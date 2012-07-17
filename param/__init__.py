@@ -21,7 +21,6 @@ __version__='$Revision$'
 
 import os.path
 
-from numpy import ndarray
 from parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
@@ -831,6 +830,8 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
     def __init__(self, **params):
+        # CEBALERT: instead use python array as default?
+        from numpy import ndarray
         super(Array,self).__init__(ndarray, allow_None=True, **params)
                 
 

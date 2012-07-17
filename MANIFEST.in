@@ -1,5 +1,5 @@
-README.txt
-LICENSE.txt
-setup.py
-param/__init__.py
-param/parameterized.py
+include README.txt
+include LICENSE.txt
+include setup.py
+recursive-include param *.py
+

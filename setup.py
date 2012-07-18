@@ -8,7 +8,7 @@ setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version='0.01',
+    version='0.03',
     description='Declarative Python programming using Parameters.',
     long_description=open('README.txt').read(),
     author= "IOAM",
@@ -17,7 +17,7 @@ setup_args.update(dict(
     maintainer_email= "developers@topographica.org",
     platforms=['Windows', 'Mac OS X', 'Linux'],
     license='BSD',
-    url='http://ioam.github.com/topographica.org/',
+    url='http://ioam.github.com/param/',
     packages = ["param"],
     classifiers = [
         "License :: OSI Approved :: BSD License",

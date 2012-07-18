@@ -10,8 +10,9 @@ examples.
 Installation
 ============
 
+Param has no dependencies outside of Python's standard library.
+
 Official releases of Param are available at
 http://pypi.python.org/pypi/param, and can be installed via ``pip
 install param`` or ``easy_install param`` (or via python setup.py
-install of the source). Windows users can alternatively download and
-run the exe from the preceding link.
+install of the source).

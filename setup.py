@@ -8,7 +8,7 @@ setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version='0.05',
+    version='1.0',
     description='Declarative Python programming using Parameters.',
     long_description=open('README.txt').read(),
     author= "IOAM",
@@ -21,8 +21,7 @@ setup_args.update(dict(
     packages = ["param"],
     classifiers = [
         "License :: OSI Approved :: BSD License",
-# (until packaging tested)
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 2.5",
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",

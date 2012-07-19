@@ -8,7 +8,7 @@ setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version='0.03',
+    version='0.05',
     description='Declarative Python programming using Parameters.',
     long_description=open('README.txt').read(),
     author= "IOAM",

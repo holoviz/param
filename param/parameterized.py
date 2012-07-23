@@ -17,6 +17,18 @@ import collections
 
 import logging
 
+# Logger instance to use for param; if "logger" is set to None, the root logger
+# will be used.
+logger = None
+def get_logger():
+    if logger is None:
+        # If it was not configured before, do default initialization
+        if not logging.getLogger().handlers:
+            logging.basicConfig()
+        return logging.getLogger()
+    else:
+        return logger
+
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
 warnings_as_exceptions = False
@@ -1073,7 +1085,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         requires it. (The time-consuming code is usually that used to
         build the repr().)
         """
-        if logging.getLogger().isEnabledFor(level):
+        if get_logger().isEnabledFor(level):
 
             # call any args that are functions
             args = list(args)
@@ -1087,7 +1099,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             else:
                 prefix=""
                 
-            logging.log(level, "{}{}: {}".format(prefix,self.name,s))
+            get_logger().log(level, "{}{}: {}".format(prefix,self.name,s))
 
     def warning(self,*args):
         """

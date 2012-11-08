@@ -209,8 +209,9 @@ def identity_hook(obj,val): return val
 
 class Number(Dynamic):
     """
-    Number is a numeric parameter. Numbers have a default value and
-    optional bounds.  There are two types of bounds: ``bounds`` and
+    A numeric Dynamic Parameter, with a default value and optional bounds.
+
+    There are two types of bounds: ``bounds`` and
     ``softbounds``.  ``bounds`` are hard bounds: the parameter must
     have a value within the specified range.  The default bounds are
     (None,None), meaning there are actually no hard bounds.  One or
@@ -248,6 +249,7 @@ class Number(Dynamic):
     Example of creating a Number::
       AB = Number(default=0.5, bounds=(None,10), softbounds=(0,1), doc='Distance from A to B.')
     """
+
     __slots__ = ['bounds','_softbounds','allow_None','inclusive_bounds','set_hook']
  
     def __init__(self,default=0.0,bounds=None,softbounds=None,allow_None=False,inclusive_bounds=(True,True),**params):
@@ -425,6 +427,7 @@ class Number(Dynamic):
 
 
 class Integer(Number):
+    """Numeric Parameter required to be an Integer"""
 
     def _check_value(self,val):
         if self.allow_None and val is None:
@@ -435,15 +438,20 @@ class Integer(Number):
             
         self._checkBounds(val)    
 
+
             
 class Magnitude(Number):
+    """Numeric Parameter required to be in the range [0.0-1.0]."""
 
     def __init__(self,default=1.0,softbounds=None,**params):
         Number.__init__(self,default=default,bounds=(0.0,1.0),softbounds=softbounds,**params)
 
 
+
 # JAB: Should this and other Parameters below be a Dynamic instead?
 class Boolean(Parameter):
+    """Binary or tristate Boolean Parameter."""
+
     __slots__ = ['bounds','allow_None']
 
     # CB: what does bounds=(0,1) mean/do for this Parameter?
@@ -470,7 +478,10 @@ class Boolean(Parameter):
         super(Boolean,self).__set__(obj,val)
 
 
+
 class NumericTuple(Parameter):
+    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+
     __slots__ = ['length']
 
     def __init__(self,default=(0,0),length=None,**params):
@@ -504,10 +515,13 @@ class NumericTuple(Parameter):
         super(NumericTuple,self).__set__(obj,val)
 
 
+
 class XYCoordinates(NumericTuple):
+    """A NumericTuple for an X,Y coordinate."""
 
     def __init__(self,default=(0.0,0.0),**params):
         super(XYCoordinates,self).__init__(default=default,length=2,**params)
+
 
                  
 class Callable(Parameter):
@@ -519,10 +533,12 @@ class Callable(Parameter):
     regular standalone functions cannot be deepcopied as of Python
     2.4, so instantiate must be False for those values.
     """
+
     def __set__(self,obj,val):
         if not callable(val):
             raise ValueError("Callable '%s' only takes a callable object."%self._attrib_name)
         super(Callable,self).__set__(obj,val)
+
 
         
 # CBNOTE: python now has abstract base classes, so we could update
@@ -533,6 +549,7 @@ def _is_abstract(class_):
         return class_.abstract
     except AttributeError:
         return False
+
     
     
 # CEBALERT: this should be a method of ClassSelector.
@@ -550,16 +567,19 @@ def concrete_descendents(parentclass):
                  if not _is_abstract(c)])
 
 
+
 class Composite(Parameter):
     """
-    A parameter that is in fact a composite of a set of other
-    parameters or attributes of the class.  The constructor argumentt
-    'attribs' takes a list of attribute names.  Getting the parameter
+    A Parameter that is a composite of a set of other attributes of the class.  
+    
+    The constructor argument 'attribs' takes a list of attribute
+    names, which may or may not be Parameters.  Getting the parameter
     returns a list of the values of the constituents of the composite,
     in the order specified.  Likewise, setting the parameter takes a
     sequence of values and sets the value of the constituent
     attributes.
     """
+
     __slots__=['attribs','objtype']
 
     def __init__(self,attribs=None,**kw):
@@ -593,11 +613,11 @@ class Composite(Parameter):
 
 class Selector(Parameter):
     """
-    Parameter whose value is set to some form of one of the
-    possibilities in its range.
+    Parameter whose value must be chosen from a list of possibilities.
 
     Subclasses must implement get_range().
     """
+
     __abstract = True
     
     def get_range(self):
@@ -606,8 +626,7 @@ class Selector(Parameter):
     
 class ObjectSelector(Selector):
     """
-    Parameter whose value is set to an object from its list of
-    possible objects.
+    Parameter whose value must be one object from a list of possible objects.
 
     check_on_set restricts the value to be among the current list of
     objects. By default, if objects are initially supplied,
@@ -620,6 +639,7 @@ class ObjectSelector(Selector):
     (initial) value must be among the list of objects (unless the
     default value is None).
     """
+
     __slots__ = ['objects','compute_default_fn','check_on_set']
 
     # ObjectSelector is usually used to allow selection from a list of
@@ -704,9 +724,8 @@ class ObjectSelector(Selector):
 
     
 class ClassSelector(Selector):
-    """
-    Parameter whose value is an instance of the specified class.    
-    """
+    """Parameter whose value is an instance of the specified class."""
+
     __slots__ = ['class_','allow_None']
 
     def __init__(self,class_,default=None,instantiate=True,allow_None=False,**params):
@@ -753,6 +772,7 @@ class List(Parameter):
     list to be enforced.  If the class is non-None, all
     items in the list are checked to be of that type.
     """
+
     __slots__ = ['class_','bounds']
 
     def __init__(self,default=[],class_=None,instantiate=True,
@@ -829,6 +849,7 @@ class Array(ClassSelector):
     """
     Parameter whose value is a numpy array.
     """
+
     def __init__(self, **params):
         # CEBALERT: instead use python array as default?
         from numpy import ndarray
@@ -928,22 +949,27 @@ class normalize_path(ParameterizedFunction):
         return os.path.normpath(path)
 
 
+
 class Path(Parameter):
     """
-    Parameter that can be set to a string specifying the path of a 
-    file or folder (in unix style); returns it in the format of the 
-    user's operating system. Please use the Filename or Foldername
-    classes if you require discrimination between the two.
+    Parameter that can be set to a string specifying the path of a file or folder.
+ 
+    The string should be specified in UNIX style, but it will be
+    returned in the format of the user's operating system. Please use
+    the Filename or Foldername classes if you require discrimination
+    between the two possibilities.
 
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
       search_paths is not None); 
+
     or
     
     * any of the paths searched by resolve_path() (if search_paths
       is None).
     """
+
     __slots__ = ['search_paths'] 
     
     def __init__(self, default=None, search_paths=None, **params):
@@ -987,11 +1013,13 @@ class Path(Parameter):
         return state
 
 
+
 class Filename(Path):
     """
-    Parameter that can be set to a string specifying the path of a 
-    file (in unix style); returns it in the format of the user's 
-    operating system.  
+    Parameter that can be set to a string specifying the path of a file.
+
+    The string should be specified in UNIX style, but it will be
+    returned in the format of the user's operating system. 
 
     The specified path can be absolute, or relative to either:
 
@@ -1012,9 +1040,10 @@ class Filename(Path):
             
 class Foldername(Path):
     """
-    Parameter that can be set to a string specifying the
-    path of a folder (in unix style); returns it in the format of
-    the user's operating system.  
+    Parameter that can be set to a string specifying the path of a folder.
+
+    The string should be specified in UNIX style, but it will be
+    returned in the format of the user's operating system. 
 
     The specified path can be absolute, or relative to either:
 

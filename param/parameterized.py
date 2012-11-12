@@ -371,7 +371,7 @@ class Parameter(object):
         # NB: obj can be None (when __get__ called for a
         # Parameterized class); objtype is never None
         
-        if not obj:
+        if obj is None:
             result = self.default
         else:
             result = obj.__dict__.get(self._internal_name,self.default)
@@ -409,7 +409,7 @@ class Parameter(object):
         if self.constant or self.readonly:
             if self.readonly:
                 raise TypeError("Read-only parameter '%s' cannot be modified"%self._attrib_name)
-            elif not obj:
+            elif obj is None:  #not obj
                 self.default = val
             elif not obj.initialized:
                 obj.__dict__[self._internal_name] = val
@@ -417,7 +417,7 @@ class Parameter(object):
                 raise TypeError("Constant parameter '%s' cannot be modified"%self._attrib_name)
 
         else:
-            if not obj:
+            if obj is None:
                 self.default = val
             else:
                 obj.__dict__[self._internal_name] = val

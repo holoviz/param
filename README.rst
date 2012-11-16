@@ -18,4 +18,4 @@ Official releases of Param are available at
 `PyPI <http://pypi.python.org/pypi/param>`_, and can be installed via ``pip
 install --user param``, ``pip install param``, or ``easy_install param``.
 
-More recent changes can be obtained by cloning the `git repository <https://github.com/ioam/param>`_.
+More recent changes can be obtained by cloning the git repository.

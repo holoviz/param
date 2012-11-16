@@ -16,5 +16,6 @@ Param has no dependencies outside of Python's standard library.
 
 Official releases of Param are available at
 `PyPI <http://pypi.python.org/pypi/param>`_, and can be installed via ``pip
-install param`` or ``easy_install param`` (or via python setup.py
-install of the source).
+install --user param``, ``pip install param``, or ``easy_install param``.
+
+More recent changes can be obtained by cloning the `git repository <https://github.com/ioam/param>`_.

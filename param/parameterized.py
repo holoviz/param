@@ -1,8 +1,6 @@
 """
 Generic support for objects with full-featured Parameters and
 messaging.  
-
-$Id$
 """
 __version__='$Revision$'
 

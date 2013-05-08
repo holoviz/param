@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import sys
 from distutils.core import setup
 
 
@@ -10,7 +9,7 @@ setup_args.update(dict(
     name='param',
     version='1.0',
     description='Declarative Python programming using Parameters.',
-    long_description=open('README.txt').read(),
+    long_description=open('README.rst').read(),
     author= "IOAM",
     author_email= "developers@topographica.org",
     maintainer= "IOAM",

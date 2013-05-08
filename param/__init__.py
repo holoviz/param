@@ -11,8 +11,6 @@ parameterized.Parameterized classes for more information.
 
 This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number).
-
-$Id$
 """
 __version__='$Revision$'
 

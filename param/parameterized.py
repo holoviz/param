@@ -1,8 +1,6 @@
 """
 Generic support for objects with full-featured Parameters and
 messaging.  
-
-$Id$
 """
 __version__='$Revision$'
 
@@ -1118,6 +1116,12 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def message(self,*args):
         """Print the arguments as a message."""
         self.__db_print(logging.INFO,*args)
+
+    def verbose(self,*args):
+        """Print the arguments as a verbose message. Note that there is no
+        logging-level that corresponds to the old VERBOSE; this is kept for
+        backwards compatibility."""
+        self.__db_print(logging.DEBUG,*args)
 
     def debug(self,*args):
         """Print the arguments as a debugging statement."""

@@ -14,6 +14,10 @@ from functools import partial, wraps
 
 import logging
 
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+VERBOSE = INFO - 1
+logging.addLevelName(VERBOSE, "VERBOSE")
+
 # Logger instance to use for param; if "logger" is set to None, the root logger
 # will be used.
 logger = None
@@ -1077,7 +1081,7 @@ class Parameterized(object):
     # Note that Python's logging module would simplify print
     # statements still further (see "topographica's debug printing"
     # emails between CB&JB).
-    def __db_print(self,level=logging.INFO,*args):
+    def __db_print(self,level=INFO,*args):
         """
         Any of args may be functions, in which case they will be
         called. This allows delayed execution, preventing
@@ -1110,24 +1114,22 @@ class Parameterized(object):
         if not warnings_as_exceptions:
             global warning_count
             warning_count+=1
-            self.__db_print(logging.WARNING,*args)
+            self.__db_print(WARNING,*args)
         else:
             raise Exception, ' '.join(["Warning:",]+[str(x) for x in args])
 
 
     def message(self,*args):
         """Print the arguments as a message."""
-        self.__db_print(logging.INFO,*args)
+        self.__db_print(INFO,*args)
 
     def verbose(self,*args):
-        """Print the arguments as a verbose message. Note that there is no
-        logging-level that corresponds to the old VERBOSE; this is kept for
-        backwards compatibility."""
-        self.__db_print(logging.DEBUG,*args)
+        """Print the arguments as a verbose message."""
+        self.__db_print(VERBOSE,*args)
 
     def debug(self,*args):
         """Print the arguments as a debugging statement."""
-        self.__db_print(logging.DEBUG,*args)
+        self.__db_print(DEBUG,*args)
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self,param_obj,dict_=None,key=None):

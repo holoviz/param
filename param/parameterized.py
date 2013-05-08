@@ -12,15 +12,23 @@ from operator import itemgetter,attrgetter
 from types import FunctionType
 from functools import partial, wraps
 
-# JABALERT: Could consider using Python's logging facilities instead.
-SILENT  = 0
-WARNING = 50
-NORMAL  = 100
-MESSAGE = NORMAL
-VERBOSE = 200
-DEBUG   = 300
+import logging
 
-min_print_level = NORMAL
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+VERBOSE = INFO - 1
+logging.addLevelName(VERBOSE, "VERBOSE")
+
+# Logger instance to use for param; if "logger" is set to None, the root logger
+# will be used.
+logger = None
+def get_logger():
+    if logger is None:
+        # If it was not configured before, do default initialization
+        if not logging.getLogger().handlers:
+            logging.basicConfig()
+        return logging.getLogger()
+    else:
+        return logger
 
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
@@ -808,28 +816,13 @@ class Parameterized(object):
     in this case foo.xx gets the value 20.
     
     Message formatting: Each Parameterized instance has several methods
-    for optionally printing output according to the current 'print
-    level', such as SILENT, WARNING, MESSAGE, VERBOSE, or DEBUG.  Each
-    successive level allows more messages to be printed.  For example,
-    when the level is VERBOSE, all warning, message, and verbose
-    output will be printed.  When it is WARNING, only warnings will be
-    printed.  When it is SILENT, no output will be printed.
-    
-    For each level (except SILENT) there's an associated print method:
-    Parameterized.warning(), .message(), .verbose(), and .debug().
-    
-    Each line printed this way is prepended with the name of the
-    object that printed it.  The Parameterized.print_level parameter
-    and the module global variable min_print_level combine to
-    determine what gets printed.  For example, if foo is a
-    Parameterized:
-    
-       foo.message('The answer is',42)
-    
-    is equivalent to:
-    
-       if max(foo.print_level,parameterized.min_print_level) >= MESSAGE:
-           print foo.name+':', 'The answer is', 42
+    methods for optionally printing output. This functionality is
+    based on the standard Python 'logging' module; using the methods
+    provided here, wraps calls to the 'logging' module's root logger
+    and prepends each message with information about the instance
+    from which the call was made. For more information on how to set
+    the global logging level and change the default message prefix,
+    see documentation for the 'logging' module.
     """
 
     __metaclass__ = ParameterizedMetaclass
@@ -837,9 +830,6 @@ class Parameterized(object):
     name           = String(default=None,constant=True,doc="""
     String identifier for this object.""")
     
-    ### JABALERT: Should probably make this an Enumeration instead.
-    print_level = Parameter(default=MESSAGE,precedence=-1)
-
     
     def __init__(self,**params):
         """
@@ -1048,13 +1038,11 @@ class Parameterized(object):
         """
         Variant of __repr__ designed for generating a runnable script.
         """        
-        # Suppresses automatically generated names and print_levels.
+        # Suppresses automatically generated names.
         settings=[]
         for name,val in self.get_param_values(onlychanged=script_repr_suppress_defaults):
             if name == 'name' and (val is not None and
                                    re.match('^'+self.__class__.__name__+'[0-9]+$',val)):
-                rep=None
-            elif name == 'print_level':
                 rep=None
             else:
                 rep=script_repr(val,imports,prefix,settings)
@@ -1093,19 +1081,15 @@ class Parameterized(object):
     # Note that Python's logging module would simplify print
     # statements still further (see "topographica's debug printing"
     # emails between CB&JB).
-    def __db_print(self,level=NORMAL,*args):
+    def __db_print(self,level=INFO,*args):
         """
-        Print each of the given args iff print_level or
-        self.db_print_level is greater than or equal to the given
-        level.
-
         Any of args may be functions, in which case they will be
         called. This allows delayed execution, preventing
         time-consuming code from being called unless the print level
         requires it. (The time-consuming code is usually that used to
         build the repr().)
         """
-        if level <= max(min_print_level,self.print_level):
+        if get_logger().isEnabledFor(level):
 
             # call any args that are functions
             args = list(args)
@@ -1119,10 +1103,7 @@ class Parameterized(object):
             else:
                 prefix=""
                 
-            print "%s%s: %s" % (prefix,self.name,s)
-            
-        sys.stdout.flush()
-
+            get_logger().log(level, "%s%s: %s" % (prefix,self.name,s))
 
     def warning(self,*args):
         """
@@ -1133,15 +1114,15 @@ class Parameterized(object):
         if not warnings_as_exceptions:
             global warning_count
             warning_count+=1
-            self.__db_print(WARNING,"Warning:",*args)
+            self.__db_print(WARNING,*args)
         else:
             raise Exception, ' '.join(["Warning:",]+[str(x) for x in args])
 
 
     def message(self,*args):
         """Print the arguments as a message."""
-        self.__db_print(MESSAGE,*args)
-        
+        self.__db_print(INFO,*args)
+
     def verbose(self,*args):
         """Print the arguments as a verbose message."""
         self.__db_print(VERBOSE,*args)

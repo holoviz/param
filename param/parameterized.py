@@ -25,7 +25,7 @@ def get_logger():
     if logger is None:
         # If it was not configured before, do default initialization
         if not logging.getLogger().handlers:
-            logging.basicConfig()
+            logging.basicConfig(level=INFO)
         return logging.getLogger()
     else:
         return logger

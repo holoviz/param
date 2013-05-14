@@ -4,7 +4,6 @@ messaging.
 """
 __version__='$Revision$'
 
-import sys
 import copy
 import re
 
@@ -14,7 +13,7 @@ from functools import partial, wraps
 
 import logging
 
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL # pyflakes:ignore (API import)
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
 
@@ -76,10 +75,10 @@ def get_all_slots(class_):
     # in its superclass (the superclass' __slots__ end up as
     # attributes of the subclass).
     all_slots = []
-    parent_param_classes = [class_ for class_ in classlist(class_)[1::]]
-    for class_ in parent_param_classes:
-        if hasattr(class_,'__slots__'):
-            all_slots+=class_.__slots__
+    parent_param_classes = [c for c in classlist(class_)[1::]]
+    for c in parent_param_classes:
+        if hasattr(c,'__slots__'):
+            all_slots+=c.__slots__
     return all_slots
 
 
@@ -512,9 +511,8 @@ class ParameterizedMetaclass(type):
 
         # All objects (with their names) of type Parameter that are
         # defined in this class
-        parameters = [(name,obj)
-                      for (name,obj) in dict_.items()
-                      if isinstance(obj,Parameter)]
+        parameters = [(n,o) for (n,o) in dict_.items()
+                      if isinstance(o,Parameter)]
         
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)

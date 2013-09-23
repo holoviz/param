@@ -1583,10 +1583,23 @@ class ParameterizedFunction(Parameterized):
     def __str__(self):
         return self.__class__.__name__+"()"
 
-    @classmethod
-    def instance(class_,*args,**params):
-        """Return an instance of this class."""
-        inst=Parameterized.__new__(class_,*args)
+    @bothmethod
+    def instance(self_or_cls,*args,**params):
+        """
+        Return an instance of this class, copying parameters from any
+        existing instance provided.
+        """
+
+        if isinstance (self_or_cls,ParameterizedMetaclass):
+            cls = self_or_cls
+        else:
+            p = params
+            params = dict(self_or_cls.get_param_values())
+            params.update(p)
+            params.pop('name')
+            cls = self_or_cls.__class__
+
+        inst=Parameterized.__new__(cls,*args)
         Parameterized.__init__(inst,**params)
         return inst
 

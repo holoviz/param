@@ -15,13 +15,19 @@ parameter types (e.g. Number).
 __version__='$Revision$'
 
 # CEBALERT: we need more documentation above, now that params is a
-# separate directory and will be a separate package.
+# separate package.
 
 import os.path
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 import collections
+
+
+#: Top-level object to allow messaging not tied to a particular
+#: Parameterized object, as in 'param.main.warning("Invalid option")'.
+main=Parameterized(name="main")
+
 
 
 def produce_value(value_obj):
@@ -34,6 +40,7 @@ def produce_value(value_obj):
         return value_obj()
     else:
         return value_obj
+
 
 
 class Dynamic(Parameter):

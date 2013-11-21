@@ -211,7 +211,7 @@ class Time(Parameterized):
         """
         Enter the context and push the current state.
         """
-        self._pushed_state = [self(), self.timestep, self.until]
+        self._pushed_state = [self._time, self.timestep, self.until]
         self.in_context = True
         return self
 
@@ -222,7 +222,7 @@ class Time(Parameterized):
         exit. Any other exception exc that is raised in the block will not be
         caught.
         """
-        self.time, self.timestep, self.until = self._pushed_state
+        self._time, self.timestep, self.until = self._pushed_state
         self.in_context = False
         if exc is StopIteration:
             return True

@@ -41,6 +41,193 @@ def produce_value(value_obj):
         return value_obj
 
 
+class Forever(object):
+    """
+    Forever instances are used to indicate infinite time durations. All
+     operators on Forever() return Forever() apart from the comparison and
+     equality operators. Equality works by checking whether the two objects are
+     both instances of this class.
+    """
+    def __eq__(self, other):
+        return isinstance(other, self.__class__)
+    def __lt__(self, other):   return False
+    def __gt__(self, other):   return True
+    def __add__(self, other):  return self
+    def __radd__(self, other): return self
+    def __ladd__(self, other): return self
+    def __sub__(self, other):  return self
+    def __iadd_(self, other):  return self
+    def __isub__(self, other): return self
+    def __repr__(self):        return "Forever()"
+    def __str__(self):         return repr(self)
+
+
+
+class Time(Parameterized):
+    """
+    A Time object in an example of a typical time_fn (a callable that returns
+    the time) that also encapsulates many common operations involve a single
+    timebase shared across multiple different objects. It allows time to be
+    represented using exact numeric types, avoid floating point issues, and
+    allows time to be iterated (or stepped through) using a fixed timestep.
+
+    When used as a context manager using the 'with' statement (and implemented
+    by the __enter__ and __exit__ special methods), entry into a context pushes
+    the state of the TimeLine object, allowing the timeline to be explored by
+    setting, incrementing or decrementing time as desired. This allows the state
+    of time-dependent objects to be modified as a function of time within the
+    context's block. This is appropriate for manipulating individual objects
+    with a functional dependence on time and not for manipulating stateful
+    objects that assume time will be consistently updated across all objects in
+    a monotonic manner (e.g. components of a complex simulator).
+
+    Note that that the time value of a new Time object is 0.0, converted to the
+    chosen time type. Here is an illustration of how time can be manipulated
+    using a Time object:
+
+    >>> with Time(until=20, timestep=1, autostep=False) as t:  # Entering a context
+    ...     'Setting the initial time to %s' % t(5)
+    ...     t += 10                  # Increment by 10
+    ...     t -= 5                   # Decrement by 5
+    ...     'Time before iteration: %s' % t()
+    ...     'Iteration: %s' % [val for val in t]
+    ...     'Time after iteration: %s' % t()
+    ...     t += 2
+    ...     'The until parameter may be exceeded outside iteration: %s' % t()
+    'Setting the initial time to 5'
+    'Time before iteration: 10'
+    'Iteration: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]'
+    'Time after iteration: 20'
+    'The until parameter may be exceeded outside iteration: 22'
+    """
+
+    forever = Forever()
+
+    time_type = Parameter(default=int, constant=True, doc = """
+        Callable for converting user-specified times into the numeric type to be
+        used for time-varying (Dynamic) parameters.
+
+       For instance, one might wish to use arbitrary precision floating-point
+       time to avoid accumulating rounding errors.  If a time-dependent
+       parameter is stepped every 0.05 time units, after 20 such steps using
+       floats the value of 1.0 will not be reached exactly, but will instead be
+       slightly higher or lower.  With an arbitrary precision float type such a
+       series of steps can be guaranteed to reach 1.0 exactly.  Alternatively,
+       one might wish to use a rational type so that events can be guaranteed to
+       happen a certain number of times in a given interval, even if the ratio
+       cannot be expressed as an even decimal or binary fraction.
+
+       Some potentially useful exact number classes::
+
+        - int: If the time can be expressed as integers only, default is
+          appropriate.
+
+        - Python's decimal.Decimal and fractions.Fraction classes.
+
+        - fixedpoint.FixedPoint: Third party package offering pure Python
+          fixed-point numbers, but quite slow.
+
+        - gmpy.mpq: Third party package offering access to the fast GNU
+          Multi-Precision library (which requires GMP to be built); gmpy.mpq is
+          gmpy's rational type.
+    """)
+
+    timestep = Parameter(default=1.0,doc = """
+       The default step size used by the iterator interface and used to advance
+       the time per call if the autostep parameter is enabled. """)
+
+    until = Parameter(default=forever, doc="""
+         Declaration of an expected end to the timeline. When
+         using the iterator interface, iteration will end before
+         this value is exceeded.
+
+         By default, the timeline extends forever, and so the
+         iterator always advances.""")
+
+    autostep = Parameter(default=False, doc="""
+        Whether to step forward by a single timestep per call up to the 'until'
+        value (if finite). Equivalent to advancing the timeline using the next()
+        method after each call.""")
+
+    def __init__(self, **params):
+
+        super(Time, self).__init__(**params)
+        self._time = self.time_type(0)
+        self._exhausted = False
+
+
+    def __iter__(self): return self
+
+    def next(self):
+        time = self._time
+        timestep = self.time_type(self.timestep)
+
+        if (time + timestep) <= self.until:
+            self._time += timestep
+        elif not self._exhausted:
+            self._exhausted = True
+        else:
+            self._exhausted = False
+            raise StopIteration
+        return time
+
+    def __call__(self, val=None, time_type=None):
+        """
+        Returns the time value when called without arguments. If val is
+        supplied, sets the time to val. If time_type is specified, the object
+        will use the new time_type starting with the given val (which must be
+        specified).
+
+        Specifying the time_type in call is the correct way to set the time_type
+        once a Time object has been constructed.
+        """
+        if time_type and val is None:
+            raise Exception("Please specify a value for the new time_type.")
+        if time_type:
+            type_param = self.params('time_type')
+            type_param.constant = False
+            self.time_type = time_type
+            type_param.constant = True
+        if val is not None:
+            self._time = self.time_type(val)
+            return self._time
+        try:
+            if self.autostep: self.next()
+        except StopIteration: pass
+        return self._time
+
+
+    def __iadd__(self, other):
+        self._time = self._time + self.time_type(other)
+        return self
+
+
+    def __isub__(self, other):
+        self._time = self._time - self.time_type(other)
+        return self
+
+
+    def __enter__(self):
+        """
+        Enter the context and push the current state.
+        """
+        self._pushed_state = [self(), self.timestep, self.until]
+        self.in_context = True
+        return self
+
+
+    def __exit__(self, exc, *args):
+        """
+        The StopIteration exception raised in context will force the context to
+        exit. Any other exception exc that is raised in the block will not be
+        caught.
+        """
+        self.time, self.timestep, self.until = self._pushed_state
+        self.in_context = False
+        if exc is StopIteration:
+            return True
+
+
 
 class Dynamic(Parameter):
     """
@@ -64,10 +251,9 @@ class Dynamic(Parameter):
     value of time_fn is greater than what it was last time the
     parameter value was requested.
 
-    If time_fn is set to None, a new value is always produced.
-
-    If Dynamic.time_fn is set to something other than None, it must,
-    when called, produce a number.
+    By default, time_fn for all Dynamic parameters is a single Time instance
+    designed to allow general manipulations of time. It may be set to some other
+    callable as required so long as a number is returned on each call.
     """
     # CB: making Dynamic support iterators and generators is sf.net
     # feature request 1864370. When working on that task, note that
@@ -75,8 +261,7 @@ class Dynamic(Parameter):
     # replaced by something that matches whatever Dynamic becomes
     # capable of using.
     
-    time_fn = None # could add a slot for time_fn to allow instances
-                   # to override
+    time_fn = Time(autostep=True) # Time will advance on each call.
     
     # CBENHANCEMENT: Add an 'epsilon' slot.
     # See email 'Re: simulation-time-controlled Dynamic parameters'

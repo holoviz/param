@@ -50,8 +50,11 @@ class Forever(object):
     """
     def __eq__(self, other):
         return isinstance(other, self.__class__)
+    def __ne__(self, other): return not self== other
     def __lt__(self, other):   return False
+    def __le__(self, other):  return False
     def __gt__(self, other):   return True
+    def __ge__(self, other):   return True
     def __add__(self, other):  return self
     def __radd__(self, other): return self
     def __ladd__(self, other): return self

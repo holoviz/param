@@ -41,10 +41,13 @@ def produce_value(value_obj):
         return value_obj
 
 
-class Forever(object):
+class Infinity(object):
     """
-    An instance of this class represents an infinite time duration.
-    All operators on Forever() return Forever(), apart from the
+    An instance of this class represents an infinite value. Unlike
+    Python's float('inf') value, this object can be safely compared
+    with gmpy numeric types across different gmpy versions.
+
+    All operators on Infinity() return Infinity(), apart from the
     comparison and equality operators. Equality works by checking
     whether the two objects are both instances of this class.
     """
@@ -61,7 +64,7 @@ class Forever(object):
     def __sub__ (self,other): return self
     def __iadd_ (self,other): return self
     def __isub__(self,other): return self
-    def __repr__(self):       return "Forever()"
+    def __repr__(self):       return "Infinity()"
     def __str__ (self):       return repr(self)
 
 
@@ -118,7 +121,7 @@ class Time(Parameterized):
 
     _infinitely_iterable = True
 
-    forever = Forever()
+    forever = Infinity()
 
     time_type = Parameter(default=int, constant=True, doc="""
         Callable that Time will use to convert user-specified time

@@ -68,7 +68,7 @@ class Forever(object):
 
 class Time(Parameterized):
     """
-    A callable object returning a number for the current time.  
+    A callable object returning a number for the current time.
 
     Here 'time' is an abstract concept that can be interpreted in any
     useful way.  For instance, in a simulation, it would be the
@@ -136,15 +136,15 @@ class Time(Parameterized):
         accumulation issues over long time intervals.
 
         Some potentially useful exact number classes::
-        
+
          - int: Suitable if all times can be expressed as integers.
            appropriate.
-        
+
          - Python's decimal.Decimal and fractions.Fraction classes:
            widely available but slow and also awkward to specify times
            (e.g. cannot simply type 0.05, but have to use a special
            constructor or a string).
-        
+
          - fixedpoint.FixedPoint: Allows a natural representation of
            times in decimal notation, but very slow and needs to be
            installed separately.
@@ -216,12 +216,12 @@ class Time(Parameterized):
     def __call__(self, val=None, time_type=None):
         """
         When called with no arguments, returns the current time value.
-        
-        When called with a specified val, sets the time to it. 
+
+        When called with a specified val, sets the time to it.
 
         When called with a specified time_type, changes the time_type
         and sets the current time to the given val (which *must* be
-        specified) converted to that time type.  To ensure that 
+        specified) converted to that time type.  To ensure that
         the current state remains consistent, this is normally the only
         way to change the time_type of an existing Time instance.
         """
@@ -277,14 +277,14 @@ class Dynamic(Parameter):
     """
     Parameter whose value can be generated dynamically by a callable
     object.
-    
+
     If a Parameter is declared as Dynamic, it can be set a callable
     object (such as a function or callable class), and getting the
     parameter's value will call that callable.
 
     Note that at present, the callable object must allow attributes
     to be set on itself.
-    
+
     [Python 2.4 limitation: the callable object must be an instance of a
     callable class, rather than a named function or a lambda function,
     otherwise the object will not be picklable or deepcopyable.]
@@ -304,13 +304,13 @@ class Dynamic(Parameter):
     # detection of a dynamic generator by 'callable' needs to be
     # replaced by something that matches whatever Dynamic becomes
     # capable of using.
-    
+
     time_fn = Time(autostep=True) # Time will advance on each call.
-    
+
     # CBENHANCEMENT: Add an 'epsilon' slot.
     # See email 'Re: simulation-time-controlled Dynamic parameters'
     # Dec 22, 2007 CB->JAB
-        
+
     def __init__(self,**params):
         """
         Call the superclass's __init__ and set instantiate=True if the
@@ -338,8 +338,8 @@ class Dynamic(Parameter):
 
         gen._saved_Dynamic_last = []
         gen._saved_Dynamic_time = []
-                
-        
+
+
     def __get__(self,obj,objtype):
         """
         Call the superclass's __get__; if the result is not dynamic
@@ -352,7 +352,7 @@ class Dynamic(Parameter):
             return gen
         else:
             return self._produce_value(gen)
-            
+
 
     def __set__(self,obj,val):
         """
@@ -364,7 +364,7 @@ class Dynamic(Parameter):
         """
         super(Dynamic,self).__set__(obj,val)
 
-        dynamic = callable(val)        
+        dynamic = callable(val)
         if dynamic: self._initialize_generator(val,obj)
         if not obj: self._set_instantiate(dynamic)
 
@@ -381,16 +381,16 @@ class Dynamic(Parameter):
         new value will be produced and returned. Otherwise,
         the last value gen produced will be returned.
         """
-        if hasattr(gen,"_Dynamic_time_fn"):            
+        if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:
             time_fn = self.time_fn
-        
+
         if time_fn is None:
             value = produce_value(gen)
             gen._Dynamic_last = value
         else:
-            
+
             time = time_fn()
 
             if force or time>gen._Dynamic_time:
@@ -414,22 +414,22 @@ class Dynamic(Parameter):
     def _inspect(self,obj,objtype=None):
         """Return the last generated value for this parameter."""
         gen=super(Dynamic,self).__get__(obj,objtype)
-        
-        if hasattr(gen,'_Dynamic_last'):
-            return gen._Dynamic_last 
-        else:
-            return gen 
 
-    
+        if hasattr(gen,'_Dynamic_last'):
+            return gen._Dynamic_last
+        else:
+            return gen
+
+
     def _force(self,obj,objtype=None):
         """Force a new value to be generated, and return it."""
         gen=super(Dynamic,self).__get__(obj,objtype)
-        
+
         if hasattr(gen,'_Dynamic_last'):
             return self._produce_value(gen,force=True)
         else:
-            return gen 
-        
+            return gen
+
 
 # CEBNOTE: isinstance(x,Number) should be possible in Python 2.6
 # (Number is a new abstract base class).
@@ -485,7 +485,7 @@ class Number(Dynamic):
     """
 
     __slots__ = ['bounds','_softbounds','allow_None','inclusive_bounds','set_hook']
- 
+
     def __init__(self,default=0.0,bounds=None,softbounds=None,allow_None=False,inclusive_bounds=(True,True),**params):
         """
         Initialize this parameter object and store the bounds.
@@ -493,14 +493,14 @@ class Number(Dynamic):
         Non-dynamic default values are checked against the bounds.
         """
         super(Number,self).__init__(default=default,**params)
-        
+
         self.set_hook = identity_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
         self.allow_None = (default is None or allow_None)
-        if not callable(default): self._check_value(default)  
-        
+        if not callable(default): self._check_value(default)
+
 
     def __get__(self,obj,objtype):
         """
@@ -520,7 +520,7 @@ class Number(Dynamic):
         Set to the given value raising an exception if out of bounds.
         Also applies set_hook, providing support for conversions
         and transformations of the value.
-        """        
+        """
         val = self.set_hook(obj,val)
 
         if not callable(val): self._check_value(val)
@@ -539,7 +539,7 @@ class Number(Dynamic):
             bounded_val = val
         super(Number,self).__set__(obj,bounded_val)
 
-    
+
     # CEBERRORALERT: doesn't take account of exclusive bounds. When
     # the gui uses set_in_bounds(), expecting to get acceptable
     # values, it actually gets an out-of-bounds error. When fixed,
@@ -564,7 +564,7 @@ class Number(Dynamic):
         if _is_number(val):
             if self.bounds is None:
                 return val
-            vmin, vmax = self.bounds 
+            vmin, vmax = self.bounds
             if vmin is not None:
                 if val < vmin:
                     return  vmin
@@ -575,7 +575,7 @@ class Number(Dynamic):
 
         elif self.allow_None and val is None:
             return val
-        
+
         else:
             # non-numeric value sent in: reverts to default value
             return  self.default
@@ -584,7 +584,7 @@ class Number(Dynamic):
 
 
     def _checkBounds(self, val):
-    
+
         if self.bounds is not None:
             vmin,vmax = self.bounds
             incmin,incmax = self.inclusive_bounds
@@ -617,9 +617,9 @@ class Number(Dynamic):
 ##              raise ValueError("Parameter '%s' must be in the range %s" % (self._attrib_name,self.rangestr()))
 
 ##         where self.rangestr() formats the range using the usual notation for
-##         indicating exclusivity, e.g. "[0,10)".     
-    
-    
+##         indicating exclusivity, e.g. "[0,10)".
+
+
     def _check_value(self,val):
         """
         Checks that the value is numeric and that it is within the hard
@@ -630,7 +630,7 @@ class Number(Dynamic):
 
         if not _is_number(val):
             raise ValueError("Parameter '%s' only takes numeric values"%(self._attrib_name))
-            
+
         self._checkBounds(val)
 
 
@@ -649,7 +649,7 @@ class Number(Dynamic):
         else:
             sl,su=self._softbounds
 
-                
+
         if sl is None: l = hl
         else:          l = sl
 
@@ -669,11 +669,11 @@ class Integer(Number):
 
         if not isinstance(val,int):
             raise ValueError("Parameter '%s' must be an integer."%self._attrib_name)
-            
-        self._checkBounds(val)    
+
+        self._checkBounds(val)
 
 
-            
+
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
@@ -693,19 +693,19 @@ class Boolean(Parameter):
         self.bounds = bounds
         self.allow_None = (default is None or allow_None)
         Parameter.__init__(self,default=default,**params)
-        
+
     def __set__(self,obj,val):
         if self.allow_None:
             if not isinstance(val,bool) and val is not None:
                 raise ValueError("Boolean '%s' only takes a Boolean value or None."
                                  %self._attrib_name)
-    
+
             if val is not True and val is not False and val is not None:
                 raise ValueError("Boolean '%s' must be True, False, or None."%self._attrib_name)
         else:
             if not isinstance(val,bool):
                 raise ValueError("Boolean '%s' only takes a Boolean value."%self._attrib_name)
-    
+
             if val is not True and val is not False:
                 raise ValueError("Boolean '%s' must be True or False."%self._attrib_name)
 
@@ -729,21 +729,21 @@ class NumericTuple(Parameter):
             self.length = len(default)
         else:
             self.length = length
-            
+
         self._check(default)
         Parameter.__init__(self,default=default,**params)
-        
+
     def _check(self,val):
         if not isinstance(val,tuple):
             raise ValueError("NumericTuple '%s' only takes a tuple value."%self._attrib_name)
-        
+
         if not len(val)==self.length:
             raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
                              (self._attrib_name,len(val),self.length))
         for n in val:
             if not _is_number(n):
                 raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
-            
+
     def __set__(self,obj,val):
         self._check(val)
         super(NumericTuple,self).__set__(obj,val)
@@ -757,11 +757,11 @@ class XYCoordinates(NumericTuple):
         super(XYCoordinates,self).__init__(default=default,length=2,**params)
 
 
-                 
+
 class Callable(Parameter):
     """
     Parameter holding a value that is a callable object, such as a function.
-    
+
     A keyword argument instantiate=True should be provided when a
     function object is used that might have state.  On the other hand,
     regular standalone functions cannot be deepcopied as of Python
@@ -774,7 +774,7 @@ class Callable(Parameter):
         super(Callable,self).__set__(obj,val)
 
 
-        
+
 # CBNOTE: python now has abstract base classes, so we could update
 # this. At least if the check is in a method, all such checks could be
 # changed at once.
@@ -784,8 +784,8 @@ def _is_abstract(class_):
     except AttributeError:
         return False
 
-    
-    
+
+
 # CEBALERT: this should be a method of ClassSelector.
 def concrete_descendents(parentclass):
     """
@@ -804,8 +804,8 @@ def concrete_descendents(parentclass):
 
 class Composite(Parameter):
     """
-    A Parameter that is a composite of a set of other attributes of the class.  
-    
+    A Parameter that is a composite of a set of other attributes of the class.
+
     The constructor argument 'attribs' takes a list of attribute
     names, which may or may not be Parameters.  Getting the parameter
     returns a list of the values of the constituents of the composite,
@@ -836,7 +836,7 @@ class Composite(Parameter):
         Set the values of all the attribs.
         """
         assert len(val) == len(self.attribs),"Compound parameter '%s' got the wrong number of values (needed %d, but got %d)." % (self._attrib_name,len(self.attribs),len(val))
-        
+
         if not obj:
             for a,v in zip(self.attribs,val):
                 setattr(self.objtype,a,v)
@@ -853,11 +853,11 @@ class Selector(Parameter):
     """
 
     __abstract = True
-    
+
     def get_range(self):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
-    
+
 class ObjectSelector(Selector):
     """
     Parameter whose value must be one object from a list of possible objects.
@@ -894,13 +894,13 @@ class ObjectSelector(Selector):
 
         if default is not None and self.check_on_set is True:
             self._check_value(default)
-            
+
         super(ObjectSelector,self).__init__(default=default,instantiate=instantiate,**params)
-        
+
 
     # CBNOTE: if the list of objects is changed, the current value for
     # this parameter in existing POs could be out of the new range.
-    
+
     def compute_default(self):
         """
         If this parameter's compute_default_fn is callable, call it
@@ -910,7 +910,7 @@ class ObjectSelector(Selector):
         no longer None).
         """
         if self.default is None and callable(self.compute_default_fn):
-            self.default=self.compute_default_fn() 
+            self.default=self.compute_default_fn()
             if self.default not in self.objects:
                 self.objects.append(self.default)
 
@@ -956,7 +956,7 @@ class ObjectSelector(Selector):
             d=dict([(obj,obj) for obj in self.objects])
         return d
 
-    
+
 class ClassSelector(Selector):
     """Parameter whose value is an instance of the specified class."""
 
@@ -980,7 +980,7 @@ class ClassSelector(Selector):
         self._check_value(val,obj)
         super(ClassSelector,self).__set__(obj,val)
 
-        
+
     def get_range(self):
         """
         Return the possible types for this parameter's value.
@@ -1019,7 +1019,7 @@ class List(Parameter):
 
     # Could add range() method from ClassSelector, to allow
     # list to be populated in the GUI
-    
+
     def __set__(self,obj,val):
         """Set to the given value, raising an exception if out of bounds."""
         self._check_bounds(val)
@@ -1040,7 +1040,7 @@ class List(Parameter):
                 if not (min_length <= l <= max_length):
                     raise ValueError("%s: list length must be between %s and %s (inclusive)"%(self._attrib_name,min_length,max_length))
             elif min_length is not None:
-                if not min_length <= l: 
+                if not min_length <= l:
                     raise ValueError("%s: list length must be at least %s."%(self._attrib_name,min_length))
             elif max_length is not None:
                 if not l <= max_length:
@@ -1088,12 +1088,12 @@ class Array(ClassSelector):
         # CEBALERT: instead use python array as default?
         from numpy import ndarray
         super(Array,self).__init__(ndarray, allow_None=True, **params)
-                
+
 
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
-#   - use resolve_file_path() for paths to existing files to be read, 
-#   - use resolve_folder_path() for paths to existing folders to be read, 
+#   - use resolve_file_path() for paths to existing files to be read,
+#   - use resolve_folder_path() for paths to existing folders to be read,
 #     and normalize_path() for paths to new files to be written.
 
 class resolve_path(ParameterizedFunction):
@@ -1119,7 +1119,7 @@ class resolve_path(ParameterizedFunction):
 
     path_to_file = Boolean(default=True, pickle_default_value=False, doc="""
         String specifying whether the path refers to a 'File' or a 'Folder'.""")
-        
+
     def __call__(self, path, **params):
         p = ParamOverrides(self, params)
 
@@ -1138,12 +1138,12 @@ class resolve_path(ParameterizedFunction):
                     raise IOError("Folder '%s' not found." %path)
             else:
                 raise IOError("Type '%s' not recognised." %p.path_type)
-                
+
         else:
             paths_tried = []
             for prefix in p.search_paths:
                 try_path = os.path.join(os.path.normpath(prefix), path)
-                
+
                 if p.path_to_file:
                     if os.path.isfile(try_path):
                         return try_path
@@ -1157,7 +1157,7 @@ class resolve_path(ParameterizedFunction):
 
             raise IOError(os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
-            
+
 class normalize_path(ParameterizedFunction):
     """
     Convert a UNIX-style path to the current OS's format,
@@ -1187,7 +1187,7 @@ class normalize_path(ParameterizedFunction):
 class Path(Parameter):
     """
     Parameter that can be set to a string specifying the path of a file or folder.
- 
+
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
     the Filename or Foldername classes if you require discrimination
@@ -1196,29 +1196,29 @@ class Path(Parameter):
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None); 
+      search_paths is not None);
 
     or
-    
+
     * any of the paths searched by resolve_path() (if search_paths
       is None).
     """
 
-    __slots__ = ['search_paths'] 
-    
+    __slots__ = ['search_paths']
+
     def __init__(self, default=None, search_paths=None, **params):
         if search_paths is None:
             search_paths = []
-        
+
         self.search_paths = search_paths
         super(Path,self).__init__(default,**params)
-            
+
     def _resolve(self, path):
         if self.search_paths:
             return resolve_path(path, search_paths=self.search_paths)
         else:
-            return resolve_path(path)                               
-        
+            return resolve_path(path)
+
     def __set__(self, obj, val):
         """
         Call Parameter's __set__, but warn if the file cannot be found.
@@ -1229,7 +1229,7 @@ class Path(Parameter):
             Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s'%(e.args[0]))
 
         super(Path,self).__set__(obj,val)
-        
+
     def __get__(self, obj, objtype):
         """
         Return an absolute, normalized path (see resolve_path).
@@ -1238,12 +1238,12 @@ class Path(Parameter):
         return self._resolve(raw_path)
 
     def __getstate__(self):
-        # don't want to pickle the search_paths        
+        # don't want to pickle the search_paths
         state = super(Path,self).__getstate__()
-        
+
         if 'search_paths' in state:
             state['search_paths'] = []
-        
+
         return state
 
 
@@ -1253,38 +1253,38 @@ class Filename(Path):
     Parameter that can be set to a string specifying the path of a file.
 
     The string should be specified in UNIX style, but it will be
-    returned in the format of the user's operating system. 
+    returned in the format of the user's operating system.
 
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None); 
+      search_paths is not None);
     or
-    
+
     * any of the paths searched by resolve_path() (if search_paths
       is None).
     """
-    
+
     def _resolve(self, path):
         if self.search_paths:
             return resolve_path(path, path_to_file=True, search_paths=self.search_paths)
         else:
-            return resolve_path(path, path_to_file=True)       
+            return resolve_path(path, path_to_file=True)
 
-            
+
 class Foldername(Path):
     """
     Parameter that can be set to a string specifying the path of a folder.
 
     The string should be specified in UNIX style, but it will be
-    returned in the format of the user's operating system. 
+    returned in the format of the user's operating system.
 
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None); 
+      search_paths is not None);
     or
-    
+
     * any of the paths searched by resolve_dir_path() (if search_paths
       is None).
     """
@@ -1293,4 +1293,4 @@ class Foldername(Path):
         if self.search_paths:
             return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
         else:
-            return resolve_path(path, path_to_file=False)       
+            return resolve_path(path, path_to_file=False)

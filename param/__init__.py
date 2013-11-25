@@ -43,50 +43,62 @@ def produce_value(value_obj):
 
 class Forever(object):
     """
-    Forever instances are used to indicate infinite time durations. All
-     operators on Forever() return Forever() apart from the comparison and
-     equality operators. Equality works by checking whether the two objects are
-     both instances of this class.
+    An instance of this class represents an infinite time duration.
+    All operators on Forever() return Forever(), apart from the
+    comparison and equality operators. Equality works by checking
+    whether the two objects are both instances of this class.
     """
-    def __eq__(self, other):
-        return isinstance(other, self.__class__)
-    def __ne__(self, other): return not self== other
-    def __lt__(self, other):   return False
-    def __le__(self, other):  return False
-    def __gt__(self, other):   return True
-    def __ge__(self, other):   return True
-    def __add__(self, other):  return self
-    def __radd__(self, other): return self
-    def __ladd__(self, other): return self
-    def __sub__(self, other):  return self
-    def __iadd_(self, other):  return self
-    def __isub__(self, other): return self
-    def __repr__(self):        return "Forever()"
-    def __str__(self):         return repr(self)
+
+    def __eq__  (self,other): return isinstance(other,self.__class__)
+    def __ne__  (self,other): return not self==other
+    def __lt__  (self,other): return False
+    def __le__  (self,other): return False
+    def __gt__  (self,other): return True
+    def __ge__  (self,other): return True
+    def __add__ (self,other): return self
+    def __radd__(self,other): return self
+    def __ladd__(self,other): return self
+    def __sub__ (self,other): return self
+    def __iadd_ (self,other): return self
+    def __isub__(self,other): return self
+    def __repr__(self):       return "Forever()"
+    def __str__ (self):       return repr(self)
 
 
 
 class Time(Parameterized):
     """
-    A Time object in an example of a typical time_fn (a callable that returns
-    the time) that also encapsulates many common operations involve a single
-    timebase shared across multiple different objects. It allows time to be
-    represented using exact numeric types, avoid floating point issues, and
-    allows time to be iterated (or stepped through) using a fixed timestep.
+    A callable object returning a number for the current time.  
 
-    When used as a context manager using the 'with' statement (and implemented
-    by the __enter__ and __exit__ special methods), entry into a context pushes
-    the state of the TimeLine object, allowing the timeline to be explored by
-    setting, incrementing or decrementing time as desired. This allows the state
-    of time-dependent objects to be modified as a function of time within the
-    context's block. This is appropriate for manipulating individual objects
-    with a functional dependence on time and not for manipulating stateful
-    objects that assume time will be consistently updated across all objects in
-    a monotonic manner (e.g. components of a complex simulator).
+    Here 'time' is an abstract concept that can be interpreted in any
+    useful way.  For instance, in a simulation, it would be the
+    current simulation time, while in a turn-taking game it could be
+    the number of moves so far.  The key intended usage is to allow
+    independent Parameterized objects with Dynamic parameters to
+    remain consistent with a global reference.
 
-    Note that that the time value of a new Time object is 0.0, converted to the
-    chosen time type. Here is an illustration of how time can be manipulated
-    using a Time object:
+    The time datatype (time_type) is configurable, but should
+    typically be an exact numeric type like an integer or a rational,
+    so that small floating-point errors do not accumulate as time is
+    incremented repeatedly.
+
+    When used as a context manager using the 'with' statement
+    (implemented by the __enter__ and __exit__ special methods), entry
+    into a context pushes the state of the Time object, allowing the
+    effect of changes to the time value to be explored by setting,
+    incrementing or decrementing time as desired. This allows the
+    state of time-dependent objects to be modified temporarily as a
+    function of time, within the context's block. For instance, you
+    could use the context manager to "see into the future" to collect
+    data over multiple times, without affecting the global time state
+    once exiting the context. Of course, you need to be careful not to
+    do anything while in context that would affect the lasting state
+    of your other objects, if you want things to return to their
+    starting state when exiting the context.
+
+    The starting time value of a new Time object is 0, converted to
+    the chosen time type. Here is an illustration of how time can be
+    manipulated using a Time object:
 
     >>> with Time(until=20, timestep=1, autostep=False) as t:  # Entering a context
     ...     'Setting the initial time to %s' % t(5)
@@ -106,54 +118,64 @@ class Time(Parameterized):
 
     forever = Forever()
 
-    time_type = Parameter(default=int, constant=True, doc = """
-        Callable for converting user-specified times into the numeric type to be
-        used for time-varying (Dynamic) parameters.
+    time_type = Parameter(default=int, constant=True, doc="""
+        Callable that Time will use to convert user-specified time
+        values into the current time; all times will be of the resulting
+        numeric type.
 
-       For instance, one might wish to use arbitrary precision floating-point
-       time to avoid accumulating rounding errors.  If a time-dependent
-       parameter is stepped every 0.05 time units, after 20 such steps using
-       floats the value of 1.0 will not be reached exactly, but will instead be
-       slightly higher or lower.  With an arbitrary precision float type such a
-       series of steps can be guaranteed to reach 1.0 exactly.  Alternatively,
-       one might wish to use a rational type so that events can be guaranteed to
-       happen a certain number of times in a given interval, even if the ratio
-       cannot be expressed as an even decimal or binary fraction.
+        By default, time is of integer type, but you can supply any
+        arbitrary-precision type like a fixed-point decimal or a
+        rational, to allow fractional times.  Floating-point times are
+        also allowed, but are not recommended because they will suffer
+        from accumulated rounding errors.  For instance, incrementing
+        a floating-point value 0.0 by 0.05, 20 times, will not reach
+        1.0 exactly.  Instead, it will be slightly higher than 1.0,
+        because 0.05 cannot be represented exactly in a standard
+        floating point numeric type. Fixed-point or rational types
+        should be able to handle such computations exactly, avoiding
+        accumulation issues over long time intervals.
 
-       Some potentially useful exact number classes::
+        Some potentially useful exact number classes::
+        
+         - int: Suitable if all times can be expressed as integers.
+           appropriate.
+        
+         - Python's decimal.Decimal and fractions.Fraction classes:
+           widely available but slow and also awkward to specify times
+           (e.g. cannot simply type 0.05, but have to use a special
+           constructor or a string).
+        
+         - fixedpoint.FixedPoint: Allows a natural representation of
+           times in decimal notation, but very slow and needs to be
+           installed separately.
 
-        - int: If the time can be expressed as integers only, default is
-          appropriate.
+         - gmpy.mpq: Allows a natural representation of times in
+           decimal notation, and very fast because it uses the GNU
+           Multi-Precision library, but needs to be installed
+           separately and depends on a non-Python library.  gmpy.mpq
+           is gmpy's rational type.
+        """)
 
-        - Python's decimal.Decimal and fractions.Fraction classes.
+    timestep = Parameter(default=1.0,doc="""
+        Stepsize to be used for autostepping and the iterator interface.
+        Time can be advanced or decremented by any value, not just
+        those corresponding to the stepsize, and so this value is only
+        a default.""")
 
-        - fixedpoint.FixedPoint: Third party package offering pure Python
-          fixed-point numbers, but quite slow.
-
-        - gmpy.mpq: Third party package offering access to the fast GNU
-          Multi-Precision library (which requires GMP to be built); gmpy.mpq is
-          gmpy's rational type.
-    """)
-
-    timestep = Parameter(default=1.0,doc = """
-       The default step size used by the iterator interface and used to advance
-       the time per call if the autostep parameter is enabled. """)
-
-    until = Parameter(default=forever, doc="""
-         Declaration of an expected end to the timeline. When
-         using the iterator interface, iteration will end before
-         this value is exceeded.
-
-         By default, the timeline extends forever, and so the
-         iterator always advances.""")
+    until = Parameter(default=forever,doc="""
+         Declaration of an expected end to time values, if any.  When
+         using the iterator interface, iteration will end before this
+         value is exceeded.""")
 
     autostep = Parameter(default=False, doc="""
-        Whether to step forward by a single timestep per call up to the 'until'
-        value (if finite). Equivalent to advancing the timeline using the next()
-        method after each call.""")
+        Whether to step forward by the default timestep after every call.
+        Respects the 'until' value, if any. Equivalent to advancing
+        the time using the next() method after each call, and is
+        useful if all that's needed from time is that it is
+        monotonically increasing.""")
+
 
     def __init__(self, **params):
-
         super(Time, self).__init__(**params)
         self._time = self.time_type(0)
         self._exhausted = False
@@ -177,6 +199,7 @@ class Time(Parameterized):
 
     def __iter__(self): return self
 
+
     def next(self):
         time = self._time
         timestep = self.time_type(self.timestep)
@@ -192,14 +215,17 @@ class Time(Parameterized):
 
     def __call__(self, val=None, time_type=None):
         """
-        Returns the time value when called without arguments. If val is
-        supplied, sets the time to val. If time_type is specified, the object
-        will use the new time_type starting with the given val (which must be
-        specified).
+        When called with no arguments, returns the current time value.
+        
+        When called with a specified val, sets the time to it. 
 
-        Specifying the time_type in call is the correct way to set the time_type
-        once a Time object has been constructed.
+        When called with a specified time_type, changes the time_type
+        and sets the current time to the given val (which *must* be
+        specified) converted to that time type.  To ensure that 
+        the current state remains consistent, this is normally the only
+        way to change the time_type of an existing Time instance.
         """
+
         if time_type and val is None:
             raise Exception("Please specify a value for the new time_type.")
         if time_type:
@@ -227,9 +253,7 @@ class Time(Parameterized):
 
 
     def __enter__(self):
-        """
-        Enter the context and push the current state.
-        """
+        """Enter the context and push the current state."""
         self._pushed_state = [self._time, self.timestep, self.until]
         self.in_context = True
         return self
@@ -237,9 +261,10 @@ class Time(Parameterized):
 
     def __exit__(self, exc, *args):
         """
-        The StopIteration exception raised in context will force the context to
-        exit. Any other exception exc that is raised in the block will not be
-        caught.
+        Exit from the current context, restoring the previous state.
+        The StopIteration exception raised in context will force the
+        context to exit. Any other exception exc that is raised in the
+        block will not be caught.
         """
         self._time, self.timestep, self.until = self._pushed_state
         self.in_context = False

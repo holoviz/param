@@ -191,11 +191,9 @@ class Time(Parameterized):
     def __eq__(self, other):
         if not isinstance(other, Time):
             return False
-        if self.timestep != other.timestep:
-            return False
-        if self.until != other.until:
-            return False
-        if self.autostep != other.autostep:
+        self_params = (self.timestep,self.until,self.autostep)
+        other_params = (other.timestep,other.until,other.autostep)
+        if self_params != other_params:
             return False
         return True
 

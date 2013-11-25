@@ -96,12 +96,16 @@ def get_occupied_slots(instance):
 
 def all_equal(arg1,arg2):
     """
-    Return a single boolean for arg1==arg2, even for numpy arrays.
+    Return a single boolean for arg1==arg2, even for numpy arrays
+    using element-wise comparison.
 
     Uses all(arg1==arg2) for sequences, and arg1==arg2 otherwise.
+
+    If both objects have an '_infinitely_iterable' attribute, they are
+    not be zipped together and are compared directly instead.
     """
-    if arg1.__class__.__name__ == arg2.__class__.__name__  == 'Time':
-        return arg1 == arg2
+    if all(hasattr(el, '_infinitely_iterable') for el in [arg1,arg2]):
+        return arg1==arg2
     try:
         return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
     except TypeError:

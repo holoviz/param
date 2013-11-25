@@ -116,6 +116,8 @@ class Time(Parameterized):
     'The until parameter may be exceeded outside iteration: 22'
     """
 
+    _infinitely_iterable = True
+
     forever = Forever()
 
     time_type = Parameter(default=int, constant=True, doc="""

@@ -27,7 +27,9 @@ from parameterized import Parameterized, Parameter, String, \
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
 main=Parameterized(name="main")
 
-
+# A global random seed available for controlling the behaviour of
+# parameterized objects with random state.
+random_seed = 42
 
 def produce_value(value_obj):
     """

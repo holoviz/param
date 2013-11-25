@@ -100,6 +100,8 @@ def all_equal(arg1,arg2):
 
     Uses all(arg1==arg2) for sequences, and arg1==arg2 otherwise.
     """
+    if arg1.__class__.__name__ == arg2.__class__.__name__  == 'Time':
+        return arg1 == arg2
     try:
         return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
     except TypeError:

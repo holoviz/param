@@ -159,6 +159,22 @@ class Time(Parameterized):
         self._exhausted = False
 
 
+    def __eq__(self, other):
+        if not isinstance(other, Time):
+            return False
+        if self.timestep != other.timestep:
+            return False
+        if self.until != other.until:
+            return False
+        if self.autostep != other.autostep:
+            return False
+        return True
+
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
     def __iter__(self): return self
 
     def next(self):

@@ -192,6 +192,7 @@ class Time(Parameterized):
         super(Time, self).__init__(**params)
         self._time = self.time_type(0)
         self._exhausted = None
+        self._pushed_state = []
 
 
     def __eq__(self, other):
@@ -264,7 +265,7 @@ class Time(Parameterized):
 
     def __enter__(self):
         """Enter the context and push the current state."""
-        self._pushed_state = [self._time, self.timestep, self.until]
+        self._pushed_state.append((self._time, self.timestep, self.until))
         self.in_context = True
         return self
 
@@ -276,8 +277,8 @@ class Time(Parameterized):
         context to exit. Any other exception exc that is raised in the
         block will not be caught.
         """
-        self._time, self.timestep, self.until = self._pushed_state
-        self.in_context = False
+        (self._time, self.timestep, self.until) = self._pushed_state.pop()
+        self.in_context = len(self._pushed_state) != 0
         if exc is StopIteration:
             return True
 

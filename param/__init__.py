@@ -303,12 +303,13 @@ class Dynamic(Parameter):
 
     Setting Dynamic.time_fn allows the production of dynamic values to
     be controlled: a new value will be produced only if the current
-    value of time_fn is greater than what it was last time the
+    value of time_fn is different from what it was the last time the
     parameter value was requested.
 
-    By default, time_fn for all Dynamic parameters is a single Time instance
-    designed to allow general manipulations of time. It may be set to some other
-    callable as required so long as a number is returned on each call.
+    By default, time_fn for all Dynamic parameters is a single Time
+    instance designed to allow general manipulations of time. It may
+    be set to some other callable as required so long as a number is
+    returned on each call.
     """
     # CB: making Dynamic support iterators and generators is sf.net
     # feature request 1864370. When working on that task, note that
@@ -387,10 +388,10 @@ class Dynamic(Parameter):
         If there is no time_fn, then a new value will be returned
         (i.e. gen will be asked to produce a new value).
 
-        If force is True, or the value of time_fn() is greater than
-        what it was was last time produce_value was called, a
-        new value will be produced and returned. Otherwise,
-        the last value gen produced will be returned.
+        If force is True, or the value of time_fn() is different from
+        what it was was last time produce_value was called, a new
+        value will be produced and returned. Otherwise, the last value
+        gen produced will be returned.
         """
         if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
@@ -404,7 +405,7 @@ class Dynamic(Parameter):
 
             time = time_fn()
 
-            if force or time>gen._Dynamic_time:
+            if force or time!=gen._Dynamic_time:
                 value = produce_value(gen)
                 gen._Dynamic_last = value
                 gen._Dynamic_time = time

@@ -105,20 +105,26 @@ class Time(Parameterized):
     the chosen time type. Here is an illustration of how time can be
     manipulated using a Time object:
 
-    >>> with Time(until=20, timestep=1, autostep=False) as t:  # Entering a context
-    ...     'Setting the initial time to %s' % t(5)
-    ...     t += 10                  # Increment by 10
-    ...     t -= 5                   # Decrement by 5
+    >>> time = Time(until=20, timestep=1, autostep=False)
+    >>> 'The initial time is %s' % time()
+    'The initial time is 0'
+    >>> 'Setting the time to %s' % time(5)
+    'Setting the time to 5'
+    >>> time += 5
+    >>> 'After incrementing by 5, the time is %s' % time()
+    'After incrementing by 5, the time is 10'
+    >>> with time as t:  # Entering a context
     ...     'Time before iteration: %s' % t()
     ...     'Iteration: %s' % [val for val in t]
     ...     'Time after iteration: %s' % t()
     ...     t += 2
     ...     'The until parameter may be exceeded outside iteration: %s' % t()
-    'Setting the initial time to 5'
     'Time before iteration: 10'
     'Iteration: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]'
     'Time after iteration: 20'
     'The until parameter may be exceeded outside iteration: 22'
+    >>> 'After exiting the context the time is back to %s' % time()
+    'After exiting the context the time is back to 10'
     """
 
     _infinitely_iterable = True
@@ -185,7 +191,7 @@ class Time(Parameterized):
     def __init__(self, **params):
         super(Time, self).__init__(**params)
         self._time = self.time_type(0)
-        self._exhausted = False
+        self._exhausted = None
 
 
     def __eq__(self, other):
@@ -206,17 +212,16 @@ class Time(Parameterized):
 
 
     def next(self):
-        time = self._time
         timestep = self.time_type(self.timestep)
 
-        if (time + timestep) <= self.until:
-            self._time += timestep
-        elif not self._exhausted:
-            self._exhausted = True
-        else:
+        if self._exhausted is None:
             self._exhausted = False
+        elif (self._time + timestep) <= self.until:
+            self._time += timestep
+        else:
+            self._exhausted = None
             raise StopIteration
-        return time
+        return self._time
 
     def __call__(self, val=None, time_type=None):
         """

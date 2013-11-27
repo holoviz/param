@@ -105,7 +105,7 @@ class Time(Parameterized):
     the chosen time type. Here is an illustration of how time can be
     manipulated using a Time object:
 
-    >>> time = Time(until=20, timestep=1, autostep=False)
+    >>> time = Time(until=20, timestep=1)
     >>> 'The initial time is %s' % time()
     'The initial time is 0'
     >>> 'Setting the time to %s' % time(5)
@@ -170,7 +170,7 @@ class Time(Parameterized):
         """)
 
     timestep = Parameter(default=1.0,doc="""
-        Stepsize to be used for autostepping and the iterator interface.
+        Stepsize to be used with the iterator interface.
         Time can be advanced or decremented by any value, not just
         those corresponding to the stepsize, and so this value is only
         a default.""")
@@ -179,13 +179,6 @@ class Time(Parameterized):
          Declaration of an expected end to time values, if any.  When
          using the iterator interface, iteration will end before this
          value is exceeded.""")
-
-    autostep = Parameter(default=False, doc="""
-        Whether to step forward by the default timestep after every call.
-        Respects the 'until' value, if any. Equivalent to advancing
-        the time using the next() method after each call, and is
-        useful if all that's needed from time is that it is
-        monotonically increasing.""")
 
 
     def __init__(self, **params):
@@ -198,8 +191,8 @@ class Time(Parameterized):
     def __eq__(self, other):
         if not isinstance(other, Time):
             return False
-        self_params = (self.timestep,self.until,self.autostep)
-        other_params = (other.timestep,other.until,other.autostep)
+        self_params = (self.timestep,self.until)
+        other_params = (other.timestep,other.until)
         if self_params != other_params:
             return False
         return True
@@ -246,10 +239,7 @@ class Time(Parameterized):
             type_param.constant = True
         if val is not None:
             self._time = self.time_type(val)
-            return self._time
-        try:
-            if self.autostep: self.next()
-        except StopIteration: pass
+
         return self._time
 
 
@@ -300,16 +290,17 @@ class Dynamic(Parameter):
     callable class, rather than a named function or a lambda function,
     otherwise the object will not be picklable or deepcopyable.]
 
+    If set as time_dependent, setting the Dynamic.time_fn allows the
+    production of dynamic values to be controlled: a new value will be
+    produced only if the current value of time_fn is different from
+    what it was the last time the parameter value was requested.
 
-    Setting Dynamic.time_fn allows the production of dynamic values to
-    be controlled: a new value will be produced only if the current
-    value of time_fn is different from what it was the last time the
-    parameter value was requested.
-
-    By default, time_fn for all Dynamic parameters is a single Time
-    instance designed to allow general manipulations of time. It may
-    be set to some other callable as required so long as a number is
-    returned on each call.
+    By default, the Dynamic parameters are not time_dependent so that
+    new values are generated on every call regardless of the time. The
+    default time_fn used when time_dependent is a single Time instance
+    that allows general manipulations of time. It may be set to some
+    other callable as required so long as a number is returned on each
+    call.
     """
     # CB: making Dynamic support iterators and generators is sf.net
     # feature request 1864370. When working on that task, note that
@@ -317,7 +308,8 @@ class Dynamic(Parameter):
     # replaced by something that matches whatever Dynamic becomes
     # capable of using.
 
-    time_fn = Time(autostep=True) # Time will advance on each call.
+    time_fn = Time()
+    time_dependent = False
 
     # CBENHANCEMENT: Add an 'epsilon' slot.
     # See email 'Re: simulation-time-controlled Dynamic parameters'
@@ -393,6 +385,8 @@ class Dynamic(Parameter):
         value will be produced and returned. Otherwise, the last value
         gen produced will be returned.
         """
+
+        force = force or not self.time_dependent
         if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:

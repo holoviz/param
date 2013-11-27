@@ -386,13 +386,12 @@ class Dynamic(Parameter):
         gen produced will be returned.
         """
 
-        force = force or not self.time_dependent
         if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:
             time_fn = self.time_fn
 
-        if time_fn is None:
+        if (time_fn is None) or (not self.time_dependent):
             value = produce_value(gen)
             gen._Dynamic_last = value
         else:

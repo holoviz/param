@@ -1590,7 +1590,7 @@ class ParameterizedFunction(Parameterized):
         return self.__class__.__name__+"()"
 
     @bothmethod
-    def instance(self_or_cls,*args,**params):
+    def instance(self_or_cls,**params):
         """
         Return an instance of this class, copying parameters from any
         existing instance provided.
@@ -1605,7 +1605,7 @@ class ParameterizedFunction(Parameterized):
             params.pop('name')
             cls = self_or_cls.__class__
 
-        inst=Parameterized.__new__(cls,*args)
+        inst=Parameterized.__new__(cls)
         Parameterized.__init__(inst,**params)
         return inst
 

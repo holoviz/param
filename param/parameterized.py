@@ -1569,8 +1569,10 @@ class ParamOverrides(dict):
         return extra_keywords
 
 
-def _new_parameterized(*a,**k):
-    return Parameterized.__new__(*a,**k)
+# Helper function required by ParameterizedFunction.__reduce__
+def _new_parameterized(cls):
+    return Parameterized.__new__(cls)
+
 
 class ParameterizedFunction(Parameterized):
     """

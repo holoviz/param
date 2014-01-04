@@ -693,7 +693,8 @@ class Boolean(Parameter):
 
     __slots__ = ['bounds','allow_None']
 
-    # CB: what does bounds=(0,1) mean/do for this Parameter?
+    # CB: what does bounds=(0,1) mean/do for this Parameter? (Maybe we meant to inherit from
+    # Integer?)
     def __init__(self,default=False,bounds=(0,1),allow_None=False,**params):
         self.bounds = bounds
         self.allow_None = (default is None or allow_None)

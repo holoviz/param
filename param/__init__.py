@@ -151,7 +151,6 @@ class Time(Parameterized):
         Some potentially useful exact number classes::
 
          - int: Suitable if all times can be expressed as integers.
-           appropriate.
 
          - Python's decimal.Decimal and fractions.Fraction classes:
            widely available but slow and also awkward to specify times

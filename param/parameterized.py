@@ -2,7 +2,6 @@
 Generic support for objects with full-featured Parameters and
 messaging.
 """
-__version__='$Revision$'
 
 import copy
 import re

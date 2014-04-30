@@ -12,7 +12,6 @@ parameterized.Parameterized classes for more information.
 This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number).
 """
-__version__='$Revision$'
 
 # CEBALERT: we need more documentation above, now that params is a
 # separate package.
@@ -21,6 +20,11 @@ import os.path
 
 from parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
+
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
 
 #: Top-level object to allow messaging not tied to a particular
@@ -1299,3 +1303,4 @@ class Foldername(Path):
             return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
         else:
             return resolve_path(path, path_to_file=False)
+

@@ -2,12 +2,19 @@
 
 from distutils.core import setup
 
+import versioneer
+versioneer.versionfile_source = 'param/_version.py'
+versioneer.versionfile_build = 'param/_version.py'
+versioneer.tag_prefix = '' 
+versioneer.parentdir_prefix = 'param-' 
+
 
 setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version='1.0',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read(),
     author= "IOAM",

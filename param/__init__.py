@@ -12,7 +12,6 @@ parameterized.Parameterized classes for more information.
 This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number).
 """
-__version__='$Revision$'
 
 # CEBALERT: we need more documentation above, now that params is a
 # separate package.
@@ -29,6 +28,35 @@ import collections
 main=Parameterized(name="main")
 
 
+# A global random seed available for controlling the behaviour of
+# parameterized objects with random state.
+random_seed = 42
+
+
+# Set __version__ using versioneer.
+#
+# Encased in a try/except to guarantee this does not interfere with
+# using param (i.e. __init__.py and parameterized.py remain the only
+# two necessary files).
+try:
+    from ._version import get_versions
+    __version__ = get_versions()['version']
+    del get_versions
+    if __version__=='unknown': 
+        # Think 'unknown' is what versioneer returns if unable to
+        # determine version info
+        raise ValueError       
+except:
+    main.warning("""\
+Unable to determine the version of this copy of param.
+
+For an official release, the version is stored in param/_version.py.
+
+For a development copy, the version information is requested from Git
+by param/_version.py.
+""")
+    __version__ = 'unknown'
+
 
 def produce_value(value_obj):
     """
@@ -42,47 +70,277 @@ def produce_value(value_obj):
         return value_obj
 
 
+class Infinity(object):
+    """
+    An instance of this class represents an infinite value. Unlike
+    Python's float('inf') value, this object can be safely compared
+    with gmpy numeric types across different gmpy versions.
+
+    All operators on Infinity() return Infinity(), apart from the
+    comparison and equality operators. Equality works by checking
+    whether the two objects are both instances of this class.
+    """
+
+    def __eq__  (self,other): return isinstance(other,self.__class__)
+    def __ne__  (self,other): return not self==other
+    def __lt__  (self,other): return False
+    def __le__  (self,other): return False
+    def __gt__  (self,other): return True
+    def __ge__  (self,other): return True
+    def __add__ (self,other): return self
+    def __radd__(self,other): return self
+    def __ladd__(self,other): return self
+    def __sub__ (self,other): return self
+    def __iadd_ (self,other): return self
+    def __isub__(self,other): return self
+    def __repr__(self):       return "Infinity()"
+    def __str__ (self):       return repr(self)
+
+
+
+class Time(Parameterized):
+    """
+    A callable object returning a number for the current time.
+
+    Here 'time' is an abstract concept that can be interpreted in any
+    useful way.  For instance, in a simulation, it would be the
+    current simulation time, while in a turn-taking game it could be
+    the number of moves so far.  The key intended usage is to allow
+    independent Parameterized objects with Dynamic parameters to
+    remain consistent with a global reference.
+
+    The time datatype (time_type) is configurable, but should
+    typically be an exact numeric type like an integer or a rational,
+    so that small floating-point errors do not accumulate as time is
+    incremented repeatedly.
+
+    When used as a context manager using the 'with' statement
+    (implemented by the __enter__ and __exit__ special methods), entry
+    into a context pushes the state of the Time object, allowing the
+    effect of changes to the time value to be explored by setting,
+    incrementing or decrementing time as desired. This allows the
+    state of time-dependent objects to be modified temporarily as a
+    function of time, within the context's block. For instance, you
+    could use the context manager to "see into the future" to collect
+    data over multiple times, without affecting the global time state
+    once exiting the context. Of course, you need to be careful not to
+    do anything while in context that would affect the lasting state
+    of your other objects, if you want things to return to their
+    starting state when exiting the context.
+
+    The starting time value of a new Time object is 0, converted to
+    the chosen time type. Here is an illustration of how time can be
+    manipulated using a Time object:
+
+    >>> time = Time(until=20, timestep=1)
+    >>> 'The initial time is %s' % time()
+    'The initial time is 0'
+    >>> 'Setting the time to %s' % time(5)
+    'Setting the time to 5'
+    >>> time += 5
+    >>> 'After incrementing by 5, the time is %s' % time()
+    'After incrementing by 5, the time is 10'
+    >>> with time as t:  # Entering a context
+    ...     'Time before iteration: %s' % t()
+    ...     'Iteration: %s' % [val for val in t]
+    ...     'Time after iteration: %s' % t()
+    ...     t += 2
+    ...     'The until parameter may be exceeded outside iteration: %s' % t()
+    'Time before iteration: 10'
+    'Iteration: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]'
+    'Time after iteration: 20'
+    'The until parameter may be exceeded outside iteration: 22'
+    >>> 'After exiting the context the time is back to %s' % time()
+    'After exiting the context the time is back to 10'
+    """
+
+    _infinitely_iterable = True
+
+    forever = Infinity()
+
+    time_type = Parameter(default=int, constant=True, doc="""
+        Callable that Time will use to convert user-specified time
+        values into the current time; all times will be of the resulting
+        numeric type.
+
+        By default, time is of integer type, but you can supply any
+        arbitrary-precision type like a fixed-point decimal or a
+        rational, to allow fractional times.  Floating-point times are
+        also allowed, but are not recommended because they will suffer
+        from accumulated rounding errors.  For instance, incrementing
+        a floating-point value 0.0 by 0.05, 20 times, will not reach
+        1.0 exactly.  Instead, it will be slightly higher than 1.0,
+        because 0.05 cannot be represented exactly in a standard
+        floating point numeric type. Fixed-point or rational types
+        should be able to handle such computations exactly, avoiding
+        accumulation issues over long time intervals.
+
+        Some potentially useful exact number classes::
+
+         - int: Suitable if all times can be expressed as integers.
+
+         - Python's decimal.Decimal and fractions.Fraction classes:
+           widely available but slow and also awkward to specify times
+           (e.g. cannot simply type 0.05, but have to use a special
+           constructor or a string).
+
+         - fixedpoint.FixedPoint: Allows a natural representation of
+           times in decimal notation, but very slow and needs to be
+           installed separately.
+
+         - gmpy.mpq: Allows a natural representation of times in
+           decimal notation, and very fast because it uses the GNU
+           Multi-Precision library, but needs to be installed
+           separately and depends on a non-Python library.  gmpy.mpq
+           is gmpy's rational type.
+        """)
+
+    timestep = Parameter(default=1.0,doc="""
+        Stepsize to be used with the iterator interface.
+        Time can be advanced or decremented by any value, not just
+        those corresponding to the stepsize, and so this value is only
+        a default.""")
+
+    until = Parameter(default=forever,doc="""
+         Declaration of an expected end to time values, if any.  When
+         using the iterator interface, iteration will end before this
+         value is exceeded.""")
+
+
+    def __init__(self, **params):
+        super(Time, self).__init__(**params)
+        self._time = self.time_type(0)
+        self._exhausted = None
+        self._pushed_state = []
+
+
+    def __eq__(self, other):
+        if not isinstance(other, Time):
+            return False
+        self_params = (self.timestep,self.until)
+        other_params = (other.timestep,other.until)
+        if self_params != other_params:
+            return False
+        return True
+
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+    def __iter__(self): return self
+
+
+    def next(self):
+        timestep = self.time_type(self.timestep)
+
+        if self._exhausted is None:
+            self._exhausted = False
+        elif (self._time + timestep) <= self.until:
+            self._time += timestep
+        else:
+            self._exhausted = None
+            raise StopIteration
+        return self._time
+
+    def __call__(self, val=None, time_type=None):
+        """
+        When called with no arguments, returns the current time value.
+
+        When called with a specified val, sets the time to it.
+
+        When called with a specified time_type, changes the time_type
+        and sets the current time to the given val (which *must* be
+        specified) converted to that time type.  To ensure that
+        the current state remains consistent, this is normally the only
+        way to change the time_type of an existing Time instance.
+        """
+
+        if time_type and val is None:
+            raise Exception("Please specify a value for the new time_type.")
+        if time_type:
+            type_param = self.params('time_type')
+            type_param.constant = False
+            self.time_type = time_type
+            type_param.constant = True
+        if val is not None:
+            self._time = self.time_type(val)
+
+        return self._time
+
+
+    def __iadd__(self, other):
+        self._time = self._time + self.time_type(other)
+        return self
+
+
+    def __isub__(self, other):
+        self._time = self._time - self.time_type(other)
+        return self
+
+
+    def __enter__(self):
+        """Enter the context and push the current state."""
+        self._pushed_state.append((self._time, self.timestep, self.until))
+        self.in_context = True
+        return self
+
+
+    def __exit__(self, exc, *args):
+        """
+        Exit from the current context, restoring the previous state.
+        The StopIteration exception raised in context will force the
+        context to exit. Any other exception exc that is raised in the
+        block will not be caught.
+        """
+        (self._time, self.timestep, self.until) = self._pushed_state.pop()
+        self.in_context = len(self._pushed_state) != 0
+        if exc is StopIteration:
+            return True
+
+
 
 class Dynamic(Parameter):
     """
     Parameter whose value can be generated dynamically by a callable
     object.
-    
+
     If a Parameter is declared as Dynamic, it can be set a callable
     object (such as a function or callable class), and getting the
     parameter's value will call that callable.
 
     Note that at present, the callable object must allow attributes
     to be set on itself.
-    
+
     [Python 2.4 limitation: the callable object must be an instance of a
     callable class, rather than a named function or a lambda function,
     otherwise the object will not be picklable or deepcopyable.]
 
+    If set as time_dependent, setting the Dynamic.time_fn allows the
+    production of dynamic values to be controlled: a new value will be
+    produced only if the current value of time_fn is different from
+    what it was the last time the parameter value was requested.
 
-    Setting Dynamic.time_fn allows the production of dynamic values to
-    be controlled: a new value will be produced only if the current
-    value of time_fn is greater than what it was last time the
-    parameter value was requested.
-
-    If time_fn is set to None, a new value is always produced.
-
-    If Dynamic.time_fn is set to something other than None, it must,
-    when called, produce a number.
+    By default, the Dynamic parameters are not time_dependent so that
+    new values are generated on every call regardless of the time. The
+    default time_fn used when time_dependent is a single Time instance
+    that allows general manipulations of time. It may be set to some
+    other callable as required so long as a number is returned on each
+    call.
     """
     # CB: making Dynamic support iterators and generators is sf.net
     # feature request 1864370. When working on that task, note that
     # detection of a dynamic generator by 'callable' needs to be
     # replaced by something that matches whatever Dynamic becomes
     # capable of using.
-    
-    time_fn = None # could add a slot for time_fn to allow instances
-                   # to override
-    
+
+    time_fn = Time()
+    time_dependent = False
+
     # CBENHANCEMENT: Add an 'epsilon' slot.
     # See email 'Re: simulation-time-controlled Dynamic parameters'
     # Dec 22, 2007 CB->JAB
-        
+
     def __init__(self,**params):
         """
         Call the superclass's __init__ and set instantiate=True if the
@@ -110,8 +368,8 @@ class Dynamic(Parameter):
 
         gen._saved_Dynamic_last = []
         gen._saved_Dynamic_time = []
-                
-        
+
+
     def __get__(self,obj,objtype):
         """
         Call the superclass's __get__; if the result is not dynamic
@@ -124,7 +382,7 @@ class Dynamic(Parameter):
             return gen
         else:
             return self._produce_value(gen)
-            
+
 
     def __set__(self,obj,val):
         """
@@ -136,7 +394,7 @@ class Dynamic(Parameter):
         """
         super(Dynamic,self).__set__(obj,val)
 
-        dynamic = isinstance(val, collections.Callable)        
+        dynamic = isinstance(val, collections.Callable)
         if dynamic: self._initialize_generator(val,obj)
         if not obj: self._set_instantiate(dynamic)
 
@@ -148,24 +406,25 @@ class Dynamic(Parameter):
         If there is no time_fn, then a new value will be returned
         (i.e. gen will be asked to produce a new value).
 
-        If force is True, or the value of time_fn() is greater than
-        what it was was last time produce_value was called, a
-        new value will be produced and returned. Otherwise,
-        the last value gen produced will be returned.
+        If force is True, or the value of time_fn() is different from
+        what it was was last time produce_value was called, a new
+        value will be produced and returned. Otherwise, the last value
+        gen produced will be returned.
         """
-        if hasattr(gen,"_Dynamic_time_fn"):            
+
+        if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:
             time_fn = self.time_fn
-        
-        if time_fn is None:
+
+        if (time_fn is None) or (not self.time_dependent):
             value = produce_value(gen)
             gen._Dynamic_last = value
         else:
-            
+
             time = time_fn()
 
-            if force or time>gen._Dynamic_time:
+            if force or time!=gen._Dynamic_time:
                 value = produce_value(gen)
                 gen._Dynamic_last = value
                 gen._Dynamic_time = time
@@ -186,22 +445,22 @@ class Dynamic(Parameter):
     def _inspect(self,obj,objtype=None):
         """Return the last generated value for this parameter."""
         gen=super(Dynamic,self).__get__(obj,objtype)
-        
-        if hasattr(gen,'_Dynamic_last'):
-            return gen._Dynamic_last 
-        else:
-            return gen 
 
-    
+        if hasattr(gen,'_Dynamic_last'):
+            return gen._Dynamic_last
+        else:
+            return gen
+
+
     def _force(self,obj,objtype=None):
         """Force a new value to be generated, and return it."""
         gen=super(Dynamic,self).__get__(obj,objtype)
-        
+
         if hasattr(gen,'_Dynamic_last'):
             return self._produce_value(gen,force=True)
         else:
-            return gen 
-        
+            return gen
+
 
 import numbers
 _is_number = lambda obj: isinstance(obj, numbers.Number)
@@ -254,7 +513,7 @@ class Number(Dynamic):
     """
 
     __slots__ = ['bounds','_softbounds','allow_None','inclusive_bounds','set_hook']
- 
+
     def __init__(self,default=0.0,bounds=None,softbounds=None,allow_None=False,inclusive_bounds=(True,True),**params):
         """
         Initialize this parameter object and store the bounds.
@@ -262,14 +521,14 @@ class Number(Dynamic):
         Non-dynamic default values are checked against the bounds.
         """
         super(Number,self).__init__(default=default,**params)
-        
+
         self.set_hook = identity_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
         self.allow_None = (default is None or allow_None)
-        if not isinstance(default, collections.Callable): self._check_value(default)  
-        
+        if not isinstance(default, collections.Callable): self._check_value(default)
+
 
     def __get__(self,obj,objtype):
         """
@@ -289,7 +548,7 @@ class Number(Dynamic):
         Set to the given value raising an exception if out of bounds.
         Also applies set_hook, providing support for conversions
         and transformations of the value.
-        """        
+        """
         val = self.set_hook(obj,val)
 
         if not isinstance(val, collections.Callable): self._check_value(val)
@@ -308,7 +567,7 @@ class Number(Dynamic):
             bounded_val = val
         super(Number,self).__set__(obj,bounded_val)
 
-    
+
     # CEBERRORALERT: doesn't take account of exclusive bounds. When
     # the gui uses set_in_bounds(), expecting to get acceptable
     # values, it actually gets an out-of-bounds error. When fixed,
@@ -333,7 +592,7 @@ class Number(Dynamic):
         if _is_number(val):
             if self.bounds is None:
                 return val
-            vmin, vmax = self.bounds 
+            vmin, vmax = self.bounds
             if vmin is not None:
                 if val < vmin:
                     return  vmin
@@ -344,7 +603,7 @@ class Number(Dynamic):
 
         elif self.allow_None and val is None:
             return val
-        
+
         else:
             # non-numeric value sent in: reverts to default value
             return  self.default
@@ -353,7 +612,7 @@ class Number(Dynamic):
 
 
     def _checkBounds(self, val):
-    
+
         if self.bounds is not None:
             vmin,vmax = self.bounds
             incmin,incmax = self.inclusive_bounds
@@ -386,9 +645,9 @@ class Number(Dynamic):
 ##              raise ValueError("Parameter '{}' must be in the range {}".format(self._attrib_name,self.rangestr()))
 
 ##         where self.rangestr() formats the range using the usual notation for
-##         indicating exclusivity, e.g. "[0,10)".     
-    
-    
+##         indicating exclusivity, e.g. "[0,10)".
+
+
     def _check_value(self,val):
         """
         Checks that the value is numeric and that it is within the hard
@@ -399,7 +658,7 @@ class Number(Dynamic):
 
         if not _is_number(val):
             raise ValueError("Parameter '{}' only takes numeric values".format(self._attrib_name))
-            
+
         self._checkBounds(val)
 
 
@@ -418,7 +677,7 @@ class Number(Dynamic):
         else:
             sl,su=self._softbounds
 
-                
+
         if sl is None: l = hl
         else:          l = sl
 
@@ -438,11 +697,10 @@ class Integer(Number):
 
         if not isinstance(val,int):
             raise ValueError("Parameter '{}' must be an integer.".format(self._attrib_name))
-            
-        self._checkBounds(val)    
+
+        self._checkBounds(val)
 
 
-            
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
@@ -457,24 +715,25 @@ class Boolean(Parameter):
 
     __slots__ = ['bounds','allow_None']
 
-    # CB: what does bounds=(0,1) mean/do for this Parameter?
+    # CB: what does bounds=(0,1) mean/do for this Parameter? (Maybe we meant to inherit from
+    # Integer?)
     def __init__(self,default=False,bounds=(0,1),allow_None=False,**params):
         self.bounds = bounds
         self.allow_None = (default is None or allow_None)
         Parameter.__init__(self,default=default,**params)
-        
+
     def __set__(self,obj,val):
         if self.allow_None:
             if not isinstance(val,bool) and val is not None:
                 raise ValueError("Boolean '{}' only takes a Boolean value or None.".format(
                                  self._attrib_name))
-    
+
             if val is not True and val is not False and val is not None:
                 raise ValueError("Boolean '{}' must be True, False, or None.".format(self._attrib_name))
         else:
             if not isinstance(val,bool):
                 raise ValueError("Boolean '{}' only takes a Boolean value.".format(self._attrib_name))
-    
+
             if val is not True and val is not False:
                 raise ValueError("Boolean '{}' must be True or False.".format(self._attrib_name))
 
@@ -498,21 +757,21 @@ class NumericTuple(Parameter):
             self.length = len(default)
         else:
             self.length = length
-            
+
         self._check(default)
         Parameter.__init__(self,default=default,**params)
-        
+
     def _check(self,val):
         if not isinstance(val,tuple):
             raise ValueError("NumericTuple '{}' only takes a tuple value.".format(self._attrib_name))
-        
+
         if not len(val)==self.length:
             raise ValueError("{}: tuple is not of the correct length ({} instead of {}).".format(
                              self._attrib_name,len(val),self.length))
         for n in val:
             if not _is_number(n):
                 raise ValueError("{}: tuple element is not numeric: {}.".format(self._attrib_name,str(n)))
-            
+
     def __set__(self,obj,val):
         self._check(val)
         super(NumericTuple,self).__set__(obj,val)
@@ -526,11 +785,11 @@ class XYCoordinates(NumericTuple):
         super(XYCoordinates,self).__init__(default=default,length=2,**params)
 
 
-                 
+
 class Callable(Parameter):
     """
     Parameter holding a value that is a callable object, such as a function.
-    
+
     A keyword argument instantiate=True should be provided when a
     function object is used that might have state.  On the other hand,
     regular standalone functions cannot be deepcopied as of Python
@@ -543,7 +802,7 @@ class Callable(Parameter):
         super(Callable,self).__set__(obj,val)
 
 
-        
+
 # CBNOTE: python now has abstract base classes, so we could update
 # this. At least if the check is in a method, all such checks could be
 # changed at once.
@@ -553,8 +812,8 @@ def _is_abstract(class_):
     except AttributeError:
         return False
 
-    
-    
+
+
 # CEBALERT: this should be a method of ClassSelector.
 def concrete_descendents(parentclass):
     """
@@ -573,8 +832,8 @@ def concrete_descendents(parentclass):
 
 class Composite(Parameter):
     """
-    A Parameter that is a composite of a set of other attributes of the class.  
-    
+    A Parameter that is a composite of a set of other attributes of the class.
+
     The constructor argument 'attribs' takes a list of attribute
     names, which may or may not be Parameters.  Getting the parameter
     returns a list of the values of the constituents of the composite,
@@ -606,7 +865,7 @@ class Composite(Parameter):
         """
         assert len(val) == len(self.attribs),"Compound parameter '{}' got the wrong number of values (needed {}, but got {}).".format(
                 self._attrib_name,len(self.attribs),len(val))
-        
+
         if not obj:
             for a,v in zip(self.attribs,val):
                 setattr(self.objtype,a,v)
@@ -623,11 +882,11 @@ class Selector(Parameter):
     """
 
     __abstract = True
-    
+
     def get_range(self):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
-    
+
 class ObjectSelector(Selector):
     """
     Parameter whose value must be one object from a list of possible objects.
@@ -664,13 +923,13 @@ class ObjectSelector(Selector):
 
         if default is not None and self.check_on_set is True:
             self._check_value(default)
-            
+
         super(ObjectSelector,self).__init__(default=default,instantiate=instantiate,**params)
-        
+
 
     # CBNOTE: if the list of objects is changed, the current value for
     # this parameter in existing POs could be out of the new range.
-    
+
     def compute_default(self):
         """
         If this parameter's compute_default_fn is callable, call it
@@ -680,7 +939,7 @@ class ObjectSelector(Selector):
         no longer None).
         """
         if self.default is None and isinstance(self.compute_default_fn, collections.Callable):
-            self.default=self.compute_default_fn() 
+            self.default=self.compute_default_fn()
             if self.default not in self.objects:
                 self.objects.append(self.default)
 
@@ -726,7 +985,7 @@ class ObjectSelector(Selector):
             d=dict( ((obj,obj) for obj in self.objects) )
         return d
 
-    
+
 class ClassSelector(Selector):
     """Parameter whose value is an instance of the specified class."""
 
@@ -750,7 +1009,7 @@ class ClassSelector(Selector):
         self._check_value(val,obj)
         super(ClassSelector,self).__set__(obj,val)
 
-        
+
     def get_range(self):
         """
         Return the possible types for this parameter's value.
@@ -789,7 +1048,7 @@ class List(Parameter):
 
     # Could add range() method from ClassSelector, to allow
     # list to be populated in the GUI
-    
+
     def __set__(self,obj,val):
         """Set to the given value, raising an exception if out of bounds."""
         self._check_bounds(val)
@@ -810,7 +1069,7 @@ class List(Parameter):
                 if not (min_length <= l <= max_length):
                     raise ValueError("{}: list length must be between {} and {} (inclusive)".format(self._attrib_name,min_length,max_length))
             elif min_length is not None:
-                if not min_length <= l: 
+                if not min_length <= l:
                     raise ValueError("{}: list length must be at least {}.".format(self._attrib_name,min_length))
             elif max_length is not None:
                 if not l <= max_length:
@@ -858,12 +1117,12 @@ class Array(ClassSelector):
         # CEBALERT: instead use python array as default?
         from numpy import ndarray
         super(Array,self).__init__(ndarray, allow_None=True, **params)
-                
+
 
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
-#   - use resolve_file_path() for paths to existing files to be read, 
-#   - use resolve_folder_path() for paths to existing folders to be read, 
+#   - use resolve_file_path() for paths to existing files to be read,
+#   - use resolve_folder_path() for paths to existing folders to be read,
 #     and normalize_path() for paths to new files to be written.
 
 class resolve_path(ParameterizedFunction):
@@ -889,7 +1148,7 @@ class resolve_path(ParameterizedFunction):
 
     path_to_file = Boolean(default=True, pickle_default_value=False, doc="""
         String specifying whether the path refers to a 'File' or a 'Folder'.""")
-        
+
     def __call__(self, path, **params):
         p = ParamOverrides(self, params)
 
@@ -908,12 +1167,12 @@ class resolve_path(ParameterizedFunction):
                     raise IOError("Folder '{}' not found.".format(path))
             else:
                 raise IOError("Type '{}' not recognised.".format(p.path_type))
-                
+
         else:
             paths_tried = []
             for prefix in p.search_paths:
                 try_path = os.path.join(os.path.normpath(prefix), path)
-                
+
                 if p.path_to_file:
                     if os.path.isfile(try_path):
                         return try_path
@@ -927,7 +1186,7 @@ class resolve_path(ParameterizedFunction):
 
             raise IOError(os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
-            
+
 class normalize_path(ParameterizedFunction):
     """
     Convert a UNIX-style path to the current OS's format,
@@ -957,7 +1216,7 @@ class normalize_path(ParameterizedFunction):
 class Path(Parameter):
     """
     Parameter that can be set to a string specifying the path of a file or folder.
- 
+
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
     the Filename or Foldername classes if you require discrimination
@@ -966,29 +1225,29 @@ class Path(Parameter):
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None); 
+      search_paths is not None);
 
     or
-    
+
     * any of the paths searched by resolve_path() (if search_paths
       is None).
     """
 
-    __slots__ = ['search_paths'] 
-    
+    __slots__ = ['search_paths']
+
     def __init__(self, default=None, search_paths=None, **params):
         if search_paths is None:
             search_paths = []
-        
+
         self.search_paths = search_paths
         super(Path,self).__init__(default,**params)
-            
+
     def _resolve(self, path):
         if self.search_paths:
             return resolve_path(path, search_paths=self.search_paths)
         else:
-            return resolve_path(path)                               
-        
+            return resolve_path(path)
+
     def __set__(self, obj, val):
         """
         Call Parameter's __set__, but warn if the file cannot be found.
@@ -999,7 +1258,7 @@ class Path(Parameter):
             Parameterized(name="{}.{}".format(obj.name,self._attrib_name)).warning('{}'.format(e.args[0]))
 
         super(Path,self).__set__(obj,val)
-        
+
     def __get__(self, obj, objtype):
         """
         Return an absolute, normalized path (see resolve_path).
@@ -1008,12 +1267,12 @@ class Path(Parameter):
         return self._resolve(raw_path)
 
     def __getstate__(self):
-        # don't want to pickle the search_paths        
+        # don't want to pickle the search_paths
         state = super(Path,self).__getstate__()
-        
+
         if 'search_paths' in state:
             state['search_paths'] = []
-        
+
         return state
 
 
@@ -1023,38 +1282,38 @@ class Filename(Path):
     Parameter that can be set to a string specifying the path of a file.
 
     The string should be specified in UNIX style, but it will be
-    returned in the format of the user's operating system. 
+    returned in the format of the user's operating system.
 
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None); 
+      search_paths is not None);
     or
-    
+
     * any of the paths searched by resolve_path() (if search_paths
       is None).
     """
-    
+
     def _resolve(self, path):
         if self.search_paths:
             return resolve_path(path, path_to_file=True, search_paths=self.search_paths)
         else:
-            return resolve_path(path, path_to_file=True)       
+            return resolve_path(path, path_to_file=True)
 
-            
+
 class Foldername(Path):
     """
     Parameter that can be set to a string specifying the path of a folder.
 
     The string should be specified in UNIX style, but it will be
-    returned in the format of the user's operating system. 
+    returned in the format of the user's operating system.
 
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None); 
+      search_paths is not None);
     or
-    
+
     * any of the paths searched by resolve_dir_path() (if search_paths
       is None).
     """
@@ -1063,4 +1322,5 @@ class Foldername(Path):
         if self.search_paths:
             return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
         else:
-            return resolve_path(path, path_to_file=False)       
+            return resolve_path(path, path_to_file=False)
+

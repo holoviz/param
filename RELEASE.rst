@@ -1,11 +1,12 @@
 How to make a new release of ``param``
 ======================================
 
-- [Insert important tasks such as review commit log, update release notes, etc!]
+- [Insert important tasks such as review commit log, update release
+  notes, etc!]
 
 - Add the version number as a tag in git::
 
-   git tag -a v1.0.0 -m "Creating first official version."
+   git tag -a 1.0.0 -m "Creating first official version."
 
 - Push the tag to github::
 
@@ -13,7 +14,6 @@ How to make a new release of ``param``
 
 - Publish on PyPi::
 
-   python setup.py register
    python setup.py sdist upload
 
 - [Insert important tasks such as update webpage...]

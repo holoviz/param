@@ -26,7 +26,7 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
-v1.1.0
+1.1.0
 ------
 
 * Switched to Python's own logging module.
@@ -34,10 +34,10 @@ v1.1.0
 * Optional extension for IPython users.
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/v1.0.0...v1.1.0>`_.
+`on GitHub <https://github.com/ioam/param/compare/1.0.0...1.1.0>`_.
 
 
-v1.0.0
+1.0.0
 ------
 
 * Initial release.

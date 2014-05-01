@@ -1,8 +1,8 @@
 """
-IPython extension for working with Parameters.
+Optional IPython extension for working with Parameters.
 
-This extension offers optional functionality for IPython users. It may
-be loaded using:
+This extension offers extended but completely optional functionality
+for IPython users.  From within IPython, it may be loaded using:
 
 %load_ext param.ipython
 
@@ -33,6 +33,8 @@ blue  = '\x1b[1;34m%s\x1b[0m'
 green = '\x1b[1;32m%s\x1b[0m'
 cyan = '\x1b[1;36m%s\x1b[0m'
 
+
+
 class ParamPager(object):
     """
     Callable class that displays information about the supplied
@@ -40,7 +42,7 @@ class ParamPager(object):
     """
 
     def __init__(self):
-        # Order in which information is listed in the table (left to right)
+        # Order of the information to be listed in the table (left to right)
         self.order = ['name', 'changed', 'value', 'type', 'bounds', 'mode']
 
 
@@ -48,8 +50,9 @@ class ParamPager(object):
         """
         Get the parameter dictionary, the list of modifed parameters
         and the dictionary or parameter values. If include_super is
-        True, parameters are collected from the super classes.
+        True, parameters are also collected from the super classes.
         """
+
         params = dict(obj.params())
         if isinstance(obj,type):
             changed = []
@@ -74,6 +77,7 @@ class ParamPager(object):
         docstrings in a clean format (alternating red and blue for
         readability).
         """
+
         (params, val_dict, changed) = info
         contents = []
         displayed_params = {}
@@ -117,6 +121,7 @@ class ParamPager(object):
         Collect the information about parameters needed to build a
         properly formatted table and then tabulate it.
         """
+
         info_dict, bounds_dict = {}, {}
         (params, val_dict, changed) = info
         col_widths = dict((k,0) for k in order)
@@ -174,6 +179,7 @@ class ParamPager(object):
         order:      The order of the table columns
         bound_dict: Dictionary of appropriately formatted bounds
         """
+
         contents, tail = [], []
         column_set = set(k for row in info_dict.values() for k in row)
         columns = [col for col in order if col in column_set]
@@ -217,9 +223,10 @@ class ParamPager(object):
 
     def __call__(self, param_obj):
         """
-        Given a parameterized object or class display information
+        Given a parameterized object or class, display information
         about the parameters in the IPython pager.
         """
+
         parameterized_object = isinstance(param_obj, param.Parameterized)
         parameterized_class = (isinstance(param_obj,type)
                                and  issubclass(param_obj,param.Parameterized))

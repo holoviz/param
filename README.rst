@@ -34,7 +34,7 @@ v1.1.0
 * Optional extension for IPython users.
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/v1.1.0...master>`_.
+`on GitHub <https://github.com/ioam/param/compare/v1.0.0...v1.1.0>`_.
 
 
 v1.0.0

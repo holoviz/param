@@ -231,7 +231,7 @@ class Time(Parameterized):
     def __iter__(self): return self
 
 
-    def next(self):
+    def __next__(self):
         timestep = self.time_type(self.timestep)
 
         if self._exhausted is None:

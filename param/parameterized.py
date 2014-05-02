@@ -891,7 +891,7 @@ class Parameterized(object):
         # "add_param()" method has to deal with it (plus any future
         # remove_param() method.)
         type.__setattr__(cls,param_name,param_obj)
-        cls.__metaclass__._initialize_parameter(cls,param_name,param_obj)
+        ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
         # delete cached params()
         try:
             delattr(cls,'_%s__params'%cls.__name__)

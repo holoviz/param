@@ -824,8 +824,8 @@ def concrete_descendents(parentclass):
 
     Only non-abstract classes will be included.
     """
-    return dict( ((c.__name__,c) for c in descendents(parentclass)
-                 if not _is_abstract(c)) )
+    return dict((c.__name__,c) for c in descendents(parentclass)
+                if not _is_abstract(c))
 
 
 
@@ -979,9 +979,9 @@ class ObjectSelector(Selector):
         # Parameterized instances. Think this is an sf.net bug/feature
         # request. Temporary fix: don't use obj.name if unavailable.
         try:
-            d=dict( ((obj.name,obj) for obj in self.objects) )
+            d=dict((obj.name,obj) for obj in self.objects)
         except AttributeError:
-            d=dict( ((obj,obj) for obj in self.objects) )
+            d=dict((obj,obj) for obj in self.objects)
         return d
 
 
@@ -1020,7 +1020,7 @@ class ClassSelector(Selector):
         (see concrete_descendents()).
         """
         classes = concrete_descendents(self.class_)
-        d=dict( ((name,class_) for name,class_ in classes.items()) )
+        d=dict((name,class_) for name,class_ in classes.items())
         if self.allow_None:
             d['None']=None
         return d

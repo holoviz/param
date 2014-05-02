@@ -20,7 +20,6 @@ import os.path
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
-import collections
 
 
 #: Top-level object to allow messaging not tied to a particular
@@ -64,7 +63,7 @@ def produce_value(value_obj):
     object: if the object is callable, call it, otherwise return the
     object.
     """
-    if isinstance(value_obj, collections.Callable):
+    if callable(value_obj):
         return value_obj()
     else:
         return value_obj
@@ -348,7 +347,7 @@ class Dynamic(Parameter):
         """
         super(Dynamic,self).__init__(**params)
 
-        if isinstance(self.default, collections.Callable):
+        if callable(self.default):
             self._set_instantiate(True)
             self._initialize_generator(self.default)
 
@@ -394,7 +393,7 @@ class Dynamic(Parameter):
         """
         super(Dynamic,self).__set__(obj,val)
 
-        dynamic = isinstance(val, collections.Callable)
+        dynamic = callable(val)
         if dynamic: self._initialize_generator(val,obj)
         if not obj: self._set_instantiate(dynamic)
 
@@ -527,7 +526,7 @@ class Number(Dynamic):
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
         self.allow_None = (default is None or allow_None)
-        if not isinstance(default, collections.Callable): self._check_value(default)
+        if not callable(default): self._check_value(default)
 
 
     def __get__(self,obj,objtype):
@@ -551,7 +550,7 @@ class Number(Dynamic):
         """
         val = self.set_hook(obj,val)
 
-        if not isinstance(val, collections.Callable): self._check_value(val)
+        if not callable(val): self._check_value(val)
         super(Number,self).__set__(obj,val)
 
 
@@ -561,7 +560,7 @@ class Number(Dynamic):
         All objects are accepted, and no exceptions will be raised.  See
         crop_to_bounds for details on how cropping is done.
         """
-        if not isinstance(val, collections.Callable):
+        if not callable(val):
             bounded_val = self.crop_to_bounds(val)
         else:
             bounded_val = val
@@ -797,7 +796,7 @@ class Callable(Parameter):
     """
 
     def __set__(self,obj,val):
-        if not isinstance(val, collections.Callable):
+        if not callable(val):
             raise ValueError("Callable '{}' only takes a callable object.".format(self._attrib_name))
         super(Callable,self).__set__(obj,val)
 
@@ -938,7 +937,7 @@ class ObjectSelector(Selector):
         Also removes None from the list of objects (if the default is
         no longer None).
         """
-        if self.default is None and isinstance(self.compute_default_fn, collections.Callable):
+        if self.default is None and callable(self.compute_default_fn):
             self.default=self.compute_default_fn()
             if self.default not in self.objects:
                 self.objects.append(self.default)
@@ -1096,7 +1095,7 @@ class HookList(List):
 
     def _check_type(self,val):
         for v in val:
-            assert isinstance(v, collections.Callable),repr(self._attrib_name)+": "+repr(v)+" is not callable."
+            assert callable(v),repr(self._attrib_name)+": "+repr(v)+" is not callable."
 
 
 

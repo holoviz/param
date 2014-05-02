@@ -9,7 +9,6 @@ import re
 from operator import itemgetter,attrgetter
 from types import FunctionType
 from functools import partial, wraps
-import collections
 
 import logging
 
@@ -1099,7 +1098,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
             s = ' '.join( (str(x) for x in args) )
 
-            if dbprint_prefix and isinstance(dbprint_prefix, collections.Callable):
+            if dbprint_prefix and callable(dbprint_prefix):
                 prefix=dbprint_prefix() # pylint: disable-msg=E1102
             else:
                 prefix=""

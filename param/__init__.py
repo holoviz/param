@@ -18,7 +18,7 @@ parameter types (e.g. Number).
 
 import os.path
 
-from parameterized import Parameterized, Parameter, String, \
+from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
 
@@ -230,7 +230,7 @@ class Time(Parameterized):
     def __iter__(self): return self
 
 
-    def next(self):
+    def __next__(self):
         timestep = self.time_type(self.timestep)
 
         if self._exhausted is None:
@@ -461,11 +461,8 @@ class Dynamic(Parameter):
             return gen
 
 
-# CEBNOTE: isinstance(x,Number) should be possible in Python 2.6
-# (Number is a new abstract base class).
-# http://docs.python.org/whatsnew/2.6.html
-import operator
-_is_number = operator.isNumberType
+import numbers
+_is_number = lambda obj: isinstance(obj, numbers.Number)
 
 def identity_hook(obj,val): return val
 
@@ -622,18 +619,18 @@ class Number(Dynamic):
             if vmax is not None:
                 if incmax is True:
                     if not val <= vmax:
-                        raise ValueError("Parameter '%s' must be at most %s"%(self._attrib_name,vmax))
+                        raise ValueError("Parameter '{}' must be at most {}".format(self._attrib_name,vmax))
                 else:
                     if not val < vmax:
-                        raise ValueError("Parameter '%s' must be less than %s"%(self._attrib_name,vmax))
+                        raise ValueError("Parameter '{}' must be less than {}".format(self._attrib_name,vmax))
 
             if vmin is not None:
                 if incmin is True:
                     if not val >= vmin:
-                        raise ValueError("Parameter '%s' must be at least %s"%(self._attrib_name,vmin))
+                        raise ValueError("Parameter '{}' must be at least {}".format(self._attrib_name,vmin))
                 else:
                     if not val > vmin:
-                        raise ValueError("Parameter '%s' must be greater than %s"%(self._attrib_name,vmin))
+                        raise ValueError("Parameter '{}' must be greater than {}".format(self._attrib_name,vmin))
 
 ##         could consider simplifying the above to something like this untested code:
 
@@ -644,7 +641,7 @@ class Number(Dynamic):
 ##          too_high = ...
 
 ##          if too_low or too_high:
-##              raise ValueError("Parameter '%s' must be in the range %s" % (self._attrib_name,self.rangestr()))
+##              raise ValueError("Parameter '{}' must be in the range {}".format(self._attrib_name,self.rangestr()))
 
 ##         where self.rangestr() formats the range using the usual notation for
 ##         indicating exclusivity, e.g. "[0,10)".
@@ -659,7 +656,7 @@ class Number(Dynamic):
             return
 
         if not _is_number(val):
-            raise ValueError("Parameter '%s' only takes numeric values"%(self._attrib_name))
+            raise ValueError("Parameter '{}' only takes numeric values".format(self._attrib_name))
 
         self._checkBounds(val)
 
@@ -698,10 +695,9 @@ class Integer(Number):
             return
 
         if not isinstance(val,int):
-            raise ValueError("Parameter '%s' must be an integer."%self._attrib_name)
+            raise ValueError("Parameter '{}' must be an integer.".format(self._attrib_name))
 
         self._checkBounds(val)
-
 
 
 class Magnitude(Number):
@@ -728,17 +724,17 @@ class Boolean(Parameter):
     def __set__(self,obj,val):
         if self.allow_None:
             if not isinstance(val,bool) and val is not None:
-                raise ValueError("Boolean '%s' only takes a Boolean value or None."
-                                 %self._attrib_name)
+                raise ValueError("Boolean '{}' only takes a Boolean value or None.".format(
+                                 self._attrib_name))
 
             if val is not True and val is not False and val is not None:
-                raise ValueError("Boolean '%s' must be True, False, or None."%self._attrib_name)
+                raise ValueError("Boolean '{}' must be True, False, or None.".format(self._attrib_name))
         else:
             if not isinstance(val,bool):
-                raise ValueError("Boolean '%s' only takes a Boolean value."%self._attrib_name)
+                raise ValueError("Boolean '{}' only takes a Boolean value.".format(self._attrib_name))
 
             if val is not True and val is not False:
-                raise ValueError("Boolean '%s' must be True or False."%self._attrib_name)
+                raise ValueError("Boolean '{}' must be True or False.".format(self._attrib_name))
 
         super(Boolean,self).__set__(obj,val)
 
@@ -766,14 +762,14 @@ class NumericTuple(Parameter):
 
     def _check(self,val):
         if not isinstance(val,tuple):
-            raise ValueError("NumericTuple '%s' only takes a tuple value."%self._attrib_name)
+            raise ValueError("NumericTuple '{}' only takes a tuple value.".format(self._attrib_name))
 
         if not len(val)==self.length:
-            raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
-                             (self._attrib_name,len(val),self.length))
+            raise ValueError("{}: tuple is not of the correct length ({} instead of {}).".format(
+                             self._attrib_name,len(val),self.length))
         for n in val:
             if not _is_number(n):
-                raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
+                raise ValueError("{}: tuple element is not numeric: {}.".format(self._attrib_name,str(n)))
 
     def __set__(self,obj,val):
         self._check(val)
@@ -801,7 +797,7 @@ class Callable(Parameter):
 
     def __set__(self,obj,val):
         if not callable(val):
-            raise ValueError("Callable '%s' only takes a callable object."%self._attrib_name)
+            raise ValueError("Callable '{}' only takes a callable object.".format(self._attrib_name))
         super(Callable,self).__set__(obj,val)
 
 
@@ -828,8 +824,8 @@ def concrete_descendents(parentclass):
 
     Only non-abstract classes will be included.
     """
-    return dict([(c.__name__,c) for c in descendents(parentclass)
-                 if not _is_abstract(c)])
+    return dict((c.__name__,c) for c in descendents(parentclass)
+                if not _is_abstract(c))
 
 
 
@@ -866,7 +862,8 @@ class Composite(Parameter):
         """
         Set the values of all the attribs.
         """
-        assert len(val) == len(self.attribs),"Compound parameter '%s' got the wrong number of values (needed %d, but got %d)." % (self._attrib_name,len(self.attribs),len(val))
+        assert len(val) == len(self.attribs),"Compound parameter '{}' got the wrong number of values (needed {}, but got {}).".format(
+                self._attrib_name,len(self.attribs),len(val))
 
         if not obj:
             for a,v in zip(self.attribs,val):
@@ -957,8 +954,8 @@ class ObjectSelector(Selector):
                 attrib_name = self._attrib_name
             except AttributeError:
                 attrib_name = ""
-            raise ValueError("%s not in Parameter %s's list of possible objects" \
-                             %(val,attrib_name))
+            raise ValueError("{} not in Parameter {}'s list of possible objects".format(
+                             val,attrib_name))
 
 # CBNOTE: I think it's not helpful to do a type check for the value of
 # an ObjectSelector. If we did such type checking, any user
@@ -982,9 +979,9 @@ class ObjectSelector(Selector):
         # Parameterized instances. Think this is an sf.net bug/feature
         # request. Temporary fix: don't use obj.name if unavailable.
         try:
-            d=dict([(obj.name,obj) for obj in self.objects])
+            d=dict((obj.name,obj) for obj in self.objects)
         except AttributeError:
-            d=dict([(obj,obj) for obj in self.objects])
+            d=dict((obj,obj) for obj in self.objects)
         return d
 
 
@@ -1004,8 +1001,8 @@ class ClassSelector(Selector):
         """val must be None or an instance of self.class_"""
         if not (isinstance(val,self.class_)) and not (val is None and self.allow_None):
             raise ValueError(
-                "Parameter '%s' value must be an instance of %s, not '%s'" %
-                (self._attrib_name, self.class_.__name__, val))
+                "Parameter '{}' value must be an instance of {}, not '{}'".format(
+                self._attrib_name, self.class_.__name__, val))
 
     def __set__(self,obj,val):
         self._check_value(val,obj)
@@ -1023,7 +1020,7 @@ class ClassSelector(Selector):
         (see concrete_descendents()).
         """
         classes = concrete_descendents(self.class_)
-        d=dict([(name,class_) for name,class_ in classes.items()])
+        d=dict((name,class_) for name,class_ in classes.items())
         if self.allow_None:
             d['None']=None
         return d
@@ -1062,20 +1059,20 @@ class List(Parameter):
         Otherwise, an exception is raised.
         """
         if not (isinstance(val,list)):
-            raise ValueError("List '%s' must be a list."%(self._attrib_name))
+            raise ValueError("List '{}' must be a list.".format(self._attrib_name))
 
         if self.bounds is not None:
             min_length,max_length = self.bounds
             l=len(val)
             if min_length is not None and max_length is not None:
                 if not (min_length <= l <= max_length):
-                    raise ValueError("%s: list length must be between %s and %s (inclusive)"%(self._attrib_name,min_length,max_length))
+                    raise ValueError("{}: list length must be between {} and {} (inclusive)".format(self._attrib_name,min_length,max_length))
             elif min_length is not None:
                 if not min_length <= l:
-                    raise ValueError("%s: list length must be at least %s."%(self._attrib_name,min_length))
+                    raise ValueError("{}: list length must be at least {}.".format(self._attrib_name,min_length))
             elif max_length is not None:
                 if not l <= max_length:
-                    raise ValueError("%s: list length must be at most %s."%(self._attrib_name,max_length))
+                    raise ValueError("{}: list length must be at most {}.".format(self._attrib_name,max_length))
 
         self._check_type(val)
 
@@ -1161,14 +1158,14 @@ class resolve_path(ParameterizedFunction):
                 if os.path.isfile(path):
                     return path
                 else:
-                    raise IOError("File '%s' not found." %path)
+                    raise IOError("File '{}' not found.".format(path))
             elif not p.path_to_file:
                 if os.path.isdir(path):
                     return path
                 else:
-                    raise IOError("Folder '%s' not found." %path)
+                    raise IOError("Folder '{}' not found.".format(path))
             else:
-                raise IOError("Type '%s' not recognised." %p.path_type)
+                raise IOError("Type '{}' not recognised.".format(p.path_type))
 
         else:
             paths_tried = []
@@ -1182,7 +1179,7 @@ class resolve_path(ParameterizedFunction):
                     if os.path.isdir(try_path):
                         return try_path
                 else:
-                    raise IOError("Type '%s' not recognised." %p.path_type)
+                    raise IOError("Type '{}' not recognised.".format(p.path_type))
 
                 paths_tried.append(try_path)
 
@@ -1256,8 +1253,8 @@ class Path(Parameter):
         """
         try:
             self._resolve(val)
-        except IOError, e:
-            Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s'%(e.args[0]))
+        except IOError as e:
+            Parameterized(name="{}.{}".format(obj.name,self._attrib_name)).warning('{}'.format(e.args[0]))
 
         super(Path,self).__set__(obj,val)
 

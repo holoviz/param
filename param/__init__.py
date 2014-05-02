@@ -463,7 +463,11 @@ class Dynamic(Parameter):
 
 
 import numbers
-_is_number = lambda obj: isinstance(obj, numbers.Number)
+def _is_number(obj):
+    return isinstance(obj, numbers.Number) or \
+           (hasattr(obj, '__int__') and hasattr(obj, '__add__'))
+           # The extra check is for classes that behave like numbers, such as
+           # those found in numpy, gmpy, etc.
 
 def identity_hook(obj,val): return val
 

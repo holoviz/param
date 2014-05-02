@@ -18,7 +18,7 @@ parameter types (e.g. Number).
 
 import os.path
 
-from parameterized import Parameterized, Parameter, String, \
+from param.parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
 
@@ -230,7 +230,7 @@ class Time(Parameterized):
     def __iter__(self): return self
 
 
-    def next(self):
+    def __next__(self):
         timestep = self.time_type(self.timestep)
 
         if self._exhausted is None:
@@ -241,6 +241,7 @@ class Time(Parameterized):
             self._exhausted = None
             raise StopIteration
         return self._time
+    next = __next__
 
     def __call__(self, val=None, time_type=None):
         """
@@ -461,11 +462,8 @@ class Dynamic(Parameter):
             return gen
 
 
-# CEBNOTE: isinstance(x,Number) should be possible in Python 2.6
-# (Number is a new abstract base class).
-# http://docs.python.org/whatsnew/2.6.html
-import operator
-_is_number = operator.isNumberType
+import numbers
+_is_number = lambda obj: isinstance(obj, numbers.Number)
 
 def identity_hook(obj,val): return val
 
@@ -828,8 +826,8 @@ def concrete_descendents(parentclass):
 
     Only non-abstract classes will be included.
     """
-    return dict([(c.__name__,c) for c in descendents(parentclass)
-                 if not _is_abstract(c)])
+    return dict((c.__name__,c) for c in descendents(parentclass)
+                if not _is_abstract(c))
 
 
 
@@ -982,9 +980,9 @@ class ObjectSelector(Selector):
         # Parameterized instances. Think this is an sf.net bug/feature
         # request. Temporary fix: don't use obj.name if unavailable.
         try:
-            d=dict([(obj.name,obj) for obj in self.objects])
+            d=dict((obj.name,obj) for obj in self.objects)
         except AttributeError:
-            d=dict([(obj,obj) for obj in self.objects])
+            d=dict((obj,obj) for obj in self.objects)
         return d
 
 
@@ -1023,7 +1021,7 @@ class ClassSelector(Selector):
         (see concrete_descendents()).
         """
         classes = concrete_descendents(self.class_)
-        d=dict([(name,class_) for name,class_ in classes.items()])
+        d=dict((name,class_) for name,class_ in classes.items())
         if self.allow_None:
             d['None']=None
         return d
@@ -1256,7 +1254,7 @@ class Path(Parameter):
         """
         try:
             self._resolve(val)
-        except IOError, e:
+        except IOError as e:
             Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s'%(e.args[0]))
 
         super(Path,self).__set__(obj,val)

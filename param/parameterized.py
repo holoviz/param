@@ -111,6 +111,19 @@ def all_equal(arg1,arg2):
         return arg1==arg2
 
 
+# Code from six
+def add_metaclass(metaclass):
+    """Class decorator for creating a class with a metaclass."""
+    def wrapper(cls):
+        orig_vars = cls.__dict__.copy()
+        orig_vars.pop('__dict__', None)
+        orig_vars.pop('__weakref__', None)
+        for slots_var in orig_vars.get('__slots__', ()):
+            orig_vars.pop(slots_var)
+        return metaclass(cls.__name__, cls.__bases__, orig_vars)
+    return wrapper
+
+
 class bothmethod(object): # pylint: disable-msg=R0903
     """
     'optional @classmethod'
@@ -179,6 +192,7 @@ class ParameterMetaclass(type):
 # a parameter to discover things about itself when created (would also
 # allow things like checking a Parameter is owned by a
 # Parameterized). I have some vague ideas about what to do.
+@add_metaclass(ParameterMetaclass)
 class Parameter(object):
     """
     An attribute descriptor for declaring parameters.
@@ -258,7 +272,6 @@ class Parameter(object):
     or as class attributes of non-Parameterized classes, will not have
     the behavior described here.
     """
-    __metaclass__ = ParameterMetaclass
 
     # Because they implement __get__ and __set__, Parameters are known
     # as 'descriptors' in Python; see "Implementing Descriptors" and
@@ -598,8 +611,8 @@ class ParameterizedMetaclass(type):
                 # mechanisms, which has have consequences for warning
                 # counts, warnings as exceptions, etc.
                 if not attribute_name.startswith('_'):
-                    print ("Warning: Setting non-Parameter class attribute %s.%s = %s "
-                           % (mcs.__name__,attribute_name,`value`))
+                    print("Warning: Setting non-Parameter class attribute %s.%s = %s "
+                           % (mcs.__name__,attribute_name,repr(value)))
 
 
     def __param_inheritance(mcs,param_name,param):
@@ -660,7 +673,7 @@ class ParameterizedMetaclass(type):
             # we run out of classes to search.
             while getattr(param,slot) is None:
                 try:
-                    param_super_class = superclasses.next()
+                    param_super_class = next(superclasses)
                 except StopIteration:
                     break
 
@@ -753,7 +766,7 @@ def container_script_repr(container,imports,prefix,settings):
 
 # why I have to type prefix and settings?
 def function_script_repr(fn,imports,prefix,settings):
-    name = fn.func_name
+    name = fn.__name__
     module = fn.__module__
     imports.append('import %s'%module)
     return module+'.'+name
@@ -794,6 +807,7 @@ def as_uninitialized(fn):
 
 
 
+@add_metaclass(ParameterizedMetaclass)
 class Parameterized(object):
     """
     Base class for named objects that support Parameters and message
@@ -818,7 +832,7 @@ class Parameterized(object):
 
     in this case foo.xx gets the value 20.
 
-    Message formatting: Each Parameterized instance has several methods
+    Message formatting: Each Parameterized instance has several
     methods for optionally printing output. This functionality is
     based on the standard Python 'logging' module; using the methods
     provided here, wraps calls to the 'logging' module's root logger
@@ -827,8 +841,6 @@ class Parameterized(object):
     the global logging level and change the default message prefix,
     see documentation for the 'logging' module.
     """
-
-    __metaclass__ = ParameterizedMetaclass
 
     name           = String(default=None,constant=True,doc="""
     String identifier for this object.""")
@@ -1099,7 +1111,7 @@ class Parameterized(object):
             for a in args:
                 if isinstance(a,FunctionType): args[args.index(a)]=a()
 
-            s = ' '.join([str(x) for x in args])
+            s = ' '.join(str(x) for x in args)
 
             if dbprint_prefix and callable(dbprint_prefix):
                 prefix=dbprint_prefix() # pylint: disable-msg=E1102
@@ -1119,7 +1131,7 @@ class Parameterized(object):
             warning_count+=1
             self.__db_print(WARNING,*args)
         else:
-            raise Exception, ' '.join(["Warning:",]+[str(x) for x in args])
+            raise Exception(' '.join(["Warning:",]+[str(x) for x in args]))
 
 
     def message(self,*args):
@@ -1309,7 +1321,7 @@ class Parameterized(object):
     def print_param_values(self):
         """Print the values of all this object's Parameters."""
         for name,val in self.get_param_values():
-            print '%s.%s = %s' % (self.name,name,val)
+            print('%s.%s = %s' % (self.name,name,val))
 
 
     def __getstate__(self):
@@ -1385,7 +1397,7 @@ class Parameterized(object):
         """Print the default values of all cls's Parameters."""
         for key,val in cls.__dict__.items():
             if isinstance(val,Parameter):
-                print cls.__name__+'.'+key, '=', repr(val.default)
+                print(cls.__name__+'.'+key, '=', repr(val.default))
 
 
     def defaults(self):
@@ -1456,15 +1468,15 @@ class Parameterized(object):
 
 def print_all_param_defaults():
     """Print the default values for all imported Parameters."""
-    print "_______________________________________________________________________________"
-    print ""
-    print "                           Parameter Default Values"
-    print ""
+    print("_______________________________________________________________________________")
+    print("")
+    print("                           Parameter Default Values")
+    print("")
     classes = descendents(Parameterized)
     classes.sort(key=lambda x:x.__name__)
     for c in classes:
         c.print_param_defaults()
-    print "_______________________________________________________________________________"
+    print("_______________________________________________________________________________")
 
 
 
@@ -1547,7 +1559,7 @@ class ParamOverrides(dict):
         Print a warning if params contains something that is not a
         Parameter of the overridden object.
         """
-        overridden_object_params = self._overridden.params().keys()
+        overridden_object_params = list(self._overridden.params().keys())
         for item in params:
             if item not in overridden_object_params:
                 self.warning("'%s' will be ignored (not a Parameter)."%item)
@@ -1670,7 +1682,7 @@ class overridable_property(object):
         if obj is None:
             return self
         if self.fget is None:
-            raise AttributeError, "unreadable attribute"
+            raise AttributeError("unreadable attribute")
         if self.fget.__name__ == '<lambda>' or not self.fget.__name__:
             return self.fget(obj)
         else:
@@ -1678,7 +1690,7 @@ class overridable_property(object):
 
     def __set__(self, obj, value):
         if self.fset is None:
-            raise AttributeError, "can't set attribute"
+            raise AttributeError("can't set attribute")
         if self.fset.__name__ == '<lambda>' or not self.fset.__name__:
             self.fset(obj, value)
         else:
@@ -1686,7 +1698,7 @@ class overridable_property(object):
 
     def __delete__(self, obj):
         if self.fdel is None:
-            raise AttributeError, "can't delete attribute"
+            raise AttributeError("can't delete attribute")
         if self.fdel.__name__ == '<lambda>' or not self.fdel.__name__:
             self.fdel(obj)
         else:

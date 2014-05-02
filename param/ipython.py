@@ -232,7 +232,7 @@ class ParamPager(object):
                                and  issubclass(param_obj,param.Parameterized))
 
         if not (parameterized_object or parameterized_class):
-            print "Object is not a parameterized class or object."
+            print("Object is not a parameterized class or object.")
             return
 
         title = 'Parameters of %r' % param_obj.name
@@ -286,13 +286,13 @@ class ParamMagics(Magics):
         Usage: %params <parameterized class or object>
         """
         if parameter_s=='':
-            print "Please specify an object to inspect."
+            print("Please specify an object to inspect.")
             return
 
         # Beware! Uses IPython internals that may change in future...
         obj = self.shell._object_find(parameter_s)
         if obj.found is False:
-            print "Object %r not found in the namespace." % parameter_s
+            print("Object %r not found in the namespace." % parameter_s)
             return
 
         return self.param_pager(obj.obj)
@@ -305,7 +305,7 @@ _loaded = False
 
 def load_ipython_extension(ip, verbose=True):
 
-    if verbose: print message
+    if verbose: print(message)
 
     global _loaded
     if not _loaded:

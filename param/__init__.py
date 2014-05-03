@@ -241,6 +241,8 @@ class Time(Parameterized):
             self._exhausted = None
             raise StopIteration
         return self._time
+
+    # For Python 2 compatibility; can be removed for Python 3.
     next = __next__
 
     def __call__(self, val=None, time_type=None):

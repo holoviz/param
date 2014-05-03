@@ -111,7 +111,16 @@ def all_equal(arg1,arg2):
         return arg1==arg2
 
 
-# Code from six
+
+# For Python 2 compatibility.
+#
+# The syntax to use a metaclass changed incompatibly between 2 and
+# 3. The add_metaclass() class decorator below creates a class using a
+# specified metaclass in a way that works on both 2 and 3. For 3, can
+# remove this decorator and specify metaclasses in a simpler way
+# (https://docs.python.org/3/reference/datamodel.html#customizing-class-creation)
+#
+# Code from six (https://bitbucket.org/gutworth/six; version ???).
 def add_metaclass(metaclass):
     """Class decorator for creating a class with a metaclass."""
     def wrapper(cls):

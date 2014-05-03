@@ -120,7 +120,7 @@ def all_equal(arg1,arg2):
 # remove this decorator and specify metaclasses in a simpler way
 # (https://docs.python.org/3/reference/datamodel.html#customizing-class-creation)
 #
-# Code from six (https://bitbucket.org/gutworth/six; version ???).
+# Code from six (https://bitbucket.org/gutworth/six; version 1.4.1).
 def add_metaclass(metaclass):
     """Class decorator for creating a class with a metaclass."""
     def wrapper(cls):

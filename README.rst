@@ -26,6 +26,17 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+
+1.2.0
+------
+
+* Added support for Python 3 (thanks to Marco Elver).
+* Dropped support for Python 2.5.
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/1.1.0...1.2.0>`_.
+
+
 1.1.0
 ------
 

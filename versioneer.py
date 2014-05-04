@@ -243,6 +243,7 @@ domain.
 """
 
 import os, sys, re
+import os.path
 from distutils.core import Command
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build import build as _build
@@ -447,7 +448,6 @@ def get_versions(default={"version": "unknown", "full": ""}, verbose=False):
 
 
 import subprocess
-import sys
 import errno
 
 
@@ -483,9 +483,6 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False):
     return stdout
 
 
-import sys
-import re
-import os.path
 
 def get_expanded_variables(versionfile_abs):
     # the code embedded in _version.py can just fetch the value of these
@@ -589,8 +586,6 @@ def versions_from_parentdir(parentdir_prefix, root, verbose=False):
                   (root, dirname, parentdir_prefix))
         return None
     return {"version": dirname[len(parentdir_prefix):], "full": ""}
-import os.path
-import sys
 
 # os.path.relpath only appeared in Python-2.6 . Define it here for 2.5.
 def os_path_relpath(path, start=os.path.curdir):

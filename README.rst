@@ -7,7 +7,8 @@ values, documentation strings, default values, etc., each of which is
 inherited from parent classes if not specified in a subclass.
 
 Please see `param's website <http://ioam.github.com/param/>`_ for documentation and
-examples.
+examples. Release instructions for developers may be 
+`found on the wiki <https://github.com/ioam/param/wiki/Release-instructions>`_.
 
 Installation
 ============

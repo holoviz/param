@@ -21,6 +21,8 @@ install --user param``, ``pip install param``, or ``easy_install param``.
 Windows users can alternatively download and run an installer (exe).
 
 More recent changes can be obtained by cloning the git repository.
+Current status: |BuildStatus|_
+
 
 Release Notes
 =============
@@ -56,3 +58,7 @@ A full list of changes since the previous release is available
 * First standalone release. Param was originally developed as part of
   `Topographica <http://ioam.github.io/topographica/>`_, and has been
   in heavy usage as part of that project since 2005.
+
+
+.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
+.. _BuildStatus: https://travis-ci.org/ioam/param

@@ -104,10 +104,15 @@ class Version(object):
 
     def git_fetch(self, cmd='git'):
         cmd = [cmd, 'describe', '--long', '--match', 'v*.*', '--dirty']
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=os.path.dirname(self.fpath))
-        output = str(proc.communicate()[0].decode()).strip()
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                cwd=os.path.dirname(self.fpath))
+        output, error = (s.decode().strip() for s in proc.communicate())
 
-        # If there is an error, return (release is still useful)
+        if error=='fatal: No names found, cannot describe anything.':
+            raise Exception("Cannot find any git version tags of format v*.*")
+
+        # If there is any other error, return (release value still useful)
         if proc.returncode != 0: return self
 
         split = output[1:].split('-')

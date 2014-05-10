@@ -21,6 +21,8 @@ import os.path
 from param.parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
+from param.version import Version
+__version__ = Version(release=(1,0,0), fpath=__file__, commit="$Format:%h$")
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
@@ -30,31 +32,6 @@ main=Parameterized(name="main")
 # A global random seed available for controlling the behaviour of
 # parameterized objects with random state.
 random_seed = 42
-
-
-# Set __version__ using versioneer.
-#
-# Encased in a try/except to guarantee this does not interfere with
-# using param (i.e. __init__.py and parameterized.py remain the only
-# two necessary files).
-try:
-    from ._version import get_versions
-    __version__ = get_versions()['version']
-    del get_versions
-    if __version__=='unknown': 
-        # Think 'unknown' is what versioneer returns if unable to
-        # determine version info
-        raise ValueError       
-except:
-    main.warning("""\
-Unable to determine the version of this copy of param.
-
-For an official release, the version is stored in param/_version.py.
-
-For a development copy, the version information is requested from Git
-by param/_version.py.
-""")
-    __version__ = 'unknown'
 
 
 def produce_value(value_obj):

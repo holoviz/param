@@ -89,10 +89,12 @@ class Version(object):
         Returns a tuple of the major version together with the
         appropriate SHA and dirty bit (for development version only).
         """
-        if not self.fpath:
-            self._release = self.expected_release
-            self._commit = self._expected_commit
         if self._release is not None:
+            return self
+
+        self._release = self.expected_release
+        if not self.fpath:
+            self._commit = self._expected_commit
             return self
 
         # Only git right now but easily extended to SVN, Mercurial etc.

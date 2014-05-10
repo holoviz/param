@@ -5,7 +5,7 @@ from distutils.core import setup
 import versioneer
 versioneer.versionfile_source = 'param/_version.py'
 versioneer.versionfile_build = 'param/_version.py'
-versioneer.tag_prefix = '' 
+versioneer.tag_prefix = 'v' 
 versioneer.parentdir_prefix = 'param-' 
 
 

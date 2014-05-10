@@ -38,7 +38,7 @@ are listed below.
 * Dropped support for Python 2.5.
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/1.1.0...1.2.0>`_.
+`on GitHub <https://github.com/ioam/param/compare/v1.1.0...v1.2.0>`_.
 
 
 1.1.0 (2014/05)
@@ -49,7 +49,7 @@ A full list of changes since the previous release is available
 * Optional extension for IPython users.
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/1.0.0...1.1.0>`_.
+`on GitHub <https://github.com/ioam/param/compare/v1.0.0...v1.1.0>`_.
 
 
 1.0.0 (2012/07)

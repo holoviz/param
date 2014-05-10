@@ -156,7 +156,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose=False):
         return None
     return {"version": dirname[len(parentdir_prefix):], "full": ""}
 
-tag_prefix = ""
+tag_prefix = "v"
 parentdir_prefix = "param-"
 versionfile_source = "param/_version.py"
 

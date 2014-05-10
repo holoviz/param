@@ -97,12 +97,15 @@ class Version(object):
             self._commit = self._expected_commit
             return self
 
-        # Only git right now but easily extended to SVN, Mercurial etc.
-        self.git_fetch()
-        if sys.platform == "win32":
-            self.git_fetch('git.cmd')
-            self.git_fetch('git.exe')
+         # Only git right now but easily extended to SVN, Mercurial etc.
+        for cmd in ['git', 'git.cmd', 'git.exe']:
+            try:
+                self.git_fetch(cmd)
+                break
+            except EnvironmentError:
+                pass
         return self
+
 
     def git_fetch(self, cmd='git'):
         cmd = [cmd, 'describe', '--long', '--match', 'v*.*', '--dirty']

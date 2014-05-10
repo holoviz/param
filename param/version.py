@@ -25,7 +25,7 @@ will check that all versioning information has been properly updated.
 
 __author__ = 'Jean-Luc Stevens'
 
-import sys, os, subprocess
+import os, subprocess
 
 class Version(object):
     """

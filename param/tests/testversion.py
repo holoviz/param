@@ -89,7 +89,7 @@ class TestVersion(unittest.TestCase):
         v1 = Version(release=(1,0))
         v1.verify()
 
-    def test_verify_v1(self):
+    def test_verify_v1_commit(self):
         v1 = Version(release=(1,0), commit='shortSHA')
         try:
             v1.verify()

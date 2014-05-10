@@ -153,5 +153,5 @@ class Version(object):
         if self.commit_count !=0:
             raise Exception("Please update the git version tag before release.")
 
-        if self.commit not in [None, "$Format:%h$"]:
+        if self._expected_commit not in [None, "$Format:%h$"]:
             raise Exception("Declared release does not match git version tag")

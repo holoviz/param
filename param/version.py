@@ -120,7 +120,7 @@ class Version(object):
         split = output[1:].split('-')
         self._release = tuple(int(el) for el in split[0].split('.'))
         self._commit_count = int(split[1])
-        self._commit = split[2][1:] # Strip out 'g' prefix ('g'=>'git')
+        self._commit = str(split[2][1:]) # Strip out 'g' prefix ('g'=>'git')
         self._dirty = (split[-1]=='dirty')
         return self
 

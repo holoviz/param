@@ -1,3 +1,5 @@
+|BuildStatus|_
+
 Param
 =====
 
@@ -21,8 +23,6 @@ install --user param``, ``pip install param``, or ``easy_install param``.
 Windows users can alternatively download and run an installer (exe).
 
 More recent changes can be obtained by cloning the git repository.
-Current status: |BuildStatus|_
-
 
 Release Notes
 =============

@@ -94,7 +94,7 @@ class TestVersion(unittest.TestCase):
         try:
             v1.verify()
         except Exception as e:
-            assert e.message.startswith('Declared release does not match git version tag')
+            assert str(e).startswith('Declared release does not match git version tag')
 
 
 if __name__ == "__main__":

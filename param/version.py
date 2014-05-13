@@ -112,7 +112,7 @@ class Version(object):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 cwd=os.path.dirname(self.fpath))
-        output, error = (s.decode().strip() for s in proc.communicate())
+        output, error = (str(s.decode()).strip() for s in proc.communicate())
 
         if error=='fatal: No names found, cannot describe anything.':
             raise Exception("Cannot find any git version tags of format v*.*")

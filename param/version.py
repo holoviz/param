@@ -168,6 +168,9 @@ class Version(object):
         doing a release. Should be called from setup.py when releasing
         to PyPI.
         """
+        if self.dirty:
+            raise Exception("Current working directory is dirty.")
+
         if self.release != self.expected_release:
             raise Exception("Declared release does not match current release tag.")
 

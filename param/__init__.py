@@ -22,7 +22,7 @@ from param.parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
 from param.version import Version
-__version__ = Version(release=(1,0,0), fpath=__file__, commit="$Format:%h$")
+__version__ = Version(release=(1,2,0), fpath=__file__, commit="$Format:%h$")
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.

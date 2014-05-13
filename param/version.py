@@ -132,8 +132,19 @@ class Version(object):
         Version in in x.y.z string format. Does not include the 'v'
         prefix of git version tags as format does not appear to be pip
         compatible.
+
+        If the commit count is non-zero or the repository is dirty the
+        string representation is equivalent to output of:
+
+        `git describe --long --match v*.* --dirty` ('v' prefix removed)
         """
-        return '.'.join(str(el) for el in self.release)
+        release = '.'.join(str(el) for el in self.release)
+        if self.commit_count == 0 and not self.dirty:
+            return release
+
+        dirty_status = '-dirty' if self.dirty else ''
+        return '%s-%d-g%s%s' % (release, self.commit_count,
+                                self.commit, dirty_status)
 
     def __repr__(self):
         return "Version(%r,%r,%r)" % (self.release,

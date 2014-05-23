@@ -21,8 +21,14 @@ __author__ = "Jean-Luc Stevens"
 
 import textwrap
 import param
-from IPython.core.magic import Magics, magics_class, line_magic
-from IPython.core import page
+
+try:
+    from IPython.core.magic import Magics, magics_class, line_magic
+    from IPython.core import page
+except:
+    from nose.plugins.skip import SkipTest
+    raise SkipTest("IPython extension requires IPython >= 0.13")
+
 
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False

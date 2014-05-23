@@ -9,6 +9,6 @@ python:
 # no dependencies (coveralls only for coverage)
 install: pip install coveralls
 
-script: nosetests --with-coverage --cover-package=param
+script: nosetests --with-doctest --with-coverage --cover-package=param
 
 after_success: coveralls

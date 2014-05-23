@@ -248,6 +248,10 @@ class Time(Parameterized):
         return self._time
 
 
+    def advance(self, val):
+        self += val
+
+
     def __iadd__(self, other):
         self._time = self._time + self.time_type(other)
         return self

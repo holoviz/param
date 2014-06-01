@@ -146,6 +146,7 @@ class Version(object):
 
         `git describe --long --match v*.* --dirty` (with 'v' prefix removed)
         """
+        if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)
         if self.commit_count == 0 and not self.dirty:
             return release

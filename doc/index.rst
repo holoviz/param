@@ -73,11 +73,15 @@ Parameters make it simple to generate GUIs. An interface for Tk already exists (
 Installation
 ============
 
-Official releases of Param are available at `PyPI <http://pypi.python.org/pypi/param>`_, and can be installed via `pip install param` or `easy_install param` (or via `python setup.py install` of the source).
+Param has no dependencies outside of Python's standard library.
+
+Official releases of Param are available at
+`PyPI <http://pypi.python.org/pypi/param>`_, and can be installed via ``pip
+install --user param``, ``pip install param``, or ``easy_install param``.
+Windows users can alternatively download and run an installer (exe).
 
 More recent changes can be obtained by cloning the `git repository <http://github.com/ioam/param>`_.
 
-|BuildStatus|_
 
 Release Notes
 =============
@@ -120,6 +124,3 @@ Support
 
 Questions and comments are welcome at https://github.com/ioam/param/issues.
 
-
-.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
-.. _BuildStatus: https://travis-ci.org/ioam/param

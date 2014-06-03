@@ -87,7 +87,7 @@ are listed below.
 
 
 1.2.0 (unreleased)
-------------------
+__________________
 
 * Added support for Python 3 (thanks to Marco Elver).
 * Dropped support for Python 2.5.
@@ -97,7 +97,7 @@ A full list of changes since the previous release is available
 
 
 1.1.0 (2014/05)
----------------
+_______________
 
 * Switched to Python's own logging module.
 * Improved support for time when using Dynamic parameters.
@@ -108,7 +108,7 @@ A full list of changes since the previous release is available
 
 
 1.0.0 (2012/07)
----------------
+_______________
 
 * First standalone release. Param was originally developed as part of
   `Topographica <http://ioam.github.io/topographica/>`_, and has been

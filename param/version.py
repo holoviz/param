@@ -23,6 +23,10 @@ release is made, e.g. v1.0 or v2.6.3.  As a safety check, you can also
 add a call to Version.verify() in your setup.py script, which will
 remind you to create this tag if necessary, and will check that the
 declared version in setup.py is consistent with the tag.
+
+This file is in the public domain.  Anyone is free to copy, modify,
+publish, use, compile, sell, or distribute it, for any purpose,
+commercial or non-commercial, and by any means.
 """
 
 

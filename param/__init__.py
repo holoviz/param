@@ -978,23 +978,36 @@ class ObjectSelector(Selector):
 
 
 class ClassSelector(Selector):
-    """Parameter whose value is an instance of the specified class."""
+    """
+    Parameter whose value is a specified class or an instance of that class.
+    By default, requires an instance, but if is_instance=False, accepts a class instead.
+    Both class and instance values respect the instantiate slot, though it matters only
+    for is_instance=True.
+    """
 
-    __slots__ = ['class_','allow_None']
+    __slots__ = ['class_','allow_None','is_instance']
 
-    def __init__(self,class_,default=None,instantiate=True,allow_None=False,**params):
+    def __init__(self,class_,default=None,instantiate=True,allow_None=False,is_instance=True,**params):
         self.class_ = class_
         self.allow_None = (default is None or allow_None)
+        self.is_instance = is_instance
         self._check_value(default)
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
 
 
     def _check_value(self,val,obj=None):
-        """val must be None or an instance of self.class_"""
-        if not (isinstance(val,self.class_)) and not (val is None and self.allow_None):
-            raise ValueError(
-                "Parameter '%s' value must be an instance of %s, not '%s'" %
-                (self._attrib_name, self.class_.__name__, val))
+        """val must be None, an instance of self.class_ if self.is_instance=True or a subclass of self_class if self.is_instance=False"""
+        if self.is_instance:
+            if not (isinstance(val,self.class_)) and not (val is None and self.allow_None):
+                raise ValueError(
+                    "Parameter '%s' value must be an instance of %s, not '%s'" %
+                    (self._attrib_name, self.class_.__name__, val))
+        else:
+            if not (val is None and self.allow_None) and not (issubclass(val,self.class_)):
+                raise ValueError(
+                    "Parameter '%s' must be a subclass of %s, not '%s'" %
+                    (val.__name__, self.class_.__name__, val.__class__.__name__))
+
 
     def __set__(self,obj,val):
         self._check_value(val,obj)

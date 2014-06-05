@@ -26,7 +26,9 @@ declared version in setup.py is consistent with the tag.
 
 This file is in the public domain.  Anyone is free to copy, modify,
 publish, use, compile, sell, or distribute it, for any purpose,
-commercial or non-commercial, and by any means.
+commercial or non-commercial, and by any means.  
+The original file is maintained at:
+https://github.com/ioam/param/blob/master/param/version.py
 """
 
 

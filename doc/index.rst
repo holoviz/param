@@ -129,6 +129,7 @@ __________________
 
 * Added support for Python 3 (thanks to Marco Elver).
 * Dropped support for Python 2.5.
+* Added optional version module.
 * Added optional numbergen module.
 
 A full list of changes since the previous release is available 

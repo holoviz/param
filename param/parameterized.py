@@ -1546,7 +1546,7 @@ class ParamOverrides(dict):
         supplied dict_ whose names are parameters of the
         overridden object (i.e. not extra keywords/parameters).
         """
-        return {key: self[key] for key in self if key not in self.extra_keywords()}
+        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
 
     def __missing__(self,name):
         # Return 'name' from the overridden object

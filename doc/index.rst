@@ -61,13 +61,47 @@ class B(A)
 Param is lightweight
 ____________________
 
-Param consists of two BSD-licensed Python files, with no dependencies outside of the standard library.
+Param consists of three BSD-licensed Python files, with no dependencies outside of the standard library.
 
 
 Parameters make GUI programming simpler
 _______________________________________
 
 Parameters make it simple to generate GUIs. An interface for Tk already exists (`ParamTk <http://ioam.github.com/paramtk/>`_), providing a property sheet that can automatically generate a GUI window for viewing and editing an object's Parameters.
+
+
+Optional dynamic parameter values using `numbergen`
+_______________________________________
+
+Providing random or other types of varying values for parameters can
+be tricky, because unnamed ("lambda") functions as used above cannot
+easily be pickled, causing problems for people who wish to store
+Parameterized objects containing random state.  To avoid users having
+to write a separate function for each random value, Param includes an
+optional set of value-generating objects that are easily configured
+and support pickling.  These objects are available if you import the
+optional `numbergen` module.  If you wish to use numbergen, the above
+example can be rewritten as:
+
+>>> import param,numbergen
+>>> class A(param.Parameterized):
+...    a = param.Number(0.5,bounds=(0,1),doc="Probability that...")
+...    b = param.Boolean(False,doc="Enable feature...")
+
+>>> class B(A):
+...    b = param.Boolean(True)
+
+>>> x = B(a=numbergen.UniformRandom())
+  
+Numbergen objects support the usual arithmetic operations like +, -,
+*, /, //, %, **, and abs(), and so they can be freely combined with
+each other or with mathematical constants:
+
+>>> y = B(a=2.0*numbergen.UniformRandom()/(numbergen.NormalRandom()+1.5))
+
+Note that unlike the lambda-function approach, all varying numbergen
+objects respect `param.Dynamic.time_fn`, e.g. to ensure that new
+values will be generated only when Param's time has changed.
 
 
 Installation
@@ -95,6 +129,7 @@ __________________
 
 * Added support for Python 3 (thanks to Marco Elver).
 * Dropped support for Python 2.5.
+* Added optional numbergen module.
 
 A full list of changes since the previous release is available 
 `on GitHub <https://github.com/ioam/param/compare/v1.1.0...v1.2.0>`_.

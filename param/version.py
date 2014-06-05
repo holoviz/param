@@ -11,11 +11,12 @@ The Version class is designed to solve these problems, acting like a
 simple version string for released versions while making additional
 information accessible when working with version control during
 development.  Currently the only version control system supported is
-git, but others could be added easily. All you need to do to declare
-the version of a package is to add a line like this to the package's
-__init__.py file:
+git, but others could be added easily. If version.py is in a package,
+all you need to do to declare the version of the package is to add
+two lines like this to the package's __init__.py file:
 
-__version__ = param.Version(release=(1,0), fpath=__file__)
+from .version import Version
+__version__ = Version(release=(1,0), fpath=__file__)
 
 The Version class assumes that you will tag the release in your
 version control system with a string of the form v*.* before the

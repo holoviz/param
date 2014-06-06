@@ -1,11 +1,11 @@
 # Makefile for Sphinx documentation
 #
 
-PROJECT = Param
-MODULE = param
+PROJECT = 'Param'
+MODULE = 'param'
 
-include ./builder/Makefile
+include ./builder/Makefile 
 export
 
 %:
-	@MAKE -f ./builder/Makefile
+	$(MAKE) -f ./builder/Makefile $(CFLAGS)

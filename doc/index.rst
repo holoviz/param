@@ -124,8 +124,8 @@ Notable additions, or changes that may require users to alter code,
 are listed below.
 
 
-1.2.0 (unreleased)
-__________________
+1.2.0 (2014/06)
+_______________
 
 * Added support for Python 3 (thanks to Marco Elver).
 * Dropped support for Python 2.5.

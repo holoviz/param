@@ -130,7 +130,7 @@ _______________
 * Added support for Python 3 (thanks to Marco Elver).
 * Dropped support for Python 2.5.
 * Added optional version module.
-* Added optional numbergen module.
+* Added optional numbergen package.
 
 A full list of changes since the previous release is available 
 `on GitHub <https://github.com/ioam/param/compare/v1.1.0...v1.2.0>`_.

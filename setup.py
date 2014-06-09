@@ -18,6 +18,7 @@ setup_args.update(dict(
     license='BSD',
     url='http://ioam.github.com/param/',
     packages = ["param","numbergen"],
+    provides = ["param","numbergen"],
     classifiers = [
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",

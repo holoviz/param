@@ -144,7 +144,7 @@ class Version(object):
                 # Verify this is the correct repository
                 output = run_cmd([cmd, 'remote', '-v'],
                                  cwd=os.path.dirname(self.fpath))
-                if '/' + self.name not in output:
+                if '/' + self.name + '.git' not in output:
                     return self
 
             output = run_cmd([cmd, 'describe', '--long', '--match', 'v*.*', '--dirty'],

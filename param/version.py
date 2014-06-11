@@ -78,11 +78,11 @@ class Version(object):
     __init__.py export-subst
     """
 
-    def __init__(self, release=None, fpath=None, commit=None, name=None):
+    def __init__(self, release=None, fpath=None, commit=None, reponame=None):
         """
         release:  Release tuple (corresponding to the current git tag)
         fpath:    Set to __file__ to access version control information
-        name:     Optional name for project.
+        reponame: Used to verify VCS repository name.
         """
         self.fpath = fpath
         self._expected_commit = commit
@@ -92,7 +92,7 @@ class Version(object):
         self._commit_count = 0
         self._release = None
         self._dirty = False
-        self.name = name
+        self.reponame = reponame
 
     @property
     def release(self):
@@ -140,11 +140,11 @@ class Version(object):
 
     def git_fetch(self, cmd='git'):
         try:
-            if self.name is not None:
+            if self.reponame is not None:
                 # Verify this is the correct repository
                 output = run_cmd([cmd, 'remote', '-v'],
                                  cwd=os.path.dirname(self.fpath))
-                if '/' + self.name + '.git' not in output:
+                if '/' + self.reponame + '.git' not in output:
                     return self
 
             output = run_cmd([cmd, 'describe', '--long', '--match', 'v*.*', '--dirty'],

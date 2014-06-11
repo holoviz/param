@@ -23,7 +23,7 @@ from param.parameterized import Parameterized, Parameter, String, \
 
 from param.version import Version
 __version__ = Version(release=(1,2,0), fpath=__file__,
-                      commit="$Format:%h$", name="param")
+                      commit="$Format:%h$", reponame="param")
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.

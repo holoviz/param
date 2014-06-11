@@ -37,6 +37,16 @@ __author__ = 'Jean-Luc Stevens'
 
 import os, subprocess
 
+def run_cmd(args, cwd=None):
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            cwd=cwd)
+    output, error = (str(s.decode()).strip() for s in proc.communicate())
+
+    if proc.returncode != 0:
+        raise Exception(proc.returncode, error)
+    return output
+
 class Version(object):
     """
     A simple approach to Python package versioning that supports PyPI
@@ -68,11 +78,11 @@ class Version(object):
     __init__.py export-subst
     """
 
-    def __init__(self, release=None, fpath=None, commit=None):
+    def __init__(self, release=None, fpath=None, commit=None, reponame=None):
         """
         release:  Release tuple (corresponding to the current git tag)
         fpath:    Set to __file__ to access version control information
-        describe: Set to "$Format:%h$" (double quotes) for git archive
+        reponame: Used to verify VCS repository name.
         """
         self.fpath = fpath
         self._expected_commit = commit
@@ -82,6 +92,7 @@ class Version(object):
         self._commit_count = 0
         self._release = None
         self._dirty = False
+        self.reponame = reponame
 
     @property
     def release(self):
@@ -128,17 +139,21 @@ class Version(object):
 
 
     def git_fetch(self, cmd='git'):
-        cmd = [cmd, 'describe', '--long', '--match', 'v*.*', '--dirty']
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                cwd=os.path.dirname(self.fpath))
-        output, error = (str(s.decode()).strip() for s in proc.communicate())
+        try:
+            if self.reponame is not None:
+                # Verify this is the correct repository
+                output = run_cmd([cmd, 'remote', '-v'],
+                                 cwd=os.path.dirname(self.fpath))
+                if '/' + self.reponame + '.git' not in output:
+                    return self
 
-        if error=='fatal: No names found, cannot describe anything.':
-            raise Exception("Cannot find any git version tags of format v*.*")
-
-        # If there is any other error, return (release value still useful)
-        if proc.returncode != 0: return self
+            output = run_cmd([cmd, 'describe', '--long', '--match', 'v*.*', '--dirty'],
+                             cwd=os.path.dirname(self.fpath))
+        except Exception as e:
+            if e.args[1] == 'fatal: No names found, cannot describe anything.':
+                raise Exception("Cannot find any git version tags of format v*.*")
+            # If there is any other error, return (release value still useful)
+            return self
 
         split = output[1:].split('-')
         self._release = tuple(int(el) for el in split[0].split('.'))

@@ -68,11 +68,11 @@ class Version(object):
     __init__.py export-subst
     """
 
-    def __init__(self, release=None, fpath=None, commit=None):
+    def __init__(self, release=None, fpath=None, commit=None, name=None):
         """
         release:  Release tuple (corresponding to the current git tag)
         fpath:    Set to __file__ to access version control information
-        describe: Set to "$Format:%h$" (double quotes) for git archive
+        name:     Optional name for project.
         """
         self.fpath = fpath
         self._expected_commit = commit
@@ -82,6 +82,7 @@ class Version(object):
         self._commit_count = 0
         self._release = None
         self._dirty = False
+        self.name = name
 
     @property
     def release(self):
@@ -128,17 +129,29 @@ class Version(object):
 
 
     def git_fetch(self, cmd='git'):
-        cmd = [cmd, 'describe', '--long', '--match', 'v*.*', '--dirty']
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                cwd=os.path.dirname(self.fpath))
-        output, error = (str(s.decode()).strip() for s in proc.communicate())
+        def _git_cmd(args):
+            proc = subprocess.Popen([cmd] + args, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    cwd=os.path.dirname(self.fpath))
+            output, error = (str(s.decode()).strip() for s in proc.communicate())
 
-        if error=='fatal: No names found, cannot describe anything.':
-            raise Exception("Cannot find any git version tags of format v*.*")
+            if proc.returncode != 0:
+                raise Exception(proc.returncode, error)
+            return output
 
-        # If there is any other error, return (release value still useful)
-        if proc.returncode != 0: return self
+        try:
+            if self.name is not None:
+                # Verify this is the correct repository
+                output = _git_cmd(['remote', '-v'])
+                if '/' + self.name not in output:
+                    return self
+
+            output = _git_cmd(['describe', '--long', '--match', 'v*.*', '--dirty'])
+        except Exception as e:
+            if e.args[1] == 'fatal: No names found, cannot describe anything.':
+                raise Exception("Cannot find any git version tags of format v*.*")
+            # If there is any other error, return (release value still useful)
+            return self
 
         split = output[1:].split('-')
         self._release = tuple(int(el) for el in split[0].split('.'))

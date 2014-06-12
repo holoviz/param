@@ -5,25 +5,33 @@ strings, constant and read-only parameters, and type or range checking
 at assignment time.
 
 Potentially useful for any large Python program that needs
-user-modifiable object attributes; see the parameterized.Parameter and
-parameterized.Parameterized classes for more information.
-
+user-modifiable object attributes; see the Parameter and Parameterized
+classes for more information.  If you do not want to add a dependency
+on external code by importing from a separately installed param
+package, you can simply save this file as param.py and copy it and
+parameterized.py directly into your own package.
 
 This file contains subclasses of Parameter, implementing specific
-parameter types (e.g. Number).
+parameter types (e.g. Number), and also imports the definition of
+Parameters and Parameterized classes.
 """
-
-# CEBALERT: we need more documentation above, now that params is a
-# separate package.
 
 import os.path
 
-from param.parameterized import Parameterized, Parameter, String, \
+from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
-from param.version import Version
-__version__ = Version(release=(1,2,0), fpath=__file__,
-                      commit="$Format:%h$", reponame="param")
+
+# Determine up-to-date version information, if possible, but with a
+# safe fallback to ensure that this file and parameterized.py are the
+# only two required files.
+try:
+    from .version import Version
+    __version__ = Version(release=(1,2,0), fpath=__file__, 
+                          commit="$Format:%h$", reponame="param")
+except:
+    __version__ = '1.2.0-unknown'
+
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.

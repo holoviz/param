@@ -12,15 +12,19 @@ add_paths(paths)
 project = u'Param'
 copyright = u'2014, IOAM'
 ioam_project = 'param'
+from param import __version__
 
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
+
+# The version info for the project being documented, defining |version|
+# and |release| and used in various other places throughout the built
+# documents.  Assumes __version__ is a param.version.Version object.
 #
-# The short X.Y version.
-version = '1.1'
-# The full version, including alpha/beta/rc tags.
-release = '1.1-devel'
+# The short X.Y.Z version.
+version = __version__.abbrev()
+
+# The full version, including alpha/beta/rc/dev tags.
+release = __version__.abbrev(dev_suffix="-dev")
+
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

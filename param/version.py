@@ -62,9 +62,11 @@ class Version(object):
     number of commits since the last version tag, the short commit
     hash, and whether the commit is dirty (has changes not yet
     committed). Version tags must start with a lowercase 'v' and have
-    a period in them, e.g. v2.0, v0.9.8, v0.1a, or v0.2beta.
+    a period in them, e.g. v2.0, v0.9.8, v0.1a, or v0.2beta.  Note
+    that any non-numeric portion of the version ("a", "beta", etc.)
+    will currently be discarded for the purposes of numeric comparisons. 
 
-    Note that when version control information is used, the comparison
+    Also note that when version control information is used, the comparison
     operators take into account the number of commits since the last
     version tag. This approach is often useful in practice to decide
     which version is newer for a single developer, but will not
@@ -186,6 +188,16 @@ class Version(object):
         return "Version(%r,%r,%r)" % (self.release,
                                       self.fpath if self.fpath else None,
                                       self.commit)
+
+    def abbrev(self,dev_suffix=""):
+        """
+        Abbreviated string representation, optionally declaring whether it is 
+        a development version.
+        """
+        return '.'.join(str(el) for el in self.release) + \
+            (dev_suffix if self.commit_count > 0 or self.dirty else "")
+
+
 
     def __eq__(self, other):
         """

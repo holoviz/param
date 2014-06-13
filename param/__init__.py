@@ -27,10 +27,10 @@ from .parameterized import Parameterized, Parameter, String, \
 # only two required files.
 try:
     from .version import Version
-    __version__ = Version(release=(1,2,0), fpath=__file__, 
+    __version__ = Version(release=(1,2,1), fpath=__file__, 
                           commit="$Format:%h$", reponame="param")
 except:
-    __version__ = '1.2.0-unknown'
+    __version__ = '1.2.1-unknown'
 
 
 #: Top-level object to allow messaging not tied to a particular

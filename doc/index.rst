@@ -124,12 +124,24 @@ Notable additions, or changes that may require users to alter code,
 are listed below.
 
 
+1.2.1 (2014/06)
+_______________
+
+* Minor bugfix release to fix issues with version when param is
+  installed in a foreign git repository
+* Made version module optional
+* Improved ClassSelector and ParamOverrides
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/v1.2.0...v1.2.1>`_.
+
+
 1.2.0 (2014/06)
 _______________
 
 * Added support for Python 3 (thanks to Marco Elver).
 * Dropped support for Python 2.5.
-* Added optional version module.
+* Added version module.
 * Added optional numbergen package.
 
 A full list of changes since the previous release is available 

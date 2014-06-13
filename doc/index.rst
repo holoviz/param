@@ -61,7 +61,9 @@ class B(A)
 Param is lightweight
 ____________________
 
-Param consists of three BSD-licensed Python files, with no dependencies outside of the standard library.
+Param consists of two required BSD-licensed Python files, with no
+dependencies outside of the standard library, and so it can easily be
+included as part of larger projects without adding external dependencies.
 
 
 Parameters make GUI programming simpler

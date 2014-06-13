@@ -8,9 +8,10 @@ have features such as type and range checking, dynamically generated
 values, documentation strings, default values, etc., each of which is
 inherited from parent classes if not specified in a subclass.
 
-Param consists of three required Python files, with no external
+Param contains only two required Python files, with no external
 dependencies, and is provided freely for both non-commercial and
-commercial use under a BSD license.
+commercial use under a BSD license, so that it can easily be included
+as part of other projects.
 
 Please see `param's website <http://ioam.github.com/param/>`_ for
 official releases, installation instructions, documentation, and examples.

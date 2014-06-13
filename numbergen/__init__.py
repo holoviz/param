@@ -10,6 +10,10 @@ from math import e,pi
 import param
 
 
+from param.version import Version
+__version__ = Version(release=(1,2,1), fpath=__file__, 
+                      commit="$Format:%h$", reponame="param")
+
 
 class TimeAware(param.Parameterized):
     """

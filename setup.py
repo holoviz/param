@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 from distutils.core import setup
-import param
+import param,numbergen
 
 setup_args = {}
 
@@ -43,5 +43,6 @@ if __name__=="__main__":
 
     if 'bdist_wininst' in sys.argv or 'upload' in sys.argv:
         param.__version__.verify()
+        numbergen.__version__.verify()
 
     setup(**setup_args)

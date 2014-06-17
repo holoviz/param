@@ -41,7 +41,7 @@ setup_args.update(dict(
 
 if __name__=="__main__":
 
-    if 'bdist_wininst' in sys.argv or 'upload' in sys.argv:
+    if 'upload' in sys.argv:
         param.__version__.verify()
         numbergen.__version__.verify()
 

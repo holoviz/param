@@ -27,7 +27,7 @@ declared version in setup.py is consistent with the tag.
 
 This file is in the public domain.  Anyone is free to copy, modify,
 publish, use, compile, sell, or distribute it, for any purpose,
-commercial or non-commercial, and by any means.  
+commercial or non-commercial, and by any means.
 The original file is maintained at:
 https://github.com/ioam/param/blob/master/param/version.py
 """
@@ -64,7 +64,7 @@ class Version(object):
     committed). Version tags must start with a lowercase 'v' and have
     a period in them, e.g. v2.0, v0.9.8, v0.1a, or v0.2beta.  Note
     that any non-numeric portion of the version ("a", "beta", etc.)
-    will currently be discarded for the purposes of numeric comparisons. 
+    will currently be discarded for the purposes of numeric comparisons.
 
     Also note that when version control information is used, the comparison
     operators take into account the number of commits since the last
@@ -170,7 +170,7 @@ class Version(object):
         Version in x.y.z string format. Does not include the 'v'
         prefix of git version tags, for pip compatibility.
 
-        If the commit count is non-zero or the repository is dirty, 
+        If the commit count is non-zero or the repository is dirty,
         the string representation is equivalent to the output of:
 
         `git describe --long --match v*.* --dirty` (with 'v' prefix removed)
@@ -191,7 +191,7 @@ class Version(object):
 
     def abbrev(self,dev_suffix=""):
         """
-        Abbreviated string representation, optionally declaring whether it is 
+        Abbreviated string representation, optionally declaring whether it is
         a development version.
         """
         return '.'.join(str(el) for el in self.release) + \

@@ -178,14 +178,14 @@ class UnaryOperator(NumberGenerator):
 
 class Hash(object):
     """
-    A platform and architecture independent hash (unlike Python's
-    inbuilt hash functon) for hashing an ordered collection of
-    rationals or integers.
+    A platform- and architecture-independent hash function 
+    (unlike Python's inbuilt hash()) for use with an ordered
+    collection of rationals or integers.
 
-    The supplied name sets the initial hash state and the output of
-    the call is a 64-bit integer. The number of inputs (integer or
-    rational numbers) must be specified in the constrcutor and is
-    expected to stay constant across calls.
+    The supplied name sets the initial hash state.  The output from
+    each call is a 64-bit integer. The number of inputs (integer or
+    rational numbers) to be supplied for __call__ must be specified in
+    the constructor and must stay constant across calls.
     """
     def __init__(self, name, input_count):
         self.name = name
@@ -196,6 +196,7 @@ class Hash(object):
 
 
     def _rational(self, val):
+        """Convert the given value to a rational, if necessary."""
         if isinstance(val, int):
             denom , numer = 1, val
         elif hasattr(val, 'numer'):
@@ -229,7 +230,7 @@ class Hash(object):
         architecture-independent integer hash.
         """
         # Convert inputs to (denom, numer) pairs with integers
-        # becoming (int, 1) pairs to match gmpy.mpqs at int values.
+        # becoming (int, 1) pairs to match gmpy.mpqs for int values.
         pairs = [self._rational(val) for val in vals]
         # Unpack pairs and fill struct with ints to update md5 hash
         ints = [el for pair in pairs for el in pair]

@@ -14,7 +14,7 @@ import param
 
 
 from param.version import Version
-__version__ = Version(release=(1,2,1), fpath=__file__, 
+__version__ = Version(release=(1,2,1), fpath=__file__,
                       commit="$Format:%h$", reponame="param")
 
 
@@ -516,7 +516,7 @@ class SquareWave(NumberGenerator, TimeDependent):
          Duration of the 'on' state during which a value of 1.0 is
          returned.""")
 
-    off_duration = param.Number(default=None, allow_None=True, 
+    off_duration = param.Number(default=None, allow_None=True,
                                 bounds=(0.0,None), doc="""
         Duration of the 'off' value state during which a value of 0.0
         is returned. By default, this duration matches the value of
@@ -580,11 +580,11 @@ class TimeSampledFn(NumberGenerator, TimeDependent):
     held constant within each interval.
     """
 
-    period = param.Number(default=1.0, bounds=(0.0,None), 
+    period = param.Number(default=1.0, bounds=(0.0,None),
         inclusive_bounds=(False,True), softbounds=(0.0,5.0), doc="""
         The periodicity with which the values of fn are sampled.""")
 
-    offset = param.Number(default=0.0, bounds=(0.0,None), 
+    offset = param.Number(default=0.0, bounds=(0.0,None),
                           softbounds=(0.0,5.0), doc="""
         The offset from time 0.0 at which the first sample will be drawn.
         Must be less than the value of period.""")

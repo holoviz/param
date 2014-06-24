@@ -198,15 +198,15 @@ class Hash(object):
     def _rational(self, val):
         """Convert the given value to a rational, if necessary."""
         if isinstance(val, int):
-            denom , numer = 1, val
+             numer, denom = val, 1
         elif hasattr(val, 'numer'):
             (numer, denom) = (int(val.numer()), int(val.denom()))
         else:
             self.warning("Casting type '%s' to Fraction.fraction"
                          % type(val).__name__)
             frac = fractions.Fraction(str(val))
-            denom, numer = frac.denominator, frac.numerator
-        return denom, numer
+            numer, denom = frac.numerator, frac.denominator
+        return numer, denom
 
 
     def __getstate__(self):
@@ -229,7 +229,7 @@ class Hash(object):
         Given integer or rational inputs, generate a cross-platform,
         architecture-independent integer hash.
         """
-        # Convert inputs to (denom, numer) pairs with integers
+        # Convert inputs to (numer, denom) pairs with integers
         # becoming (int, 1) pairs to match gmpy.mpqs for int values.
         pairs = [self._rational(val) for val in vals]
         # Unpack pairs and fill struct with ints to update md5 hash

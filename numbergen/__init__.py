@@ -4,6 +4,9 @@ Callable objects that generate numbers according to different distributions.
 
 import random
 import operator
+import hashlib
+import struct
+import fractions
 
 from math import e,pi
 
@@ -172,6 +175,71 @@ class UnaryOperator(NumberGenerator):
         return self.operator(self.operand(),**self.args)
 
 
+
+class Hash(object):
+    """
+    A platform and architecture independent hash (unlike Python's
+    inbuilt hash functon) for hashing an ordered collection of
+    rationals or integers.
+
+    The supplied name sets the initial hash state and the output of
+    the call is a 64-bit integer. The number of inputs (integer or
+    rational numbers) must be specified in the constrcutor and is
+    expected to stay constant across calls.
+    """
+    def __init__(self, name, input_count):
+        self.name = name
+        self._digest = hashlib.md5()
+        self._digest.update(name.encode())
+        struct_format = "!"+" ".join(["I"] * (input_count * 2))
+        self._hash_struct = struct.Struct(struct_format)
+
+
+    def _rational(self, val):
+        if isinstance(val, int):
+            denom , numer = 1, val
+        elif hasattr(val, 'numer'):
+            (numer, denom) = (int(val.numer()), int(val.denom()))
+        else:
+            self.warning("Casting type '%s' to Fraction.fraction"
+                         % type(val).__name__)
+            frac = fractions.Fraction(str(val))
+            denom, numer = frac.denominator, frac.numerator
+        return denom, numer
+
+
+    def __getstate__(self):
+        """
+        Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)
+        """
+        d = self.__dict__.copy()
+        d.pop('_digest')
+        return d
+
+
+    def __setstate__(self, d):
+        self._digest = hashlib.md5()
+        self._digest.update(d['name'].encode())
+        self.__dict__.update(d)
+
+
+    def __call__(self, *vals):
+        """
+        Given integer or rational inputs, generate a cross-platform,
+        architecture-independent integer hash.
+        """
+        # Convert inputs to (denom, numer) pairs with integers
+        # becoming (int, 1) pairs to match gmpy.mpqs at int values.
+        pairs = [self._rational(val) for val in vals]
+        # Unpack pairs and fill struct with ints to update md5 hash
+        ints = [el for pair in pairs for el in pair]
+        digest = self._digest.copy()
+        digest.update(self._hash_struct.pack(*ints))
+        # Convert from hex string to 64 bit int
+        return int(digest.hexdigest()[:15], 16)
+
+
+
 class RandomDistribution(NumberGenerator, TimeAware):
     """
     Python's random module provides the Random class, which can be
@@ -237,6 +305,7 @@ class RandomDistribution(NumberGenerator, TimeAware):
         else:
             self.random_generator.jumpahead(10)
 
+        self._hashfn = Hash(self.name, input_count=2)
         self._verify_constrained_hash()
         if self.time_dependent:
             self._hash_and_seed()
@@ -249,12 +318,8 @@ class RandomDistribution(NumberGenerator, TimeAware):
                          "random values conditional on object instantiation order.")
 
     def _hash_and_seed(self):
-        time = self.time_fn()
-        if hasattr(time, 'numer'):
-            time = (int(time.numer()), int(time.denom()))
-        elif not isinstance(time, int):
-            self.warning("Cannot generate known hash format for time type '%s'" % type(time).__name__)
-        hashval = hash((self.name, time, param.random_seed))
+        # Assumes param.random_seed is an integer or rational type
+        hashval = self._hashfn(self.time_fn(), param.random_seed)
         self.random_generator.seed(hashval)
 
 

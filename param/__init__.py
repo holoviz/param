@@ -38,8 +38,8 @@ except:
 main=Parameterized(name="main")
 
 
-# A global random seed available for controlling the behaviour of
-# parameterized objects with random state.
+# A global random seed (integer or rational) available for controlling
+# the behaviour of parameterized objects with random state.
 random_seed = 42
 
 

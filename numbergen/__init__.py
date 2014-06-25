@@ -178,7 +178,7 @@ class UnaryOperator(NumberGenerator):
 
 class Hash(object):
     """
-    A platform- and architecture-independent hash function 
+    A platform- and architecture-independent hash function
     (unlike Python's inbuilt hash()) for use with an ordered
     collection of rationals or integers.
 
@@ -189,10 +189,10 @@ class Hash(object):
     """
     def __init__(self, name, input_count):
         self.name = name
+        self.input_count = input_count
         self._digest = hashlib.md5()
         self._digest.update(name.encode())
-        struct_format = "!"+" ".join(["I"] * (input_count * 2))
-        self._hash_struct = struct.Struct(struct_format)
+        self._hash_struct = struct.Struct( "!" +" ".join(["I"] * (input_count * 2)))
 
 
     def _rational(self, val):
@@ -215,12 +215,15 @@ class Hash(object):
         """
         d = self.__dict__.copy()
         d.pop('_digest')
+        d.pop('_hash_struct')
         return d
 
 
     def __setstate__(self, d):
         self._digest = hashlib.md5()
-        self._digest.update(d['name'].encode())
+        name, input_count = d['name'], d['input_count']
+        self._digest.update(name.encode())
+        self._hash_struct = struct.Struct( "!" +" ".join(["I"] * (input_count * 2)))
         self.__dict__.update(d)
 
 

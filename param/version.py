@@ -10,13 +10,13 @@ This file provides a Version class that addresses both problems.
 Version is meant to be a simple, bare-bones approach that focuses on
 (a) ensuring that all declared version information matches for a
 release, and (b) providing fine-grained version information via a
-version control system in between releases.  Other approaches like
+version control system (VCS) in between releases.  Other approaches like
 versioneer.py can automate more of the process of making releases, but
 they require more complex self-modifying code and code generation
 techniques than the simple Python class declaration used here.
 
-Currently, the only version control system supported is git, but
-others could be added easily.
+Currently, the only VCS supported is git, but others could be added
+easily.
 
 To use Version in a project that provides a Python package named
 "package" maintained in a git repository named "packagegit", just put
@@ -51,16 +51,16 @@ the form v*.*, i.e. v1.0.0 in this example.  E.g. for git:
 git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
 
 
-Now when you run setup.py to make a release via something like 
-"python setup.py register sdist upload", Python will verify that the
-version last tagged in the version control system is the same as what
-is declared in the package and also in setup.py, aborting the release
-until either the tag is corrected or the declared version is made to
-match the tag.  Releases installed without version control information
-will then report the declared release version.  If version control
-information is available and matches the specified repository name,
-then version reported from e.g. str(package.__version__)) will provide 
-more detailed information about the version control revision.  
+Now when you run setup.py to make a release via something like "python
+setup.py register sdist upload", Python will verify that the version
+last tagged in the VCS is the same as what is declared in the package
+and also in setup.py, aborting the release until either the tag is
+corrected or the declared version is made to match the tag.  Releases
+installed without VCS information will then report the declared
+release version.  If VCS information is available and matches the
+specified repository name, then version reported from
+e.g. str(package.__version__)) will provide more detailed information
+about the VCS revision.
 
 This file is in the public domain, provided as-is, with no warranty of
 any kind expressed or implied.  Anyone is free to copy, modify,
@@ -96,20 +96,21 @@ class Version(object):
     of items can be supplied in the release tuple, with either two or
     three numeric versioning levels typical.
 
-    During development, `git describe` will be used to compute the
-    number of commits since the last version tag, the short commit
-    hash, and whether the commit is dirty (has changes not yet
-    committed). Version tags must start with a lowercase 'v' and have
-    a period in them, e.g. v2.0, v0.9.8, v0.1a, or v0.2beta.  Note
-    that any non-numeric portion of the version ("a", "beta", etc.)
-    will currently be discarded for the purposes of numeric comparisons.
+    During development, a command like `git describe` will be used to
+    compute the number of commits since the last version tag, the
+    short commit hash, and whether the commit is dirty (has changes
+    not yet committed). Version tags must start with a lowercase 'v'
+    and have a period in them, e.g. v2.0, v0.9.8, v0.1a, or v0.2beta.
+    Note that any non-numeric portion of the version ("a", "beta",
+    etc.)  will currently be discarded for the purposes of numeric
+    comparisons.
 
-    Also note that when version control information is used, the comparison
-    operators take into account the number of commits since the last
-    version tag. This approach is often useful in practice to decide
-    which version is newer for a single developer, but will not
-    necessarily be reliable when comparing against a different fork or
-    branch in a distributed version control system.
+    Also note that when version control system (VCS) information is
+    used, the comparison operators take into account the number of
+    commits since the last version tag. This approach is often useful
+    in practice to decide which version is newer for a single
+    developer, but will not necessarily be reliable when comparing
+    against a different fork or branch in a distributed VCS.
 
     For git, if you want version control information available even in
     an exported archive (e.g. a .zip file from GitHub), you can set
@@ -120,7 +121,7 @@ class Version(object):
 
     def __init__(self, release=None, fpath=None, commit=None, reponame=None):
         """
-        release:  Release tuple (corresponding to the current git tag)
+        release:  Release tuple (corresponding to the current VCS tag)
         fpath:    Set to __file__ to access version control information
         reponame: Used to verify VCS repository name.
         """
@@ -141,7 +142,7 @@ class Version(object):
 
     @property
     def commit(self):
-        "The short git SHA"
+        "A specification for this particular VCS version, e.g. a short git SHA"
         return self.fetch()._commit
 
     @property
@@ -206,7 +207,7 @@ class Version(object):
     def __str__(self):
         """
         Version in x.y.z string format. Does not include the 'v'
-        prefix of git version tags, for pip compatibility.
+        prefix of the VCS version tags, for pip compatibility.
 
         If the commit count is non-zero or the repository is dirty,
         the string representation is equivalent to the output of:
@@ -257,9 +258,9 @@ class Version(object):
 
     def verify(self):
         """
-        Check that the version information is consistent with git before
-        doing a release. Should be called from setup.py before releasing
-        to PyPI.
+        Check that the version information is consistent with the VCS
+        information before doing a release. Should be called from
+        setup.py before releasing to PyPI.
         """
         if self.dirty:
             raise Exception("Current working directory is dirty.")
@@ -268,7 +269,7 @@ class Version(object):
             raise Exception("Declared release does not match current release tag.")
 
         if self.commit_count !=0:
-            raise Exception("Please update the git version tag before release.")
+            raise Exception("Please update the VCS version tag before release.")
 
         if self._expected_commit not in [None, "$Format:%h$"]:
-            raise Exception("Declared release does not match git version tag")
+            raise Exception("Declared release does not match the VCS version tag")

@@ -1,34 +1,72 @@
 """
-A simple approach to automatically maintaining __version__ strings for
-Python packages, as an alternative to larger, more complex solutions
-like versioneer.py.
+Provide consistent and up-to-date __version__ strings for Python packages.
 
 It is easy to forget to update __version__ strings when releasing a
-project and it is important that the __version__ strings are useful
-over the course of development, especially if releases are infrequent.
+project, and it is important that the __version__ strings are useful
+over the course of development even between releases, especially if
+releases are infrequent.
 
-The Version class is designed to solve these problems, acting like a
-simple version string for released versions while making additional
-information accessible when working with version control during
-development.  Currently the only version control system supported is
-git, but others could be added easily. If version.py is in a package,
-all you need to do to declare the version of the package is to add
-two lines like this to the package's __init__.py file:
+This file provides a Version class that addresses both problems.  
+Version is meant to be a simple, bare-bones approach that focuses on
+(a) ensuring that all declared version information matches for a
+release, and (b) providing fine-grained version information via a
+version control system in between releases.  Other approaches like
+versioneer.py can automate more of the process of making releases, but
+they require more complex self-modifying code and code generation
+techniques than the simple Python class declaration used here.
+
+Currently, the only version control system supported is git, but
+others could be added easily.
+
+To use Version in a project that provides a Python package named
+"package" maintained in a git repository named "packagegit", just put
+this file into package/version.py and then:
+
+
+1. Assuming that the current version is 1.0.0, add these two lines to package/__init__.py:
 
 from .version import Version
-__version__ = Version(release=(1,0), fpath=__file__)
+__version__ = Version(release=(1,0,0), fpath=__file__, commit="$Format:%h$", reponame="packagegit")
 
-The Version class assumes that you will tag the release in your
-version control system with a string of the form v*.* before the
-release is made, e.g. v1.0 or v2.6.3.  As a safety check, you can also
-add a call to Version.verify() in your setup.py script, which will
-remind you to create this tag if necessary, and will check that the
-declared version in setup.py is consistent with the tag.
 
-This file is in the public domain.  Anyone is free to copy, modify,
-publish, use, compile, sell, or distribute it, for any purpose,
-commercial or non-commercial, and by any means.
-The original file is maintained at:
+2. Declare the version as a string in the package's setup.py file, e.g.:
+setup_args["version"]="1.0.0"
+
+
+3. In your setup.py script code for making a release, add a call to Version.verify() and
+a statement like "assert str(param.__version__) == setup_args['version']".  E.g.:
+
+setup_args = dict(name='package', version="1.0.0", ...)
+
+if __name__=="__main__":
+    if 'upload' in sys.argv:
+        import package
+        package.__version__.verify()
+        assert str(package.__version__) == setup_args['version']
+    setup(**setup_args)
+
+4. Tag the version of the repository to be released with a string of
+the form v*.*, i.e. v1.0.0 in this example.  E.g. for git:
+
+git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
+
+
+Now when you run setup.py to make a release via something like 
+"python setup.py register sdist upload", Python will verify that the
+version last tagged in the version control system is the same as what
+is declared in the package and also in setup.py, aborting the release
+until either the tag is corrected or the declared version is made to
+match the tag.  Releases installed without version control information
+will then report the declared release version.  If version control
+information is available and matches the specified repository name,
+then version reported from e.g. str(package.__version__)) will provide 
+more detailed information about the version control revision.  
+
+This file is in the public domain, provided as-is, with no warranty of
+any kind expressed or implied.  Anyone is free to copy, modify,
+publish, use, compile, sell, or distribute it under any license, for
+any purpose, commercial or non-commercial, and by any means.  The
+original file is maintained at:
 https://github.com/ioam/param/blob/master/param/version.py
 """
 

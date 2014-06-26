@@ -42,9 +42,7 @@ if __name__=="__main__":
 
     if 'upload' in sys.argv:
         import param, numbergen
-        param.__version__.verify()
-        numbergen.__version__.verify()
-        assert str(param.__version__) == setup_args['version']
-        assert str(numbergen.__version__) == setup_args['version']
+        param.__version__.verify(setup_args['version'])
+        numbergen.__version__.verify(setup_args['version'])
 
     setup(**setup_args)

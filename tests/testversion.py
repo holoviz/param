@@ -85,17 +85,6 @@ class TestVersion(unittest.TestCase):
         v101 = Version(release=(1,0,1))
         self.assertEqual(v1 !=v101, True)
 
-    def test_verify_v1(self):
-        v1 = Version(release=(1,0))
-        v1.verify()
-
-    def test_verify_v1_commit(self):
-        v1 = Version(release=(1,0), commit='shortSHA')
-        try:
-            v1.verify()
-        except Exception as e:
-            assert str(e).startswith('Declared release does not match git version tag')
-
 
 if __name__ == "__main__":
     import nose

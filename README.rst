@@ -1,4 +1,4 @@
-|BuildStatus|_
+|BuildStatus|_ |PyPIVersion|_
 
 Param
 =====
@@ -18,3 +18,6 @@ official releases, installation instructions, documentation, and examples.
 
 .. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
 .. _BuildStatus: https://travis-ci.org/ioam/param
+
+.. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
+.. _PyPIVersion: https://pypi.python.org/pypi/param/1.2.1

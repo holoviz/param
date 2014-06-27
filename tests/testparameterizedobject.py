@@ -2,13 +2,7 @@
 Unit test for Parameterized.
 """
 
-# CEBALERT: copy of Topographica's
-# topo/tests/unit/testparameterizedobject.py.  Param is currently
-# tested inside Topographica. This file is here as a placeholder to
-# allow param's testing infrastructure to be set up.
-
 import unittest
-
 import param
 
 # CEBALERT: not anything like a complete test of Parameterized!

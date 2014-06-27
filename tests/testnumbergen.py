@@ -18,7 +18,7 @@ class TestUniformRandom(unittest.TestCase):
                 seed=_seed,
                 lbound=lbound,
                 ubound=ubound)
-        for _ in xrange(_iterations):
+        for _ in range(_iterations):
             value = gen()
             self.assertTrue(lbound <= value < ubound)
 
@@ -30,7 +30,7 @@ class TestUniformRandomOffset(unittest.TestCase):
                 seed=_seed,
                 mean=(ubound + lbound) / 2,
                 range=ubound - lbound)
-        for _ in xrange(_iterations):
+        for _ in range(_iterations):
             value = gen()
             self.assertTrue(lbound <= value < ubound)
 

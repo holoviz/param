@@ -4,6 +4,7 @@ Unit test for Parameterized.
 
 import unittest
 import param
+import numbergen
 
 # CEBALERT: not anything like a complete test of Parameterized!
 
@@ -196,6 +197,36 @@ class TestParameterizedFunction(unittest.TestCase):
         i = pickle.loads(s)
         self.assertEqual(i(),(0.3,18,[10,20,30]))
 
+
+@nottest
+class TestPO1(param.Parameterized):
+    x = param.Number(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=1),bounds=(-1,1))
+    y = param.Number(default=1,bounds=(-1,1))
+
+@istest
+class TestNumberParameter(unittest.TestCase):
+
+    def test_outside_bounds(self):
+        t1 = TestPO1()
+        # Test bounds (non-dynamic number)
+        try:
+            t1.y = 10
+        except ValueError:
+            pass
+        else:
+            assert False, "Should raise ValueError."
+
+    def test_outside_bounds_numbergen(self):
+        t1 = TestPO1()
+        # Test bounds (dynamic number)
+        t1.x = numbergen.UniformRandom(lbound=2,ubound=3)  # bounds not checked on set
+        try:
+            v1 = t1.x
+        except ValueError:
+            pass
+        else:
+            assert False, "Should raise ValueError."
+
 if __name__ == "__main__":
-	import nose
-	nose.runmodule()
+    import nose
+    nose.runmodule()

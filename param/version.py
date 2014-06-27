@@ -21,36 +21,39 @@ Currently, the only VCS supported is git, but others could be added
 easily.
 
 To use Version in a project that provides a Python package named
-"package" maintained in a git repository named "packagegit", make sure
-you have access to Version class (via the param package or by
-including package/version.py) and then:
+"package" maintained in a git repository named "packagegit":
 
+1. Make the Version class available for import from your package,
+   either by adding the PyPI package "param" as a dependency for your
+   package, or by simply copying this file into package/version.py.
 
-1. Assuming that the current version is 1.0.0, add the following line
-   to package/__init__.py with the Version class imported:
+2. Assuming that the current version of your package is 1.0.0, add the
+   following lines to your package/__init__.py:
 
-__version__ = Version(release=(1,0,0), fpath=__file__,
-                      commit="$Format:%h$", reponame="packagegit")
+   from param import Version
+   __version__ = Version(release=(1,0,0), fpath=__file__,
+                         commit="$Format:%h$", reponame="packagegit")
 
+   (or ``from .version import Version`` if you copied the file directly.)
 
-2. Declare the version as a string in the package's setup.py file,
-e.g.: setup_args["version"]="1.0.0"
+3. Declare the version as a string in your package's setup.py file, e.g.: 
+   setup_args["version"]="1.0.0"
 
-3. In your setup.py script code for making a release, add a call to
-Version.verify method E.g.:
+4. In your package's setup.py script code for making a release, add a
+   call to the Version.verify method. E.g.:
 
-setup_args = dict(name='package', version="1.0.0", ...)
-
-if __name__=="__main__":
-     if 'upload' in sys.argv:
-         import package
-         package.__version__.verify(setup_args['version'])
-     setup(**setup_args)
+   setup_args = dict(name='package', version="1.0.0", ...)
+   
+   if __name__=="__main__":
+        if 'upload' in sys.argv:
+            import package
+            package.__version__.verify(setup_args['version'])
+        setup(**setup_args)
 
 4. Tag the version of the repository to be released with a string of
-the form v*.*, i.e. v1.0.0 in this example.  E.g. for git:
+   the form v*.*, i.e. v1.0.0 in this example.  E.g. for git:
 
-git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
+   git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
 
 
 Now when you run setup.py to make a release via something like "python
@@ -60,9 +63,10 @@ and also in setup.py, aborting the release until either the tag is
 corrected or the declared version is made to match the tag.  Releases
 installed without VCS information will then report the declared
 release version.  If VCS information is available and matches the
-specified repository name, then version reported from
+specified repository name, then the version reported from
 e.g. str(package.__version__)) will provide more detailed information
-about the VCS revision.
+about the precise VCS revision changes since the release.  See the
+docstring for the Version class for more detailed information.
 
 This file is in the public domain, provided as-is, with no warranty of
 any kind expressed or implied.  Anyone is free to copy, modify,

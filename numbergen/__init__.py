@@ -296,18 +296,20 @@ class RandomDistribution(NumberGenerator, TimeAware):
         positional and keyword arguments.
 
         If seed=X is specified, sets the Random() instance's seed.
-        Otherwise, calls the instance's jumpahead() method to get a
-        state very likely to be different from any just used.
+        Otherwise, calls creates an unseeded Random instance which is
+        likely to result in a state very different from any just used.
+
+        Note that any supplied seed is ignored if time_dependent=True.
         """
-        self.random_generator = random.Random()
 
         seed = params.pop('seed', None)
         super(RandomDistribution,self).__init__(**params)
 
         if seed is not None:
-            self.random_generator.seed(seed)
+            self.random_generator = random.Random(seed)
         else:
-            self.random_generator.jumpahead(10)
+            self.random_generator = random.Random()
+
 
         self._hashfn = Hash(self.name, input_count=2)
         self._verify_constrained_hash()

@@ -1,11 +1,11 @@
 """
-Provide consistent and up-to-date __version__ strings for Python
+Provide consistent and up-to-date ``__version__`` strings for Python
 packages.
 
-It is easy to forget to update __version__ strings when releasing a
-project, and it is important that the __version__ strings are useful
-over the course of development even between releases, especially if
-releases are infrequent.
+It is easy to forget to update ``__version__`` strings when releasing
+a project, and it is important that the ``__version__`` strings are
+useful over the course of development even between releases,
+especially if releases are infrequent.
 
 This file provides a Version class that addresses both problems.
 Version is meant to be a simple, bare-bones approach that focuses on
@@ -21,52 +21,53 @@ Currently, the only VCS supported is git, but others could be added
 easily.
 
 To use Version in a project that provides a Python package named
-"package" maintained in a git repository named "packagegit":
+``package`` maintained in a git repository named ``packagegit``:
 
 1. Make the Version class available for import from your package,
    either by adding the PyPI package "param" as a dependency for your
-   package, or by simply copying this file into package/version.py.
+   package, or by simply copying this file into ``package/version.py``.
 
 2. Assuming that the current version of your package is 1.0.0, add the
-   following lines to your package/__init__.py:
+   following lines to your ``package/__init__.py``::
 
-   from param import Version
-   __version__ = Version(release=(1,0,0), fpath=__file__,
-                         commit="$Format:%h$", reponame="packagegit")
+     from param import Version
+     __version__ = Version(release=(1,0,0), fpath=__file__,
+                           commit="$Format:%h$", reponame="packagegit")
 
    (or ``from .version import Version`` if you copied the file directly.)
 
-3. Declare the version as a string in your package's setup.py file, e.g.: 
-   setup_args["version"]="1.0.0"
+3. Declare the version as a string in your package's setup.py file, e.g.:: 
+
+     setup_args["version"]="1.0.0"
 
 4. In your package's setup.py script code for making a release, add a
-   call to the Version.verify method. E.g.:
+   call to the Version.verify method. E.g.::
 
-   setup_args = dict(name='package', version="1.0.0", ...)
-   
-   if __name__=="__main__":
-        if 'upload' in sys.argv:
-            import package
-            package.__version__.verify(setup_args['version'])
-        setup(**setup_args)
+     setup_args = dict(name='package', version="1.0.0", ...)
+     
+     if __name__=="__main__":
+          if 'upload' in sys.argv:
+              import package
+              package.__version__.verify(setup_args['version'])
+          setup(**setup_args)
 
 4. Tag the version of the repository to be released with a string of
-   the form v*.*, i.e. v1.0.0 in this example.  E.g. for git:
+   the form v*.*, i.e. ``v1.0.0`` in this example.  E.g. for git::
 
-   git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
+     git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
 
 
-Now when you run setup.py to make a release via something like "python
-setup.py register sdist upload", Python will verify that the version
-last tagged in the VCS is the same as what is declared in the package
-and also in setup.py, aborting the release until either the tag is
-corrected or the declared version is made to match the tag.  Releases
-installed without VCS information will then report the declared
-release version.  If VCS information is available and matches the
-specified repository name, then the version reported from
-e.g. str(package.__version__)) will provide more detailed information
-about the precise VCS revision changes since the release.  See the
-docstring for the Version class for more detailed information.
+Now when you run ``setup.py`` to make a release via something like
+``python setup.py register sdist upload``, Python will verify that the
+version last tagged in the VCS is the same as what is declared in the
+package and also in setup.py, aborting the release until either the
+tag is corrected or the declared version is made to match the tag.
+Releases installed without VCS information will then report the
+declared release version.  If VCS information is available and matches
+the specified repository name, then the version reported from
+e.g. ``str(package.__version__)`` will provide more detailed
+information about the precise VCS revision changes since the release.
+See the docstring for the Version class for more detailed information.
 
 This file is in the public domain, provided as-is, with no warranty of
 any kind expressed or implied.  Anyone is free to copy, modify,
@@ -97,12 +98,12 @@ class Version(object):
     releases and additional information when working with version
     control. When obtaining a package from PyPI, the version returned
     is a string-formatted rendering of the supplied release tuple.
-    For instance, release (1,0) tagged as "v1.0" in the version
-    control system will return "1.0" for str(__version__).  Any number
-    of items can be supplied in the release tuple, with either two or
-    three numeric versioning levels typical.
+    For instance, release (1,0) tagged as ``v1.0`` in the version
+    control system will return ``1.0`` for ``str(__version__)``.  Any
+    number of items can be supplied in the release tuple, with either
+    two or three numeric versioning levels typical.
 
-    During development, a command like `git describe` will be used to
+    During development, a command like ``git describe`` will be used to
     compute the number of commits since the last version tag, the
     short commit hash, and whether the commit is dirty (has changes
     not yet committed). Version tags must start with a lowercase 'v'
@@ -120,16 +121,16 @@ class Version(object):
 
     For git, if you want version control information available even in
     an exported archive (e.g. a .zip file from GitHub), you can set
-    the following line in the .gitattributes file of your project:
+    the following line in the .gitattributes file of your project::
 
-    __init__.py export-subst
+      __init__.py export-subst
     """
 
     def __init__(self, release=None, fpath=None, commit=None, reponame=None):
         """
-        release:  Release tuple (corresponding to the current VCS tag)
-        fpath:    Set to __file__ to access version control information
-        reponame: Used to verify VCS repository name.
+        :release:  Release tuple (corresponding to the current VCS tag)
+        :fpath:    Set to ``__file__`` to access version control information
+        :reponame: Used to verify VCS repository name.
         """
         self.fpath = fpath
         self._expected_commit = commit
@@ -212,13 +213,15 @@ class Version(object):
 
     def __str__(self):
         """
-        Version in x.y.z string format. Does not include the 'v'
+        Version in x.y.z string format. Does not include the "v"
         prefix of the VCS version tags, for pip compatibility.
 
         If the commit count is non-zero or the repository is dirty,
-        the string representation is equivalent to the output of:
+        the string representation is equivalent to the output of::
 
-        `git describe --long --match v*.* --dirty` (with 'v' prefix removed)
+          git describe --long --match v*.* --dirty
+
+        (with "v" prefix removed).
         """
         if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)

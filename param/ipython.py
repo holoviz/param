@@ -265,8 +265,7 @@ class ParamPager(object):
         heading_text = 'Parameter docstrings:'
         heading_string = "%s\n%s" % (heading_text, '=' * len(heading_text))
         docstring_heading = (green % heading_string)
-        page.page("%s\n\n%s\n\n%s\n\n%s" % (top_heading, table,
-                                            docstring_heading, docstrings))
+        return "%s\n\n%s\n\n%s\n\n%s" % (top_heading, table, docstring_heading, docstrings)
 
 
 
@@ -301,7 +300,7 @@ class ParamMagics(Magics):
             print("Object %r not found in the namespace." % parameter_s)
             return
 
-        return self.param_pager(obj.obj)
+        page.page(self.param_pager(obj.obj))
 
 
 message = """Welcome to the param IPython extension! (http://ioam.github.io/param/)"""

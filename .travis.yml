@@ -6,8 +6,8 @@ python:
   - "3.3"
   - "3.4"
 
-# no dependencies (coveralls only for coverage)
-install: pip install coveralls
+# no dependencies (coveralls only for coverage and ipython only for testing optional IPython extension)
+install: pip install coveralls ipython
 
 script: nosetests --with-doctest --with-coverage --cover-package=param
 

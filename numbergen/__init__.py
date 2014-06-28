@@ -259,9 +259,6 @@ class RandomDistribution(NumberGenerator, TimeAware):
     of how many parameters are used by the underlying distribution,
     and can simply treat them as a generic source of random numbers.
 
-    The underlying random.Random() instance and all its methods can be
-    accessed from the 'random_generator' attribute.
-
     RandomDistributions are TimeAware, and thus can be locked to
     a global time if desired.  By default, time_dependent=False, and
     so a new random value will be generated each time these objects
@@ -272,12 +269,12 @@ class RandomDistribution(NumberGenerator, TimeAware):
     streams of random numbers, even if you e.g. move time forwards and
     backwards for testing.
 
-    If declared time_dependent, a hash is generated for seeding the
-    random state on each call, using a triple consisting of the object
-    name, the time returned by time_fn and the global value of
-    param.random_seed. As a consequence, for a given name and fixed
-    value of param.random_seed, the random values generated will be a
-    fixed function of time.
+    If declared time_dependent, the random state is determined by a
+    hash value per call. The hash is initialized once with the object
+    name and then per call using a tuple consisting of the time (via
+    time_fn) and the global param.random_seed.  As a consequence, for
+    a given name and fixed value of param.random_seed, the random
+    values generated will be a fixed function of time.
 
     If the object name has not been set and time_dependent is True, a
     message is generated warning that the default object name is

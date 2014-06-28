@@ -9,8 +9,10 @@ import numbergen
 # CEBALERT: not anything like a complete test of Parameterized!
 
 import random
-
 from nose.tools import istest, nottest
+
+
+from param.parameterized import ParamOverrides
 
 @nottest
 class _SomeRandomNumbers(object):
@@ -226,6 +228,34 @@ class TestNumberParameter(unittest.TestCase):
             pass
         else:
             assert False, "Should raise ValueError."
+
+
+@istest
+class TestParamOverrides(unittest.TestCase):
+
+    def setUp(self):
+        super(TestParamOverrides, self).setUp()
+        self.po = param.Parameterized(name='A',print_level=0)
+
+    def test_init_name(self):
+        self.assertEqual(self.po.name, 'A')
+
+    def test_simple_override(self):
+        overrides = ParamOverrides(self.po,{'name':'B'})
+        self.assertEqual(overrides['name'], 'B')
+        self.assertEqual(overrides['print_level'], 0)
+
+    def test_missing_key(self):
+        overrides = ParamOverrides(self.po,{'name':'B'})
+        try:
+            overrides['doesnotexist']
+        except AttributeError:
+            pass
+        except:
+            raise AssertionError("ParamOverrides should give AttributeError when key can't be found.")
+        else:
+            raise AssertionError("Test supposed to lookup non-existent attribute and raise error.")
+
 
 if __name__ == "__main__":
     import nose

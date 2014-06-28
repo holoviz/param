@@ -2,9 +2,11 @@
 Unit test for the IPython magic
 """
 
+import re
 import sys
 import unittest
 import param
+
 
 # SkipTest will be raised if IPython unavailable
 from param.ipython import ParamPager
@@ -17,7 +19,7 @@ test2_repr = """\x1b[1;32mParameters of 'TestClass01034'\n======================
 class TestParamPager(unittest.TestCase):
 
     def setUp(self):
-
+        self.maxDiff = None
         class TestClass(param.Parameterized):
             u = param.Number(4)
             v = param.Number(4, constant=True)
@@ -31,8 +33,12 @@ class TestParamPager(unittest.TestCase):
 
     def test_parameterized_class(self):
         page_string = self.pager(self.TestClass)
+        # Remove params automatic numbered names
+        page_string = re.sub('TestClass(\d+)', 'TestClass', page_string)
+        ref_string = re.sub('TestClass(\d+)', 'TestClass', test1_repr)
+
         try:
-            self.assertEqual(page_string, test1_repr)
+            self.assertEqual(page_string, ref_string)
         except Exception as e:
             sys.stderr.write(page_string)  # Coloured output
             sys.stderr.write("\nRAW STRING:\n\n%r\n\n" % page_string)
@@ -40,8 +46,12 @@ class TestParamPager(unittest.TestCase):
 
     def test_parameterized_instance(self):
         page_string = self.pager(self.TestClass())
+        # Remove params automatic numbered names
+        page_string = re.sub('TestClass(\d+)', 'TestClass', page_string)
+        ref_string = re.sub('TestClass(\d+)', 'TestClass', test2_repr)
+
         try:
-            self.assertEqual(page_string, test2_repr)
+            self.assertEqual(page_string, ref_string)
         except Exception as e:
             sys.stderr.write(page_string)  # Coloured output
             sys.stderr.write("\nRAW STRING:\n\n%r\n\n" % page_string)

@@ -14,29 +14,26 @@ import unittest
 import param
 import numbergen
 
-from nose.tools import istest, nottest
 
-
-@nottest
-class TestPO1(param.Parameterized):
-    x = param.Dynamic(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=1),doc="nothing")
-    y = param.Dynamic(default=1)
-
-
-@istest
 class TestDynamicParameters(unittest.TestCase):
 
     def setUp(self):
         param.Dynamic.time_dependent = False
+
+        class TestPO1(param.Parameterized):
+            x = param.Dynamic(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=1),doc="nothing")
+            y = param.Dynamic(default=1)
+
         class TestPO2(param.Parameterized):
             x = param.Dynamic(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=30))
             y = param.Dynamic(default=1.0)
 
         self.TestPO2 = TestPO2
+        self.TestPO1 = TestPO1
 
-        self.t1 = TestPO1()
-        self.t2 = TestPO1(x=numbergen.UniformRandom(lbound=-1,ubound=1,seed=10))
-        self.t3 = TestPO1(x=numbergen.UniformRandom(lbound=-1,ubound=1,seed=10))
+        self.t1 = self.TestPO1()
+        self.t2 = self.TestPO1(x=numbergen.UniformRandom(lbound=-1,ubound=1,seed=10))
+        self.t3 = self.TestPO1(x=numbergen.UniformRandom(lbound=-1,ubound=1,seed=10))
         self.t2.set_dynamic_time_fn(None)
         self.t3.set_dynamic_time_fn(None)
 
@@ -128,7 +125,6 @@ class TestDynamicParameters(unittest.TestCase):
 
 
 
-@istest
 class TestDynamicTimeDependent(TestDynamicParameters):
 
     def setUp(self):
@@ -139,14 +135,14 @@ class TestDynamicTimeDependent(TestDynamicParameters):
             x = param.Dynamic(default=numbergen.UniformRandom(name='xgen',
                                                               time_dependent=True))
 
-        class TestPO4(TestPO1):
+        class TestPO4(self.TestPO1):
             "Nested parameterized objects"
-            z = param.Parameter(default=TestPO1())
+            z = param.Parameter(default=self.TestPO1())
 
         self.TestPO3 = TestPO3
         self.TestPO4 = TestPO4
 
-        self.t10 = TestPO1()
+        self.t10 = self.TestPO1()
         self.t11 = TestPO3()
 
     def test_dynamic_values_unchanged_dependent(self):
@@ -199,21 +195,21 @@ class TestDynamicTimeDependent(TestDynamicParameters):
         self.assertNotEqual(call_2, call_3)
 
     def test_dynamic_value_change_independent(self):
-        t12 = TestPO1()
+        t12 = self.TestPO1()
         t12.set_dynamic_time_fn(None)
         self.assertNotEqual(t12.x, t12.x)
         self.assertEqual(t12.y, t12.y)
 
     def test_dynamic_value_change_disabled(self):
         " time_fn set on the UniformRandom() when t13.y was set"
-        t13 = TestPO1()
+        t13 = self.TestPO1()
         t13.set_dynamic_time_fn(None)
         t13.y = numbergen.UniformRandom()
         self.assertNotEqual(t13.y, t13.y)
 
     def test_dynamic_value_change_enabled(self):
         " time_fn set on the UniformRandom() when t13.y was set"
-        t14 = TestPO1()
+        t14 = self.TestPO1()
         t14.y = numbergen.UniformRandom()
         self.assertEqual(t14.y, t14.y)
 
@@ -230,7 +226,6 @@ class TestDynamicTimeDependent(TestDynamicParameters):
 
 
 
-@istest
 class TestDynamicSharedNumbergen(TestDynamicParameters):
     "Check shared generator"
     def setUp(self):
@@ -239,8 +234,8 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
 
     def test_dynamic_shared_numbergen(self):
         param.Dynamic.time_dependent = True
-        t11 = TestPO1(x=self.shared)
-        t12 = TestPO1(x=self.shared)
+        t11 = self.TestPO1(x=self.shared)
+        t12 = self.TestPO1(x=self.shared)
 
         with param.Dynamic.time_fn as t:
             t += 1

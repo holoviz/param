@@ -223,7 +223,7 @@ class TestNumberParameter(unittest.TestCase):
         # Test bounds (dynamic number)
         t1.x = numbergen.UniformRandom(lbound=2,ubound=3)  # bounds not checked on set
         try:
-            v1 = t1.x
+            t1.x
         except ValueError:
             pass
         else:

@@ -78,16 +78,16 @@ class TestCompositeParameters(unittest.TestCase):
         a2 = self.A(x=self.SomeSequence([1,2,3]),
                     y=self.SomeSequence([4,5,6]))
 
-        x1,y1 = a2.x, a2.y
+        a2.x, a2.y # Call of x and y params
         # inspect should not advance numbers
         self.assertEqual(a2.inspect_value('xy'), [1, 4])
 
-    def test_composite_dynamic(self):
+    def test_composite_dynamic_generator(self):
 
         a2 = self.A(x=self.SomeSequence([1,2,3]),
                     y=self.SomeSequence([4,5,6]))
 
-        x1,y1 = a2.x, a2.y
+        a2.x, a2.y # Call of x and y params
         ix,iy = a2.get_value_generator('xy')
         # get_value_generator() should give the objects
         self.assertEqual(ix(), 2)

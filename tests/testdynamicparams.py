@@ -8,7 +8,6 @@ Originally implemented as doctests in Topographica in the file
 testDynamicParameter.txt
 """
 
-import sys
 import copy
 import unittest
 import param
@@ -39,6 +38,9 @@ class TestDynamicParameters(unittest.TestCase):
 
         self.t6 = self.TestPO2()
         self.t7 = self.TestPO2()
+
+
+class TestDynamicParameterBasics(TestDynamicParameters):
 
     def test_set_dynamic_time_fn_x(self):
         self.t1.set_dynamic_time_fn(None)
@@ -71,14 +73,14 @@ class TestDynamicParameters(unittest.TestCase):
 
     def test_numbergen_objects_distinct(self):
         "check t2 and t3 do not share UniformRandom objects"
-        t2_call = self.t2.x
+        self.t2.x
         self.assertNotEqual(self.t2.inspect_value('x'),
                             self.t3.inspect_value('x'))
 
     def test_numbergen_inspect(self):
         " inspect_value() should return last generated value "
-        t2_call_1 = self.t2.x
-        t2_call_2=  self.t2.x
+        self.t2.x # Call 1
+        self.t2.x # Call 2
         t2_last_value = self.t2.x  # advance t2 beyond t3
 
         self.assertEqual(self.t2.inspect_value('x'),

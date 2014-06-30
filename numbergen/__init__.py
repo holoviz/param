@@ -178,9 +178,9 @@ class UnaryOperator(NumberGenerator):
 
 class Hash(object):
     """
-    A platform- and architecture-independent hash function
-    (unlike Python's inbuilt hash()) for use with an ordered
-    collection of rationals or integers.
+    A platform- and architecture-independent hash function (unlike
+    Python's inbuilt hash function) for use with an ordered collection
+    of rationals or integers.
 
     The supplied name sets the initial hash state.  The output from
     each call is a 64-bit integer. The number of inputs (integer or
@@ -244,36 +244,28 @@ class Hash(object):
 
 
 
-class RandomDistribution(NumberGenerator, TimeAware):
+class TimeAwareRandomState(TimeAware):
     """
-    Python's random module provides the Random class, which can be
-    instantiated to give an object that can be asked to generate
-    numbers from any of several different random distributions
-    (e.g. uniform, Gaussian).
+    Generic base class to enable time-dependent random
+    streams. Although this class is the basis of all random numbergen
+    classes, it is designed to be useful whenever time-dependent
+    randomness is needed using param's notion of time. For instance,
+    this class is used by the imagen package to define time-dependent,
+    random distributions over 2D arrays.
 
-    To make it easier to use these, Numbergen provides here a
-    hierarchy of classes, each tied to a particular random
-    distribution. RandomDistributions support setting parameters on
-    creation rather than passing them each call, and allow pickling to
-    work properly.  Code that uses these classes will be independent
-    of how many parameters are used by the underlying distribution,
-    and can simply treat them as a generic source of random numbers.
+    For generality, this class may use either the Random class from
+    Python's random module or numpy.random.RandomState. Either of
+    these random state objects may be used to generate numbers from
+    any of several different random distributions (e.g. uniform,
+    Gaussian). The latter offers the ability to generate
+    multi-dimensional random arrays and more random distributions but
+    requires numpy as a dependency.
 
-    RandomDistributions are TimeAware, and thus can be locked to
-    a global time if desired.  By default, time_dependent=False, and
-    so a new random value will be generated each time these objects
-    are called.  If you have a global time function, you can set
-    time_dependent=True, so that the random values will instead be
-    constant at any given time, changing only when the time changes.
-    Using time_dependent values can help you obtain fully reproducible
-    streams of random numbers, even if you e.g. move time forwards and
-    backwards for testing.
-
-    If declared time_dependent, the random state is determined by a
-    hash value per call. The hash is initialized once with the object
-    name and then per call using a tuple consisting of the time (via
-    time_fn) and the global param.random_seed.  As a consequence, for
-    a given name and fixed value of param.random_seed, the random
+    If declared time_dependent, the random state is fully determined
+    by a hash value per call. The hash is initialized once with the
+    object name and then per call using a tuple consisting of the time
+    (via time_fn) and the global param.random_seed.  As a consequence,
+    for a given name and fixed value of param.random_seed, the random
     values generated will be a fixed function of time.
 
     If the object name has not been set and time_dependent is True, a
@@ -284,8 +276,105 @@ class RandomDistribution(NumberGenerator, TimeAware):
     explicitly when you construct the RandomDistribution object.
     """
 
+    random_generator = param.Parameter(
+        default=random.Random((500,500)), doc=
+        """
+        Random state used by the object. This may may be an instance
+        of random.Random from the Python standard library or an
+        instance of numpy.random.RandomState.
+
+        This random state may be exclusively owned by the object or
+        may be shared by all instance of the same class. It is always
+        possible to give an object its own unique random state by
+        setting this parameter with a new random state instance.
+        """)
+
     __abstract = True
 
+    def _initialize_random_state(self, seed=None, shared=True):
+        """
+        Initialization method to be called in the constructor of
+        subclasses to initialize the random state correctly.
+
+        If seed is None, there is no control over the random stream
+        (no reproducibility of the stream).
+
+        If shared is True (and not time-dependent), the random state
+        is shared across all objects of the given class. This can be
+        overridden per object by creating new random state to assign
+        to the random_generator parameter.
+        """
+        if seed is None: # Equivalent to an uncontrolled seed.
+            seed = random.Random().randint(0, 1000000)
+
+        # If time_dependent, independent state required: otherwise
+        # time-dependent seeding (via hash) will affect shared
+        # state. Note that if all objects have time_dependent=True
+        # shared random state is safe and more memory efficient.
+        if self.time_dependent or not shared:
+            self.random_generator = type(self.random_generator)(seed)
+
+        # Seed appropriately (if not shared)
+        if not shared:
+            self.random_generator.seed(seed)
+        self._hashfn = Hash(self.name, input_count=2)
+        self._verify_constrained_hash()
+        if self.time_dependent:
+            self._hash_and_seed()
+
+
+    def _verify_constrained_hash(self):
+        """
+        Warn if the object name is not explicitly set.
+        """
+        changed_params = dict(self.get_param_values(onlychanged=True))
+        if self.time_dependent and ('name' not in changed_params):
+            self.warning("Default object name used to set the seed: "
+                         "random values conditional on object instantiation order.")
+
+    def _hash_and_seed(self):
+        """
+        To be called between blocks of random number generation. A
+        'block' can be an unbounded sequence of random numbers so long
+        as the time value (as returned by time_fn) is guaranteed not
+        to change within the block. If this condition holds, each
+        block of random numbers is time-dependent.
+
+        Note: param.random_seed is assumed to be integer or rational.
+        """
+        hashval = self._hashfn(self.time_fn(), param.random_seed)
+        self.random_generator.seed(hashval)
+
+
+
+class RandomDistribution(NumberGenerator, TimeAwareRandomState):
+    """
+    The base class for all Numbergenerators using random state.
+
+    Numbergen provides a hierarchy of classes to make it easier to use
+    the random distributions made available in Python's random module,
+    where each class is tied to a particular random distribution.
+
+    RandomDistributions support setting parameters on creation rather
+    than passing them each call, and allow pickling to work properly.
+    Code that uses these classes will be independent of how many
+    parameters are used by the underlying distribution, and can simply
+    treat them as a generic source of random numbers.
+
+    RandomDistributions are examples of TimeAwareRandomState, and thus
+    can be locked to a global time if desired.  By default,
+    time_dependent=False, and so a new random value will be generated
+    each time these objects are called.  If you have a global time
+    function, you can set time_dependent=True, so that the random
+    values will instead be constant at any given time, changing only
+    when the time changes.  Using time_dependent values can help you
+    obtain fully reproducible streams of random numbers, even if you
+    e.g. move time forwards and backwards for testing.
+
+    Note: Each RandomDistribution object has independent random state.
+    """
+
+    __abstract = True
 
     def __init__(self,**params):
         """
@@ -298,33 +387,9 @@ class RandomDistribution(NumberGenerator, TimeAware):
 
         Note that any supplied seed is ignored if time_dependent=True.
         """
-
         seed = params.pop('seed', None)
         super(RandomDistribution,self).__init__(**params)
-
-        if seed is not None:
-            self.random_generator = random.Random(seed)
-        else:
-            self.random_generator = random.Random()
-
-
-        self._hashfn = Hash(self.name, input_count=2)
-        self._verify_constrained_hash()
-        if self.time_dependent:
-            self._hash_and_seed()
-
-
-    def _verify_constrained_hash(self):
-        changed_params = dict(self.get_param_values(onlychanged=True))
-        if self.time_dependent and ('name' not in changed_params):
-            self.warning("Default object name used to set the seed: "
-                         "random values conditional on object instantiation order.")
-
-    def _hash_and_seed(self):
-        # Assumes param.random_seed is an integer or rational type
-        hashval = self._hashfn(self.time_fn(), param.random_seed)
-        self.random_generator.seed(hashval)
-
+        self._initialize_random_state(seed=seed, shared=False)
 
     def __call__(self):
         if self.time_dependent:

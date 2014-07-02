@@ -6,6 +6,10 @@ python:
   - "3.3"
   - "3.4"
 
+notifications:
+  email:
+    on_failure: change # [always|never|change] default: always
+    
 # no dependencies (coveralls only for coverage and ipython only for testing optional IPython extension)
 install: pip install coveralls ipython
 

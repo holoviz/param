@@ -2,6 +2,7 @@
 Unit tests for the param.Time class, time dependent parameters and
 time-dependent numbergenerators.
 """
+import sys
 import unittest
 import param
 import numbergen
@@ -13,6 +14,9 @@ try:
     import gmpy
 except:
     gmpy = None
+
+
+py26 = (sys.version_info[0] == 2) and (sys.version_info[1] == 6)
 
 class TestTimeClass(unittest.TestCase):
 
@@ -245,8 +249,9 @@ class TestTimeDependentDynamic(unittest.TestCase):
         reasonable rational numbers.
         """
         hashfn = numbergen.Hash("test", input_count=1)
-        self.assertEqual(hashfn(0.5), hashfn(fractions.Fraction(0.5)))
         pi = "3.141592"
+        half = fractions.Fraction(1,2) if py26 else fractions.Fraction(0.5)
+        self.assertEqual(hashfn(0.5), hashfn(half))
         self.assertEqual(hashfn(pi), hashfn(fractions.Fraction(pi)))
 
 

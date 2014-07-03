@@ -199,11 +199,13 @@ class Hash(object):
         """Convert the given value to a rational, if necessary."""
         if isinstance(val, int):
              numer, denom = val, 1
+        elif isinstance(val, fractions.Fraction):
+            numer, denom = val.numerator, val.denominator
         elif hasattr(val, 'numer'):
             (numer, denom) = (int(val.numer()), int(val.denom()))
         else:
-            self.warning("Casting type '%s' to Fraction.fraction"
-                         % type(val).__name__)
+            param.main.warning("Casting type '%s' to Fraction.fraction"
+                               % type(val).__name__)
             frac = fractions.Fraction(str(val))
             numer, denom = frac.numerator, frac.denominator
         return numer, denom

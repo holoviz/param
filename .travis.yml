@@ -10,8 +10,8 @@ notifications:
   email:
     on_failure: change # [always|never|change] default: always
     
-# no dependencies (coveralls, ipython and gmpy only for testing)
-install: pip install coveralls ipython gmpy
+# no dependencies (coveralls, ipython only needed for testing)
+install: pip install coveralls ipython
 
 script: nosetests --with-doctest --with-coverage --cover-package=param
 

@@ -733,6 +733,9 @@ def script_repr(val,imports,prefix,settings):
     script_repr_reg dictionary. Using the type as a key, add a
     function that returns a suitable representation of instances of
     that type, and adds the required import statement.
+
+    The repr of a parameter can be suppressed by returning None from
+    the appropriate hook in script_repr_reg.
     """
     # CB: doc prefix & settings or realize they don't need to be
     # passed around, etc.

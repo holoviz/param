@@ -782,11 +782,9 @@ def random_state_script_repr(state,imports,prefix,settings):
     to create a new random state object.
     """
     if isinstance(state, random.Random):
-        imports.append('import random')
-        return 'random.Random()'
+        return None
     elif isinstance(state, numpy.random.RandomState):
-        imports.append('import numpy as np')
-        return 'np.random.RandomState()'
+        return None
 
 try:
     import numpy

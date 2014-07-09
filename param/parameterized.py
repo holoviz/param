@@ -778,26 +778,19 @@ def container_script_repr(container,imports,prefix,settings):
     return rep
 
 
-def random_state_script_repr(state,imports,prefix,settings):
-    """
-    Random number generators in general do not have succinct reprs. If
-    a random state object is encountered, returns the representation
-    to create a new random state object.
-    """
-    if isinstance(state, random.Random):
-        return None
-    elif isinstance(state, numpy.random.RandomState):
-        return None
+def empty_script_repr(*args): # pyflakes:ignore (unused arguments):
+    return None
 
 try:
+    # Suppress scriptrepr for objects not yet having a useful string representation
+    import random
+    script_repr_reg[random.Random] = empty_script_repr
+
     import numpy
-    script_repr_reg[numpy.random.RandomState] = random_state_script_repr
-except:
-    pass
-finally:
-    script_repr_reg[random.Random] = random_state_script_repr
+    script_repr_reg[numpy.random.RandomState] = empty_script_repr
 
-
+except ImportError:
+    pass # Support added only if those libraries are available
 
 
 # why I have to type prefix and settings?

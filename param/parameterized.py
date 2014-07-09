@@ -11,7 +11,6 @@ from types import FunctionType
 from functools import partial, wraps
 
 import logging
-import random
 
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL # pyflakes:ignore (API import)
 VERBOSE = INFO - 1

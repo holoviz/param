@@ -620,8 +620,9 @@ class ParameterizedMetaclass(type):
                 # mechanisms, which has have consequences for warning
                 # counts, warnings as exceptions, etc.
                 if not attribute_name.startswith('_'):
-                    get_logger().debug("Warning: Setting non-Parameter class attribute %s.%s = %s "
-                           % (mcs.__name__,attribute_name,repr(value)))
+                    get_logger().log(WARNING,
+                                     "Setting non-Parameter class attribute %s.%s = %s "
+                                     % (mcs.__name__,attribute_name,repr(value)))
 
 
     def __param_inheritance(mcs,param_name,param):

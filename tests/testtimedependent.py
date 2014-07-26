@@ -16,7 +16,8 @@ except:
     gmpy = None
 
 
-py26 = (sys.version_info[0] == 2) and (sys.version_info[1] == 6)
+pybefore27 = (sys.version_info[0] == 2) and (sys.version_info[1] < 7)
+
 
 class TestTimeClass(unittest.TestCase):
 
@@ -250,8 +251,8 @@ class TestTimeDependentDynamic(unittest.TestCase):
         """
         hashfn = numbergen.Hash("test", input_count=1)
         pi = "3.141592"
-        # In Python 2.6 fractions.Fraction cannot be initialized with a float
-        half = fractions.Fraction(1,2) if py26 else fractions.Fraction(0.5)
+        # Before Python 2.7, fractions.Fraction cannot be initialized with a float
+        half = fractions.Fraction(1,2) if pybefore27 else fractions.Fraction(0.5)
         self.assertEqual(hashfn(0.5), hashfn(half))
         self.assertEqual(hashfn(pi), hashfn(fractions.Fraction(pi)))
 

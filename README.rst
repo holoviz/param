@@ -1,4 +1,4 @@
-|BuildStatus|_ |PyPIVersion|_
+|BuildStatus|_ |PyPIVersion|_ |License|_
 
 Param
 =====
@@ -21,3 +21,6 @@ official releases, installation instructions, documentation, and examples.
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param
+
+.. |License| image:: https://pypip.in/license/param/badge.svg
+.. _License: https://pypi.python.org/pypi/param

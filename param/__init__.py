@@ -19,7 +19,7 @@ Parameters and Parameterized classes.
 import os.path
 
 from .parameterized import Parameterized, Parameter, String, \
-     descendents, ParameterizedFunction, ParamOverrides, param_logging_level
+     descendents, ParameterizedFunction, ParamOverrides, logging_level
 
 
 # Determine up-to-date version information, if possible, but with a

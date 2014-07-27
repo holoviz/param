@@ -38,7 +38,7 @@ warning_count = 0
 
 
 @contextmanager
-def param_logging_level(level):
+def logging_level(level):
     """
     Temporarily modify param's logging level.
     """

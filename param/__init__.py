@@ -19,7 +19,9 @@ Parameters and Parameterized classes.
 import os.path
 
 from .parameterized import Parameterized, Parameter, String, \
-     descendents, ParameterizedFunction, ParamOverrides, logging_level
+     descendents, ParameterizedFunction, ParamOverrides
+
+from .parameterized import logging_level # pyflakes:ignore (needed for eval)
 
 
 # Determine up-to-date version information, if possible, but with a

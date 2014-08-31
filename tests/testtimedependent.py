@@ -205,10 +205,10 @@ class TestTimeDependentDynamic(unittest.TestCase):
 
         dynamic = DynamicClass()
 
-        test1_t1 = 0.05424377791396562
-        test2_t1 = 0.3764564306414948
-        test1_t2 = 0.3690433754656409
-        test2_t2 = 0.35713730752868933
+        test1_t1 = 0.23589388250988552
+        test2_t1 = 0.12576257837158122
+        test1_t2 = 0.14117586161849593
+        test2_t2 = 0.9134917395930359
 
         self.time_fn(0)
         self.assertEqual(dynamic.c,    test1_t1)

@@ -183,9 +183,14 @@ class Hash(object):
     of rationals or integers.
 
     The supplied name sets the initial hash state.  The output from
-    each call is a 64-bit integer. The number of inputs (integer or
-    rational numbers) to be supplied for __call__ must be specified in
-    the constructor and must stay constant across calls.
+    each call is a 32-bit integer to ensure the value is a regular
+    Python integer (and not a Python long) on both 32-bit and 64-bit
+    platforms. This can be important to seed Numpy's random number
+    generator safely (a bad Numpy bug!).
+
+    The number of inputs (integer or rational numbers) to be supplied
+    for __call__ must be specified in the constructor and must stay
+    constant across calls.
     """
     def __init__(self, name, input_count):
         self.name = name
@@ -232,7 +237,7 @@ class Hash(object):
     def __call__(self, *vals):
         """
         Given integer or rational inputs, generate a cross-platform,
-        architecture-independent integer hash.
+        architecture-independent 32-bit integer hash.
         """
         # Convert inputs to (numer, denom) pairs with integers
         # becoming (int, 1) pairs to match gmpy.mpqs for int values.
@@ -241,8 +246,8 @@ class Hash(object):
         ints = [el for pair in pairs for el in pair]
         digest = self._digest.copy()
         digest.update(self._hash_struct.pack(*ints))
-        # Convert from hex string to 64 bit int
-        return int(digest.hexdigest()[:15], 16)
+        # Convert from hex string to 32 bit int
+        return int(digest.hexdigest()[:7], 16)
 
 
 

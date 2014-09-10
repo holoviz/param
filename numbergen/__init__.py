@@ -202,6 +202,8 @@ class Hash(object):
 
     def _rational(self, val):
         """Convert the given value to a rational, if necessary."""
+
+        I32 = 4294967296 # Maximum 32 bit unsigned int (i.e. 'I') value
         if isinstance(val, int):
              numer, denom = val, 1
         elif isinstance(val, fractions.Fraction):
@@ -213,7 +215,7 @@ class Hash(object):
                                % type(val).__name__)
             frac = fractions.Fraction(str(val))
             numer, denom = frac.numerator, frac.denominator
-        return numer, denom
+        return numer % I32, denom % I32
 
 
     def __getstate__(self):

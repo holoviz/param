@@ -248,8 +248,7 @@ class ParamPager(object):
         param_info = self._get_param_info(param_obj, include_super=True)
 
         if not param_info[0]:
-            page.page("%s\n%s" % ((green % heading_text), "Object has no parameters."))
-            return
+            return "%s\n%s" % ((green % heading_text), "Object has no parameters.")
 
         table = self._build_table(param_info, self.order, max_col_len=40,
                                   only_changed=False)

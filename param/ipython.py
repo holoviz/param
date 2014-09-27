@@ -71,7 +71,7 @@ class ParamPager(object):
 
         if not include_super:
             params = dict((k,v) for (k,v) in params.items()
-                          if k in self_class.__dict__.keys())
+                          if k in self_class.__dict__)
 
         params.pop('name') # Already displayed in the title.
         return (params, val_dict, changed)

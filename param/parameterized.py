@@ -802,7 +802,7 @@ def container_script_repr(container,imports,prefix,settings):
 
 
 def empty_script_repr(*args): # pyflakes:ignore (unused arguments):
-    return None
+    return ""
 
 try:
     # Suppress scriptrepr for objects not yet having a useful string representation

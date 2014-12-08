@@ -36,7 +36,7 @@ To use Version in a project that provides a Python package named
 
    (or ``from .version import Version`` if you copied the file directly.)
 
-3. Declare the version as a string in your package's setup.py file, e.g.:: 
+3. Declare the version as a string in your package's setup.py file, e.g.::
 
      setup_args["version"]="1.0.0"
 
@@ -44,7 +44,7 @@ To use Version in a project that provides a Python package named
    call to the Version.verify method. E.g.::
 
      setup_args = dict(name='package', version="1.0.0", ...)
-     
+
      if __name__=="__main__":
           if 'upload' in sys.argv:
               import package

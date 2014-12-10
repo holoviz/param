@@ -145,7 +145,7 @@ class Time(Parameterized):
 
     forever = Infinity()
 
-    label= Parameter(default='Time', doc="""
+    label= String(default='Time', doc="""
          The label given to the Time object. Can be used to convey
          more specific notions of time as appropriate. For instance,
          the label could be 'Simulation Time' or 'Duration'.""")
@@ -199,7 +199,7 @@ class Time(Parameterized):
          using the iterator interface, iteration will end before this
          value is exceeded.""")
 
-    unit = Parameter(default=None, doc="""
+    unit = String(default=None, doc="""
         The units of the time dimensions. The default of None is set
         as the global time function may on an arbitrary time base.
 

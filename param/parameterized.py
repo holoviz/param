@@ -575,10 +575,13 @@ class ParameterizedMetaclass(type):
             if DOCSTRING_SIGNATURE:
                 kwargs.append("%s=%r" % (param_name, param.default))
 
-        if DOCSTRING_SIGNATURE and not mcs.__init__.__func__.__doc__:
+        if DOCSTRING_SIGNATURE and not mcs.__init__.__doc__:
             class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
             signature = ("%s(*args, **kwargs, %s)" % (name, ", ".join(sorted(kwargs))))
-            mcs.__init__.__func__.__doc__ = signature + class_docstr
+            if hasattr(mcs.__init__, '__func__'):
+                mcs.__init__.__func__.__doc__ = signature + class_docstr
+            else: # Python 3
+                mcs.__init__.__doc__ = signature + class_docstr
 
 
     def _initialize_parameter(mcs,param_name,param):

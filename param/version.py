@@ -189,10 +189,14 @@ class Version(object):
     def git_fetch(self, cmd='git'):
         try:
             if self.reponame is not None:
-                # Verify this is the correct repository
+                # Verify this is the correct repository (since fpath could
+                # be an unrelated git repository, and param could just have
+                # been copied/installed into it).
                 output = run_cmd([cmd, 'remote', '-v'],
                                  cwd=os.path.dirname(self.fpath))
                 repo_matches = ['/' + self.reponame + '.git' ,
+                                # A remote 'server:reponame.git' can also be referred 
+                                # to (i.e. cloned) as `server:reponame`.
                                 '/' + self.reponame + ' ']
                 if not any(m in output for m in repo_matches):
                     return self

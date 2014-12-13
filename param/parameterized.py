@@ -571,12 +571,16 @@ class ParameterizedMetaclass(type):
         # listing all the parameters as keyword arguments. This is
         # particularly useful in the IPython Notebook as IPython will
         # parse the signature to allow tab-completion of keywords
+        max_dft_val_length = 15  # Maximum number of characters for default values
         processed_kws, keyword_groups = set(), []
         for cls in reversed(mcs.mro()):
             keyword_group = []
             for (k,v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
-                    keyword_group.append("%s=%r" % (k, v.default))
+                    default_value = repr(v.default)
+                    if len(default_value) > max_dft_val_length:
+                        default_value = default_value[:max_dft_val_length-3]+'...'
+                    keyword_group.append("%s=%s" % (k, default_value))
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 

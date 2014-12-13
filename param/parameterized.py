@@ -564,18 +564,26 @@ class ParameterizedMetaclass(type):
         parameters = [(n,o) for (n,o) in dict_.items()
                       if isinstance(o,Parameter)]
 
-        kwargs = []
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)
-            kwargs.append("%s=%r" % (param_name, param.default))
 
         # If the __init__ method lacks a docstring, autogenerate one
         # listing all the parameters as keyword arguments. This is
-        # partciularly useful in the IPython Notebook as IPython will
+        # particularly useful in the IPython Notebook as IPython will
         # parse the signature to allow tab-completion of keywords
+        processed_kws, keyword_groups = set(), []
+        for cls in reversed(mcs.mro()):
+            keyword_group = []
+            for (k,v) in sorted(cls.__dict__.items()):
+                if isinstance(v, Parameter) and k not in processed_kws:
+                    keyword_group.append("%s=%r" % (k, v.default))
+                    processed_kws.add(k)
+            keyword_groups.append(keyword_group)
+
+        keywords = [el for grp in reversed(keyword_groups) for el in grp]
         if not mcs.__init__.__doc__:
             class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-            signature = ("%s(*args, **kwargs, %s)" % (name, ", ".join(sorted(kwargs))))
+            signature = "%s(*args, **kwargs, %s)" % (name, ", ".join(keywords))
             if hasattr(mcs.__init__, '__func__'):
                 mcs.__init__.__func__.__doc__ = signature + class_docstr
             else: # Python 3

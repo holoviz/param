@@ -569,6 +569,10 @@ class ParameterizedMetaclass(type):
             mcs._initialize_parameter(param_name,param)
             kwargs.append("%s=%r" % (param_name, param.default))
 
+        # If the __init__ method lacks a docstring, autogenerate one
+        # listing all the parameters as keyword arguments. This is
+        # partciularly useful in the IPython Notebook as IPython will
+        # parse the signature to allow tab-completion of keywords
         if not mcs.__init__.__doc__:
             class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
             signature = ("%s(*args, **kwargs, %s)" % (name, ", ".join(sorted(kwargs))))

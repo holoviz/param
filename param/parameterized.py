@@ -597,7 +597,7 @@ class ParameterizedMetaclass(type):
 
         keywords = [el for grp in reversed(keyword_groups) for el in grp]
         class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-        signature = "Parameters(%s)" % (", ".join(keywords))
+        signature = "params(%s)" % (", ".join(keywords))
         description = param_pager(mcs) if docstring_describe_params else ''
         mcs.__doc__ = signature + class_docstr + '\n' + description
 

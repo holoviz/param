@@ -927,17 +927,6 @@ class Parameterized(object):
 
 
     def __init__(self,**params):
-        """
-        Initialize this Parameterized instance.
-
-        The values of parameters can be supplied as keyword arguments
-        to the constructor (using parametername=parametervalue); these
-        values will override the class default values for this one
-        instance.
-
-        If no 'name' parameter is supplied, self.name defaults to the
-        object's class name with a unique number appended to it.
-        """
         global object_count
 
         # Flag that can be tested to see if e.g. constant Parameters

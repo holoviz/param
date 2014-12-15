@@ -569,14 +569,14 @@ class ParameterizedMetaclass(type):
             mcs._initialize_parameter(param_name,param)
 
         if docstring_signature:
-            mcs.__generate_init_docstring()
+            mcs.__class_docstring_signature()
 
-    def __generate_init_docstring(mcs, max_repr_len=15):
+    def __class_docstring_signature(mcs, max_repr_len=15):
         """
-        If the __init__ method lacks a docstring, autogenerate one
-        that lists all defined parameters as keyword arguments. This
-        is particularly useful in the IPython Notebook as IPython will
-        parse this signature to allow tab-completion of keywords.
+        Autogenerate a keyword signature in the class docstring for
+        all available parameters. This is particularly useful in the
+        IPython Notebook as IPython will parse this signature to allow
+        tab-completion of keywords.
 
         max_repr_len: Maximum length (in characters) of value reprs.
         """
@@ -592,14 +592,11 @@ class ParameterizedMetaclass(type):
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
-        if not mcs.__init__.__doc__:
-            keywords = [el for grp in reversed(keyword_groups) for el in grp]
-            class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-            signature = "%s(*args, **kwargs, %s)" % (mcs.name, ", ".join(keywords))
-            if hasattr(mcs.__init__, '__func__'):
-                mcs.__init__.__func__.__doc__ = signature + class_docstr
-            else: # Python 3
-                mcs.__init__.__doc__ = signature + class_docstr
+
+        keywords = [el for grp in reversed(keyword_groups) for el in grp]
+        class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
+        signature = "%s(*args, **kwargs, %s)" % (mcs.name, ", ".join(keywords))
+        mcs.__doc__ = signature + class_docstr
 
 
     def _initialize_parameter(mcs,param_name,param):

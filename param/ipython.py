@@ -40,9 +40,15 @@ class ParamPager(object):
     parameterized object or class in the IPython pager.
     """
 
-    def __init__(self):
+    def __init__(self, metaclass=False):
+        """
+        If metaclass is set to True, the checks for Parameterized
+        classes objects are disabled. This option is for use in
+        ParameterizedMetaclass for automatic docstring generation.
+        """
         # Order of the information to be listed in the table (left to right)
         self.order = ['name', 'changed', 'value', 'type', 'bounds', 'mode']
+        self.metaclass = metaclass
 
 
     def _get_param_info(self, obj, include_super=True):
@@ -226,13 +232,14 @@ class ParamPager(object):
         about the parameters in the IPython pager.
         """
 
-        parameterized_object = isinstance(param_obj, param.Parameterized)
-        parameterized_class = (isinstance(param_obj,type)
-                               and  issubclass(param_obj,param.Parameterized))
+        if not self.metaclass:
+            parameterized_object = isinstance(param_obj, param.Parameterized)
+            parameterized_class = (isinstance(param_obj,type)
+                                   and  issubclass(param_obj,param.Parameterized))
 
-        if not (parameterized_object or parameterized_class):
-            print("Object is not a parameterized class or object.")
-            return
+            if not (parameterized_object or parameterized_class):
+                print("Object is not a parameterized class or object.")
+                return
 
         title = 'Parameters of %r' % param_obj.name
         heading_line = '=' * len(title)

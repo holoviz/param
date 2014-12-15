@@ -14,6 +14,8 @@ import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL # pyflakes:ignore (API import)
 
+from .ipython import ParamPager
+
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
 
@@ -32,6 +34,10 @@ def get_logger():
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
 warnings_as_exceptions = False
+
+docstring_signature = True                # Add signature to class docstrings
+docstring_describe_params = True          # Add parameter description to class docstrings
+param_pager = ParamPager(metaclass=True)  # Generates param description
 
 object_count = 0
 warning_count = 0
@@ -567,6 +573,34 @@ class ParameterizedMetaclass(type):
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)
 
+        if docstring_signature:
+            mcs.__class_docstring_signature()
+
+    def __class_docstring_signature(mcs, max_repr_len=15):
+        """
+        Autogenerate a keyword signature in the class docstring for
+        all available parameters. This is particularly useful in the
+        IPython Notebook as IPython will parse this signature to allow
+        tab-completion of keywords.
+
+        max_repr_len: Maximum length (in characters) of value reprs.
+        """
+        processed_kws, keyword_groups = set(), []
+        for cls in reversed(mcs.mro()):
+            keyword_group = []
+            for (k,v) in sorted(cls.__dict__.items()):
+                if isinstance(v, Parameter) and k not in processed_kws:
+                    param_type = v.__class__.__name__
+                    keyword_group.append("%s=%s" % (k, param_type))
+                    processed_kws.add(k)
+            keyword_groups.append(keyword_group)
+
+        keywords = [el for grp in reversed(keyword_groups) for el in grp]
+        class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
+        signature = "Parameters(%s)" % (", ".join(keywords))
+        description = param_pager(mcs) if docstring_describe_params else ''
+        mcs.__doc__ = signature + class_docstr + '\n' + description
+
 
     def _initialize_parameter(mcs,param_name,param):
         # parameter has no way to find out the name a
@@ -884,6 +918,15 @@ class Parameterized(object):
 
     in this case foo.xx gets the value 20.
 
+    When initializing a Parameterized instance ('foo' in the example
+    above), the values of parameters can be supplied as keyword
+    arguments to the constructor (using parametername=parametervalue);
+    these values will override the class default values for this one
+    instance.
+
+    If no 'name' parameter is supplied, self.name defaults to the
+    object's class name with a unique number appended to it.
+
     Message formatting: Each Parameterized instance has several
     methods for optionally printing output. This functionality is
     based on the standard Python 'logging' module; using the methods
@@ -899,17 +942,6 @@ class Parameterized(object):
 
 
     def __init__(self,**params):
-        """
-        Initialize this Parameterized instance.
-
-        The values of parameters can be supplied as keyword arguments
-        to the constructor (using parametername=parametervalue); these
-        values will override the class default values for this one
-        instance.
-
-        If no 'name' parameter is supplied, self.name defaults to the
-        object's class name with a unique number appended to it.
-        """
         global object_count
 
         # Flag that can be tested to see if e.g. constant Parameters

@@ -22,13 +22,6 @@ __author__ = "Jean-Luc Stevens"
 import textwrap
 import param
 
-try:
-    from IPython.core.magic import Magics, magics_class, line_magic
-    from IPython.core import page
-except:
-    from nose.plugins.skip import SkipTest
-    raise SkipTest("IPython extension requires IPython >= 0.13")
-
 
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False
@@ -267,47 +260,50 @@ class ParamPager(object):
         return "%s\n\n%s\n\n%s\n\n%s" % (top_heading, table, docstring_heading, docstrings)
 
 
-
-@magics_class
-class ParamMagics(Magics):
-    """
-    Implements the %params line magic used to inspect the parameters
-    of a parameterized class or object.
-    """
-    def __init__(self, *args, **kwargs):
-        super(ParamMagics, self).__init__(*args, **kwargs)
-        self.param_pager = ParamPager()
-
-
-    @line_magic
-    def params(self, parameter_s='', namespaces=None):
-        """
-        The %params line magic accepts a single argument which is a
-        handle on the parameterized object to be inspected. If the
-        object can be found in the active namespace, information about
-        the object's parameters is displayed in the IPython pager.
-
-        Usage: %params <parameterized class or object>
-        """
-        if parameter_s=='':
-            print("Please specify an object to inspect.")
-            return
-
-        # Beware! Uses IPython internals that may change in future...
-        obj = self.shell._object_find(parameter_s)
-        if obj.found is False:
-            print("Object %r not found in the namespace." % parameter_s)
-            return
-
-        page.page(self.param_pager(obj.obj))
-
-
 message = """Welcome to the param IPython extension! (http://ioam.github.io/param/)"""
 message += '\nAvailable magics: %params'
 
 _loaded = False
 
 def load_ipython_extension(ip, verbose=True):
+
+    from IPython.core.magic import Magics, magics_class, line_magic
+    from IPython.core import page
+
+
+    @magics_class
+    class ParamMagics(Magics):
+        """
+        Implements the %params line magic used to inspect the parameters
+        of a parameterized class or object.
+        """
+        def __init__(self, *args, **kwargs):
+            super(ParamMagics, self).__init__(*args, **kwargs)
+            self.param_pager = ParamPager()
+
+
+        @line_magic
+        def params(self, parameter_s='', namespaces=None):
+            """
+            The %params line magic accepts a single argument which is a
+            handle on the parameterized object to be inspected. If the
+            object can be found in the active namespace, information about
+            the object's parameters is displayed in the IPython pager.
+
+            Usage: %params <parameterized class or object>
+            """
+            if parameter_s=='':
+                print("Please specify an object to inspect.")
+                return
+
+            # Beware! Uses IPython internals that may change in future...
+            obj = self.shell._object_find(parameter_s)
+            if obj.found is False:
+                print("Object %r not found in the namespace." % parameter_s)
+                return
+
+            page.page(self.param_pager(obj.obj))
+
 
     if verbose: print(message)
 

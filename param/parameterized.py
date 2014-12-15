@@ -32,7 +32,7 @@ def get_logger():
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
 warnings_as_exceptions = False
-docstring_signature = False
+docstring_signature = True
 
 object_count = 0
 warning_count = 0

@@ -585,10 +585,8 @@ class ParameterizedMetaclass(type):
             keyword_group = []
             for (k,v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
-                    value_repr = repr(v)
-                    if len(value_repr) > max_repr_len:
-                        value_repr = value_repr[:max_repr_len-3]+'...'
-                    keyword_group.append("%s=%s" % (k, value_repr))
+                    param_type = v.__class__.__name__
+                    keyword_group.append("%s=%s" % (k, param_type))
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 

@@ -14,6 +14,8 @@ import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL # pyflakes:ignore (API import)
 
+from ipython import ParamPager
+
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
 
@@ -32,7 +34,10 @@ def get_logger():
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
 warnings_as_exceptions = False
-docstring_signature = True
+
+docstring_signature = True                # Add signature to class docstrings
+docstring_describe_params = True          # Add parameter description to class docstrings
+param_pager = ParamPager(metaclass=True)  # Generates param description
 
 object_count = 0
 warning_count = 0
@@ -593,7 +598,8 @@ class ParameterizedMetaclass(type):
         keywords = [el for grp in reversed(keyword_groups) for el in grp]
         class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
         signature = "Parameters(%s)" % (", ".join(keywords))
-        mcs.__doc__ = signature + class_docstr
+        description = param_pager(mcs) if docstring_describe_params else ''
+        mcs.__doc__ = signature + class_docstr + '\n' + description
 
 
     def _initialize_parameter(mcs,param_name,param):

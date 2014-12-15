@@ -14,7 +14,7 @@ import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL # pyflakes:ignore (API import)
 
-from ipython import ParamPager
+from .ipython import ParamPager
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")

@@ -37,7 +37,7 @@ cyan = '\x1b[1;36m%s\x1b[0m'
 class ParamPager(object):
     """
     Callable class that displays information about the supplied
-    parameterized object or class in the IPython pager.
+    Parameterized object or class in the IPython pager.
     """
 
     def __init__(self, metaclass=False):
@@ -228,7 +228,7 @@ class ParamPager(object):
 
     def __call__(self, param_obj):
         """
-        Given a parameterized object or class, display information
+        Given a Parameterized object or class, display information
         about the parameters in the IPython pager.
         """
 
@@ -238,7 +238,7 @@ class ParamPager(object):
                                    and  issubclass(param_obj,param.Parameterized))
 
             if not (parameterized_object or parameterized_class):
-                print("Object is not a parameterized class or object.")
+                print("Object is not a Parameterized class or object.")
                 return
 
         title = 'Parameters of %r' % param_obj.name

@@ -32,6 +32,7 @@ def get_logger():
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
 warnings_as_exceptions = False
+docstring_signature = False
 
 object_count = 0
 warning_count = 0
@@ -567,11 +568,18 @@ class ParameterizedMetaclass(type):
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)
 
-        # If the __init__ method lacks a docstring, autogenerate one
-        # listing all the parameters as keyword arguments. This is
-        # particularly useful in the IPython Notebook as IPython will
-        # parse the signature to allow tab-completion of keywords
-        max_dft_val_length = 15  # Maximum number of characters for default values
+        if docstring_signature:
+            mcs.__generate_init_docstring()
+
+    def __generate_init_docstring(mcs, max_repr_len=15):
+        """
+        If the __init__ method lacks a docstring, autogenerate one
+        that lists all defined parameters as keyword arguments. This
+        is particularly useful in the IPython Notebook as IPython will
+        parse this signature to allow tab-completion of keywords.
+
+        max_repr_len: Maximum length (in characters) of value reprs.
+        """
         processed_kws, keyword_groups = set(), []
         for cls in reversed(mcs.mro()):
             keyword_group = []
@@ -584,10 +592,10 @@ class ParameterizedMetaclass(type):
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
-        keywords = [el for grp in reversed(keyword_groups) for el in grp]
         if not mcs.__init__.__doc__:
+            keywords = [el for grp in reversed(keyword_groups) for el in grp]
             class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-            signature = "%s(*args, **kwargs, %s)" % (name, ", ".join(keywords))
+            signature = "%s(*args, **kwargs, %s)" % (mcs.name, ", ".join(keywords))
             if hasattr(mcs.__init__, '__func__'):
                 mcs.__init__.__func__.__doc__ = signature + class_docstr
             else: # Python 3

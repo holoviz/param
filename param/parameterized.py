@@ -590,10 +590,9 @@ class ParameterizedMetaclass(type):
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
-
         keywords = [el for grp in reversed(keyword_groups) for el in grp]
         class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-        signature = "%s(*args, **kwargs, %s)" % (mcs.name, ", ".join(keywords))
+        signature = "Parameters(%s)" % (", ".join(keywords))
         mcs.__doc__ = signature + class_docstr
 
 

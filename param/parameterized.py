@@ -912,6 +912,15 @@ class Parameterized(object):
 
     in this case foo.xx gets the value 20.
 
+    When initializing a Parameterized instance ('foo' in the example
+    above), the values of parameters can be supplied as keyword
+    arguments to the constructor (using parametername=parametervalue);
+    these values will override the class default values for this one
+    instance.
+
+    If no 'name' parameter is supplied, self.name defaults to the
+    object's class name with a unique number appended to it.
+
     Message formatting: Each Parameterized instance has several
     methods for optionally printing output. This functionality is
     based on the standard Python 'logging' module; using the methods

@@ -732,7 +732,7 @@ class ParameterizedMetaclass(type):
         # instantiate is handled specially
         for superclass in classlist(mcs)[::-1]:
             super_param = superclass.__dict__.get(param_name)
-            if super_param is not None and super_param.instantiate is True:
+            if isinstance(super_param, Parameter) and super_param.instantiate is True:
                 param.instantiate=True
         del slots['instantiate']
 

@@ -755,9 +755,8 @@ class Boolean(SupportsAllowNone):
         super(Boolean,self).__set__(obj,val)
 
 
-
-class NumericTuple(SupportsAllowNone):
-    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+class Tuple(SupportsAllowNone):
+    """A tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
     __slots__ = ['length']
 
@@ -787,14 +786,24 @@ class NumericTuple(SupportsAllowNone):
         if not len(val)==self.length:
             raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
                              (self._attrib_name,len(val),self.length))
-        for n in val:
-            if not _is_number(n):
-                raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
 
 
     def __set__(self,obj,val):
         self._check(val)
-        super(NumericTuple,self).__set__(obj,val)
+        super(Tuple,self).__set__(obj,val)
+
+
+
+class NumericTuple(Tuple):
+    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+
+    __slots__ = []
+
+    def _check(self,val):
+        super(NumericTuple)._check(val)
+        for n in val:
+            if not _is_number(n):
+                raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
 
 
 

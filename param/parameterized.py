@@ -514,14 +514,25 @@ class Parameter(object):
             setattr(self,k,v)
 
 
-# Define one particular type of Parameter that is used in this file
-class String(Parameter):
+
+class SupportsAllowNone(Parameter):
+    """
+    Parameter that can optionally be set to allow None.
+    """
     __slots__ = ['allow_None']
 
-    def __init__(self,default="",allow_None=False,**params):
-        """Initialize a string parameter."""
+    def __init__(self,default,allow_None=False,**params):
         Parameter.__init__(self,default=default,**params)
         self.allow_None = (default is None or allow_None)
+
+
+
+class String(SupportsAllowNone):
+    """
+    A simple String parameter.
+    """
+
+    __slots__ = []
 
     def __set__(self,obj,val):
         if not isinstance(val,str) and not (self.allow_None and val is None):

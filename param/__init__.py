@@ -19,7 +19,7 @@ Parameters and Parameterized classes.
 import os.path
 
 from .parameterized import Parameterized, Parameter, String, \
-     descendents, ParameterizedFunction, ParamOverrides
+     SupportsAllowNone, descendents, ParameterizedFunction, ParamOverrides
 
 from .parameterized import logging_level # pyflakes:ignore (needed for eval)
 
@@ -726,17 +726,16 @@ class Magnitude(Number):
 
 
 # JAB: Should this and other Parameters below be a Dynamic instead?
-class Boolean(Parameter):
+class Boolean(SupportsAllowNone):
     """Binary or tristate Boolean Parameter."""
 
-    __slots__ = ['bounds','allow_None']
+    __slots__ = ['bounds']
 
     # CB: what does bounds=(0,1) mean/do for this Parameter? (Maybe we meant to inherit from
     # Integer?)
-    def __init__(self,default=False,bounds=(0,1),allow_None=False,**params):
+    def __init__(self,default=False,bounds=(0,1),**params):
         self.bounds = bounds
-        self.allow_None = (default is None or allow_None)
-        Parameter.__init__(self,default=default,**params)
+        super(Boolean, self).__init__(self,default=default,**params)
 
     def __set__(self,obj,val):
         if self.allow_None:
@@ -757,7 +756,7 @@ class Boolean(Parameter):
 
 
 
-class NumericTuple(Parameter):
+class NumericTuple(SupportsAllowNone):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
     __slots__ = ['length']
@@ -777,7 +776,11 @@ class NumericTuple(Parameter):
         self._check(default)
         Parameter.__init__(self,default=default,**params)
 
+
     def _check(self,val):
+        if val is None and self.allow_None:
+            return
+
         if not isinstance(val,tuple):
             raise ValueError("NumericTuple '%s' only takes a tuple value."%self._attrib_name)
 
@@ -787,6 +790,7 @@ class NumericTuple(Parameter):
         for n in val:
             if not _is_number(n):
                 raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
+
 
     def __set__(self,obj,val):
         self._check(val)
@@ -1055,7 +1059,7 @@ class ClassSelector(Selector):
         return d
 
 
-class List(Parameter):
+class List(SupportsAllowNone):
     """
     Parameter whose value is a list of objects, usually of a specified type.
 
@@ -1071,8 +1075,8 @@ class List(Parameter):
         self.class_ = class_
         self.bounds = bounds
         self._check_bounds(default)
-        Parameter.__init__(self,default=default,instantiate=instantiate,
-                           **params)
+        super(List, self).__init__(self,default=default,instantiate=instantiate,
+                                   **params)
 
     # Could add range() method from ClassSelector, to allow
     # list to be populated in the GUI

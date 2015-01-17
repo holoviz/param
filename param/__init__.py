@@ -756,13 +756,12 @@ class Boolean(Parameter):
         super(Boolean,self).__set__(obj,val)
 
 
+class Tuple(Parameter):
+    """A tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
-class NumericTuple(Parameter):
-    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+    __slots__ = ['length', 'allow_None']
 
-    __slots__ = ['length']
-
-    def __init__(self,default=(0,0),length=None,**params):
+    def __init__(self,default=(0,0),allow_None=False,length=None,**params):
         """
         Initialize a numeric tuple parameter with a fixed length
         (number of elements).  The length is determined by the initial
@@ -773,24 +772,39 @@ class NumericTuple(Parameter):
             self.length = len(default)
         else:
             self.length = length
+        self.allow_None = (default is None or allow_None)
+        super(Tuple,self).__init__(default=default,**params)
 
         self._check(default)
-        Parameter.__init__(self,default=default,**params)
+
+
 
     def _check(self,val):
+        if val is None and self.allow_None:
+            return
+
         if not isinstance(val,tuple):
             raise ValueError("NumericTuple '%s' only takes a tuple value."%self._attrib_name)
 
         if not len(val)==self.length:
             raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
                              (self._attrib_name,len(val),self.length))
-        for n in val:
-            if not _is_number(n):
-                raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
+
 
     def __set__(self,obj,val):
         self._check(val)
-        super(NumericTuple,self).__set__(obj,val)
+        super(Tuple,self).__set__(obj,val)
+
+
+
+class NumericTuple(Tuple):
+    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+
+    def _check(self,val):
+        super(NumericTuple, self)._check(val)
+        for n in val:
+            if not _is_number(n):
+                raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
 
 
 

@@ -372,7 +372,7 @@ class Parameter(object):
     # persistent storage pickling); see __getstate__ and __setstate__.
     __slots__ = ['_attrib_name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
-                 'pickle_default_value']
+                 'pickle_default_value','allow_None']
 
     # When created, a Parameter does not know which
     # Parameterized class owns it. If a Parameter subclass needs
@@ -381,7 +381,7 @@ class Parameter(object):
 
     def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
-                 pickle_default_value=True):
+                 pickle_default_value=True, allow_None=False):
         """
         Initialize a new Parameter object: store the supplied attributes.
 
@@ -409,6 +409,7 @@ class Parameter(object):
         self.readonly = readonly
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
+        self.allow_None = (default is None or allow_None)
 
 
     def _set_instantiate(self,instantiate):
@@ -516,12 +517,9 @@ class Parameter(object):
 
 # Define one particular type of Parameter that is used in this file
 class String(Parameter):
-    __slots__ = ['allow_None']
-
-    def __init__(self,default="",allow_None=False,**params):
-        """Initialize a string parameter."""
-        Parameter.__init__(self,default=default,**params)
-        self.allow_None = (default is None or allow_None)
+    """
+    A simple String parameter.
+    """
 
     def __set__(self,obj,val):
         if not isinstance(val,str) and not (self.allow_None and val is None):

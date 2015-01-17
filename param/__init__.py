@@ -527,9 +527,9 @@ class Number(Dynamic):
       AB = Number(default=0.5, bounds=(None,10), softbounds=(0,1), doc='Distance from A to B.')
     """
 
-    __slots__ = ['bounds','_softbounds','allow_None','inclusive_bounds','set_hook']
+    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook']
 
-    def __init__(self,default=0.0,bounds=None,softbounds=None,allow_None=False,inclusive_bounds=(True,True),**params):
+    def __init__(self,default=0.0,bounds=None,softbounds=None,inclusive_bounds=(True,True),**params):
         """
         Initialize this parameter object and store the bounds.
 
@@ -541,7 +541,6 @@ class Number(Dynamic):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
-        self.allow_None = (default is None or allow_None)
         if not callable(default): self._check_value(default)
 
 
@@ -729,14 +728,13 @@ class Magnitude(Number):
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
-    __slots__ = ['bounds','allow_None']
+    __slots__ = ['bounds']
 
     # CB: what does bounds=(0,1) mean/do for this Parameter? (Maybe we meant to inherit from
     # Integer?)
-    def __init__(self,default=False,bounds=(0,1),allow_None=False,**params):
+    def __init__(self,default=False,bounds=(0,1),**params):
         self.bounds = bounds
-        self.allow_None = (default is None or allow_None)
-        Parameter.__init__(self,default=default,**params)
+        super(Boolean, self).__init__(default=default,**params)
 
     def __set__(self,obj,val):
         if self.allow_None:
@@ -1023,14 +1021,13 @@ class ClassSelector(Selector):
     for is_instance=True.
     """
 
-    __slots__ = ['class_','allow_None','is_instance']
+    __slots__ = ['class_','is_instance']
 
-    def __init__(self,class_,default=None,instantiate=True,allow_None=False,is_instance=True,**params):
+    def __init__(self,class_,default=None,instantiate=True,is_instance=True,**params):
         self.class_ = class_
-        self.allow_None = (default is None or allow_None)
         self.is_instance = is_instance
-        self._check_value(default)
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
+        self._check_value(default)
 
 
     def _check_value(self,val,obj=None):

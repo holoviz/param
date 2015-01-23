@@ -759,20 +759,18 @@ class Tuple(Parameter):
 
     __slots__ = ['length', 'allow_None']
 
-    def __init__(self,default=(0,0),allow_None=False,length=None,**params):
+    def __init__(self,default=(0,0),length=None,**params):
         """
         Initialize a numeric tuple parameter with a fixed length
         (number of elements).  The length is determined by the initial
         default value, and is not allowed to change after
         instantiation.
         """
-        if length is None:
+        super(Tuple,self).__init__(default=default,**params)
+        if length is None and default is not None:
             self.length = len(default)
         else:
             self.length = length
-        self.allow_None = (default is None or allow_None)
-        super(Tuple,self).__init__(default=default,**params)
-
         self._check(default)
 
 
@@ -800,9 +798,11 @@ class NumericTuple(Tuple):
 
     def _check(self,val):
         super(NumericTuple, self)._check(val)
-        for n in val:
-            if not _is_number(n):
-                raise ValueError("%s: tuple element is not numeric: %s." % (self._attrib_name,str(n)))
+        if not self.allow_None and val is None:
+            for n in val:
+                if not _is_number(n):
+                    raise ValueError("%s: tuple element is not numeric: %s." %
+                                     (self._attrib_name,str(n)))
 
 
 
@@ -825,7 +825,7 @@ class Callable(Parameter):
     """
 
     def __set__(self,obj,val):
-        if not callable(val):
+        if not (self.allow_None and val is None) and (not callable(val)):
             raise ValueError("Callable '%s' only takes a callable object."%self._attrib_name)
         super(Callable,self).__set__(obj,val)
 
@@ -935,10 +935,12 @@ class ObjectSelector(Selector):
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self,default=None,objects=None,instantiate=False,
-                 compute_default_fn=None,check_on_set=None,**params):
+                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
         if objects is None:
             objects = []
         self.objects = objects
+        if allow_None and None not in objects:
+            self.objects.append(None)
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
@@ -948,10 +950,11 @@ class ObjectSelector(Selector):
         else:
             self.check_on_set=True
 
+        super(ObjectSelector,self).__init__(default=default,instantiate=instantiate,
+                                            allow_None=allow_None,**params)
+
         if default is not None and self.check_on_set is True:
             self._check_value(default)
-
-        super(ObjectSelector,self).__init__(default=default,instantiate=instantiate,**params)
 
 
     # CBNOTE: if the list of objects is changed, the current value for
@@ -975,7 +978,7 @@ class ObjectSelector(Selector):
         """
         val must be None or one of the objects in self.objects.
         """
-        if not val in self.objects:
+        if not (val in self.objects or (self.allow_None and val is None)):
             # CEBALERT: can be called before __init__ has called
             # super's __init__, i.e. before attrib_name has been set.
             try:
@@ -1081,9 +1084,9 @@ class List(Parameter):
                  bounds=(0,None),**params):
         self.class_ = class_
         self.bounds = bounds
-        self._check_bounds(default)
         Parameter.__init__(self,default=default,instantiate=instantiate,
                            **params)
+        self._check_bounds(default)
 
     # Could add range() method from ClassSelector, to allow
     # list to be populated in the GUI
@@ -1098,7 +1101,10 @@ class List(Parameter):
         Checks that the list is of the right length and has the right contents.
         Otherwise, an exception is raised.
         """
-        if not (isinstance(val,list)):
+        if self.allow_None and val is None:
+            return
+
+        if not isinstance(val, list):
             raise ValueError("List '%s' must be a list."%(self._attrib_name))
 
         if self.bounds is not None:
@@ -1291,11 +1297,11 @@ class Path(Parameter):
         """
         Call Parameter's __set__, but warn if the file cannot be found.
         """
-        try:
-            self._resolve(val)
-        except IOError as e:
-            Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s'%(e.args[0]))
-
+        if not self.allow_None and val is None:
+            try:
+                self._resolve(val)
+            except IOError as e:
+                Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s'%(e.args[0]))
         super(Path,self).__set__(obj,val)
 
     def __get__(self, obj, objtype):
@@ -1303,7 +1309,7 @@ class Path(Parameter):
         Return an absolute, normalized path (see resolve_path).
         """
         raw_path = super(Path,self).__get__(obj,objtype)
-        return self._resolve(raw_path)
+        return None if raw_path is None else self._resolve(raw_path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths

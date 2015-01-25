@@ -808,9 +808,6 @@ class Callable(Parameter):
 
 
 
-# CBNOTE: python now has abstract base classes, so we could update
-# this. At least if the check is in a method, all such checks could be
-# changed at once.
 def _is_abstract(class_):
     try:
         return class_.abstract

@@ -335,11 +335,6 @@ class Dynamic(Parameter):
     other callable as required so long as a number is returned on each
     call.
     """
-    # CB: making Dynamic support iterators and generators is sf.net
-    # feature request 1864370. When working on that task, note that
-    # detection of a dynamic generator by 'callable' needs to be
-    # replaced by something that matches whatever Dynamic becomes
-    # capable of using.
 
     time_fn = Time()
     time_dependent = False

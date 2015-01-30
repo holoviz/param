@@ -110,8 +110,10 @@ class ParamPager(object):
             if len(lines) > 1:
                 tail = ['%s%s' % (' '  * right_shift, line) for line in lines[1:]]
                 all_lines = [ heading.ljust(right_shift) + lines[0]] + tail
-            else:
+            elif len(lines) == 1:
                 all_lines = [ heading.ljust(right_shift) + lines[0]]
+            else:
+                all_lines = []
 
             if i % 2:  # Alternate red and blue for docstrings
                 contents.extend([red %el for el in all_lines])

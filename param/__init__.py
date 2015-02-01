@@ -335,11 +335,6 @@ class Dynamic(Parameter):
     other callable as required so long as a number is returned on each
     call.
     """
-    # CB: making Dynamic support iterators and generators is sf.net
-    # feature request 1864370. When working on that task, note that
-    # detection of a dynamic generator by 'callable' needs to be
-    # replaced by something that matches whatever Dynamic becomes
-    # capable of using.
 
     time_fn = Time()
     time_dependent = False
@@ -582,12 +577,8 @@ class Number(Dynamic):
         super(Number,self).__set__(obj,bounded_val)
 
 
-    # CEBERRORALERT: doesn't take account of exclusive bounds. When
-    # the gui uses set_in_bounds(), expecting to get acceptable
-    # values, it actually gets an out-of-bounds error. When fixed,
-    # should remove hack in
-    # topo.tkgui.projectionpanel.UnitsPanel.sheet_change().
-
+    # CEBERRORALERT: doesn't take account of exclusive bounds; see
+    # https://github.com/ioam/param/issues/80.
     def crop_to_bounds(self,val):
         """
         Return the given value cropped to be within the hard bounds
@@ -631,6 +622,7 @@ class Number(Dynamic):
             vmin,vmax = self.bounds
             incmin,incmax = self.inclusive_bounds
 
+            # Could simplify: see https://github.com/ioam/param/issues/83
             if vmax is not None:
                 if incmax is True:
                     if not val <= vmax:
@@ -647,19 +639,6 @@ class Number(Dynamic):
                     if not val > vmin:
                         raise ValueError("Parameter '%s' must be greater than %s"%(self._attrib_name,vmin))
 
-##         could consider simplifying the above to something like this untested code:
-
-##          too_low = False if vmin is None else
-##                    (val < vmin if incmin else val <= vmin) and
-##                    (val > vmin if incmin else val <= vmin)
-
-##          too_high = ...
-
-##          if too_low or too_high:
-##              raise ValueError("Parameter '%s' must be in the range %s" % (self._attrib_name,self.rangestr()))
-
-##         where self.rangestr() formats the range using the usual notation for
-##         indicating exclusivity, e.g. "[0,10)".
 
 
     def _check_value(self,val):
@@ -724,14 +703,12 @@ class Magnitude(Number):
 
 
 
-# JAB: Should this and other Parameters below be a Dynamic instead?
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
     __slots__ = ['bounds']
 
-    # CB: what does bounds=(0,1) mean/do for this Parameter? (Maybe we meant to inherit from
-    # Integer?)
+    # CB: bounds have no effect; see https://github.com/ioam/param/issues/82
     def __init__(self,default=False,bounds=(0,1),**params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default,**params)
@@ -831,9 +808,6 @@ class Callable(Parameter):
 
 
 
-# CBNOTE: python now has abstract base classes, so we could update
-# this. At least if the check is in a method, all such checks could be
-# changed at once.
 def _is_abstract(class_):
     try:
         return class_.abstract

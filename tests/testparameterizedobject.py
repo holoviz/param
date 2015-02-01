@@ -231,6 +231,30 @@ class TestNumberParameter(unittest.TestCase):
 
 
 @istest
+class TestStringParameter(unittest.TestCase):
+
+    def setUp(self):
+        super(TestStringParameter, self).setUp()
+
+        class TestString(param.Parameterized):
+            a = param.String()
+            b = param.String(default='',allow_None=True)
+            c = param.String(default=None)
+
+        self._TestString = TestString
+
+    def test_handling_of_None(self):
+        t = self._TestString()
+        with self.assertRaises(ValueError):
+            t.a = None
+
+        t.b = None
+
+        assert t.c is None
+
+
+
+@istest
 class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):

@@ -775,7 +775,7 @@ class NumericTuple(Tuple):
 
     def _check(self,val):
         super(NumericTuple, self)._check(val)
-        if not self.allow_None and val is None:
+        if not (self.allow_None and val is None):
             for n in val:
                 if not _is_number(n):
                     raise ValueError("%s: tuple element is not numeric: %s." %
@@ -913,8 +913,6 @@ class ObjectSelector(Selector):
         if objects is None:
             objects = []
         self.objects = objects
-        if allow_None and None not in objects:
-            self.objects.append(None)
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
@@ -925,8 +923,9 @@ class ObjectSelector(Selector):
             self.check_on_set=True
 
         super(ObjectSelector,self).__init__(default=default,instantiate=instantiate,
-                                            allow_None=allow_None,**params)
-
+                                            **params)
+        # Required as Parameter sets allow_None=True if default is None
+        self.allow_None = allow_None
         if default is not None and self.check_on_set is True:
             self._check_value(default)
 
@@ -1271,7 +1270,10 @@ class Path(Parameter):
         """
         Call Parameter's __set__, but warn if the file cannot be found.
         """
-        if not self.allow_None and val is None:
+        if val is None:
+            if not self.allow_None:
+                Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('None is not allowed')
+        else:
             try:
                 self._resolve(val)
             except IOError as e:

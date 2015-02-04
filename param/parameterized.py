@@ -521,6 +521,10 @@ class String(Parameter):
     A simple String parameter.
     """
 
+    def __init__(self, default="", allow_None=False, **kwargs):
+        super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
+        self.allow_None = allow_None
+
     def __set__(self,obj,val):
         if not isinstance(val,str) and not (self.allow_None and val is None):
             raise ValueError("String '%s' only takes a string value."%self._attrib_name)

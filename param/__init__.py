@@ -757,7 +757,7 @@ class Tuple(Parameter):
             return
 
         if not isinstance(val,tuple):
-            raise ValueError("NumericTuple '%s' only takes a tuple value."%self._attrib_name)
+            raise ValueError("Tuple '%s' only takes a tuple value."%self._attrib_name)
 
         if not len(val)==self.length:
             raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %

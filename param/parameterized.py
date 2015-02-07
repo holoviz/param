@@ -1719,6 +1719,8 @@ class ParameterizedFunction(Parameterized):
 
         inst=Parameterized.__new__(cls)
         Parameterized.__init__(inst,**params)
+        if 'name' in params:  inst.__name__ = params['name']
+        else:                 inst.__name__ = self_or_cls.name
         return inst
 
     def __new__(class_,*args,**params):

@@ -8,6 +8,22 @@ import numbergen
 
 # CEBALERT: not anything like a complete test of Parameterized!
 
+# When we drop python 2.6, can use assertRaises as context manager,
+# which will allow us to replace e.g.
+#
+#     try:
+#         ...
+#     except Error:
+#         pass
+#     else:
+#         raise AssertionError
+#
+# with
+#
+#     with self.assertRaises(Error):
+#        ... 
+
+
 import random
 from nose.tools import istest, nottest
 
@@ -61,7 +77,6 @@ class TestParameterized(unittest.TestCase):
         testpo = TestPO()
         self.assertEqual(testpo.ro,"Hello")
 
-        # CB: couldn't figure out how to use assertRaises
         try:
             t = TestPO(ro=20)
         except TypeError:
@@ -245,8 +260,13 @@ class TestStringParameter(unittest.TestCase):
 
     def test_handling_of_None(self):
         t = self._TestString()
-        with self.assertRaises(ValueError):
+        
+        try:
             t.a = None
+        except ValueError:
+            pass
+        else:
+           raise AssertionError
 
         t.b = None
 
@@ -280,11 +300,19 @@ class TestParamOverrides(unittest.TestCase):
             b = param.Number(0.5, bounds=(0,1))
 
         # these three similar tests might be overkill
-        with self.assertRaises(ValueError):
+        try:
             ParamOverrides(ATestPO(),dict(a=10))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Shouldn't be able to override a param.String with a number")
 
-        with self.assertRaises(ValueError):
+        try:
             ParamOverrides(ATestPO(),dict(b=2))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Shouldn't be able to override a param.Number to value outside its bounds")
 
         self.assertRaises(ValueError, some_fn, num_phase='bad value') 
 

@@ -300,7 +300,7 @@ class TimeAwareRandomState(TimeAware):
 
     __abstract = True
 
-    def _initialize_random_state(self, seed=None, shared=True):
+    def _initialize_random_state(self, seed=None, shared=True, name=None):
         """
         Initialization method to be called in the constructor of
         subclasses to initialize the random state correctly.
@@ -326,8 +326,11 @@ class TimeAwareRandomState(TimeAware):
         # Seed appropriately (if not shared)
         if not shared:
             self.random_generator.seed(seed)
-        self._hashfn = Hash(self.name, input_count=2)
-        self._verify_constrained_hash()
+
+        if name is None:
+            self._verify_constrained_hash()
+        self._hashfn = Hash(name if name else self.name, input_count=2)
+
         if self.time_dependent:
             self._hash_and_seed()
 

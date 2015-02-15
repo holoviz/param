@@ -1723,121 +1723,72 @@ def print_all_param_defaults():
 
 
 
-
 # Note that with Python 2.6, a fn's **args no longer has to be a
 # dictionary. This might allow us to use a decorator to simplify using
 # ParamOverrides (if that does indeed make them simpler to use).
 # http://docs.python.org/whatsnew/2.6.html
-class ParamOverrides(dict):
-    """
-    A dictionary that returns the attribute of a specified object if
-    that attribute is not present in itself.
 
-    Used to override the parameters of an object.
-    """
+# CB: closely tied to Parameterized's implementation
+class ParamOverrides(Parameterized):
 
-    # NOTE: Attribute names of this object block parameters of the
-    # same name, so all attributes of this object should have names
-    # starting with an underscore (_).
+    # Note: __getattribute__ is overridden: see that method before
+    # adding to ParamOverrides.
 
     def __init__(self,overridden,dict_,allow_extra_keywords=False):
-        """
 
-        If allow_extra_keywords is False, then all keys in the
-        supplied dict_ must match parameter names on the overridden
-        object (otherwise a warning will be printed).
+        # CB: allow_extra_keywords(=False) only applies during
+        # __init__ (matching previous ParamOverrides' behavior)
+        
+        # each instance gets its own class in which to store the
+        # parameter objects
+        self.__class__ = type(overridden.name+'ParamOverrides', 
+                              (self.__class__,),
+                              # CB: remind myself how to get params of Parameterized
+                              # (can't remember if params() is the best way; clean that up
+                              # if necessary - see https://github.com/ioam/param/issues/8)                              
+                              overridden.params())
 
-        If allow_extra_keywords is True, then any items in the
-        supplied dict_ that are not also parameters of the overridden
-        object will be available via the extra_keywords() method.
-        """
-        # we'd like __init__ to be fast because it's going to be
-        # called a lot. What's the fastest way to move the existing
-        # params dictionary into this one? Would
-        #  def __init__(self,overridden,**kw):
-        #      ...
-        #      dict.__init__(self,**kw)
-        # be faster/easier to use?
         self._overridden = overridden
-        dict.__init__(self,dict_)
 
         if allow_extra_keywords:
-            self._extra_keywords=self._extract_extra_keywords(dict_)
-        else:
-            self._check_params(dict_)
+            dict_ = dict_.copy() # avoid removing keys from incoming dict_
 
-    def extra_keywords(self):
-        """
-        Return a dictionary containing items from the originally
-        supplied dict_ whose names are not parameters of the
-        overridden object.
-        """
-        return self._extra_keywords
+            # CB: how to get keys as set for all the pythons?
+            for name in set(dict_.keys()).difference(set(overridden.params().keys())):
+                # we avoid warnings by setting extra names before this
+                # instance is 'Parameterized'
+                setattr(self,name,dict_[name])
+                del dict_[name]
 
-    def param_keywords(self):
-        """
-        Return a dictionary containing items from the originally
-        supplied dict_ whose names are parameters of the
-        overridden object (i.e. not extra keywords/parameters).
-        """
-        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
+        Parameterized.__init__(self,**dict_)
 
-    def __missing__(self,name):
-        # Return 'name' from the overridden object
-        return getattr(self._overridden,name)
 
-    def __repr__(self):
-        # As dict.__repr__, but indicate the overridden object
-        return dict.__repr__(self)+" overriding params from %s"%repr(self._overridden)
+    def __getattribute__(self,name): 
+        # If name is 'special' (e.g. it's one of the various special
+        # method names) or if (param-mangled)name is set locally on
+        # this instance, return (param-mangled)name from this
+        # instance. Otherwise, return name from the overridden
+        # Parameterized instance.
+        look_in = self if (name.startswith('_') or '_%s_param_value'%name in self.__dict__ or name in self.__dict__) else self._overridden
+        return Parameterized.__getattribute__(look_in,name)
 
-    def __getattr__(self,name):
-        # Provide 'dot' access to entries in the dictionary.
-        # (This __getattr__ method is called only if 'name' isn't an
-        # attribute of self.)
-        return self.__getitem__(name)
+    
+    def _instantiate_param(self,param_obj,dict_=None,key=None):
+        # Don't instantiate params into this object
+        pass
 
-    def __setattr__(self,name,val):
-        # Attributes whose name starts with _ are set on self (as
-        # normal), but all other attributes are inserted into the
-        # dictionary.
-        if not name.startswith('_'):
-            self.__setitem__(name,val)
-        else:
-            dict.__setattr__(self,name,val)
 
-    def get(self, key, default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
+    # ParamOverrides was previously a dict
+    def __getitem__(self,name):
+        # try/except raise IndexError is probably necessary?
+        return getattr(self,name)
 
-    def __contains__(self, key):
-        return key in self.__dict__ or key in self._overridden.params()
 
-    def _check_params(self,params):
-        """
-        Print a warning if params contains something that is not a
-        Parameter of the overridden object.
-        """
-        overridden_object_params = list(self._overridden.params().keys())
-        for item in params:
-            if item not in overridden_object_params:
-                self.warning("'%s' will be ignored (not a Parameter).",item)
+    # TODO: missing methods that previously existed: extra_keywords(),
+    # param_keywords()
 
-    def _extract_extra_keywords(self,params):
-        """
-        Return any items in params that are not also
-        parameters of the overridden object.
-        """
-        extra_keywords = {}
-        overridden_object_params = self._overridden.params()
-        for name,val in params.items():
-            if name not in overridden_object_params:
-                extra_keywords[name]=val
-                # CEBALERT: should we remove name from params
-                # (i.e. del params[name]) so that it's only available
-                # via extra_keywords()?
-        return extra_keywords
+    # TODO: repr, pickle, etc    
+
 
 
 # Helper function required by ParameterizedFunction.__reduce__

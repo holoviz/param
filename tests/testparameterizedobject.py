@@ -289,6 +289,50 @@ class TestParamOverrides(unittest.TestCase):
         self.assertEqual(overrides['name'], 'B')
         self.assertEqual(overrides['print_level'], 0)
 
+    # CB: would be nice if we could repeat an existing set of
+    # tests somehow (since here we're testing that ParamOverrides'
+    # behavior doesn't differ from that of the wrapped
+    # Parameterized instace).            
+
+    def test_dynamic_override(self):
+        class ATestPO(param.Parameterized):
+            a = param.Number(0.5, bounds=(0,1))
+
+        po = ParamOverrides(ATestPO(),dict(a=lambda:0.75))        
+        self.assertEqual(po.a,0.75)
+
+        po = ParamOverrides(ATestPO(),dict(a=lambda:2))
+        try:
+            po.a
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Dynamic value wasn't checked")
+    
+
+
+    def test_value_checking(self):
+        class ATestPO(param.Parameterized):
+            a = param.String('test')
+            b = param.Number(0.5, bounds=(0,1))
+
+        # these three similar tests might be overkill
+        try:
+            ParamOverrides(ATestPO(),dict(a=10))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Shouldn't be able to override a param.String with a number")
+
+        try:
+            ParamOverrides(ATestPO(),dict(b=2))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Shouldn't be able to override a param.Number to value outside its bounds")
+
+        self.assertRaises(ValueError, some_fn, num_phase='bad value') 
+
     # CEBALERT: missing test for allow_extra_keywords (e.g. getting a
     # warning on attempting to override non-existent parameter when
     # allow_extra_keywords is False)

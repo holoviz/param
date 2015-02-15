@@ -5,8 +5,18 @@ Param
 Param is a library providing Parameters: Python attributes extended to
 have features such as type and range checking, dynamically generated
 values, documentation strings, default values, etc., each of which is
-inherited from parent classes if not specified in a subclass.
+inherited from parent classes if not specified in a subclass.  Param
+lets you program declaratively in Python, by just stating facts about
+each of your parameters, and then using them throughout your code.
+With Parameters, error checking will be automatic, which eliminates
+huge amounts of boilerplate code that would otherwise be required to
+verify or test user-supplied values.
 
+Param-based programs tend to contain much less code than other Python
+programs, instead just having easily readable and maintainable
+manifests of Parameters for each object or function.  This way your
+remaining code can be much simpler and clearer, while users can also
+easily see how to use it properly.
 
 What is a Parameter?
 ====================

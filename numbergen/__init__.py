@@ -391,7 +391,7 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
     Note: Each RandomDistribution object has independent random state.
     """
 
-    seed = param.Number(default=None, allow_None=True, doc="""
+    seed = param.Integer(default=None, allow_None=True, doc="""
        Sets the seed of the random number generator and can be used to
        randomize time dependent streams.
 

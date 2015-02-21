@@ -329,6 +329,10 @@ class TimeAwareRandomState(TimeAware):
 
         if name is None:
             self._verify_constrained_hash()
+
+        if seed is not None:
+            name = '%s%s' % (name, seed)
+
         self._hashfn = Hash(name if name else self.name, input_count=2)
 
         if self.time_dependent:
@@ -386,6 +390,13 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
     Note: Each RandomDistribution object has independent random state.
     """
 
+    seed = param.Number(default=None, allow_None=True, doc="""
+       Sets the seed of the random number generator and can be used to
+       randomize time dependent streams.
+
+       If seed is None, there is no control over the random stream
+       (i.e. no reproducibility of the stream).""")
+
     __abstract = True
 
     def __init__(self,**params):
@@ -399,9 +410,8 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
 
         Note that any supplied seed is ignored if time_dependent=True.
         """
-        seed = params.pop('seed', None)
         super(RandomDistribution,self).__init__(**params)
-        self._initialize_random_state(seed=seed, shared=False)
+        self._initialize_random_state(seed=self.seed, shared=False)
 
     def __call__(self):
         if self.time_dependent:

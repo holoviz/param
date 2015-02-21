@@ -334,7 +334,8 @@ class TimeAwareRandomState(TimeAware):
             self._verify_constrained_hash()
 
         hash_name = name if name else self.name
-        self._hashfn = Hash(hash_name+suffix, input_count=2)
+        if not shared:  hash_name += suffix
+        self._hashfn = Hash(hash_name, input_count=2)
 
         if self.time_dependent:
             self._hash_and_seed()

@@ -315,6 +315,9 @@ class TimeAwareRandomState(TimeAware):
         """
         if seed is None: # Equivalent to an uncontrolled seed.
             seed = random.Random().randint(0, 1000000)
+            suffix = ''
+        else:
+            suffix = str(seed)
 
         # If time_dependent, independent state required: otherwise
         # time-dependent seeding (via hash) will affect shared
@@ -330,10 +333,8 @@ class TimeAwareRandomState(TimeAware):
         if name is None:
             self._verify_constrained_hash()
 
-        if seed is not None:
-            name = '%s%s' % (name, seed)
-
-        self._hashfn = Hash(name if name else self.name, input_count=2)
+        hash_name = name if name else self.name
+        self._hashfn = Hash(hash_name+suffix, input_count=2)
 
         if self.time_dependent:
             self._hash_and_seed()

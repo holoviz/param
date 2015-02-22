@@ -789,7 +789,8 @@ script_repr_suppress_defaults=True
 # Also, do we need an option to return repr without path, if desired?
 # E.g. to get 'pre_plot_hooks()' instead of
 # 'topo.command.analysis.pre_plot_hooks()' in the gui?
-def script_repr(val,imports,prefix,settings):
+def script_repr(val,imports, prefix="\n    ", settings=[],
+                unknown_value='<?>', qualify=True):
     """
     Variant of repr() designed for generating a runnable script.
 
@@ -810,7 +811,10 @@ def script_repr(val,imports,prefix,settings):
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
     elif hasattr(val,'script_repr'):
-        rep=val.script_repr(imports=imports,prefix=prefix+"    ")
+        rep=val.script_repr(imports=imports,
+                            prefix=prefix+"    ",
+                            qualify=True,
+                            unknown_value=unknown_value)
 
     else:
         rep=repr(val)
@@ -1139,8 +1143,7 @@ class Parameterized(object):
 
 
 
-
-    def script_repr(self, imports=[], sep=",\n", prefix="    ", unknown_value='<?>', qualify=True):
+    def script_repr(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
@@ -1178,10 +1181,14 @@ class Parameterized(object):
                                 re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
                 continue
 
-            value = script_repr(values[k],imports,prefix,[]) if k in values else unknown_value
+            value = script_repr(values[k], imports,
+                                prefix=prefix,
+                                settings=[],
+                                unknown_value=unknown_value,
+                                qualify=qualify) if k in values else unknown_value
             if value is None:
-                raise Exception("Argument %s is not a parameter "
-                                "and has an unknown value.")
+                raise Exception("Argument %r is not a parameter "
+                                "and has an unknown value." % k)
 
             # Explicit kwarg (unchanged)
             if (k in kwargs) and kwargs[k] == value: continue
@@ -1197,10 +1204,9 @@ class Parameterized(object):
                 keywords.append('%s=%s' % (k, value))
             processed.append(k)
 
-        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-
         qualifier = mod + '.'  if qualify else ''
-        return qualifier + '%s(%s)' % (self.__class__.__name__,  (sep+prefix).join(arguments))
+        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
+        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+prefix).join(arguments))
 
 
     def __str__(self):

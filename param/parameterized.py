@@ -1188,8 +1188,8 @@ class Parameterized(object):
                 raise Exception("Argument %r is not a parameter "
                                 "and has an unknown value." % k)
 
-            # Explicit kwarg (unchanged)
-            if (k in kwargs) and kwargs[k] == value: continue
+            # Explicit kwarg (unchanged, known value)
+            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
 
             if k in posargs:
                 # The value repr is used for positional arguments

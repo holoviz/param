@@ -804,6 +804,8 @@ def script_repr(val,imports, prefix="\n    ", settings=[],
     """
     # CB: doc prefix & settings or realize they don't need to be
     # passed around, etc.
+    # JLS: The settings argument is not used anywhere. To be removed
+    # in a separate PR.
     if isinstance(val,type):
         rep = type_script_repr(val,imports,prefix,settings)
 
@@ -811,10 +813,8 @@ def script_repr(val,imports, prefix="\n    ", settings=[],
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
     elif hasattr(val,'script_repr'):
-        rep=val.script_repr(imports=imports,
-                            prefix=prefix+"    ",
-                            qualify=True,
-                            unknown_value=unknown_value)
+        rep=val.script_repr(imports=imports, prefix=prefix+"    ",
+                            qualify=True, unknown_value=unknown_value)
 
     else:
         rep=repr(val)
@@ -1181,9 +1181,7 @@ class Parameterized(object):
                                 re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
                 continue
 
-            value = script_repr(values[k], imports,
-                                prefix=prefix,
-                                settings=[],
+            value = script_repr(values[k], imports, prefix=prefix,settings=[],
                                 unknown_value=unknown_value,
                                 qualify=qualify) if k in values else unknown_value
             if value is None:
@@ -1196,12 +1194,11 @@ class Parameterized(object):
             if k in posargs:
                 # The value repr is used for positional arguments
                 arglist.append(value)
-            elif k in kwargs:
-                # Explicit keyword argument (changed)
+            elif k in kwargs or (spec.keywords is not None):
+                # Explicit modified keywords or parameters in
+                # precendence order (if **kwargs present)
                 keywords.append('%s=%s' % (k, value))
-            elif (spec.keywords is not None):
-                # Parameters ordered by precendence (if **kwargs present)
-                keywords.append('%s=%s' % (k, value))
+
             processed.append(k)
 
         qualifier = mod + '.'  if qualify else ''

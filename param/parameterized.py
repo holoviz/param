@@ -80,6 +80,68 @@ def classlist(class_):
     return inspect.getmro(class_)[::-1]
 
 
+def pprint(obj, including={}, exclude=['self', 'name']):
+    """
+    Pretty printed representation of a parameterized object that may
+    be evaluated with eval. Similar to repr except introspection of
+    the constructor (__init__) ensures a valid and succinct
+    representation is generated.
+
+    Note that any **kwargs argument is assumed to be used for setting
+    parameters and will therefore not be shown.
+
+    Positional arguments are always shown, followed by the explicitly
+    declared keyword arguments (that have been modified) followed by
+    modified parameters, sorted by precedence.
+
+    The including dictionary allows arguments to be supplied that
+    aren't parameters but that should also be pretty printed.
+
+    The exclude list is used to exclude specified parameters from
+    being included in the representation.
+    """
+    changed_params = dict(obj.get_param_values(onlychanged=True))
+    param_values = dict(obj.get_param_values())
+    spec = inspect.getargspec(obj.__init__)
+    args = spec.args[1:] if spec.args[0] == 'self' else spec.args
+
+    if spec.defaults is not None:
+        posargs = spec.args[:-len(spec.defaults)]
+        kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
+    else:
+        posargs, kwargs = args, []
+
+
+    ordering = sorted(changed_params.keys(),
+                          key=lambda k: obj.params(k).precedence)
+
+    values = dict(obj.get_param_values())
+    values.update(including)
+
+    arglist, defaults, processed = [], [], []
+    for k in args + ordering:
+        if k in processed: continue
+
+        if k in posargs:
+            # The value repr is used for positional arguments
+            arglist.append(repr(values[k]))
+        elif (k in kwargs) and kwargs[k] != values[k]:
+            # Explicit keyword arguments that have changed
+            arglist.append(k)
+            defaults.append(values[k])
+        elif spec.keywords is not None:
+            # Parameters ordered by precendence (if **kwargs present)
+            arglist.append(k)
+            defaults.append(values[k])
+        processed.append(k)
+
+    return obj.__class__.__name__ + inspect.formatargspec(arglist,
+                                                          varargs=spec.varargs,
+                                                          defaults=defaults)
+
+
+
+
 def descendents(class_):
     """
     Return a list of the class hierarchy below (and including) the given class.

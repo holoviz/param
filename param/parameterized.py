@@ -129,7 +129,9 @@ def pprint(obj, including={}, exclude=['self', 'name']):
             # Explicit keyword arguments that have changed
             arglist.append(k)
             defaults.append(values[k])
-        elif spec.keywords is not None:
+        elif k in kwargs:
+            continue
+        elif (spec.keywords is not None):
             # Parameters ordered by precendence (if **kwargs present)
             arglist.append(k)
             defaults.append(values[k])

@@ -21,7 +21,7 @@ import numbergen
 # with
 #
 #     with self.assertRaises(Error):
-#        ... 
+#        ...
 
 
 import random
@@ -260,7 +260,7 @@ class TestStringParameter(unittest.TestCase):
 
     def test_handling_of_None(self):
         t = self._TestString()
-        
+
         try:
             t.a = None
         except ValueError:
@@ -292,7 +292,7 @@ class TestParamOverrides(unittest.TestCase):
     # CEBALERT: missing test for allow_extra_keywords (e.g. getting a
     # warning on attempting to override non-existent parameter when
     # allow_extra_keywords is False)
-    
+
     def test_missing_key(self):
         overrides = ParamOverrides(self.po,{'name':'B'})
         try:

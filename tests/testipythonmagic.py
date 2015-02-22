@@ -56,4 +56,3 @@ class TestParamPager(unittest.TestCase):
             sys.stderr.write(page_string)  # Coloured output
             sys.stderr.write("\nRAW STRING:\n\n%r\n\n" % page_string)
             raise e
-

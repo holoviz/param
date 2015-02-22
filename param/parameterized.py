@@ -80,70 +80,6 @@ def classlist(class_):
     return inspect.getmro(class_)[::-1]
 
 
-def pprint(obj, including={}, exclude=['self', 'name']):
-    """
-    Pretty printed representation of a parameterized object that may
-    be evaluated with eval. Similar to repr except introspection of
-    the constructor (__init__) ensures a valid and succinct
-    representation is generated.
-
-    Note that any **kwargs argument is assumed to be used for setting
-    parameters and will therefore not be shown.
-
-    Positional arguments are always shown, followed by the explicitly
-    declared keyword arguments (that have been modified) followed by
-    modified parameters, sorted by precedence.
-
-    The including dictionary allows arguments to be supplied that
-    aren't parameters but that should also be pretty printed.
-
-    The exclude list is used to exclude specified parameters from
-    being included in the representation.
-    """
-    changed_params = dict(obj.get_param_values(onlychanged=True))
-    param_values = dict(obj.get_param_values())
-    spec = inspect.getargspec(obj.__init__)
-    args = spec.args[1:] if spec.args[0] == 'self' else spec.args
-
-    if spec.defaults is not None:
-        posargs = spec.args[:-len(spec.defaults)]
-        kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
-    else:
-        posargs, kwargs = args, []
-
-
-    ordering = sorted(changed_params.keys(),
-                          key=lambda k: obj.params(k).precedence)
-
-    values = dict(obj.get_param_values())
-    values.update(including)
-
-    arglist, defaults, processed = [], [], []
-    for k in args + ordering:
-        if k in processed: continue
-
-        if k in posargs:
-            # The value repr is used for positional arguments
-            arglist.append(repr(values[k]))
-        elif (k in kwargs) and kwargs[k] != values[k]:
-            # Explicit keyword arguments that have changed
-            arglist.append(k)
-            defaults.append(values[k])
-        elif k in kwargs:
-            continue
-        elif (spec.keywords is not None):
-            # Parameters ordered by precendence (if **kwargs present)
-            arglist.append(k)
-            defaults.append(values[k])
-        processed.append(k)
-
-    return obj.__class__.__name__ + inspect.formatargspec(arglist,
-                                                          varargs=spec.varargs,
-                                                          defaults=defaults)
-
-
-
-
 def descendents(class_):
     """
     Return a list of the class hierarchy below (and including) the given class.
@@ -1204,35 +1140,67 @@ class Parameterized(object):
 
 
 
-    def script_repr(self,imports=[],prefix="    "):
+    def script_repr(self, imports=[], sep=",\n", prefix="    ", unknown_value='<?>', qualify=True):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
-        # Suppresses automatically generated names.
-        settings=[]
-        for name,val in self.get_param_values(onlychanged=script_repr_suppress_defaults):
-            if name == 'name' and (val is not None and
-                                   re.match('^'+self.__class__.__name__+'[0-9]+$',val)):
-                rep=None
-            else:
-                rep=script_repr(val,imports,prefix,settings)
-
-            if rep is not None:
-                settings.append('%s=%s' % (name,rep))
-
+        exclude=['self', 'name']
 
         # Generate import statement
         mod = self.__module__
-
         bits = mod.split('.')
-
         imports.append("import %s"%mod)
         imports.append("import %s"%bits[0])
 
-        # CB: Doesn't give a nice repr, but I don't see what to do
-        # otherwise that will work in all cases. Also I haven't
-        # updated this code in other places (e.g. simulation).
-        return mod+'.'+self.__class__.__name__ + "(" + (",\n"+prefix).join(settings) + ")"
+        changed_params = dict(self.get_param_values(onlychanged=script_repr_suppress_defaults))
+        param_values = dict(self.get_param_values())
+        spec = inspect.getargspec(self.__init__)
+        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
+
+        if spec.defaults is not None:
+            posargs = spec.args[:-len(spec.defaults)]
+            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
+        else:
+            posargs, kwargs = args, []
+
+        ordering = sorted(
+            sorted(changed_params.keys()), # alphanumeric tie-breaker
+            key=lambda k: self.params(k).precedence)
+
+        values = dict(self.get_param_values())
+
+        arglist, keywords, processed = [], [], []
+        for k in args + ordering:
+            if k in processed: continue
+
+            # Suppresses automatically generated names.
+            if k == 'name' and (values[k] is not None and
+                                re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+                continue
+
+            value = script_repr(values[k],imports,prefix,[]) if k in values else unknown_value
+            if value is None:
+                raise Exception("Argument %s is not a parameter "
+                                "and has an unknown value.")
+
+            # Explicit kwarg (unchanged)
+            if (k in kwargs) and kwargs[k] == value: continue
+
+            if k in posargs:
+                # The value repr is used for positional arguments
+                arglist.append(value)
+            elif k in kwargs:
+                # Explicit keyword argument (changed)
+                keywords.append('%s=%s' % (k, value))
+            elif (spec.keywords is not None):
+                # Parameters ordered by precendence (if **kwargs present)
+                keywords.append('%s=%s' % (k, value))
+            processed.append(k)
+
+        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
+
+        qualifier = mod + '.'  if qualify else ''
+        return qualifier + '%s(%s)' % (self.__class__.__name__,  (sep+prefix).join(arguments))
 
 
     def __str__(self):

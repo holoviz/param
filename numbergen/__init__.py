@@ -315,6 +315,9 @@ class TimeAwareRandomState(TimeAware):
         """
         if seed is None: # Equivalent to an uncontrolled seed.
             seed = random.Random().randint(0, 1000000)
+            suffix = ''
+        else:
+            suffix = str(seed)
 
         # If time_dependent, independent state required: otherwise
         # time-dependent seeding (via hash) will affect shared
@@ -329,7 +332,10 @@ class TimeAwareRandomState(TimeAware):
 
         if name is None:
             self._verify_constrained_hash()
-        self._hashfn = Hash(name if name else self.name, input_count=2)
+
+        hash_name = name if name else self.name
+        if not shared:  hash_name += suffix
+        self._hashfn = Hash(hash_name, input_count=2)
 
         if self.time_dependent:
             self._hash_and_seed()
@@ -386,6 +392,13 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
     Note: Each RandomDistribution object has independent random state.
     """
 
+    seed = param.Integer(default=None, allow_None=True, doc="""
+       Sets the seed of the random number generator and can be used to
+       randomize time dependent streams.
+
+       If seed is None, there is no control over the random stream
+       (i.e. no reproducibility of the stream).""")
+
     __abstract = True
 
     def __init__(self,**params):
@@ -396,12 +409,9 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
         If seed=X is specified, sets the Random() instance's seed.
         Otherwise, calls creates an unseeded Random instance which is
         likely to result in a state very different from any just used.
-
-        Note that any supplied seed is ignored if time_dependent=True.
         """
-        seed = params.pop('seed', None)
         super(RandomDistribution,self).__init__(**params)
-        self._initialize_random_state(seed=seed, shared=False)
+        self._initialize_random_state(seed=self.seed, shared=False)
 
     def __call__(self):
         if self.time_dependent:

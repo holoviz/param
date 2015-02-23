@@ -1168,7 +1168,9 @@ class Parameterized(object):
 
         ordering = sorted(
             sorted(changed_params.keys()), # alphanumeric tie-breaker
-            key=lambda k: self.params(k).precedence)
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if self.params(k).precedence is None
+                           else self.params(k).precedence))
 
         values = dict(self.get_param_values())
 

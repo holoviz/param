@@ -409,8 +409,6 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
         If seed=X is specified, sets the Random() instance's seed.
         Otherwise, calls creates an unseeded Random instance which is
         likely to result in a state very different from any just used.
-
-        Note that any supplied seed is ignored if time_dependent=True.
         """
         super(RandomDistribution,self).__init__(**params)
         self._initialize_random_state(seed=self.seed, shared=False)

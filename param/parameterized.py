@@ -1124,7 +1124,7 @@ class Parameterized(object):
         """
         self._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
 
-    # CB: __repr__ is called often; methods it uses should not be too slow
+
     def __repr__(self):
         """
         Provide a nearly valid Python representation that could be used to recreate
@@ -1177,16 +1177,9 @@ class Parameterized(object):
 
 
     # CEBALERT: designed to avoid any processing unless the print
-    # level is high enough (e.g. to avoid expensive str(Parameterized
-    # instance) calls). Not all callers are taking advantage of this
-    # (either calling str() themselves, resulting in potentially
-    # expensive operations for things that might never be printed, or
-    # redundantly using lambda functions to avoid the
-    # processing. Should fix that.
-    #
-    # Note that Python's logging module would simplify print
-    # statements still further (see "topographica's debug printing"
-    # emails between CB&JB).
+    # level is high enough, but not all callers of message(),
+    # verbose(), debug(), etc are taking advantage of this. Need to
+    # document, and also check other ioam projects.
     def __db_print(self,level=INFO,*args):
         """
         Any of args may be functions, in which case they will be
@@ -1285,9 +1278,9 @@ class Parameterized(object):
         for name,val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if desc:
-                self.debug("Setting param %s=%s"% (name, val))
+                self.debug("Setting param %s=%s",name,val)
             else:
-                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters" % (name, val))
+                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self,name,val)
 
@@ -1661,7 +1654,7 @@ class ParamOverrides(dict):
         overridden_object_params = list(self._overridden.params().keys())
         for item in params:
             if item not in overridden_object_params:
-                self.warning("'%s' will be ignored (not a Parameter)."%item)
+                self.warning("'%s' will be ignored (not a Parameter).",item)
 
     def _extract_extra_keywords(self,params):
         """

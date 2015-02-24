@@ -1277,7 +1277,7 @@ class Path(Parameter):
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s'%(e.args[0]))
+                Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s',e.args[0])
         super(Path,self).__set__(obj,val)
 
     def __get__(self, obj, objtype):

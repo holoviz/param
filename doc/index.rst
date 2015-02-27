@@ -135,6 +135,20 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+1.3.0 (unreleased)
+__________________
+
+* Added 'allow_None' support to all Parameters. Any subclass of
+  Parameter that checks types and/or values should be modified to add
+  appropriate handling of allow_None.
+* Added (reproducible) time-dependent random streams
+  (numbergen.TimeAwareRandomState).
+* Added label and unit parameters to param.Time class.
+* Improved optional IPython extension.
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/v1.2.1...master>`_.
+
 
 1.2.1 (2014/06)
 _______________

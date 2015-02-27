@@ -734,7 +734,7 @@ class Boolean(Parameter):
 class Tuple(Parameter):
     """A tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
-    __slots__ = ['length', 'allow_None']
+    __slots__ = ['length']
 
     def __init__(self,default=(0,0),length=None,**params):
         """

@@ -738,11 +738,10 @@ class Tuple(Parameter):
 
     def __init__(self,default=(0,0),length=None,**params):
         """
-        Initialize a numeric tuple parameter with a fixed length
-        (number of elements).  The length is determined by the initial
-        default value, if any, and must be supplied explicitly
-        otherwise.  The length is not allowed to change after
-        instantiation.
+        Initialize a tuple parameter with a fixed length (number of
+        elements).  The length is determined by the initial default
+        value, if any, and must be supplied explicitly otherwise.  The
+        length is not allowed to change after instantiation.
         """
         super(Tuple,self).__init__(default=default,**params)
         if length is None and default is not None:

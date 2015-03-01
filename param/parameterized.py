@@ -789,7 +789,8 @@ script_repr_suppress_defaults=True
 # Also, do we need an option to return repr without path, if desired?
 # E.g. to get 'pre_plot_hooks()' instead of
 # 'topo.command.analysis.pre_plot_hooks()' in the gui?
-def script_repr(val,imports,prefix,settings):
+def script_repr(val,imports, prefix="\n    ", settings=[],
+                unknown_value='<?>', qualify=True):
     """
     Variant of repr() designed for generating a runnable script.
 
@@ -803,6 +804,8 @@ def script_repr(val,imports,prefix,settings):
     """
     # CB: doc prefix & settings or realize they don't need to be
     # passed around, etc.
+    # JLS: The settings argument is not used anywhere. To be removed
+    # in a separate PR.
     if isinstance(val,type):
         rep = type_script_repr(val,imports,prefix,settings)
 
@@ -810,7 +813,8 @@ def script_repr(val,imports,prefix,settings):
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
     elif hasattr(val,'script_repr'):
-        rep=val.script_repr(imports=imports,prefix=prefix+"    ")
+        rep=val.script_repr(imports=imports, prefix=prefix+"    ",
+                            qualify=True, unknown_value=unknown_value)
 
     else:
         rep=repr(val)
@@ -1139,36 +1143,69 @@ class Parameterized(object):
 
 
 
-
-    def script_repr(self,imports=[],prefix="    "):
+    def script_repr(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
-        # Suppresses automatically generated names.
-        settings=[]
-        for name,val in self.get_param_values(onlychanged=script_repr_suppress_defaults):
-            if name == 'name' and (val is not None and
-                                   re.match('^'+self.__class__.__name__+'[0-9]+$',val)):
-                rep=None
-            else:
-                rep=script_repr(val,imports,prefix,settings)
-
-            if rep is not None:
-                settings.append('%s=%s' % (name,rep))
-
+        exclude=['self', 'name']
 
         # Generate import statement
         mod = self.__module__
-
         bits = mod.split('.')
-
         imports.append("import %s"%mod)
         imports.append("import %s"%bits[0])
 
-        # CB: Doesn't give a nice repr, but I don't see what to do
-        # otherwise that will work in all cases. Also I haven't
-        # updated this code in other places (e.g. simulation).
-        return mod+'.'+self.__class__.__name__ + "(" + (",\n"+prefix).join(settings) + ")"
+        changed_params = dict(self.get_param_values(onlychanged=script_repr_suppress_defaults))
+        param_values = dict(self.get_param_values())
+        spec = inspect.getargspec(self.__init__)
+        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
+
+        if spec.defaults is not None:
+            posargs = spec.args[:-len(spec.defaults)]
+            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
+        else:
+            posargs, kwargs = args, []
+
+        ordering = sorted(
+            sorted(changed_params.keys()), # alphanumeric tie-breaker
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if self.params(k).precedence is None
+                           else self.params(k).precedence))
+
+        values = dict(self.get_param_values())
+
+        arglist, keywords, processed = [], [], []
+        for k in args + ordering:
+            if k in processed: continue
+
+            # Suppresses automatically generated names.
+            if k == 'name' and (values[k] is not None and
+                                re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+                continue
+
+            value = script_repr(values[k], imports, prefix=prefix,settings=[],
+                                unknown_value=unknown_value,
+                                qualify=qualify) if k in values else unknown_value
+            if value is None:
+                raise Exception("Argument %r is not a parameter "
+                                "and has an unknown value." % k)
+
+            # Explicit kwarg (unchanged, known value)
+            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
+
+            if k in posargs:
+                # The value repr is used for positional arguments
+                arglist.append(value)
+            elif k in kwargs or (spec.keywords is not None):
+                # Explicit modified keywords or parameters in
+                # precendence order (if **kwargs present)
+                keywords.append('%s=%s' % (k, value))
+
+            processed.append(k)
+
+        qualifier = mod + '.'  if qualify else ''
+        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
+        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+prefix).join(arguments))
 
 
     def __str__(self):

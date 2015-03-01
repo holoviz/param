@@ -732,7 +732,7 @@ class Boolean(Parameter):
 
 
 class Tuple(Parameter):
-    """A tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+    """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
 
     __slots__ = ['length']
 
@@ -740,12 +740,16 @@ class Tuple(Parameter):
         """
         Initialize a numeric tuple parameter with a fixed length
         (number of elements).  The length is determined by the initial
-        default value, and is not allowed to change after
+        default value, if any, and must be supplied explicitly
+        otherwise.  The length is not allowed to change after
         instantiation.
         """
         super(Tuple,self).__init__(default=default,**params)
         if length is None and default is not None:
             self.length = len(default)
+        elif length is None and default is None:
+            raise ValueError("%s: length must be specified if no default is supplied." %
+                             (self._attrib_name))
         else:
             self.length = length
         self._check(default)

@@ -141,6 +141,9 @@ __________________
 * Added 'allow_None' support to all Parameters. Any subclass of
   Parameter that checks types and/or values should be modified to add
   appropriate handling of allow_None.
+* Improved pretty printing ('script_repr') of Parameterized instances,
+  and made available via the 'pprint' method. The 'script_repr' name
+  will be removed in a future release.
 * Added (reproducible) time-dependent random streams
   (numbergen.TimeAwareRandomState).
 * Added label and unit parameters to param.Time class.

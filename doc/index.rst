@@ -135,22 +135,22 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
-1.3.0 (unreleased)
-__________________
+1.3.0 (2015/03)
+_______________
 
 * Added 'allow_None' support to all Parameters. Any subclass of
   Parameter that checks types and/or values should be modified to add
   appropriate handling of allow_None.
-* Improved pretty printing ('script_repr') of Parameterized instances,
-  and made available via the 'pprint' method. The 'script_repr' name
-  will be removed in a future release.
+* Improved pretty printing (script_repr) of Parameterized instances,
+  and made available via the pprint method. The script_repr name will
+  be removed in a future release.
 * Added (reproducible) time-dependent random streams
   (numbergen.TimeAwareRandomState).
 * Added label and unit parameters to param.Time class.
 * Improved optional IPython extension.
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/v1.2.1...master>`_.
+`on GitHub <https://github.com/ioam/param/compare/v1.2.1...v1.3.0>`_.
 
 
 1.2.1 (2014/06)

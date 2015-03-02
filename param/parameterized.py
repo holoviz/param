@@ -1142,6 +1142,12 @@ class Parameterized(object):
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
 
 
+    def pprint(self,*args,**kw):
+        """
+        See script_repr().
+        """
+        return self.script_repr(*args,**kw)
+
 
     def script_repr(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
         """

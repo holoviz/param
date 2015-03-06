@@ -1778,12 +1778,15 @@ class ParameterizedFunction(Parameterized):
         # __main__. Pretty obscure aspect of pickle.py, or a bug?
         return (_new_parameterized,(self.__class__,),state)
 
-    def script_repr(self,imports=[],prefix="    "):
+    def script_repr(self, imports=[], prefix="\n    ", settings=[],
+                        unknown_value='<?>', qualify=True):
         """
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        r = Parameterized.script_repr(self,imports,prefix)
+        r = Parameterized.script_repr(self,imports,prefix,
+                                      unknown_value=unknown_value,
+                                      qualify=qualify)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
 

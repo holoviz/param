@@ -101,7 +101,7 @@ class ParamPager(object):
             if (WARN_MISFORMATTED_DOCSTRINGS
                 and not unindented.startswith("\n")  and len(unindented.splitlines()) > 1):
                 param.main.warning("Multi-line docstring for %r is incorrectly formatted "
-                                   " (should start with newline)" % name)
+                                   " (should start with newline)", name)
             # Strip any starting newlines
             while unindented.startswith("\n"):
                 unindented = unindented[1:]

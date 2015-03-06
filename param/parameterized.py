@@ -685,8 +685,8 @@ class ParameterizedMetaclass(type):
                 # counts, warnings as exceptions, etc.
                 if not attribute_name.startswith('_'):
                     get_logger().log(WARNING,
-                                     "Setting non-Parameter class attribute %s.%s = %s "
-                                     % (mcs.__name__,attribute_name,repr(value)))
+                                     "Setting non-Parameter class attribute %s.%s = %s ",
+                                     mcs.__name__,attribute_name,repr(value))
 
 
     def __param_inheritance(mcs,param_name,param):
@@ -964,7 +964,7 @@ class Parameterized(object):
         self._setup_params(**params)
         object_count += 1
 
-        self.debug('Initialized',self)
+        self.debug('Initialized %s',self)
 
         self.initialized=True
 
@@ -1223,31 +1223,23 @@ class Parameterized(object):
     # level is high enough, but not all callers of message(),
     # verbose(), debug(), etc are taking advantage of this. Need to
     # document, and also check other ioam projects.
-    def __db_print(self,level=INFO,*args):
+    def __db_print(self,level,msg,*args):
         """
-        Any of args may be functions, in which case they will be
-        called. This allows delayed execution, preventing
-        time-consuming code from being called unless the print level
-        requires it. (The time-consuming code is usually that used to
-        build the repr().)
+        Calls the logger returned by the get_logger() function,
+        prepending the result of calling dbprint_prefix() (if any).
+
+        See python's logging module for details.
         """
         if get_logger().isEnabledFor(level):
-
-            # call any args that are functions
-            args = list(args)
-            for a in args:
-                if isinstance(a,FunctionType): args[args.index(a)]=a()
-
-            s = ' '.join(str(x) for x in args)
 
             if dbprint_prefix and callable(dbprint_prefix):
                 prefix=dbprint_prefix() # pylint: disable-msg=E1102
             else:
                 prefix=""
 
-            get_logger().log(level, "%s%s: %s" % (prefix,self.name,s))
+            get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args)
 
-    def warning(self,*args):
+    def warning(self,msg,*args,**kw):
         """
         Print the arguments as a warning, unless module variable
         warnings_as_exceptions is True, then raise an Exception
@@ -1256,22 +1248,22 @@ class Parameterized(object):
         if not warnings_as_exceptions:
             global warning_count
             warning_count+=1
-            self.__db_print(WARNING,*args)
+            self.__db_print(WARNING,msg,*args,**kw)
         else:
             raise Exception(' '.join(["Warning:",]+[str(x) for x in args]))
 
 
-    def message(self,*args):
+    def message(self,msg,*args,**kw):
         """Print the arguments as a message."""
-        self.__db_print(INFO,*args)
+        self.__db_print(INFO,msg,*args,**kw)
 
-    def verbose(self,*args):
+    def verbose(self,msg,*args,**kw):
         """Print the arguments as a verbose message."""
-        self.__db_print(VERBOSE,*args)
+        self.__db_print(VERBOSE,msg,*args,**kw)
 
-    def debug(self,*args):
+    def debug(self,msg,*args,**kw):
         """Print the arguments as a debugging statement."""
-        self.__db_print(DEBUG,*args)
+        self.__db_print(DEBUG,msg,*args,**kw)
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self,param_obj,dict_=None,key=None):

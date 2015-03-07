@@ -135,6 +135,23 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+1.3.1 (unreleased)
+__________________
+
+* Minor bugfix release to support the previous script_repr interface
+  (prematurely removed in 1.3.0) and to fix issues with logging.
+* Param's logging interface now matches that of Python's logging
+  module, making it simpler to use logging (see Python's logging
+  module for details). Note therefore that Param's logging methods (a)
+  no longer call functions that are passed as arguments (instead,
+  Python's logging module does lazy string merges), and (b) no longer
+  automatically combine strings passed as arguments (instead, Python's
+  logging module supports string formatting).  
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/v1.3.0...master>`_.
+
+
 1.3.0 (2015/03)
 _______________
 

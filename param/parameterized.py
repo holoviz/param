@@ -808,7 +808,6 @@ def script_repr(val,imports,prefix,settings):
 # maybe merging with original docstring of pprint from 
 # https://github.com/ioam/param/commit/10672a25c7eecfc28ce5f5f5d36ff1bbd08ab0f3.
 # And the ALERT by script_repr about defaults can go.
-# CEBALERT: does the qualify argument do anything? (qualify=True in fn body)
 def pprint(val,imports, prefix="\n    ", settings=[],
            unknown_value='<?>', qualify=True):
     # CB: doc prefix & settings or realize they don't need to be
@@ -823,7 +822,7 @@ def pprint(val,imports, prefix="\n    ", settings=[],
 
     elif hasattr(val,'pprint'):
         rep=val.pprint(imports=imports, prefix=prefix+"    ",
-                       qualify=True, unknown_value=unknown_value)
+                       qualify=qualify, unknown_value=unknown_value)
         
     # CB: to be removed when script_repr is removed
     elif hasattr(val,'script_repr'):

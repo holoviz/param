@@ -1,5 +1,5 @@
 """
-Unit test for the repr and script_repr of parameterized objects.
+Unit test for the repr and pprint of parameterized objects.
 """
 
 import unittest
@@ -70,49 +70,49 @@ class TestParameterizedRepr(unittest.TestCase):
 
     def testparameterizedscriptrepr1(self):
         obj = self.A(4,'B', name='test')
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "A(4, 'B', name='test')")
 
     def testparameterizedscriptrepr2(self):
         obj = self.A(4,'B', c=5, name='test')
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "A(4, 'B', c=5, name='test')")
 
     def testparameterizedscriptrepr3(self):
         obj = self.A(4,'B', c=5,  x=True, name='test')
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "A(4, 'B', c=5, name='test')")
 
     def testparameterizedscriptrepr4(self):
         obj = self.A(4,'B', c=5,  x=10, name='test')
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "A(4, 'B', c=5, name='test', x=10)")
 
 
     def testparameterizedscriptrepr5(self):
         obj = self.A(4,'B', x=10, y=11, z=12, name='test')
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "A(4, 'B', name='test', z=12, y=11, x=10)")
 
     def testparameterizedscriptrepr_nokwargs(self):
         obj = self.B(4,'B', c=99)
         obj.x = 10 # Modified but not passable through constructor
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "B(4, 'B', c=99)")
 
     def testparameterizedscriptrepr_varags(self):
         obj = self.C(4,'C', c=99)
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "C(4, 'C', c=99, **varargs)")
 
     def testparameterizedscriptrepr_varags_kwargs(self):
         obj = self.C(4,'C', c=99, x=10, y=11, z=12)
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "C(4, 'C', c=99, z=12, y=11, x=10, **varargs)")
 
     def testparameterizedscriptrepr_missing_values(self):
         obj = self.D(4,'D', c=99)
-        self.assertEqual(obj.script_repr(),
+        self.assertEqual(obj.pprint(),
                          "D(4, 'D', c=<?>, d=<?>)")
 
 

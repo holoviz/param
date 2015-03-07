@@ -789,8 +789,7 @@ script_repr_suppress_defaults=True
 # Also, do we need an option to return repr without path, if desired?
 # E.g. to get 'pre_plot_hooks()' instead of
 # 'topo.command.analysis.pre_plot_hooks()' in the gui?
-def script_repr(val,imports, prefix="\n    ", settings=[],
-                unknown_value='<?>', qualify=True):
+def script_repr(val,imports,prefix,settings):
     """
     Variant of repr() designed for generating a runnable script.
 
@@ -802,6 +801,16 @@ def script_repr(val,imports, prefix="\n    ", settings=[],
     The repr of a parameter can be suppressed by returning None from
     the appropriate hook in script_repr_reg.
     """
+    return pprint(val,imports=imports,prefix=prefix,settings=settings)
+
+
+# CB: when removing script_repr, move its docstring here and improve,
+# maybe merging with original docstring of pprint from 
+# https://github.com/ioam/param/commit/10672a25c7eecfc28ce5f5f5d36ff1bbd08ab0f3.
+# And the ALERT by script_repr about defaults can go.
+# CEBALERT: does the qualify argument do anything? (qualify=True in fn body)
+def pprint(val,imports, prefix="\n    ", settings=[],
+           unknown_value='<?>', qualify=True):
     # CB: doc prefix & settings or realize they don't need to be
     # passed around, etc.
     # JLS: The settings argument is not used anywhere. To be removed
@@ -812,9 +821,13 @@ def script_repr(val,imports, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
+    elif hasattr(val,'pprint'):
+        rep=val.pprint(imports=imports, prefix=prefix+"    ",
+                       qualify=True, unknown_value=unknown_value)
+        
+    # CB: to be removed when script_repr is removed
     elif hasattr(val,'script_repr'):
-        rep=val.script_repr(imports=imports, prefix=prefix+"    ",
-                            qualify=True, unknown_value=unknown_value)
+        rep=val.script_repr(imports,prefix+"    ")
 
     else:
         rep=repr(val)
@@ -830,7 +843,7 @@ script_repr_reg = {}
 def container_script_repr(container,imports,prefix,settings):
     result=[]
     for i in container:
-        result.append(script_repr(i,imports,prefix,settings))
+        result.append(pprint(i,imports,prefix,settings))
 
     ## (hack to get container brackets)
     if isinstance(container,list):
@@ -1142,17 +1155,14 @@ class Parameterized(object):
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
 
 
-    def pprint(self,*args,**kw):
-        """
-        See script_repr().
-        """
-        return self.script_repr(*args,**kw)
-
-
-    def script_repr(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
+    def script_repr(self,imports=[],prefix="    "):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
+        return self.pprint(imports=imports,prefix=prefix,qualify=True)
+
+
+    def pprint(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
         exclude=['self', 'name']
 
         # Generate import statement
@@ -1189,9 +1199,9 @@ class Parameterized(object):
                                 re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
                 continue
 
-            value = script_repr(values[k], imports, prefix=prefix,settings=[],
-                                unknown_value=unknown_value,
-                                qualify=qualify) if k in values else unknown_value
+            value = pprint(values[k], imports, prefix=prefix,settings=[],
+                           unknown_value=unknown_value,
+                           qualify=qualify) if k in values else unknown_value
             if value is None:
                 raise Exception("Argument %r is not a parameter "
                                 "and has an unknown value." % k)
@@ -1770,15 +1780,18 @@ class ParameterizedFunction(Parameterized):
         # __main__. Pretty obscure aspect of pickle.py, or a bug?
         return (_new_parameterized,(self.__class__,),state)
 
-    def script_repr(self, imports=[], prefix="\n    ", settings=[],
-                        unknown_value='<?>', qualify=True):
+    def script_repr(self,imports=[],prefix="    "):
         """
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        r = Parameterized.script_repr(self,imports,prefix,
-                                      unknown_value=unknown_value,
-                                      qualify=qualify)
+        return self.pprint(imports=imports,prefix=prefix,qualify=True)
+
+    def pprint(self, imports=[], prefix="\n    ", settings=[],
+               unknown_value='<?>', qualify=True):
+        r = Parameterized.pprint(self,imports,prefix,
+                                 unknown_value=unknown_value,
+                                 qualify=qualify)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
 

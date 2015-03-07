@@ -106,7 +106,7 @@ example can be rewritten as:
 >>> x = B(a=numbergen.UniformRandom())
   
 Numbergen objects support the usual arithmetic operations like +, -,
-*, /, //, %, **, and abs(), and so they can be freely combined with
+\*, /, //, %, \*\*, and abs(), and so they can be freely combined with
 each other or with mathematical constants:
 
 >>> y = B(a=2.0*numbergen.UniformRandom()/(numbergen.NormalRandom()+1.5))

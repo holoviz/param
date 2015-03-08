@@ -1058,17 +1058,29 @@ class Parameterized(object):
 
 
     @bothmethod
-    def set_param(self_or_cls,param_name,val):
+    def set_param(self_or_cls,*args,**kwargs):
         """
-        Sets the value of param_name to val, after checking that param_name
-        is a parameter of this object.
+        For each param=value keyword argument, sets the corresponding
+        parameter of this object or class to the given value.
 
-        (I.e., same as setattr(obj,param_name,val), except the
-        param_name's existence as a parameter is first checked.)
+        For backwards compatibility, also accepts
+        set_param("param",value) for a single parameter value using
+        positional arguments, but the keyword interface is preferred
+        because it is more compact and can set multiple values.
         """
-        if param_name not in self_or_cls.params():
-            raise ValueError("'%s' is not a parameter of %s"%(param_name,self_or_cls))
-        setattr(self_or_cls,param_name,val)
+
+        if args:
+            if len(args)==2 and not args[0] in kwargs and not kwargs:
+                kwargs[args[0]]=args[1]
+            else: 
+                raise ValueError("Invalid positional arguments for %s.set_param" % 
+                                 (self_or_cls.name))
+
+        for (k,v) in kwargs.items():
+            if k not in self_or_cls.params():
+                raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
+            setattr(self_or_cls,k,v)
+
 
 
     # CEBALERT: I think I've noted elsewhere the fact that we

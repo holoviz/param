@@ -801,7 +801,21 @@ def script_repr(val,imports,prefix,settings):
     The repr of a parameter can be suppressed by returning None from
     the appropriate hook in script_repr_reg.
     """
-    return pprint(val,imports=imports,prefix=prefix,settings=settings)
+    # CB: doc prefix & settings or realize they don't need to be
+    # passed around, etc.
+    if isinstance(val,type):
+        rep = type_script_repr(val,imports,prefix,settings)
+
+    elif type(val) in script_repr_reg:
+        rep = script_repr_reg[type(val)](val,imports,prefix,settings)
+
+    elif hasattr(val,'script_repr'):
+        rep=val.script_repr(imports=imports,prefix=prefix+"    ")
+
+    else:
+        rep=repr(val)
+
+    return rep
 
 
 # CB: when removing script_repr, move its docstring here and improve,
@@ -810,12 +824,31 @@ def script_repr(val,imports,prefix,settings):
 # And the ALERT by script_repr about defaults can go.
 def pprint(val,imports, prefix="\n    ", settings=[],
            unknown_value='<?>', qualify=True):
+    """
+    (Experimental) Pretty printed representation of a parameterized
+    object that may be evaluated with eval. Similar to repr except
+    introspection of the constructor (__init__) ensures a valid and
+    succinct representation is generated.
+
+    Note that any **kwargs argument is assumed to be used for setting
+    parameters and will therefore not be shown.
+
+    Positional arguments are always shown, followed by the explicitly
+    declared keyword arguments (that have been modified) followed by
+    modified parameters, sorted by precedence.
+
+    NOTE: pprint will replace script_repr in a future version of
+    param, but is not yet a complete replacement for script_repr.
+    """
     # CB: doc prefix & settings or realize they don't need to be
     # passed around, etc.
     # JLS: The settings argument is not used anywhere. To be removed
     # in a separate PR.
     if isinstance(val,type):
         rep = type_script_repr(val,imports,prefix,settings)
+
+    elif type(val) in pprint_reg:
+        rep = pprint_reg[type(val)](val,imports,prefix,settings)
 
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
@@ -824,10 +857,6 @@ def pprint(val,imports, prefix="\n    ", settings=[],
         rep=val.pprint(imports=imports, prefix=prefix+"    ",
                        qualify=qualify, unknown_value=unknown_value)
         
-    # CB: to be removed when script_repr is removed
-    elif hasattr(val,'script_repr'):
-        rep=val.script_repr(imports,prefix+"    ")
-
     else:
         rep=repr(val)
 
@@ -836,10 +865,32 @@ def pprint(val,imports, prefix="\n    ", settings=[],
 
 #: see script_repr()
 script_repr_reg = {}
+# CEBALERT: when replacing script_repr with pprint, remove
+# duplicated reg entries
+pprint_reg = {}
 
 
 # currently only handles list and tuple
 def container_script_repr(container,imports,prefix,settings):
+    result=[]
+    for i in container:
+        result.append(script_repr(i,imports,prefix,settings))
+
+    ## (hack to get container brackets)
+    if isinstance(container,list):
+        d1,d2='[',']'
+    elif isinstance(container,tuple):
+        d1,d2='(',')'
+    else:
+        raise NotImplementedError
+    rep=d1+','.join(result)+d2
+
+    # no imports to add for built-in types
+
+    return rep
+
+# CEBALERT: duplicates container_script_repr
+def container_pprint(container,imports,prefix,settings):
     result=[]
     for i in container:
         result.append(pprint(i,imports,prefix,settings))
@@ -887,7 +938,9 @@ def type_script_repr(type_,imports,prefix,settings):
     return module+'.'+type_.__name__
 
 script_repr_reg[list]=container_script_repr
+pprint_reg[list]=container_pprint
 script_repr_reg[tuple]=container_script_repr
+pprint_reg[tuple]=container_pprint
 script_repr_reg[FunctionType]=function_script_repr
 
 
@@ -1158,10 +1211,45 @@ class Parameterized(object):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
-        return self.pprint(imports=imports,prefix=prefix,qualify=True)
+        # Suppresses automatically generated names.
+        settings=[]
+        for name,val in self.get_param_values(onlychanged=script_repr_suppress_defaults):
+            if name == 'name' and (val is not None and
+                                   re.match('^'+self.__class__.__name__+'[0-9]+$',val)):
+                rep=None
+            else:
+                rep=script_repr(val,imports,prefix,settings)
+
+            if rep is not None:
+                settings.append('%s=%s' % (name,rep))
+
+
+        # Generate import statement
+        mod = self.__module__
+
+        bits = mod.split('.')
+
+        imports.append("import %s"%mod)
+        imports.append("import %s"%bits[0])
+
+        # CB: Doesn't give a nice repr, but I don't see what to do
+        # otherwise that will work in all cases. Also I haven't
+        # updated this code in other places (e.g. simulation).
+        return mod+'.'+self.__class__.__name__ + "(" + (",\n"+prefix).join(settings) + ")"
 
 
     def pprint(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
+        """
+        (Experimental) Pretty printed representation that may be
+        evaluated with eval. Similar to repr except introspection of the
+        constructor (__init__) ensures a valid and succinct representation
+        is generated.
+
+        See pprint() function for more details.
+
+        NOTE: pprint will replace script_repr in a future version of
+        param, but is not yet a complete replacement for script_repr.
+        """
         exclude=['self', 'name']
 
         # Generate import statement
@@ -1784,10 +1872,17 @@ class ParameterizedFunction(Parameterized):
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        return self.pprint(imports=imports,prefix=prefix,qualify=True)
+        r = Parameterized.script_repr(self,imports,prefix)
+        classname=self.__class__.__name__
+        return r.replace(".%s("%classname,".%s.instance("%classname)
+
 
     def pprint(self, imports=[], prefix="\n    ", settings=[],
                unknown_value='<?>', qualify=True):
+        """
+        Same as Parameterized.pprint, except that X.classname(Y
+        is replaced with X.classname.instance(Y
+        """
         r = Parameterized.pprint(self,imports,prefix,
                                  unknown_value=unknown_value,
                                  qualify=qualify)

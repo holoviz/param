@@ -976,7 +976,7 @@ class Parameterized(object):
         self._setup_params(**params)
         object_count += 1
 
-        self.debug('Initialized %s',self)
+        self.debug('Initialized %s',self.name)
 
         self.initialized=True
 

@@ -1029,8 +1029,6 @@ class Parameterized(object):
         self._setup_params(**params)
         object_count += 1
 
-        self.debug('Initialized %s',self.name)
-
         self.initialized=True
 
 
@@ -1409,9 +1407,7 @@ class Parameterized(object):
         ## keyword arg setting
         for name,val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
-            if desc:
-                self.debug("Setting param %s=%s",name,val)
-            else:
+            if not desc:
                 self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self,name,val)

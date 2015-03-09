@@ -63,6 +63,16 @@ class TestParameterizedRepr(unittest.TestCase):
         self.D = D
 
 
+        # More realistically, positional args are not params
+        class E(param.Parameterized):
+            a = param.Number(4, precedence=-5)
+
+            def __init__(self, p, q=4, **params): # (plus non-param kw too)
+                super(E, self).__init__(**params)
+
+        self.E = E
+
+
     def testparameterizedrepr(self):
         obj = self.A(4,'B', name='test1')
         self.assertEqual(repr(obj),
@@ -114,6 +124,27 @@ class TestParameterizedRepr(unittest.TestCase):
         obj = self.D(4,'D', c=99)
         self.assertEqual(obj.pprint(),
                          "D(4, 'D', c=<?>, d=<?>)")
+
+    def testparameterizedscriptrepr_nonparams(self):
+        obj = self.E(10,q='hi', a=99)
+        self.assertEqual(obj.pprint(),
+                         "E(<?>, q=<?>, a=99)")
+
+
+    def test_exceptions(self):
+        obj = self.E(10,q='hi',a=99)
+        try:
+            obj.pprint(unknown_value=False)
+        except Exception:
+            pass
+        else:
+            raise AssertionErorr
+
+    def test_suppression(self):
+        obj = self.E(10,q='hi',a=99)
+        self.assertEqual(obj.pprint(unknown_value=None),
+                         "E(a=99)")
+
 
 
 if __name__ == "__main__":

@@ -130,7 +130,6 @@ class TestParameterizedRepr(unittest.TestCase):
         self.assertEqual(obj.pprint(),
                          "E(<?>, q=<?>, a=99)")
 
-
     def test_exceptions(self):
         obj = self.E(10,q='hi',a=99)
         try:
@@ -144,6 +143,12 @@ class TestParameterizedRepr(unittest.TestCase):
         obj = self.E(10,q='hi',a=99)
         self.assertEqual(obj.pprint(unknown_value=None),
                          "E(a=99)")
+
+    def test_imports_deduplication(self):
+        obj = self.E(10,q='hi', a=99)
+        imports = ['import me','import me']
+        obj.pprint(imports=imports)
+        self.assertEqual(imports.count('import me'),1)
 
 
 

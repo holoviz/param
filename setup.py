@@ -6,7 +6,7 @@ setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version="1.3.0",
+    version="1.3.1",
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read(),
     author= "IOAM",

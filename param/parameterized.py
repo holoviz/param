@@ -807,6 +807,7 @@ def script_repr(val,imports,prefix,settings):
 
 # CB: when removing script_repr, merge its docstring here and improve.
 # And the ALERT by script_repr about defaults can go.
+# CEBALERT: remove settings, add default argument for imports
 def pprint(val,imports, prefix="\n    ", settings=[],
            unknown_value='<?>', qualify=False, separator=''):
     """
@@ -832,8 +833,18 @@ def pprint(val,imports, prefix="\n    ", settings=[],
     unknown_value is False, an Exception will be raised if an
     unrepresentable value is encountered.
 
-    
-    
+    If supplied, imports should be a list, and it will be populated
+    with the set of imports required for the object and all of its
+    parameter values.
+
+    If qualify is True, the class's path will be included (e.g. "a.b.C()"),
+    otherwise only the class will appear ("C()").
+
+    Parameters will be separated by a comma only by default, but the
+    separator parameter allows an additional separator to be supplied
+    (e.g. a newline could be supplied to have each Parameter appear on a
+    separate line).
+
     NOTE: pprint will replace script_repr in a future version of
     param, but is not yet a complete replacement for script_repr.
     """

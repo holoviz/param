@@ -139,7 +139,7 @@ are listed below.
 __________________
 
 * Minor bugfix release to restore pre-1.3.0 script_repr behavior
-  (prematurely changed in 1.3.0) and to fix issues with logging.
+  (accidentally changed in 1.3.0) and to fix issues with logging.
 * Param's logging interface now matches that of Python's logging
   module, making it simpler to use logging (see Python's logging
   module for details). Note therefore that Param's logging methods (a)

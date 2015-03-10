@@ -150,6 +150,16 @@ class TestParameterizedRepr(unittest.TestCase):
         obj.pprint(imports=imports)
         self.assertEqual(imports.count('import me'),1)
 
+    def test_qualify(self):
+        obj = self.E(10,q='hi', a=99)
+
+        r = "E(<?>, q=<?>, a=99)"
+        self.assertEqual(obj.pprint(qualify=False),
+                         r)
+
+        self.assertEqual(obj.pprint(qualify=True),
+                         "tests.testparameterizedrepr."+r)
+
 
 
 if __name__ == "__main__":

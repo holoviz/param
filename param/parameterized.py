@@ -801,28 +801,39 @@ def script_repr(val,imports,prefix,settings):
     The repr of a parameter can be suppressed by returning None from
     the appropriate hook in script_repr_reg.
     """
-    return pprint(val,imports,prefix,settings,unknown_value=None)
+    return pprint(val,imports,prefix,settings,unknown_value=None,
+                  qualify=True,separator="\n")
 
 
-# CB: when removing script_repr, move its docstring here and improve,
-# maybe merging with original docstring of pprint from 
-# https://github.com/ioam/param/commit/10672a25c7eecfc28ce5f5f5d36ff1bbd08ab0f3.
+# CB: when removing script_repr, merge its docstring here and improve.
 # And the ALERT by script_repr about defaults can go.
 def pprint(val,imports, prefix="\n    ", settings=[],
-           unknown_value='<?>', qualify=True):
+           unknown_value='<?>', qualify=False, separator=''):
     """
     (Experimental) Pretty printed representation of a parameterized
-    object that may be evaluated with eval. Similar to repr except
-    introspection of the constructor (__init__) ensures a valid and
-    succinct representation is generated.
+    object that may be evaluated with eval.
 
-    Note that any **kwargs argument is assumed to be used for setting
-    parameters and will therefore not be shown.
+    Similar to repr except introspection of the constructor (__init__)
+    ensures a valid and succinct representation is generated.
 
-    Positional arguments are always shown, followed by the explicitly
-    declared keyword arguments (that have been modified) followed by
-    modified parameters, sorted by precedence.
+    Only parameters are represented (whether specified as standard,
+    positional, or keyword arguments). Parameters specified as
+    positional arguments are always shown, followed by modified
+    parameters specified as keyword arguments, sorted by precedence.
 
+    unknown_value determines what to do where a representation cannot be
+    generated for something required to recreate the object. Such things
+    include non-parameter positional and keyword arguments, and certain
+    values of parameters (e.g. some random state objects).
+
+    Supplying an unknown_value of None causes unrepresentable things
+    to be silently ignored. If unknown_value is a string, that
+    string will appear in place of any unrepresentable things. If
+    unknown_value is False, an Exception will be raised if an
+    unrepresentable value is encountered.
+
+    
+    
     NOTE: pprint will replace script_repr in a future version of
     param, but is not yet a complete replacement for script_repr.
     """
@@ -836,12 +847,14 @@ def pprint(val,imports, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
+    # CEBALERT: remove with script_repr
     elif hasattr(val,'script_repr'):
         rep=val.script_repr(imports, prefix+"    ")
 
     elif hasattr(val,'pprint'):
         rep=val.pprint(imports=imports, prefix=prefix+"    ",
-                       qualify=qualify, unknown_value=unknown_value)
+                       qualify=qualify, unknown_value=unknown_value,
+                       separator=separator)
         
     else:
         rep=repr(val)
@@ -1183,32 +1196,20 @@ class Parameterized(object):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
-        return self.pprint(imports,prefix, unknown_value=None, qualify=True)
+        return self.pprint(imports,prefix, unknown_value=None, qualify=True,
+                           separator="\n")
 
 
     # CEBALERT: not yet properly documented
-    def pprint(self, imports=[], prefix=" ", unknown_value='<?>', qualify=False):
+    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
         """
         (Experimental) Pretty printed representation that may be
-        evaluated with eval. Similar to repr except introspection of the
-        constructor (__init__) ensures a valid and succinct representation
-        is generated. Note that only values of parameters are included.
-
-        unknown_value determines what to do where a representation cannot be
-        generated for something required to recreate the object. Such things
-        include non-parameter positional and keyword arguments, and certain
-        values of parameters (e.g. some random state objects).
-
-        Supplying an unknown_value of None causes unrepresentable things to be silently
-        ignored. If unknown_value is a string, that string will appear in place of
-        any unrepresentable things. If unknown_value is False, an Exception will be
-        raised if an unrepresentable value is encountered.
-
-        See the pprint() function for more details.
-
-        NOTE: pprint will replace script_repr in a future version of
-        param, but is not yet a complete replacement for script_repr.
+        evaluated with eval. See pprint() function for more details.
         """
+        if imports is None:
+            imports = []
+
         # CEBALERT: imports should just be a set rather than a list;
         # change in next release?
         imports[:] = list(set(imports))
@@ -1277,7 +1278,7 @@ class Parameterized(object):
 
         qualifier = mod + '.'  if qualify else ''
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+prefix).join(arguments))
+        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
 
     def __str__(self):
@@ -1839,18 +1840,19 @@ class ParameterizedFunction(Parameterized):
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        return self.pprint(imports,prefix,unknown_value='',qualify=True)
+        return self.pprint(imports,prefix,unknown_value='',qualify=True,
+                           separator="\n")
 
 
-    def pprint(self, imports=[], prefix="\n    ",
-               unknown_value='<?>', qualify=True):
+    def pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
+               qualify=False, separator=""):
         """
         Same as Parameterized.pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
         r = Parameterized.pprint(self,imports,prefix,
                                  unknown_value=unknown_value,
-                                 qualify=qualify)
+                                 qualify=qualify,separator=separator)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
 

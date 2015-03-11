@@ -1224,9 +1224,6 @@ class Parameterized(object):
         # CEBALERT: imports should just be a set rather than a list;
         # change in next release?
         imports[:] = list(set(imports))
-
-        exclude=['self', 'name']
-
         # Generate import statement
         mod = self.__module__
         bits = mod.split('.')
@@ -1234,7 +1231,7 @@ class Parameterized(object):
         imports.append("import %s"%bits[0])
 
         changed_params = dict(self.get_param_values(onlychanged=script_repr_suppress_defaults))
-        param_values = dict(self.get_param_values())
+        values = dict(self.get_param_values())
         spec = inspect.getargspec(self.__init__)
         args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
@@ -1249,8 +1246,6 @@ class Parameterized(object):
             key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
                            if self.params(k).precedence is None
                            else self.params(k).precedence))
-
-        values = dict(self.get_param_values())
 
         arglist, keywords, processed = [], [], []
         for k in args + ordering:

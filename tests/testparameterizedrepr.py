@@ -137,7 +137,7 @@ class TestParameterizedRepr(unittest.TestCase):
         except Exception:
             pass
         else:
-            raise AssertionErorr
+            raise AssertionError
 
     def test_suppression(self):
         obj = self.E(10,q='hi',a=99)

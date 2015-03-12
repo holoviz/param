@@ -1296,7 +1296,7 @@ class Parameterized(object):
     # level is high enough, but not all callers of message(),
     # verbose(), debug(), etc are taking advantage of this. Need to
     # document, and also check other ioam projects.
-    def __db_print(self,level,msg,*args):
+    def __db_print(self,level,msg,*args,**kw):
         """
         Calls the logger returned by the get_logger() function,
         prepending the result of calling dbprint_prefix() (if any).
@@ -1310,13 +1310,15 @@ class Parameterized(object):
             else:
                 prefix=""
 
-            get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args)
+            get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args, **kw)
 
     def warning(self,msg,*args,**kw):
         """
-        Print the arguments as a warning, unless module variable
+        Print msg merged with args as a warning, unless module variable
         warnings_as_exceptions is True, then raise an Exception
         containing the arguments.
+
+        See Python's logging module for details of message formatting.
         """
         if not warnings_as_exceptions:
             global warning_count
@@ -1327,15 +1329,27 @@ class Parameterized(object):
 
 
     def message(self,msg,*args,**kw):
-        """Print the arguments as a message."""
+        """        
+        Print msg merged with args as a message.
+
+        See Python's logging module for details of message formatting.
+        """
         self.__db_print(INFO,msg,*args,**kw)
 
     def verbose(self,msg,*args,**kw):
-        """Print the arguments as a verbose message."""
+        """        
+        Print msg merged with args as a verbose message.
+
+        See Python's logging module for details of message formatting.
+        """
         self.__db_print(VERBOSE,msg,*args,**kw)
 
     def debug(self,msg,*args,**kw):
-        """Print the arguments as a debugging statement."""
+        """        
+        Print msg merged with args as a debugging statement.
+
+        See Python's logging module for details of message formatting.
+        """        
         self.__db_print(DEBUG,msg,*args,**kw)
 
     # CEBALERT: this is a bit ugly

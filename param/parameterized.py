@@ -869,7 +869,7 @@ def pprint(val,imports, prefix="\n    ", settings=[],
         rep=val.pprint(imports=imports, prefix=prefix+"    ",
                        qualify=qualify, unknown_value=unknown_value,
                        separator=separator)
-        
+
     else:
         rep=repr(val)
 
@@ -1061,8 +1061,8 @@ class Parameterized(object):
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
                 kwargs[args[0]]=args[1]
-            else: 
-                raise ValueError("Invalid positional arguments for %s.set_param" % 
+            else:
+                raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
         for (k,v) in kwargs.items():
@@ -1332,7 +1332,7 @@ class Parameterized(object):
 
 
     def message(self,msg,*args,**kw):
-        """        
+        """
         Print msg merged with args as a message.
 
         See Python's logging module for details of message formatting.
@@ -1340,7 +1340,7 @@ class Parameterized(object):
         self.__db_print(INFO,msg,*args,**kw)
 
     def verbose(self,msg,*args,**kw):
-        """        
+        """
         Print msg merged with args as a verbose message.
 
         See Python's logging module for details of message formatting.
@@ -1348,11 +1348,11 @@ class Parameterized(object):
         self.__db_print(VERBOSE,msg,*args,**kw)
 
     def debug(self,msg,*args,**kw):
-        """        
+        """
         Print msg merged with args as a debugging statement.
 
         See Python's logging module for details of message formatting.
-        """        
+        """
         self.__db_print(DEBUG,msg,*args,**kw)
 
     # CEBALERT: this is a bit ugly

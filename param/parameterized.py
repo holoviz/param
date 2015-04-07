@@ -5,6 +5,7 @@ messaging.
 
 import copy
 import re
+import sys
 
 from operator import itemgetter,attrgetter
 from types import FunctionType
@@ -521,13 +522,15 @@ class String(Parameter):
     A simple String parameter.
     """
 
+    basestring = basestring if sys.version_info.major==2 else str
+
     def __init__(self, default="", allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self._check_value(default)
         self.allow_None = allow_None
 
     def _check_value(self,val):
-        if not isinstance(val,str) and not (self.allow_None and val is None):
+        if not isinstance(val, self.basestring) and not (self.allow_None and val is None):
             raise ValueError("String '%s' only takes a string value."%self._attrib_name)
 
     def __set__(self,obj,val):

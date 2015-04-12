@@ -51,7 +51,7 @@ class ParamPager(object):
         self.metaclass = metaclass
 
 
-    def _get_param_info(self, obj, include_super=True):
+    def get_param_info(self, obj, include_super=True):
         """
         Get the parameter dictionary, the list of modifed parameters
         and the dictionary or parameter values. If include_super is
@@ -76,7 +76,7 @@ class ParamPager(object):
         return (params, val_dict, changed)
 
 
-    def _param_docstrings(self, info, max_col_len=100, only_changed=False):
+    def param_docstrings(self, info, max_col_len=100, only_changed=False):
         """
         Build a string to that presents all of the parameter
         docstrings in a clean format (alternating red and blue for
@@ -247,7 +247,7 @@ class ParamPager(object):
         heading_line = '=' * len(title)
         heading_text = "%s\n%s\n" % (title, heading_line)
 
-        param_info = self._get_param_info(param_obj, include_super=True)
+        param_info = self.get_param_info(param_obj, include_super=True)
 
         if not param_info[0]:
             return "%s\n%s" % ((green % heading_text), "Object has no parameters.")
@@ -255,7 +255,7 @@ class ParamPager(object):
         table = self._build_table(param_info, self.order, max_col_len=40,
                                   only_changed=False)
 
-        docstrings = self._param_docstrings(param_info, max_col_len=100, only_changed=False)
+        docstrings = self.param_docstrings(param_info, max_col_len=100, only_changed=False)
 
         dflt_msg = "Parameters changed from their default values are marked in red."
         top_heading = (green % heading_text)

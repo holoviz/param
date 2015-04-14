@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import sys
 from distutils.core import setup
 
@@ -6,9 +7,9 @@ setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version="1.3.1",
+    version="1.3.2",
     description='Declarative Python programming using Parameters.',
-    long_description=open('README.rst').read(),
+    long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author= "IOAM",
     author_email= "developers@topographica.org",
     maintainer= "IOAM",
@@ -40,7 +41,7 @@ setup_args.update(dict(
 
 if __name__=="__main__":
 
-    if 'upload' in sys.argv:
+    if ('upload' in sys.argv) or ('sdist' in sys.argv):
         import param, numbergen
         param.__version__.verify(setup_args['version'])
         numbergen.__version__.verify(setup_args['version'])

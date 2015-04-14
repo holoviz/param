@@ -16,7 +16,7 @@ as part of other projects.
 Please see `param's website <http://ioam.github.com/param/>`_ for
 official releases, installation instructions, documentation, and examples.
 
-.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
+.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg
 .. _BuildStatus: https://travis-ci.org/ioam/param
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg

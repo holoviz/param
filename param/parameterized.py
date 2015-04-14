@@ -6,6 +6,8 @@ messaging.
 import copy
 import re
 import sys
+import inspect
+import random
 
 from operator import itemgetter,attrgetter
 from types import FunctionType
@@ -70,8 +72,6 @@ def logging_level(level):
         param_logger.setLevel(logging_level)
 
 
-
-import inspect
 def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
@@ -908,10 +908,8 @@ def empty_script_repr(*args): # pyflakes:ignore (unused arguments):
 
 try:
     # Suppress scriptrepr for objects not yet having a useful string representation
-    import random
-    script_repr_reg[random.Random] = empty_script_repr
-
     import numpy
+    script_repr_reg[random.Random] = empty_script_repr
     script_repr_reg[numpy.random.RandomState] = empty_script_repr
 
 except ImportError:

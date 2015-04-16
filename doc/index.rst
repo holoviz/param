@@ -135,6 +135,16 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+1.3.2 (2015/04)
+_______________
+
+* Added Unicode support for param.String.
+* Minor bugfixes.
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/v1.3.1...v1.3.2>`_.
+
+
 1.3.1 (2015/03)
 _______________
 

@@ -16,14 +16,14 @@ as part of other projects.
 Please see `param's website <http://ioam.github.com/param/>`_ for
 official releases, installation instructions, documentation, and examples.
 
-.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg
+.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
 .. _BuildStatus: https://travis-ci.org/ioam/param
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param
 
-.. |PyVersion| image:: https://pypip.in/py_versions/param/badge.svg?style=flat
+.. |PyVersion| image:: https://img.shields.io/pypi/v/param.svg
 .. _PyVersion: https://pypi.python.org/pypi/param
 
-.. |License| image:: https://pypip.in/license/param/badge.svg
+.. |License| image:: https://img.shields.io/pypi/l/param.svg
 .. _License: https://pypi.python.org/pypi/param

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
-from setuptools import find_packages, setup, Extension
+from setuptools import setup
 
 setup_args = {}
 

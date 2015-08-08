@@ -15,7 +15,7 @@ from functools import partial, wraps
 
 import logging
 from contextlib import contextmanager
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL # pyflakes:ignore (API import)
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 try:
     # In case the optional ipython module is unavailable

@@ -9,7 +9,7 @@ import sys
 import inspect
 import random
 
-from operator import itemgetter,attrgetter
+from operator import itemgetter, attrgetter
 from types import FunctionType
 from functools import partial, wraps
 
@@ -88,12 +88,12 @@ def descendents(class_):
     The list is ordered from least- to most-specific.  Can be useful for
     printing the contents of an entire class hierarchy.
     """
-    assert isinstance(class_,type)
+    assert isinstance(class_, type)
     q = [class_]
     out = []
     while len(q):
         x = q.pop(0)
-        out.insert(0,x)
+        out.insert(0, x)
         for b in x.__subclasses__():
             if b not in q and b not in out:
                 q.append(b)
@@ -111,7 +111,7 @@ def get_all_slots(class_):
     all_slots = []
     parent_param_classes = [c for c in classlist(class_)[1::]]
     for c in parent_param_classes:
-        if hasattr(c,'__slots__'):
+        if hasattr(c, '__slots__'):
             all_slots+=c.__slots__
     return all_slots
 
@@ -125,10 +125,10 @@ def get_occupied_slots(instance):
     value.)
     """
     return [slot for slot in get_all_slots(type(instance))
-            if hasattr(instance,slot)]
+            if hasattr(instance, slot)]
 
 
-def all_equal(arg1,arg2):
+def all_equal(arg1, arg2):
     """
     Return a single boolean for arg1==arg2, even for numpy arrays
     using element-wise comparison.
@@ -138,7 +138,7 @@ def all_equal(arg1,arg2):
     If both objects have an '_infinitely_iterable' attribute, they are
     not be zipped together and are compared directly instead.
     """
-    if all(hasattr(el, '_infinitely_iterable') for el in [arg1,arg2]):
+    if all(hasattr(el, '_infinitely_iterable') for el in [arg1, arg2]):
         return arg1==arg2
     try:
         return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
@@ -196,7 +196,7 @@ class ParameterMetaclass(type):
     """
     Metaclass allowing control over creation of Parameter classes.
     """
-    def __new__(mcs,classname,bases,classdict):
+    def __new__(mcs, classname, bases, classdict):
         # store the class's docstring in __classdoc
         if '__doc__' in classdict:
             classdict['__classdoc']=classdict['__doc__']
@@ -211,15 +211,15 @@ class ParameterMetaclass(type):
         if '__slots__' not in classdict:
             classdict['__slots__']=[]
 
-        return type.__new__(mcs,classname,bases,classdict)
+        return type.__new__(mcs, classname, bases, classdict)
 
-    def __getattribute__(mcs,name):
+    def __getattribute__(mcs, name):
         if name=='__doc__':
             # when asking for help on Parameter *class*, return the
             # stored class docstring
-            return type.__getattribute__(mcs,'__classdoc')
+            return type.__getattribute__(mcs, '__classdoc')
         else:
-            return type.__getattribute__(mcs,name)
+            return type.__getattribute__(mcs, name)
 
 
 
@@ -371,17 +371,17 @@ class Parameter(object):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['_attrib_name','_internal_name','default','doc',
-                 'precedence','instantiate','constant','readonly',
-                 'pickle_default_value','allow_None']
+    __slots__ = ['_attrib_name', '_internal_name', 'default', 'doc',
+                 'precedence', 'instantiate', 'constant', 'readonly',
+                 'pickle_default_value', 'allow_None']
 
     # When created, a Parameter does not know which
     # Parameterized class owns it. If a Parameter subclass needs
     # to know the owning class, it can declare an 'objtype' slot
     # (which will be filled in by ParameterizedMetaclass)
 
-    def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
-                 instantiate=False,constant=False,readonly=False,
+    def __init__(self, default=None, doc=None, precedence=None,  # pylint: disable-msg=R0913
+                 instantiate=False, constant=False, readonly=False,
                  pickle_default_value=True, allow_None=False):
         """
         Initialize a new Parameter object: store the supplied attributes.
@@ -413,7 +413,7 @@ class Parameter(object):
         self.allow_None = (default is None or allow_None)
 
 
-    def _set_instantiate(self,instantiate):
+    def _set_instantiate(self, instantiate):
         """Constant parameters must be instantiated."""
         # CB: instantiate doesn't actually matter for read-only
         # parameters, since they can't be set even on a class.  But
@@ -424,7 +424,7 @@ class Parameter(object):
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
 
 
-    def __get__(self,obj,objtype): # pylint: disable-msg=W0613
+    def __get__(self, obj, objtype): # pylint: disable-msg=W0613
         """
         Return the value for this Parameter.
 
@@ -442,11 +442,11 @@ class Parameter(object):
         if obj is None:
             result = self.default
         else:
-            result = obj.__dict__.get(self._internal_name,self.default)
+            result = obj.__dict__.get(self._internal_name, self.default)
         return result
 
 
-    def __set__(self,obj,val):
+    def __set__(self, obj, val):
         """
         Set the value for this Parameter.
 
@@ -491,11 +491,11 @@ class Parameter(object):
                 obj.__dict__[self._internal_name] = val
 
 
-    def __delete__(self,obj):
+    def __delete__(self, obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed."%self._attrib_name)
 
 
-    def _set_names(self,attrib_name):
+    def _set_names(self, attrib_name):
         self._attrib_name = attrib_name
         self._internal_name = "_%s_param_value"%attrib_name
 
@@ -507,13 +507,13 @@ class Parameter(object):
         """
         state = {}
         for slot in get_occupied_slots(self):
-            state[slot] = getattr(self,slot)
+            state[slot] = getattr(self, slot)
         return state
 
-    def __setstate__(self,state):
+    def __setstate__(self, state):
         # set values of __slots__ (instead of in non-existent __dict__)
-        for (k,v) in state.items():
-            setattr(self,k,v)
+        for (k, v) in state.items():
+            setattr(self, k, v)
 
 
 # Define one particular type of Parameter that is used in this file
@@ -529,13 +529,13 @@ class String(Parameter):
         self._check_value(default)
         self.allow_None = allow_None
 
-    def _check_value(self,val):
+    def _check_value(self, val):
         if not isinstance(val, self.basestring) and not (self.allow_None and val is None):
             raise ValueError("String '%s' only takes a string value."%self._attrib_name)
 
-    def __set__(self,obj,val):
+    def __set__(self, obj, val):
         self._check_value(val)
-        super(String,self).__set__(obj,val)
+        super(String, self).__set__(obj, val)
 
 
 
@@ -562,7 +562,7 @@ class ParameterizedMetaclass(type):
     attribute __abstract set to True. The 'abstract' attribute can be
     used to find out if a class is abstract or not.
     """
-    def __init__(mcs,name,bases,dict_):
+    def __init__(mcs, name, bases, dict_):
         """
         Initialize the class object (not an instance of the class, but
         the class itself).
@@ -571,7 +571,7 @@ class ParameterizedMetaclass(type):
         default values (see __param_inheritance()) and setting
         attrib_names (see _set_names()).
         """
-        type.__init__(mcs,name,bases,dict_)
+        type.__init__(mcs, name, bases, dict_)
 
         # Give Parameterized classes a useful 'name' attribute.
         # (Could instead consider changing the instance Parameter
@@ -580,11 +580,11 @@ class ParameterizedMetaclass(type):
 
         # All objects (with their names) of type Parameter that are
         # defined in this class
-        parameters = [(n,o) for (n,o) in dict_.items()
-                      if isinstance(o,Parameter)]
+        parameters = [(n, o) for (n, o) in dict_.items()
+                      if isinstance(o, Parameter)]
 
-        for param_name,param in parameters:
-            mcs._initialize_parameter(param_name,param)
+        for param_name, param in parameters:
+            mcs._initialize_parameter(param_name, param)
 
         if docstring_signature:
             mcs.__class_docstring_signature()
@@ -601,7 +601,7 @@ class ParameterizedMetaclass(type):
         processed_kws, keyword_groups = set(), []
         for cls in reversed(mcs.mro()):
             keyword_group = []
-            for (k,v) in sorted(cls.__dict__.items()):
+            for (k, v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
                     param_type = v.__class__.__name__
                     keyword_group.append("%s=%s" % (k, param_type))
@@ -615,11 +615,11 @@ class ParameterizedMetaclass(type):
         mcs.__doc__ = signature + class_docstr + '\n' + description
 
 
-    def _initialize_parameter(mcs,param_name,param):
+    def _initialize_parameter(mcs, param_name, param):
         # parameter has no way to find out the name a
         # Parameterized class has for it
         param._set_names(param_name)
-        mcs.__param_inheritance(param_name,param)
+        mcs.__param_inheritance(param_name, param)
 
 
     # Python 2.6 added abstract base classes; see
@@ -640,7 +640,7 @@ class ParameterizedMetaclass(type):
         # _ClassName__abstract.  So, we have to mangle it ourselves at
         # runtime.
         try:
-            return getattr(mcs,'_%s__abstract'%mcs.__name__)
+            return getattr(mcs, '_%s__abstract'%mcs.__name__)
         except AttributeError:
             return False
 
@@ -648,7 +648,7 @@ class ParameterizedMetaclass(type):
 
 
 
-    def __setattr__(mcs,attribute_name,value):
+    def __setattr__(mcs, attribute_name, value):
         """
         Implements 'self.attribute_name=value' in a way that also supports Parameters.
 
@@ -664,18 +664,18 @@ class ParameterizedMetaclass(type):
         """
         # Find out if there's a Parameter called attribute_name as a
         # class attribute of this class - if not, parameter is None.
-        parameter,owning_class = mcs.get_param_descriptor(attribute_name)
+        parameter, owning_class = mcs.get_param_descriptor(attribute_name)
 
-        if parameter and not isinstance(value,Parameter):
+        if parameter and not isinstance(value, Parameter):
             if owning_class != mcs:
-                type.__setattr__(mcs,attribute_name,copy.copy(parameter))
-            mcs.__dict__[attribute_name].__set__(None,value)
+                type.__setattr__(mcs, attribute_name, copy.copy(parameter))
+            mcs.__dict__[attribute_name].__set__(None, value)
 
         else:
-            type.__setattr__(mcs,attribute_name,value)
+            type.__setattr__(mcs, attribute_name, value)
 
-            if isinstance(value,Parameter):
-                mcs.__param_inheritance(attribute_name,value)
+            if isinstance(value, Parameter):
+                mcs.__param_inheritance(attribute_name, value)
             else:
                 # the purpose of the warning below is to catch
                 # mistakes ("thinking you are setting a parameter, but
@@ -692,10 +692,10 @@ class ParameterizedMetaclass(type):
                 if not attribute_name.startswith('_'):
                     get_logger().log(WARNING,
                                      "Setting non-Parameter class attribute %s.%s = %s ",
-                                     mcs.__name__,attribute_name,repr(value))
+                                     mcs.__name__, attribute_name, repr(value))
 
 
-    def __param_inheritance(mcs,param_name,param):
+    def __param_inheritance(mcs, param_name, param):
         """
         Look for Parameter values in superclasses of this
         Parameterized class.
@@ -734,7 +734,7 @@ class ParameterizedMetaclass(type):
         # class. Such classes can declare an 'objtype' slot, and the
         # owning class will be stored in it.
         if 'objtype' in slots:
-            setattr(param,'objtype',mcs)
+            setattr(param, 'objtype', mcs)
             del slots['objtype']
 
         # instantiate is handled specially
@@ -751,21 +751,21 @@ class ParameterizedMetaclass(type):
             # Search up the hierarchy until param.slot (which has to
             # be obtained using getattr(param,slot)) is not None, or
             # we run out of classes to search.
-            while getattr(param,slot) is None:
+            while getattr(param, slot) is None:
                 try:
                     param_super_class = next(superclasses)
                 except StopIteration:
                     break
 
                 new_param = param_super_class.__dict__.get(param_name)
-                if new_param is not None and hasattr(new_param,slot):
+                if new_param is not None and hasattr(new_param, slot):
                     # (slot might not be there because could be a more
                     # general type of Parameter)
-                    new_value = getattr(new_param,slot)
-                    setattr(param,slot,new_value)
+                    new_value = getattr(new_param, slot)
+                    setattr(param, slot, new_value)
 
 
-    def get_param_descriptor(mcs,param_name):
+    def get_param_descriptor(mcs, param_name):
         """
         Goes up the class hierarchy (starting from the current class)
         looking for a Parameter class attribute param_name. As soon as
@@ -775,9 +775,9 @@ class ParameterizedMetaclass(type):
         classes = classlist(mcs)
         for c in classes[::-1]:
             attribute = c.__dict__.get(param_name)
-            if isinstance(attribute,Parameter):
-                return attribute,c
-        return None,None
+            if isinstance(attribute, Parameter):
+                return attribute, c
+        return None, None
 
 
 
@@ -795,7 +795,7 @@ script_repr_suppress_defaults=True
 # Also, do we need an option to return repr without path, if desired?
 # E.g. to get 'pre_plot_hooks()' instead of
 # 'topo.command.analysis.pre_plot_hooks()' in the gui?
-def script_repr(val,imports,prefix,settings):
+def script_repr(val, imports, prefix, settings):
     """
     Variant of repr() designed for generating a runnable script.
 
@@ -807,14 +807,14 @@ def script_repr(val,imports,prefix,settings):
     The repr of a parameter can be suppressed by returning None from
     the appropriate hook in script_repr_reg.
     """
-    return pprint(val,imports,prefix,settings,unknown_value=None,
-                  qualify=True,separator="\n")
+    return pprint(val, imports, prefix, settings, unknown_value=None,
+                  qualify=True, separator="\n")
 
 
 # CB: when removing script_repr, merge its docstring here and improve.
 # And the ALERT by script_repr about defaults can go.
 # CEBALERT: remove settings, add default argument for imports
-def pprint(val,imports, prefix="\n    ", settings=[],
+def pprint(val, imports, prefix="\n    ", settings=[],
            unknown_value='<?>', qualify=False, separator=''):
     """
     (Experimental) Pretty printed representation of a parameterized
@@ -858,17 +858,17 @@ def pprint(val,imports, prefix="\n    ", settings=[],
     # passed around, etc.
     # JLS: The settings argument is not used anywhere. To be removed
     # in a separate PR.
-    if isinstance(val,type):
-        rep = type_script_repr(val,imports,prefix,settings)
+    if isinstance(val, type):
+        rep = type_script_repr(val, imports, prefix, settings)
 
     elif type(val) in script_repr_reg:
-        rep = script_repr_reg[type(val)](val,imports,prefix,settings)
+        rep = script_repr_reg[type(val)](val, imports, prefix, settings)
 
     # CEBALERT: remove with script_repr
-    elif hasattr(val,'script_repr'):
+    elif hasattr(val, 'script_repr'):
         rep=val.script_repr(imports, prefix+"    ")
 
-    elif hasattr(val,'pprint'):
+    elif hasattr(val, 'pprint'):
         rep=val.pprint(imports=imports, prefix=prefix+"    ",
                        qualify=qualify, unknown_value=unknown_value,
                        separator=separator)
@@ -884,16 +884,16 @@ script_repr_reg = {}
 
 
 # currently only handles list and tuple
-def container_script_repr(container,imports,prefix,settings):
+def container_script_repr(container, imports, prefix, settings):
     result=[]
     for i in container:
-        result.append(pprint(i,imports,prefix,settings))
+        result.append(pprint(i, imports, prefix, settings))
 
     ## (hack to get container brackets)
-    if isinstance(container,list):
-        d1,d2='[',']'
-    elif isinstance(container,tuple):
-        d1,d2='(',')'
+    if isinstance(container, list):
+        d1, d2='[', ']'
+    elif isinstance(container, tuple):
+        d1, d2='(', ')'
     else:
         raise NotImplementedError
     rep=d1+','.join(result)+d2
@@ -917,13 +917,13 @@ except ImportError:
 
 
 # why I have to type prefix and settings?
-def function_script_repr(fn,imports,prefix,settings):
+def function_script_repr(fn, imports, prefix, settings):
     name = fn.__name__
     module = fn.__module__
     imports.append('import %s'%module)
     return module+'.'+name
 
-def type_script_repr(type_,imports,prefix,settings):
+def type_script_repr(type_, imports, prefix, settings):
     module = type_.__module__
     if module!='__builtin__':
         imports.append('import %s'%module)
@@ -950,10 +950,10 @@ def as_uninitialized(fn):
     a constant Parameter.)
     """
     @wraps(fn)
-    def override_initialization(parameterized_instance,*args,**kw):
+    def override_initialization(parameterized_instance, *args, **kw):
         original_initialized=parameterized_instance.initialized
         parameterized_instance.initialized=False
-        fn(parameterized_instance,*args,**kw)
+        fn(parameterized_instance, *args, **kw)
         parameterized_instance.initialized=original_initialized
     return override_initialization
 
@@ -1003,11 +1003,11 @@ class Parameterized(object):
     see documentation for the 'logging' module.
     """
 
-    name           = String(default=None,constant=True,doc="""
+    name           = String(default=None, constant=True, doc="""
     String identifier for this object.""")
 
 
-    def __init__(self,**params):
+    def __init__(self, **params):
         global object_count
 
         # Flag that can be tested to see if e.g. constant Parameters
@@ -1023,7 +1023,7 @@ class Parameterized(object):
 
 
     @classmethod
-    def _add_parameter(cls, param_name,param_obj):
+    def _add_parameter(cls, param_name, param_obj):
         """
         Add a new Parameter object into this object's class.
 
@@ -1038,17 +1038,17 @@ class Parameterized(object):
         # would be worthwhile making sure no method except for one
         # "add_param()" method has to deal with it (plus any future
         # remove_param() method.)
-        type.__setattr__(cls,param_name,param_obj)
-        ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
+        type.__setattr__(cls, param_name, param_obj)
+        ParameterizedMetaclass._initialize_parameter(cls, param_name, param_obj)
         # delete cached params()
         try:
-            delattr(cls,'_%s__params'%cls.__name__)
+            delattr(cls, '_%s__params'%cls.__name__)
         except AttributeError:
             pass
 
 
     @bothmethod
-    def set_param(self_or_cls,*args,**kwargs):
+    def set_param(self_or_cls, *args, **kwargs):
         """
         For each param=value keyword argument, sets the corresponding
         parameter of this object or class to the given value.
@@ -1066,10 +1066,10 @@ class Parameterized(object):
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
-        for (k,v) in kwargs.items():
+        for (k, v) in kwargs.items():
             if k not in self_or_cls.params():
-                raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
-            setattr(self_or_cls,k,v)
+                raise ValueError("'%s' is not a parameter of %s"%(k, self_or_cls.name))
+            setattr(self_or_cls, k, v)
 
 
 
@@ -1103,14 +1103,14 @@ class Parameterized(object):
         Generally, this method is used by operations that need to test
         something without permanently altering the objects' state.
         """
-        for pname,p in self.params().items():
+        for pname, p in self.params().items():
             g = self.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
+            if hasattr(g, '_Dynamic_last'):
                 g._saved_Dynamic_last.append(g._Dynamic_last)
                 g._saved_Dynamic_time.append(g._Dynamic_time)
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
-            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
+            elif hasattr(g, 'state_push') and isinstance(g, Parameterized):
                 g.state_push()
 
     def state_pop(self):
@@ -1119,27 +1119,27 @@ class Parameterized(object):
 
         See state_push() for more details.
         """
-        for pname,p in self.params().items():
+        for pname, p in self.params().items():
             g = self.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
+            if hasattr(g, '_Dynamic_last'):
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
-            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
+            elif hasattr(g, 'state_pop') and isinstance(g, Parameterized):
                 g.state_pop()
 
 
     @classmethod
-    def set_default(cls,param_name,value):
+    def set_default(cls, param_name, value):
         """
         Set the default value of param_name.
 
         Equivalent to setting param_name on the class.
         """
-        setattr(cls,param_name,value)
+        setattr(cls, param_name, value)
 
 
     @bothmethod
-    def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
+    def set_dynamic_time_fn(self_or_cls, time_fn, sublistattr=None):
         """
         Set time_fn for all Dynamic Parameters of this class or
         instance object that are currently being dynamically
@@ -1159,29 +1159,29 @@ class Parameterized(object):
         """
         self_or_cls._Dynamic_time_fn = time_fn
 
-        if isinstance(self_or_cls,type):
-            a = (None,self_or_cls)
+        if isinstance(self_or_cls, type):
+            a = (None, self_or_cls)
         else:
             a = (self_or_cls,)
 
-        for n,p in self_or_cls.params().items():
-            if hasattr(p,'_value_is_dynamic'):
+        for n, p in self_or_cls.params().items():
+            if hasattr(p, '_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
                     g = self_or_cls.get_value_generator(n)
                     g._Dynamic_time_fn = time_fn
 
         if sublistattr:
             try:
-                sublist = getattr(self_or_cls,sublistattr)
+                sublist = getattr(self_or_cls, sublistattr)
             except AttributeError:
                 sublist = []
 
             for obj in sublist:
-                obj.set_dynamic_time_fn(time_fn,sublistattr)
+                obj.set_dynamic_time_fn(time_fn, sublistattr)
 
 
     @as_uninitialized
-    def _set_name(self,name):
+    def _set_name(self, name):
         self.name=name
 
 
@@ -1191,7 +1191,7 @@ class Parameterized(object):
         Set name to a gensym formed from the object's type name and
         the object_count.
         """
-        self._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
+        self._set_name('%s%05d' % (self.__class__.__name__ , object_count))
 
 
     def __repr__(self):
@@ -1202,16 +1202,16 @@ class Parameterized(object):
         Returns 'classname(parameter1=x,parameter2=y,...)', listing
         all the parameters of this object.
         """
-        settings = ['%s=%s' % (name,repr(val))
-                    for name,val in self.get_param_values()]
+        settings = ['%s=%s' % (name, repr(val))
+                    for name, val in self.get_param_values()]
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
 
 
-    def script_repr(self,imports=[],prefix="    "):
+    def script_repr(self, imports=[], prefix="    "):
         """
         Variant of __repr__ designed for generating a runnable script.
         """
-        return self.pprint(imports,prefix, unknown_value=None, qualify=True,
+        return self.pprint(imports, prefix, unknown_value=None, qualify=True,
                            separator="\n")
 
 
@@ -1260,13 +1260,13 @@ class Parameterized(object):
                                 re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
                 continue
 
-            value = pprint(values[k], imports, prefix=prefix,settings=[],
+            value = pprint(values[k], imports, prefix=prefix, settings=[],
                            unknown_value=unknown_value,
                            qualify=qualify) if k in values else None
 
             if value is None:
                 if unknown_value is False:
-                    raise Exception("%s: unknown value of %r" % (self.name,k))
+                    raise Exception("%s: unknown value of %r" % (self.name, k))
                 elif unknown_value is None:
                     # i.e. suppress repr
                     continue
@@ -1293,14 +1293,14 @@ class Parameterized(object):
 
     def __str__(self):
         """Return a short representation of the name and class of this object."""
-        return "<%s %s>" % (self.__class__.__name__,self.name)
+        return "<%s %s>" % (self.__class__.__name__, self.name)
 
 
     # CEBALERT: designed to avoid any processing unless the print
     # level is high enough, but not all callers of message(),
     # verbose(), debug(), etc are taking advantage of this. Need to
     # document, and also check other ioam projects.
-    def __db_print(self,level,msg,*args,**kw):
+    def __db_print(self, level, msg, *args, **kw):
         """
         Calls the logger returned by the get_logger() function,
         prepending the result of calling dbprint_prefix() (if any).
@@ -1316,7 +1316,7 @@ class Parameterized(object):
 
             get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args, **kw)
 
-    def warning(self,msg,*args,**kw):
+    def warning(self, msg, *args, **kw):
         """
         Print msg merged with args as a warning, unless module variable
         warnings_as_exceptions is True, then raise an Exception
@@ -1327,37 +1327,37 @@ class Parameterized(object):
         if not warnings_as_exceptions:
             global warning_count
             warning_count+=1
-            self.__db_print(WARNING,msg,*args,**kw)
+            self.__db_print(WARNING, msg, *args, **kw)
         else:
-            raise Exception(' '.join(["Warning:",]+[str(x) for x in args]))
+            raise Exception(' '.join(["Warning:", ]+[str(x) for x in args]))
 
 
-    def message(self,msg,*args,**kw):
+    def message(self, msg, *args, **kw):
         """
         Print msg merged with args as a message.
 
         See Python's logging module for details of message formatting.
         """
-        self.__db_print(INFO,msg,*args,**kw)
+        self.__db_print(INFO, msg, *args, **kw)
 
-    def verbose(self,msg,*args,**kw):
+    def verbose(self, msg, *args, **kw):
         """
         Print msg merged with args as a verbose message.
 
         See Python's logging module for details of message formatting.
         """
-        self.__db_print(VERBOSE,msg,*args,**kw)
+        self.__db_print(VERBOSE, msg, *args, **kw)
 
-    def debug(self,msg,*args,**kw):
+    def debug(self, msg, *args, **kw):
         """
         Print msg merged with args as a debugging statement.
 
         See Python's logging module for details of message formatting.
         """
-        self.__db_print(DEBUG,msg,*args,**kw)
+        self.__db_print(DEBUG, msg, *args, **kw)
 
     # CEBALERT: this is a bit ugly
-    def _instantiate_param(self,param_obj,dict_=None,key=None):
+    def _instantiate_param(self, param_obj, dict_=None, key=None):
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
         # under the parameter's _internal_name (or key if supplied)
         dict_ = dict_ or self.__dict__
@@ -1365,7 +1365,7 @@ class Parameterized(object):
         new_object = copy.deepcopy(param_obj.default)
         dict_[key]=new_object
 
-        if isinstance(new_object,Parameterized):
+        if isinstance(new_object, Parameterized):
             global object_count
             object_count+=1
             # CB: writes over name given to the original object;
@@ -1374,7 +1374,7 @@ class Parameterized(object):
 
 
     @as_uninitialized
-    def _setup_params(self,**params):
+    def _setup_params(self, **params):
         """
         Initialize default and keyword parameter values.
 
@@ -1392,24 +1392,24 @@ class Parameterized(object):
         #  a later-overridden parent class's parameter)
         params_to_instantiate = {}
         for class_ in classlist(type(self)):
-            for (k,v) in class_.__dict__.items():
+            for (k, v) in class_.__dict__.items():
                 # (avoid replacing name with the default of None)
-                if isinstance(v,Parameter) and v.instantiate and k!="name":
+                if isinstance(v, Parameter) and v.instantiate and k!="name":
                     params_to_instantiate[k]=v
 
         for p in params_to_instantiate.values():
             self._instantiate_param(p)
 
         ## keyword arg setting
-        for name,val in params.items():
+        for name, val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
+                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
-            setattr(self,name,val)
+            setattr(self, name, val)
 
 
-    def get_param_values(self,onlychanged=False):
+    def get_param_values(self, onlychanged=False):
         """
         Return a list of name,value pairs for all Parameters of this
         object.
@@ -1422,10 +1422,10 @@ class Parameterized(object):
         # (would need to distinguish instantiation of default from
         # user setting of value).
         vals = []
-        for name,val in self.params().items():
+        for name, val in self.params().items():
             value = self.get_value_generator(name)
-            if not onlychanged or not all_equal(value,val.default):
-                vals.append((name,value))
+            if not onlychanged or not all_equal(value, val.default):
+                vals.append((name, value))
 
         vals.sort(key=itemgetter(0))
         return vals
@@ -1439,7 +1439,7 @@ class Parameterized(object):
     # would show up in lissom_oo_or because separated composite uses
     # this method.
     @bothmethod
-    def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
+    def force_new_dynamic_value(cls_or_slf, name): # pylint: disable-msg=E0213
         """
         Force a new value to be generated for the dynamic attribute
         name, and return it.
@@ -1450,22 +1450,22 @@ class Parameterized(object):
         param_obj = cls_or_slf.params().get(name)
 
         if not param_obj:
-            return getattr(cls_or_slf,name)
+            return getattr(cls_or_slf, name)
 
-        cls,slf=None,None
-        if isinstance(cls_or_slf,type):
+        cls, slf=None, None
+        if isinstance(cls_or_slf, type):
             cls = cls_or_slf
         else:
             slf = cls_or_slf
 
-        if not hasattr(param_obj,'_force'):
-            return param_obj.__get__(slf,cls)
+        if not hasattr(param_obj, '_force'):
+            return param_obj.__get__(slf, cls)
         else:
-            return param_obj._force(slf,cls)
+            return param_obj._force(slf, cls)
 
 
     @bothmethod
-    def get_value_generator(cls_or_slf,name): # pylint: disable-msg=E0213
+    def get_value_generator(cls_or_slf, name): # pylint: disable-msg=E0213
         """
         Return the value or value-generating object of the named
         attribute.
@@ -1477,22 +1477,22 @@ class Parameterized(object):
         param_obj = cls_or_slf.params().get(name)
 
         if not param_obj:
-            value = getattr(cls_or_slf,name)
+            value = getattr(cls_or_slf, name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
-        elif hasattr(param_obj,'attribs'):
+        elif hasattr(param_obj, 'attribs'):
             value = [cls_or_slf.get_value_generator(a) for a in param_obj.attribs]
 
         # not a Dynamic Parameter
-        elif not hasattr(param_obj,'_value_is_dynamic'):
-            value = getattr(cls_or_slf,name)
+        elif not hasattr(param_obj, '_value_is_dynamic'):
+            value = getattr(cls_or_slf, name)
 
         # Dynamic Parameter...
         else:
             internal_name = "_%s_param_value"%name
-            if hasattr(cls_or_slf,internal_name):
+            if hasattr(cls_or_slf, internal_name):
                 # dealing with object and it's been set on this object
-                value = getattr(cls_or_slf,internal_name)
+                value = getattr(cls_or_slf, internal_name)
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default
@@ -1501,7 +1501,7 @@ class Parameterized(object):
 
 
     @bothmethod
-    def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
+    def inspect_value(cls_or_slf, name): # pylint: disable-msg=E0213
         """
         Return the current value of the named attribute without modifying it.
 
@@ -1511,16 +1511,16 @@ class Parameterized(object):
         param_obj = cls_or_slf.params().get(name)
 
         if not param_obj:
-            value = getattr(cls_or_slf,name)
-        elif hasattr(param_obj,'attribs'):
+            value = getattr(cls_or_slf, name)
+        elif hasattr(param_obj, 'attribs'):
             value = [cls_or_slf.inspect_value(a) for a in param_obj.attribs]
-        elif not hasattr(param_obj,'_inspect'):
-            value = getattr(cls_or_slf,name)
+        elif not hasattr(param_obj, '_inspect'):
+            value = getattr(cls_or_slf, name)
         else:
-            if isinstance(cls_or_slf,type):
-                value = param_obj._inspect(None,cls_or_slf)
+            if isinstance(cls_or_slf, type):
+                value = param_obj._inspect(None, cls_or_slf)
             else:
-                value = param_obj._inspect(cls_or_slf,None)
+                value = param_obj._inspect(cls_or_slf, None)
 
         return value
 
@@ -1528,8 +1528,8 @@ class Parameterized(object):
 
     def print_param_values(self):
         """Print the values of all this object's Parameters."""
-        for name,val in self.get_param_values():
-            print('%s.%s = %s' % (self.name,name,val))
+        for name, val in self.get_param_values():
+            print('%s.%s = %s' % (self.name, name, val))
 
 
     def __getstate__(self):
@@ -1542,7 +1542,7 @@ class Parameterized(object):
         state = self.__dict__.copy()
 
         for slot in get_occupied_slots(self):
-            state[slot] = getattr(self,slot)
+            state[slot] = getattr(self, slot)
 
         # Note that Parameterized object pickling assumes that
         # attributes to be saved are only in __dict__ or __slots__
@@ -1554,20 +1554,20 @@ class Parameterized(object):
         return state
 
 
-    def __setstate__(self,state):
+    def __setstate__(self, state):
         """
         Restore objects from the state dictionary to this object.
 
         During this process the object is considered uninitialized.
         """
         self.initialized=False
-        for name,value in state.items():
-            setattr(self,name,value)
+        for name, value in state.items():
+            setattr(self, name, value)
         self.initialized=True
 
 
     @classmethod
-    def params(cls,parameter_name=None):
+    def params(cls, parameter_name=None):
         """
         Return the Parameters of this class as the
         dictionary {name: parameter_object}
@@ -1578,19 +1578,19 @@ class Parameterized(object):
         # CB: we cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
         try:
-            pdict=getattr(cls,'_%s__params'%cls.__name__)
+            pdict=getattr(cls, '_%s__params'%cls.__name__)
         except AttributeError:
             paramdict = {}
             for class_ in classlist(cls):
-                for name,val in class_.__dict__.items():
-                    if isinstance(val,Parameter):
+                for name, val in class_.__dict__.items():
+                    if isinstance(val, Parameter):
                         paramdict[name] = val
 
             # We only want the cache to be visible to the cls on which
             # params() is called, so we mangle the name ourselves at
             # runtime (if we were to mangle it now, it would be
             # _Parameterized.__params for all classes).
-            setattr(cls,'_%s__params'%cls.__name__,paramdict)
+            setattr(cls, '_%s__params'%cls.__name__, paramdict)
             pdict= paramdict
 
         if parameter_name is None:
@@ -1603,8 +1603,8 @@ class Parameterized(object):
     @classmethod
     def print_param_defaults(cls):
         """Print the default values of all cls's Parameters."""
-        for key,val in cls.__dict__.items():
-            if isinstance(val,Parameter):
+        for key, val in cls.__dict__.items():
+            if isinstance(val, Parameter):
                 print(cls.__name__+'.'+key, '=', repr(val.default))
 
 
@@ -1617,11 +1617,11 @@ class Parameterized(object):
         instantiated.
         """
         d = {}
-        for param_name,param in self.params().items():
+        for param_name, param in self.params().items():
             if param.constant:
                 pass
             elif param.instantiate:
-                self._instantiate_param(param,dict_=d,key=param_name)
+                self._instantiate_param(param, dict_=d, key=param_name)
             else:
                 d[param_name]=param.default
         return d
@@ -1681,7 +1681,7 @@ def print_all_param_defaults():
     print("                           Parameter Default Values")
     print("")
     classes = descendents(Parameterized)
-    classes.sort(key=lambda x:x.__name__)
+    classes.sort(key=lambda x: x.__name__)
     for c in classes:
         c.print_param_defaults()
     print("_______________________________________________________________________________")
@@ -1705,7 +1705,7 @@ class ParamOverrides(dict):
     # same name, so all attributes of this object should have names
     # starting with an underscore (_).
 
-    def __init__(self,overridden,dict_,allow_extra_keywords=False):
+    def __init__(self, overridden, dict_, allow_extra_keywords=False):
         """
 
         If allow_extra_keywords is False, then all keys in the
@@ -1724,7 +1724,7 @@ class ParamOverrides(dict):
         #      dict.__init__(self,**kw)
         # be faster/easier to use?
         self._overridden = overridden
-        dict.__init__(self,dict_)
+        dict.__init__(self, dict_)
 
         if allow_extra_keywords:
             self._extra_keywords=self._extract_extra_keywords(dict_)
@@ -1747,30 +1747,30 @@ class ParamOverrides(dict):
         """
         return dict((key, self[key]) for key in self if key not in self.extra_keywords())
 
-    def __missing__(self,name):
+    def __missing__(self, name):
         # Return 'name' from the overridden object
-        return getattr(self._overridden,name)
+        return getattr(self._overridden, name)
 
     def __repr__(self):
         # As dict.__repr__, but indicate the overridden object
         return dict.__repr__(self)+" overriding params from %s"%repr(self._overridden)
 
-    def __getattr__(self,name):
+    def __getattr__(self, name):
         # Provide 'dot' access to entries in the dictionary.
         # (This __getattr__ method is called only if 'name' isn't an
         # attribute of self.)
         return self.__getitem__(name)
 
-    def __setattr__(self,name,val):
+    def __setattr__(self, name, val):
         # Attributes whose name starts with _ are set on self (as
         # normal), but all other attributes are inserted into the
         # dictionary.
         if not name.startswith('_'):
-            self.__setitem__(name,val)
+            self.__setitem__(name, val)
         else:
-            dict.__setattr__(self,name,val)
+            dict.__setattr__(self, name, val)
 
-    def _check_params(self,params):
+    def _check_params(self, params):
         """
         Print a warning if params contains something that is not a
         Parameter of the overridden object.
@@ -1778,16 +1778,16 @@ class ParamOverrides(dict):
         overridden_object_params = list(self._overridden.params().keys())
         for item in params:
             if item not in overridden_object_params:
-                self.warning("'%s' will be ignored (not a Parameter).",item)
+                self.warning("'%s' will be ignored (not a Parameter).", item)
 
-    def _extract_extra_keywords(self,params):
+    def _extract_extra_keywords(self, params):
         """
         Return any items in params that are not also
         parameters of the overridden object.
         """
         extra_keywords = {}
         overridden_object_params = self._overridden.params()
-        for name,val in params.items():
+        for name, val in params.items():
             if name not in overridden_object_params:
                 extra_keywords[name]=val
                 # CEBALERT: should we remove name from params
@@ -1819,13 +1819,13 @@ class ParameterizedFunction(Parameterized):
         return self.__class__.__name__+"()"
 
     @bothmethod
-    def instance(self_or_cls,**params):
+    def instance(self_or_cls, **params):
         """
         Return an instance of this class, copying parameters from any
         existing instance provided.
         """
 
-        if isinstance (self_or_cls,ParameterizedMetaclass):
+        if isinstance (self_or_cls, ParameterizedMetaclass):
             cls = self_or_cls
         else:
             p = params
@@ -1835,18 +1835,18 @@ class ParameterizedFunction(Parameterized):
             cls = self_or_cls.__class__
 
         inst=Parameterized.__new__(cls)
-        Parameterized.__init__(inst,**params)
+        Parameterized.__init__(inst, **params)
         if 'name' in params:  inst.__name__ = params['name']
         else:                 inst.__name__ = self_or_cls.name
         return inst
 
-    def __new__(class_,*args,**params):
+    def __new__(class_, *args, **params):
         # Create and __call__() an instance of this class.
         inst = class_.instance()
         inst._set_name(class_.__name__)
-        return inst.__call__(*args,**params)
+        return inst.__call__(*args, **params)
 
-    def __call__(self,*args,**kw):
+    def __call__(self, *args, **kw):
         raise NotImplementedError("Subclasses must implement __call__.")
 
     def __reduce__(self):
@@ -1857,28 +1857,28 @@ class ParameterizedFunction(Parameterized):
         # module level rather than Parameterized.__new__ directly
         # because otherwise pickle will find .__new__'s module to be
         # __main__. Pretty obscure aspect of pickle.py, or a bug?
-        return (_new_parameterized,(self.__class__,),state)
+        return (_new_parameterized, (self.__class__,), state)
 
-    def script_repr(self,imports=[],prefix="    "):
+    def script_repr(self, imports=[], prefix="    "):
         """
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        return self.pprint(imports,prefix,unknown_value='',qualify=True,
+        return self.pprint(imports, prefix, unknown_value='', qualify=True,
                            separator="\n")
 
 
-    def pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
+    def pprint(self, imports=None, prefix="\n    ", unknown_value='<?>',
                qualify=False, separator=""):
         """
         Same as Parameterized.pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        r = Parameterized.pprint(self,imports,prefix,
+        r = Parameterized.pprint(self, imports, prefix,
                                  unknown_value=unknown_value,
-                                 qualify=qualify,separator=separator)
+                                 qualify=qualify, separator=separator)
         classname=self.__class__.__name__
-        return r.replace(".%s("%classname,".%s.instance("%classname)
+        return r.replace(".%s("%classname, ".%s.instance("%classname)
 
 
 

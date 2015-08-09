@@ -18,6 +18,6 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install ipython; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install ipython; fi
 
-script: nosetests --with-doctest --with-coverage --cover-package=param && flake8 --statistics --exit-zero param numbergen
+script: nosetests --with-doctest --with-coverage --cover-package=param && flake8 --statistics --exit-zero --ignore=E231 param numbergen
 
 after_success: coveralls

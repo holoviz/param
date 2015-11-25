@@ -22,7 +22,7 @@ official releases, installation instructions, documentation, and examples.
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param
 
-.. |PyVersion| image:: https://img.shields.io/pypi/v/param.svg
+.. |PyVersion| image:: https://img.shields.io/pypi/pyversions/param.svg
 .. _PyVersion: https://pypi.python.org/pypi/param
 
 .. |License| image:: https://img.shields.io/pypi/l/param.svg

@@ -7,6 +7,12 @@ try:
 except ImportError:
     from distutils.core import setup
 
+try:
+    from Cython.Build import cythonize
+    ext_modules = cythonize("param/*.py", exclude=['param/ipython.py'])
+except:
+    ext_modules = []
+
 setup_args = {}
 
 setup_args.update(dict(
@@ -16,8 +22,9 @@ setup_args.update(dict(
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author= "IOAM",
     author_email= "developers@topographica.org",
-    maintainer= "IOAM",
-    maintainer_email= "developers@topographica.org",
+    ext_modules=ext_modules,
+    maintainer="IOAM",
+    maintainer_email="developers@topographica.org",
     platforms=['Windows', 'Mac OS X', 'Linux'],
     license='BSD',
     url='http://ioam.github.com/param/',

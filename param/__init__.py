@@ -22,6 +22,7 @@ from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
 from .parameterized import logging_level # pyflakes:ignore (needed for eval)
+from .parameterized import shared_parameters # pyflakes:ignore (needed for eval)
 
 
 # Determine up-to-date version information, if possible, but with a

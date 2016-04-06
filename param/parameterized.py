@@ -539,6 +539,28 @@ class String(Parameter):
 
 
 
+class shared_parameters(object):
+    """
+    Context manager to share parameter instances when creating
+    multiple Parameterized objects of the same type. Parameter default
+    values are instantiated once and cached to be reused when another
+    Parameterized object of the same type is instantiated.
+    Can be useful to easily modify large collections of Parameterized
+    objects at once and can provide a significant speedup.
+    """
+
+    _share = False
+    _shared_cache = {}
+
+    def __enter__(self):
+        shared_parameters._share = True
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        shared_parameters._share = False
+        shared_parameters._shared_cache = {}
+
+
+
 class ParameterizedMetaclass(type):
     """
     The metaclass of Parameterized (and all its descendents).
@@ -1362,7 +1384,15 @@ class Parameterized(object):
         # under the parameter's _internal_name (or key if supplied)
         dict_ = dict_ or self.__dict__
         key = key or param_obj._internal_name
-        new_object = copy.deepcopy(param_obj.default)
+        param_key = (str(type(self)), param_obj._attrib_name)
+        if shared_parameters._share:
+            if param_key in shared_parameters._shared_cache:
+                new_object = shared_parameters._shared_cache[param_key]
+            else:
+                new_object = copy.deepcopy(param_obj.default)
+                shared_parameters._shared_cache[param_key] = new_object
+        else:
+            new_object = copy.deepcopy(param_obj.default)
         dict_[key]=new_object
 
         if isinstance(new_object,Parameterized):

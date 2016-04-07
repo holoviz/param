@@ -28,7 +28,7 @@ import random
 from nose.tools import istest, nottest
 
 
-from param.parameterized import ParamOverrides
+from param.parameterized import ParamOverrides, shared_parameters
 
 @nottest
 class _SomeRandomNumbers(object):
@@ -303,6 +303,25 @@ class TestParamOverrides(unittest.TestCase):
             raise AssertionError("ParamOverrides should give AttributeError when key can't be found.")
         else:
             raise AssertionError("Test supposed to lookup non-existent attribute and raise error.")
+
+
+class TestSharedParameters(unittest.TestCase):
+
+    def setUp(self):
+        with shared_parameters():
+            self.p1 = TestPO(name='A', print_level=0)
+            self.p2 = TestPO(name='B', print_level=0)
+            self.ap1 = AnotherTestPO(name='A', print_level=0)
+            self.ap2 = AnotherTestPO(name='B', print_level=0)
+
+    def test_shared_object(self):
+        self.assertIs(self.ap1.instPO, self.ap2.instPO)
+        self.assertIsNot(self.ap1.params('instPO').default, self.ap2.instPO)
+
+    def test_shared_list(self):
+        self.assertIs(self.p1.inst, self.p2.inst)
+        self.assertIsNot(self.p1.params('inst').default, self.p2.inst)
+
 
 
 if __name__ == "__main__":

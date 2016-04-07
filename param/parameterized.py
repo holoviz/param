@@ -1392,6 +1392,8 @@ class Parameterized(object):
         #  a later-overridden parent class's parameter)
         params_to_instantiate = {}
         for class_ in classlist(type(self)):
+            if not issubclass(class_, Parameterized):
+                continue
             for (k,v) in class_.__dict__.items():
                 # (avoid replacing name with the default of None)
                 if isinstance(v,Parameter) and v.instantiate and k!="name":

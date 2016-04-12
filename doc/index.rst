@@ -128,6 +128,39 @@ Windows users can alternatively download and run an installer (exe).
 
 More recent changes can be obtained by cloning the `git repository <http://github.com/ioam/param>`_.
 
+Comparison to other packages
+============================
+
+Param was first developed in 2004, in the context of the Topographica brain simulator project, and
+was made into a separate package until 2012.  During that time there were other parameter libraries
+developed, including `Traits <http://code.enthought.com/projects/traits>`_ and 
+`Traitlets <https://github.com/ipython/traitlets/>`_.  These libraries have broadly similar goals,
+but each differs in important ways:
+
+* **Dependencies**: Traits is a much more heavyweight solution, requiring 
+installation of a large suite of tools, including C code, which makes it difficult to include in 
+separate projects.  Param and Traitlets are both pure Python projects, with minimal dependencies.  
+
+* **GUI toolkits**: The packages differ on which GUI toolkits are supported: Traits (via the 
+separate TraitsUI package) supports wxWidgets and QT, while Param supports Tkinter (via the 
+separate ParamTk package) and IPython widgets (via the separate ParamNB package), and Traitlets
+supports IPython widgets.  
+
+* **Dynamic support**: The packages differ in how they support "active" or "dynamic" values.  
+Traits and Traitlets provide extensive mechanisms for defining custom callbacks and "onchange"
+code associated with specific user-defined trait instances, which can be very valuable when it is
+needed, but requires a significant amount of code to be written each time support for such 
+dynamic execution is provided to users.  Param instead focuses on supporting dynamic parameter 
+*values* for any parameter, not on implementing specific dynamic parameter *definitions*, 
+allowing users to provide dynamic streams of values for any Parameter that has been defined.  
+The `numbergen` package included with Param make it simple to define such streams (e.g. 
+random values, values determined by a mathematical function, or values calculated using
+arbitrary Python code). Users can then define a clock function for Param so that it is clear 
+when the next dynamic value should be returned; each dynamic value is then a function of this
+global clock value.  Param's approach is particularly well suited for use when there is a 
+concept of time, whether simulated or real time, because it makes it simple to
+coordinate many different dynamic parameter values without requiring any code to do the
+coordination or handle generating the dynamic values themselves.
 
 Release Notes
 =============

@@ -132,7 +132,7 @@ Comparison to other packages
 ============================
 
 Param was first developed in 2003, in the context of the Topographica brain simulator project, and
-was made into a separate package until 2012.  During that time there were other parameter libraries
+was made into a separate package in 2012.  During that time there were other parameter libraries
 developed, including `Traits <http://code.enthought.com/projects/traits>`_ and 
 `Traitlets <https://github.com/ipython/traitlets/>`_.  These libraries have broadly similar goals,
 but each differs in important ways:

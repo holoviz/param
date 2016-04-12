@@ -131,7 +131,7 @@ More recent changes can be obtained by cloning the `git repository <http://githu
 Comparison to other packages
 ============================
 
-Param was first developed in 2004, in the context of the Topographica brain simulator project, and
+Param was first developed in 2003, in the context of the Topographica brain simulator project, and
 was made into a separate package until 2012.  During that time there were other parameter libraries
 developed, including `Traits <http://code.enthought.com/projects/traits>`_ and 
 `Traitlets <https://github.com/ipython/traitlets/>`_.  These libraries have broadly similar goals,
@@ -258,7 +258,7 @@ _______________
 
 * First standalone release. Param was originally developed as part of
   `Topographica <http://ioam.github.io/topographica/>`_, and has been
-  in heavy usage as part of that project since 2005.
+  in heavy usage as part of that project since 2003.
 
 
 Support

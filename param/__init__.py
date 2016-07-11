@@ -1361,7 +1361,7 @@ def abbreviate_paths(pathspec,named_paths):
     from os.path import commonprefix, dirname, sep
 
     prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
-    return {name[len(prefix):]:path for name,path in named_paths.items()}
+    return dict([(name[len(prefix):],path) for name,path in named_paths.items()])
 
 
 

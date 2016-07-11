@@ -315,12 +315,12 @@ class TestSharedParameters(unittest.TestCase):
             self.ap2 = AnotherTestPO(name='B', print_level=0)
 
     def test_shared_object(self):
-        self.assertIs(self.ap1.instPO, self.ap2.instPO)
-        self.assertIsNot(self.ap1.params('instPO').default, self.ap2.instPO)
+        self.assertTrue(self.ap1.instPO is self.ap2.instPO)
+        self.assertTrue(self.ap1.params('instPO').default is not self.ap2.instPO)
 
     def test_shared_list(self):
-        self.assertIs(self.p1.inst, self.p2.inst)
-        self.assertIsNot(self.p1.params('inst').default, self.p2.inst)
+        self.assertTrue(self.p1.inst is self.p2.inst)
+        self.assertTrue(self.p1.params('inst').default is not self.p2.inst)
 
 
 

@@ -975,21 +975,15 @@ class ObjectSelector(Selector):
         super(ObjectSelector,self).__set__(obj,val)
 
 
-    # CebAlert; move some bits into superclass (same for clsselector)?
     def get_range(self):
         """
         Return the possible objects to which this parameter could be set.
 
         (Returns the dictionary {object.name:object}.)
         """
-        # CEBHACKALERT: was written assuming it would only operate on
-        # Parameterized instances. Think this is an sf.net bug/feature
-        # request. Temporary fix: don't use obj.name if unavailable.
-        try:
-            d=dict((obj.name,obj) for obj in self.objects)
-        except AttributeError:
-            d=dict((obj,obj) for obj in self.objects)
-        return d
+        return dict((obj.name if hasattr(obj,"name") \
+                     else obj.__name__ if hasattr(obj,"__name__") \
+                     else str(obj), obj) for obj in self.objects)
 
 
 class ClassSelector(Selector):

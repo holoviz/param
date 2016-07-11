@@ -1605,7 +1605,7 @@ class Parameterized(object):
         """Print the default values of all cls's Parameters."""
         for key,val in cls.__dict__.items():
             if isinstance(val,Parameter):
-                print(cls.__name__+'.'+key, '=', repr(val.default))
+                print(cls.__name__+'.'+key+ '='+ repr(val.default))
 
 
     def defaults(self):

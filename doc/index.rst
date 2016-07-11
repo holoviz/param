@@ -182,14 +182,14 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
-1.3.3 (2016/07)
+1.4.0 (2016/07)
 _______________
 
 * Added support for new (`ParamNB<https://github.com/ioam/paramnb>`_) ParamNB project
 * Added new parameter types Action, FileSelector, and ListSelector
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/v1.3.2...v1.3.3>`_.
+`on GitHub <https://github.com/ioam/param/compare/v1.3.2...v1.4.0>`_.
 
 
 1.3.2 (2015/04)

@@ -31,10 +31,10 @@ from .parameterized import shared_parameters # pyflakes:ignore (needed for eval)
 # only two required files.
 try:
     from .version import Version
-    __version__ = Version(release=(1,3,2), fpath=__file__,
+    __version__ = Version(release=(1,4,0), fpath=__file__,
                           commit="$Format:%h$", reponame="param")
 except:
-    __version__ = '1.3.2-unknown'
+    __version__ = '1.4.0-unknown'
 
 
 #: Top-level object to allow messaging not tied to a particular

@@ -573,6 +573,15 @@ class Number(Dynamic):
         super(Number,self).__set__(obj,val)
 
 
+    # Allow softbounds to be used like a normal attribute, as it 
+    # probably should have been already (not _softbounds)
+    @property
+    def softbounds(self): return self._softbounds
+
+    @softbounds.setter
+    def softbounds(self,value): self._softbounds = value
+
+
     def set_in_bounds(self,obj,val):
         """
         Set to the given value, but cropped to be within the legal bounds.

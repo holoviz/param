@@ -79,7 +79,18 @@ included as part of larger projects without adding external dependencies.
 Parameters make GUI programming simpler
 _______________________________________
 
-Parameters make it simple to generate GUIs. An interface for Tk already exists (`ParamTk <http://ioam.github.com/paramtk/>`_), providing a property sheet that can automatically generate a GUI window for viewing and editing an object's Parameters.
+Parameters make it simple to generate GUIs by separating your semantic
+information (what is this parameter? what type can it have? does it
+have bounds?) from anything to do with a particular GUI library.  To
+use Parameters in a particular GUI toolkit, you just need to write a
+simple set of interfaces that indicate how a given Parameter type
+should be displayed, and what widgets to generate for it.  Currently,
+interfaces are provided for use in Jupyter Notebooks (`ParamNB
+<https://github.com/ioam/paramnb>`_) 
+or in Tk (`ParamTk <http://ioam.github.com/paramtk/>`_), both of which
+make it simple to provide a property sheet that automatically
+generates a set of widgets for viewing and editing an object's
+Parameters.
 
 
 Optional dynamic parameter values using `numbergen`
@@ -170,6 +181,16 @@ Release Notes
 
 Notable additions, or changes that may require users to alter code,
 are listed below.
+
+1.4.0 (2016/07)
+_______________
+
+* Added support for new (`ParamNB<https://github.com/ioam/paramnb>`_) ParamNB project
+* Added new parameter types Action, FileSelector, and ListSelector
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/v1.3.2...v1.4.0>`_.
+
 
 1.3.2 (2015/04)
 _______________

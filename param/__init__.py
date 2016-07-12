@@ -25,6 +25,13 @@ from .parameterized import Parameterized, Parameter, String, \
 from .parameterized import logging_level # pyflakes:ignore (needed for eval)
 from .parameterized import shared_parameters # pyflakes:ignore (needed for eval)
 
+try: 
+   from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
+except ImportError as e:
+    raise ImportError("Requires ordereddict package on Python 2.6")
+
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -991,7 +998,7 @@ class ObjectSelector(Selector):
 
         (Returns the dictionary {object.name:object}.)
         """
-        return dict((obj.name if hasattr(obj,"name") \
+        return OrderedDict((obj.name if hasattr(obj,"name") \
                      else obj.__name__ if hasattr(obj,"__name__") \
                      else str(obj), obj) for obj in self.objects)
 
@@ -1043,7 +1050,7 @@ class ClassSelector(Selector):
         (see concrete_descendents()).
         """
         classes = concrete_descendents(self.class_)
-        d=dict((name,class_) for name,class_ in classes.items())
+        d=OrderedDict((name,class_) for name,class_ in classes.items())
         if self.allow_None:
             d['None']=None
         return d
@@ -1362,7 +1369,7 @@ def abbreviate_paths(pathspec,named_paths):
     from os.path import commonprefix, dirname, sep
 
     prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
-    return dict([(name[len(prefix):],path) for name,path in named_paths.items()])
+    return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
 
 
 

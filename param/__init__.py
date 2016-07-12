@@ -38,7 +38,7 @@ except ImportError as e:
 # only two required files.
 try:
     from .version import Version
-    __version__ = Version(release=(1,4,0), fpath=__file__,
+    __version__ = Version(release=(1,4,1), fpath=__file__,
                           commit="$Format:%h$", reponame="param")
 except:
     __version__ = '1.4.0-unknown'

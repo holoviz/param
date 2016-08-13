@@ -8,6 +8,9 @@ except ImportError:
     from distutils.core import setup
 
 try:
+    # check we can compile on this machine
+    import cython; cython.inline("return 1;")
+    
     from Cython.Build import cythonize
     ext_modules = cythonize("param/*.py", exclude=['param/ipython.py'])
 except:

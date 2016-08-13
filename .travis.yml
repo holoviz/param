@@ -19,6 +19,6 @@ install:
 
 script:
   - nosetests --with-doctest --with-coverage --cover-package=param
-  - if [[ $TRAVIS_PYTHON_VERSION != 2.6]]; flake8 --statistics --exit-zero --ignore=E231 param numbergen
+  - if [[ $TRAVIS_PYTHON_VERSION =~ 2.6]]; flake8 --statistics --exit-zero --ignore=E231 param numbergen
 
 after_success: coveralls

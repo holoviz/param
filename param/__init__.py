@@ -990,14 +990,11 @@ class ObjectSelector(Selector):
             raise ValueError("%s not in Parameter %s's list of possible objects" \
                              %(val,attrib_name))
 
-# CBNOTE: I think it's not helpful to do a type check for the value of
-# an ObjectSelector. If we did such type checking, any user
-# of this Parameter would have to be sure to update the list of possible
-# objects before setting the Parameter's value. As it is, only users who care about the
-# correct list of objects being displayed need to update the list.
     def __set__(self,obj,val):
         if self.check_on_set:
             self._check_value(val,obj)
+        elif not (val in self.objects):
+            self.objects.append(val)
         super(ObjectSelector,self).__set__(obj,val)
 
 

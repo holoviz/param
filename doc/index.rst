@@ -182,6 +182,16 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+1.4.1 (2016/07)
+_______________
+
+* Selector parameters now respect order of options supplied
+* Allowed softbounds to be accessed like an attribute
+
+A full list of changes since the previous release is available 
+`on GitHub <https://github.com/ioam/param/compare/v1.4.0...v1.4.1>`_.
+
+
 1.4.0 (2016/07)
 _______________
 

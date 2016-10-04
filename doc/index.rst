@@ -185,7 +185,7 @@ are listed below.
 1.4.0 (2016/07)
 _______________
 
-* Added support for new (`ParamNB<https://github.com/ioam/paramnb>`_) ParamNB project
+* Added support for new `ParamNB <https://github.com/ioam/paramnb>`_ project
 * Added new parameter types Action, FileSelector, and ListSelector
 
 A full list of changes since the previous release is available 

@@ -124,26 +124,36 @@ each other or with mathematical constants:
 
 Note that unlike the lambda-function approach, all varying numbergen
 objects respect `param.Dynamic.time_fn`, e.g. to ensure that new
-values will be generated only when Param's time has changed.
+values will be generated only when Param's time has changed.  
+Parameterized programs can define a time function to maintain a
+logical/simulated time, such as the state of a simulator, which
+allows all Parameter values to be kept synchronized without
+any special coordination code.
 
 
 Installation
 ============
 
-Param has no dependencies outside of Python's standard library.
+Param has no required dependencies outside of Python's standard
+library, although it will use Cython to improve performance if it is
+installed.
 
-Official releases of Param are available at
-`PyPI <http://pypi.python.org/pypi/param>`_, and can be installed via ``pip
-install --user param``, ``pip install param``, or ``easy_install param``.
-Windows users can alternatively download and run an installer (exe).
+Official releases of Param are available on
+`Anaconda <https://anaconda.org/ioam/param>`_ and
+`PyPI <http://pypi.python.org/pypi/param>`_, and can be installed via
+``conda install -c ioam param``, ``pip install --user param``, or 
+``pip install param``.
 
-More recent changes can be obtained by cloning the `git repository <http://github.com/ioam/param>`_.
+The very latest changes can always be obtained by cloning the `git
+repository <http://github.com/ioam/param>`_, but because Param is a
+very mature library, there is usually very little difference between
+the git and released versions.
 
 Comparison to other packages
 ============================
 
 Param was first developed in 2003, in the context of the Topographica brain simulator project, and
-was made into a separate package in 2012.  During that time there were other parameter libraries
+was made into a separate package in 2012.  In the interim other parameter libraries were
 developed, including `Traits <http://code.enthought.com/projects/traits>`_ and 
 `Traitlets <https://github.com/ipython/traitlets/>`_.  These libraries have broadly similar goals,
 but each differs in important ways:
@@ -151,31 +161,89 @@ but each differs in important ways:
 **Dependencies**: 
   Traits is a much more heavyweight solution, requiring 
   installation of a large suite of tools, including C code, which makes it difficult to include in 
-  separate projects.  Param and Traitlets are both pure Python projects, with minimal dependencies.  
+  separate projects.  In contrast, Param and Traitlets are both pure Python projects, with minimal dependencies.  
 
 **GUI toolkits**: 
-  The packages differ on which GUI toolkits are supported: Traits (via the 
-  separate TraitsUI package) supports wxWidgets and QT, while Param supports Tkinter (via the 
-  separate ParamTk package) and IPython widgets (via the separate ParamNB package), and Traitlets
-  supports IPython widgets.  
+  Although any of the packages could in principle add support for any
+  GUI toolkit, the toolkits actually provided differ: Traits (via the
+  separate TraitsUI package) supports wxWidgets and QT, while Param
+  supports Tkinter (via the separate ParamTk package) and
+  browser-based IPython widgets (via the separate ParamNB package),
+  while Traitlets only supports IPython widgets.
 
-**Dynamic support**: 
-  The packages differ in how they support "active" or "dynamic" values.  
-  Traits and Traitlets provide extensive mechanisms for defining custom callbacks and "onchange"
-  code associated with specific user-defined trait instances, which can be very valuable when it is
-  needed, but requires a significant amount of code to be written each time support for such 
-  dynamic execution is provided to users.  Param instead focuses on supporting dynamic parameter 
-  *values* for any parameter, not on implementing specific dynamic parameter *definitions*, 
-  allowing users to provide dynamic streams of values for any Parameter that has been defined.  
-  The `numbergen` package included with Param make it simple to define such streams (e.g. 
-  random values, values determined by a mathematical function, or values calculated using
-  arbitrary Python code). Users can then define a clock function for Param so that it is clear 
-  when the next dynamic value should be returned; each dynamic value is then a function of this
-  global clock value.  Param's approach is particularly well suited for use when there is a 
-  concept of time, whether simulated or real time, because it makes it simple to
-  coordinate many different dynamic parameter values without requiring any code to do the
-  coordination or handle generating the dynamic values themselves.
+..   >>> from time import time
+     >>> import traitlets as tr
+     >>> class A(tr.HasTraits):
+     ...     instantiation_time = tr.Float()
+     ...     @tr.default('instantiation_time')
+     ...     def _look_up_time(self):
+     ...         return time()
+     ... 
+     >>> a=A()
+     >>> a.instantiation_time
+     1475587151.967874
+     >>> a.instantiation_time
+     1475587151.967874
+     >>> b=A()
+     >>> b.instantiation_time
+     1475587164.750875
 
+**Dynamic values**:
+  Param, Traits, and Traitlets all allow any Python expression to be
+  supplied for initializing parameters, allowing parameter default
+  values to be computed at the time a module is first loaded.  Traits
+  and Traitlets also allow a class author to add code for a given
+  parameter to compute a default value on first access.  Param does
+  not provide any special support for programmatic default values,
+  instead allowing fully dynamic values for *any* numeric Parameter
+  instance:
+
+  >>> from time import time
+  >>> import param
+  >>> class A(param.Parameterized):
+  ...     val=param.Number(0)
+  ... 
+  >>> a=A()
+  >>> a.val
+  0
+  >>> a.val=lambda:time()
+  >>> a.val
+  1475587455.437027
+  >>> a.val
+  1475587456.501314
+
+  Note that here it is the *user* of a Parameterized class, not the
+  author of the class, that decides whether any particular value is
+  dynamic, without writing any new methods or other code.  All the
+  usual type checking, etc. is done on dynamic values when they are
+  computed, and so the rest of the code does not need to know or care
+  whether the user has set a particular parameter to a dynamic value.
+  This approach provides an enormous amount of power to the user,
+  without making the code more complex.
+
+**On_change callbacks**
+  Traitlets and Traits allow the author of a HasTraits-derived class
+  to specify code to run when a specific parameter used in that class
+  instance is modified.  Param supports similar capabilities, but not
+  at the Parameterized class level, only at the Parameter class level
+  or as part of ParamNB.  I.e., a class author needs to first write a
+  new Parameter class, adding methods to implement checking on
+  changes, and then add it to a Parameterized class, or else such
+  functionality can be added as callbacks at the whole-object level,
+  using ParamNB. Each approach has advantages and disadvantages, and
+  per-parameter on_change callbacks could be added in the future if
+  there are clear use cases.
+
+All of these packages also overlap in functionality with Python
+properties, which were added to the language after Traits and Param
+were developed.  Like parameters and traits, properties act like
+attributes with possible method-like actions, and so they can all be
+used to provide the same user-visible functionality.  However,
+implementing Param/Traits-like functionality using properties would
+require vastly more code (multiple method definitions for *every*
+parameter in a class), and so in practice Parameters and Traits are
+much more practical for the use cases that they cover.
+  
 Release Notes
 =============
 

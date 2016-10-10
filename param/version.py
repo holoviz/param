@@ -242,9 +242,7 @@ class Version(object):
                                 self.commit, dirty_status)
 
     def __repr__(self):
-        return "Version(%r,%r,%r)" % (self.release,
-                                      self.fpath if self.fpath else None,
-                                      self.commit)
+        return str(self)
 
     def abbrev(self,dev_suffix=""):
         """

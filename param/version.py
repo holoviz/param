@@ -233,7 +233,10 @@ class Version(object):
         """
         if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)
-        if self.commit_count == 0 and not self.dirty:
+
+        if (self.commit is not None) and  ("$Format" not in self.commit):
+            pass  # Concrete commit supplied - print full version string
+        elif (self.commit_count == 0 and not self.dirty):
             return release
 
         dirty_status = '-dirty' if self.dirty else ''
@@ -241,9 +244,7 @@ class Version(object):
                                 self.commit, dirty_status)
 
     def __repr__(self):
-        return "Version(%r,%r,%r)" % (self.release,
-                                      self.fpath if self.fpath else None,
-                                      self.commit)
+        return str(self)
 
     def abbrev(self,dev_suffix=""):
         """

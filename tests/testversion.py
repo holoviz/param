@@ -12,11 +12,15 @@ class TestVersion(unittest.TestCase):
 
     def test_repr_v1(self):
         v1 = Version(release=(1,0))
-        self.assertEqual(repr(v1), 'Version((1, 0),None,None)')
+        self.assertEqual(repr(v1), '1.0')
 
     def test_repr_v101(self):
-        v101 = Version(release=(1,0,1), commit='shortSHA')
-        self.assertEqual(repr(v101), "Version((1, 0, 1),None,'shortSHA')")
+        v101 = Version(release=(1,0,1), commit='fffffff')
+        self.assertEqual(repr(v101), '1.0.1-0-gfffffff')
+
+    def test_repr_v101_10_commits(self):
+        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa')
+        self.assertEqual(repr(v101), '1.0.1-10-gaaaaaaa')
 
     def test_version_init_v101(self):
         Version(release=(1,0,1))

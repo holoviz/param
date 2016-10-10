@@ -18,6 +18,10 @@ class TestVersion(unittest.TestCase):
         v101 = Version(release=(1,0,1), commit='fffffff')
         self.assertEqual(repr(v101), '1.0.1-0-gfffffff')
 
+    def test_repr_v101_10_commits(self):
+        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa')
+        self.assertEqual(repr(v101), '1.0.1-10-gaaaaaaa')
+
     def test_version_init_v101(self):
         Version(release=(1,0,1))
 

@@ -234,7 +234,7 @@ class Version(object):
         if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)
 
-        if (self.commit is not None) and  ("$Format" not in self.commit):
+        if (self._expected_commit is not None) and  ("$Format" not in self._expected_commit):
             pass  # Concrete commit supplied - print full version string
         elif (self.commit_count == 0 and not self.dirty):
             return release

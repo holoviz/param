@@ -14,7 +14,7 @@ import param
 
 
 from param.version import Version
-__version__ = Version(release=(1,4,1), fpath=__file__,
+__version__ = Version(release=(1,4,2), fpath=__file__,
                       commit="$Format:%h$", reponame="param")
 
 

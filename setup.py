@@ -20,7 +20,7 @@ setup_args = {}
 
 setup_args.update(dict(
     name='param',
-    version="1.4.1",
+    version="1.4.2",
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author= "IOAM",

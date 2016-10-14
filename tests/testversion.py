@@ -16,7 +16,8 @@ class TestVersion(unittest.TestCase):
 
     def test_repr_v101(self):
         v101 = Version(release=(1,0,1), commit='fffffff')
-        self.assertEqual(repr(v101), '1.0.1-0-gfffffff')
+        if not ((repr(v101) == '1.0.1-0-gfffffff') or (repr(v101), '1.0.1-x-gfffffff')):
+            raise AssertionError('Unexpected version string returned')
 
     def test_repr_v101_10_commits(self):
         v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa')

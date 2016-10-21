@@ -1351,7 +1351,7 @@ class Parameterized(object):
             warning_count+=1
             self.__db_print(WARNING,msg,*args,**kw)
         else:
-            raise Exception(' '.join(["Warning:",]+[str(x) for x in args]))
+            raise Exception("Warning: " + msg % args)
 
 
     def message(self,msg,*args,**kw):

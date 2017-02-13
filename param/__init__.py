@@ -990,11 +990,22 @@ class ObjectSelector(Selector):
             raise ValueError("%s not in Parameter %s's list of possible objects" \
                              %(val,attrib_name))
 
+    def _ensure_value_is_in_objects(self,val):
+        """
+        Make sure that the provided value is present on the objects list.
+        Subclasses can override if they support multiple items on a list,
+        to check each item instead.
+        """
+
+        if not (val in self.objects):
+           self.objects.append(val)
+         
     def __set__(self,obj,val):
         if self.check_on_set:
             self._check_value(val,obj)
-        elif not (val in self.objects):
-            self.objects.append(val)
+        else:
+            self._ensure_value_is_in_objects(val)
+
         super(ObjectSelector,self).__set__(obj,val)
 
 
@@ -1417,7 +1428,10 @@ class ListSelector(ObjectSelector):
         for o in val:
             super(ListSelector, self)._check_value(o, obj)
 
-
+    def _ensure_value_is_in_objects(self,val):
+        for o in val:
+            super(ListSelector, self)._ensure_value_is_in_objects(o)
+         
 
 class MultiFileSelector(ListSelector):
     """

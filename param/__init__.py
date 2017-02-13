@@ -17,6 +17,7 @@ Parameters and Parameterized classes.
 """
 
 import os.path
+import sys
 import glob
 
 from .parameterized import Parameterized, Parameter, String, \
@@ -43,6 +44,8 @@ try:
 except:
     __version__ = '1.4.2-unknown'
 
+if sys.version_info[0] >= 3:
+    unicode = str
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
@@ -64,6 +67,34 @@ def produce_value(value_obj):
         return value_obj()
     else:
         return value_obj
+
+
+def as_unicode(obj):
+    """
+    Safely casts any object to unicode including regular string
+    (i.e. bytes) types in python 2.
+    """
+    if sys.version_info.major < 3 and isinstance(obj, str):
+        obj = obj.decode('utf-8')
+    return unicode(obj)
+
+
+def named_objs(objlist):
+    """
+    Given a list of objects, returns a dictionary mapping from
+    string name for the object to the object itself.
+    """
+    objs = OrderedDict()
+    for obj in objlist:
+        if hasattr(obj, "name"):
+            k = obj.name
+        elif hasattr(obj, '__name__'):
+            k = obj.__name__
+        else:
+            k = as_unicode(obj)
+        objs[k] = obj
+    return objs
+
 
 
 class Infinity(object):
@@ -1015,9 +1046,7 @@ class ObjectSelector(Selector):
 
         (Returns the dictionary {object.name:object}.)
         """
-        return OrderedDict((obj.name if hasattr(obj,"name") \
-                     else obj.__name__ if hasattr(obj,"__name__") \
-                     else str(obj), obj) for obj in self.objects)
+        return named_objs(self.objects)
 
 
 class ClassSelector(Selector):

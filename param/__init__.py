@@ -19,6 +19,8 @@ Parameters and Parameterized classes.
 import os.path
 import sys
 import glob
+import re
+import datetime as dt
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
@@ -43,6 +45,15 @@ try:
                           commit="$Format:%h$", reponame="param")
 except:
     __version__ = '1.4.2-unknown'
+
+
+dt_types = (dt.datetime,)
+
+try:
+    import numpy as np
+    dt_types = dt_types + (np.datetime64,)
+except:
+    pass
 
 if sys.version_info[0] >= 3:
     unicode = str
@@ -1468,4 +1479,38 @@ class MultiFileSelector(ListSelector):
     def get_range(self):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
 
+
+class Date(Parameter):
+    """
+    Date parameter of datetime type.
+    """
+
+    def _check_value(self,val):
+        if not isinstance(val, dt_types) and not (self.allow_None and val is None):
+            raise ValueError("Date '%s' only takes datetime types."%self._attrib_name)
+
+    def __set__(self,obj,val):
+        self._check_value(val)
+        super(Date,self).__set__(obj,val)
+
+
+class Color(Parameter):
+    """
+    Color parameter defined as a hex RGB string with an optional #
+    prefix.
+    """
+
+    def __init__(self, default=None, allow_None=False, **kwargs):
+        super(Color, self).__init__(default=default, **kwargs)
+        self.allow_None = True if default is None else allow_None
+        self._check_value(default)
+
+    def _check_value(self,val):
+        if (self.allow_None and val is None):
+            return
+        if not isinstance(val, String.basestring):
+            raise ValueError("Color '%s' only takes a string value."%self._attrib_name)
+        if not re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val):
+            raise ValueError("Color '%s' only accepts valid RGB hex codes."
+                             % self._attrib_name)
 

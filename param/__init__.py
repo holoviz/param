@@ -1499,10 +1499,8 @@ class Date(Number):
     Date parameter of datetime type.
     """
 
-    def __init__(self, default=None, allow_None=False, **kwargs):
-        allow_None = True if default is None else allow_None
-        super(Date, self).__init__(default=default, allow_None=allow_None, **kwargs)
-        self._check_value(default)
+    def __init__(self, default=None, **kwargs):
+        super(Date, self).__init__(default=default, **kwargs)
 
     def _check_value(self,val):
         """
@@ -1540,7 +1538,7 @@ class Color(Parameter):
 
 
 class Range(NumericTuple):
-    """Range parameter represents a numeric range with option bounds and softbounds."""
+    "A numeric range with optional bounds and softbounds"
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds']
 

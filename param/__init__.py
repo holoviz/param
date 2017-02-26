@@ -19,6 +19,8 @@ Parameters and Parameterized classes.
 import os.path
 import sys
 import glob
+import re
+import datetime as dt
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
@@ -43,6 +45,15 @@ try:
                           commit="$Format:%h$", reponame="param")
 except:
     __version__ = '1.4.2-unknown'
+
+
+dt_types = (dt.datetime,)
+
+try:
+    import numpy as np
+    dt_types = dt_types + (np.datetime64,)
+except:
+    pass
 
 if sys.version_info[0] >= 3:
     unicode = str
@@ -1483,3 +1494,115 @@ class MultiFileSelector(ListSelector):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
 
 
+class Date(Number):
+    """
+    Date parameter of datetime type.
+    """
+
+    def __init__(self, default=None, **kwargs):
+        super(Date, self).__init__(default=default, **kwargs)
+
+    def _check_value(self,val):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        if self.allow_None and val is None:
+            return
+
+        if not isinstance(val, dt_types) and not (self.allow_None and val is None):
+            raise ValueError("Date '%s' only takes datetime types."%self._attrib_name)
+
+        self._checkBounds(val)
+
+
+class Color(Parameter):
+    """
+    Color parameter defined as a hex RGB string with an optional #
+    prefix.
+    """
+
+    def __init__(self, default=None, allow_None=False, **kwargs):
+        super(Color, self).__init__(default=default, **kwargs)
+        self._check_value(default)
+
+    def _check_value(self,val):
+        if (self.allow_None and val is None):
+            return
+        if not isinstance(val, String.basestring):
+            raise ValueError("Color '%s' only takes a string value."%self._attrib_name)
+        if not re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val):
+            raise ValueError("Color '%s' only accepts valid RGB hex codes."
+                             % self._attrib_name)
+
+
+
+class Range(NumericTuple):
+    "A numeric range with optional bounds and softbounds"
+
+    __slots__ = ['bounds', 'inclusive_bounds', 'softbounds']
+
+
+    def __init__(self,default=None, bounds=None, softbounds=None,
+                 inclusive_bounds=(True,True), **params):
+        self.bounds = bounds
+        self.inclusive_bounds = inclusive_bounds
+        self.softbounds = softbounds
+        super(Range,self).__init__(default=default,length=2,**params)
+
+
+    def _check(self,val):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        if self.allow_None and val is None:
+            return
+        super(Range, self)._check(val)
+
+        self._checkBounds(val)
+
+
+    def get_soft_bounds(self):
+        """
+        For each soft bound (upper and lower), if there is a defined bound (not equal to None)
+        then it is returned, otherwise it defaults to the hard bound. The hard bound could still be None.
+        """
+        if self.bounds is None:
+            hl,hu=(None,None)
+        else:
+            hl,hu=self.bounds
+
+        if self.softbounds is None:
+            sl,su=(None,None)
+        else:
+            sl,su=self.softbounds
+
+
+        if sl is None: l = hl
+        else:          l = sl
+
+        if su is None: u = hu
+        else:          u = su
+
+        return (l,u)
+
+
+    def rangestr(self):
+        vmin, vmax = self.bounds
+        incmin, incmax = self.inclusive_bounds
+        incmin = '[' if incmin else '('
+        incmax = ']' if incmax else ')'
+        return '%s%s, %s%s' % (incmin, vmin, vmax, incmax)
+
+
+    def _checkBounds(self, val):
+        if self.bounds is not None:
+            vmin,vmax = self.bounds
+            incmin,incmax = self.inclusive_bounds
+            for bound, v in zip(['lower', 'upper'], val):
+                too_low = (vmin is not None) and (v < vmin if incmin else v <= vmin)
+                too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
+                if too_low or too_high:
+                    raise ValueError("Parameter '%s' %s bound must be in range %s"
+                                     % (self._attrib_name, bound, self.rangestr()))

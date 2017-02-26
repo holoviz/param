@@ -1494,18 +1494,28 @@ class MultiFileSelector(ListSelector):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
 
 
-class Date(Parameter):
+class Date(Number):
     """
     Date parameter of datetime type.
     """
 
+    def __init__(self, default=None, allow_None=False, **kwargs):
+        allow_None = True if default is None else allow_None
+        super(Date, self).__init__(default=default, allow_None=allow_None, **kwargs)
+        self._check_value(default)
+
     def _check_value(self,val):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        if self.allow_None and val is None:
+            return
+
         if not isinstance(val, dt_types) and not (self.allow_None and val is None):
             raise ValueError("Date '%s' only takes datetime types."%self._attrib_name)
 
-    def __set__(self,obj,val):
-        self._check_value(val)
-        super(Date,self).__set__(obj,val)
+        self._checkBounds(val)
 
 
 class Color(Parameter):
@@ -1516,7 +1526,6 @@ class Color(Parameter):
 
     def __init__(self, default=None, allow_None=False, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
-        self.allow_None = True if default is None else allow_None
         self._check_value(default)
 
     def _check_value(self,val):

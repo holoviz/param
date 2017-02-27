@@ -1029,8 +1029,15 @@ class ObjectSelector(Selector):
                 attrib_name = self._attrib_name
             except AttributeError:
                 attrib_name = ""
-            raise ValueError("%s not in Parameter %s's list of possible objects" \
-                             %(val,attrib_name))
+
+            items = self.objects
+            limiter = ']'
+            if len(items) > 20:
+                items = items[:20]
+                limiter = ', ...]'
+            items = '[' + ', '.join(map(str, items)) + limiter
+            raise ValueError("%s not in Parameter %s's list of possible objects, "
+                             "valid options include %s"%(val,attrib_name, items))
 
     def _ensure_value_is_in_objects(self,val):
         """

@@ -1535,6 +1535,10 @@ class Color(Parameter):
             raise ValueError("Color '%s' only accepts valid RGB hex codes."
                              % self._attrib_name)
 
+    def __set__(self,obj,val):
+        self._check_value(val)
+        super(Color,self).__set__(obj,val)
+
 
 
 class Range(NumericTuple):

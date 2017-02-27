@@ -250,6 +250,18 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+
+1.5.0 (2017/02)
+_______________
+
+* Added Range, Color, and Date parameters
+* Improved ObjectSelector error messages
+* Minor bugfixes
+
+A full list of changes since the previous release is available
+`on GitHub <https://github.com/ioam/param/compare/v1.4.2...v1.5.0>`_.
+
+
 1.4.2 (2016/10)
 _______________
 
@@ -257,7 +269,7 @@ _______________
 * Minor bugfixes
 
 A full list of changes since the previous release is available 
-`on GitHub <https://github.com/ioam/param/compare/v1.4.1...v1.4.0>`_.
+`on GitHub <https://github.com/ioam/param/compare/v1.4.1...v1.4.2>`_.
 
 
 1.4.1 (2016/07)

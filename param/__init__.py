@@ -1030,12 +1030,18 @@ class ObjectSelector(Selector):
             except AttributeError:
                 attrib_name = ""
 
-            items = self.objects
+            items = []
             limiter = ']'
-            if len(items) > 20:
-                items = items[:20]
-                limiter = ', ...]'
-            items = '[' + ', '.join(map(str, items)) + limiter
+            length = 0
+            for item in self.objects:
+                string = str(item)
+                length += len(string)
+                if length < 200:
+                    items.append(string)
+                else:
+                    limiter = ', ...]'
+                    break
+            items = '[' + ', '.join(items) + limiter
             raise ValueError("%s not in Parameter %s's list of possible objects, "
                              "valid options include %s"%(val,attrib_name, items))
 

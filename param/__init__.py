@@ -1126,6 +1126,14 @@ class ClassSelector(Selector):
         return d
 
 
+    @classmethod
+    def from_parametrized_class(cls, templ_cls, **kwargs):
+        class SubClass(cls):
+            def __init__(self, **params):
+                super(SubClass, self).__init__(templ_cls, **params)
+        return SubClass(**kwargs)
+
+
 class List(Parameter):
     """
     Parameter whose value is a list of objects, usually of a specified type.

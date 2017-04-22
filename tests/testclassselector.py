@@ -2,8 +2,11 @@
 Unit test for ClassSelector parameters.
 """
 
-from numbers import Number
+import sys
 import unittest
+from numbers import Number
+
+from nose.plugins.skip import SkipTest
 import param
 
 
@@ -24,6 +27,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.e, 6)
 
     def test_single_class_instance_error(self):
+        if sys.version_info[:2] == (2, 6): raise SkipTest
         exception = "Parameter 'e' value must be an instance of int, not 'a'"
         with self.assertRaisesRegexp(ValueError, exception):
             p = self.P(e='a')
@@ -33,6 +37,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.f, float)
 
     def test_single_class_type_error(self):
+        if sys.version_info[:2] == (2, 6): raise SkipTest
         exception = "Parameter 'str' must be a subclass of Number, not 'type'"
         with self.assertRaisesRegexp(ValueError, exception):
             p = self.P(f=str)
@@ -46,6 +51,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.g, 'A')
 
     def test_multiple_class_instance_error(self):
+        if sys.version_info[:2] == (2, 6): raise SkipTest
         exception = "Parameter 'g' value must be an instance of \(int, str\), not '3.0'"
         with self.assertRaisesRegexp(ValueError, exception):
             p = self.P(g=3.0)
@@ -59,6 +65,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.h, str)
 
     def test_multiple_class_type_error(self):
+        if sys.version_info[:2] == (2, 6): raise SkipTest
         exception = "Parameter 'float' must be a subclass of \(int, str\), not 'type'"
         with self.assertRaisesRegexp(ValueError, exception):
             p = self.P(h=float)

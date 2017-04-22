@@ -1092,16 +1092,20 @@ class ClassSelector(Selector):
 
     def _check_value(self,val,obj=None):
         """val must be None, an instance of self.class_ if self.is_instance=True or a subclass of self_class if self.is_instance=False"""
+        if isinstance(self.class_, tuple):
+            class_name = ('(%s)' % ', '.join(cl.__name__ for cl in self.class_))
+        else:
+            class_name = self.class_.__name__
         if self.is_instance:
             if not (isinstance(val,self.class_)) and not (val is None and self.allow_None):
                 raise ValueError(
                     "Parameter '%s' value must be an instance of %s, not '%s'" %
-                    (self._attrib_name, self.class_.__name__, val))
+                    (self._attrib_name, class_name, val))
         else:
             if not (val is None and self.allow_None) and not (issubclass(val,self.class_)):
                 raise ValueError(
                     "Parameter '%s' must be a subclass of %s, not '%s'" %
-                    (val.__name__, self.class_.__name__, val.__class__.__name__))
+                    (val.__name__, class_name, val.__class__.__name__))
 
 
     def __set__(self,obj,val):

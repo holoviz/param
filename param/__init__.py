@@ -28,7 +28,7 @@ from .parameterized import Parameterized, Parameter, String, \
 from .parameterized import logging_level # pyflakes:ignore (needed for eval)
 from .parameterized import shared_parameters # pyflakes:ignore (needed for eval)
 
-try: 
+try:
    from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
@@ -615,7 +615,7 @@ class Number(Dynamic):
         super(Number,self).__set__(obj,val)
 
 
-    # Allow softbounds to be used like a normal attribute, as it 
+    # Allow softbounds to be used like a normal attribute, as it
     # probably should have been already (not _softbounds)
     @property
     def softbounds(self): return self._softbounds
@@ -1054,7 +1054,7 @@ class ObjectSelector(Selector):
 
         if not (val in self.objects):
            self.objects.append(val)
-         
+
     def __set__(self,obj,val):
         if self.check_on_set:
             self._check_value(val,obj)
@@ -1488,7 +1488,7 @@ class ListSelector(ObjectSelector):
     def _ensure_value_is_in_objects(self,val):
         for o in val:
             super(ListSelector, self)._ensure_value_is_in_objects(o)
-         
+
 
 class MultiFileSelector(ListSelector):
     """

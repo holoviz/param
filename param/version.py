@@ -197,7 +197,7 @@ class Version(object):
                 output = run_cmd([cmd, 'remote', '-v'],
                                  cwd=os.path.dirname(self.fpath))
                 repo_matches = ['/' + self.reponame + '.git' ,
-                                # A remote 'server:reponame.git' can also be referred 
+                                # A remote 'server:reponame.git' can also be referred
                                 # to (i.e. cloned) as `server:reponame`.
                                 '/' + self.reponame + ' ']
                 if not any(m in output for m in repo_matches):

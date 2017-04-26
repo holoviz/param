@@ -250,6 +250,15 @@ Release Notes
 Notable additions, or changes that may require users to alter code,
 are listed below.
 
+1.5.1 (2017/04)
+_______________
+
+* Fixed error messages for ClassSelector with tuple of classes
+* Added get and contains methods for ParamOverrides
+
+A full list of changes since the previous release is available
+`on GitHub <https://github.com/ioam/param/compare/v1.5.0...v1.5.1>`_.
+
 
 1.5.0 (2017/02)
 _______________

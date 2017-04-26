@@ -41,10 +41,10 @@ except ImportError as e:
 # only two required files.
 try:
     from .version import Version
-    __version__ = Version(release=(1,5,0), fpath=__file__,
+    __version__ = Version(release=(1,5,1), fpath=__file__,
                           commit="$Format:%h$", reponame="param")
 except:
-    __version__ = '1.5.0-unknown'
+    __version__ = '1.5.1-unknown'
 
 
 dt_types = (dt.datetime,)

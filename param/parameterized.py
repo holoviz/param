@@ -1802,6 +1802,15 @@ class ParamOverrides(dict):
         else:
             dict.__setattr__(self,name,val)
 
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __contains__(self, key):
+        return key in self.__dict__ or key in self._overridden.params()
+
     def _check_params(self,params):
         """
         Print a warning if params contains something that is not a

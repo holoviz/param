@@ -744,6 +744,9 @@ class Number(Dynamic):
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
+    def __init__(self,default=0,**params):
+       Number.__init__(self,default=default,**params)
+    
     def _check_value(self,val):
         if self.allow_None and val is None:
             return

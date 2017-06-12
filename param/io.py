@@ -75,7 +75,7 @@ def serialize(parameter):
                         d[key] = {}
                     d = d[key]
                 d[current_key[-1]] = parameter
-            return output
+            yield output
 
     list(switch_data_types(parameter, ()))
     return dict(output)

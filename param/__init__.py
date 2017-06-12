@@ -27,7 +27,7 @@ from .parameterized import Parameterized, Parameter, String, \
 
 from .parameterized import logging_level # pyflakes:ignore (needed for eval)
 from .parameterized import shared_parameters # pyflakes:ignore (needed for eval)
-
+from .io import *
 try:
    from collections import OrderedDict
 except ImportError:
@@ -746,7 +746,7 @@ class Integer(Number):
 
     def __init__(self,default=0,**params):
        Number.__init__(self,default=default,**params)
-    
+
     def _check_value(self,val):
         if self.allow_None and val is None:
             return
@@ -1150,6 +1150,7 @@ class List(Parameter):
         self.bounds = bounds
         Parameter.__init__(self,default=default,instantiate=instantiate,
                            **params)
+        #self.class_ = class_
         self._check_bounds(default)
 
     # Could add range() method from ClassSelector, to allow

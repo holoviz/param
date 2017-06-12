@@ -5,12 +5,14 @@ import param
 
 __all__ = ['serialize', 'deserialize',
            'to_yaml', 'to_json',
-           'from_yaml', 'from_yaml',]
+           'from_yaml', 'from_json',]
 
 def from_params_dict(parameter, obj=None):
     if hasattr(parameter, 'params'):
         for k, p in parameter.params().items():
-            if k in obj:
+            if k == 'name':
+                continue
+            if isinstance(obj, dict) and k in obj:
                 v = obj[k]
                 args = (p, v)
             else:
@@ -21,7 +23,8 @@ def from_params_dict(parameter, obj=None):
                 else:
                     p = v
             elif hasattr(p, 'params'):
-                setattr(parameter, k, from_params_dict(*args))
+                if k != 'name':
+                    setattr(parameter, k, from_params_dict(*args))
             else:
                 p = v
     else:
@@ -49,6 +52,8 @@ def serialize(parameter):
     output = {}
     def handle_dict_type(parameter, current_key):
         for key in parameter.params():
+            if key == 'name':
+                continue
             value = getattr(parameter, key)
             for item in switch_data_types(value, current_key + (key,)):
                 yield (current_key, item)
@@ -90,5 +95,5 @@ def to_yaml(parameter, fname):
 def to_json(parameter, fname):
     converted = serialize(parameter)
     with open(fname, 'w') as f:
-        json.dump(converted, indent=2)
+        json.dump(converted, f, indent=2)
 

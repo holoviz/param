@@ -1441,21 +1441,24 @@ class Parameterized(object):
             setattr(self,name,val)
 
 
-    def get_param_values(self,onlychanged=False):
+    @bothmethod
+    def get_param_values(self_or_cls,onlychanged=False):
         """
         Return a list of name,value pairs for all Parameters of this
         object.
 
-        If onlychanged is True, will only return values that are not
-        equal to the default value.
+        When called on an instance with onlychanged set to True, will
+        only return values that are not equal to the default value
+        (onlychanged has no effect when called on a class).
         """
         # CEB: we'd actually like to know whether a value has been
         # explicitly set on the instance, but I'm not sure that's easy
         # (would need to distinguish instantiation of default from
         # user setting of value).
         vals = []
-        for name,val in self.params().items():
-            value = self.get_value_generator(name)
+        for name,val in self_or_cls.params().items():
+            value = self_or_cls.get_value_generator(name)
+            # (this is pointless for cls)
             if not onlychanged or not all_equal(value,val.default):
                 vals.append((name,value))
 

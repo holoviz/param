@@ -1630,3 +1630,28 @@ class Range(NumericTuple):
                 if too_low or too_high:
                     raise ValueError("Parameter '%s' %s bound must be in range %s"
                                      % (self._attrib_name, bound, self.rangestr()))
+
+
+class DateRange(Range):
+    """
+    A date range specified as (start_date, end_date).
+
+    Dates must be specified as datetime-like types (see
+    param.dt_types).
+    """
+    def _check(self,val):
+        if self.allow_None and val is None:
+            return
+        
+        for n in val:
+            if not isinstance(n, dt_types):
+                raise ValueError("DateRange '%s' only takes datetime types: %s"%(self._attrib_name,val))
+
+        start, end = val
+        if not end >= start:
+           raise ValueError("DateRange '%s': end date %s is before start date %s."%(self._attrib_name,val[1],val[0]))
+        
+        # Calling super(DateRange, self)._check(val) would also check
+        # values are numeric, which is redundant, so just call
+        # _checkBounds().
+        self._checkBounds(val)

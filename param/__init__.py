@@ -1643,14 +1643,13 @@ class DateRange(Range):
         if self.allow_None and val is None:
             return
         
-        if not (self.allow_None and val is None):
-            for n in val:
-                if not isinstance(n, dt_types):
-                    raise ValueError("DateRange '%s' only takes datetime types: %s"%(self._attrib_name,val))
+        for n in val:
+            if not isinstance(n, dt_types):
+                raise ValueError("DateRange '%s' only takes datetime types: %s"%(self._attrib_name,val))
 
-            start, end = val
-            if not end >= start:
-               raise ValueError("DateRange '%s': end date %s is before start date %s."%(self._attrib_name,val[1],val[0]))
+        start, end = val
+        if not end >= start:
+           raise ValueError("DateRange '%s': end date %s is before start date %s."%(self._attrib_name,val[1],val[0]))
         
         # Calling super(DateRange, self)._check(val) would also check
         # values are numeric, which is redundant, so just call

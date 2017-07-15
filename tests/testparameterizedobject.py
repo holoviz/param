@@ -279,7 +279,9 @@ class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):
         super(TestParamOverrides, self).setUp()
-        self.po = param.Parameterized(name='A',print_level=0)
+        class AnotherTestPO(param.Parameterized):
+            print_level = param.Number(default=0)
+        self.po = AnotherTestPO(name='A',print_level=0)
 
     def test_init_name(self):
         self.assertEqual(self.po.name, 'A')

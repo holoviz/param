@@ -1761,7 +1761,7 @@ class ParamOverrides(Parameterized):
 
         Parameterized.__init__(self,**dict_)
 
-
+        
     def __getattribute__(self,name):
         """
         If the requested name is a parameter of the overridden object
@@ -1783,16 +1783,62 @@ class ParamOverrides(Parameterized):
         # already happened on overridden
         pass
 
-    # ParamOverrides was previously a dict, so support dict access (TODO: more to add)
+    ##########
+    # ParamOverrides was previously a dict, so support dict access
+    # Do we need this, except for backwards compatibility?
     def __getitem__(self,name):
-        # try/except raise IndexError is probably necessary?
-        return getattr(self,name)
+        try:
+            return getattr(self,name)
+        except AttributeError:
+            raise KeyError("%s not in %s"%(name,self))
 
-    # TODO: missing methods that previously existed:
-    #   * extra_keywords(),
-    #   * param_keywords()
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __contains__(self, key):
+        return key in self.params() or key in self.__dict__
+    ##########
+
     # TODO: check pickling (should work fine)
+    
+# TODO...
+#
+#    def extra_keywords(self):
+#        """
+#        Return a dictionary containing items from the originally
+#        supplied dict_ whose names are not parameters of the
+#        overridden object.
+#        """
+#        return self._extra_keywords
+#
+#    def param_keywords(self):
+#        """
+#        Return a dictionary containing items from the originally
+#        supplied dict_ whose names are parameters of the
+#        overridden object (i.e. not extra keywords/parameters).
+#        """
+#        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
+#
+#
+#    def _extract_extra_keywords(self,params):
+#        """
+#        Return any items in params that are not also
+#        parameters of the overridden object.
+#        """
+#        extra_keywords = {}
+#        overridden_object_params = self._overridden.params()
+#        for name,val in params.items():
+#            if name not in overridden_object_params:
+#                extra_keywords[name]=val
+#                # CEBALERT: should we remove name from params
+#                # (i.e. del params[name]) so that it's only available
+#                # via extra_keywords()?
+#        return extra_keywords
 
+    
 
 # Helper function required by ParameterizedFunction.__reduce__
 def _new_parameterized(cls):

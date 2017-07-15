@@ -281,6 +281,7 @@ class TestParamOverrides(unittest.TestCase):
         super(TestParamOverrides, self).setUp()
         class AnotherTestPO(param.Parameterized):
             print_level = param.Number(default=0)
+            some_param = param.Parameter(default="x")
         self.po = AnotherTestPO(name='A',print_level=0)
 
     def test_init_name(self):
@@ -343,12 +344,36 @@ class TestParamOverrides(unittest.TestCase):
         overrides = ParamOverrides(self.po,{'name':'B'})
         try:
             overrides['doesnotexist']
-        except AttributeError:
+        except KeyError:
             pass
         except:
-            raise AssertionError("ParamOverrides should give AttributeError when key can't be found.")
+            raise AssertionError("ParamOverrides should give KeyError when key can't be found.")
         else:
             raise AssertionError("Test supposed to lookup non-existent attribute and raise error.")
+
+        
+    def test_dict_like(self):
+        overrides = ParamOverrides(self.po,{'some_param':'y'})
+        
+        assert 'some_param' in overrides
+        assert 'print_level' in overrides        
+        assert 'bogus' not in overrides
+
+        overrides['some_param'] == 'y'
+        overrides['print_level'] == 0
+
+        try:
+            overrides['bogus']
+        except KeyError:
+            pass
+        else:
+            raise
+
+        assert overrides.get('some_param') == 'y'
+        assert overrides.get('print_level') == 0
+        
+        assert overrides.get('bogus') is None
+        assert overrides.get('bogus',20) is 20
 
 
 class TestSharedParameters(unittest.TestCase):
@@ -367,7 +392,6 @@ class TestSharedParameters(unittest.TestCase):
     def test_shared_list(self):
         self.assertTrue(self.p1.inst is self.p2.inst)
         self.assertTrue(self.p1.params('inst').default is not self.p2.inst)
-
 
 
 if __name__ == "__main__":

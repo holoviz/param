@@ -1735,9 +1735,10 @@ class ParamOverrides(Parameterized):
     # adding to ParamOverrides.
 
     def __init__(self,overridden,dict_,allow_extra_keywords=False):
-
         # CB: allow_extra_keywords(=False) only applies during
         # __init__ (matching previous ParamOverrides' behavior)
+        
+        self._overridden = overridden
         
         # each instance gets its own class in which to store the
         # parameter objects
@@ -1746,9 +1747,7 @@ class ParamOverrides(Parameterized):
                               # CB: remind myself how to get params of Parameterized
                               # (can't remember if params() is the best way; clean that up
                               # if necessary - see https://github.com/ioam/param/issues/8)                              
-                              overridden.params())
-
-        self._overridden = overridden
+                              overridden.params())        
 
         if allow_extra_keywords:
             dict_ = dict_.copy() # avoid removing keys from incoming dict_
@@ -1763,6 +1762,7 @@ class ParamOverrides(Parameterized):
         Parameterized.__init__(self,**dict_)
 
 
+<<<<<<< HEAD
     def __getattribute__(self,name): 
         # If name is 'special' (e.g. it's one of the various special
         # method names) or if (param-mangled)name is set locally on
@@ -1771,24 +1771,43 @@ class ParamOverrides(Parameterized):
         # Parameterized instance.
         look_in = self if (name.startswith('_') or '_%s_param_value'%name in self.__dict__ or name in self.__dict__) else self._overridden
         return Parameterized.__getattribute__(look_in,name)
+=======
+    def __getattribute__(self,name):
+        """
+        If the requested name is a parameter of the overridden object:
+        return its value from this ParamOverrides instance if it's
+        been set on this instance; otherwise, return its value from
+        the overridden instance.
+>>>>>>> Simplify ParamOverrides.__getattribute__ by only looking for parameters on overridden. Allows ParamOverrides to act like regular Parameterized otherwise.
 
+        If the requested name is not a parameter, look up name as
+        usual.
+        """
+        # Note: type(overridden) is like super() because
+        # ParamOverrides inherits from overridden's class
+        overridden = object.__getattribute__(self,'_overridden')
+        if name in overridden.params():
+            if '_%s_param_value'%name in object.__getattribute__(self,'__dict__'):
+                return type(overridden).__getattribute__(self,name)
+            else:
+                return getattr(overridden,name)
+        else:
+            return type(overridden).__getattribute__(self,name)
     
     def _instantiate_param(self,param_obj,dict_=None,key=None):
-        # Don't instantiate params into this object
+        # Don't instantiate params into this object because that
+        # already happened on overridden
         pass
 
-
-    # ParamOverrides was previously a dict
+    # ParamOverrides was previously a dict, so support dict access (TODO: more to add)
     def __getitem__(self,name):
         # try/except raise IndexError is probably necessary?
         return getattr(self,name)
 
-
-    # TODO: missing methods that previously existed: extra_keywords(),
-    # param_keywords()
-
-    # TODO: repr, pickle, etc    
-
+    # TODO: missing methods that previously existed:
+    #   * extra_keywords(),
+    #   * param_keywords()
+    # TODO: check pickling (should work fine)
 
 
 # Helper function required by ParameterizedFunction.__reduce__

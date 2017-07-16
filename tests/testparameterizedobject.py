@@ -440,7 +440,27 @@ class TestParamOverrides(unittest.TestCase):
                 return self._overrides.path
 
         assert A3(path=test_file) == test_path+test_file, A3(path=test_file)
-        
+
+    # another test to simplify one day!
+    def test_extra_keywords(self):
+        try:
+            old = param.parameterized.warnings_as_exceptions
+            param.parameterized.warnings_as_exceptions = True
+            p = param.ParamOverrides(self.po,{'extra':100},allow_extra_keywords=False)
+        except:
+            pass
+        else:
+            raise AssertionError
+        finally:
+            param.parameterized.warnings_as_exceptions = old
+            
+        p = param.ParamOverrides(self.po,{'extra':100},allow_extra_keywords=False)
+        assert len(p._extra_keywords) == 0
+
+        p = param.ParamOverrides(self.po,{'extra':100},allow_extra_keywords=True)
+        assert len(p._extra_keywords) == 1
+        assert p._extra_keywords['extra'] == 100
+
 
 class TestSharedParameters(unittest.TestCase):
 

@@ -1723,7 +1723,6 @@ def print_all_param_defaults():
 
 
 
-# CB: closely tied to Parameterized's implementation
 class ParamOverrides(Parameterized):
 
     # Note: __getattribute__ is overridden: see that method before
@@ -1744,6 +1743,7 @@ class ParamOverrides(Parameterized):
                               # if necessary - see https://github.com/ioam/param/issues/8)                              
                               overridden.params())        
 
+        self._extra_keywords = {}
         if allow_extra_keywords:
             dict_ = dict_.copy() # avoid removing keys from incoming dict_
 
@@ -1751,8 +1751,9 @@ class ParamOverrides(Parameterized):
             for name in set(dict_.keys()).difference(set(overridden.params().keys())):
                 # we avoid warnings by setting extra names before this
                 # instance is 'Parameterized'
-                setattr(self,name,dict_[name])
-                del dict_[name]
+                val = dict_.pop(name)
+                setattr(self,name,val)
+                self._extra_keywords[name] = val
 
         Parameterized.__init__(self,**dict_)
 
@@ -1803,14 +1804,13 @@ class ParamOverrides(Parameterized):
     
 # TODO...
 #
-#    def extra_keywords(self):
-#        """
-#        Return a dictionary containing items from the originally
-#        supplied dict_ whose names are not parameters of the
-#        overridden object.
-#        """
-#        return self._extra_keywords
-#
+    def extra_keywords(self):
+        """
+        Dictionary containing items from the originally supplied dict_
+        whose names are not parameters of the overridden object.
+        """
+        return self._extra_keywords
+
 #    def param_keywords(self):
 #        """
 #        Return a dictionary containing items from the originally

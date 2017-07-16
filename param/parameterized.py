@@ -1812,17 +1812,6 @@ class ParamOverrides(Parameterized):
         """
         return self._extra_keywords
 
-
-def overrides(m):
-    """Class decorator for creating a class with a metaclass."""
-    @wraps(m)
-    def wrapper(parameterized,*args,**params):
-        assert not hasattr(parameterized,'_overrides')
-        parameterized._overrides = ParamOverrides(parameterized,params)
-        result = m(parameterized,*args,**params)
-        del parameterized._overrides
-        return result
-    return wrapper
     
 
 # Helper function required by ParameterizedFunction.__reduce__

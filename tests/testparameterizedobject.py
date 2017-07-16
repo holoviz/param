@@ -28,7 +28,7 @@ import random
 from nose.tools import istest, nottest
 
 
-from param.parameterized import ParamOverrides, shared_parameters
+from param.parameterized import ParamOverrides, shared_parameters, overrides
 
 @nottest
 class _SomeRandomNumbers(object):
@@ -402,6 +402,36 @@ class TestParamOverrides(unittest.TestCase):
         assert a2() == test_path+test_file, a2()
         assert a2(path=test_file) == test_path+test_file, a2(path=test_file)
 
+    # this test's as bad as the one above except this one's still useful
+    def test_overrides_decorator(self):
+        # TODO: only good on linux/max - should do this properly
+        test_file = 'passwd'
+        test_path = '/etc/'
+
+        ###
+        # this will fail if the test itsel isn't working
+        class A2(param.Parameterized):
+            path = param.Path(search_paths=['/etc'])
+            def __call__(self,**params):
+                p = param.ParamOverrides(self,params)
+                return p.path
+
+        # the actual test...
+        a2 = A2(path=test_file)
+        assert a2() == test_path+test_file, a2()
+        assert a2(path=test_file) == test_path+test_file, a2(path=test_file)
+        ###
+
+        class A2(param.Parameterized):
+            path = param.Path(search_paths=['/etc'])
+            @overrides
+            def __call__(self,**params):
+                return self._overrides.path
+    
+        a2 = A2(path=test_file)
+        assert a2() == test_path+test_file, a2()
+        assert a2(path=test_file) == test_path+test_file, a2(path=test_file)
+        
 
 class TestSharedParameters(unittest.TestCase):
 

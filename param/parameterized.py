@@ -1802,8 +1802,6 @@ class ParamOverrides(Parameterized):
 
     # TODO: check pickling (should work fine)
     
-# TODO...
-#
     def extra_keywords(self):
         """
         Dictionary containing items from the originally supplied dict_
@@ -1811,29 +1809,6 @@ class ParamOverrides(Parameterized):
         """
         return self._extra_keywords
 
-#    def param_keywords(self):
-#        """
-#        Return a dictionary containing items from the originally
-#        supplied dict_ whose names are parameters of the
-#        overridden object (i.e. not extra keywords/parameters).
-#        """
-#        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
-#
-#
-#    def _extract_extra_keywords(self,params):
-#        """
-#        Return any items in params that are not also
-#        parameters of the overridden object.
-#        """
-#        extra_keywords = {}
-#        overridden_object_params = self._overridden.params()
-#        for name,val in params.items():
-#            if name not in overridden_object_params:
-#                extra_keywords[name]=val
-#                # CEBALERT: should we remove name from params
-#                # (i.e. del params[name]) so that it's only available
-#                # via extra_keywords()?
-#        return extra_keywords
 
 def overrides(m):
     """Class decorator for creating a class with a metaclass."""

@@ -1746,14 +1746,9 @@ class ParamOverrides(Parameterized):
         self._extra_keywords = {}
         if allow_extra_keywords:
             dict_ = dict_.copy() # avoid removing keys from incoming dict_
-
-            # CB: how to get keys as set for all the pythons?
+            # CB: only way I could think to support all the pythons
             for name in set(dict_.keys()).difference(set(overridden.params().keys())):
-                # we avoid warnings by setting extra names before this
-                # instance is 'Parameterized'
-                val = dict_.pop(name)
-                setattr(self,name,val)
-                self._extra_keywords[name] = val
+                self._extra_keywords[name] = dict_.pop(name)
 
         Parameterized.__init__(self,**dict_)
 
@@ -1782,8 +1777,10 @@ class ParamOverrides(Parameterized):
         pass
 
     ##########
-    # ParamOverrides was previously a dict, so support dict access
-    # Do we need this, except for backwards compatibility?
+    # ParamOverrides was previously a dict, so support whatever dict
+    # access appears to already be in use (not setting, hopefully...).
+    # Do we need this, except for backwards compatibility? Maybe mark
+    # for future removal?
     def __getitem__(self,name):
         try:
             return getattr(self,name)
@@ -1798,6 +1795,14 @@ class ParamOverrides(Parameterized):
 
     def __contains__(self, key):
         return key in self.params() or key in self.__dict__
+
+    # used a generator though params() itself is not
+    # Also, in py2.6, dict items wouldn't be generator...
+    def items(self):
+        for name in self.params().keys():
+            yield name,getattr(self,name)
+        for key,value in self._extra_keywords.items():
+            yield key,value
     ##########
 
     def extra_keywords(self):

@@ -375,6 +375,8 @@ class TestParamOverrides(unittest.TestCase):
         assert overrides.get('bogus') is None
         assert overrides.get('bogus',20) is 20
 
+        assert [('name', overrides.name), ('print_level', 0), ('some_param', 'y')] == sorted(overrides.items())
+
     # this test is about checking things are looked up normally (like
     # for dynamic tests above) so is probably redundant now
     # paramoverrides is itself a parameterized object.

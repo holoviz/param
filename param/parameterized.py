@@ -1800,8 +1800,6 @@ class ParamOverrides(Parameterized):
         return key in self.params() or key in self.__dict__
     ##########
 
-    # TODO: check pickling (should work fine)
-    
     def extra_keywords(self):
         """
         Dictionary containing items from the originally supplied dict_

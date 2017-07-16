@@ -7,6 +7,7 @@ python:
   - "3.5"
   - "3.6"
   - "pypy"
+  - "pypy3"
 
 notifications:
   email:
@@ -20,7 +21,7 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install ipython; fi
 
 script:
-  - nosetests --with-doctest --with-coverage --cover-package=param
+  - nosetests --verbose --with-doctest --with-coverage --cover-package=param
   - flake8 --statistics --exit-zero --ignore=E231 param numbergen
 
 after_success: coveralls

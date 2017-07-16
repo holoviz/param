@@ -1723,11 +1723,6 @@ def print_all_param_defaults():
 
 
 
-# Note that with Python 2.6, a fn's **args no longer has to be a
-# dictionary. This might allow us to use a decorator to simplify using
-# ParamOverrides (if that does indeed make them simpler to use).
-# http://docs.python.org/whatsnew/2.6.html
-
 # CB: closely tied to Parameterized's implementation
 class ParamOverrides(Parameterized):
 

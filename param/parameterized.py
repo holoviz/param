@@ -527,7 +527,7 @@ class String(Parameter):
     def __init__(self, default="", allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self._check_value(default)
-        self.allow_None = allow_None
+        self.allow_None = (default is None or allow_None)
 
     def _check_value(self,val):
         if not isinstance(val, self.basestring) and not (self.allow_None and val is None):

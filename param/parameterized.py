@@ -1770,14 +1770,16 @@ class ParamOverrides(Parameterized):
 
         Otherwise get name as usual.
         """
-        # Note: type(overridden) is like super() because
-        # ParamOverrides inherits from overridden's class
         overridden = object.__getattribute__(self,'_overridden')
         if name in overridden.params():
             if '_%s_param_value'%name not in object.__getattribute__(self,'__dict__'):
                 return getattr(overridden,name)
-        return type(overridden).__getattribute__(self,name)
-    
+        # type(overridden).__getattribute__ might be better in case
+        # __getattribute__ is ever overridden on some parameterized class,
+        # but that currently results in endless recursion on
+        # pypy (though it works on cpython)
+        return object.__getattribute__(self,name)
+ 
     def _instantiate_param(self,param_obj,dict_=None,key=None):
         # Don't instantiate params into this object because that
         # already happened on overridden

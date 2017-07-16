@@ -431,6 +431,15 @@ class TestParamOverrides(unittest.TestCase):
         a2 = A2(path=test_file)
         assert a2() == test_path+test_file, a2()
         assert a2(path=test_file) == test_path+test_file, a2(path=test_file)
+        assert not hasattr(a2,'_overrides')
+
+        class A3(param.ParameterizedFunction):
+            path = param.Path(search_paths=['/etc'])
+            @overrides
+            def __call__(self,**params):
+                return self._overrides.path
+
+        assert A3(path=test_file) == test_path+test_file, A3(path=test_file)
         
 
 class TestSharedParameters(unittest.TestCase):

@@ -573,7 +573,7 @@ class Number(Dynamic):
       AB = Number(default=0.5, bounds=(None,10), softbounds=(0,1), doc='Distance from A to B.')
     """
 
-    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook']
+    __slots__ = ['bounds','_softbounds','inclusive_bounds']
 
     def __init__(self,default=0.0,bounds=None,softbounds=None,inclusive_bounds=(True,True),**params):
         """
@@ -582,8 +582,6 @@ class Number(Dynamic):
         Non-dynamic default values are checked against the bounds.
         """
         super(Number,self).__init__(default=default,**params)
-
-        self.set_hook = identity_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
@@ -609,8 +607,6 @@ class Number(Dynamic):
         Also applies set_hook, providing support for conversions
         and transformations of the value.
         """
-        val = self.set_hook(obj,val)
-
         if not callable(val): self._check_value(val)
         super(Number,self).__set__(obj,val)
 

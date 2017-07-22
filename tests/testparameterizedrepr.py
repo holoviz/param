@@ -3,6 +3,8 @@ Unit test for the repr and pprint of parameterized objects.
 """
 
 import unittest
+from nose.plugins.skip import SkipTest
+
 import param
 
 
@@ -71,6 +73,11 @@ class TestParameterizedRepr(unittest.TestCase):
                 super(E, self).__init__(**params)
 
         self.E = E
+
+        class A2(param.Parameterized):
+            arr = param.Parameter()
+
+        self.A2 = A2
 
 
     def testparameterizedrepr(self):
@@ -160,7 +167,23 @@ class TestParameterizedRepr(unittest.TestCase):
         self.assertEqual(obj.pprint(qualify=True),
                          "tests.testparameterizedrepr."+r)
 
+    def test_nparray(self):
+        try:
+            import numpy as np
+        except ImportError:
+            raise SkipTest
 
+        obj = self.A2()
+        a = [[1,2],[3,4]]
+        import numpy as np
+        obj.arr = np.array(a)
+        obj.pprint() # no problem
+        self.A2.arr = a
+        obj.arr = a
+        obj.pprint() # no problem
+        obj.arr = np.array(a)
+        obj.pprint() # truth value of array with more than one element is ambiguous
+        
 
 if __name__ == "__main__":
     import nose

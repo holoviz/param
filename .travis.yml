@@ -14,6 +14,7 @@ notifications:
 
 # no dependencies for py2.7+ (coveralls, ipython, flake8 only needed for testing)
 install:
+  - pip freeze
   - pip install coveralls flake8
   - if [[ $TRAVIS_PYTHON_VERSION == 2.6 ]]; then pip install ipython==1.0 ordereddict flake8==2.6; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install ipython==5.3; fi

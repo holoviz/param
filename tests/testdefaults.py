@@ -15,9 +15,20 @@ positional_args = {
     ClassSelector: (object,)
 }
 
+skip = []
+
+try:
+    import numpy
+except ImportError:
+    skip.append('Array')
+
 
 class TestDefaultsMetaclass(type):
     def __new__(mcs, name, bases, dict_):
+
+        def test_skip(*args,**kw):
+            from nose.exc import SkipTest
+            raise SkipTest
 
         def add_test(p):
             def test(self):
@@ -27,7 +38,7 @@ class TestDefaultsMetaclass(type):
             return test
 
         for p_name, p_type in concrete_descendents(Parameter).items():
-            dict_["test_default_of_%s"%p_name] = add_test(p_type)
+            dict_["test_default_of_%s"%p_name] = add_test(p_type) if p_name not in skip else test_skip
 
         return type.__new__(mcs, name, bases, dict_)
 

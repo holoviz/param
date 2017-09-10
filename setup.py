@@ -7,25 +7,14 @@ try:
 except ImportError:
     from distutils.core import setup
 
-try:
-    # check we can compile on this machine
-    import cython; cython.inline("return 1;")
-    
-    from Cython.Build import cythonize
-    ext_modules = cythonize("param/*.py", exclude=['param/ipython.py'])
-except:
-    ext_modules = []
 
-setup_args = {}
-
-setup_args.update(dict(
+setup_args = dict(
     name='param',
     version="1.5.1",
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author= "IOAM",
     author_email= "developers@topographica.org",
-    ext_modules=ext_modules,
     maintainer="IOAM",
     maintainer_email="developers@topographica.org",
     platforms=['Windows', 'Mac OS X', 'Linux'],
@@ -45,7 +34,7 @@ setup_args.update(dict(
         "Natural Language :: English",
         "Topic :: Scientific/Engineering",
         "Topic :: Software Development :: Libraries"]
-))
+)
 
 
 

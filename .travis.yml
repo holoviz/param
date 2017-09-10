@@ -18,7 +18,7 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.6 ]]; then pip install ipython==1.0 ordereddict flake8==2.6; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install ipython==5.3; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install ipython; fi
-  - conda env export
+  - pip freeze
 
 script:
   - nosetests --with-doctest --with-coverage --cover-package=param

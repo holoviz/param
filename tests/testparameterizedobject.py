@@ -377,6 +377,11 @@ class TestParamOverrides(unittest.TestCase):
 
         assert [('name', overrides.name), ('print_level', 0), ('some_param', 'y')] == sorted(overrides.items())
 
+    def test_is_mapping(self):
+        def f(**kw): pass
+        overrides = ParamOverrides(self.po,{'some_param':'y'})
+        f(**overrides)
+    
     # this test is about checking things are looked up normally (like
     # for dynamic tests above) so is probably redundant now
     # paramoverrides is itself a parameterized object.
@@ -425,6 +430,23 @@ class TestParamOverrides(unittest.TestCase):
         assert len(p._extra_keywords) == 1
         assert p._extra_keywords['extra'] == 100
 
+    def test_nonparamattr(self):
+        x = AnotherTestPO(name='A')
+        x.some_other_thing = 1
+        assert x.some_other_thing == 1
+        overrides = ParamOverrides(x,{'some_param':'y'})
+        assert overrides.some_other_thing == 1
+        
+    def test_param_keywords(self):
+        overrides = ParamOverrides(self.po,{'name':'B','an_extra_thing':1},allow_extra_keywords=True)
+        assert 'an_extra_thing' in overrides.extra_keywords()
+        assert 'an_extra_thing' not in overrides.param_keywords()
+
+    def test_pickle(self):
+        overrides = ParamOverrides(self.po,{'name':'B','an_extra_thing':1},allow_extra_keywords=True)
+        import pickle
+        pkl = pickle.dumps(overrides)
+        
 
 class TestSharedParameters(unittest.TestCase):
 

@@ -107,10 +107,12 @@ class Version(object):
     compute the number of commits since the last version tag, the
     short commit hash, and whether the commit is dirty (has changes
     not yet committed). Version tags must start with a lowercase 'v'
-    and have a period in them, e.g. v2.0, v0.9.8, v0.1a, or v0.2beta.
-    Note that any non-numeric portion of the version ("a", "beta",
-    etc.)  will currently be discarded for the purposes of numeric
-    comparisons.
+    and have a period in them, e.g. v2.0, v0.9.8 or v0.1.
+
+    Development versions are supported by setting the dev argument to an
+    appropriate number. The corresponding tag then takes the form
+    v0.1dev3, v1.9.0dev2 etc and the version string will be formatted in
+    the corresponding manner.
 
     Also note that when version control system (VCS) information is
     used, the comparison operators take into account the number of
@@ -126,12 +128,14 @@ class Version(object):
       __init__.py export-subst
     """
 
-    def __init__(self, release=None, fpath=None, commit=None, reponame=None, commit_count=0):
+    def __init__(self, release=None, fpath=None, commit=None,
+                 reponame=None, dev=None, commit_count=0):
         """
         :release:      Release tuple (corresponding to the current VCS tag)
         :commit        Short SHA. Set to '$Format:%h$' for git archive support.
         :fpath:        Set to ``__file__`` to access version control information
         :reponame:     Used to verify VCS repository name.
+        :dev:          Development version number. None if not a development version.
         :commit_count  Commits since last release. Set for dev releases.
         """
         self.fpath = fpath
@@ -143,6 +147,7 @@ class Version(object):
         self._release = None
         self._dirty = False
         self.reponame = reponame
+        self.dev = dev
 
     @property
     def release(self):
@@ -212,6 +217,11 @@ class Version(object):
             return self
 
         split = output[1:].split('-')
+        if 'dev' in split[0]:
+            dev_split = split[0].split('dev')
+            self.dev = int(dev_split[1])
+            split[0] = dev_split[0]
+
         self._release = tuple(int(el) for el in split[0].split('.'))
         self._commit_count = int(split[1])
         self._commit = str(split[2][1:]) # Strip out 'g' prefix ('g'=>'git')
@@ -233,6 +243,7 @@ class Version(object):
         """
         if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)
+        release = '%sdev%d' % (release, self.dev) if self.dev else release
 
         if (self._expected_commit is not None) and  ("$Format" not in self._expected_commit):
             pass  # Concrete commit supplied - print full version string
@@ -255,7 +266,6 @@ class Version(object):
             (dev_suffix if self.commit_count > 0 or self.dirty else "")
 
 
-
     def __eq__(self, other):
         """
         Two versions are considered equivalent if and only if they are
@@ -265,13 +275,25 @@ class Version(object):
         changes even for the same release and commit count.
         """
         if self.dirty or other.dirty: return False
-        return (self.release, self.commit_count) == (other.release, other.commit_count)
+        return ((self.release, self.commit_count, self.dev)
+                == (other.release, other.commit_count, other.dev))
 
     def __gt__(self, other):
-        return (self.release, self.commit_count) > (other.release, other.commit_count)
+        if self.release == other.release:
+            if self.dev == other.dev:
+                return self.commit_count > other.commit_count
+            elif None in [self.dev, other.dev]:
+                return self.dev is None
+            else:
+                return self.dev > other.dev
+        else:
+            return (self.release, self.commit_count) > (other.release, other.commit_count)
 
     def __lt__(self, other):
-        return (self.release, self.commit_count) < (other.release, other.commit_count)
+        if self==other:
+            return False
+        else:
+            return not (self > other)
 
 
     def verify(self, string_version=None):

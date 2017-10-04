@@ -129,7 +129,7 @@ class Version(object):
     """
 
     def __init__(self, release=None, fpath=None, commit=None,
-                 reponame=None, dev=None, commit_count=0):
+                 reponame=None, dev=None, commit_count=0, pep440=True):
         """
         :release:      Release tuple (corresponding to the current VCS tag)
         :commit        Short SHA. Set to '$Format:%h$' for git archive support.
@@ -148,6 +148,7 @@ class Version(object):
         self._dirty = False
         self.reponame = reponame
         self.dev = dev
+        self.pep440 = pep440
 
     @property
     def release(self):
@@ -220,7 +221,8 @@ class Version(object):
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')
             self.dev = int(dev_split[1])
-            split[0] = dev_split[0]
+            # Remove the dot if following pep440
+            split[0] = dev_split[0][1:] if self.pep440 else dev_split[0]
 
         self._release = tuple(int(el) for el in split[0].split('.'))
         self._commit_count = int(split[1])
@@ -243,7 +245,8 @@ class Version(object):
         """
         if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)
-        release = '%sdev%d' % (release, self.dev) if self.dev else release
+        release = ('%s%sdev%d' % (release, '.' if self.pep440 else '', self.dev)
+                   if self.dev else release)
 
         if (self._expected_commit is not None) and  ("$Format" not in self._expected_commit):
             pass  # Concrete commit supplied - print full version string

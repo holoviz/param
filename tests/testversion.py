@@ -24,7 +24,13 @@ class TestVersion(unittest.TestCase):
         self.assertEqual(repr(v101), '1.0.1-10-gaaaaaaa')
 
     def test_repr_v101dev4_10_commits(self):
-        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa', dev=4)
+        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa',
+                       dev=4, pep440=True)
+        self.assertEqual(repr(v101), '1.0.1.dev4-10-gaaaaaaa')
+
+    def test_repr_v101dev4_10_commits_wo_pep440(self):
+        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa',
+                       dev=4, pep440=False)
         self.assertEqual(repr(v101), '1.0.1dev4-10-gaaaaaaa')
 
     def test_version_init_v101(self):
@@ -40,6 +46,10 @@ class TestVersion(unittest.TestCase):
 
     def test_version_str_v1dev3(self):
         v1 = Version(release=(1,0),dev=3)
+        self.assertEqual(str(v1), '1.0.dev3')
+
+    def test_version_str_v1dev3_wo_pep440(self):
+        v1 = Version(release=(1,0),dev=3, pep440=False)
         self.assertEqual(str(v1), '1.0dev3')
 
     def test_version_v1_dirty(self):

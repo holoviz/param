@@ -219,14 +219,14 @@ class Version(object):
 
         self._update_from_vcs(output)
 
-    def _update_from_vcs(output):
+    def _update_from_vcs(self, output):
         "Update state based on the VCS state e.g the output of git describe"
         split = output[1:].split('-')
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')
             self.dev = int(dev_split[1])
             # Remove the dot if following pep440
-            split[0] = dev_split[0][1:] if self.pep440 else dev_split[0]
+            split[0] = dev_split[0][:-1] if self.pep440 else dev_split[0]
 
         self._release = tuple(int(el) for el in split[0].split('.'))
         self._commit_count = int(split[1])

@@ -81,6 +81,34 @@ class TestVersion(unittest.TestCase):
         v1 = Version(release=(1,0), commit='shortSHA')
         self.assertEqual(v1.commit, 'shortSHA')
 
+    #===========================================#
+    #  Update from VCS (currently git describe) #
+    #===========================================#
+
+    def test_version_simple_git_describe(self):
+        v105 = Version(release=(1,0,5))
+        v105._update_from_vcs('v1.0.5-42-gabcdefgh')
+        self.assertEqual(v105.release, (1,0,5))
+        self.assertEqual(v105.commit_count, 42)
+        self.assertEqual(v105.dev, None)
+        self.assertEqual(v105.commit, 'abcdefgh')
+
+    def test_version_dev_pep440_git_describe(self):
+        v105 = Version(release=(1,0,5), dev=4, pep440=True)
+        v105._update_from_vcs('v1.0.6.dev4-42-gabcdefgh')
+        self.assertEqual(v105.release, (1,0,6))
+        self.assertEqual(v105.commit_count, 42)
+        self.assertEqual(v105.dev, 4)
+        self.assertEqual(v105.commit, 'abcdefgh')
+
+    def test_version_dev_wo_pep440_git_describe(self):
+        v105 = Version(release=(1,0,5), dev=4, pep440=False)
+        v105._update_from_vcs('v1.0.6dev4-42-gabcdefgh')
+        self.assertEqual(v105.release, (1,0,6))
+        self.assertEqual(v105.commit_count, 42)
+        self.assertEqual(v105.dev, 4)
+        self.assertEqual(v105.commit, 'abcdefgh')
+
     #===========================#
     #  Comparisons and equality #
     #===========================#

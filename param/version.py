@@ -217,6 +217,10 @@ class Version(object):
             # If there is any other error, return (release value still useful)
             return self
 
+        self._update_from_vcs(output)
+
+    def _update_from_vcs(output):
+        "Update state based on the VCS state e.g the output of git describe"
         split = output[1:].split('-')
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')

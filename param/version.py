@@ -110,9 +110,10 @@ class Version(object):
     and have a period in them, e.g. v2.0, v0.9.8 or v0.1.
 
     Development versions are supported by setting the dev argument to an
-    appropriate number. The corresponding tag then takes the form
-    v0.1dev3, v1.9.0dev2 etc and the version string will be formatted in
-    the corresponding manner.
+    appropriate dev version number. The corresponding tag can be PEP440
+    compliant (using .devX) of the form v0.1.dev3, v1.9.0.dev2 etc but
+    it doesn't have to be as the dot may be omitted i.e v0.1dev3,
+    v1.9.0dev2 etc.
 
     Also note that when version control system (VCS) information is
     used, the comparison operators take into account the number of
@@ -129,7 +130,7 @@ class Version(object):
     """
 
     def __init__(self, release=None, fpath=None, commit=None,
-                 reponame=None, dev=None, commit_count=0, pep440=True):
+                 reponame=None, dev=None, commit_count=0):
         """
         :release:      Release tuple (corresponding to the current VCS tag)
         :commit        Short SHA. Set to '$Format:%h$' for git archive support.
@@ -148,7 +149,6 @@ class Version(object):
         self._dirty = False
         self.reponame = reponame
         self.dev = dev
-        self.pep440 = pep440
 
     @property
     def release(self):
@@ -225,8 +225,10 @@ class Version(object):
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')
             self.dev = int(dev_split[1])
-            # Remove the dot if following pep440
-            split[0] = dev_split[0][:-1] if self.pep440 else dev_split[0]
+            split[0] = dev_split[0]
+            # Remove the pep440 dot if present
+            if split[0].endswith('.'):
+                split[0] = dev_split[0][:-1]
 
         self._release = tuple(int(el) for el in split[0].split('.'))
         self._commit_count = int(split[1])
@@ -249,8 +251,7 @@ class Version(object):
         """
         if self.release is None: return 'None'
         release = '.'.join(str(el) for el in self.release)
-        release = ('%s%sdev%d' % (release, '.' if self.pep440 else '', self.dev)
-                   if self.dev else release)
+        release = '%s.dev%d' % (release, self.dev) if self.dev is not None else release
 
         if (self._expected_commit is not None) and  ("$Format" not in self._expected_commit):
             pass  # Concrete commit supplied - print full version string

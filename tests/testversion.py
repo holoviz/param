@@ -24,14 +24,8 @@ class TestVersion(unittest.TestCase):
         self.assertEqual(repr(v101), '1.0.1-10-gaaaaaaa')
 
     def test_repr_v101dev4_10_commits(self):
-        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa',
-                       dev=4, pep440=True)
+        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa', dev=4)
         self.assertEqual(repr(v101), '1.0.1.dev4-10-gaaaaaaa')
-
-    def test_repr_v101dev4_10_commits_wo_pep440(self):
-        v101 = Version(release=(1,0,1), commit_count=10, commit='aaaaaaa',
-                       dev=4, pep440=False)
-        self.assertEqual(repr(v101), '1.0.1dev4-10-gaaaaaaa')
 
     def test_version_init_v101(self):
         Version(release=(1,0,1))
@@ -47,10 +41,6 @@ class TestVersion(unittest.TestCase):
     def test_version_str_v1dev3(self):
         v1 = Version(release=(1,0),dev=3)
         self.assertEqual(str(v1), '1.0.dev3')
-
-    def test_version_str_v1dev3_wo_pep440(self):
-        v1 = Version(release=(1,0),dev=3, pep440=False)
-        self.assertEqual(str(v1), '1.0dev3')
 
     def test_version_v1_dirty(self):
         v1 = Version(release=(1,0))
@@ -94,7 +84,7 @@ class TestVersion(unittest.TestCase):
         self.assertEqual(v105.commit, 'abcdefgh')
 
     def test_version_dev_pep440_git_describe(self):
-        v105 = Version(release=(1,0,5), dev=4, pep440=True)
+        v105 = Version(release=(1,0,5), dev=4)
         v105._update_from_vcs('v1.0.6.dev4-42-gabcdefgh')
         self.assertEqual(v105.release, (1,0,6))
         self.assertEqual(v105.commit_count, 42)
@@ -102,7 +92,7 @@ class TestVersion(unittest.TestCase):
         self.assertEqual(v105.commit, 'abcdefgh')
 
     def test_version_dev_wo_pep440_git_describe(self):
-        v105 = Version(release=(1,0,5), dev=4, pep440=False)
+        v105 = Version(release=(1,0,5), dev=4)
         v105._update_from_vcs('v1.0.6dev4-42-gabcdefgh')
         self.assertEqual(v105.release, (1,0,6))
         self.assertEqual(v105.commit_count, 42)

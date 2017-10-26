@@ -16,8 +16,15 @@ requirements:
     - python
 
 test:
+  requires:
+    - nose
+  source_files:
+    - tests
   imports:
     - param
+    - numbergen
+  commands:
+    - nosetests tests
 
 about:
   home: https://github.com/ioam/param

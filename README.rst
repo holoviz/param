@@ -20,7 +20,7 @@ official releases, installation instructions, documentation, and examples.
 .. _TravisBuildStatus: https://travis-ci.org/ioam/param
 
 .. |AppveyorBuildStatus| image:: https://ci.appveyor.com/api/projects/status/huoiwwamso2or7xw/branch/master?svg=true
-.. _AppveyorBuildStatus: https://ci.appveyor.com/project/ioam/param/branch/master
+.. _AppveyorBuildStatus: https://ci.appveyor.com/project/Ioam/param/branch/master
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param

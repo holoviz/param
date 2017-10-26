@@ -23,6 +23,12 @@ jobs:
       script:
         - tox -e $TOX_ENV
 
+    - <<: *tests
+      env: TOX_ENV=numpy
+
+    - <<: *tests
+      env: TOX_ENV=ipython
+
 #    - <<: *tests
 #      stage: lint
 #      env: TOX_ENV=flake8

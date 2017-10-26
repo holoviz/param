@@ -2,6 +2,8 @@ environment:
   matrix:
     - TOXENV: py27
     - TOXENV: py36
+    - TOXENV: ipython
+    - TOXENV: numpy
 
 matrix:
   fast_finish: true

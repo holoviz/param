@@ -1,11 +1,14 @@
-#!/usr/bin/env python
 import os
-#import sys
+import sys
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+install_requires = []
+if sys.version_info.major==2 and sys.version_info.minor<=6:
+    install_requires+=['ordereddict']
 
 
 setup_args = dict(
@@ -22,6 +25,7 @@ setup_args = dict(
     url='http://ioam.github.com/param/',
     packages = ["param","numbergen"],
     provides = ["param","numbergen"],
+    install_requires = install_requires,
     classifiers = [
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",

@@ -1,0 +1,22 @@
+environment:
+  matrix:
+    - TOXENV: flake8
+    - TOXENV: py27
+    - TOXENV: py36
+
+#matrix:
+#  fast_finish: true
+
+build: false
+
+install: C:\Python36\python -m pip install -U tox
+
+test_script: C:\Python36\scripts\tox
+
+#after_test:
+#  - if exist .coverage.* (C:\Python36\scripts\tox -e coverage) else (echo no .coverage files)
+#  - if exist coverage.xml (C:\Python36\scripts\tox -e codecov) else (echo no coverage.xml)
+
+#cache:
+#  - '%LOCALAPPDATA%\pip\cache'
+#  - '%USERPROFILE%\.cache\pre-commit'

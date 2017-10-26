@@ -1,3 +1,8 @@
+# TODO:
+# * caching
+# * decide what to do about param.version
+# * fast finish
+
 sudo: false
 
 language: python

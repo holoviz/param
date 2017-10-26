@@ -145,12 +145,16 @@ Official releases of Param are available on
 
 The very latest changes can be obtained via ``conda install -c cball
 param`` or ``pip install
-https://github.com/ioam/param/archive/master.zip``.  Alternatively,
-the `git repository <http://github.com/ioam/param>`_ can be cloned and
-then 'develop installed' via ``pip install -e .`` or ``python setup.py
-develop``. To run the tests, you can install and run `tox
-<https://tox.readthedocs.io/en/latest/>`_, or otherwise install `nose
-<http://nose.readthedocs.io/en/latest/>`_ and run ``nosetests``.
+https://github.com/ioam/param/archive/master.zip``.
+
+For development, the `git repository <http://github.com/ioam/param>`_
+can be cloned and then 'develop installed' (``pip install -e .`` or
+``python setup.py develop``). Tests can be run via `tox
+<https://tox.readthedocs.io/en/latest/>`_: ``tox`` for all tests, or
+e.g. ``tox -e coverage`` to run unit tests with coverage for the
+currently active python. Alternatively, unit tests can be run via
+``nosetests`` (after installing `nose
+<http://nose.readthedocs.io/en/latest/>`_).
 
 
 Comparison to other packages

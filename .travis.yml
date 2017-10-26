@@ -55,9 +55,6 @@ jobs:
       env: TOX_ENV=with_numpy
 
     - <<: *tests
-      env: TOX_ENV=develop
-
-    - <<: *tests
       env: TOX_ENV=coverage
 
     - <<: *tests

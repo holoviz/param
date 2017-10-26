@@ -1,5 +1,4 @@
 # TODO:
-# * caching
 # * decide what to do about param.version
 # * fast finish
 # * optional envs: with numpy, with ipython, etc
@@ -15,6 +14,7 @@ stages:
   - deploy to pypi
 
 jobs:
+  fast_finish: true
   include:
     - &tests
       stage: test

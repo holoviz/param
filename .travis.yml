@@ -3,7 +3,8 @@ language: python
 
 stages:
   - test
-  - deploy
+  - deploy to anaconda
+  - deploy to pypi  
 
 jobs:
   include:
@@ -20,14 +21,14 @@ jobs:
       python: 3.6
       env: TOX_ENV=py36
 
-    - stage: deploy
+    - stage: deploy to pypi
       python: 3.6
       install:
         - python -v
       script:
         - python -v
 
-    - stage: deploy
+    - stage: deploy to anaconda
       install:
         - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
         - bash miniconda.sh -b -p $HOME/miniconda

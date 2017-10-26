@@ -37,5 +37,5 @@ jobs:
         - conda install conda-build=3.0.25
         - conda install anaconda-client
       script:
-        - python -v      
+        - python -v
         - conda build conda.recipe

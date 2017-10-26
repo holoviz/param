@@ -44,6 +44,9 @@ setup_args = dict(
 
 if __name__=="__main__":
 
+# TODO: conda packages won't have meaningful version number yet
+
+# TODO: need to decide what to do about this
 #    if ('upload' in sys.argv) or ('sdist' in sys.argv):
 #        import param, numbergen
 #        param.__version__.verify(setup_args['version'])

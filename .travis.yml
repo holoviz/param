@@ -5,7 +5,7 @@ language: python
 stages:
   - lint
   - test
-  - conda
+  - conda_package
 #    if: branch = master AND type != pull_request  
 
 jobs:
@@ -49,16 +49,19 @@ jobs:
       env: TOX_ENV=pypy
 
     - <<: *tests
-      env: TOX_ENV=ipython
+      env: TOX_ENV=with_ipython
 
     - <<: *tests
-      env: TOX_ENV=numpy
+      env: TOX_ENV=with_numpy
+
+    - <<: *tests
+      env: TOX_ENV=develop
 
     - <<: *tests
       stage: lint
-      env: TOX_ENV=flake8
+      env: TOX_ENV=lint_checks
 
-    - stage: conda
+    - stage: conda_package
       install:
         - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
         - bash miniconda.sh -b -p $HOME/miniconda

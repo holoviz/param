@@ -7,8 +7,7 @@ environment:
     - TOXENV: py27
     - TOXENV: py26
     - TOXENV: pypy
-    - TOXENV: ipython
-    - TOXENV: numpy
+    - TOXENV: develop
 
 matrix:
   fast_finish: true

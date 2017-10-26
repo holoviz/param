@@ -4,8 +4,8 @@ environment:
     - TOXENV: py27
     - TOXENV: py36
 
-#matrix:
-#  fast_finish: true
+matrix:
+  fast_finish: true
 
 build: false
 

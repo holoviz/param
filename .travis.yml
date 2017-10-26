@@ -1,6 +1,5 @@
 # TODO:
 # * decide what to do about param.version
-# * optional envs: with numpy, with ipython, etc
 
 sudo: false
 
@@ -24,54 +23,54 @@ jobs:
         - tox -e $TOX_ENV
 
     - <<: *tests
-      env: TOX_ENV=numpy
+      python: 3.5
+      env: TOX_ENV=py35
+
+    - <<: *tests
+      python: 3.4
+      env: TOX_ENV=py34
+
+    - <<: *tests
+      python: 3.3
+      env: TOX_ENV=py33
+
+    - <<: *tests
+      python: 3.2
+      env: TOX_ENV=py32
+
+    - <<: *tests
+      python: 2.7
+      env: TOX_ENV=py27
+
+    - <<: *tests
+      python: 2.6
+      env: TOX_ENV=py26
+
+    - <<: *tests
+      python: pypy
+      env: TOX_ENV=pypy
 
     - <<: *tests
       env: TOX_ENV=ipython
 
-#    - <<: *tests
-#      stage: lint
-#      env: TOX_ENV=flake8
+    - <<: *tests
+      env: TOX_ENV=numpy
 
-#    - <<: *tests
-#      python: 3.5
-#      env: TOX_ENV=py35
-#
-#    - <<: *tests
-#      python: 3.4
-#      env: TOX_ENV=py34
-#
-#    - <<: *tests
-#      python: 3.3
-#      env: TOX_ENV=py33
-#
-#    - <<: *tests
-#      python: 3.2
-#      env: TOX_ENV=py32
-#
-#    - <<: *tests
-#      python: pypy
-#      env: TOX_ENV=pypy
+    - <<: *tests
+      stage: lint
+      env: TOX_ENV=flake8
 
-#    - <<: *tests
-#      python: 2.7
-#      env: TOX_ENV=py27
-
-#    - <<: *tests
-#      python: 2.6
-#      env: TOX_ENV=py26
-
-#    - stage: conda
-#      install:
-#        - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-#        - bash miniconda.sh -b -p $HOME/miniconda
-#        - export PATH="$HOME/miniconda/bin:$PATH"
-#        - conda config --set always_yes yes --set changeps1 no
-#        - conda update conda
-#        - conda install conda-build anaconda-client
-#      script:
-#        - conda build conda.recipe
-#        - anaconda -t $CONDA_UPLOAD_TOKEN upload --force -u cball $HOME/miniconda/conda-bld/noarch/param*.tar.bz2
+    - stage: conda
+      install:
+        - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+        - bash miniconda.sh -b -p $HOME/miniconda
+        - export PATH="$HOME/miniconda/bin:$PATH"
+        - conda config --set always_yes yes --set changeps1 no
+        - conda update conda
+        - conda install conda-build anaconda-client
+      script:
+        - conda build conda.recipe
+        - anaconda -t $CONDA_UPLOAD_TOKEN upload --force -u cball $HOME/miniconda/conda-bld/noarch/param*.tar.bz2
 
 # TODO: can't test til on master
 deploy:

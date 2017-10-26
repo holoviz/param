@@ -1,7 +1,13 @@
 environment:
   matrix:
-    - TOXENV: py27
     - TOXENV: py36
+    - TOXENV: py35
+    - TOXENV: py34
+    - TOXENV: py33
+    - TOXENV: py32
+    - TOXENV: py27
+    - TOXENV: py26
+    - TOXENV: pypy
     - TOXENV: ipython
     - TOXENV: numpy
 

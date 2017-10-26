@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 import sys
 
@@ -6,6 +5,10 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+install_requires = []
+if sys.version_info[0]==2 and sys.version_info[1]<7:
+    install_requires+=['ordereddict','unittest2']
 
 
 setup_args = dict(
@@ -22,12 +25,18 @@ setup_args = dict(
     url='http://ioam.github.com/param/',
     packages = ["param","numbergen"],
     provides = ["param","numbergen"],
+    install_requires = install_requires,
     classifiers = [
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",
+        "Programming Language :: Python :: 2",        
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Operating System :: OS Independent",
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
@@ -40,9 +49,12 @@ setup_args = dict(
 
 if __name__=="__main__":
 
-    if ('upload' in sys.argv) or ('sdist' in sys.argv):
-        import param, numbergen
-        param.__version__.verify(setup_args['version'])
-        numbergen.__version__.verify(setup_args['version'])
+# TODO: conda packages won't have meaningful version number yet
+
+# TODO: need to decide what to do about this
+#    if ('upload' in sys.argv) or ('sdist' in sys.argv):
+#        import param, numbergen
+#        param.__version__.verify(setup_args['version'])
+#        numbergen.__version__.verify(setup_args['version'])
 
     setup(**setup_args)

@@ -1,0 +1,32 @@
+package:
+  name: param
+  version: {{ environ['GIT_DESCRIBE_TAG'].lstrip('v') }}.{{ GIT_BUILD_STR }}
+
+source:
+  path: ..
+
+build:
+  noarch: python
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  build:
+    - python
+  run:
+    - python
+
+test:
+  requires:
+    - nose
+  source_files:
+    - tests
+  imports:
+    - param
+    - numbergen
+  commands:
+    - nosetests tests
+
+about:
+  home: https://github.com/ioam/param
+  summary: Make your Python code clearer and more reliable by declaring Parameters
+  license: BSD 3-Clause

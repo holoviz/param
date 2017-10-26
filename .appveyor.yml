@@ -1,0 +1,17 @@
+environment:
+  matrix:
+    - TOXENV: py36
+    - TOXENV: py35
+    - TOXENV: py34
+    - TOXENV: py33
+    - TOXENV: py27
+    - TOXENV: py26
+
+matrix:
+  fast_finish: true
+
+build: false
+
+install: C:\Python36\python -m pip install -U tox
+
+test_script: C:\Python36\scripts\tox

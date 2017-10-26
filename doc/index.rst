@@ -135,8 +135,7 @@ Installation
 ============
 
 Param has no required dependencies outside of Python's standard
-library, although it will use Cython to improve performance if it is
-installed.
+library.
 
 Official releases of Param are available on
 `Anaconda <https://anaconda.org/ioam/param>`_ and
@@ -144,10 +143,12 @@ Official releases of Param are available on
 ``conda install -c ioam param``, ``pip install --user param``, or 
 ``pip install param``.
 
-The very latest changes can always be obtained by cloning the `git
-repository <http://github.com/ioam/param>`_, but because Param is a
-very mature library, there is usually very little difference between
-the git and released versions.
+The latest changes can be obtained via `conda install -c cball param`
+or `pip install https://github.com/ioam/param/archive/master.zip`.
+Alternatively, the `git repository <http://github.com/ioam/param>`_
+can be cloned and then 'develop installed' via `pip install -e .` or
+`python setup.py develop`.
+
 
 Comparison to other packages
 ============================

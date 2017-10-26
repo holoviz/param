@@ -1,4 +1,4 @@
-|BuildStatus|_ |PyPIVersion|_ |PyVersion|_ |License|_
+|LinuxBuild|_ |WinBuild|_ |Coverage|_ |PyPIVersion|_ |PyVersion|_ |License|_
 
 Param
 =====
@@ -16,8 +16,14 @@ as part of other projects.
 Please see `param's website <http://ioam.github.com/param/>`_ for
 official releases, installation instructions, documentation, and examples.
 
-.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
-.. _BuildStatus: https://travis-ci.org/ioam/param
+.. |LinuxBuild| image:: https://travis-ci.org/ioam/param.svg?branch=master
+.. _LinuxBuild: https://travis-ci.org/ioam/param
+
+.. |WinBuild| image:: https://ci.appveyor.com/api/projects/status/huoiwwamso2or7xw/branch/master?svg=true
+.. _WinBuild: https://ci.appveyor.com/project/Ioam/param/branch/master
+
+.. |Coverage| image:: https://img.shields.io/coveralls/ioam/param.svg
+.. _Coverage: https://coveralls.io/r/ioam/param?branch=master
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param

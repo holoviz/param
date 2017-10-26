@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-import sys
+#import sys
 
 try:
     from setuptools import setup

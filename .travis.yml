@@ -1,27 +1,44 @@
+sudo: false
 language: python
-python:
-  - "2.6"
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-  - "pypy"
 
-notifications:
-  email:
-    on_failure: change # [always|never|change] default: always
+stages:
+  - test
+  - deploy
 
-# no dependencies for py2.7+ (coveralls, ipython, flake8 only needed for testing)
-install:
-  - pip install coveralls flake8
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.6 ]]; then pip install ipython==1.0 ordereddict flake8==2.6; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install ipython==5.3; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then pip install ipython; fi
-  - pip freeze
+jobs:
+  include:
 
-script:
-  - nosetests --with-doctest --with-coverage --cover-package=param
-  - flake8 --statistics --exit-zero --ignore=E231 param numbergen
+    - &tests
+      stage: test
+      python: 2.7
+      env: TOX_ENV=py27
+      install:
+        - pip install tox
+      script:
+        - tox -e $TOX_ENV
 
-after_success: coveralls
+    - <<: *tests
+      python: 3.6
+      env: TOX_ENV=py36
+
+    - pypi
+      stage: deploy
+      python: 3.6
+      install:
+        - python -v
+      script:
+        - python -v
+
+    - anaconda
+      stage: deploy
+      install:
+        - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+	- bash miniconda.sh -b -p $HOME/miniconda
+        - export PATH="$HOME/miniconda/bin:$PATH"
+        - conda config --set always_yes yes --set changeps1 no
+        - conda update conda
+        - conda install conda-build=3.0.25
+        - conda install anaconda-client
+      script:
+        - python -v      
+        - conda build conda.recipe

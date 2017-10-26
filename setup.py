@@ -7,7 +7,7 @@ except ImportError:
     from distutils.core import setup
 
 install_requires = []
-if sys.version_info.major==2 and sys.version_info.minor<=6:
+if sys.version_info[0]==2 and sys.version_info[1]<=6:
     install_requires+=['ordereddict']
 
 

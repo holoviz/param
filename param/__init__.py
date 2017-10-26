@@ -25,8 +25,8 @@ import datetime as dt
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
-from .parameterized import logging_level # pyflakes:ignore (needed for eval)
-from .parameterized import shared_parameters # pyflakes:ignore (needed for eval)
+from .parameterized import logging_level     # noqa: api import
+from .parameterized import shared_parameters # noqa: api import
 
 try:
    from collections import OrderedDict

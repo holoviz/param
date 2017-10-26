@@ -522,7 +522,7 @@ class String(Parameter):
     A simple String parameter.
     """
 
-    basestring = basestring if sys.version_info[0]==2 else str
+    basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
     def __init__(self, default="", allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)

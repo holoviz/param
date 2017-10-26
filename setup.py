@@ -7,8 +7,8 @@ except ImportError:
     from distutils.core import setup
 
 install_requires = []
-if sys.version_info[0]==2 and sys.version_info[1]<=6:
-    install_requires+=['ordereddict']
+if sys.version_info <= (2,6):
+    install_requires+=['ordereddict','unittest2']
 
 
 setup_args = dict(

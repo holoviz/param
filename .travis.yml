@@ -29,25 +29,25 @@ jobs:
       stage: lint
       env: TOX_ENV=flake8
 
-    - <<: *tests
-      python: 3.5
-      env: TOX_ENV=py35
-
-    - <<: *tests
-      python: 3.4
-      env: TOX_ENV=py34
-
-    - <<: *tests
-      python: 3.3
-      env: TOX_ENV=py33
-
-    - <<: *tests
-      python: 3.2
-      env: TOX_ENV=py32
-
-    - <<: *tests
-      python: pypy
-      env: TOX_ENV=pypy
+#    - <<: *tests
+#      python: 3.5
+#      env: TOX_ENV=py35
+#
+#    - <<: *tests
+#      python: 3.4
+#      env: TOX_ENV=py34
+#
+#    - <<: *tests
+#      python: 3.3
+#      env: TOX_ENV=py33
+#
+#    - <<: *tests
+#      python: 3.2
+#      env: TOX_ENV=py32
+#
+#    - <<: *tests
+#      python: pypy
+#      env: TOX_ENV=pypy
 
     - <<: *tests
       python: 2.7

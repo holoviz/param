@@ -40,9 +40,9 @@ setup_args = dict(
 
 if __name__=="__main__":
 
-    if ('upload' in sys.argv) or ('sdist' in sys.argv):
-        import param, numbergen
-        param.__version__.verify(setup_args['version'])
-        numbergen.__version__.verify(setup_args['version'])
+#    if ('upload' in sys.argv) or ('sdist' in sys.argv):
+#        import param, numbergen
+#        param.__version__.verify(setup_args['version'])
+#        numbergen.__version__.verify(setup_args['version'])
 
     setup(**setup_args)

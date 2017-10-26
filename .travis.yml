@@ -2,6 +2,7 @@
 # * caching
 # * decide what to do about param.version
 # * fast finish
+# * optional envs: with numpy, with ipython, etc
 
 sudo: false
 

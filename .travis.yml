@@ -58,6 +58,7 @@ jobs:
 
     - stage: deploy to testpypi
       install:
+      script:
       provider: pypi
       server: https://test.pypi.org/legacy/
       distributions: "sdist bdist_wheel"

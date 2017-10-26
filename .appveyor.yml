@@ -1,6 +1,5 @@
 environment:
   matrix:
-    - TOXENV: flake8
     - TOXENV: py27
     - TOXENV: py36
 

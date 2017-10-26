@@ -1,4 +1,4 @@
-|BuildStatus|_ |PyPIVersion|_ |PyVersion|_ |License|_
+|TravisBuildStatus|_ |AppveyorBuildStatus|_ |PyPIVersion|_ |PyVersion|_ |License|_
 
 Param
 =====
@@ -16,8 +16,11 @@ as part of other projects.
 Please see `param's website <http://ioam.github.com/param/>`_ for
 official releases, installation instructions, documentation, and examples.
 
-.. |BuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
-.. _BuildStatus: https://travis-ci.org/ioam/param
+.. |TravisBuildStatus| image:: https://travis-ci.org/ioam/param.svg?branch=master
+.. _TravisBuildStatus: https://travis-ci.org/ioam/param
+
+.. |AppveyorBuildStatus| image:: https://ci.appveyor.com/api/projects/status/huoiwwamso2or7xw/branch/master?svg=true
+.. _AppveyorBuildStatus: https://ci.appveyor.com/project/ioam/param/branch/master
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param

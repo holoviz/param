@@ -1,6 +1,5 @@
 # TODO:
 # * decide what to do about param.version
-# * fast finish
 # * optional envs: with numpy, with ipython, etc
 
 sudo: false
@@ -11,7 +10,7 @@ stages:
   - lint
   - test
   - deploy to anaconda
-  - deploy to pypi
+  - deploy to testpypi
 
 jobs:
   fast_finish: true
@@ -25,9 +24,9 @@ jobs:
       script:
         - tox -e $TOX_ENV
 
-    - <<: *tests
-      stage: lint
-      env: TOX_ENV=flake8
+#    - <<: *tests
+#      stage: lint
+#      env: TOX_ENV=flake8
 
 #    - <<: *tests
 #      python: 3.5
@@ -53,11 +52,12 @@ jobs:
 #      python: 2.7
 #      env: TOX_ENV=py27
 
-    - <<: *tests
-      python: 2.6
-      env: TOX_ENV=py26
+#    - <<: *tests
+#      python: 2.6
+#      env: TOX_ENV=py26
 
-    - stage: deploy to pypi
+    - stage: deploy to testpypi
+      install:
       provider: pypi
       server: https://test.pypi.org/legacy/
       distributions: "sdist bdist_wheel"

@@ -3,63 +3,63 @@ sudo: false
 language: python
 
 stages:
-  - lint
-  - test
+#  - lint
+#  - test
   - conda_package
 #    if: branch = master AND type != pull_request  
 
 jobs:
   fast_finish: true
   include:
-    - &tests
-      stage: test
-      python: 3.6
-      env: TOX_ENV=py36
-      install:
-        - pip install tox
-      script:
-        - tox -e $TOX_ENV
-
-    - <<: *tests
-      python: 3.5
-      env: TOX_ENV=py35
-
-    - <<: *tests
-      python: 3.4
-      env: TOX_ENV=py34
-
-    - <<: *tests
-      python: 3.3
-      env: TOX_ENV=py33
-
-    - <<: *tests
-      python: 3.2
-      env: TOX_ENV=py32
-
-    - <<: *tests
-      python: 2.7
-      env: TOX_ENV=py27
-
-    - <<: *tests
-      python: 2.6
-      env: TOX_ENV=py26
-
-    - <<: *tests
-      python: pypy
-      env: TOX_ENV=pypy
-
-    - <<: *tests
-      env: TOX_ENV=with_ipython
-
-    - <<: *tests
-      env: TOX_ENV=with_numpy
-
-    - <<: *tests
-      env: TOX_ENV=develop
-
-    - <<: *tests
-      stage: lint
-      env: TOX_ENV=lint_checks
+#    - &tests
+#      stage: test
+#      python: 3.6
+#      env: TOX_ENV=py36
+#      install:
+#        - pip install tox
+#      script:
+#        - tox -e $TOX_ENV
+#
+#    - <<: *tests
+#      python: 3.5
+#      env: TOX_ENV=py35
+#
+#    - <<: *tests
+#      python: 3.4
+#      env: TOX_ENV=py34
+#
+#    - <<: *tests
+#      python: 3.3
+#      env: TOX_ENV=py33
+#
+#    - <<: *tests
+#      python: 3.2
+#      env: TOX_ENV=py32
+#
+#    - <<: *tests
+#      python: 2.7
+#      env: TOX_ENV=py27
+#
+#    - <<: *tests
+#      python: 2.6
+#      env: TOX_ENV=py26
+#
+#    - <<: *tests
+#      python: pypy
+#      env: TOX_ENV=pypy
+#
+#    - <<: *tests
+#      env: TOX_ENV=with_ipython
+#
+#    - <<: *tests
+#      env: TOX_ENV=with_numpy
+#
+#    - <<: *tests
+#      env: TOX_ENV=develop
+#
+#    - <<: *tests
+#      stage: lint
+#      env: TOX_ENV=lint_checks
 
     - stage: conda_package
       install:

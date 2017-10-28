@@ -6,6 +6,12 @@ try:
 except ImportError:
     from distutils.core import setup
 
+try:
+    import param
+    version = param.__version__
+except ImportError:
+    version = '1.5.1'
+
 install_requires = []
 if sys.version_info[0]==2 and sys.version_info[1]<7:
     install_requires+=['ordereddict','unittest2']
@@ -13,7 +19,7 @@ if sys.version_info[0]==2 and sys.version_info[1]<7:
 
 setup_args = dict(
     name='param',
-    version="1.5.1",
+    version=version,
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author= "IOAM",
@@ -46,18 +52,29 @@ setup_args = dict(
 )
 
 
+def _making_dist():
+    for arg in sys.argv:
+        # (note: not supposed to use 'upload' now)
+        if 'dist' in arg or arg == 'upload':
+            return True
+    return False
+
 
 if __name__=="__main__":
 
-    if os.environ.get('PARAM_BUILDING_INBETWEEN_RELEASES') == '1':
-        import param
-        with open('param/_version.py','w') as f:
-            f.write('commit_count=%s\ncommit="%s"\n'%(param.__version__.commit_count,
-                                                      param.__version__.commit))
+    # get a meaningful version in dists built between official releases
+    if os.environ.get('PARAM_MAKING_UNOFFICIAL_RELEASE') == '1':
+        if _making_dist():
+            try:
+                import param
+                setup_args['version'] = param.__version__
+                with open('param/_version.py','w') as f:
+                    f.write('commit_count=%s\ncommit="%s"\n'%(param.__version__.commit_count,
+                                                              param.__version__.commit))
+            except ImportError:
+                pass
 
-    # TODO: upload out of date? And what about the several other
-    # 'dist' commands - why not check those?
-    elif ('upload' in sys.argv) or ('sdist' in sys.argv):
+    if _making_dist():
         import param, numbergen
         param.__version__.verify(setup_args['version'])
         numbergen.__version__.verify(setup_args['version'])

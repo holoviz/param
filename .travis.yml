@@ -6,7 +6,7 @@ stages:
   - lint
   - test
   - name: conda_package
-    if: branch = master AND type != pull_request
+#    if: branch = master AND type != pull_request
 
 jobs:
   fast_finish: true

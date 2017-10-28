@@ -29,7 +29,7 @@ setup_args = dict(
     classifiers = [
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",
-        "Programming Language :: Python :: 2",        
+        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.2",
@@ -49,12 +49,17 @@ setup_args = dict(
 
 if __name__=="__main__":
 
-# TODO: conda packages won't have meaningful version number yet
+    if os.environ.get('PARAM_BUILDING_INBETWEEN_RELEASES') == '1':
+        import param
+        with open('param/_version.py','w') as f:
+            f.write('commit_count=%s\ncommit="%s"\n'%(param.__version__.commit_count,
+                                                      param.__version__.commit))
 
-# TODO: need to decide what to do about this
-#    if ('upload' in sys.argv) or ('sdist' in sys.argv):
-#        import param, numbergen
-#        param.__version__.verify(setup_args['version'])
-#        numbergen.__version__.verify(setup_args['version'])
+    # TODO: upload out of date? And what about the several other
+    # 'dist' commands - why not check those?
+    elif ('upload' in sys.argv) or ('sdist' in sys.argv):
+        import param, numbergen
+        param.__version__.verify(setup_args['version'])
+        numbergen.__version__.verify(setup_args['version'])
 
     setup(**setup_args)

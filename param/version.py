@@ -140,9 +140,14 @@ class Version(object):
         :commit_count  Commits since last release. Set for dev releases.
         """
         self.fpath = fpath
+
+        try:
+            from param._version import commit_count, commit
+        except ImportError:
+            pass
+
         self._expected_commit = commit
         self.expected_release = release
-
         self._commit = None if commit in [None, "$Format:%h$"] else commit
         self._commit_count = commit_count
         self._release = None

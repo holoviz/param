@@ -2,7 +2,6 @@
 Unit tests for the param.Time class, time dependent parameters and
 time-dependent numbergenerators.
 """
-import sys
 import unittest
 import param
 import numbergen
@@ -15,8 +14,6 @@ try:
 except:
     gmpy = None
 
-
-pybefore27 = (sys.version_info[0] == 2) and (sys.version_info[1] < 7)
 
 
 class TestTimeClass(unittest.TestCase):
@@ -251,8 +248,7 @@ class TestTimeDependentDynamic(unittest.TestCase):
         """
         hashfn = numbergen.Hash("test", input_count=1)
         pi = "3.141592"
-        # Before Python 2.7, fractions.Fraction cannot be initialized with a float
-        half = fractions.Fraction(1,2) if pybefore27 else fractions.Fraction(0.5)
+        half = fractions.Fraction(0.5)
         self.assertEqual(hashfn(0.5), hashfn(half))
         self.assertEqual(hashfn(pi), hashfn(fractions.Fraction(pi)))
 

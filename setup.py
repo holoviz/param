@@ -74,9 +74,4 @@ if __name__=="__main__":
             except ImportError:
                 pass
 
-    if _making_dist():
-        import param, numbergen
-        param.__version__.verify(setup_args['version'])
-        numbergen.__version__.verify(setup_args['version'])
-
     setup(**setup_args)

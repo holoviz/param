@@ -8,21 +8,6 @@ import numbergen
 
 # CEBALERT: not anything like a complete test of Parameterized!
 
-# When we drop python 2.6, can use assertRaises as context manager,
-# which will allow us to replace e.g.
-#
-#     try:
-#         ...
-#     except Error:
-#         pass
-#     else:
-#         raise AssertionError
-#
-# with
-#
-#     with self.assertRaises(Error):
-#        ...
-
 
 import random
 from nose.tools import istest, nottest
@@ -77,12 +62,8 @@ class TestParameterized(unittest.TestCase):
         testpo = TestPO()
         self.assertEqual(testpo.ro,"Hello")
 
-        try:
+        with self.assertRaises(TypeError):
             t = TestPO(ro=20)
-        except TypeError:
-            pass
-        else:
-            raise AssertionError("Read-only parameter was set!")
 
         t=TestPO()
         self.assertRaises(TypeError,setattr,t,'ro',10)
@@ -261,12 +242,8 @@ class TestStringParameter(unittest.TestCase):
     def test_handling_of_None(self):
         t = self._TestString()
 
-        try:
+        with self.assertRaises(ValueError):
             t.a = None
-        except ValueError:
-            pass
-        else:
-           raise AssertionError
 
         t.b = None
 
@@ -295,14 +272,8 @@ class TestParamOverrides(unittest.TestCase):
 
     def test_missing_key(self):
         overrides = ParamOverrides(self.po,{'name':'B'})
-        try:
+        with self.assertRaises(AttributeError):
             overrides['doesnotexist']
-        except AttributeError:
-            pass
-        except:
-            raise AssertionError("ParamOverrides should give AttributeError when key can't be found.")
-        else:
-            raise AssertionError("Test supposed to lookup non-existent attribute and raise error.")
 
 
 class TestSharedParameters(unittest.TestCase):

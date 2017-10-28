@@ -12,10 +12,11 @@ from math import e,pi
 
 import param
 
-
+# TODO: numbergen is really tied to param, and param is significantly
+# enhanced by numbergen. So, numbergen should probably should just be
+# a module in param.
 from param.version import Version
-__version__ = Version(release=(1,5,1), fpath=__file__,
-                      commit="$Format:%h$", reponame="param")
+__version__ = param.__version__
 
 
 class TimeAware(param.Parameterized):

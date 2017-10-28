@@ -70,6 +70,7 @@ jobs:
         - conda update conda
         - conda install conda-build anaconda-client
       script:
+        - export PARAM_MAKING_UNOFFICIAL_RELEASE=1
         - conda build conda.recipe
         - anaconda -t $CONDA_UPLOAD_TOKEN upload --force -u cball $HOME/miniconda/conda-bld/noarch/param*.tar.bz2
 

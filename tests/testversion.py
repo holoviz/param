@@ -4,6 +4,11 @@ Unit test for param.version.Version
 import unittest
 from param.version import Version
 
+# chrishacks
+try:
+    import param._version
+except:
+    raise unittest.SkipTest("not testing param.version in unofficial release")
 
 class TestVersion(unittest.TestCase):
 

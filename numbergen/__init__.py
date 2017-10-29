@@ -15,7 +15,6 @@ import param
 # TODO: numbergen is really tied to param, and param is significantly
 # enhanced by numbergen. So, numbergen should probably should just be
 # a module in param.
-from param.version import Version
 __version__ = param.__version__
 
 

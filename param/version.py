@@ -267,7 +267,7 @@ class Version(object):
         dirty_status = '-dirty' if self.dirty else ''
 
         if self.chrishacks:
-            return "%s+%s%s"%(release, self.commit, dirty_status)
+            return "%s+g%s%s"%(release, self.commit, dirty_status)
 
         return '%s-%s-g%s%s' % (release, self.commit_count if self.commit_count else 'x',
                                 self.commit, dirty_status)

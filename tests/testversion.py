@@ -7,8 +7,11 @@ from param.version import Version
 # chrishacks
 try:
     import param._version
-except:
+except ImportError:
+    pass
+else:
     raise unittest.SkipTest("not testing param.version in unofficial release")
+
 
 class TestVersion(unittest.TestCase):
 

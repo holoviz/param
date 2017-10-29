@@ -142,9 +142,10 @@ class Version(object):
         self.fpath = fpath
 
         try:
-            from param._version import commit_count, commit
+            from param._version import commit_count, commit, dev
+            self.chrishacks = True
         except ImportError:
-            pass
+            self.chrishacks = False
 
         self._expected_commit = commit
         self.expected_release = release
@@ -264,6 +265,10 @@ class Version(object):
             return release
 
         dirty_status = '-dirty' if self.dirty else ''
+
+        if self.chrishacks:
+            return "%s+%s%s"%(release, self.commit, dirty_status)
+
         return '%s-%s-g%s%s' % (release, self.commit_count if self.commit_count else 'x',
                                 self.commit, dirty_status)
 

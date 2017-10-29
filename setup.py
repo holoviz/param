@@ -6,11 +6,6 @@ try:
 except ImportError:
     from distutils.core import setup
 
-try:
-    import param
-    version = param.__version__
-except ImportError:
-    version = '1.5.1'
 
 install_requires = []
 if sys.version_info[0]==2 and sys.version_info[1]<7:
@@ -19,7 +14,7 @@ if sys.version_info[0]==2 and sys.version_info[1]<7:
 
 setup_args = dict(
     name='param',
-    version=version,
+    version='1.5.1',
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author= "IOAM",
@@ -67,10 +62,12 @@ if __name__=="__main__":
         if _making_dist():
             try:
                 import param
-                setup_args['version'] = param.__version__
+                param.__version__.chrishacks=True
+                setup_args['version'] = str(param.__version__)
                 with open('param/_version.py','w') as f:
-                    f.write('commit_count=%s\ncommit="%s"\n'%(param.__version__.commit_count,
-                                                              param.__version__.commit))
+                    f.write('commit_count=%s\ncommit="%s"\ndev=%s'%(param.__version__.commit_count,
+                                                                    param.__version__.commit,
+                                                                    param.__version__.commit_count))
             except ImportError:
                 pass
 

@@ -29,7 +29,7 @@ from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
 try:
-   from collections import OrderedDict
+    from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
 except ImportError as e:

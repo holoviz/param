@@ -1,6 +1,6 @@
 package:
   name: param
-  version: {{environ['GIT_DESCRIBE_TAG'].split('.dev')[0]}}.dev{{GIT_BUILD_STR }}
+  version: {{environ['GIT_DESCRIBE_TAG'].lstrip('v').split('.dev')[0]}}.dev{{GIT_BUILD_STR }}
 
 source:
   path: ..

@@ -69,7 +69,7 @@ jobs:
         - export PATH="$HOME/miniconda/bin:$PATH"
         - conda config --set always_yes yes --set changeps1 no
         - conda update conda
-        - conda install conda-build anaconda-client
+        - conda install "conda-build=3.0.25" anaconda-client
       script:
         - conda build conda.recipe/
         - anaconda -t $CONDA_UPLOAD_TOKEN upload --force -u cball $HOME/miniconda/conda-bld/noarch/param*.tar.bz2

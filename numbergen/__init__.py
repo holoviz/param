@@ -12,9 +12,9 @@ from math import e,pi
 
 import param
 
-# TODO: numbergen is really tied to param, and param is significantly
-# enhanced by numbergen. So, numbergen should probably should just be
-# a module in param.
+# TODO: numbergen is really tied to param, so admit the version is the
+# same as param. Note: param is significantly enhanced by numbergen;
+# numbergen could be a module in param (but this is not decided yet).
 __version__ = param.__version__
 
 

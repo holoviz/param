@@ -1,6 +1,8 @@
 import os
 import sys
 
+import versioneer
+
 try:
     from setuptools import setup
 except ImportError:
@@ -14,9 +16,10 @@ if sys.version_info[0]==2 and sys.version_info[1]<7:
 
 setup_args = dict(
     name='param',
-    version='1.5.2',
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     author= "IOAM",
     author_email= "developers@topographica.org",
     maintainer="IOAM",
@@ -47,31 +50,5 @@ setup_args = dict(
 )
 
 
-#def _making_dist():
-#    for arg in sys.argv:
-#        # (note: not supposed to use 'upload' now)
-#        if 'dist' in arg or arg == 'upload':
-#            return True
-#    return False
-
-
 if __name__=="__main__":
-
-    # get a meaningful version in dists built between official
-    # releases (name of package, and when imported)
-    if os.environ.get('PARAM_MAKING_UNOFFICIAL_RELEASE') == '1':
-        try:
-            import param
-            # make this version include git info
-            param.__version__.chrishacks=True
-            param.__version__.dev=param.__version__.commit_count
-            setup_args['version'] = str(param.__version__)
-            # store this version in the distributed param
-            with open('param/_version.py','w') as f:
-                f.write('commit_count=%s\ncommit="%s"\ndev=%s'%(param.__version__.commit_count,
-                                                                param.__version__.commit,
-                                                                param.__version__.commit_count))
-        except ImportError:
-            pass
-
     setup(**setup_args)

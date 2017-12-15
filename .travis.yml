@@ -6,6 +6,7 @@ stages:
   - lint
   - test
   - name: conda_package
+# TODO: restore below before merge
 #    if: branch = master AND type != pull_request
 
 jobs:
@@ -70,7 +71,7 @@ jobs:
         - conda update conda
         - conda install conda-build anaconda-client
       script:
-        - PARAM_MAKING_UNOFFICIAL_RELEASE=1 conda build conda.recipe/
+        - conda build conda.recipe/
         - anaconda -t $CONDA_UPLOAD_TOKEN upload --force -u cball $HOME/miniconda/conda-bld/noarch/param*.tar.bz2
 
 # TODO: can't test til on master

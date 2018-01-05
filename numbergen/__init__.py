@@ -12,10 +12,10 @@ from math import e,pi
 
 import param
 
-# TODO: numbergen is really tied to param, so admit the version is the
-# same as param. Note: param is significantly enhanced by numbergen;
-# numbergen could be a module in param (but this is not decided yet).
-__version__ = param.__version__
+
+from param.version import Version
+__version__ = Version(release=(1,5,1), fpath=__file__,
+                      commit="$Format:%h$", reponame="param")
 
 
 class TimeAware(param.Parameterized):

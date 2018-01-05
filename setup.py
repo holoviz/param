@@ -1,8 +1,6 @@
 import os
 import sys
 
-import versioneer
-
 try:
     from setuptools import setup
 except ImportError:
@@ -16,10 +14,9 @@ if sys.version_info[0]==2 and sys.version_info[1]<7:
 
 setup_args = dict(
     name='param',
+    version="1.5.1",
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
     author= "IOAM",
     author_email= "developers@topographica.org",
     maintainer="IOAM",

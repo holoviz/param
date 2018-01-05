@@ -36,9 +36,15 @@ except ImportError as e:
     raise ImportError("Requires ordereddict package on Python 2.6")
 
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+# Determine up-to-date version information, if possible, but with a
+# safe fallback to ensure that this file and parameterized.py are the
+# only two required files.
+try:
+    from .version import Version
+    __version__ = Version(release=(1,5,1), fpath=__file__,
+                          commit="$Format:%h$", reponame="param")
+except:
+    __version__ = '1.5.1-unknown'
 
 
 dt_types = (dt.datetime,)

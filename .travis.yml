@@ -7,11 +7,13 @@ stages:
   - test
   - name: conda_package
     if: branch = master AND type != pull_request
+  - name: pypi_package
+#    if: branch = master AND type != pull_request
 
 jobs:
   fast_finish: true
   include:
-    - &tests
+    - &default
       stage: test
       python: 3.6
       env: TOX_ENV=py36
@@ -20,44 +22,44 @@ jobs:
       script:
         - tox -e $TOX_ENV
 
-    - <<: *tests
+    - <<: *default
       python: 3.5
       env: TOX_ENV=py35
 
-    - <<: *tests
+    - <<: *default
       python: 3.4
       env: TOX_ENV=py34
 
-    - <<: *tests
+    - <<: *default
       python: 3.3
       env: TOX_ENV=py33
 
-    - <<: *tests
+    - <<: *default
       python: 3.2
       env: TOX_ENV=py32
 
-    - <<: *tests
+    - <<: *default
       python: 2.7
       env: TOX_ENV=py27
 
-    - <<: *tests
+    - <<: *default
       python: 2.6
       env: TOX_ENV=py26
 
-    - <<: *tests
+    - <<: *default
       python: pypy
       env: TOX_ENV=pypy
 
-    - <<: *tests
+    - <<: *default
       env: TOX_ENV=with_ipython
 
-    - <<: *tests
+    - <<: *default
       env: TOX_ENV=with_numpy
 
-    - <<: *tests
+    - <<: *default
       env: TOX_ENV=coverage
 
-    - <<: *tests
+    - <<: *default
       stage: lint
       env: TOX_ENV=lint_checks
 
@@ -72,12 +74,17 @@ jobs:
       script:
         - conda build --token $CONDA_UPLOAD_TOKEN --user cball conda.recipe/
 
-deploy:
-  provider: pypi
-  server: https://test.pypi.org/legacy/
-  distributions: "sdist bdist_wheel"
-  on:
-    tags: true
-  user: ceball
-  password:
-    secure: odJx1tSnIIyVZjj+dB2bZDGHroLGvvSjy0OIyKJtyosZ0s3xgYNrC49SPgGJacp7uM+hIL8Hw/FuGTKOAGwQWmJIkznQcT7NzPCyOgAArH+0k5+EDl3Y0+MrSsMRpW6FurOcPFyJHl4zjfuFP/0ORDwZqljQ4SCqytvo/gaJ1JgCMi/jFafdvKrpSZBaK/Wfm0zilPN1QZAaQfGG+Ej5kG9BjybEszyZIqSe6FccAZLr62ko0necXx/DG2rrfxVtOPEFlYctwxngr9og9QjVY8j2zFyIHolxDUR7Iv2ADR7MCjtBJWlBek3S+rFe3dxGg3TbcnrmuV3tL1yaObMOfCCYT0pI/0lq08q4OgJQFW41eGailZ9lRNxQsPeFTvvTmYmZA8mCD/spD5z5pJmehny+rSW2rmFonUq15GG/bHnV48FrNyq6rA+lFLBSzVHjFsp+ZCWAHxQTj/zkqMO3ReBt7B+2Zu+Fkj8fsnUqWqoNEoBPJx5jTR4lfgg5TQJ9FUiLmoB7LG+H8BQL9ylY7XG00MyyAN89YLqZTg2CI1mKeCWW2CB5kXMc39o1qDOm0QsCJPATfle5bNPoKDg5Gtod9U3eFc+c8/ynOSrZzP8IGTK5uMsFuhpMQ/DAKJqLmMn8H712zwVY4znza9NJMDQWgNMTDr7+w8JFm0hiqO8=
+    - <<: *default
+      stage: pypi_package
+      install: true
+      script: true
+      deploy:
+        provider: pypi
+        # could instead consider using real pypi when tag is release style
+        server: https://test.pypi.org/legacy/
+        distributions: "sdist bdist_wheel"
+#	on:
+#          tags: true
+        user: ceball
+        password:
+          secure: odJx1tSnIIyVZjj+dB2bZDGHroLGvvSjy0OIyKJtyosZ0s3xgYNrC49SPgGJacp7uM+hIL8Hw/FuGTKOAGwQWmJIkznQcT7NzPCyOgAArH+0k5+EDl3Y0+MrSsMRpW6FurOcPFyJHl4zjfuFP/0ORDwZqljQ4SCqytvo/gaJ1JgCMi/jFafdvKrpSZBaK/Wfm0zilPN1QZAaQfGG+Ej5kG9BjybEszyZIqSe6FccAZLr62ko0necXx/DG2rrfxVtOPEFlYctwxngr9og9QjVY8j2zFyIHolxDUR7Iv2ADR7MCjtBJWlBek3S+rFe3dxGg3TbcnrmuV3tL1yaObMOfCCYT0pI/0lq08q4OgJQFW41eGailZ9lRNxQsPeFTvvTmYmZA8mCD/spD5z5pJmehny+rSW2rmFonUq15GG/bHnV48FrNyq6rA+lFLBSzVHjFsp+ZCWAHxQTj/zkqMO3ReBt7B+2Zu+Fkj8fsnUqWqoNEoBPJx5jTR4lfgg5TQJ9FUiLmoB7LG+H8BQL9ylY7XG00MyyAN89YLqZTg2CI1mKeCWW2CB5kXMc39o1qDOm0QsCJPATfle5bNPoKDg5Gtod9U3eFc+c8/ynOSrZzP8IGTK5uMsFuhpMQ/DAKJqLmMn8H712zwVY4znza9NJMDQWgNMTDr7+w8JFm0hiqO8=

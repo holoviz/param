@@ -58,7 +58,6 @@ jobs:
 
     - <<: *default
       env: TOX_ENV=coverage
-      after_success: coveralls
 
     - <<: *default
       stage: lint

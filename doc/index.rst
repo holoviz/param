@@ -135,8 +135,7 @@ Installation
 ============
 
 Param has no required dependencies outside of Python's standard
-library, although it will use Cython to improve performance if it is
-installed.
+library.
 
 Official releases of Param are available on
 `Anaconda <https://anaconda.org/ioam/param>`_ and
@@ -144,10 +143,19 @@ Official releases of Param are available on
 ``conda install -c ioam param``, ``pip install --user param``, or 
 ``pip install param``.
 
-The very latest changes can always be obtained by cloning the `git
-repository <http://github.com/ioam/param>`_, but because Param is a
-very mature library, there is usually very little difference between
-the git and released versions.
+The very latest changes can be obtained via ``conda install -c cball
+param`` or ``pip install
+https://github.com/ioam/param/archive/master.zip``.
+
+For development, the `git repository <http://github.com/ioam/param>`_
+can be cloned and then 'develop installed' (``pip install -e .`` or
+``python setup.py develop``). Tests can be run via `tox
+<https://tox.readthedocs.io/en/latest/>`_: ``tox`` for all tests, or
+e.g. ``tox -e coverage`` to run unit tests with coverage for the
+currently active python. Alternatively, unit tests can be run via
+``nosetests`` (after installing `nose
+<http://nose.readthedocs.io/en/latest/>`_).
+
 
 Comparison to other packages
 ============================

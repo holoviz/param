@@ -8,6 +8,15 @@ import unittest
 import param
 
 
+try:
+    import IPython
+except ImportError:
+    import os
+    if os.getenv('PARAM_TEST_IPYTHON','0') == '1':
+        raise ImportError("PARAM_TEST_IPYTHON=1 but ipython not available.")
+
+# TODO: is the below actually true?
+
 # SkipTest will be raised if IPython unavailable
 from param.ipython import ParamPager
 

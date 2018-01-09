@@ -83,7 +83,7 @@ jobs:
         # could instead consider using real pypi when tag is release style
         server: https://test.pypi.org/legacy/
         distributions: "sdist bdist_wheel"
-	on:
+        on:
           tags: true
         user: ceball
         password:

@@ -6,7 +6,7 @@ stages:
   - lint
   - test
   - name: conda_package
-    if: branch = master AND type != pull_request
+#    if: branch = master AND type != pull_request
   - name: pypi_package
     if: branch = master AND type != pull_request
 
@@ -73,7 +73,7 @@ jobs:
         - conda install "conda-build=3.0.25" anaconda-client
       script:
         - conda build conda.recipe/
-	- anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev `conda build --output conda.recipe`
+        - anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev `conda build --output conda.recipe`
 
     - <<: *default
       stage: pypi_package
@@ -89,4 +89,3 @@ jobs:
         user: ceball
         password:
           secure: odJx1tSnIIyVZjj+dB2bZDGHroLGvvSjy0OIyKJtyosZ0s3xgYNrC49SPgGJacp7uM+hIL8Hw/FuGTKOAGwQWmJIkznQcT7NzPCyOgAArH+0k5+EDl3Y0+MrSsMRpW6FurOcPFyJHl4zjfuFP/0ORDwZqljQ4SCqytvo/gaJ1JgCMi/jFafdvKrpSZBaK/Wfm0zilPN1QZAaQfGG+Ej5kG9BjybEszyZIqSe6FccAZLr62ko0necXx/DG2rrfxVtOPEFlYctwxngr9og9QjVY8j2zFyIHolxDUR7Iv2ADR7MCjtBJWlBek3S+rFe3dxGg3TbcnrmuV3tL1yaObMOfCCYT0pI/0lq08q4OgJQFW41eGailZ9lRNxQsPeFTvvTmYmZA8mCD/spD5z5pJmehny+rSW2rmFonUq15GG/bHnV48FrNyq6rA+lFLBSzVHjFsp+ZCWAHxQTj/zkqMO3ReBt7B+2Zu+Fkj8fsnUqWqoNEoBPJx5jTR4lfgg5TQJ9FUiLmoB7LG+H8BQL9ylY7XG00MyyAN89YLqZTg2CI1mKeCWW2CB5kXMc39o1qDOm0QsCJPATfle5bNPoKDg5Gtod9U3eFc+c8/ynOSrZzP8IGTK5uMsFuhpMQ/DAKJqLmMn8H712zwVY4znza9NJMDQWgNMTDr7+w8JFm0hiqO8=
-

@@ -143,7 +143,7 @@ Official releases of Param are available on
 ``conda install -c ioam param``, ``pip install --user param``, or 
 ``pip install param``.
 
-The very latest changes can be obtained via ``conda install -c cball
+The very latest changes can be obtained via ``conda install -c pyviz
 param`` or ``pip install
 https://github.com/ioam/param/archive/master.zip``.
 

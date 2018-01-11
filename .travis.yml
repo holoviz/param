@@ -6,7 +6,7 @@ stages:
   - lint
   - test
   - name: conda_package
-    if: branch = master AND type != pull_request
+#    if: branch = master AND type != pull_request
   - name: pypi_package
     if: branch = master AND type != pull_request
 
@@ -72,7 +72,7 @@ jobs:
         - conda update conda
         - conda install "conda-build=3.0.25" anaconda-client
       script:
-        - conda build --token $CONDA_UPLOAD_TOKEN --user cball conda.recipe/
+        - conda build --token $CONDA_UPLOAD_TOKEN --user pyviz conda.recipe/
 
     - <<: *default
       stage: pypi_package

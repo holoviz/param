@@ -73,7 +73,7 @@ jobs:
         - conda install "conda-build=3.0.25" anaconda-client
       script:
         - export VERSIONHACK=`python -c "import subprocess;desc=subprocess.check_output(['git','describe']).decode('utf8');v,commits=desc.split('-')[0:2];newv=[int(x) for x in v[1::].split('.')];newv[-1]+=1;print('.'.join(str(x) for x in newv)+'.dev'+commits)"`
-	- conda build conda.recipe/
+        - conda build conda.recipe/
         - anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev `conda build --output conda.recipe`
 
     - <<: *default

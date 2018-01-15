@@ -1,6 +1,6 @@
 package:
   name: param
-  version: {{environ['GIT_DESCRIBE_TAG'].lstrip('v')}}.post{{GIT_DESCRIBE_NUMBER}}.dev+{{GIT_DESCRIBE_HASH}}
+  version: {{ os.environ.get("VERSIONHACK") }}
 
 source:
   path: ..

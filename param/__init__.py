@@ -449,7 +449,7 @@ class Dynamic(Parameter):
 
         dynamic = callable(val)
         if dynamic: self._initialize_generator(val,obj)
-        if not obj: self._set_instantiate(dynamic)
+        if obj is None: self._set_instantiate(dynamic)
 
 
     def _produce_value(self,gen,force=False):
@@ -930,7 +930,7 @@ class Composite(Parameter):
         """
         Return the values of all the attribs, as a list.
         """
-        if not obj:
+        if obj is None:
             return [getattr(objtype,a) for a in self.attribs]
         else:
             return [getattr(obj,a) for a in self.attribs]
@@ -941,7 +941,7 @@ class Composite(Parameter):
         """
         assert len(val) == len(self.attribs),"Compound parameter '%s' got the wrong number of values (needed %d, but got %d)." % (self._attrib_name,len(self.attribs),len(val))
 
-        if not obj:
+        if obj is None:
             for a,v in zip(self.attribs,val):
                 setattr(self.objtype,a,v)
         else:

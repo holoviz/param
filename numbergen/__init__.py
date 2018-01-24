@@ -727,8 +727,8 @@ class BoundedNumber(NumberGenerator):
     def __call__(self):
         val = self.generator()
         min_, max_ = self.bounds
-        if   min_ != None and val < min_: return min_
-        elif max_ != None and val > max_: return max_
+        if   min_ is not None and val < min_: return min_
+        elif max_ is not None and val > max_: return max_
         else: return val
 
 

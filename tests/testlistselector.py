@@ -21,6 +21,10 @@ class TestListSelectorParameters(unittest.TestCase):
 
         self.P = P
 
+    def test_default_None(self):
+        class Q(param.Parameterized):
+            r = param.ListSelector(default=None)
+
     def test_set_object_constructor(self):
         p = self.P(e=[6])
         self.assertEqual(p.e, [6])
@@ -64,7 +68,7 @@ class TestListSelectorParameters(unittest.TestCase):
         else:
             raise AssertionError("Object set outside range.")
 
-        
+
     def test_set_object_setattr_post_error(self):
         p = self.P(e=[6])
         p.f = [9]
@@ -99,6 +103,41 @@ class TestListSelectorParameters(unittest.TestCase):
             pass
         else:
             raise AssertionError("ListSelector created without range.")
+
+
+    ##################################################################
+    ##################################################################
+    ### new tests (not copied from testobjectselector)
+
+    def test_bad_default(self):
+        with self.assertRaises(TypeError):
+            class Q(param.Parameterized):
+                r = param.ListSelector(default=6,check_on_set=True)
+
+    def test_implied_check_on_set(self):
+        with self.assertRaises(TypeError):
+            class Q(param.Parameterized):
+                r = param.ListSelector(default=7,objects=[7,8])
+
+    def test_default_not_checked(self):
+        class Q(param.Parameterized):
+            r = param.ListSelector(default=[6])
+
+    ##########################
+    # CEBALERT: not sure it makes sense for ListSelector to be set to
+    # a non-iterable value (except None). I.e. I think this first test
+    # should fail.
+    def test_default_not_checked_to_be_iterable(self):
+        class Q(param.Parameterized):
+            r = param.ListSelector(default=6)
+
+    def test_set_checked_to_be_iterable(self):
+        class Q(param.Parameterized):
+            r = param.ListSelector(default=6,check_on_set=False)
+
+        with self.assertRaises(TypeError):
+            Q.r = 6
+    ##########################
 
 
 if __name__ == "__main__":

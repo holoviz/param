@@ -149,12 +149,12 @@ class TestListSelectorParameters(unittest.TestCase):
         self.assertEqual(Q.r, [1,2,3])
         self.assertEqual(Q.params('r').objects, [1,2,3])
 
-    # CEBALERT: as above - not sure it makes sense for ListSelector to
-    # be set to a non-iterable value i.e. think this test should fail
     def test_bad_compute_default(self):
         class Q(param.Parameterized):
             r = param.ListSelector(default=None,compute_default_fn=lambda:1)
-        Q.params('r').compute_default()
+
+        with self.assertRaises(TypeError):
+            Q.params('r').compute_default()
 
 if __name__ == "__main__":
     import nose

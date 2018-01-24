@@ -1476,8 +1476,8 @@ class ListSelector(ObjectSelector):
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
             for o in self.default:
-                if self.default not in self.objects:
-                    self.objects.append(self.default)
+                if o not in self.objects:
+                    self.objects.append(o)
 
     def _check_value(self, val, obj=None):
         for o in val:

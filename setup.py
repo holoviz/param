@@ -1,5 +1,7 @@
 import os
 import sys
+import json
+import importlib
 
 try:
     from setuptools import setup
@@ -12,9 +14,29 @@ if sys.version_info[0]==2 and sys.version_info[1]<7:
     install_requires+=['ordereddict','unittest2']
 
 
+def get_setup_version(reponame):
+    """
+    Helper to get the current version from either git describe or the
+    .version file (if available).
+    """
+    basepath = os.path.split(__file__)[0]
+    version_file_path = os.path.join(basepath, reponame, '.version')
+    try:
+        version = importlib.import_module(reponame + ".version") # Bundled
+    except:
+        version = None
+
+        #import pdb;pdb.set_trace()
+    if version is not None:
+        return version.Version.setup_version(basepath, reponame, dirty='strip',
+                                             archive_commit="$Format:%h$")
+    else:
+        return json.load(open(version_file_path, 'r'))['version_string']
+
+
 setup_args = dict(
     name='param',
-    version="1.5.1",
+    version=get_setup_version("param"),
     description='Declarative Python programming using Parameters.',
     long_description=open('README.rst').read() if os.path.isfile('README.rst') else 'Consult README.rst',
     author="IOAM",
@@ -26,6 +48,8 @@ setup_args = dict(
     url='http://ioam.github.com/param/',
     packages=["param","numbergen"],
     provides=["param","numbergen"],
+    package_data = {'pkg_bundle': ['.version']},
+    include_package_data = True,
     install_requires=install_requires,
     classifiers=[
         "License :: OSI Approved :: BSD License",

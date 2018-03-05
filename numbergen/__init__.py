@@ -13,10 +13,7 @@ from math import e,pi
 import param
 
 
-from param.version import Version
-__version__ = Version(release=(1,5,1), fpath=__file__,
-                      commit="$Format:%h$", reponame="param")
-
+from param import __version__  # noqa: API import
 
 class TimeAware(param.Parameterized):
     """

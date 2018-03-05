@@ -36,8 +36,7 @@ from collections import OrderedDict
 # only two required files.
 try:
     from .version import Version
-    _version = Version(release=None, fpath=__file__,
-                       archive_commit="$Format:%h$", reponame="param")
+    _version = Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param")
     __version__ = str(_version)
 except:
     import json

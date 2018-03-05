@@ -13,7 +13,7 @@ from math import e,pi
 import param
 
 
-from param import __version__
+from param import __version__  # noqa: API import
 
 class TimeAware(param.Parameterized):
     """

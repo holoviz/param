@@ -26,7 +26,6 @@ def get_setup_version(reponame):
     except:
         version = None
 
-        #import pdb;pdb.set_trace()
     if version is not None:
         return version.Version.setup_version(basepath, reponame, dirty='strip',
                                              archive_commit="$Format:%h$")

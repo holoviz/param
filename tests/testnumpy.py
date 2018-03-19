@@ -16,7 +16,7 @@ except ImportError:
         raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
     else:
         raise unittest.SkipTest("numpy not available")
-    
+
 
 def _is_array_and_equal(test,ref):
     if not type(test) == numpy.ndarray:
@@ -30,10 +30,10 @@ class TestNumpy(unittest.TestCase):
             z = param.Array(default=numpy.array([1]))
 
         _is_array_and_equal(Z.z,[1])
-        
+
         z = Z(z=numpy.array([1,2]))
         _is_array_and_equal(z.z,[1,2])
-        
+
 
 if __name__ == "__main__":
     import nose

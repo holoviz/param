@@ -33,7 +33,7 @@ class TestDateRange(unittest.TestCase):
             pass
         else:
             raise AssertionError("Bad date type was accepted.")
-        
+
     def test_wrong_type_set(self):
         class Q(param.Parameterized):
             a = param.DateRange()
@@ -54,11 +54,11 @@ class TestDateRange(unittest.TestCase):
             pass
         else:
             raise AssertionError("Bad date range was accepted.")
-        
+
     def test_start_before_end_init(self):
         class Q(param.Parameterized):
             a = param.DateRange()
-        
+
         try:
             Q(a=self.bad_range)
         except ValueError:

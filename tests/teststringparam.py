@@ -17,4 +17,4 @@ class TestStringParameters(unittest.TestCase):
         a = A()
         a.s = "hello"
         a.s = None # because allow_None should be True with default of None
-            
+

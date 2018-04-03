@@ -51,8 +51,22 @@ def get_setup_version(reponame):
     else:
         return json.load(open(version_file_path, 'r'))['version_string']
 
-#############################
 
+########## dependencies ##########
+
+extras_require = {
+    # pip doesn't support tests_require
+    # (https://github.com/pypa/pip/issues/1197)
+    'tests': [
+        'nose',
+        'flake8',
+    ]
+}
+
+extras_require['all'] = sorted(set(sum(extras_require.values(), [])))
+
+
+########## metadata for setuptools ##########
 
 setup_args = dict(
     name='param',
@@ -72,6 +86,8 @@ setup_args = dict(
     include_package_data = True,
     python_requires=">=2.7",
     install_requires=[],
+    extras_require=extras_require,
+    tests_require=extras_require['tests'],
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",

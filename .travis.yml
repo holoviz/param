@@ -42,6 +42,8 @@ jobs:
       python: pypy
       env: TOX_ENV=pypy
 
+    # could consider running with_ipython,numpy over py36 and 27
+
     - <<: *default
       env: TOX_ENV=with_ipython
 
@@ -53,7 +55,7 @@ jobs:
 
     - <<: *default
       stage: lint
-      env: TOX_ENV=lint_checks
+      env: TOX_ENV=flakes
 
     - stage: conda_package
       install:

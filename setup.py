@@ -3,16 +3,10 @@ import sys
 import json
 import importlib
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup
 
 
-install_requires = []
-if sys.version_info[0]==2 and sys.version_info[1]<7:
-    install_requires+=['ordereddict','unittest2']
-
+########## autover ##########
 
 def embed_version(basepath, reponame, ref='v0.2.1'):
     """
@@ -58,6 +52,8 @@ def get_setup_version(reponame):
     else:
         return json.load(open(version_file_path, 'r'))['version_string']
 
+#############################
+
 
 setup_args = dict(
     name='param',
@@ -75,12 +71,14 @@ setup_args = dict(
     provides=["param","numbergen"],
     package_data = {'pkg_bundle': ['.version']},
     include_package_data = True,
-    install_requires=install_requires,
+    python_requires=">=2.7",
+    install_requires=[],
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",

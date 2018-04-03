@@ -66,10 +66,9 @@ jobs:
         - conda update conda
         - conda install anaconda-client conda-build
       script:
-        - export VERSIONHACK=$(python -c "import subprocess;desc=subprocess.check_output(['git','describe','--long']).decode('utf8');v,commits=desc.split('-')[0:2];newv=[int(x) for x in v[1::].split('.')];newv[-1]+=1;print('.'.join(str(x) for x in newv)+'.dev'+commits)")
         - conda build conda.recipe/
         # only upload if package doesn't exist (as e.g. there are cron builds)
-        - anaconda show pyviz/param/$VERSIONHACK || anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev `conda build --output conda.recipe`
+        - anaconda show pyviz/param/$(python setup.py --version) || anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev $(conda build --output conda.recipe)
 
     - <<: *default
       stage: pypi_package

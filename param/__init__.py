@@ -36,12 +36,9 @@ from collections import OrderedDict
 # only two required files.
 try:
     from .version import Version
-    _version = Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param")
-    __version__ = str(_version)
+    __version__ = str(Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param"))
 except:
-    import json
-    __version__ = json.load(open(os.path.join(os.path.split(__file__)[0],
-                                              '.version'), 'r'))['version_string']
+    __version__ = "0.0.0+unknown"
 
 
 dt_types = (dt.datetime,)

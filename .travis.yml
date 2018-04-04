@@ -2,13 +2,21 @@ sudo: false
 
 language: python
 
+# quick hack to determine what tag is (improvements welcomed)
+#     release: ^v(\d+|\.)*[^a-z]\d*$
+# dev release: ^v(\d+|\.)*[a-z]\d*$
+
 stages:
   - lint
   - test
+  - name: pip_dev_package
+    if: tag =~ ^v(\d+|\.)*[a-z]\d*$
+  - name: pip_package
+    if: tag =~ ^v(\d+|\.)*[^a-z]\d*$
+  - name: conda_dev_package
+    if: tag =~ ^v(\d+|\.)*[a-z]\d*$ OR (branch = master AND type != pull_request)
   - name: conda_package
-    if: branch = master AND type != pull_request
-  - name: pypi_package
-    if: branch = master AND type != pull_request
+    if: tag =~ ^v(\d+|\.)*[^a-z]\d*$
 
 jobs:
   fast_finish: true
@@ -57,7 +65,12 @@ jobs:
       stage: lint
       env: TOX_ENV=flakes
 
-    - stage: conda_package
+    # TODO: the below packaging sections will be simplified with
+    # doit/pyct (and note that using after_success means no alert to
+    # failure uploading)
+
+    - &conda_default
+      stage: conda_dev_package
       install:
         - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
         - bash miniconda.sh -b -p $HOME/miniconda
@@ -67,20 +80,33 @@ jobs:
         - conda install anaconda-client conda-build
       script:
         - conda build conda.recipe/
+      after_success:
         # only upload if package doesn't exist (as e.g. there are cron builds)
         - anaconda show pyviz/param/$(python setup.py --version) || anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev $(conda build --output conda.recipe)
 
+    - <<: *conda_default
+      stage: conda_package
+      after_success:
+        # error if there's an existing package with same version
+        - anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev --label main $(conda build --output conda.recipe)
+
     - <<: *default
-      stage: pypi_package
-      install: true
-      script: true
+      stage: pip_dev_package
       deploy:
         provider: pypi
-        # could instead consider using real pypi when tag is release style
         server: https://test.pypi.org/legacy/
         distributions: "sdist bdist_wheel"
-        on:
-          tags: true
+        user: ceball
+        password:
+          secure: odJx1tSnIIyVZjj+dB2bZDGHroLGvvSjy0OIyKJtyosZ0s3xgYNrC49SPgGJacp7uM+hIL8Hw/FuGTKOAGwQWmJIkznQcT7NzPCyOgAArH+0k5+EDl3Y0+MrSsMRpW6FurOcPFyJHl4zjfuFP/0ORDwZqljQ4SCqytvo/gaJ1JgCMi/jFafdvKrpSZBaK/Wfm0zilPN1QZAaQfGG+Ej5kG9BjybEszyZIqSe6FccAZLr62ko0necXx/DG2rrfxVtOPEFlYctwxngr9og9QjVY8j2zFyIHolxDUR7Iv2ADR7MCjtBJWlBek3S+rFe3dxGg3TbcnrmuV3tL1yaObMOfCCYT0pI/0lq08q4OgJQFW41eGailZ9lRNxQsPeFTvvTmYmZA8mCD/spD5z5pJmehny+rSW2rmFonUq15GG/bHnV48FrNyq6rA+lFLBSzVHjFsp+ZCWAHxQTj/zkqMO3ReBt7B+2Zu+Fkj8fsnUqWqoNEoBPJx5jTR4lfgg5TQJ9FUiLmoB7LG+H8BQL9ylY7XG00MyyAN89YLqZTg2CI1mKeCWW2CB5kXMc39o1qDOm0QsCJPATfle5bNPoKDg5Gtod9U3eFc+c8/ynOSrZzP8IGTK5uMsFuhpMQ/DAKJqLmMn8H712zwVY4znza9NJMDQWgNMTDr7+w8JFm0hiqO8=
+
+    # TODO: update the pypi password and user (don't know what they are)
+
+    - <<: *default
+      stage: pip_package
+      deploy:
+        provider: pypi
+        distributions: "sdist bdist_wheel"
         user: ceball
         password:
           secure: odJx1tSnIIyVZjj+dB2bZDGHroLGvvSjy0OIyKJtyosZ0s3xgYNrC49SPgGJacp7uM+hIL8Hw/FuGTKOAGwQWmJIkznQcT7NzPCyOgAArH+0k5+EDl3Y0+MrSsMRpW6FurOcPFyJHl4zjfuFP/0ORDwZqljQ4SCqytvo/gaJ1JgCMi/jFafdvKrpSZBaK/Wfm0zilPN1QZAaQfGG+Ej5kG9BjybEszyZIqSe6FccAZLr62ko0necXx/DG2rrfxVtOPEFlYctwxngr9og9QjVY8j2zFyIHolxDUR7Iv2ADR7MCjtBJWlBek3S+rFe3dxGg3TbcnrmuV3tL1yaObMOfCCYT0pI/0lq08q4OgJQFW41eGailZ9lRNxQsPeFTvvTmYmZA8mCD/spD5z5pJmehny+rSW2rmFonUq15GG/bHnV48FrNyq6rA+lFLBSzVHjFsp+ZCWAHxQTj/zkqMO3ReBt7B+2Zu+Fkj8fsnUqWqoNEoBPJx5jTR4lfgg5TQJ9FUiLmoB7LG+H8BQL9ylY7XG00MyyAN89YLqZTg2CI1mKeCWW2CB5kXMc39o1qDOm0QsCJPATfle5bNPoKDg5Gtod9U3eFc+c8/ynOSrZzP8IGTK5uMsFuhpMQ/DAKJqLmMn8H712zwVY4znza9NJMDQWgNMTDr7+w8JFm0hiqO8=

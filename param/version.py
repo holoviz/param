@@ -1,4 +1,15 @@
-"""Provide consistent and up-to-date ``__version__`` strings for Python
+"""Apart from this first paragraph, this version.py file is an exact
+copy of https://github.com/ioam/autover/blob/59c207db70da6f41b689e8be5c5f6abb1e062c8e/autover/version.py.
+Autover's version.py is included inside the param package only to make
+version.py available to various other projects that use version.py and
+already depend on param, thus saving them from bundling version.py or
+dependending on autover. Otherwise, version.py would only be in the
+root of param's git repository, and would not be part of the param
+package.
+
+-----
+
+Provide consistent and up-to-date ``__version__`` strings for Python
 packages.
 
 It is easy to forget to update ``__version__`` strings when releasing
@@ -283,7 +294,7 @@ class Version(object):
                     self._commit = commit_argument
                 return
 
-            except IOError as e2:
+            except IOError:
                 if e1.args[1] == 'fatal: No names found, cannot describe anything.':
                     raise Exception("Cannot find any git version tags of format v*.*")
                 # If there is any other error, return (release value still useful)
@@ -308,7 +319,7 @@ class Version(object):
         if known_stale: self._commit_count = None
         return known_stale
 
-    def _output_from_file(self):
+    def _output_from_file(self, entry='git_describe'):
         """
         Read the version from a .version file that may exist alongside __init__.py.
 
@@ -319,7 +330,7 @@ class Version(object):
         try:
             vfile = os.path.join(os.path.dirname(self.fpath), '.version')
             with open(vfile, 'r') as f:
-                return json.loads(f.read())['git_describe']
+                return json.loads(f.read()).get(entry, None)
         except: # File may be missing if using pip + git archive
             return None
 
@@ -357,8 +368,12 @@ class Version(object):
         """
         known_stale = self._known_stale()
         if self.release is None and not known_stale:
-            return 'None'
+            extracted_directory_tag = self._output_from_file(entry='extracted_directory_tag')
+            return 'None' if extracted_directory_tag is None else extracted_directory_tag
         elif self.release is None and known_stale:
+            extracted_directory_tag = self._output_from_file(entry='extracted_directory_tag')
+            if extracted_directory_tag is not None:
+                return extracted_directory_tag
             return '0.0.0+g{SHA}-gitarchive'.format(SHA=self.archive_commit)
 
         release = '.'.join(str(el) for el in self.release)
@@ -423,7 +438,7 @@ class Version(object):
 
     @classmethod
     def get_setup_version(cls, setup_path, reponame, describe=False,
-                          dirty='strip', archive_commit=None):
+                          dirty='raise', archive_commit=None):
         """
         Helper for use in setup.py to get the version from the .version file (if available)
         or more up-to-date information from git describe (if available).
@@ -460,22 +475,55 @@ class Version(object):
         else:
             return vstring
 
+
     @classmethod
-    def setup_version(cls, setup_path, reponame, archive_commit=None, dirty='strip'):
-        vstring =  Version.get_setup_version(setup_path,
-                                             reponame,
-                                             describe=False,
-                                             dirty=dirty,
-                                             archive_commit=archive_commit)
+    def extract_directory_tag(cls, setup_path, reponame):
+        setup_dir = os.path.split(setup_path)[-1] # Directory containing setup.py
+        prefix = reponame + '-' # Prefix to match
+        if setup_dir.startswith(prefix):
+            tag = setup_dir[len(prefix):]
+            # Assuming the tag is a version if it isn't empty, 'master' and has a dot in it
+            if tag not in ['', 'master'] and ('.' in tag):
+                return tag
+        return None
+
+
+    @classmethod
+    def setup_version(cls, setup_path, reponame, archive_commit=None, dirty='raise'):
+        info = {}
+        git_describe = None
         try:
             # Will only work if in a git repo and git is available
-            describe_string = Version.get_setup_version(setup_path,
-                                                        reponame,
-                                                        describe=True,
-                                                        dirty=dirty,
-                                                        archive_commit=archive_commit)
-            with open(os.path.join(setup_path, reponame, '.version'), 'w') as f:
-                f.write(json.dumps({'git_describe':  describe_string,
-                                    'version_string': vstring}))
+            git_describe  = Version.get_setup_version(setup_path,
+                                                      reponame,
+                                                      describe=True,
+                                                      dirty=dirty,
+                                                      archive_commit=archive_commit)
+
+            if git_describe is not None:
+                info['git_describe'] = git_describe
         except: pass
-        return vstring
+
+        if git_describe is None:
+            extracted_directory_tag = Version.extract_directory_tag(setup_path, reponame)
+            if extracted_directory_tag is not None:
+                info['extracted_directory_tag'] = extracted_directory_tag
+            try:
+                with open(os.path.join(setup_path, reponame, '.version'), 'w') as f:
+                    f.write(json.dumps({'extracted_directory_tag':extracted_directory_tag}))
+            except:
+                print('Error in setup_version: could not write .version file.')
+
+
+        info['version_string'] =  Version.get_setup_version(setup_path,
+                                                            reponame,
+                                                            describe=False,
+                                                            dirty=dirty,
+                                                            archive_commit=archive_commit)
+        try:
+            with open(os.path.join(setup_path, reponame, '.version'), 'w') as f:
+                f.write(json.dumps(info))
+        except:
+            print('Error in setup_version: could not write .version file.')
+
+        return info['version_string']

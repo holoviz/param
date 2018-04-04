@@ -99,7 +99,7 @@ jobs:
         on:
           tags: true
         user: $TESTPYPI_USER
-        password: $TESTPYPI_PASSWORD
+        password: $TESTPYPI_PWD
 
     - <<: *default
       stage: pip_package
@@ -107,7 +107,6 @@ jobs:
         provider: pypi
         distributions: "sdist bdist_wheel"
         on:
-          tags: true    
+          tags: true
         user: $PYPI_USER
-        password: $PYPI_PASSWORD
-
+        password: $PYPI_PWD

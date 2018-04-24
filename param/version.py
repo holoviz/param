@@ -1,121 +1,19 @@
-"""Apart from this first paragraph, this version.py file is an exact
-copy of https://github.com/ioam/autover/blob/ad22b3fcbcdaa40570c3fc8eedb3aeed23b5cdcf/autover/version.py.
-Autover's version.py is included inside the param package only to make
-version.py available to various other projects that use version.py and
-already depend on param, thus saving them from bundling version.py or
-dependending on autover. Otherwise, version.py would only be in the
-root of param's git repository, and would not be part of the param
-package.
-
------
-
-Provide consistent and up-to-date ``__version__`` strings for Python
-packages.
-
-It is easy to forget to update ``__version__`` strings when releasing
-a project, and it is important that the ``__version__`` strings are
-useful over the course of development even between releases,
-especially if releases are infrequent.
-
-This file provides a Version class that addresses both problems.
-Version is meant to be a simple, bare-bones approach that focuses on (a)
-ensuring that all declared version information matches for a release if
-supplied, and (b) providing fine-grained version information via a
-version control system (VCS) in between releases (c) allowing versions
-to be specified with tags alone.  Other approaches like versioneer.py
-can automate more of the process of making releases, but they require
-more complex self-modifying code and code generation techniques than the
-simple Python class declaration used here.
-
-Currently, the only VCS supported is git, but others could be added
-easily.
-
-To use Version in a project that provides a Python package named
-``package`` maintained in a git repository named ``packagegit``:
-
-1. Make the Version class available for import from your package,
-   either by adding the PyPI package "autover" as a dependency for your
-   package, or by simply copying this file into ``package/autover.py``.
-
-2. Assuming that the current version of your package is 1.0.0 (and you
-   want to enforce this), add the following lines to your
-   ``package/__init__.py``::
-
-     from autover import Version
-     __version__ = Version(release=(1,0,0), fpath=__file__,
-                           commit="$Format:%h$", reponame="packagegit")
-
-   (or ``from .version import Version`` if you copied the file directly.)
-
-   You can supply release=None if you want to set the version purely via a tag.
-
-3. Declare the version as a string in your package's setup.py file, e.g.::
-
-     setup_args["version"]="1.0.0"
-
-  This acts as an explicit check you can verify against. You can also set this
-  up against the tag using:
-
-      setup_args["version"]=get_setup_version("autover") # Your package name here
-
-  To use this, adapt the get_setup_version function in autover/setup.py for use
-  in your package's setup.py.
-
-
-4. (Optional) In your package's setup.py script code for making a
-   release, you can add a call to the Version.verify method. E.g.::
-
-     setup_args = dict(name='package', version="1.0.0", ...)
-
-     if __name__=="__main__":
-          if 'upload' in sys.argv:
-              import package
-              package.__version__.verify(setup_args['version'])
-          setup(**setup_args)
-
-  This can help make sure the repository is in a good state before
-  building a package (e.g not dirty).
-
-4. Tag the version of the repository to be released with a string of
-   the form v*.*.*, i.e. ``v1.0.0`` in this example.  E.g. for git::
-
-     git tag -a v1.0.0 -m 'Release version 1.0.0' ; git push
-
-  You need to use an annotated tag (i.e the -a flag) and you can use
-  PEP440 compliant strings as long as they start with a 'v' e.g
-  v1.0.1a1 v2.3rc5 etc.
-
-If you chose to specify explicit version strings in setup.py and
-__init__.py and used the verify method, running ``setup.py`` to make a
-release via something like ``python setup.py register sdist upload``,
-Python will verify that the version last tagged in the VCS is the same
-as what is declared in the package and the setup.py, aborting the
-release until either the tag is corrected or the declared version is
-made to match the tag.
-
-Releases installed without VCS information will then report the declared
-release version if specified, otherwise it will read the .version file
-containing the VSC information when the package was build . If live VCS
-information is available and matches the specified repository name, then
-the version reported from e.g. ``str(package.__version__)`` will provide
-more detailed information about the precise VCS revision changes since
-the release.  See the docstring for the Version class for more detailed
-information.
-
-If you used release=None in __init__.py and the get_setup_version
-function in setup.py, all you need to get a live version string is set
-an appropriate VCS tag. Note that to ensure this is always correct,
-autover is required as a build dependency, otherwise the information
-available in the .version file is used.
-
-This file is in the public domain, provided as-is, with no warranty of
-any kind expressed or implied.  Anyone is free to copy, modify,
-publish, use, compile, sell, or distribute it under any license, for
-any purpose, commercial or non-commercial, and by any means.  The
-original file is maintained at:
-https://github.com/ioam/autover/blob/master/autover/__init__.py
-
 """
+Provide consistent and up-to-date ``__version__`` strings for
+Python packages.
+
+See https://github.com/pyviz/autover for more information.
+"""
+
+# The Version class is a copy of autover.version.Version v0.2.5,
+# except as noted below.
+#
+# The current version of autover supports a workflow based on tagging
+# a git repository, and reports PEP440 compliant version information.
+# Previously, the workflow required editing of version numbers in
+# source code, and the version was not necessarily PEP440 compliant.
+# Version.__new__ is added here to provide the previous Version class
+# (OldDeprecatedVersion) if Version is called in the old way.
 
 
 __author__ = 'Jean-Luc Stevens'
@@ -179,6 +77,8 @@ class Version(object):
     supplied."""
 
     def __new__(cls,**kw):
+        # If called in the old way, provide the previous class. Means
+        # PEP440/tag based workflow warning below will never appear.
         if ('release' in kw and kw['release'] is not None) or \
            ('dev' in kw and kw['dev'] is not None) or \
            ('commit_count' in kw):
@@ -186,10 +86,7 @@ class Version(object):
         else:
             return super(Version, cls).__new__(cls)
 
-    # TODO: because of the above, release will never be passed
-    # here. self.expected_release and self._commit_count will always
-    # be None; can they and any associated code be removed from this
-    # class now?
+
     def __init__(self, release=None, fpath=None, commit=None, reponame=None,
                  commit_count_prefix='.post', archive_commit=None, **kwargs):
         """
@@ -200,6 +97,9 @@ class Version(object):
         """
         self.fpath = fpath
         self._expected_commit = commit
+
+        if release is not None or 'commit_count' in kwargs:
+            print('WARNING: param.Version now supports PEP440 and a new tag based workflow. See param/version.py for more details')
 
         self.expected_release = release
 
@@ -544,7 +444,8 @@ class Version(object):
         return info['version_string']
 
 
-# param/version.py aa087db29976d9b7e0f59c29789dfd721c85afd0
+
+# from param/version.py aa087db29976d9b7e0f59c29789dfd721c85afd0
 class OldDeprecatedVersion(object):
     """
     A simple approach to Python package versioning that supports PyPI

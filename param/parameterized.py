@@ -1546,6 +1546,8 @@ class Parameterized(object):
         # Flag that can be tested to see if e.g. constant Parameters
         # can still be set
         self.initialized=False
+        # Override class level param namespace with instance namespace
+        self.param = Parameters(self.__class__, self=self)
 
         self.__generate_name()
 
@@ -1554,8 +1556,6 @@ class Parameterized(object):
 
         self.initialized=True
 
-        # Override class level param namespace with instance namespace
-        self.param = Parameters(self.__class__, self=self)
 
 
     @as_uninitialized

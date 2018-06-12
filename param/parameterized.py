@@ -1693,7 +1693,7 @@ class Parameterized(object):
 
     @classmethod
     def params(cls,parameter_name=None):
-        return cls.param.params(parameter_name=None)
+        return cls.param.params(parameter_name=parameter_name)
 
     @classmethod
     def set_default(cls,param_name,value):
@@ -1709,11 +1709,11 @@ class Parameterized(object):
 
     @bothmethod
     def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
-        return self_or_cls.param.set_dynamic_time_fn(time_fn,sublistattr=None)
+        return self_or_cls.param.set_dynamic_time_fn(time_fn,sublistattr=sublistattr)
 
     @bothmethod
     def get_param_values(self_or_cls,onlychanged=False):
-        return self_or_cls.param.get_param_values(onlychanged=False)
+        return self_or_cls.param.get_param_values(onlychanged=onlychanged)
 
     @bothmethod
     def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
@@ -1728,12 +1728,13 @@ class Parameterized(object):
         return cls_or_slf.param.inspect_value(name)
 
     def script_repr(self,imports=[],prefix="    "):
-        return self.param.script_repr(imports=[],prefix="    ")
+        return self.param.script_repr(imports=imports,prefix=prefix)
 
     def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
-        return self.param.pprint(imports=None, prefix=" ", unknown_value='<?>',
-                                 qualify=False, separator="")
+        return self.param.pprint(imports=imports, prefix=prefix,
+                                 unknown_value=unknown_value,
+                                 qualify=qualify, separator=separator)
 
     def __db_print(self,level,msg,*args,**kw):
         return self.param.__db_print(level,msg,*args,**kw)

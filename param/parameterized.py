@@ -579,6 +579,22 @@ class Parameters(object):
         self_.cls = cls
         self_.self = self
 
+    @classmethod
+    def deprecate(cls, fn):
+        """
+        Decorator to issue warnings for API moving onto the param
+        namespace and to add a docstring directing people to the
+        appropriate method.
+        """
+        def inner(*args, **kwargs):
+            info = (args[0].__class__.__name__,  fn.__name__)
+            get_logger().log(WARNING,
+                                '%s: Use method %r via param namespace ' % info)
+            return fn(*args, **kwargs)
+
+        inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
+        return inner
+
     # Classmethods
 
     def print_param_defaults(self_):
@@ -1688,78 +1704,99 @@ class Parameterized(object):
     # API to be accessed via param namespace
 
     @classmethod
+    @Parameters.deprecate
     def _add_parameter(cls, param_name,param_obj):
         cls.param._add_parameter(param_name,param_obj)
 
     @classmethod
+    @Parameters.deprecate
     def params(cls,parameter_name=None):
         return cls.param.params(parameter_name=parameter_name)
 
     @classmethod
+    @Parameters.deprecate
     def set_default(cls,param_name,value):
         return cls.param.set_default(param_name,value)
 
     @classmethod
+    @Parameters.deprecate
     def print_param_defaults(cls):
         cls.param.print_param_defaults()
 
     @bothmethod
+    @Parameters.deprecate
     def set_param(self_or_cls,*args,**kwargs):
         return self_or_cls.param.set_param(*args,**kwargs)
 
     @bothmethod
+    @Parameters.deprecate
     def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
         return self_or_cls.param.set_dynamic_time_fn(time_fn,sublistattr=sublistattr)
 
     @bothmethod
+    @Parameters.deprecate
     def get_param_values(self_or_cls,onlychanged=False):
         return self_or_cls.param.get_param_values(onlychanged=onlychanged)
 
     @bothmethod
+    @Parameters.deprecate
     def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
         return cls_or_slf.param.force_new_dynamic_value(name)
 
     @bothmethod
+    @Parameters.deprecate
     def get_value_generator(cls_or_slf,name): # pylint: disable-msg=E0213
         return cls_or_slf.param.get_value_generator(name)
 
     @bothmethod
+    @Parameters.deprecate
     def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
         return cls_or_slf.param.inspect_value(name)
 
+    @Parameters.deprecate
     def script_repr(self,imports=[],prefix="    "):
         return self.param.script_repr(imports=imports,prefix=prefix)
 
+    @Parameters.deprecate
     def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
         return self.param.pprint(imports=imports, prefix=prefix,
                                  unknown_value=unknown_value,
                                  qualify=qualify, separator=separator)
 
+    @Parameters.deprecate
     def __db_print(self,level,msg,*args,**kw):
         return self.param.__db_print(level,msg,*args,**kw)
 
+    @Parameters.deprecate
     def warning(self,msg,*args,**kw):
         return self.param.warning(msg,*args,**kw)
 
+    @Parameters.deprecate
     def message(self,msg,*args,**kw):
         return self.param.message(msg,*args,**kw)
 
+    @Parameters.deprecate
     def verbose(self,msg,*args,**kw):
         return self.param.verbose(msg,*args,**kw)
 
+    @Parameters.deprecate
     def debug(self,msg,*args,**kw):
         return self.param.debug(msg,*args,**kw)
 
+    @Parameters.deprecate
     def state_push(self):
         return self.param.state_push()
 
+    @Parameters.deprecate
     def state_pop(self):
         return self.param.state_pop()
 
+    @Parameters.deprecate
     def print_param_values(self):
         return self.param.print_param_values()
 
+    @Parameters.deprecate
     def defaults(self):
         return self.param.defaults()
 

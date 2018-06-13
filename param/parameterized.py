@@ -1706,7 +1706,7 @@ class Parameterized(object):
     @classmethod
     @Parameters.deprecate
     def _add_parameter(cls, param_name,param_obj):
-        cls.param._add_parameter(param_name,param_obj)
+        return cls.param._add_parameter(param_name,param_obj)
 
     @classmethod
     @Parameters.deprecate
@@ -1721,7 +1721,7 @@ class Parameterized(object):
     @classmethod
     @Parameters.deprecate
     def print_param_defaults(cls):
-        cls.param.print_param_defaults()
+        return cls.param.print_param_defaults()
 
     @bothmethod
     @Parameters.deprecate

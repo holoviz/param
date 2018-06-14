@@ -973,91 +973,6 @@ class Parameters(object):
 
             get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args, **kw)
 
-    def script_repr(self_,imports=[],prefix="    "):
-        """
-        Variant of __repr__ designed for generating a runnable script.
-        """
-        self = self_.self
-        return self.param.pprint(imports,prefix, unknown_value=None, qualify=True,
-                                 separator="\n")
-
-    # CEBALERT: not yet properly documented
-    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        """
-        (Experimental) Pretty printed representation that may be
-        evaluated with eval. See pprint() function for more details.
-        """
-        self = self_.self
-        if imports is None:
-            imports = []
-
-        # CEBALERT: imports should just be a set rather than a list;
-        # change in next release?
-        imports[:] = list(set(imports))
-        # Generate import statement
-        mod = self.__module__
-        bits = mod.split('.')
-        imports.append("import %s"%mod)
-        imports.append("import %s"%bits[0])
-
-        changed_params = dict(self.param.get_param_values(onlychanged=script_repr_suppress_defaults))
-        values = dict(self.param.get_param_values())
-        spec = inspect.getargspec(self.__init__)
-        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
-
-        if spec.defaults is not None:
-            posargs = spec.args[:-len(spec.defaults)]
-            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
-        else:
-            posargs, kwargs = args, []
-
-        ordering = sorted(
-            sorted(changed_params.keys()), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if self.param.params(k).precedence is None
-                           else self.param.params(k).precedence))
-
-        arglist, keywords, processed = [], [], []
-        for k in args + ordering:
-            if k in processed: continue
-
-            # Suppresses automatically generated names.
-            if k == 'name' and (values[k] is not None and
-                                re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
-                continue
-
-            value = pprint(values[k], imports, prefix=prefix,settings=[],
-                           unknown_value=unknown_value,
-                           qualify=qualify) if k in values else None
-
-            if value is None:
-                if unknown_value is False:
-                    raise Exception("%s: unknown value of %r" % (self.name,k))
-                elif unknown_value is None:
-                    # i.e. suppress repr
-                    continue
-                else:
-                    value = unknown_value
-
-            # Explicit kwarg (unchanged, known value)
-            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
-
-            if k in posargs:
-                # value will be unknown_value unless k is a parameter
-                arglist.append(value)
-            elif k in kwargs or (spec.keywords is not None):
-                # Explicit modified keywords or parameters in
-                # precendence order (if **kwargs present)
-                keywords.append('%s=%s' % (k, value))
-
-            processed.append(k)
-
-        qualifier = mod + '.'  if qualify else ''
-        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
-
-
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""
         self = self_.self
@@ -1716,6 +1631,90 @@ class Parameterized(object):
         """Return a short representation of the name and class of this object."""
         return "<%s %s>" % (self.__class__.__name__,self.name)
 
+
+    def script_repr(self,imports=[],prefix="    "):
+        """
+        Variant of __repr__ designed for generating a runnable script.
+        """
+        return self.pprint(imports,prefix, unknown_value=None, qualify=True,
+                           separator="\n")
+
+    # CEBALERT: not yet properly documented
+    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
+        """
+        (Experimental) Pretty printed representation that may be
+        evaluated with eval. See pprint() function for more details.
+        """
+        if imports is None:
+            imports = []
+
+        # CEBALERT: imports should just be a set rather than a list;
+        # change in next release?
+        imports[:] = list(set(imports))
+        # Generate import statement
+        mod = self.__module__
+        bits = mod.split('.')
+        imports.append("import %s"%mod)
+        imports.append("import %s"%bits[0])
+
+        changed_params = dict(self.param.get_param_values(onlychanged=script_repr_suppress_defaults))
+        values = dict(self.param.get_param_values())
+        spec = inspect.getargspec(self.__init__)
+        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
+
+        if spec.defaults is not None:
+            posargs = spec.args[:-len(spec.defaults)]
+            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
+        else:
+            posargs, kwargs = args, []
+
+        ordering = sorted(
+            sorted(changed_params.keys()), # alphanumeric tie-breaker
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if self.param.params(k).precedence is None
+                           else self.param.params(k).precedence))
+
+        arglist, keywords, processed = [], [], []
+        for k in args + ordering:
+            if k in processed: continue
+
+            # Suppresses automatically generated names.
+            if k == 'name' and (values[k] is not None and
+                                re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+                continue
+
+            value = pprint(values[k], imports, prefix=prefix,settings=[],
+                           unknown_value=unknown_value,
+                           qualify=qualify) if k in values else None
+
+            if value is None:
+                if unknown_value is False:
+                    raise Exception("%s: unknown value of %r" % (self.name,k))
+                elif unknown_value is None:
+                    # i.e. suppress repr
+                    continue
+                else:
+                    value = unknown_value
+
+            # Explicit kwarg (unchanged, known value)
+            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
+
+            if k in posargs:
+                # value will be unknown_value unless k is a parameter
+                arglist.append(value)
+            elif k in kwargs or (spec.keywords is not None):
+                # Explicit modified keywords or parameters in
+                # precendence order (if **kwargs present)
+                keywords.append('%s=%s' % (k, value))
+
+            processed.append(k)
+
+        qualifier = mod + '.'  if qualify else ''
+        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
+        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
+
+
     # API to be accessed via param namespace
 
     @classmethod
@@ -1767,17 +1766,6 @@ class Parameterized(object):
     @Parameters.deprecate
     def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
         return cls_or_slf.param.inspect_value(name)
-
-    @Parameters.deprecate
-    def script_repr(self,imports=[],prefix="    "):
-        return self.param.script_repr(imports=imports,prefix=prefix)
-
-    @Parameters.deprecate
-    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        return self.param.pprint(imports=imports, prefix=prefix,
-                                 unknown_value=unknown_value,
-                                 qualify=qualify, separator=separator)
 
     @Parameters.deprecate
     def __db_print(self,level,msg,*args,**kw):

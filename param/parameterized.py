@@ -694,7 +694,7 @@ class Parameters(object):
                                  (self_or_cls.name))
 
         for (k,v) in kwargs.items():
-            if k not in self_or_cls.params():
+            if k not in self_or_cls.param.params():
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
 
@@ -724,10 +724,10 @@ class Parameters(object):
         else:
             a = (self_or_cls,)
 
-        for n,p in self_or_cls.params().items():
+        for n,p in self_or_cls.param.params().items():
             if hasattr(p,'_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
-                    g = self_or_cls.get_value_generator(n)
+                    g = self_or_cls.param.get_value_generator(n)
                     g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -737,7 +737,7 @@ class Parameters(object):
                 sublist = []
 
             for obj in sublist:
-                obj.set_dynamic_time_fn(time_fn,sublistattr)
+                obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
     def get_param_values(self_,onlychanged=False):
         """
@@ -754,8 +754,8 @@ class Parameters(object):
         # (would need to distinguish instantiation of default from
         # user setting of value).
         vals = []
-        for name,val in self_or_cls.params().items():
-            value = self_or_cls.get_value_generator(name)
+        for name,val in self_or_cls.param.params().items():
+            value = self_or_cls.param.get_value_generator(name)
             # (this is pointless for cls)
             if not onlychanged or not all_equal(value,val.default):
                 vals.append((name,value))
@@ -780,7 +780,7 @@ class Parameters(object):
         (i.e. equivalent to getattr(name).
         """
         cls_or_slf = self_.cls if self_.self is None else self_.self
-        param_obj = cls_or_slf.params().get(name)
+        param_obj = cls_or_slf.param.params().get(name)
 
         if not param_obj:
             return getattr(cls_or_slf,name)
@@ -807,14 +807,14 @@ class Parameters(object):
         their value-generating object returned.
         """
         cls_or_slf = self_.cls if self_.self is None else self_.self
-        param_obj = cls_or_slf.params().get(name)
+        param_obj = cls_or_slf.param.params().get(name)
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj,'attribs'):
-            value = [cls_or_slf.get_value_generator(a) for a in param_obj.attribs]
+            value = [cls_or_slf.param.get_value_generator(a) for a in param_obj.attribs]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj,'_value_is_dynamic'):
@@ -840,12 +840,12 @@ class Parameters(object):
         last generated value returned.
         """
         cls_or_slf = self_.cls if self_.self is None else self_.self
-        param_obj = cls_or_slf.params().get(name)
+        param_obj = cls_or_slf.param.params().get(name)
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [cls_or_slf.inspect_value(a) for a in param_obj.attribs]
+            value = [cls_or_slf.param.inspect_value(a) for a in param_obj.attribs]
         elif not hasattr(param_obj,'_inspect'):
             value = getattr(cls_or_slf,name)
         else:
@@ -869,7 +869,7 @@ class Parameters(object):
         """
         self = self_.self
         d = {}
-        for param_name,param in self.params().items():
+        for param_name,param in self.param.params().items():
             if param.constant:
                 pass
             elif param.instantiate:
@@ -904,8 +904,8 @@ class Parameters(object):
         Variant of __repr__ designed for generating a runnable script.
         """
         self = self_.self
-        return self.pprint(imports,prefix, unknown_value=None, qualify=True,
-                           separator="\n")
+        return self.param.pprint(imports,prefix, unknown_value=None, qualify=True,
+                                 separator="\n")
 
     # CEBALERT: not yet properly documented
     def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
@@ -927,8 +927,8 @@ class Parameters(object):
         imports.append("import %s"%mod)
         imports.append("import %s"%bits[0])
 
-        changed_params = dict(self.get_param_values(onlychanged=script_repr_suppress_defaults))
-        values = dict(self.get_param_values())
+        changed_params = dict(self.param.get_param_values(onlychanged=script_repr_suppress_defaults))
+        values = dict(self.param.get_param_values())
         spec = inspect.getargspec(self.__init__)
         args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
@@ -941,8 +941,8 @@ class Parameters(object):
         ordering = sorted(
             sorted(changed_params.keys()), # alphanumeric tie-breaker
             key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if self.params(k).precedence is None
-                           else self.params(k).precedence))
+                           if self.param.params(k).precedence is None
+                           else self.param.params(k).precedence))
 
         arglist, keywords, processed = [], [], []
         for k in args + ordering:
@@ -987,7 +987,7 @@ class Parameters(object):
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""
         self = self_.self
-        for name,val in self.get_param_values():
+        for name,val in self.param.get_param_values():
             print('%s.%s = %s' % (self.name,name,val))
 
     def warning(self_, msg,*args,**kw):
@@ -1062,15 +1062,15 @@ class Parameters(object):
         something without permanently altering the objects' state.
         """
         self = self_.self
-        for pname,p in self.params().items():
-            g = self.get_value_generator(pname)
+        for pname,p in self.param.params().items():
+            g = self.param.get_value_generator(pname)
             if hasattr(g,'_Dynamic_last'):
                 g._saved_Dynamic_last.append(g._Dynamic_last)
                 g._saved_Dynamic_time.append(g._Dynamic_time)
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
             elif hasattr(g,'state_push') and isinstance(g,Parameterized):
-                g.state_push()
+                g.param.state_push()
 
     def state_pop(self_):
         """
@@ -1079,13 +1079,13 @@ class Parameters(object):
         See state_push() for more details.
         """
         self = self_.self
-        for pname,p in self.params().items():
-            g = self.get_value_generator(pname)
+        for pname,p in self.param.params().items():
+            g = self.param.get_value_generator(pname)
             if hasattr(g,'_Dynamic_last'):
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
-                g.state_pop()
+                g.param.state_pop()
 
 class ParameterizedMetaclass(type):
     """
@@ -1959,14 +1959,14 @@ class ParamOverrides(dict):
             return default
 
     def __contains__(self, key):
-        return key in self.__dict__ or key in self._overridden.params()
+        return key in self.__dict__ or key in self._overridden.param.params()
 
     def _check_params(self,params):
         """
         Print a warning if params contains something that is not a
         Parameter of the overridden object.
         """
-        overridden_object_params = list(self._overridden.params().keys())
+        overridden_object_params = list(self._overridden.param.params().keys())
         for item in params:
             if item not in overridden_object_params:
                 self.warning("'%s' will be ignored (not a Parameter).",item)
@@ -1977,7 +1977,7 @@ class ParamOverrides(dict):
         parameters of the overridden object.
         """
         extra_keywords = {}
-        overridden_object_params = self._overridden.params()
+        overridden_object_params = self._overridden.param.params()
         for name,val in params.items():
             if name not in overridden_object_params:
                 extra_keywords[name]=val

@@ -176,26 +176,26 @@ class TestDynamicTimeDependent(TestDynamicParameters):
         self.assertNotEqual(call_1, call_2)
         self.assertNotEqual(call_1, call_3)
 
-    # def test_dynamic_values_time_dependent(self):
-    #     param.Dynamic.time_dependent = True
-    #     with param.Dynamic.time_fn as t:
-    #         t(0)
-    #         call_1 = self.t11.x
-    #         t += 1
-    #         call_2 = self.t11.x
-    #         t(0)
-    #         call_3 = self.t11.x
-    #     self.assertNotEqual(call_1, call_2)
-    #     self.assertEqual(call_1, call_3)
+    def test_dynamic_values_time_dependent(self):
+        param.Dynamic.time_dependent = True
+        with param.Dynamic.time_fn as t:
+            t(0)
+            call_1 = self.t11.x
+            t += 1
+            call_2 = self.t11.x
+            t(0)
+            call_3 = self.t11.x
+        self.assertNotEqual(call_1, call_2)
+        self.assertEqual(call_1, call_3)
 
-    # def test_class_dynamic_values_change(self):
-    #     call_1 = self.TestPO3.x
-    #     call_2 = self.TestPO3.x
-    #     self.assertEqual(call_1, call_2)
-    #     with param.Dynamic.time_fn as t:
-    #         t += 1
-    #         call_3 = self.TestPO3.x
-    #     self.assertNotEqual(call_2, call_3)
+    def test_class_dynamic_values_change(self):
+        call_1 = self.TestPO3.x
+        call_2 = self.TestPO3.x
+        self.assertEqual(call_1, call_2)
+        with param.Dynamic.time_fn as t:
+            t += 1
+            call_3 = self.TestPO3.x
+        self.assertNotEqual(call_2, call_3)
 
     def test_dynamic_value_change_independent(self):
         t12 = self.TestPO1()

@@ -4,6 +4,7 @@ time-dependent numbergenerators.
 """
 import param
 import numbergen
+import copy
 
 from . import API1TestCase
 from nose.plugins.skip import SkipTest
@@ -125,6 +126,18 @@ class TestTimeDependentDynamic(API1TestCase):
             a = param.Number(default = self.Incrementer())
 
         self.DynamicClass = DynamicClass
+        self._start_state = copy.copy([param.Dynamic.time_dependent,
+                                       numbergen.TimeAware.time_dependent,
+                                       param.Dynamic.time_fn,
+                                       numbergen.TimeAware.time_fn,
+                                       param.random_seed])
+
+    def tearDown(self):
+        param.Dynamic.time_dependent = self._start_state[0]
+        numbergen.TimeAware.time_dependent = self._start_state[1]
+        param.Dynamic.time_fn = self._start_state[2]
+        numbergen.TimeAware.time_fn = self._start_state[3]
+        param.random_seed = self._start_state[4]
 
     def test_non_time_dependent(self):
         """

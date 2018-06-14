@@ -646,7 +646,7 @@ class Parameters(object):
         for name,val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
+                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self,name,val)
 
@@ -1971,7 +1971,7 @@ class ParamOverrides(dict):
         overridden_object_params = list(self._overridden.param.params().keys())
         for item in params:
             if item not in overridden_object_params:
-                self.warning("'%s' will be ignored (not a Parameter).",item)
+                self.param.warning("'%s' will be ignored (not a Parameter).",item)
 
     def _extract_extra_keywords(self,params):
         """

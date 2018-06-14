@@ -307,7 +307,7 @@ class Time(Parameterized):
         if time_type and val is None:
             raise Exception("Please specify a value for the new time_type.")
         if time_type:
-            type_param = self.params('time_type')
+            type_param = self.param.params('time_type')
             type_param.constant = False
             self.time_type = time_type
             type_param.constant = True

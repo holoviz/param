@@ -1704,7 +1704,7 @@ class Parameterized(object):
         all the parameters of this object.
         """
         settings = ['%s=%s' % (name,repr(val))
-                    for name,val in self.get_param_values()]
+                    for name,val in self.param.get_param_values()]
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
 
     def __str__(self):

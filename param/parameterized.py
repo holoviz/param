@@ -560,6 +560,24 @@ class shared_parameters(object):
         shared_parameters._shared_cache = {}
 
 
+def as_uninitialized(fn):
+    """
+    Decorator: call fn with the parameterized_instance's
+    initialization flag set to False, then revert the flag.
+
+    (Used to decorate Parameterized methods that must alter
+    a constant Parameter.)
+    """
+    @wraps(fn)
+    def override_initialization(self_,*args,**kw):
+        parameterized_instance = self_.self
+        original_initialized=parameterized_instance.initialized
+        parameterized_instance.initialized=False
+        fn(parameterized_instance,*args,**kw)
+        parameterized_instance.initialized=original_initialized
+    return override_initialization
+
+
 
 class Parameters(object):
     """Object that holds the namespace and implementation of Parameterized
@@ -580,6 +598,57 @@ class Parameters(object):
         """
         self_.cls = cls
         self_.self = self
+
+
+    @as_uninitialized
+    def _set_name(self_, name):
+        self = self_.param.self
+        self.name=name
+
+
+    @as_uninitialized
+    def _generate_name(self_):
+        self = self_.param.self
+        self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
+
+
+    @as_uninitialized
+    def _setup_params(self_,**params):
+        """
+        Initialize default and keyword parameter values.
+
+        First, ensures that all Parameters with 'instantiate=True'
+        (typically used for mutable Parameters) are copied directly
+        into each object, to ensure that there is an independent copy
+        (to avoid suprising aliasing errors).  Then sets each of the
+        keyword arguments, warning when any of them are not defined as
+        parameters.
+
+        Constant Parameters can be set during calls to this method.
+        """
+        self = self_.param.self
+        ## Deepcopy all 'instantiate=True' parameters
+        # (build a set of names first to avoid redundantly instantiating
+        #  a later-overridden parent class's parameter)
+        params_to_instantiate = {}
+        for class_ in classlist(type(self)):
+            if not issubclass(class_, Parameterized):
+                continue
+            for (k,v) in class_.__dict__.items():
+                # (avoid replacing name with the default of None)
+                if isinstance(v,Parameter) and v.instantiate and k!="name":
+                    params_to_instantiate[k]=v
+
+        for p in params_to_instantiate.values():
+            self._instantiate_param(p)
+
+        ## keyword arg setting
+        for name,val in params.items():
+            desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
+            if not desc:
+                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
+            # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
+            setattr(self,name,val)
 
     @classmethod
     def deprecate(cls, fn):
@@ -1493,21 +1562,8 @@ script_repr_reg[FunctionType]=function_script_repr
 dbprint_prefix=None
 
 
-def as_uninitialized(fn):
-    """
-    Decorator: call fn with the parameterized_instance's
-    initialization flag set to False, then revert the flag.
 
-    (Used to decorate Parameterized methods that must alter
-    a constant Parameter.)
-    """
-    @wraps(fn)
-    def override_initialization(parameterized_instance,*args,**kw):
-        original_initialized=parameterized_instance.initialized
-        parameterized_instance.initialized=False
-        fn(parameterized_instance,*args,**kw)
-        parameterized_instance.initialized=original_initialized
-    return override_initialization
+
 
 
 
@@ -1568,66 +1624,12 @@ class Parameterized(object):
         # Override class level param namespace with instance namespace
         self.param = Parameters(self.__class__, self=self)
 
-        self.__generate_name()
+        self.param._generate_name()
 
-        self._setup_params(**params)
+        self.param._setup_params(**params)
         object_count += 1
 
         self.initialized=True
-
-
-
-    @as_uninitialized
-    def _set_name(self,name):
-        self.name=name
-
-
-    @as_uninitialized
-    def __generate_name(self):
-        """
-        Set name to a gensym formed from the object's type name and
-        the object_count.
-        """
-        self._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
-
-
-    @as_uninitialized
-    def _setup_params(self,**params):
-        """
-        Initialize default and keyword parameter values.
-
-        First, ensures that all Parameters with 'instantiate=True'
-        (typically used for mutable Parameters) are copied directly
-        into each object, to ensure that there is an independent copy
-        (to avoid suprising aliasing errors).  Then sets each of the
-        keyword arguments, warning when any of them are not defined as
-        parameters.
-
-        Constant Parameters can be set during calls to this method.
-        """
-        ## Deepcopy all 'instantiate=True' parameters
-        # (build a set of names first to avoid redundantly instantiating
-        #  a later-overridden parent class's parameter)
-        params_to_instantiate = {}
-        for class_ in classlist(type(self)):
-            if not issubclass(class_, Parameterized):
-                continue
-            for (k,v) in class_.__dict__.items():
-                # (avoid replacing name with the default of None)
-                if isinstance(v,Parameter) and v.instantiate and k!="name":
-                    params_to_instantiate[k]=v
-
-        for p in params_to_instantiate.values():
-            self._instantiate_param(p)
-
-        ## keyword arg setting
-        for name,val in params.items():
-            desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
-            if not desc:
-                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
-            # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
-            setattr(self,name,val)
-
 
     # JL: Cannot move to namespace due to self.__dict__
     # CEBALERT: this is a bit ugly
@@ -1652,7 +1654,7 @@ class Parameterized(object):
             object_count+=1
             # CB: writes over name given to the original object;
             # should it instead keep the same name?
-            new_object.__generate_name()
+            new_object.param._generate_name()
 
 
     def __dir__(self):
@@ -2034,7 +2036,7 @@ class ParameterizedFunction(Parameterized):
     def __new__(class_,*args,**params):
         # Create and __call__() an instance of this class.
         inst = class_.instance()
-        inst._set_name(class_.__name__)
+        inst.param._set_name(class_.__name__)
         return inst.__call__(*args,**params)
 
     def __call__(self,*args,**kw):

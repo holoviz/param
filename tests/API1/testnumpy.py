@@ -1,7 +1,7 @@
 """
 If numpy's present, is numpy stuff ok?
 """
-
+import unittest
 import os
 
 import param

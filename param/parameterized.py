@@ -589,7 +589,7 @@ class Parameters(object):
     class or the instance as necessary.
     """
 
-    _disable_stubs = False
+    _disable_stubs = False # Flag used to disable stubs in the API1 tests
 
     def __init__(self_, cls, self=None):
         """

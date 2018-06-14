@@ -600,6 +600,11 @@ class Parameters(object):
         self_.self = self
 
 
+    @property
+    def self_or_cls(self_):
+        return self_.cls if self_.self is None else self_.self
+
+
     @as_uninitialized
     def _set_name(self_, name):
         self = self_.param.self
@@ -754,7 +759,7 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
-        self_or_cls = self_.cls if self_.self is None else self_.self
+        self_or_cls = self_.self_or_cls
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
                 kwargs[args[0]]=args[1]
@@ -785,7 +790,7 @@ class Parameters(object):
         the attribute sublistattr is present on any of the subobjects,
         set_dynamic_time_fn() will be called for those, too.
         """
-        self_or_cls = self_.cls if self_.self is None else self_.self
+        self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn
 
         if isinstance(self_or_cls,type):
@@ -817,7 +822,7 @@ class Parameters(object):
         only return values that are not equal to the default value
         (onlychanged has no effect when called on a class).
         """
-        self_or_cls = self_.cls if self_.self is None else self_.self
+        self_or_cls = self_.self_or_cls
         # CEB: we'd actually like to know whether a value has been
         # explicitly set on the instance, but I'm not sure that's easy
         # (would need to distinguish instantiation of default from
@@ -848,7 +853,7 @@ class Parameters(object):
         If name is not dynamic, its current value is returned
         (i.e. equivalent to getattr(name).
         """
-        cls_or_slf = self_.cls if self_.self is None else self_.self
+        cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.params().get(name)
 
         if not param_obj:
@@ -875,7 +880,7 @@ class Parameters(object):
         (i.e. the same as getattr()), but Dynamic parameters have
         their value-generating object returned.
         """
-        cls_or_slf = self_.cls if self_.self is None else self_.self
+        cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.params().get(name)
 
         if not param_obj:
@@ -908,7 +913,7 @@ class Parameters(object):
         Same as getattr() except for Dynamic parameters, which have their
         last generated value returned.
         """
-        cls_or_slf = self_.cls if self_.self is None else self_.self
+        cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.params().get(name)
 
         if not param_obj:

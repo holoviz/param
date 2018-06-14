@@ -68,9 +68,9 @@ class TestDynamicParameterBasics(TestDynamicParameters):
                                   numbergen.UniformRandom)
         self.assertEqual(is_numbergen, True)
 
-    # def test_matching_numbergen_streams(self):
-    #     "check that t2 and t3 have identical streams"
-    #     self.assertEqual(self.t2.x, self.t3.x)
+    def test_matching_numbergen_streams(self):
+        "check that t2 and t3 have identical streams"
+        self.assertEqual(self.t2.x, self.t3.x)
 
     def test_numbergen_objects_distinct(self):
         "check t2 and t3 do not share UniformRandom objects"
@@ -156,59 +156,59 @@ class TestDynamicTimeDependent(TestDynamicParameters):
         self.assertEqual(call_1, call_2)
         self.assertEqual(call_2, call_3)
 
-#     def test_dynamic_values_changed_independent(self):
-#         param.Dynamic.time_dependent = False
-#         call_1 = self.t10.x
-#         call_2 = self.t10.x
-#         call_3 = self.t10.x
-#         self.assertNotEqual(call_1, call_2)
-#         self.assertNotEqual(call_2, call_3)
+    def test_dynamic_values_changed_independent(self):
+        param.Dynamic.time_dependent = False
+        call_1 = self.t10.x
+        call_2 = self.t10.x
+        call_3 = self.t10.x
+        self.assertNotEqual(call_1, call_2)
+        self.assertNotEqual(call_2, call_3)
 
-#     def test_dynamic_values_change(self):
-#         param.Dynamic.time_dependent = True
-#         with param.Dynamic.time_fn as t:
-#             t(0)
-#             call_1 = self.t10.x
-#             t += 1
-#             call_2 = self.t10.x
-#             t(0)
-#             call_3 = self.t10.x
-#         self.assertNotEqual(call_1, call_2)
-#         self.assertNotEqual(call_1, call_3)
+    def test_dynamic_values_change(self):
+        param.Dynamic.time_dependent = True
+        with param.Dynamic.time_fn as t:
+            t(0)
+            call_1 = self.t10.x
+            t += 1
+            call_2 = self.t10.x
+            t(0)
+            call_3 = self.t10.x
+        self.assertNotEqual(call_1, call_2)
+        self.assertNotEqual(call_1, call_3)
 
-#     def test_dynamic_values_time_dependent(self):
-#         param.Dynamic.time_dependent = True
-#         with param.Dynamic.time_fn as t:
-#             t(0)
-#             call_1 = self.t11.x
-#             t += 1
-#             call_2 = self.t11.x
-#             t(0)
-#             call_3 = self.t11.x
-#         self.assertNotEqual(call_1, call_2)
-#         self.assertEqual(call_1, call_3)
+    # def test_dynamic_values_time_dependent(self):
+    #     param.Dynamic.time_dependent = True
+    #     with param.Dynamic.time_fn as t:
+    #         t(0)
+    #         call_1 = self.t11.x
+    #         t += 1
+    #         call_2 = self.t11.x
+    #         t(0)
+    #         call_3 = self.t11.x
+    #     self.assertNotEqual(call_1, call_2)
+    #     self.assertEqual(call_1, call_3)
 
-#     def test_class_dynamic_values_change(self):
-#         call_1 = self.TestPO3.x
-#         call_2 = self.TestPO3.x
-#         self.assertEqual(call_1, call_2)
-#         with param.Dynamic.time_fn as t:
-#             t += 1
-#             call_3 = self.TestPO3.x
-#         self.assertNotEqual(call_2, call_3)
+    # def test_class_dynamic_values_change(self):
+    #     call_1 = self.TestPO3.x
+    #     call_2 = self.TestPO3.x
+    #     self.assertEqual(call_1, call_2)
+    #     with param.Dynamic.time_fn as t:
+    #         t += 1
+    #         call_3 = self.TestPO3.x
+    #     self.assertNotEqual(call_2, call_3)
 
-#     def test_dynamic_value_change_independent(self):
-#         t12 = self.TestPO1()
-#         t12.param.set_dynamic_time_fn(None)
-#         self.assertNotEqual(t12.x, t12.x)
-#         self.assertEqual(t12.y, t12.y)
+    def test_dynamic_value_change_independent(self):
+        t12 = self.TestPO1()
+        t12.param.set_dynamic_time_fn(None)
+        self.assertNotEqual(t12.x, t12.x)
+        self.assertEqual(t12.y, t12.y)
 
-#     def test_dynamic_value_change_disabled(self):
-#         " time_fn set on the UniformRandom() when t13.y was set"
-#         t13 = self.TestPO1()
-#         t13.param.set_dynamic_time_fn(None)
-#         t13.y = numbergen.UniformRandom()
-#         self.assertNotEqual(t13.y, t13.y)
+    def test_dynamic_value_change_disabled(self):
+        " time_fn set on the UniformRandom() when t13.y was set"
+        t13 = self.TestPO1()
+        t13.param.set_dynamic_time_fn(None)
+        t13.y = numbergen.UniformRandom()
+        self.assertNotEqual(t13.y, t13.y)
 
     def test_dynamic_value_change_enabled(self):
         " time_fn set on the UniformRandom() when t13.y was set"
@@ -217,15 +217,15 @@ class TestDynamicTimeDependent(TestDynamicParameters):
         self.assertEqual(t14.y, t14.y)
 
 
-#     def test_dynamic_time_fn_not_inherited(self):
-#         " time_fn not inherited"
-#         t15 = self.TestPO4()
-#         t15.param.set_dynamic_time_fn(None)
-#         with param.Dynamic.time_fn as t:
-#             call_1 = t15.z.x
-#             t += 1
-#             call_2 = t15.z.x
-#             self.assertNotEqual(call_1, call_2)
+    def test_dynamic_time_fn_not_inherited(self):
+        " time_fn not inherited"
+        t15 = self.TestPO4()
+        t15.param.set_dynamic_time_fn(None)
+        with param.Dynamic.time_fn as t:
+            call_1 = t15.z.x
+            t += 1
+            call_2 = t15.z.x
+            self.assertNotEqual(call_1, call_2)
 
 
 
@@ -235,17 +235,17 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
         super(TestDynamicSharedNumbergen, self).setUp()
         self.shared = numbergen.UniformRandom(lbound=-1,ubound=1,seed=20)
 
-    # def test_dynamic_shared_numbergen(self):
-    #     param.Dynamic.time_dependent = True
-    #     t11 = self.TestPO1(x=self.shared)
-    #     t12 = self.TestPO1(x=self.shared)
+    def test_dynamic_shared_numbergen(self):
+        param.Dynamic.time_dependent = True
+        t11 = self.TestPO1(x=self.shared)
+        t12 = self.TestPO1(x=self.shared)
 
-    #     with param.Dynamic.time_fn as t:
-    #         t += 1
-    #         call_1 = t11.x
-    #         self.assertEqual(call_1, t12.x)
-    #         t += 1
-    #         self.assertNotEqual(call_1, t12.x)
+        with param.Dynamic.time_fn as t:
+            t += 1
+            call_1 = t11.x
+            self.assertEqual(call_1, t12.x)
+            t += 1
+            self.assertNotEqual(call_1, t12.x)
 
 
 

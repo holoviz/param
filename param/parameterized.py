@@ -589,7 +589,6 @@ class Parameters(object):
     class or the instance as necessary.
     """
 
-    _decorated = []
     _disable_stubs = False
 
     def __init__(self_, cls, self=None):
@@ -663,7 +662,6 @@ class Parameters(object):
         namespace and to add a docstring directing people to the
         appropriate method.
         """
-        cls._decorated.append(fn.__name__)
         def inner(*args, **kwargs):
             info = (args[0].__class__.__name__,  fn.__name__)
             if cls._disable_stubs:
@@ -1579,11 +1577,6 @@ class Parameterized(object):
             # CB: writes over name given to the original object;
             # should it instead keep the same name?
             new_object.param._generate_name()
-
-
-    def __dir__(self):
-        return [el for el in super(Parameterized, self).__dir__()
-                if el not in self.param._decorated]
 
     # 'Special' methods
 

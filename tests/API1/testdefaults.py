@@ -2,14 +2,12 @@
 Do all subclasses of Parameter supply a valid default?
 """
 
-import unittest
-
 from param.parameterized import add_metaclass
 from param import concrete_descendents, Parameter
 
 # import all parameter types
 from param import *
-
+from . import API1TestCase
 
 positional_args = {
     ClassSelector: (object,)
@@ -44,7 +42,7 @@ class TestDefaultsMetaclass(type):
 
 
 @add_metaclass(TestDefaultsMetaclass)
-class TestDefaults(unittest.TestCase):
+class TestDefaults(API1TestCase):
     pass
 
 

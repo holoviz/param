@@ -2,10 +2,10 @@
 Unit tests for the param.Time class, time dependent parameters and
 time-dependent numbergenerators.
 """
-import unittest
 import param
 import numbergen
 
+from . import API1TestCase
 from nose.plugins.skip import SkipTest
 import fractions
 
@@ -16,7 +16,7 @@ except:
 
 
 
-class TestTimeClass(unittest.TestCase):
+class TestTimeClass(API1TestCase):
 
     def test_time_init(self):
         param.Time()
@@ -105,9 +105,10 @@ class TestTimeClass(unittest.TestCase):
                                  gmpy.mpq(3,2)])
 
 
-class TestTimeDependentDynamic(unittest.TestCase):
+class TestTimeDependentDynamic(API1TestCase):
 
     def setUp(self):
+        super(TestTimeDependentDynamic, self).setUp()
         param.Dynamic.time_dependent=None
         self.time_fn= param.Time(time_type=int)
 

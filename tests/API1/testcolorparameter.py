@@ -1,12 +1,10 @@
 """
 Unit test for Color parameters.
 """
-
-import unittest
 import param
+from . import API1TestCase
 
-
-class TestColorParameters(unittest.TestCase):
+class TestColorParameters(API1TestCase):
 
     def test_initialization_invalid_string(self):
         try:

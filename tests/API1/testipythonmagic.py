@@ -4,9 +4,8 @@ Unit test for the IPython magic
 
 import re
 import sys
-import unittest
 import param
-
+from . import API1TestCase
 
 try:
     import IPython
@@ -25,9 +24,10 @@ test1_repr = """\x1b[1;32mParameters of 'TestClass'\n=========================\n
 
 test2_repr = """\x1b[1;32mParameters of 'TestClass' instance\n==================================\n\x1b[0m\n\x1b[1;31mParameters changed from their default values are marked in red.\x1b[0m\n\x1b[1;36mSoft bound values are marked in cyan.\x1b[0m\nC/V= Constant/Variable, RO/RW = ReadOnly/ReadWrite, AN=Allow None\n\n\x1b[1;34mNameValue   Type     Bounds      Mode  \x1b[0m\n\nu    4    Number                V RW  \nv    4    Number                C RW  \nw    4    Number                C RO  \nx   None  String              V RW AN \ny    4    Number  (-1, None)    V RW  \nz    4    Number  (-1, 100)     V RW  \n\n\x1b[1;32mParameter docstrings:\n=====================\x1b[0m\n\n\x1b[1;34mu: < No docstring available >\x1b[0m\n\x1b[1;31mv: < No docstring available >\x1b[0m\n\x1b[1;34mw: < No docstring available >\x1b[0m\n\x1b[1;31mx: < No docstring available >\x1b[0m\n\x1b[1;34my: < No docstring available >\x1b[0m\n\x1b[1;31mz: < No docstring available >\x1b[0m"""
 
-class TestParamPager(unittest.TestCase):
+class TestParamPager(API1TestCase):
 
     def setUp(self):
+        super(TestParamPager, self).setUp()
         self.maxDiff = None
         class TestClass(param.Parameterized):
             u = param.Number(4)

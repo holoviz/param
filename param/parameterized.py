@@ -590,6 +590,7 @@ class Parameters(object):
     """
 
     _decorated = []
+    _disable_stubs = False
 
     def __init__(self_, cls, self=None):
         """
@@ -665,8 +666,11 @@ class Parameters(object):
         cls._decorated.append(fn.__name__)
         def inner(*args, **kwargs):
             info = (args[0].__class__.__name__,  fn.__name__)
-            get_logger().log(WARNING,
-                                '%s: Use method %r via param namespace ' % info)
+            if cls._disable_stubs:
+                raise AssertionError('Stubs supporting old API disabled')
+            else:
+                get_logger().log(WARNING,
+                                 '%s: Use method %r via param namespace ' % info)
             return fn(*args, **kwargs)
 
         inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__

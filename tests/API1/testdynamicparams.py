@@ -9,14 +9,15 @@ testDynamicParameter.txt
 """
 
 import copy
-import unittest
 import param
 import numbergen
+from . import API1TestCase
 
 
-class TestDynamicParameters(unittest.TestCase):
+class TestDynamicParameters(API1TestCase):
 
     def setUp(self):
+        super(TestDynamicParameters, self).setUp()
         param.Dynamic.time_dependent = False
 
         class TestPO1(param.Parameterized):

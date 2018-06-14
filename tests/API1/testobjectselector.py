@@ -5,14 +5,13 @@ Originally implemented as doctests in Topographica in the file
 testEnumerationParameter.txt
 """
 
-import unittest
 import param
+from . import API1TestCase
 
-
-class TestObjectSelectorParameters(unittest.TestCase):
+class TestObjectSelectorParameters(API1TestCase):
 
     def setUp(self):
-
+        super(TestObjectSelectorParameters, self).setUp()
         class P(param.Parameterized):
             e = param.ObjectSelector(default=5,objects=[5,6,7])
             f = param.ObjectSelector(default=10)

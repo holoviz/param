@@ -2,16 +2,17 @@
 Unit test for ClassSelector parameters.
 """
 
-import unittest
+
 from numbers import Number
 
 import param
+from . import API1TestCase
 
 
-class TestClassSelectorParameters(unittest.TestCase):
+class TestClassSelectorParameters(API1TestCase):
 
     def setUp(self):
-
+        super(TestClassSelectorParameters, self).setUp()
         class P(param.Parameterized):
             e = param.ClassSelector(default=1,class_=int)
             f = param.ClassSelector(default=int,class_=Number, is_instance=False)

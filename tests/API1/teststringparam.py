@@ -1,14 +1,12 @@
 """
 Unit test for String parameters
 """
-
-import unittest
-
+from . import API1TestCase
 import param
 
 # TODO: very incomplete!
 
-class TestStringParameters(unittest.TestCase):
+class TestStringParameters(API1TestCase):
 
     def test_default_none(self):
         class A(param.Parameterized):

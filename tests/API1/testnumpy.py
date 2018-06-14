@@ -3,10 +3,9 @@ If numpy's present, is numpy stuff ok?
 """
 
 import os
-import unittest
 
 import param
-
+from . import API1TestCase
 
 try:
     import numpy
@@ -24,7 +23,7 @@ def _is_array_and_equal(test,ref):
     numpy.testing.assert_array_equal(test,ref)
 
 # TODO: incomplete
-class TestNumpy(unittest.TestCase):
+class TestNumpy(API1TestCase):
     def test_array_param(self):
         class Z(param.Parameterized):
             z = param.Array(default=numpy.array([1]))

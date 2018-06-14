@@ -2,15 +2,14 @@
 Unit tests for DateRange parameter.
 """
 
-import unittest
 import datetime as dt
 import param
-
+from . import API1TestCase
 
 # Assuming tests of range parameter cover most of what's needed to
 # test date range.
 
-class TestDateRange(unittest.TestCase):
+class TestDateRange(API1TestCase):
 
     bad_range = (dt.datetime(2017,2,27),dt.datetime(2017,2,26))
 

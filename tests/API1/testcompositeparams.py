@@ -5,12 +5,13 @@ Originally implemented as doctests in Topographica in the file
 testCompositeParameter.txt
 """
 
-import unittest
 import param
+from . import API1TestCase
 
-class TestCompositeParameters(unittest.TestCase):
+class TestCompositeParameters(API1TestCase):
 
     def setUp(self):
+        super(TestCompositeParameters, self).setUp()
         # initialize a class with a compound parameter
         class A(param.Parameterized):
             x = param.Number(default=0)

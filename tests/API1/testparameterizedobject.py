@@ -2,9 +2,10 @@
 Unit test for Parameterized.
 """
 
-import unittest
 import param
 import numbergen
+
+from . import API1TestCase
 
 # CEBALERT: not anything like a complete test of Parameterized!
 
@@ -44,7 +45,7 @@ class TestParamInstantiation(AnotherTestPO):
     instPO = param.Parameter(default=AnotherTestPO(),instantiate=False)
 
 @istest
-class TestParameterized(unittest.TestCase):
+class TestParameterized(API1TestCase):
 
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""
@@ -171,7 +172,7 @@ class some_fn(param.ParameterizedFunction):
 instance = some_fn.instance()
 
 @istest
-class TestParameterizedFunction(unittest.TestCase):
+class TestParameterizedFunction(API1TestCase):
 
     def _basic_tests(self,fn):
         self.assertEqual(fn(),(0.3,18,[99]))
@@ -202,7 +203,7 @@ class TestPO1(param.Parameterized):
     y = param.Number(default=1,bounds=(-1,1))
 
 @istest
-class TestNumberParameter(unittest.TestCase):
+class TestNumberParameter(API1TestCase):
 
     def test_outside_bounds(self):
         t1 = TestPO1()
@@ -227,7 +228,7 @@ class TestNumberParameter(unittest.TestCase):
 
 
 @istest
-class TestStringParameter(unittest.TestCase):
+class TestStringParameter(API1TestCase):
 
     def setUp(self):
         super(TestStringParameter, self).setUp()
@@ -252,7 +253,7 @@ class TestStringParameter(unittest.TestCase):
 
 
 @istest
-class TestParamOverrides(unittest.TestCase):
+class TestParamOverrides(API1TestCase):
 
     def setUp(self):
         super(TestParamOverrides, self).setUp()
@@ -276,9 +277,10 @@ class TestParamOverrides(unittest.TestCase):
             overrides['doesnotexist']
 
 
-class TestSharedParameters(unittest.TestCase):
+class TestSharedParameters(API1TestCase):
 
     def setUp(self):
+        super(TestSharedParameters, self).setUp()
         with shared_parameters():
             self.p1 = TestPO(name='A', print_level=0)
             self.p2 = TestPO(name='B', print_level=0)

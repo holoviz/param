@@ -2,12 +2,12 @@
 Unit test for Date parameters.
 """
 
-import unittest
+
 import datetime as dt
 import param
+from . import API1TestCase
 
-
-class TestDateParameters(unittest.TestCase):
+class TestDateParameters(API1TestCase):
 
     def test_initialization_out_of_bounds(self):
         try:

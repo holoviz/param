@@ -646,7 +646,7 @@ class Parameters(object):
                     params_to_instantiate[k]=v
 
         for p in params_to_instantiate.values():
-            self._instantiate_param(p)
+            self.param._instantiate_param(p)
 
         ## keyword arg setting
         for name,val in params.items():
@@ -676,6 +676,32 @@ class Parameters(object):
 
         inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
         return inner
+
+
+    # CEBALERT: this is a bit ugly
+    def _instantiate_param(self_,param_obj,dict_=None,key=None):
+        # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
+        # under the parameter's _internal_name (or key if supplied)
+        self = self_.self
+        dict_ = dict_ or self.__dict__
+        key = key or param_obj._internal_name
+        param_key = (str(type(self)), param_obj._attrib_name)
+        if shared_parameters._share:
+            if param_key in shared_parameters._shared_cache:
+                new_object = shared_parameters._shared_cache[param_key]
+            else:
+                new_object = copy.deepcopy(param_obj.default)
+                shared_parameters._shared_cache[param_key] = new_object
+        else:
+            new_object = copy.deepcopy(param_obj.default)
+        dict_[key]=new_object
+
+        if isinstance(new_object,Parameterized):
+            global object_count
+            object_count+=1
+            # CB: writes over name given to the original object;
+            # should it instead keep the same name?
+            new_object.param._generate_name()
 
     # Classmethods
 
@@ -952,7 +978,7 @@ class Parameters(object):
             if param.constant:
                 pass
             elif param.instantiate:
-                self._instantiate_param(param,dict_=d,key=param_name)
+                self.param._instantiate_param(param,dict_=d,key=param_name)
             else:
                 d[param_name]=param.default
         return d
@@ -1555,31 +1581,6 @@ class Parameterized(object):
         object_count += 1
 
         self.initialized=True
-
-    # JL: Cannot move to namespace due to self.__dict__
-    # CEBALERT: this is a bit ugly
-    def _instantiate_param(self,param_obj,dict_=None,key=None):
-        # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
-        # under the parameter's _internal_name (or key if supplied)
-        dict_ = dict_ or self.__dict__
-        key = key or param_obj._internal_name
-        param_key = (str(type(self)), param_obj._attrib_name)
-        if shared_parameters._share:
-            if param_key in shared_parameters._shared_cache:
-                new_object = shared_parameters._shared_cache[param_key]
-            else:
-                new_object = copy.deepcopy(param_obj.default)
-                shared_parameters._shared_cache[param_key] = new_object
-        else:
-            new_object = copy.deepcopy(param_obj.default)
-        dict_[key]=new_object
-
-        if isinstance(new_object,Parameterized):
-            global object_count
-            object_count+=1
-            # CB: writes over name given to the original object;
-            # should it instead keep the same name?
-            new_object.param._generate_name()
 
     # 'Special' methods
 

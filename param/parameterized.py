@@ -965,7 +965,7 @@ class Parameters(object):
 
         See python's logging module for details.
         """
-        self = self_.self
+        self_or_cls = self_.self_or_cls
         if get_logger().isEnabledFor(level):
 
             if dbprint_prefix and callable(dbprint_prefix):
@@ -973,7 +973,7 @@ class Parameters(object):
             else:
                 prefix=""
 
-            get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args, **kw)
+            get_logger().log(level, '%s%s: '+msg, prefix, self_or_cls.name, *args, **kw)
 
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""

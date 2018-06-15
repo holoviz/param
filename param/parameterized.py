@@ -589,7 +589,8 @@ class Parameters(object):
     class or the instance as necessary.
     """
 
-    _disable_stubs = False # Flag used to disable stubs in the API1 tests
+    _disable_stubs = None # Flag used to disable stubs in the API1 tests
+                          # None for no action, True to raise and False to warn.
 
     def __init__(self_, cls, self=None):
         """
@@ -666,7 +667,9 @@ class Parameters(object):
             info = (args[0].__class__.__name__,  fn.__name__)
             if cls._disable_stubs:
                 raise AssertionError('Stubs supporting old API disabled')
-            else:
+            elif cls._disable_stubs is None:
+                pass
+            elif cls._disable_stubs is False:
                 get_logger().log(WARNING,
                                  '%s: Use method %r via param namespace ' % info)
             return fn(*args, **kwargs)

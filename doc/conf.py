@@ -10,7 +10,7 @@ add_paths(paths)
 
 # General information about the project.
 project = u'Param'
-copyright = u'2014, IOAM'
+copyright = u'\u00a9 2003-2018, IOAM'
 ioam_project = 'param'
 from param import __version__
 

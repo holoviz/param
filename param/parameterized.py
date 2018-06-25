@@ -560,6 +560,507 @@ class shared_parameters(object):
         shared_parameters._shared_cache = {}
 
 
+def as_uninitialized(fn):
+    """
+    Decorator: call fn with the parameterized_instance's
+    initialization flag set to False, then revert the flag.
+
+    (Used to decorate Parameterized methods that must alter
+    a constant Parameter.)
+    """
+    @wraps(fn)
+    def override_initialization(self_,*args,**kw):
+        parameterized_instance = self_.self
+        original_initialized=parameterized_instance.initialized
+        parameterized_instance.initialized=False
+        fn(parameterized_instance,*args,**kw)
+        parameterized_instance.initialized=original_initialized
+    return override_initialization
+
+
+
+class Parameters(object):
+    """Object that holds the namespace and implementation of Parameterized
+    methods as well as any state that is not in __slots__ or the
+    Parameters themselves.
+
+    Exists at both the metaclass level (instantiated by the metaclass)
+    and at the instance level. Can contain state specific to either the
+    class or the instance as necessary.
+    """
+
+    _disable_stubs = None # Flag used to disable stubs in the API1 tests
+                          # None for no action, True to raise and False to warn.
+
+    def __init__(self_, cls, self=None):
+        """
+        cls is the Parameterized class which is always set.
+        self is the instance if set.
+        """
+        self_.cls = cls
+        self_.self = self
+
+
+    @property
+    def self_or_cls(self_):
+        return self_.cls if self_.self is None else self_.self
+
+
+    @as_uninitialized
+    def _set_name(self_, name):
+        self = self_.param.self
+        self.name=name
+
+
+    @as_uninitialized
+    def _generate_name(self_):
+        self = self_.param.self
+        self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
+
+
+    @as_uninitialized
+    def _setup_params(self_,**params):
+        """
+        Initialize default and keyword parameter values.
+
+        First, ensures that all Parameters with 'instantiate=True'
+        (typically used for mutable Parameters) are copied directly
+        into each object, to ensure that there is an independent copy
+        (to avoid suprising aliasing errors).  Then sets each of the
+        keyword arguments, warning when any of them are not defined as
+        parameters.
+
+        Constant Parameters can be set during calls to this method.
+        """
+        self = self_.param.self
+        ## Deepcopy all 'instantiate=True' parameters
+        # (build a set of names first to avoid redundantly instantiating
+        #  a later-overridden parent class's parameter)
+        params_to_instantiate = {}
+        for class_ in classlist(type(self)):
+            if not issubclass(class_, Parameterized):
+                continue
+            for (k,v) in class_.__dict__.items():
+                # (avoid replacing name with the default of None)
+                if isinstance(v,Parameter) and v.instantiate and k!="name":
+                    params_to_instantiate[k]=v
+
+        for p in params_to_instantiate.values():
+            self.param._instantiate_param(p)
+
+        ## keyword arg setting
+        for name,val in params.items():
+            desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
+            if not desc:
+                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
+            # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
+            setattr(self,name,val)
+
+    @classmethod
+    def deprecate(cls, fn):
+        """
+        Decorator to issue warnings for API moving onto the param
+        namespace and to add a docstring directing people to the
+        appropriate method.
+        """
+        def inner(*args, **kwargs):
+            info = (args[0].__class__.__name__,  fn.__name__)
+            if cls._disable_stubs:
+                raise AssertionError('Stubs supporting old API disabled')
+            elif cls._disable_stubs is None:
+                pass
+            elif cls._disable_stubs is False:
+                get_logger().log(WARNING,
+                                 '%s: Use method %r via param namespace ' % info)
+            return fn(*args, **kwargs)
+
+        inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
+        return inner
+
+
+    # CEBALERT: this is a bit ugly
+    def _instantiate_param(self_,param_obj,dict_=None,key=None):
+        # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
+        # under the parameter's _internal_name (or key if supplied)
+        self = self_.self
+        dict_ = dict_ or self.__dict__
+        key = key or param_obj._internal_name
+        param_key = (str(type(self)), param_obj._attrib_name)
+        if shared_parameters._share:
+            if param_key in shared_parameters._shared_cache:
+                new_object = shared_parameters._shared_cache[param_key]
+            else:
+                new_object = copy.deepcopy(param_obj.default)
+                shared_parameters._shared_cache[param_key] = new_object
+        else:
+            new_object = copy.deepcopy(param_obj.default)
+        dict_[key]=new_object
+
+        if isinstance(new_object,Parameterized):
+            global object_count
+            object_count+=1
+            # CB: writes over name given to the original object;
+            # should it instead keep the same name?
+            new_object.param._generate_name()
+
+    # Classmethods
+
+    def print_param_defaults(self_):
+        """Print the default values of all cls's Parameters."""
+        cls = self_.cls
+        for key,val in cls.__dict__.items():
+            if isinstance(val,Parameter):
+                print(cls.__name__+'.'+key+ '='+ repr(val.default))
+
+    def set_default(self_,param_name,value):
+        """
+        Set the default value of param_name.
+
+        Equivalent to setting param_name on the class.
+        """
+        cls = self_.cls
+        setattr(cls,param_name,value)
+
+
+    def _add_parameter(self_, param_name,param_obj):
+        """
+        Add a new Parameter object into this object's class.
+
+        Supposed to result in a Parameter equivalent to one declared
+        in the class's source code.
+        """
+        # CEBALERT: can't we just do
+        # setattr(cls,param_name,param_obj)?  The metaclass's
+        # __setattr__ is actually written to handle that.  (Would also
+        # need to do something about the params() cache.  That cache
+        # is a pain, but it definitely improved the startup time; it
+        # would be worthwhile making sure no method except for one
+        # "add_param()" method has to deal with it (plus any future
+        # remove_param() method.)
+        cls = self_.cls
+        type.__setattr__(cls,param_name,param_obj)
+        ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
+        # delete cached params()
+        try:
+            delattr(cls,'_%s__params'%cls.__name__)
+        except AttributeError:
+            pass
+
+    def params(self_, parameter_name=None):
+        """
+        Return the Parameters of this class as the
+        dictionary {name: parameter_object}
+
+        Includes Parameters from this class and its
+        superclasses.
+        """
+        cls = self_.cls
+        # CB: we cache the parameters because this method is called often,
+        # and parameters are rarely added (and cannot be deleted)
+        try:
+            pdict=getattr(cls,'_%s__params'%cls.__name__)
+        except AttributeError:
+            paramdict = {}
+            for class_ in classlist(cls):
+                for name,val in class_.__dict__.items():
+                    if isinstance(val,Parameter):
+                        paramdict[name] = val
+
+            # We only want the cache to be visible to the cls on which
+            # params() is called, so we mangle the name ourselves at
+            # runtime (if we were to mangle it now, it would be
+            # _Parameterized.__params for all classes).
+            setattr(cls,'_%s__params'%cls.__name__,paramdict)
+            pdict= paramdict
+
+        if parameter_name is None:
+            return pdict
+        else:
+            return pdict[parameter_name]
+
+    # Bothmethods
+
+    def set_param(self_, *args,**kwargs):
+        """
+        For each param=value keyword argument, sets the corresponding
+        parameter of this object or class to the given value.
+
+        For backwards compatibility, also accepts
+        set_param("param",value) for a single parameter value using
+        positional arguments, but the keyword interface is preferred
+        because it is more compact and can set multiple values.
+        """
+        self_or_cls = self_.self_or_cls
+        if args:
+            if len(args)==2 and not args[0] in kwargs and not kwargs:
+                kwargs[args[0]]=args[1]
+            else:
+                raise ValueError("Invalid positional arguments for %s.set_param" %
+                                 (self_or_cls.name))
+
+        for (k,v) in kwargs.items():
+            if k not in self_or_cls.param.params():
+                raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
+            setattr(self_or_cls,k,v)
+
+    def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
+        """
+        Set time_fn for all Dynamic Parameters of this class or
+        instance object that are currently being dynamically
+        generated.
+
+        Additionally, sets _Dynamic_time_fn=time_fn on this class or
+        instance object, so that any future changes to Dynamic
+        Parmeters can inherit time_fn (e.g. if a Number is changed
+        from a float to a number generator, the number generator will
+        inherit time_fn).
+
+        If specified, sublistattr is the name of an attribute of this
+        class or instance that contains an iterable collection of
+        subobjects on which set_dynamic_time_fn should be called.  If
+        the attribute sublistattr is present on any of the subobjects,
+        set_dynamic_time_fn() will be called for those, too.
+        """
+        self_or_cls = self_.self_or_cls
+        self_or_cls._Dynamic_time_fn = time_fn
+
+        if isinstance(self_or_cls,type):
+            a = (None,self_or_cls)
+        else:
+            a = (self_or_cls,)
+
+        for n,p in self_or_cls.param.params().items():
+            if hasattr(p,'_value_is_dynamic'):
+                if p._value_is_dynamic(*a):
+                    g = self_or_cls.param.get_value_generator(n)
+                    g._Dynamic_time_fn = time_fn
+
+        if sublistattr:
+            try:
+                sublist = getattr(self_or_cls,sublistattr)
+            except AttributeError:
+                sublist = []
+
+            for obj in sublist:
+                obj.param.set_dynamic_time_fn(time_fn,sublistattr)
+
+    def get_param_values(self_,onlychanged=False):
+        """
+        Return a list of name,value pairs for all Parameters of this
+        object.
+
+        When called on an instance with onlychanged set to True, will
+        only return values that are not equal to the default value
+        (onlychanged has no effect when called on a class).
+        """
+        self_or_cls = self_.self_or_cls
+        # CEB: we'd actually like to know whether a value has been
+        # explicitly set on the instance, but I'm not sure that's easy
+        # (would need to distinguish instantiation of default from
+        # user setting of value).
+        vals = []
+        for name,val in self_or_cls.param.params().items():
+            value = self_or_cls.param.get_value_generator(name)
+            # (this is pointless for cls)
+            if not onlychanged or not all_equal(value,val.default):
+                vals.append((name,value))
+
+        vals.sort(key=itemgetter(0))
+        return vals
+
+    # CB: is there a more obvious solution than making these
+    # 'bothmethod's?
+    # An alternative would be to lose these methods completely and
+    # make users do things via the Parameter object directly.
+
+    # CB: is there a performance hit for doing this decoration? It
+    # would show up in lissom_oo_or because separated composite uses
+    # this method.
+    def force_new_dynamic_value(self_,name): # pylint: disable-msg=E0213
+        """
+        Force a new value to be generated for the dynamic attribute
+        name, and return it.
+
+        If name is not dynamic, its current value is returned
+        (i.e. equivalent to getattr(name).
+        """
+        cls_or_slf = self_.self_or_cls
+        param_obj = cls_or_slf.param.params().get(name)
+
+        if not param_obj:
+            return getattr(cls_or_slf,name)
+
+        cls,slf=None,None
+        if isinstance(cls_or_slf,type):
+            cls = cls_or_slf
+        else:
+            slf = cls_or_slf
+
+        if not hasattr(param_obj,'_force'):
+            return param_obj.__get__(slf,cls)
+        else:
+            return param_obj._force(slf,cls)
+
+
+    def get_value_generator(self_,name): # pylint: disable-msg=E0213
+        """
+        Return the value or value-generating object of the named
+        attribute.
+
+        For most parameters, this is simply the parameter's value
+        (i.e. the same as getattr()), but Dynamic parameters have
+        their value-generating object returned.
+        """
+        cls_or_slf = self_.self_or_cls
+        param_obj = cls_or_slf.param.params().get(name)
+
+        if not param_obj:
+            value = getattr(cls_or_slf,name)
+
+        # CompositeParameter detected by being a Parameter and having 'attribs'
+        elif hasattr(param_obj,'attribs'):
+            value = [cls_or_slf.param.get_value_generator(a) for a in param_obj.attribs]
+
+        # not a Dynamic Parameter
+        elif not hasattr(param_obj,'_value_is_dynamic'):
+            value = getattr(cls_or_slf,name)
+
+        # Dynamic Parameter...
+        else:
+            internal_name = "_%s_param_value"%name
+            if hasattr(cls_or_slf,internal_name):
+                # dealing with object and it's been set on this object
+                value = getattr(cls_or_slf,internal_name)
+            else:
+                # dealing with class or isn't set on the object
+                value = param_obj.default
+
+        return value
+
+    def inspect_value(self_,name): # pylint: disable-msg=E0213
+        """
+        Return the current value of the named attribute without modifying it.
+
+        Same as getattr() except for Dynamic parameters, which have their
+        last generated value returned.
+        """
+        cls_or_slf = self_.self_or_cls
+        param_obj = cls_or_slf.param.params().get(name)
+
+        if not param_obj:
+            value = getattr(cls_or_slf,name)
+        elif hasattr(param_obj,'attribs'):
+            value = [cls_or_slf.param.inspect_value(a) for a in param_obj.attribs]
+        elif not hasattr(param_obj,'_inspect'):
+            value = getattr(cls_or_slf,name)
+        else:
+            if isinstance(cls_or_slf,type):
+                value = param_obj._inspect(None,cls_or_slf)
+            else:
+                value = param_obj._inspect(cls_or_slf,None)
+
+        return value
+
+    # Instance methods
+
+
+    def defaults(self_):
+        """
+        Return {parameter_name:parameter.default} for all non-constant
+        Parameters.
+
+        Note that a Parameter for which instantiate==True has its default
+        instantiated.
+        """
+        self = self_.self
+        d = {}
+        for param_name,param in self.param.params().items():
+            if param.constant:
+                pass
+            elif param.instantiate:
+                self.param._instantiate_param(param,dict_=d,key=param_name)
+            else:
+                d[param_name]=param.default
+        return d
+
+    # CEBALERT: designed to avoid any processing unless the print
+    # level is high enough, but not all callers of message(),
+    # verbose(), debug(), etc are taking advantage of this. Need to
+    # document, and also check other ioam projects.
+    def __db_print(self_,level,msg,*args,**kw):
+        """
+        Calls the logger returned by the get_logger() function,
+        prepending the result of calling dbprint_prefix() (if any).
+
+        See python's logging module for details.
+        """
+        self_or_cls = self_.self_or_cls
+        if get_logger().isEnabledFor(level):
+
+            if dbprint_prefix and callable(dbprint_prefix):
+                prefix=dbprint_prefix() # pylint: disable-msg=E1102
+            else:
+                prefix=""
+
+            get_logger().log(level, '%s%s: '+msg, prefix, self_or_cls.name, *args, **kw)
+
+    def print_param_values(self_):
+        """Print the values of all this object's Parameters."""
+        self = self_.self
+        for name,val in self.param.get_param_values():
+            print('%s.%s = %s' % (self.name,name,val))
+
+    def warning(self_, msg,*args,**kw):
+        """
+        Print msg merged with args as a warning, unless module variable
+        warnings_as_exceptions is True, then raise an Exception
+        containing the arguments.
+
+        See Python's logging module for details of message formatting.
+        """
+        if not warnings_as_exceptions:
+            global warning_count
+            warning_count+=1
+            self_.__db_print(WARNING,msg,*args,**kw)
+        else:
+            raise Exception("Warning: " + msg % args)
+
+    def message(self_,msg,*args,**kw):
+        """
+        Print msg merged with args as a message.
+
+        See Python's logging module for details of message formatting.
+        """
+        self_.__db_print(INFO,msg,*args,**kw)
+
+    def verbose(self_,msg,*args,**kw):
+        """
+        Print msg merged with args as a verbose message.
+
+        See Python's logging module for details of message formatting.
+        """
+        self_.__db_print(VERBOSE,msg,*args,**kw)
+
+    def debug(self_,msg,*args,**kw):
+        """
+        Print msg merged with args as a debugging statement.
+
+        See Python's logging module for details of message formatting.
+        """
+        self_.__db_print(DEBUG,msg,*args,**kw)
+
+
+    # CEBALERT: I think I've noted elsewhere the fact that we
+    # sometimes have a method on Parameter that requires passing the
+    # owning Parameterized instance or class, and other times we have
+    # the method on Parameterized itself.  In case I haven't written
+    # that down elsewhere, here it is again.  We should clean that up
+    # (at least we should be consistent).
+
+    # cebalert: it's really time to stop and clean up this bothmethod
+    # stuff and repeated code in methods using it.
+
+
 
 class ParameterizedMetaclass(type):
     """
@@ -599,6 +1100,8 @@ class ParameterizedMetaclass(type):
         # (Could instead consider changing the instance Parameter
         # 'name' to '__name__'?)
         mcs.name = name
+
+        mcs.param = Parameters(mcs)
 
         # All objects (with their names) of type Parameter that are
         # defined in this class
@@ -698,6 +1201,8 @@ class ParameterizedMetaclass(type):
 
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
+            elif  isinstance(value,Parameters):
+                pass
             else:
                 # the purpose of the warning below is to catch
                 # mistakes ("thinking you are setting a parameter, but
@@ -963,21 +1468,8 @@ script_repr_reg[FunctionType]=function_script_repr
 dbprint_prefix=None
 
 
-def as_uninitialized(fn):
-    """
-    Decorator: call fn with the parameterized_instance's
-    initialization flag set to False, then revert the flag.
 
-    (Used to decorate Parameterized methods that must alter
-    a constant Parameter.)
-    """
-    @wraps(fn)
-    def override_initialization(parameterized_instance,*args,**kw):
-        original_initialized=parameterized_instance.initialized
-        parameterized_instance.initialized=False
-        fn(parameterized_instance,*args,**kw)
-        parameterized_instance.initialized=original_initialized
-    return override_initialization
+
 
 
 
@@ -1035,186 +1527,49 @@ class Parameterized(object):
         # Flag that can be tested to see if e.g. constant Parameters
         # can still be set
         self.initialized=False
+        # Override class level param namespace with instance namespace
+        self.param = Parameters(self.__class__, self=self)
 
-        self.__generate_name()
+        self.param._generate_name()
 
-        self._setup_params(**params)
+        self.param._setup_params(**params)
         object_count += 1
 
         self.initialized=True
 
+    # 'Special' methods
 
-    @classmethod
-    def _add_parameter(cls, param_name,param_obj):
+    def __getstate__(self):
         """
-        Add a new Parameter object into this object's class.
-
-        Supposed to result in a Parameter equivalent to one declared
-        in the class's source code.
+        Save the object's state: return a dictionary that is a shallow
+        copy of the object's __dict__ and that also includes the
+        object's __slots__ (if it has any).
         """
-        # CEBALERT: can't we just do
-        # setattr(cls,param_name,param_obj)?  The metaclass's
-        # __setattr__ is actually written to handle that.  (Would also
-        # need to do something about the params() cache.  That cache
-        # is a pain, but it definitely improved the startup time; it
-        # would be worthwhile making sure no method except for one
-        # "add_param()" method has to deal with it (plus any future
-        # remove_param() method.)
-        type.__setattr__(cls,param_name,param_obj)
-        ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
-        # delete cached params()
-        try:
-            delattr(cls,'_%s__params'%cls.__name__)
-        except AttributeError:
-            pass
+        # remind me, why is it a copy? why not just state.update(self.__dict__)?
+        state = self.__dict__.copy()
 
+        for slot in get_occupied_slots(self):
+            state[slot] = getattr(self,slot)
 
-    @bothmethod
-    def set_param(self_or_cls,*args,**kwargs):
+        # Note that Parameterized object pickling assumes that
+        # attributes to be saved are only in __dict__ or __slots__
+        # (the standard Python places to store attributes, so that's a
+        # reasonable assumption). (Additionally, class attributes that
+        # are Parameters are also handled, even when they haven't been
+        # instantiated - see PickleableClassAttributes.)
+
+        return state
+
+    def __setstate__(self,state):
         """
-        For each param=value keyword argument, sets the corresponding
-        parameter of this object or class to the given value.
+        Restore objects from the state dictionary to this object.
 
-        For backwards compatibility, also accepts
-        set_param("param",value) for a single parameter value using
-        positional arguments, but the keyword interface is preferred
-        because it is more compact and can set multiple values.
+        During this process the object is considered uninitialized.
         """
-
-        if args:
-            if len(args)==2 and not args[0] in kwargs and not kwargs:
-                kwargs[args[0]]=args[1]
-            else:
-                raise ValueError("Invalid positional arguments for %s.set_param" %
-                                 (self_or_cls.name))
-
-        for (k,v) in kwargs.items():
-            if k not in self_or_cls.params():
-                raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
-            setattr(self_or_cls,k,v)
-
-
-
-    # CEBALERT: I think I've noted elsewhere the fact that we
-    # sometimes have a method on Parameter that requires passing the
-    # owning Parameterized instance or class, and other times we have
-    # the method on Parameterized itself.  In case I haven't written
-    # that down elsewhere, here it is again.  We should clean that up
-    # (at least we should be consistent).
-
-    # cebalert: it's really time to stop and clean up this bothmethod
-    # stuff and repeated code in methods using it.
-
-    # CEBALERT: note there's no state_push method on the class, so
-    # dynamic parameters set on a class can't have state saved. This
-    # is because, to do this, state_push() would need to be a
-    # @bothmethod, but that complicates inheritance in cases where we
-    # already have a state_push() method. I need to decide what to do
-    # about that. (isinstance(g,Parameterized) below is used to exclude classes.)
-    def state_push(self):
-        """
-        Save this instance's state.
-
-        For Parameterized instances, this includes the state of
-        dynamically generated values.
-
-        Subclasses that maintain short-term state should additionally
-        save and restore that state using state_push() and
-        state_pop().
-
-        Generally, this method is used by operations that need to test
-        something without permanently altering the objects' state.
-        """
-        for pname,p in self.params().items():
-            g = self.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
-                g._saved_Dynamic_last.append(g._Dynamic_last)
-                g._saved_Dynamic_time.append(g._Dynamic_time)
-                # CB: not storing the time_fn: assuming that doesn't
-                # change.
-            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
-                g.state_push()
-
-    def state_pop(self):
-        """
-        Restore the most recently saved state.
-
-        See state_push() for more details.
-        """
-        for pname,p in self.params().items():
-            g = self.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
-                g._Dynamic_last = g._saved_Dynamic_last.pop()
-                g._Dynamic_time = g._saved_Dynamic_time.pop()
-            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
-                g.state_pop()
-
-
-    @classmethod
-    def set_default(cls,param_name,value):
-        """
-        Set the default value of param_name.
-
-        Equivalent to setting param_name on the class.
-        """
-        setattr(cls,param_name,value)
-
-
-    @bothmethod
-    def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
-        """
-        Set time_fn for all Dynamic Parameters of this class or
-        instance object that are currently being dynamically
-        generated.
-
-        Additionally, sets _Dynamic_time_fn=time_fn on this class or
-        instance object, so that any future changes to Dynamic
-        Parmeters can inherit time_fn (e.g. if a Number is changed
-        from a float to a number generator, the number generator will
-        inherit time_fn).
-
-        If specified, sublistattr is the name of an attribute of this
-        class or instance that contains an iterable collection of
-        subobjects on which set_dynamic_time_fn should be called.  If
-        the attribute sublistattr is present on any of the subobjects,
-        set_dynamic_time_fn() will be called for those, too.
-        """
-        self_or_cls._Dynamic_time_fn = time_fn
-
-        if isinstance(self_or_cls,type):
-            a = (None,self_or_cls)
-        else:
-            a = (self_or_cls,)
-
-        for n,p in self_or_cls.params().items():
-            if hasattr(p,'_value_is_dynamic'):
-                if p._value_is_dynamic(*a):
-                    g = self_or_cls.get_value_generator(n)
-                    g._Dynamic_time_fn = time_fn
-
-        if sublistattr:
-            try:
-                sublist = getattr(self_or_cls,sublistattr)
-            except AttributeError:
-                sublist = []
-
-            for obj in sublist:
-                obj.set_dynamic_time_fn(time_fn,sublistattr)
-
-
-    @as_uninitialized
-    def _set_name(self,name):
-        self.name=name
-
-
-    @as_uninitialized
-    def __generate_name(self):
-        """
-        Set name to a gensym formed from the object's type name and
-        the object_count.
-        """
-        self._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
-
+        self.initialized=False
+        for name,value in state.items():
+            setattr(self,name,value)
+        self.initialized=True
 
     def __repr__(self):
         """
@@ -1225,8 +1580,12 @@ class Parameterized(object):
         all the parameters of this object.
         """
         settings = ['%s=%s' % (name,repr(val))
-                    for name,val in self.get_param_values()]
+                    for name,val in self.param.get_param_values()]
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
+
+    def __str__(self):
+        """Return a short representation of the name and class of this object."""
+        return "<%s %s>" % (self.__class__.__name__,self.name)
 
 
     def script_repr(self,imports=[],prefix="    "):
@@ -1235,7 +1594,6 @@ class Parameterized(object):
         """
         return self.pprint(imports,prefix, unknown_value=None, qualify=True,
                            separator="\n")
-
 
     # CEBALERT: not yet properly documented
     def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
@@ -1256,8 +1614,8 @@ class Parameterized(object):
         imports.append("import %s"%mod)
         imports.append("import %s"%bits[0])
 
-        changed_params = dict(self.get_param_values(onlychanged=script_repr_suppress_defaults))
-        values = dict(self.get_param_values())
+        changed_params = dict(self.param.get_param_values(onlychanged=script_repr_suppress_defaults))
+        values = dict(self.param.get_param_values())
         spec = inspect.getargspec(self.__init__)
         args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
@@ -1270,8 +1628,8 @@ class Parameterized(object):
         ordering = sorted(
             sorted(changed_params.keys()), # alphanumeric tie-breaker
             key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if self.params(k).precedence is None
-                           else self.params(k).precedence))
+                           if self.param.params(k).precedence is None
+                           else self.param.params(k).precedence))
 
         arglist, keywords, processed = [], [], []
         for k in args + ordering:
@@ -1313,353 +1671,135 @@ class Parameterized(object):
         return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
 
-    def __str__(self):
-        """Return a short representation of the name and class of this object."""
-        return "<%s %s>" % (self.__class__.__name__,self.name)
+    # CEBALERT: note there's no state_push method on the class, so
+    # dynamic parameters set on a class can't have state saved. This
+    # is because, to do this, state_push() would need to be a
+    # @bothmethod, but that complicates inheritance in cases where we
+    # already have a state_push() method. I need to decide what to do
+    # about that. (isinstance(g,Parameterized) below is used to exclude classes.)
 
-
-    # CEBALERT: designed to avoid any processing unless the print
-    # level is high enough, but not all callers of message(),
-    # verbose(), debug(), etc are taking advantage of this. Need to
-    # document, and also check other ioam projects.
-    def __db_print(self,level,msg,*args,**kw):
+    def state_push(self):
         """
-        Calls the logger returned by the get_logger() function,
-        prepending the result of calling dbprint_prefix() (if any).
+        Save this instance's state.
 
-        See python's logging module for details.
+        For Parameterized instances, this includes the state of
+        dynamically generated values.
+
+        Subclasses that maintain short-term state should additionally
+        save and restore that state using state_push() and
+        state_pop().
+
+        Generally, this method is used by operations that need to test
+        something without permanently altering the objects' state.
         """
-        if get_logger().isEnabledFor(level):
+        for pname,p in self.param.params().items():
+            g = self.param.get_value_generator(pname)
+            if hasattr(g,'_Dynamic_last'):
+                g._saved_Dynamic_last.append(g._Dynamic_last)
+                g._saved_Dynamic_time.append(g._Dynamic_time)
+                # CB: not storing the time_fn: assuming that doesn't
+                # change.
+            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
+                g.state_push()
 
-            if dbprint_prefix and callable(dbprint_prefix):
-                prefix=dbprint_prefix() # pylint: disable-msg=E1102
-            else:
-                prefix=""
-
-            get_logger().log(level, '%s%s: '+msg, prefix, self.name, *args, **kw)
-
-    def warning(self,msg,*args,**kw):
+    def state_pop(self):
         """
-        Print msg merged with args as a warning, unless module variable
-        warnings_as_exceptions is True, then raise an Exception
-        containing the arguments.
+        Restore the most recently saved state.
 
-        See Python's logging module for details of message formatting.
+        See state_push() for more details.
         """
-        if not warnings_as_exceptions:
-            global warning_count
-            warning_count+=1
-            self.__db_print(WARNING,msg,*args,**kw)
-        else:
-            raise Exception("Warning: " + msg % args)
+        for pname,p in self.param.params().items():
+            g = self.param.get_value_generator(pname)
+            if hasattr(g,'_Dynamic_last'):
+                g._Dynamic_last = g._saved_Dynamic_last.pop()
+                g._Dynamic_time = g._saved_Dynamic_time.pop()
+            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
+                g.state_pop()
 
 
-    def message(self,msg,*args,**kw):
-        """
-        Print msg merged with args as a message.
-
-        See Python's logging module for details of message formatting.
-        """
-        self.__db_print(INFO,msg,*args,**kw)
-
-    def verbose(self,msg,*args,**kw):
-        """
-        Print msg merged with args as a verbose message.
-
-        See Python's logging module for details of message formatting.
-        """
-        self.__db_print(VERBOSE,msg,*args,**kw)
-
-    def debug(self,msg,*args,**kw):
-        """
-        Print msg merged with args as a debugging statement.
-
-        See Python's logging module for details of message formatting.
-        """
-        self.__db_print(DEBUG,msg,*args,**kw)
-
-    # CEBALERT: this is a bit ugly
-    def _instantiate_param(self,param_obj,dict_=None,key=None):
-        # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
-        # under the parameter's _internal_name (or key if supplied)
-        dict_ = dict_ or self.__dict__
-        key = key or param_obj._internal_name
-        param_key = (str(type(self)), param_obj._attrib_name)
-        if shared_parameters._share:
-            if param_key in shared_parameters._shared_cache:
-                new_object = shared_parameters._shared_cache[param_key]
-            else:
-                new_object = copy.deepcopy(param_obj.default)
-                shared_parameters._shared_cache[param_key] = new_object
-        else:
-            new_object = copy.deepcopy(param_obj.default)
-        dict_[key]=new_object
-
-        if isinstance(new_object,Parameterized):
-            global object_count
-            object_count+=1
-            # CB: writes over name given to the original object;
-            # should it instead keep the same name?
-            new_object.__generate_name()
-
-
-    @as_uninitialized
-    def _setup_params(self,**params):
-        """
-        Initialize default and keyword parameter values.
-
-        First, ensures that all Parameters with 'instantiate=True'
-        (typically used for mutable Parameters) are copied directly
-        into each object, to ensure that there is an independent copy
-        (to avoid suprising aliasing errors).  Then sets each of the
-        keyword arguments, warning when any of them are not defined as
-        parameters.
-
-        Constant Parameters can be set during calls to this method.
-        """
-        ## Deepcopy all 'instantiate=True' parameters
-        # (build a set of names first to avoid redundantly instantiating
-        #  a later-overridden parent class's parameter)
-        params_to_instantiate = {}
-        for class_ in classlist(type(self)):
-            if not issubclass(class_, Parameterized):
-                continue
-            for (k,v) in class_.__dict__.items():
-                # (avoid replacing name with the default of None)
-                if isinstance(v,Parameter) and v.instantiate and k!="name":
-                    params_to_instantiate[k]=v
-
-        for p in params_to_instantiate.values():
-            self._instantiate_param(p)
-
-        ## keyword arg setting
-        for name,val in params.items():
-            desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
-            if not desc:
-                self.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
-            # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
-            setattr(self,name,val)
-
-
-    @bothmethod
-    def get_param_values(self_or_cls,onlychanged=False):
-        """
-        Return a list of name,value pairs for all Parameters of this
-        object.
-
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
-        """
-        # CEB: we'd actually like to know whether a value has been
-        # explicitly set on the instance, but I'm not sure that's easy
-        # (would need to distinguish instantiation of default from
-        # user setting of value).
-        vals = []
-        for name,val in self_or_cls.params().items():
-            value = self_or_cls.get_value_generator(name)
-            # (this is pointless for cls)
-            if not onlychanged or not all_equal(value,val.default):
-                vals.append((name,value))
-
-        vals.sort(key=itemgetter(0))
-        return vals
-
-    # CB: is there a more obvious solution than making these
-    # 'bothmethod's?
-    # An alternative would be to lose these methods completely and
-    # make users do things via the Parameter object directly.
-
-    # CB: is there a performance hit for doing this decoration? It
-    # would show up in lissom_oo_or because separated composite uses
-    # this method.
-    @bothmethod
-    def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
-        """
-        Force a new value to be generated for the dynamic attribute
-        name, and return it.
-
-        If name is not dynamic, its current value is returned
-        (i.e. equivalent to getattr(name).
-        """
-        param_obj = cls_or_slf.params().get(name)
-
-        if not param_obj:
-            return getattr(cls_or_slf,name)
-
-        cls,slf=None,None
-        if isinstance(cls_or_slf,type):
-            cls = cls_or_slf
-        else:
-            slf = cls_or_slf
-
-        if not hasattr(param_obj,'_force'):
-            return param_obj.__get__(slf,cls)
-        else:
-            return param_obj._force(slf,cls)
-
-
-    @bothmethod
-    def get_value_generator(cls_or_slf,name): # pylint: disable-msg=E0213
-        """
-        Return the value or value-generating object of the named
-        attribute.
-
-        For most parameters, this is simply the parameter's value
-        (i.e. the same as getattr()), but Dynamic parameters have
-        their value-generating object returned.
-        """
-        param_obj = cls_or_slf.params().get(name)
-
-        if not param_obj:
-            value = getattr(cls_or_slf,name)
-
-        # CompositeParameter detected by being a Parameter and having 'attribs'
-        elif hasattr(param_obj,'attribs'):
-            value = [cls_or_slf.get_value_generator(a) for a in param_obj.attribs]
-
-        # not a Dynamic Parameter
-        elif not hasattr(param_obj,'_value_is_dynamic'):
-            value = getattr(cls_or_slf,name)
-
-        # Dynamic Parameter...
-        else:
-            internal_name = "_%s_param_value"%name
-            if hasattr(cls_or_slf,internal_name):
-                # dealing with object and it's been set on this object
-                value = getattr(cls_or_slf,internal_name)
-            else:
-                # dealing with class or isn't set on the object
-                value = param_obj.default
-
-        return value
-
-
-    @bothmethod
-    def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
-        """
-        Return the current value of the named attribute without modifying it.
-
-        Same as getattr() except for Dynamic parameters, which have their
-        last generated value returned.
-        """
-        param_obj = cls_or_slf.params().get(name)
-
-        if not param_obj:
-            value = getattr(cls_or_slf,name)
-        elif hasattr(param_obj,'attribs'):
-            value = [cls_or_slf.inspect_value(a) for a in param_obj.attribs]
-        elif not hasattr(param_obj,'_inspect'):
-            value = getattr(cls_or_slf,name)
-        else:
-            if isinstance(cls_or_slf,type):
-                value = param_obj._inspect(None,cls_or_slf)
-            else:
-                value = param_obj._inspect(cls_or_slf,None)
-
-        return value
-
-
-
-    def print_param_values(self):
-        """Print the values of all this object's Parameters."""
-        for name,val in self.get_param_values():
-            print('%s.%s = %s' % (self.name,name,val))
-
-
-    def __getstate__(self):
-        """
-        Save the object's state: return a dictionary that is a shallow
-        copy of the object's __dict__ and that also includes the
-        object's __slots__ (if it has any).
-        """
-        # remind me, why is it a copy? why not just state.update(self.__dict__)?
-        state = self.__dict__.copy()
-
-        for slot in get_occupied_slots(self):
-            state[slot] = getattr(self,slot)
-
-        # Note that Parameterized object pickling assumes that
-        # attributes to be saved are only in __dict__ or __slots__
-        # (the standard Python places to store attributes, so that's a
-        # reasonable assumption). (Additionally, class attributes that
-        # are Parameters are also handled, even when they haven't been
-        # instantiated - see PickleableClassAttributes.)
-
-        return state
-
-
-    def __setstate__(self,state):
-        """
-        Restore objects from the state dictionary to this object.
-
-        During this process the object is considered uninitialized.
-        """
-        self.initialized=False
-        for name,value in state.items():
-            setattr(self,name,value)
-        self.initialized=True
-
+    # API to be accessed via param namespace
 
     @classmethod
+    @Parameters.deprecate
+    def _add_parameter(cls, param_name,param_obj):
+        return cls.param._add_parameter(param_name,param_obj)
+
+    @classmethod
+    @Parameters.deprecate
     def params(cls,parameter_name=None):
-        """
-        Return the Parameters of this class as the
-        dictionary {name: parameter_object}
-
-        Includes Parameters from this class and its
-        superclasses.
-        """
-        # CB: we cache the parameters because this method is called often,
-        # and parameters are rarely added (and cannot be deleted)
-        try:
-            pdict=getattr(cls,'_%s__params'%cls.__name__)
-        except AttributeError:
-            paramdict = {}
-            for class_ in classlist(cls):
-                for name,val in class_.__dict__.items():
-                    if isinstance(val,Parameter):
-                        paramdict[name] = val
-
-            # We only want the cache to be visible to the cls on which
-            # params() is called, so we mangle the name ourselves at
-            # runtime (if we were to mangle it now, it would be
-            # _Parameterized.__params for all classes).
-            setattr(cls,'_%s__params'%cls.__name__,paramdict)
-            pdict= paramdict
-
-        if parameter_name is None:
-            return pdict
-        else:
-            return pdict[parameter_name]
-
-
+        return cls.param.params(parameter_name=parameter_name)
 
     @classmethod
+    @Parameters.deprecate
+    def set_default(cls,param_name,value):
+        return cls.param.set_default(param_name,value)
+
+    @classmethod
+    @Parameters.deprecate
     def print_param_defaults(cls):
-        """Print the default values of all cls's Parameters."""
-        for key,val in cls.__dict__.items():
-            if isinstance(val,Parameter):
-                print(cls.__name__+'.'+key+ '='+ repr(val.default))
+        return cls.param.print_param_defaults()
 
+    @bothmethod
+    @Parameters.deprecate
+    def set_param(self_or_cls,*args,**kwargs):
+        return self_or_cls.param.set_param(*args,**kwargs)
 
+    @bothmethod
+    @Parameters.deprecate
+    def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
+        return self_or_cls.param.set_dynamic_time_fn(time_fn,sublistattr=sublistattr)
+
+    @bothmethod
+    @Parameters.deprecate
+    def get_param_values(self_or_cls,onlychanged=False):
+        return self_or_cls.param.get_param_values(onlychanged=onlychanged)
+
+    @bothmethod
+    @Parameters.deprecate
+    def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
+        return cls_or_slf.param.force_new_dynamic_value(name)
+
+    @bothmethod
+    @Parameters.deprecate
+    def get_value_generator(cls_or_slf,name): # pylint: disable-msg=E0213
+        return cls_or_slf.param.get_value_generator(name)
+
+    @bothmethod
+    @Parameters.deprecate
+    def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
+        return cls_or_slf.param.inspect_value(name)
+
+    @Parameters.deprecate
+    def _set_name(self,name):
+        return self.param._set_name(name)
+
+    @Parameters.deprecate
+    def __db_print(self,level,msg,*args,**kw):
+        return self.param.__db_print(level,msg,*args,**kw)
+
+    @Parameters.deprecate
+    def warning(self,msg,*args,**kw):
+        return self.param.warning(msg,*args,**kw)
+
+    @Parameters.deprecate
+    def message(self,msg,*args,**kw):
+        return self.param.message(msg,*args,**kw)
+
+    @Parameters.deprecate
+    def verbose(self,msg,*args,**kw):
+        return self.param.verbose(msg,*args,**kw)
+
+    @Parameters.deprecate
+    def debug(self,msg,*args,**kw):
+        return self.param.debug(msg,*args,**kw)
+
+    @Parameters.deprecate
+    def print_param_values(self):
+        return self.param.print_param_values()
+
+    @Parameters.deprecate
     def defaults(self):
-        """
-        Return {parameter_name:parameter.default} for all non-constant
-        Parameters.
-
-        Note that a Parameter for which instantiate==True has its default
-        instantiated.
-        """
-        d = {}
-        for param_name,param in self.params().items():
-            if param.constant:
-                pass
-            elif param.instantiate:
-                self._instantiate_param(param,dict_=d,key=param_name)
-            else:
-                d[param_name]=param.default
-        return d
+        return self.param.defaults()
 
 
 # CB: seems to work, but conflicts with (hides)
@@ -1812,17 +1952,17 @@ class ParamOverrides(dict):
             return default
 
     def __contains__(self, key):
-        return key in self.__dict__ or key in self._overridden.params()
+        return key in self.__dict__ or key in self._overridden.param.params()
 
     def _check_params(self,params):
         """
         Print a warning if params contains something that is not a
         Parameter of the overridden object.
         """
-        overridden_object_params = list(self._overridden.params().keys())
+        overridden_object_params = list(self._overridden.param.params().keys())
         for item in params:
             if item not in overridden_object_params:
-                self.warning("'%s' will be ignored (not a Parameter).",item)
+                self.param.warning("'%s' will be ignored (not a Parameter).",item)
 
     def _extract_extra_keywords(self,params):
         """
@@ -1830,7 +1970,7 @@ class ParamOverrides(dict):
         parameters of the overridden object.
         """
         extra_keywords = {}
-        overridden_object_params = self._overridden.params()
+        overridden_object_params = self._overridden.param.params()
         for name,val in params.items():
             if name not in overridden_object_params:
                 extra_keywords[name]=val
@@ -1887,7 +2027,7 @@ class ParameterizedFunction(Parameterized):
     def __new__(class_,*args,**params):
         # Create and __call__() an instance of this class.
         inst = class_.instance()
-        inst._set_name(class_.__name__)
+        inst.param._set_name(class_.__name__)
         return inst.__call__(*args,**params)
 
     def __call__(self,*args,**kw):

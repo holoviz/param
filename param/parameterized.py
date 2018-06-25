@@ -1772,7 +1772,7 @@ class Parameterized(object):
     @Parameters.deprecate
     def _set_name(self,name):
         return self.param._set_name(name)
-    
+
     @Parameters.deprecate
     def __db_print(self,level,msg,*args,**kw):
         return self.param.__db_print(level,msg,*args,**kw)

@@ -146,10 +146,10 @@ class TestParameterized(API1TestCase):
         g._Dynamic_time_fn=None
         assert t.dyn!=t.dyn
         orig = t.dyn
-        t.param.state_push()
+        t.state_push()
         t.dyn
         assert t.param.inspect_value('dyn')!=orig
-        t.param.state_pop()
+        t.state_pop()
         assert t.param.inspect_value('dyn')==orig
 
 

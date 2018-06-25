@@ -1060,52 +1060,7 @@ class Parameters(object):
     # cebalert: it's really time to stop and clean up this bothmethod
     # stuff and repeated code in methods using it.
 
-    # CEBALERT: note there's no state_push method on the class, so
-    # dynamic parameters set on a class can't have state saved. This
-    # is because, to do this, state_push() would need to be a
-    # @bothmethod, but that complicates inheritance in cases where we
-    # already have a state_push() method. I need to decide what to do
-    # about that. (isinstance(g,Parameterized) below is used to exclude classes.)
 
-    def state_push(self_):
-        """
-        Save this instance's state.
-
-        For Parameterized instances, this includes the state of
-        dynamically generated values.
-
-        Subclasses that maintain short-term state should additionally
-        save and restore that state using state_push() and
-        state_pop().
-
-        Generally, this method is used by operations that need to test
-        something without permanently altering the objects' state.
-        """
-        self = self_.self
-        for pname,p in self.param.params().items():
-            g = self.param.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
-                g._saved_Dynamic_last.append(g._Dynamic_last)
-                g._saved_Dynamic_time.append(g._Dynamic_time)
-                # CB: not storing the time_fn: assuming that doesn't
-                # change.
-            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
-                g.param.state_push()
-
-    def state_pop(self_):
-        """
-        Restore the most recently saved state.
-
-        See state_push() for more details.
-        """
-        self = self_.self
-        for pname,p in self.param.params().items():
-            g = self.param.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
-                g._Dynamic_last = g._saved_Dynamic_last.pop()
-                g._Dynamic_time = g._saved_Dynamic_time.pop()
-            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
-                g.param.state_pop()
 
 class ParameterizedMetaclass(type):
     """
@@ -1716,6 +1671,52 @@ class Parameterized(object):
         return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
 
+    # CEBALERT: note there's no state_push method on the class, so
+    # dynamic parameters set on a class can't have state saved. This
+    # is because, to do this, state_push() would need to be a
+    # @bothmethod, but that complicates inheritance in cases where we
+    # already have a state_push() method. I need to decide what to do
+    # about that. (isinstance(g,Parameterized) below is used to exclude classes.)
+
+    def state_push(self):
+        """
+        Save this instance's state.
+
+        For Parameterized instances, this includes the state of
+        dynamically generated values.
+
+        Subclasses that maintain short-term state should additionally
+        save and restore that state using state_push() and
+        state_pop().
+
+        Generally, this method is used by operations that need to test
+        something without permanently altering the objects' state.
+        """
+        for pname,p in self.param.params().items():
+            g = self.param.get_value_generator(pname)
+            if hasattr(g,'_Dynamic_last'):
+                g._saved_Dynamic_last.append(g._Dynamic_last)
+                g._saved_Dynamic_time.append(g._Dynamic_time)
+                # CB: not storing the time_fn: assuming that doesn't
+                # change.
+            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
+                g.state_push()
+
+    def state_pop(self):
+        """
+        Restore the most recently saved state.
+
+        See state_push() for more details.
+        """
+        for pname,p in self.param.params().items():
+            g = self.param.get_value_generator(pname)
+            if hasattr(g,'_Dynamic_last'):
+                g._Dynamic_last = g._saved_Dynamic_last.pop()
+                g._Dynamic_time = g._saved_Dynamic_time.pop()
+            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
+                g.state_pop()
+
+
     # API to be accessed via param namespace
 
     @classmethod
@@ -1769,6 +1770,10 @@ class Parameterized(object):
         return cls_or_slf.param.inspect_value(name)
 
     @Parameters.deprecate
+    def _set_name(self,name):
+        return self.param._set_name(name)
+
+    @Parameters.deprecate
     def __db_print(self,level,msg,*args,**kw):
         return self.param.__db_print(level,msg,*args,**kw)
 
@@ -1787,14 +1792,6 @@ class Parameterized(object):
     @Parameters.deprecate
     def debug(self,msg,*args,**kw):
         return self.param.debug(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def state_push(self):
-        return self.param.state_push()
-
-    @Parameters.deprecate
-    def state_pop(self):
-        return self.param.state_pop()
 
     @Parameters.deprecate
     def print_param_values(self):

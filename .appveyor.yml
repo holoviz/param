@@ -3,7 +3,6 @@ environment:
     - TOXENV: py36
     - TOXENV: py35
     - TOXENV: py34
-    - TOXENV: py33
     - TOXENV: py27
 
 matrix:

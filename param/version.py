@@ -510,15 +510,16 @@ def get_setupcfg_version():
         import ConfigParser as configparser # python2 (also prevents dict-like access)
     import re
     cfg = "setup.cfg"
+    autover_section = 'tool:autover'
     config = configparser.ConfigParser()
     config.read(cfg)
     pkgname = config.get('metadata','name')
-    reponame = config.get('tool:autover','reponame',vars={'reponame':pkgname})
+    reponame = config.get(autover_section,'reponame',vars={'reponame':pkgname}) if autover_section in config.sections() else pkgname
 
     ###
     # hack archive_commit into section heading; see docstring
     archive_commit = None
-    archive_commit_key = 'tool:autover.configparser_workaround.archive_commit'
+    archive_commit_key = autover_section+'.configparser_workaround.archive_commit'
     for section in config.sections():
         if section.startswith(archive_commit_key):
             archive_commit = re.match(".*=\s*(\S*)\s*",section).group(1)

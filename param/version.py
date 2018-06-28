@@ -445,6 +445,87 @@ class Version(object):
 
 
 
+def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
+    """Helper for use in setup.py to get the current version from either
+    git describe or the .version file (if available).
+
+    Set pkgname to the package name if it is different from the
+    repository name.
+
+    To ensure git information is included in a git archive, add
+    setup.py to .gitattributes (in addition to __init__):
+    ```
+    __init__.py export-subst
+    setup.py export-subst
+    ```
+    Then supply "$Format:%h$" for archive_commit.
+
+    """
+    import warnings
+    pkgname = reponame if pkgname is None else pkgname
+    if archive_commit is None:
+        warnings.warn("No archive commit available; git archives will not contain version information")
+    return Version.setup_version(os.path.dirname(os.path.abspath(location)),reponame,pkgname=pkgname,archive_commit=archive_commit)
+
+
+def get_setupcfg_version():
+    """As get_setup_version(), but configure via setup.cfg.
+
+    If your project uses setup.cfg to configure setuptools, and hence has
+    at least a "name" key in the [metadata] section, you can
+    set the version as follows:
+    ```
+    [metadata]
+    name = mypackage
+    version = attr: autover.version.get_setup_version2
+    ```
+
+    If the repository name is different from the package name, specify
+    `reponame` as a [tool:autover] option:
+    ```
+    [tool:autover]
+    reponame = mypackage
+    ```
+
+    To ensure git information is included in a git archive, add
+    setup.cfg to .gitattributes (in addition to __init__):
+    ```
+    __init__.py export-subst
+    setup.cfg export-subst
+    ```
+
+    Then add the following to setup.cfg:
+    ```
+    [tool:autover.configparser_workaround.archive_commit=$Format:%h$]
+    ```
+
+    The above being a section heading rather than just a key is
+    because setuptools requires % to be escaped with %, or it can't
+    parse setup.cfg...but then git export-subst would not work.
+
+    """
+    try:
+        import configparser
+    except ImportError:
+        import ConfigParser as configparser # python2 (also prevents dict-like access)
+    import re
+    cfg = "setup.cfg"
+    config = configparser.ConfigParser()
+    config.read(cfg)
+    pkgname = config.get('metadata','name')
+    reponame = config.get('tool:autover','reponame',vars={'reponame':pkgname})
+
+    ###
+    # hack archive_commit into section heading; see docstring
+    archive_commit = None
+    archive_commit_key = 'tool:autover.configparser_workaround.archive_commit'
+    for section in config.sections():
+        if section.startswith(archive_commit_key):
+            archive_commit = re.match(".*=\s*(\S*)\s*",section).group(1)
+    ###
+    return get_setup_version(cfg,reponame=reponame,pkgname=pkgname,archive_commit=archive_commit)
+
+
 # from param/version.py aa087db29976d9b7e0f59c29789dfd721c85afd0
 class OldDeprecatedVersion(object):
     """

@@ -519,24 +519,36 @@ class Parameter(object):
 # Define one particular type of Parameter that is used in this file
 class String(Parameter):
     """
-    A simple String parameter.
+    A String Parameter, with a default value and optional regular expression.
+
+    Example of creating a String:
+      ip_regexp = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+      IP = String(default='0.0.0.0', regexp=ip_regexp, doc='An IP address.')
     """
+
+    __slots__ = ['regexp']
 
     basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
-    def __init__(self, default="", allow_None=False, **kwargs):
+    def __init__(self, default="", regexp=None, allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
-        self._check_value(default)
+        self.regexp = regexp
         self.allow_None = (default is None or allow_None)
+        self._check_value(default)
 
     def _check_value(self,val):
-        if not isinstance(val, self.basestring) and not (self.allow_None and val is None):
+        if self.allow_None and val is None:
+            return
+
+        if not isinstance(val, self.basestring):
             raise ValueError("String '%s' only takes a string value."%self._attrib_name)
+
+        if self.regexp is not None and re.match(self.regexp, val) is None:
+            raise ValueError("String '%s' does not match regular expression."%self._attrib_name)
 
     def __set__(self,obj,val):
         self._check_value(val)
         super(String,self).__set__(obj,val)
-
 
 
 class shared_parameters(object):

@@ -546,7 +546,7 @@ class Number(Dynamic):
     When not being dynamically generated, bounds are checked when a
     Number is created or set. Using a default value outside the hard
     bounds, or one that is not numeric, results in an exception. When
-    being dynamically generated, bounds are checked when a the value
+    being dynamically generated, bounds are checked when the value
     of a Number is requested. A generated value that is not numeric,
     or is outside the hard bounds, results in an exception.
 
@@ -563,7 +563,7 @@ class Number(Dynamic):
     allows, for instance, a GUI to know what values to display on
     sliders for the Number.
 
-    Example of creating a Number::
+    Example of creating a Number:
       AB = Number(default=0.5, bounds=(None,10), softbounds=(0,1), doc='Distance from A to B.')
     """
 

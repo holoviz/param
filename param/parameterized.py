@@ -519,22 +519,26 @@ class Parameter(object):
 # Define one particular type of Parameter that is used in this file
 class String(Parameter):
     """
-    A String Parameter, with a default value and optional regular expression.
+    A String Parameter, with a default value and optional regular expression (regex) matching.
 
-    Example of creating a String::
+    Example of using a regex to implement IPv4 address matching::
 
-      ip_regexp = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-      IP = String(default='0.0.0.0', regexp=ip_regexp, doc='An IP address.')
+      class IPAddress(String):
+        '''IPv4 address as a string (dotted decimal notation)'''
+       def __init__(self, default="0.0.0.0", allow_None=False, **kwargs):
+           ip_regex = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+           super(IPAddress, self).__init__(default=default, regex=ip_regex, **kwargs)
+
 
     """
 
-    __slots__ = ['regexp']
+    __slots__ = ['regex']
 
     basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
-    def __init__(self, default="", regexp=None, allow_None=False, **kwargs):
+    def __init__(self, default="", regex=None, allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
-        self.regexp = regexp
+        self.regex = regex
         self.allow_None = (default is None or allow_None)
         self._check_value(default)
 
@@ -545,8 +549,8 @@ class String(Parameter):
         if not isinstance(val, self.basestring):
             raise ValueError("String '%s' only takes a string value."%self._attrib_name)
 
-        if self.regexp is not None and re.match(self.regexp, val) is None:
-            raise ValueError("String '%s' does not match regular expression."%self._attrib_name)
+        if self.regex is not None and re.match(self.regex, val) is None:
+            raise ValueError("String '%s': '%s' does not match regex '%s'."%(self._attrib_name,val,self.regex))
 
     def __set__(self,obj,val):
         self._check_value(val)

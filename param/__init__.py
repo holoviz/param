@@ -213,7 +213,7 @@ class Time(Parameterized):
         should be able to handle such computations exactly, avoiding
         accumulation issues over long time intervals.
 
-        Some potentially useful exact number classes::
+        Some potentially useful exact number classes:
 
          - int: Suitable if all times can be expressed as integers.
 
@@ -563,8 +563,10 @@ class Number(Dynamic):
     allows, for instance, a GUI to know what values to display on
     sliders for the Number.
 
-    Example of creating a Number:
+    Example of creating a Number::
+
       AB = Number(default=0.5, bounds=(None,10), softbounds=(0,1), doc='Distance from A to B.')
+
     """
 
     __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook']

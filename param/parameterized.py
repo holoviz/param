@@ -521,9 +521,11 @@ class String(Parameter):
     """
     A String Parameter, with a default value and optional regular expression.
 
-    Example of creating a String:
+    Example of creating a String::
+
       ip_regexp = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
       IP = String(default='0.0.0.0', regexp=ip_regexp, doc='An IP address.')
+
     """
 
     __slots__ = ['regexp']

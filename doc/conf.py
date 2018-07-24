@@ -19,6 +19,7 @@ html_theme_options = {
 }
 
 _NAV =  (
+    ('API', 'Reference_Manual/param'),
     ('About', 'About'),
 )
 

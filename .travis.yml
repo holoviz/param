@@ -17,6 +17,8 @@ stages:
     if: tag =~ ^v(\d+|\.)*[a-z]\d*$ OR (branch = master AND type != pull_request)
   - name: conda_package
     if: tag =~ ^v(\d+|\.)*[^a-z]\d*$
+  - name: doc
+    if: branch = use_nbsite
 
 jobs:
   fast_finish: true
@@ -110,3 +112,23 @@ jobs:
           tags: true
         user: $PYPI_USER
         password: $PYPI_PWD
+
+    - <<: *default
+      stage: doc
+      install:
+        - pip install nbsite sphinx_ioam_theme
+        - pip install -e .
+      script:
+        - nbsite generate-rst --org ioam --project param --repo param --examples-path examples --doc-path doc
+        - nbsite build --what=html --examples-path=examples --doc-path=doc --output=builtdocs
+        - touch ./builtdocs/.nojekyll # for github pages
+        - nbsite_cleandisthtml.py ./builtdocs take_a_chance
+      deploy:
+        - provider: pages
+          skip_cleanup: true
+          github_token: $GITHUB_TOKEN
+          local_dir: ./builtdocs
+          repo: ioam-docs/param-tmp
+          on:
+            all_branches: true
+            condition: $TRAVIS_BRANCH != master

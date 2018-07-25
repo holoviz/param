@@ -373,7 +373,8 @@ class Parameter(object):
     # persistent storage pickling); see __getstate__ and __setstate__.
     __slots__ = ['_attrib_name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
-                 'pickle_default_value','allow_None']
+                 'pickle_default_value','allow_None',
+                 'pre_set_hooks', 'post_set_hooks']
 
     # When created, a Parameter does not know which
     # Parameterized class owns it. If a Parameter subclass needs
@@ -411,6 +412,8 @@ class Parameter(object):
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)
+        self.pre_set_hooks = []
+        self.post_set_hooks = []
 
 
     def _set_instantiate(self,instantiate):
@@ -474,6 +477,10 @@ class Parameter(object):
         """
         # NB: obj can be None (when __set__ called for a
         # Parameterized class)
+
+        for hook in self.pre_set_hooks:
+            val = hook(obj, val)
+
         if self.constant or self.readonly:
             if self.readonly:
                 raise TypeError("Read-only parameter '%s' cannot be modified"%self._attrib_name)
@@ -490,6 +497,9 @@ class Parameter(object):
             else:
                 obj.__dict__[self._internal_name] = val
 
+
+        for hook in self.post_set_hooks:
+            hook(obj, val)
 
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed."%self._attrib_name)

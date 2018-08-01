@@ -1588,7 +1588,8 @@ class Parameterized(object):
         for name,value in state.items():
             setattr(self,name,value)
         # not ready for merge like this; just demo right now
-        self.param.self = self
+        if "param" not in self.__dict__:
+            self.param = Parameters(self.__class__, self=self)
         self.initialized=True
 
     def __repr__(self):

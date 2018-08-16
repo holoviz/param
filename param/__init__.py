@@ -25,6 +25,7 @@ import datetime as dt
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
+from .parameterized import depends           # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 

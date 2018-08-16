@@ -9,9 +9,10 @@ import sys
 import inspect
 import random
 
+from collections import namedtuple
 from operator import itemgetter,attrgetter
 from types import FunctionType
-from functools import partial, wraps
+from functools import partial, wraps, lru_cache, reduce
 
 import logging
 from contextlib import contextmanager
@@ -190,6 +191,99 @@ class bothmethod(object): # pylint: disable-msg=R0903
             return wraps(self.func)(partial(self.func, type_))
         else:
             return wraps(self.func)(partial(self.func, obj))
+
+
+def _getattrr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+    return reduce(_getattr, [obj] + attr.split('.'))
+
+
+# (thought I was going to have a few decorators following this pattern)
+def accept_arguments(f):
+    @wraps(f)
+    def _f(*args, **kwargs):
+        return lambda actual_f: f(actual_f, *args, **kwargs)
+    return _f
+
+
+@accept_arguments
+def depends(func, *what, cache=False, eager=False, viewable=False):
+
+    _dinfo = {'dependencies': what,
+              'cache': cache,
+              'eager': eager,
+              'viewable':viewable}
+
+    @wraps(func)
+    def _depends(*args,**kw):
+        # TODO this is a quick hack memoize implementation that
+        # should be replaced by whatever is in holoviews.
+        if cache:
+            self = args[0]            
+            # cache key is "param deps" plus regular args & kw
+            # "param deps" is tuple of id and value for each dependency
+            #
+            # id is: class name, parameter name, parameter attribute
+            # (e.g. value, bounds, etc) all joined with underscores!
+            # (should it include instance id too?)
+
+            # (have I successfully managed to avoid holding onto self
+            # forever in cache (by creating one per instance?))
+            
+            inst_cache = lru_cache()(lambda param_deps,*args,**kw: func(*args,**kw)) # (args[0] is self)
+
+            def with_cache_key(*args,**kw): # (args[0] is self)
+                param_deps = []
+                for p in self.param.params_depended_on(func.__name__):
+                    val = getattr((p.inst or p.cls),p.name) if p.what=='value' else getattr(p.pobj,p.what)
+                    param_deps.append(("_".join([p.cls.__name__,p.name,p.what]),val))
+                return inst_cache(tuple(param_deps),*args,**kw)
+
+            # Bind the decorated function to the instance to make it a method
+            # (except actually, a method can't have arbitrary
+            # attributes added to it, so use partial...will this work
+            # in py2?)
+            #g = with_cache_key.__get__(self,self.__class__)
+            g = partial(with_cache_key,self)
+            setattr(self, func.__name__, g)
+            g._dinfo = _dinfo
+            return with_cache_key(*args,**kw)
+        else:
+            return func(*args,**kw)
+
+    # storing here risks it being tricky to find if other libraries
+    # mess around with methods
+    _depends._dinfo = _dinfo
+            
+    return _depends
+
+
+def _get_members(obj, field):
+    try:
+        members = inspect.getmembers(obj, predicate=inspect.ismethod)
+    except:
+        # TODO: inspect.getmembers() fails for holoviews options
+        members = []
+    return [(n,m) for (n,m) in members if getattr(m,'_dinfo',{}).get(field,None)]
+
+
+def _params_depended_on(mthing,params):
+    for d in getattr(mthing.mthd,"_dinfo",{})['dependencies']:
+        thing = (mthing.inst or mthing.cls).param._spec_to_obj(d)
+        if isinstance(thing,PInfo):
+            params.append(thing)
+        else:
+            _params_depended_on(thing,params)
+
+
+def _m_caller(self,n):
+    return lambda change: getattr(self,n)()
+
+
+PInfo = namedtuple("PInfo","inst cls name pobj what")
+MInfo = namedtuple("MInfo","inst cls name mthd")
+Change = namedtuple("Change","what attribute obj cls old new")
 
 
 class ParameterMetaclass(type):
@@ -373,7 +467,8 @@ class Parameter(object):
     # persistent storage pickling); see __getstate__ and __setstate__.
     __slots__ = ['_attrib_name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
-                 'pickle_default_value','allow_None']
+                 'pickle_default_value','allow_None',
+                 'subscribers','_owner']
 
     # When created, a Parameter does not know which
     # Parameterized class owns it. If a Parameter subclass needs
@@ -411,6 +506,7 @@ class Parameter(object):
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)
+        self.subscribers = {}
 
 
     def _set_instantiate(self,instantiate):
@@ -423,6 +519,35 @@ class Parameter(object):
         else:
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
 
+
+    # TODO: quick trick to allow subscription to the setting of
+    # parameter metadata. ParameterParameter?
+
+    # Note that unlike with parameter value setting, there's no access
+    # to the Parameterized instance, so no per-instance subscription.
+
+    def __setattr__(self,name,value):        
+        old = getattr(self,name) if (name!="default" and hasattr(self,'subscribers') and name in self.subscribers) else NotImplemented
+
+        super(Parameter, self).__setattr__(name, value)
+        
+        if old is not NotImplemented:
+            for subscriber in self.subscribers[name]:
+                subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
+
+    # TODO: this is a python 3.6+ thing; we can presumably do this in
+    # Parameterized.__new__ for older pythons. (And merge with objtype
+    # slot.)
+    # 
+    # (not specific to this change, but regarding attrib_name, owner:
+    # what if someone re-uses a parameter object across different
+    # classes? maybe we should raise an error if attrib name,owner
+    # already set)
+    #           
+    def __set_name__(self, owner, name):
+        self._owner = owner
+        # note: simpler way of getting _attrib_name
+        # self._attrib_name = name
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
         """
@@ -472,23 +597,37 @@ class Parameter(object):
         object stored in a constant or read-only Parameter (e.g. the
         left bound of a BoundingBox).
         """
+        # TODO: simplify this method!
+
+        _old = NotImplemented
         # NB: obj can be None (when __set__ called for a
         # Parameterized class)
         if self.constant or self.readonly:
             if self.readonly:
                 raise TypeError("Read-only parameter '%s' cannot be modified"%self._attrib_name)
             elif obj is None:  #not obj
+                _old = self.default
                 self.default = val
             elif not obj.initialized:
+                _old = obj.__dict__.get(self._internal_name,self.default)
                 obj.__dict__[self._internal_name] = val
             else:
                 raise TypeError("Constant parameter '%s' cannot be modified"%self._attrib_name)
 
         else:
             if obj is None:
+                _old = self.default
                 self.default = val
             else:
+                _old = obj.__dict__.get(self._internal_name,self.default)
                 obj.__dict__[self._internal_name] = val
+
+        if obj is None:
+            subscribers = self.subscribers.get("value",[])
+        else:
+            subscribers = getattr(obj,"_param_subscribers",{}).get(self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
+        for s in subscribers:
+            s(Change(what='value',attribute=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
 
 
     def __delete__(self,obj):
@@ -978,6 +1117,69 @@ class Parameters(object):
                 value = param_obj._inspect(cls_or_slf,None)
 
         return value
+
+
+    def params_depended_on(self_,name):
+        params = []
+        _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)),params)
+        return params
+
+
+    def viewables(self_):
+        return [n for (n,m) in _get_members(self_.self_or_cls, "viewable")]
+
+
+    def _spec_to_obj(self_,spec):
+        # TODO: when we decide on spec, this method should be
+        # rewritten
+        assert spec.count(":")<=1
+
+        spec = spec.strip()
+        m = re.match("(?P<path>[^:]*):?(?P<what>.*)", spec)
+        what = m.group('what')
+        path = "."+m.group('path')
+        m = re.match("(?P<obj>.*)(\.)(?P<attr>.*)",path)
+        obj = m.group('obj')
+        attr = m.group("attr")
+
+        src = self_.self_or_cls if obj=='' else _getattrr(self_.self_or_cls,obj[1::])
+        cls,inst = (src,None) if isinstance(src,type) else (type(src),src)
+
+        if attr in src.params():
+            return PInfo(inst=inst,cls=cls,name=attr,pobj=src.params(attr),what=what if what!='' else 'value')
+        else:
+            # TODO: check it's a method maybe
+            return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+
+
+    def watch(self_,parameter_name,parameter_attribute=None,fn=None):
+        #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
+
+        assert parameter_name in self_.cls.params()
+
+        if parameter_attribute is None:
+            parameter_attribute = "value"
+
+        if self_.self is not None and parameter_attribute=="value":
+            subscribers = self_.self._param_subscribers
+            if parameter_name not in subscribers:
+                subscribers[parameter_name] = {}
+            if parameter_attribute not in subscribers[parameter_name]:
+                subscribers[parameter_name][parameter_attribute] = []
+            subscribers[parameter_name][parameter_attribute].append(fn)
+        else:
+            subscribers = self_.cls.params(parameter_name).subscribers
+            if parameter_attribute not in subscribers:
+                subscribers[parameter_attribute] = []
+            subscribers[parameter_attribute].append(fn)
+
+
+    # TODO: event_type (e.g. set, change)
+    def subscribe(self_,mthd_name,*callbacks):
+        for p in self_.self_or_cls.param.params_depended_on(mthd_name):
+            for c in callbacks:
+                (p.inst or p.cls).param.watch(p.name,p.what,c)
+
 
     # Instance methods
 
@@ -1552,6 +1754,19 @@ class Parameterized(object):
 
         self.param._setup_params(**params)
         object_count += 1
+
+        # TODO: should move to param namespace? (like _param_value
+        # etc)
+        self._param_subscribers = {}
+        
+        # add watchers for eager dependencies
+        #
+        # TODO: This isn't great. Also note anything here will happen
+        # for every instantiation.
+        for n,m in _get_members(self, "eager"):
+            for p in self.param.params_depended_on(m.__name__):
+                # TODO: can't remember why not just pass m (rather than _m_caller) here
+                (p.inst or p.cls).param.watch(p.name,p.what,_m_caller(self,n))
 
         self.initialized=True
 

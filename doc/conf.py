@@ -27,7 +27,7 @@ html_context.update({
     'PROJECT': project,
     'DESCRIPTION': description,
     'AUTHOR': authors,
-    # will work without this - for canonical (so can ignore when building locally or test deploying)    
+    # canonical URL (for search engines); can ignore for local builds
     'WEBSITE_SERVER': 'https://param.pyviz.org',
     'VERSION': version,
     'NAV': _NAV,

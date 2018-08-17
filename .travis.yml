@@ -116,7 +116,7 @@ jobs:
     - <<: *default
       stage: doc
       install:
-        - pip install nbsite sphinx_ioam_theme
+        - pip install --upgrade --pre --index-url=https://test.pypi.org/simple --extra-index-url=https://pypi.org/simple nbsite sphinx_ioam_theme
         - pip install -e .
       script:
         - nbsite generate-rst --org ioam --project param --repo param --examples-path examples --doc-path doc

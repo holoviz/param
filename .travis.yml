@@ -122,7 +122,7 @@ jobs:
         - nbsite generate-rst --org ioam --project-name param --repo param --examples=./examples --doc=./doc
         # should be option of generate-rst
         - mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
-        - nbsite build --what=html --examples=examples --doc=doc --output=builtdocs
+        - nbsite build --what=html --examples=examples --doc=doc --output=builtdocs --examples-assets=''
         - touch ./builtdocs/.nojekyll # for github pages
         - nbsite_cleandisthtml.py ./builtdocs take_a_chance
       deploy:

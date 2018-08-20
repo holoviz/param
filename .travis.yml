@@ -139,7 +139,6 @@ jobs:
           skip_cleanup: true
           github_token: $GITHUB_TOKEN
           local_dir: ./builtdocs
-          repo: ioam-docs/param-tmp
           fqdn: param.pyviz.org
           on:
             tags: true

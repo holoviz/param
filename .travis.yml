@@ -3,20 +3,25 @@ sudo: false
 language: python
 
 # quick hack to determine what tag is (improvements welcomed)
-#     release: ^v(\d+|\.)*[^a-z]\d*$
-# dev release: ^v(\d+|\.)*[a-z]\d*$
+#     release: ^v(\d+|\.)+[^a-z]\d+$
+# dev release: ^v(\d+|\.)+[a-z]\d+$
 
 stages:
   - lint
   - test
   - name: pip_dev_package
-    if: tag =~ ^v(\d+|\.)*[a-z]\d*$
+    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: pip_package
-    if: tag =~ ^v(\d+|\.)*[^a-z]\d*$
+    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: conda_dev_package
-    if: tag =~ ^v(\d+|\.)*[a-z]\d*$ OR (branch = master AND type != pull_request)
+    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: conda_package
-    if: tag =~ ^v(\d+|\.)*[^a-z]\d*$
+    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+  - name: website_dev
+    if: tag =~ ^v(\d+|\.)+[a-z]\d+$ OR tag = website_dev
+  - name: website_release
+    if: tag =~ ^v(\d+|\.)+[^a-z]\d+$ OR tag = website
+
 
 jobs:
   fast_finish: true
@@ -70,6 +75,7 @@ jobs:
     # failure uploading)
 
     - &conda_default
+      env: LABELS="--label dev"
       stage: conda_dev_package
       install:
         - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -81,14 +87,11 @@ jobs:
       script:
         - conda build conda.recipe/
       after_success:
-        # only upload if package doesn't exist (as e.g. there are cron builds)
-        - anaconda show pyviz/param/$(python setup.py --version) || anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev $(conda build --output conda.recipe)
+        - anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz $LABELS $(conda build --output conda.recipe)
 
     - <<: *conda_default
+      env: LABELS="--label dev --label main"
       stage: conda_package
-      after_success:
-        # error if there's an existing package with same version
-        - anaconda --token $CONDA_UPLOAD_TOKEN upload --user pyviz --label dev --label main $(conda build --output conda.recipe)
 
     - <<: *default
       stage: pip_dev_package
@@ -110,3 +113,46 @@ jobs:
           tags: true
         user: $PYPI_USER
         password: $PYPI_PWD
+
+    - &website
+      <<: *default
+      addons:
+        apt:
+          packages:
+          - graphviz
+      stage: website_release
+      before_install:
+        - pip install graphviz
+      install:
+        # TODO: just use pip install once nbsite 0.4.4 is out
+        - pip install --upgrade --pre --index-url=https://test.pypi.org/simple --extra-index-url=https://pypi.org/simple nbsite sphinx_ioam_theme
+        - pip install -e .
+      script:
+        # TODO: nbsite commands will be simplified eventually...
+        - nbsite generate-rst --org ioam --project-name param --repo param --examples=./examples --doc=./doc
+        - mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
+        - nbsite build --what=html --examples=examples --doc=doc --output=builtdocs --examples-assets=''
+        - touch ./builtdocs/.nojekyll # for github pages
+        - nbsite_cleandisthtml.py ./builtdocs take_a_chance
+      deploy:
+        - provider: pages
+          skip_cleanup: true
+          github_token: $GITHUB_TOKEN
+          local_dir: ./builtdocs
+          fqdn: param.pyviz.org
+          on:
+            tags: true
+            all_branches: true
+
+    - <<: *website
+      stage: website_dev
+      env: DESC="ioam-docs.github.io/parambokeh-dev"
+      deploy:
+        - provider: pages
+          skip_cleanup: true
+          github_token: $GITHUB_TOKEN
+          local_dir: ./builtdocs
+          repo: ioam-docs/param-dev
+          on:
+            tags: true
+            all_branches: true

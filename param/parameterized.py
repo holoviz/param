@@ -12,7 +12,7 @@ import random
 from collections import namedtuple
 from operator import itemgetter,attrgetter
 from types import FunctionType
-from functools import partial, wraps, lru_cache, reduce
+from functools import partial, wraps, reduce
 
 import logging
 from contextlib import contextmanager
@@ -208,49 +208,14 @@ def accept_arguments(f):
 
 
 @accept_arguments
-def depends(func, *what, cache=False, eager=False, viewable=False):
+def depends(func, *what, watch=False):
 
     _dinfo = {'dependencies': what,
-              'cache': cache,
-              'eager': eager,
-              'viewable':viewable}
+              'watch': watch}
 
     @wraps(func)
     def _depends(*args,**kw):
-        # TODO this is a quick hack memoize implementation that
-        # should be replaced by whatever is in holoviews.
-        if cache:
-            self = args[0]            
-            # cache key is "param deps" plus regular args & kw
-            # "param deps" is tuple of id and value for each dependency
-            #
-            # id is: class name, parameter name, parameter attribute
-            # (e.g. value, bounds, etc) all joined with underscores!
-            # (should it include instance id too?)
-
-            # (have I successfully managed to avoid holding onto self
-            # forever in cache (by creating one per instance?))
-            
-            inst_cache = lru_cache()(lambda param_deps,*args,**kw: func(*args,**kw)) # (args[0] is self)
-
-            def with_cache_key(*args,**kw): # (args[0] is self)
-                param_deps = []
-                for p in self.param.params_depended_on(func.__name__):
-                    val = getattr((p.inst or p.cls),p.name) if p.what=='value' else getattr(p.pobj,p.what)
-                    param_deps.append(("_".join([p.cls.__name__,p.name,p.what]),val))
-                return inst_cache(tuple(param_deps),*args,**kw)
-
-            # Bind the decorated function to the instance to make it a method
-            # (except actually, a method can't have arbitrary
-            # attributes added to it, so use partial...will this work
-            # in py2?)
-            #g = with_cache_key.__get__(self,self.__class__)
-            g = partial(with_cache_key,self)
-            setattr(self, func.__name__, g)
-            g._dinfo = _dinfo
-            return with_cache_key(*args,**kw)
-        else:
-            return func(*args,**kw)
+        return func(*args,**kw)
 
     # storing here risks it being tricky to find if other libraries
     # mess around with methods
@@ -1125,10 +1090,6 @@ class Parameters(object):
         return params
 
 
-    def viewables(self_):
-        return [n for (n,m) in _get_members(self_.self_or_cls, "viewable")]
-
-
     def _spec_to_obj(self_,spec):
         # TODO: when we decide on spec, this method should be
         # rewritten
@@ -1758,12 +1719,12 @@ class Parameterized(object):
         # TODO: should move to param namespace? (like _param_value
         # etc)
         self._param_subscribers = {}
-        
-        # add watchers for eager dependencies
+
+        # add watched dependencies
         #
         # TODO: This isn't great. Also note anything here will happen
         # for every instantiation.
-        for n,m in _get_members(self, "eager"):
+        for n,m in _get_members(self, "watch"):
             for p in self.param.params_depended_on(m.__name__):
                 # TODO: can't remember why not just pass m (rather than _m_caller) here
                 (p.inst or p.cls).param.watch(p.name,p.what,_m_caller(self,n))

@@ -208,10 +208,12 @@ def accept_arguments(f):
 
 
 @accept_arguments
-def depends(func, *what, watch=False):
+def depends(*args, **kwargs):
+    func = args[0]
+    what = args[1:]
 
     _dinfo = {'dependencies': what,
-              'watch': watch}
+              'watch': kwargs.get('watch', False)}
 
     @wraps(func)
     def _depends(*args,**kw):
@@ -220,7 +222,7 @@ def depends(func, *what, watch=False):
     # storing here risks it being tricky to find if other libraries
     # mess around with methods
     _depends._dinfo = _dinfo
-            
+
     return _depends
 
 
@@ -491,11 +493,11 @@ class Parameter(object):
     # Note that unlike with parameter value setting, there's no access
     # to the Parameterized instance, so no per-instance subscription.
 
-    def __setattr__(self,name,value):        
+    def __setattr__(self,name,value):
         old = getattr(self,name) if (name!="default" and hasattr(self,'subscribers') and name in self.subscribers) else NotImplemented
 
         super(Parameter, self).__setattr__(name, value)
-        
+
         if old is not NotImplemented:
             for subscriber in self.subscribers[name]:
                 subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
@@ -503,12 +505,12 @@ class Parameter(object):
     # TODO: this is a python 3.6+ thing; we can presumably do this in
     # Parameterized.__new__ for older pythons. (And merge with objtype
     # slot.)
-    # 
+    #
     # (not specific to this change, but regarding attrib_name, owner:
     # what if someone re-uses a parameter object across different
     # classes? maybe we should raise an error if attrib name,owner
     # already set)
-    #           
+    #
     def __set_name__(self, owner, name):
         self._owner = owner
         # note: simpler way of getting _attrib_name

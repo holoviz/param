@@ -25,6 +25,7 @@ import datetime as dt
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
+from .parameterized import depends           # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
@@ -914,6 +915,9 @@ class Composite(Parameter):
     attributes.
     """
 
+    # Note: objtype is same as _owner, but objtype left for backwards
+    # compatibility (I think it's used in places to detect composite
+    # parameter)
     __slots__=['attribs','objtype']
 
     def __init__(self,attribs=None,**kw):

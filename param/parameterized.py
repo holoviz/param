@@ -208,12 +208,14 @@ def accept_arguments(f):
 
 
 @accept_arguments
-def depends(*args, **kwargs):
-    func = args[0]
-    what = args[1:]
-
-    _dinfo = {'dependencies': what,
-              'watch': kwargs.get('watch', False)}
+def depends(func, *dependencies, **kw):
+    # python3 would allow kw-only args
+    # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
+    watch = kw.pop("watch",False)
+    assert len(kw)==0, "@depends accepts only 'watch' kw"
+    
+    _dinfo = {'dependencies': dependencies,
+              'watch': watch}
 
     @wraps(func)
     def _depends(*args,**kw):
@@ -437,10 +439,15 @@ class Parameter(object):
                  'pickle_default_value','allow_None',
                  'subscribers','_owner']
 
-    # When created, a Parameter does not know which
-    # Parameterized class owns it. If a Parameter subclass needs
-    # to know the owning class, it can declare an 'objtype' slot
-    # (which will be filled in by ParameterizedMetaclass)
+    # Note: When initially created, a Parameter does not know which
+    # Parameterized class owns it, nor does it know its names
+    # (attribute name, internal name). Once the owning Parmaeterized
+    # class is created, _owner, _attrib_name, and _internal name are
+    # set.
+
+    # TODO regarding _attrib_name, _owner: what if someone re-uses
+    # a parameter object across different classes? we should raise
+    # an error if attrib name,owner already set
 
     def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
@@ -465,6 +472,7 @@ class Parameter(object):
         """
         self._attrib_name = None
         self._internal_name = None
+        self._owner = None
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -502,19 +510,6 @@ class Parameter(object):
             for subscriber in self.subscribers[name]:
                 subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
 
-    # TODO: this is a python 3.6+ thing; we can presumably do this in
-    # Parameterized.__new__ for older pythons. (And merge with objtype
-    # slot.)
-    #
-    # (not specific to this change, but regarding attrib_name, owner:
-    # what if someone re-uses a parameter object across different
-    # classes? maybe we should raise an error if attrib name,owner
-    # already set)
-    #
-    def __set_name__(self, owner, name):
-        self._owner = owner
-        # note: simpler way of getting _attrib_name
-        # self._attrib_name = name
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
         """
@@ -1440,9 +1435,13 @@ class ParameterizedMetaclass(type):
         for p_class in classlist(type(param))[1::]:
             slots.update(dict.fromkeys(p_class.__slots__))
 
-        # Some Parameter classes need to know the owning Parameterized
-        # class. Such classes can declare an 'objtype' slot, and the
-        # owning class will be stored in it.
+
+        # note for some eventual future: python 3.6+ descriptors grew
+        # __set_name__, which could replace this and _set_names
+        setattr(param,'_owner',mcs)
+        del slots['_owner']
+
+        # backwards compatibility (see Composite parameter)
         if 'objtype' in slots:
             setattr(param,'objtype',mcs)
             del slots['objtype']

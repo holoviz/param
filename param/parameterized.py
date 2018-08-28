@@ -1115,6 +1115,7 @@ class Parameters(object):
             return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
 
 
+    # TODO: I think fn should probably be first arg (required). same for unwatch below
     def watch(self_,parameter_name,parameter_attribute=None,fn=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
@@ -1137,6 +1138,43 @@ class Parameters(object):
             subscribers[parameter_attribute].append(fn)
 
 
+    # TODO:
+    #
+    #   * error if not watched? (would then need a way to ask about status)
+    #
+    #   * would it be better to have watch() return an ID which could
+    #     later be used to remove?
+    #
+    def unwatch(self_,parameter_name,parameter_attribute=None,fn=None):
+        # TODO: overlaps with watch(); will simplify that once decided on interface
+
+        #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
+
+        assert parameter_name in self_.cls.params()
+
+        if parameter_attribute is None:
+            parameter_attribute = "value"
+
+        if self_.self is not None and parameter_attribute=="value":
+            subscribers = self_.self._param_subscribers
+            if parameter_name not in subscribers:
+                subscribers[parameter_name] = {}
+            if parameter_attribute not in subscribers[parameter_name]:
+                subscribers[parameter_name][parameter_attribute] = []
+            try:
+                subscribers[parameter_name][parameter_attribute].remove(fn)
+            except ValueError:
+                pass
+        else:
+            subscribers = self_.cls.params(parameter_name).subscribers
+            if parameter_attribute not in subscribers:
+                subscribers[parameter_attribute] = []
+            try:
+                subscribers[parameter_attribute].remove(fn)
+            except ValueError:
+                pass
+
+    # TODO: now unused?
     # TODO: event_type (e.g. set, change)
     def subscribe(self_,mthd_name,*callbacks):
         for p in self_.self_or_cls.param.params_depended_on(mthd_name):

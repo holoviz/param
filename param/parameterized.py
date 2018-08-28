@@ -208,12 +208,15 @@ def accept_arguments(f):
 
 
 @accept_arguments
-def depends(*args, **kwargs):
-    func = args[0]
-    what = args[1:]
+def depends(func, *dependencies, **kw):
+    # python3 would allow kw-only args
+    # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
+    watch = kw.pop("watch",False)
+    assert len(kw)==0, "@depends accepts only 'watch' kw"
 
-    _dinfo = {'dependencies': what,
-              'watch': kwargs.get('watch', False)}
+    # TODO: rename dinfo
+    _dinfo = {'dependencies': dependencies,
+              'watch': watch}
 
     @wraps(func)
     def _depends(*args,**kw):
@@ -224,15 +227,6 @@ def depends(*args, **kwargs):
     _depends._dinfo = _dinfo
 
     return _depends
-
-
-def _get_members(obj, field):
-    try:
-        members = inspect.getmembers(obj, predicate=inspect.ismethod)
-    except:
-        # TODO: inspect.getmembers() fails for holoviews options
-        members = []
-    return [(n,m) for (n,m) in members if getattr(m,'_dinfo',{}).get(field,None)]
 
 
 def _params_depended_on(mthing,params):
@@ -437,10 +431,15 @@ class Parameter(object):
                  'pickle_default_value','allow_None',
                  'subscribers','_owner']
 
-    # When created, a Parameter does not know which
-    # Parameterized class owns it. If a Parameter subclass needs
-    # to know the owning class, it can declare an 'objtype' slot
-    # (which will be filled in by ParameterizedMetaclass)
+    # Note: When initially created, a Parameter does not know which
+    # Parameterized class owns it, nor does it know its names
+    # (attribute name, internal name). Once the owning Parmaeterized
+    # class is created, _owner, _attrib_name, and _internal name are
+    # set.
+
+    # TODO regarding _attrib_name, _owner: what if someone re-uses
+    # a parameter object across different classes? we should raise
+    # an error if attrib name,owner already set
 
     def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
@@ -465,6 +464,7 @@ class Parameter(object):
         """
         self._attrib_name = None
         self._internal_name = None
+        self._owner = None
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -502,19 +502,6 @@ class Parameter(object):
             for subscriber in self.subscribers[name]:
                 subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
 
-    # TODO: this is a python 3.6+ thing; we can presumably do this in
-    # Parameterized.__new__ for older pythons. (And merge with objtype
-    # slot.)
-    #
-    # (not specific to this change, but regarding attrib_name, owner:
-    # what if someone re-uses a parameter object across different
-    # classes? maybe we should raise an error if attrib name,owner
-    # already set)
-    #
-    def __set_name__(self, owner, name):
-        self._owner = owner
-        # note: simpler way of getting _attrib_name
-        # self._attrib_name = name
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
         """
@@ -1294,6 +1281,20 @@ class ParameterizedMetaclass(type):
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)
 
+        # retrieve depends info from methods and store more conveniently
+        dependers = [(n,m._dinfo) for (n,m) in dict_.items()
+                     if hasattr(m,'_dinfo')]
+
+        _watch = []
+        # TODO: probably copy dependencies here too and have
+        # everything else access from here rather than from method
+        # object
+        for n,dinfo in dependers:
+            if dinfo['watch']:
+                _watch.append(n)
+
+        mcs.param._depends = {'watch':_watch}
+
         if docstring_signature:
             mcs.__class_docstring_signature()
 
@@ -1440,9 +1441,13 @@ class ParameterizedMetaclass(type):
         for p_class in classlist(type(param))[1::]:
             slots.update(dict.fromkeys(p_class.__slots__))
 
-        # Some Parameter classes need to know the owning Parameterized
-        # class. Such classes can declare an 'objtype' slot, and the
-        # owning class will be stored in it.
+
+        # note for some eventual future: python 3.6+ descriptors grew
+        # __set_name__, which could replace this and _set_names
+        setattr(param,'_owner',mcs)
+        del slots['_owner']
+
+        # backwards compatibility (see Composite parameter)
         if 'objtype' in slots:
             setattr(param,'objtype',mcs)
             del slots['objtype']
@@ -1719,15 +1724,17 @@ class Parameterized(object):
         object_count += 1
 
         # TODO: should move to param namespace? (like _param_value
-        # etc)
+        # etc should also move)
         self._param_subscribers = {}
 
         # add watched dependencies
         #
-        # TODO: This isn't great. Also note anything here will happen
-        # for every instantiation.
-        for n,m in _get_members(self, "watch"):
-            for p in self.param.params_depended_on(m.__name__):
+        for n in self.__class__.param._depends['watch']:
+            # TODO: should improve this - will happen for every
+            # instantiation of Parameterized with watched deps. Will
+            # probably store expanded deps on class - see metaclass
+            # 'dependers'.
+            for p in self.param.params_depended_on(n):
                 # TODO: can't remember why not just pass m (rather than _m_caller) here
                 (p.inst or p.cls).param.watch(p.name,p.what,_m_caller(self,n))
 

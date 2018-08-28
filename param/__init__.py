@@ -915,6 +915,9 @@ class Composite(Parameter):
     attributes.
     """
 
+    # Note: objtype is same as _owner, but objtype left for backwards
+    # compatibility (I think it's used in places to detect composite
+    # parameter)
     __slots__=['attribs','objtype']
 
     def __init__(self,attribs=None,**kw):

@@ -1133,6 +1133,40 @@ class Parameters(object):
 
     # Instance methods
 
+    @contextmanager
+    def watchers_wait(self_):
+        self = self_.self
+
+        changes = {}
+        
+        def store_change(change):
+            # overwrite previous change (note: just doing instance here)
+            if change.attribute not in changes:
+                changes[change.attribute] = {}
+            changes[change.attribute][change.what] = change
+        
+        subscribers = self._param_subscribers
+        storers = {}
+        
+        for pname in subscribers:
+            if pname not in storers:
+                storers[pname] = {}
+            for what in subscribers[pname]:
+                storers[pname][what] = [store_change]
+                break
+
+        self._param_subscribers = storers
+
+        # need try/except/finally
+        yield
+
+        self._param_subscribers = subscribers
+
+        for pname in changes:
+            for what in changes[pname]:
+                for watcher in subscribers[pname][what]:
+                    watcher(changes[pname][what])
+
 
     def defaults(self_):
         """

@@ -1145,6 +1145,11 @@ class Parameters(object):
     #   * would it be better to have watch() return an ID which could
     #     later be used to remove?
     #
+    #   * this method deliberately doesn't provide an easy way to
+    #     unwatch things declared at class level (i.e. can't turn off
+    #     watching for @depends(...,watch=True)). Does that make
+    #     sense?
+    #
     def unwatch(self_,parameter_name,parameter_attribute=None,fn=None):
         # TODO: overlaps with watch(); will simplify that once decided on interface
 

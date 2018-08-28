@@ -1115,8 +1115,7 @@ class Parameters(object):
             return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
 
 
-    # TODO: I think fn should probably be first arg (required). same for unwatch below
-    def watch(self_,parameter_name,parameter_attribute=None,fn=None):
+    def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.params()
@@ -1130,61 +1129,25 @@ class Parameters(object):
                 subscribers[parameter_name] = {}
             if parameter_attribute not in subscribers[parameter_name]:
                 subscribers[parameter_name][parameter_attribute] = []
-            subscribers[parameter_name][parameter_attribute].append(fn)
+            getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
         else:
             subscribers = self_.cls.params(parameter_name).subscribers
             if parameter_attribute not in subscribers:
                 subscribers[parameter_attribute] = []
-            subscribers[parameter_attribute].append(fn)
+            getattr(subscribers[parameter_attribute],action)(fn)
 
+    def watch(self_,fn,parameter_name,parameter_attribute=None):
+        self_._watch('append',fn,parameter_name,parameter_attribute)
 
-    # TODO:
-    #
-    #   * error if not watched? (would then need a way to ask about status)
-    #
-    #   * would it be better to have watch() return an ID which could
-    #     later be used to remove?
-    #
-    #   * this method deliberately doesn't provide an easy way to
-    #     unwatch things declared at class level (i.e. can't turn off
-    #     watching for @depends(...,watch=True)). Does that make
-    #     sense?
-    #
-    def unwatch(self_,parameter_name,parameter_attribute=None,fn=None):
-        # TODO: overlaps with watch(); will simplify that once decided on interface
-
-        #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
-
-        assert parameter_name in self_.cls.params()
-
-        if parameter_attribute is None:
-            parameter_attribute = "value"
-
-        if self_.self is not None and parameter_attribute=="value":
-            subscribers = self_.self._param_subscribers
-            if parameter_name not in subscribers:
-                subscribers[parameter_name] = {}
-            if parameter_attribute not in subscribers[parameter_name]:
-                subscribers[parameter_name][parameter_attribute] = []
-            try:
-                subscribers[parameter_name][parameter_attribute].remove(fn)
-            except ValueError:
-                pass
-        else:
-            subscribers = self_.cls.params(parameter_name).subscribers
-            if parameter_attribute not in subscribers:
-                subscribers[parameter_attribute] = []
-            try:
-                subscribers[parameter_attribute].remove(fn)
-            except ValueError:
-                pass
+    def unwatch(self_,fn,parameter_name,parameter_attribute=None):
+        self_._watch('remove',fn,parameter_name,parameter_attribute)
 
     # TODO: now unused?
     # TODO: event_type (e.g. set, change)
     def subscribe(self_,mthd_name,*callbacks):
         for p in self_.self_or_cls.param.params_depended_on(mthd_name):
             for c in callbacks:
-                (p.inst or p.cls).param.watch(p.name,p.what,c)
+                (p.inst or p.cls).param.watch(c,p.name,p.what)
 
 
     # Instance methods
@@ -1772,7 +1735,7 @@ class Parameterized(object):
         for n,m in _get_members(self, "watch"):
             for p in self.param.params_depended_on(m.__name__):
                 # TODO: can't remember why not just pass m (rather than _m_caller) here
-                (p.inst or p.cls).param.watch(p.name,p.what,_m_caller(self,n))
+                (p.inst or p.cls).param.watch(_m_caller(self,n),p.name,p.what)
 
         self.initialized=True
 

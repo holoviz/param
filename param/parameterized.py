@@ -1102,7 +1102,7 @@ class Parameters(object):
             return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
 
 
-    def watch(self_,parameter_name,parameter_attribute=None,fn=None):
+    def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.params()
@@ -1116,19 +1116,25 @@ class Parameters(object):
                 subscribers[parameter_name] = {}
             if parameter_attribute not in subscribers[parameter_name]:
                 subscribers[parameter_name][parameter_attribute] = []
-            subscribers[parameter_name][parameter_attribute].append(fn)
+            getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
         else:
             subscribers = self_.cls.params(parameter_name).subscribers
             if parameter_attribute not in subscribers:
                 subscribers[parameter_attribute] = []
-            subscribers[parameter_attribute].append(fn)
+            getattr(subscribers[parameter_attribute],action)(fn)
 
+    def watch(self_,fn,parameter_name,parameter_attribute=None):
+        self_._watch('append',fn,parameter_name,parameter_attribute)
 
+    def unwatch(self_,fn,parameter_name,parameter_attribute=None):
+        self_._watch('remove',fn,parameter_name,parameter_attribute)
+
+    # TODO: now unused?
     # TODO: event_type (e.g. set, change)
     def subscribe(self_,mthd_name,*callbacks):
         for p in self_.self_or_cls.param.params_depended_on(mthd_name):
             for c in callbacks:
-                (p.inst or p.cls).param.watch(p.name,p.what,c)
+                (p.inst or p.cls).param.watch(c,p.name,p.what)
 
 
     # Instance methods
@@ -1736,7 +1742,7 @@ class Parameterized(object):
             # 'dependers'.
             for p in self.param.params_depended_on(n):
                 # TODO: can't remember why not just pass m (rather than _m_caller) here
-                (p.inst or p.cls).param.watch(p.name,p.what,_m_caller(self,n))
+                (p.inst or p.cls).param.watch(_m_caller(self,n),p.name,p.what)
 
         self.initialized=True
 

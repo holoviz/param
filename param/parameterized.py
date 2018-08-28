@@ -213,7 +213,8 @@ def depends(func, *dependencies, **kw):
     # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
     watch = kw.pop("watch",False)
     assert len(kw)==0, "@depends accepts only 'watch' kw"
-    
+
+    # TODO: rename dinfo
     _dinfo = {'dependencies': dependencies,
               'watch': watch}
 
@@ -226,15 +227,6 @@ def depends(func, *dependencies, **kw):
     _depends._dinfo = _dinfo
 
     return _depends
-
-
-def _get_members(obj, field):
-    try:
-        members = inspect.getmembers(obj, predicate=inspect.ismethod)
-    except:
-        # TODO: inspect.getmembers() fails for holoviews options
-        members = []
-    return [(n,m) for (n,m) in members if getattr(m,'_dinfo',{}).get(field,None)]
 
 
 def _params_depended_on(mthing,params):
@@ -1289,6 +1281,19 @@ class ParameterizedMetaclass(type):
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)
 
+        dependers = [(n,m._dinfo) for (n,m) in dict_.items()
+                     if hasattr(m,'_dinfo')]
+
+        _watch = []
+        # TODO: probably copy dependencies here too and have
+        # everything else access from here rather than from method
+        # object
+        for n,dinfo in dependers:
+            if dinfo['watch']:
+                _watch.append(n)
+
+        mcs.param._depends = {'watch':_watch}
+
         if docstring_signature:
             mcs.__class_docstring_signature()
 
@@ -1718,15 +1723,17 @@ class Parameterized(object):
         object_count += 1
 
         # TODO: should move to param namespace? (like _param_value
-        # etc)
+        # etc should also move)
         self._param_subscribers = {}
 
         # add watched dependencies
         #
-        # TODO: This isn't great. Also note anything here will happen
-        # for every instantiation.
-        for n,m in _get_members(self, "watch"):
-            for p in self.param.params_depended_on(m.__name__):
+        for n in self.__class__.param._depends['watch']:
+            # TODO: should improve this - will happen for every
+            # instantiation of Parameterized with watched deps. Will
+            # probably store expanded deps on class - see metaclass
+            # 'dependers'.
+            for p in self.param.params_depended_on(n):
                 # TODO: can't remember why not just pass m (rather than _m_caller) here
                 (p.inst or p.cls).param.watch(p.name,p.what,_m_caller(self,n))
 

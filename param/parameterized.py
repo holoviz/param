@@ -1281,6 +1281,7 @@ class ParameterizedMetaclass(type):
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)
 
+        # retrieve depends info from methods and store more conveniently
         dependers = [(n,m._dinfo) for (n,m) in dict_.items()
                      if hasattr(m,'_dinfo')]
 

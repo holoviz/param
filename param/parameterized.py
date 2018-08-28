@@ -1129,13 +1129,6 @@ class Parameters(object):
     def unwatch(self_,fn,parameter_name,parameter_attribute=None):
         self_._watch('remove',fn,parameter_name,parameter_attribute)
 
-    # TODO: now unused?
-    # TODO: event_type (e.g. set, change)
-    def subscribe(self_,mthd_name,*callbacks):
-        for p in self_.self_or_cls.param.params_depended_on(mthd_name):
-            for c in callbacks:
-                (p.inst or p.cls).param.watch(c,p.name,p.what)
-
 
     # Instance methods
 

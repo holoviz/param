@@ -1002,7 +1002,7 @@ class ObjectSelector(Selector):
             objects = []
         if isinstance(objects, collections.Mapping):
             self.names = objects
-            self.objects = objects.values()
+            self.objects = list(objects.values())
         else:
             self.names = None
             self.objects = objects

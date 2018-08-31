@@ -21,6 +21,7 @@ import sys
 import glob
 import re
 import datetime as dt
+import warnings
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
@@ -101,6 +102,22 @@ def named_objs(objlist):
         objs[k] = obj
     return objs
 
+
+def param_union(*parameterizeds, warn=True):
+    """
+    Given a set of Parameterized objects, returns a dictionary
+    with the union of all param name,value pairs across them.
+    If warn is True, warns if the same parameter has been given
+    multiple values; otherwise uses the last value
+    """
+    d = {}
+    for o in parameterizeds:
+        for k, p in o.param.params().items():
+            if k != 'name':
+                if k in d and warn:
+                    warnings.warn("overwriting parameter {}".format(k))
+                d[k] = getattr(o, k)
+    return d
 
 
 class Infinity(object):

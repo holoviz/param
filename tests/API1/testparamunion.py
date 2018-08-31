@@ -40,6 +40,10 @@ class TestParamUnion(API1TestCase):
             self.assertFalse(wlist)
             A(**param.param_union(a, a))
             self.assertTrue(wlist)
-            wlist.clear()
+            wlist.pop()
             A(**param.param_union(a, a, warn=False))
             self.assertFalse(wlist)
+
+    def test_param_union_raises_on_unexpected_kwarg(self):
+        with self.assertRaises(TypeError):
+            param.param_union(dumbdumbface=True)

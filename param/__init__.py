@@ -103,14 +103,19 @@ def named_objs(objlist):
     return objs
 
 
-def param_union(*parameterizeds, warn=True):
+def param_union(*parameterizeds, **kwargs):
     """
     Given a set of Parameterized objects, returns a dictionary
     with the union of all param name,value pairs across them.
-    If warn is True, warns if the same parameter has been given
-    multiple values; otherwise uses the last value
+    If warn is True (default), warns if the same parameter has
+    been given multiple values; otherwise uses the last value
     """
-    d = {}
+    warn = kwargs.pop('warn', True)
+    if len(kwargs):
+        raise TypeError(
+            "param_union() got an unexpected keyword argument '{}'".format(
+                kwargs.popitem()[0]))
+    d = dict()
     for o in parameterizeds:
         for k, p in o.param.params().items():
             if k != 'name':

@@ -12,11 +12,11 @@ stages:
   - name: pip_dev_package
     if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: pip_package
-    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+    if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - name: conda_dev_package
     if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: conda_package
-    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+    if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - name: website_dev
     if: tag =~ ^v(\d+|\.)+[a-z]\d+$ OR tag = website_dev
   - name: website_release

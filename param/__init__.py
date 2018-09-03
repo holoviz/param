@@ -989,7 +989,9 @@ class ObjectSelector(Selector):
     The list of objects can be supplied as a list (appropriate for
     selecting among a set of strings, or among a set of objects with a
     "name" parameter), or as a (preferably ordered) dictionary from
-    names to objects.
+    names to objects.  If a dictionary is supplied, the objects
+    will need to be hashable so that their names can be looked
+    up from the object value.
     """
 
     __slots__ = ['objects','compute_default_fn','check_on_set','names']

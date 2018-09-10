@@ -27,7 +27,7 @@ except:
     param_pager = None
 
 
-DISABLE = False # Move to param namespace object
+DISABLE_WATCH = False # Move to param namespace object
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -499,7 +499,7 @@ class Parameter(object):
 
 
     def _call_subscribers(self, subscribers, what, old, new, obj):
-        if DISABLE: return
+        if DISABLE_WATCH: return
         for subscriber in subscribers:
             if not subscriber.batched:
                 subscriber.fn(Change(what=what,attribute=self._attrib_name,
@@ -912,7 +912,7 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
-        global DISABLE
+        global DISABLE_WATCH
         self_or_cls = self_.self_or_cls
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
@@ -921,12 +921,12 @@ class Parameters(object):
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
-        DISABLE = True
+        DISABLE_WATCH = True
         for (k,v) in kwargs.items():
             if k not in self_or_cls.param.params():
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
-        DISABLE = False
+        DISABLE_WATCH = False
         self_or_cls._batch_call_subscribers(kwargs)
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
@@ -1947,7 +1947,7 @@ class Parameterized(object):
 
     @bothmethod
     def _batch_call_subscribers(self, kwargs):
-        if DISABLE: return
+        if DISABLE_WATCH: return
 
         subscriber_sets = []
         for name, value in kwargs.items():

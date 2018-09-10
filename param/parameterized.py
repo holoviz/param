@@ -248,6 +248,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name mthd")
 Change = namedtuple("Change","what attribute obj cls old new")
+Subscriber = namedtuple('Subscriber', 'batched fn')
 
 
 class ParameterMetaclass(type):
@@ -500,8 +501,10 @@ class Parameter(object):
     def _call_subscribers(self, subscribers, what, old, new, obj):
         if DISABLE: return
         for subscriber in subscribers:
-            subscriber(Change(what=what,attribute=self._attrib_name,
-                              obj=obj,cls=self._owner,old=old,new=new))
+            if not subscriber.batched:
+                subscriber.fn(Change(what=what,attribute=self._attrib_name,
+                                     obj=obj,cls=self._owner,old=old,new=new))
+
 
     def __setattr__(self,name,value):
         old = getattr(self,name) if (name!="default" and hasattr(self,'subscribers') and name in self.subscribers) else NotImplemented
@@ -1119,8 +1122,10 @@ class Parameters(object):
 
         if not isinstance(parameter_name, list):
             parameter_names = [parameter_name]
+            batched = False
         else:
             parameter_names = parameter_name
+            batched = True
 
         for parameter_name in parameter_names:
             assert parameter_name in self_.cls.params()
@@ -1134,12 +1139,16 @@ class Parameters(object):
                     subscribers[parameter_name] = {}
                 if parameter_attribute not in subscribers[parameter_name]:
                     subscribers[parameter_name][parameter_attribute] = []
-                getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
+
+                subscriber = Subscriber(batched=batched, fn=fn)
+                getattr(subscribers[parameter_name][parameter_attribute],action)(subscriber)
             else:
                 subscribers = self_.cls.params(parameter_name).subscribers
                 if parameter_attribute not in subscribers:
                     subscribers[parameter_attribute] = []
-                getattr(subscribers[parameter_attribute],action)(fn)
+
+                subscriber = Subscriber(batched=batched, fn=fn)
+                getattr(subscribers[parameter_attribute],action)(subscriber)
 
     def watch(self_,fn,parameter_name,parameter_attribute=None):
         self_._watch('append',fn,parameter_name,parameter_attribute)
@@ -1780,31 +1789,6 @@ class Parameterized(object):
 
         return state
 
-
-    @bothmethod
-    def _batch_call_subscribers(self, kwargs):
-        if DISABLE: return
-
-        subscriber_sets = []
-        for name, value in kwargs.items():
-            if hasattr(self, '_param_subscribers'):
-                subscribers = self._param_subscribers[name]['value']
-            else:
-                subscribers = self.params(name).subscribers['value']
-
-            for subscriber in subscribers:
-                subscriber_sets.append((subscriber, name))
-
-        for fn,g in itertools.groupby(subscriber_sets, key=lambda t: t[0]):
-            changes = []
-            for name in [pn for _,pn in list(g)]:
-                p = self.params(name)
-                changes.append(Change(what='value', attribute=name, obj=self,
-                                      cls=p._owner,
-                                      old=p.default, new=kwargs[name]))
-            fn(*changes)
-
-
     def __setstate__(self,state):
         """
         Restore objects from the state dictionary to this object.
@@ -1961,6 +1945,29 @@ class Parameterized(object):
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
 
+    @bothmethod
+    def _batch_call_subscribers(self, kwargs):
+        if DISABLE: return
+
+        subscriber_sets = []
+        for name, value in kwargs.items():
+            if hasattr(self, '_param_subscribers'):
+                subscribers = self._param_subscribers[name]['value']
+            else:
+                subscribers = self.params(name).subscribers['value']
+
+            for subscriber in subscribers:
+                subscriber_sets.append((subscriber, name))
+
+        for subscriber,g in itertools.groupby(subscriber_sets, key=lambda t: t[0]):
+            changes = []
+            for name in [pn for _,pn in list(g)]:
+                p = self.params(name)
+                changes.append(Change(what='value', attribute=name, obj=self,
+                                      cls=p._owner,
+                                      old=p.default, new=kwargs[name]))
+            if subscriber.batched:
+                subscriber.fn(*changes)
 
     # API to be accessed via param namespace
 

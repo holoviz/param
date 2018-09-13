@@ -1133,8 +1133,19 @@ class Parameters(object):
 
     # Instance methods
 
+    # TODO: instance only for now (just a demo)
     @contextmanager
-    def watchers_wait(self_):
+    def subscribers_wait(self_,batch_fn=None):
+        """
+        no batch_fn: subscribers don't get called until the end, and each gets
+                     only the last relevant change
+
+        batch_fn: subscribers don't get called at all; instead,
+                  batch_fn(subscribers,changes) is called and can do
+                  whatever.  right now changes is dict of dicts
+                  organized like subscribers (i.e. indexed by param
+                  name and 'what' (e.g. 'value')
+        """
         self = self_.self
 
         changes = {}
@@ -1157,16 +1168,24 @@ class Parameters(object):
 
         self._param_subscribers = storers
 
-        # need try/except/finally
+        # TODO: need try/except/finally
         yield
 
         self._param_subscribers = subscribers
 
-        for pname in changes:
-            for what in changes[pname]:
-                for watcher in subscribers[pname][what]:
-                    watcher(changes[pname][what])
+        if batch_fn is None:
+            for pname in changes:
+                for what in changes[pname]:
+                    for subscriber in subscribers[pname][what]:
+                        subscriber(changes[pname][what])
+        else:
+            batch_fn(subscribers,changes)
 
+    # TODO (not related to this PR): I left 'subscribers' as the name
+    # in the past, but I think I meant to call them `watchers'. I
+    # can't remember now. But what to call them and being consistent
+    # should go into the cleanup issue.
+            
 
     def defaults(self_):
         """

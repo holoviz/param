@@ -8,6 +8,7 @@ import re
 import sys
 import inspect
 import random
+import itertools
 
 from collections import namedtuple
 from operator import itemgetter,attrgetter
@@ -25,6 +26,8 @@ try:
 except:
     param_pager = None
 
+
+DISABLE_WATCH = False # Move to param namespace object
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -246,6 +249,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name mthd")
 Change = namedtuple("Change","what attribute obj cls old new")
+Subscriber = namedtuple('Subscriber', 'batched fn')
 
 
 class ParameterMetaclass(type):
@@ -494,15 +498,22 @@ class Parameter(object):
     # Note that unlike with parameter value setting, there's no access
     # to the Parameterized instance, so no per-instance subscription.
 
+
+    def _call_subscribers(self, subscribers, what, old, new, obj):
+        if DISABLE_WATCH: return
+        for subscriber in subscribers:
+            if not subscriber.batched:
+                subscriber.fn(Change(what=what,attribute=self._attrib_name,
+                                     obj=obj,cls=self._owner,old=old,new=new))
+
+
     def __setattr__(self,name,value):
         old = getattr(self,name) if (name!="default" and hasattr(self,'subscribers') and name in self.subscribers) else NotImplemented
 
         super(Parameter, self).__setattr__(name, value)
 
         if old is not NotImplemented:
-            for subscriber in self.subscribers[name]:
-                subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
-
+            self._call_subscribers(self.subscribers[name], name, old, value, None)
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
         """
@@ -580,10 +591,10 @@ class Parameter(object):
         if obj is None:
             subscribers = self.subscribers.get("value",[])
         else:
-            subscribers = getattr(obj,"_param_subscribers",{}).get(self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
-        for s in subscribers:
-            s(Change(what='value',attribute=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
+            subscribers = getattr(obj,"_param_subscribers",{}).get(
+                self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
 
+        self._call_subscribers(subscribers, 'value', _old, val, obj)
 
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed."%self._attrib_name)
@@ -902,6 +913,7 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
+        global DISABLE_WATCH
         self_or_cls = self_.self_or_cls
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
@@ -910,10 +922,13 @@ class Parameters(object):
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
+        DISABLE_WATCH = True
         for (k,v) in kwargs.items():
             if k not in self_or_cls.param.params():
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
+        DISABLE_WATCH = False
+        self_or_cls._batch_call_subscribers(kwargs)
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """
@@ -1106,23 +1121,35 @@ class Parameters(object):
     def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
-        assert parameter_name in self_.cls.params()
-
-        if parameter_attribute is None:
-            parameter_attribute = "value"
-
-        if self_.self is not None and parameter_attribute=="value":
-            subscribers = self_.self._param_subscribers
-            if parameter_name not in subscribers:
-                subscribers[parameter_name] = {}
-            if parameter_attribute not in subscribers[parameter_name]:
-                subscribers[parameter_name][parameter_attribute] = []
-            getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
+        if not isinstance(parameter_name, list):
+            parameter_names = [parameter_name]
+            batched = False
         else:
-            subscribers = self_.cls.params(parameter_name).subscribers
-            if parameter_attribute not in subscribers:
-                subscribers[parameter_attribute] = []
-            getattr(subscribers[parameter_attribute],action)(fn)
+            parameter_names = parameter_name
+            batched = True
+
+        for parameter_name in parameter_names:
+            assert parameter_name in self_.cls.params()
+
+            if parameter_attribute is None:
+                parameter_attribute = "value"
+
+            if self_.self is not None and parameter_attribute=="value":
+                subscribers = self_.self._param_subscribers
+                if parameter_name not in subscribers:
+                    subscribers[parameter_name] = {}
+                if parameter_attribute not in subscribers[parameter_name]:
+                    subscribers[parameter_name][parameter_attribute] = []
+
+                subscriber = Subscriber(batched=batched, fn=fn)
+                getattr(subscribers[parameter_name][parameter_attribute],action)(subscriber)
+            else:
+                subscribers = self_.cls.params(parameter_name).subscribers
+                if parameter_attribute not in subscribers:
+                    subscribers[parameter_attribute] = []
+
+                subscriber = Subscriber(batched=batched, fn=fn)
+                getattr(subscribers[parameter_attribute],action)(subscriber)
 
     def watch(self_,fn,parameter_name,parameter_attribute=None):
         self_._watch('append',fn,parameter_name,parameter_attribute)
@@ -1919,6 +1946,29 @@ class Parameterized(object):
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
 
+    @bothmethod
+    def _batch_call_subscribers(self, kwargs):
+        if DISABLE_WATCH: return
+
+        subscriber_sets = []
+        for name, value in kwargs.items():
+            if hasattr(self, '_param_subscribers'):
+                subscribers = self._param_subscribers[name]['value']
+            else:
+                subscribers = self.params(name).subscribers['value']
+
+            for subscriber in subscribers:
+                subscriber_sets.append((subscriber, name))
+
+        for subscriber,g in itertools.groupby(subscriber_sets, key=lambda t: t[0]):
+            changes = []
+            for name in [pn for _,pn in list(g)]:
+                p = self.params(name)
+                changes.append(Change(what='value', attribute=name, obj=self,
+                                      cls=p._owner,
+                                      old=p.default, new=kwargs[name]))
+            if subscriber.batched:
+                subscriber.fn(*changes)
 
     # API to be accessed via param namespace
 

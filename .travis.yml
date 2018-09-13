@@ -124,8 +124,7 @@ jobs:
       before_install:
         - pip install graphviz
       install:
-        # TODO: just use pip install once nbsite 0.4.4 is out
-        - pip install --upgrade --pre --index-url=https://test.pypi.org/simple --extra-index-url=https://pypi.org/simple nbsite sphinx_ioam_theme
+        - pip install nbsite sphinx_ioam_theme
         - pip install -e .
       script:
         # TODO: nbsite commands will be simplified eventually...

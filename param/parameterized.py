@@ -248,7 +248,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name mthd")
 Change = namedtuple("Change","what attribute obj cls old new")
-Subscriber = namedtuple('Subscriber', 'batched fn')
+Subscriber = namedtuple('Subscriber', 'batched fn what')
 
 
 class ParameterMetaclass(type):
@@ -1140,7 +1140,7 @@ class Parameters(object):
                 if parameter_attribute not in subscribers[parameter_name]:
                     subscribers[parameter_name][parameter_attribute] = []
 
-                subscriber = Subscriber(batched=batched, fn=fn)
+                subscriber = Subscriber(batched=batched, fn=fn, what=parameter_attribute)
                 getattr(subscribers[parameter_name][parameter_attribute],action)(subscriber)
             else:
                 subscribers = self_.cls.params(parameter_name).subscribers

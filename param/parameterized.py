@@ -229,14 +229,17 @@ def depends(func, *dependencies, **kw):
     return _depends
 
 
-def _params_depended_on(mthing,params):
+def _params_depended_on(mthing):
+    params = []
     dinfo = getattr(mthing.mthd,"_dinfo", {})
-    for d in dinfo.get('dependencies',list(mthing.cls.params())):
-        thing = (mthing.inst or mthing.cls).param._spec_to_obj(d)
-        if isinstance(thing,PInfo):
-            params.append(thing)
-        else:
-            _params_depended_on(thing,params)
+    for d in dinfo.get('dependencies',list(mthing.cls.param.params())):
+        things = (mthing.inst or mthing.cls).param._spec_to_obj(d)
+        for thing in things:
+            if isinstance(thing,PInfo):
+                params.append(thing)
+            else:
+                params += _params_depended_on(thing)
+    return params
 
 
 def _m_caller(self,n):
@@ -1075,9 +1078,7 @@ class Parameters(object):
 
 
     def params_depended_on(self_,name):
-        params = []
-        _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)),params)
-        return params
+        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)))
 
 
     def _spec_to_obj(self_,spec):
@@ -1096,17 +1097,23 @@ class Parameters(object):
         src = self_.self_or_cls if obj=='' else _getattrr(self_.self_or_cls,obj[1::])
         cls,inst = (src,None) if isinstance(src,type) else (type(src),src)
 
-        if attr in src.params():
-            return PInfo(inst=inst,cls=cls,name=attr,pobj=src.params(attr),what=what if what!='' else 'value')
+        if attr == 'param':
+            dependencies = self_._spec_to_obj(obj[1:])
+            for p in src.param.params():
+                dependencies += src.param._spec_to_obj(p)
+            return dependencies
+        elif attr in src.param.params():
+            info = PInfo(inst=inst,cls=cls,name=attr,pobj=src.param.params(attr),
+                          what=what if what!='' else 'value')
         else:
-            # TODO: check it's a method maybe
-            return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+            info = MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+        return [info]
 
 
     def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
-        assert parameter_name in self_.cls.params()
+        assert parameter_name in self_.cls.param.params()
 
         if parameter_attribute is None:
             parameter_attribute = "value"
@@ -1119,7 +1126,7 @@ class Parameters(object):
                 subscribers[parameter_name][parameter_attribute] = []
             getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
         else:
-            subscribers = self_.cls.params(parameter_name).subscribers
+            subscribers = self_.cls.param.params(parameter_name).subscribers
             if parameter_attribute not in subscribers:
                 subscribers[parameter_attribute] = []
             getattr(subscribers[parameter_attribute],action)(fn)

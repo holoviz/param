@@ -232,7 +232,7 @@ def depends(func, *dependencies, **kw):
 def _params_depended_on(mthing):
     params = []
     dinfo = getattr(mthing.mthd,"_dinfo", {})
-    for d in dinfo.get('dependencies',list(mthing.cls.params())):
+    for d in dinfo.get('dependencies',list(mthing.cls.param.params())):
         things = (mthing.inst or mthing.cls).param._spec_to_obj(d)
         for thing in things:
             if isinstance(thing,PInfo):
@@ -1099,11 +1099,11 @@ class Parameters(object):
 
         if attr == 'param':
             dependencies = self_._spec_to_obj(obj[1:])
-            for p in src.params():
+            for p in src.param.params():
                 dependencies += src.param._spec_to_obj(p)
             return dependencies
-        elif attr in src.params():
-            info = PInfo(inst=inst,cls=cls,name=attr,pobj=src.params(attr),
+        elif attr in src.param.params():
+            info = PInfo(inst=inst,cls=cls,name=attr,pobj=src.param.params(attr),
                           what=what if what!='' else 'value')
         else:
             info = MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
@@ -1113,7 +1113,7 @@ class Parameters(object):
     def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
-        assert parameter_name in self_.cls.params()
+        assert parameter_name in self_.cls.param.params()
 
         if parameter_attribute is None:
             parameter_attribute = "value"
@@ -1126,7 +1126,7 @@ class Parameters(object):
                 subscribers[parameter_name][parameter_attribute] = []
             getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
         else:
-            subscribers = self_.cls.params(parameter_name).subscribers
+            subscribers = self_.cls.param.params(parameter_name).subscribers
             if parameter_attribute not in subscribers:
                 subscribers[parameter_attribute] = []
             getattr(subscribers[parameter_attribute],action)(fn)

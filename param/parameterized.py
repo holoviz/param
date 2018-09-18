@@ -498,7 +498,16 @@ class Parameter(object):
     # to the Parameterized instance, so no per-instance subscription.
 
     def __setattr__(self,name,value):
-        old = getattr(self,name) if (name!="default" and hasattr(self,'subscribers') and name in self.subscribers) else NotImplemented
+        implemented = (name!="default" and hasattr(self,'subscribers') and name in self.subscribers)
+        try:
+            old = getattr(self,name) if implemented else NotImplemented
+        except AttributeError as e:
+            if name in self.__slots__:
+                # If Parameter slot is defined but an AttributeError was raised
+                # we are in __setstate__ and subscribers should not be triggered
+                old = NotImplemented
+            else:
+                raise e
 
         super(Parameter, self).__setattr__(name, value)
 

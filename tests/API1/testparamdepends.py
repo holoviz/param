@@ -60,11 +60,13 @@ class TestParamDepends(API1TestCase):
         inst = self.P(a=self.P())
         pinfos = inst.param.params_depended_on('nested')
         self.assertEqual(len(pinfos), 4)
-        pinfo = pinfos[0]
+        pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
+        pinfo = pinfos[(inst, 'a')]
         self.assertIs(pinfo.cls, self.P)
         self.assertIs(pinfo.inst, inst)
         self.assertEqual(pinfo.name, 'a')
         self.assertEqual(pinfo.what, 'value')
-        for info, p in zip(pinfos[1:], ['name', 'a', 'b']):
+        for p in ['name', 'a', 'b']:
+            info = pinfos[(inst.a, p)]
             self.assertEqual(info.name, p)
             self.assertIs(info.inst, inst.a)

@@ -1117,16 +1117,9 @@ class Parameters(object):
             return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
 
 
-    def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
+    def _watch(self_,action,fn,parameter_names,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
-
-        if not isinstance(parameter_name, list):
-            parameter_names = [parameter_name]
-            batched = False
-        else:
-            parameter_names = parameter_name
-            batched = True
-
+        batched = len(parameter_names) > 1
         for parameter_name in parameter_names:
             assert parameter_name in self_.cls.params()
 
@@ -1150,11 +1143,11 @@ class Parameters(object):
                 subscriber = Subscriber(batched=batched, fn=fn)
                 getattr(subscribers[parameter_attribute],action)(subscriber)
 
-    def watch(self_,fn,parameter_name,parameter_attribute=None):
-        self_._watch('append',fn,parameter_name,parameter_attribute)
+    def watch(self_,fn,parameter_names,parameter_attribute=None):
+        self_._watch('append',fn,parameter_names,parameter_attribute)
 
-    def unwatch(self_,fn,parameter_name,parameter_attribute=None):
-        self_._watch('remove',fn,parameter_name,parameter_attribute)
+    def unwatch(self_,fn,parameter_names,parameter_attribute=None):
+        self_._watch('remove',fn,parameter_names,parameter_attribute)
 
 
     # Instance methods

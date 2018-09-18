@@ -1952,11 +1952,13 @@ class Parameterized(object):
         subscriber_sets = []
         for name, value in kwargs.items():
             if hasattr(self, '_param_subscribers'):
-                subscribers = self._param_subscribers[name]['value']
+                subscribers = self._param_subscribers[name]
             else:
-                subscribers = self.params(name).subscribers['value']
+                subscribers = self.params(name).subscribers
 
-            for subscriber in subscribers:
+            value_subscribers = subscribers.get('value', [])
+
+            for subscriber in value_subscribers:
                 subscriber_sets.append((subscriber, name))
 
         for subscriber,g in itertools.groupby(subscriber_sets, key=lambda t: t[0]):

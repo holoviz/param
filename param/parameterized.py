@@ -229,14 +229,17 @@ def depends(func, *dependencies, **kw):
     return _depends
 
 
-def _params_depended_on(mthing,params):
+def _params_depended_on(mthing):
+    params = []
     dinfo = getattr(mthing.mthd,"_dinfo", {})
     for d in dinfo.get('dependencies',list(mthing.cls.params())):
-        thing = (mthing.inst or mthing.cls).param._spec_to_obj(d)
-        if isinstance(thing,PInfo):
-            params.append(thing)
-        else:
-            _params_depended_on(thing,params)
+        things = (mthing.inst or mthing.cls).param._spec_to_obj(d)
+        for thing in things:
+            if isinstance(thing,PInfo):
+                params.append(thing)
+            else:
+                params += _params_depended_on(thing)
+    return params
 
 
 def _m_caller(self,n):
@@ -1075,9 +1078,7 @@ class Parameters(object):
 
 
     def params_depended_on(self_,name):
-        params = []
-        _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)),params)
-        return params
+        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)))
 
 
     def _spec_to_obj(self_,spec):
@@ -1096,11 +1097,17 @@ class Parameters(object):
         src = self_.self_or_cls if obj=='' else _getattrr(self_.self_or_cls,obj[1::])
         cls,inst = (src,None) if isinstance(src,type) else (type(src),src)
 
-        if attr in src.params():
-            return PInfo(inst=inst,cls=cls,name=attr,pobj=src.params(attr),what=what if what!='' else 'value')
+        if attr == 'param':
+            dependencies = self_._spec_to_obj(obj[1:])
+            for p in src.params():
+                dependencies += src.param._spec_to_obj(p)
+            return dependencies
+        elif attr in src.params():
+            info = PInfo(inst=inst,cls=cls,name=attr,pobj=src.params(attr),
+                          what=what if what!='' else 'value')
         else:
-            # TODO: check it's a method maybe
-            return MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+            info = MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+        return [info]
 
 
     def _watch(self_,action,fn,parameter_name,parameter_attribute=None):

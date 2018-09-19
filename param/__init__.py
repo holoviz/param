@@ -21,6 +21,7 @@ import sys
 import glob
 import re
 import datetime as dt
+import warnings
 import collections
 
 from .parameterized import Parameterized, Parameter, String, \
@@ -110,6 +111,27 @@ def named_objs(objlist, namesdict=None):
         objs[k] = obj
     return objs
 
+
+def param_union(*parameterizeds, **kwargs):
+    """
+    Given a set of Parameterized objects, returns a dictionary
+    with the union of all param name,value pairs across them.
+    If warn is True (default), warns if the same parameter has
+    been given multiple values; otherwise uses the last value
+    """
+    warn = kwargs.pop('warn', True)
+    if len(kwargs):
+        raise TypeError(
+            "param_union() got an unexpected keyword argument '{}'".format(
+                kwargs.popitem()[0]))
+    d = dict()
+    for o in parameterizeds:
+        for k, p in o.param.params().items():
+            if k != 'name':
+                if k in d and warn:
+                    warnings.warn("overwriting parameter {}".format(k))
+                d[k] = getattr(o, k)
+    return d
 
 
 class Infinity(object):

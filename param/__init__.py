@@ -22,6 +22,7 @@ import glob
 import re
 import datetime as dt
 import warnings
+import collections
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
@@ -86,14 +87,22 @@ def as_unicode(obj):
     return unicode(obj)
 
 
-def named_objs(objlist):
+def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself.
+    string name for the object to the object itself. Accepts
+    an optional name,obj dictionary, which will override any other
+    name if that item is present in the dictionary.
     """
     objs = OrderedDict()
+
+    if namesdict is not None:
+        objtoname = {v: k for k, v in namesdict.items()}
+
     for obj in objlist:
-        if hasattr(obj, "name"):
+        if namesdict is not None and obj in objtoname:
+            k = objtoname[obj]
+        elif hasattr(obj, "name"):
             k = obj.name
         elif hasattr(obj, '__name__'):
             k = obj.__name__
@@ -998,9 +1007,16 @@ class ObjectSelector(Selector):
     initially, or because it is explicitly specified), the default
     (initial) value must be among the list of objects (unless the
     default value is None).
+
+    The list of objects can be supplied as a list (appropriate for
+    selecting among a set of strings, or among a set of objects with a
+    "name" parameter), or as a (preferably ordered) dictionary from
+    names to objects.  If a dictionary is supplied, the objects
+    will need to be hashable so that their names can be looked
+    up from the object value.
     """
 
-    __slots__ = ['objects','compute_default_fn','check_on_set']
+    __slots__ = ['objects','compute_default_fn','check_on_set','names']
 
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -1008,7 +1024,12 @@ class ObjectSelector(Selector):
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
         if objects is None:
             objects = []
-        self.objects = objects
+        if isinstance(objects, collections.Mapping):
+            self.names = objects
+            self.objects = list(objects.values())
+        else:
+            self.names = None
+            self.objects = objects
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
@@ -1095,7 +1116,7 @@ class ObjectSelector(Selector):
 
         (Returns the dictionary {object.name:object}.)
         """
-        return named_objs(self.objects)
+        return named_objs(self.objects, self.names)
 
 
 class ClassSelector(Selector):

@@ -12,11 +12,11 @@ stages:
   - name: pip_dev_package
     if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: pip_package
-    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+    if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - name: conda_dev_package
     if: tag =~ ^v(\d+|\.)+[a-z]\d+$
   - name: conda_package
-    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+    if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - name: website_dev
     if: tag =~ ^v(\d+|\.)+[a-z]\d+$ OR tag = website_dev
   - name: website_release
@@ -124,8 +124,7 @@ jobs:
       before_install:
         - pip install graphviz
       install:
-        # TODO: just use pip install once nbsite 0.4.4 is out
-        - pip install --upgrade --pre --index-url=https://test.pypi.org/simple --extra-index-url=https://pypi.org/simple nbsite sphinx_ioam_theme
+        - pip install nbsite sphinx_ioam_theme
         - pip install -e .
       script:
         # TODO: nbsite commands will be simplified eventually...

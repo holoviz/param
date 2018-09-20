@@ -229,11 +229,11 @@ def depends(func, *dependencies, **kw):
     return _depends
 
 
-def _params_depended_on(mthing):
+def _params_depended_on(minfo):
     params = []
-    dinfo = getattr(mthing.mthd,"_dinfo", {})
-    for d in dinfo.get('dependencies',list(mthing.cls.param.params())):
-        things = (mthing.inst or mthing.cls).param._spec_to_obj(d)
+    dinfo = getattr(minfo.method,"_dinfo", {})
+    for d in dinfo.get('dependencies',list(minfo.cls.param.params())):
+        things = (minfo.inst or minfo.cls).param._spec_to_obj(d)
         for thing in things:
             if isinstance(thing,PInfo):
                 params.append(thing)
@@ -247,8 +247,8 @@ def _m_caller(self,n):
 
 
 PInfo = namedtuple("PInfo","inst cls name pobj what")
-MInfo = namedtuple("MInfo","inst cls name mthd")
-Change = namedtuple("Change","what attribute obj cls old new")
+MInfo = namedtuple("MInfo","inst cls name method")
+Change = namedtuple("Change","what name obj cls old new")
 
 
 class ParameterMetaclass(type):
@@ -497,23 +497,23 @@ class Parameter(object):
     # Note that unlike with parameter value setting, there's no access
     # to the Parameterized instance, so no per-instance subscription.
 
-    def __setattr__(self,name,value):
-        implemented = (name!="default" and hasattr(self,'subscribers') and name in self.subscribers)
+    def __setattr__(self,attribute,value):
+        implemented = (attribute!="default" and hasattr(self,'subscribers') and attribute in self.subscribers)
         try:
-            old = getattr(self,name) if implemented else NotImplemented
+            old = getattr(self,attribute) if implemented else NotImplemented
         except AttributeError as e:
-            if name in self.__slots__:
+            if attribute in self.__slots__:
                 # If Parameter slot is defined but an AttributeError was raised
                 # we are in __setstate__ and subscribers should not be triggered
                 old = NotImplemented
             else:
                 raise e
 
-        super(Parameter, self).__setattr__(name, value)
+        super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
-            for subscriber in self.subscribers[name]:
-                subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
+            for subscriber in self.subscribers[attribute]:
+                subscriber(Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -594,7 +594,7 @@ class Parameter(object):
         else:
             subscribers = getattr(obj,"_param_subscribers",{}).get(self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
         for s in subscribers:
-            s(Change(what='value',attribute=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
+            s(Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
 
 
     def __delete__(self,obj):
@@ -1087,7 +1087,7 @@ class Parameters(object):
 
 
     def params_depended_on(self_,name):
-        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)))
+        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
 
 
     def _spec_to_obj(self_,spec):
@@ -1115,7 +1115,7 @@ class Parameters(object):
             info = PInfo(inst=inst,cls=cls,name=attr,pobj=src.param.params(attr),
                           what=what if what!='' else 'value')
         else:
-            info = MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+            info = MInfo(inst=inst,cls=cls,name=attr,method=getattr(src,attr))
         return [info]
 
 

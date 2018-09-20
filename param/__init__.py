@@ -88,13 +88,21 @@ def as_unicode(obj):
 
 
 def hashable(x):
+    """
+    Return a hashable version of the given object x, with lists and
+    dictionaries converted to tuples.  Allows mutable objects to be
+    used as a lookup key in cases where the object has not actually
+    been mutated. Lookup will fail (appropriately) in cases where some
+    part of the object has changed.  Does not (currently) recursively
+    replace mutable subobjects.
+    """
     if isinstance(x, collections.MutableSequence):
         return tuple(x)
     elif isinstance(x, collections.MutableMapping):
         return tuple([(k,v) for k,v in x.items()])
     else:
         return x
-            
+
 def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from

@@ -248,7 +248,7 @@ def _m_caller(self,n):
 
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name mthd")
-Change = namedtuple("Change","what attribute obj cls old new")
+Change = namedtuple("Change","what name obj cls old new")
 
 
 class ParameterMetaclass(type):
@@ -497,23 +497,23 @@ class Parameter(object):
     # Note that unlike with parameter value setting, there's no access
     # to the Parameterized instance, so no per-instance subscription.
 
-    def __setattr__(self,name,value):
-        implemented = (name!="default" and hasattr(self,'subscribers') and name in self.subscribers)
+    def __setattr__(self,attribute,value):
+        implemented = (attribute!="default" and hasattr(self,'subscribers') and attribute in self.subscribers)
         try:
-            old = getattr(self,name) if implemented else NotImplemented
+            old = getattr(self,attribute) if implemented else NotImplemented
         except AttributeError as e:
-            if name in self.__slots__:
+            if attribute in self.__slots__:
                 # If Parameter slot is defined but an AttributeError was raised
                 # we are in __setstate__ and subscribers should not be triggered
                 old = NotImplemented
             else:
                 raise e
 
-        super(Parameter, self).__setattr__(name, value)
+        super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
-            for subscriber in self.subscribers[name]:
-                subscriber(Change(what=name,attribute=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
+            for subscriber in self.subscribers[attribute]:
+                subscriber(Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -594,7 +594,7 @@ class Parameter(object):
         else:
             subscribers = getattr(obj,"_param_subscribers",{}).get(self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
         for s in subscribers:
-            s(Change(what='value',attribute=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
+            s(Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
 
 
     def __delete__(self,obj):

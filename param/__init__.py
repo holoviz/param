@@ -96,12 +96,15 @@ def named_objs(objlist, namesdict=None):
     """
     objs = OrderedDict()
 
+    def hashable(x):
+        return tuple(x) if isinstance(x, collections.Sequence) else x
+            
     if namesdict is not None:
-        objtoname = {v: k for k, v in namesdict.items()}
+        objtoname = {hashable(v): k for k, v in namesdict.items()}
 
     for obj in objlist:
-        if namesdict is not None and obj in objtoname:
-            k = objtoname[obj]
+        if namesdict is not None and hashable(obj) in objtoname:
+            k = objtoname[hashable(obj)]
         elif hasattr(obj, "name"):
             k = obj.name
         elif hasattr(obj, '__name__'):

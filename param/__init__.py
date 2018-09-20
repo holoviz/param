@@ -87,6 +87,14 @@ def as_unicode(obj):
     return unicode(obj)
 
 
+def hashable(x):
+    if isinstance(x, collections.MutableSequence):
+        return tuple(x)
+    elif isinstance(x, collections.MutableMapping):
+        return tuple([(k,v) for k,v in x.items()])
+    else:
+        return x
+            
 def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
@@ -96,9 +104,6 @@ def named_objs(objlist, namesdict=None):
     """
     objs = OrderedDict()
 
-    def hashable(x):
-        return tuple(x) if isinstance(x, collections.MutableSequence) else x
-            
     if namesdict is not None:
         objtoname = {hashable(v): k for k, v in namesdict.items()}
 

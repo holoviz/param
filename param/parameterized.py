@@ -231,7 +231,7 @@ def depends(func, *dependencies, **kw):
 
 def _params_depended_on(mthing):
     params = []
-    dinfo = getattr(mthing.mthd,"_dinfo", {})
+    dinfo = getattr(mthing.method,"_dinfo", {})
     for d in dinfo.get('dependencies',list(mthing.cls.param.params())):
         things = (mthing.inst or mthing.cls).param._spec_to_obj(d)
         for thing in things:
@@ -247,7 +247,7 @@ def _m_caller(self,n):
 
 
 PInfo = namedtuple("PInfo","inst cls name pobj what")
-MInfo = namedtuple("MInfo","inst cls name mthd")
+MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
 
 
@@ -1087,7 +1087,7 @@ class Parameters(object):
 
 
     def params_depended_on(self_,name):
-        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,mthd=getattr(self_.self_or_cls,name)))
+        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
 
 
     def _spec_to_obj(self_,spec):
@@ -1115,7 +1115,7 @@ class Parameters(object):
             info = PInfo(inst=inst,cls=cls,name=attr,pobj=src.param.params(attr),
                           what=what if what!='' else 'value')
         else:
-            info = MInfo(inst=inst,cls=cls,name=attr,mthd=getattr(src,attr))
+            info = MInfo(inst=inst,cls=cls,name=attr,method=getattr(src,attr))
         return [info]
 
 

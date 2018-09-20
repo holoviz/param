@@ -229,11 +229,11 @@ def depends(func, *dependencies, **kw):
     return _depends
 
 
-def _params_depended_on(mthing):
+def _params_depended_on(minfo):
     params = []
-    dinfo = getattr(mthing.method,"_dinfo", {})
-    for d in dinfo.get('dependencies',list(mthing.cls.param.params())):
-        things = (mthing.inst or mthing.cls).param._spec_to_obj(d)
+    dinfo = getattr(minfo.method,"_dinfo", {})
+    for d in dinfo.get('dependencies',list(minfo.cls.param.params())):
+        things = (minfo.inst or minfo.cls).param._spec_to_obj(d)
         for thing in things:
             if isinstance(thing,PInfo):
                 params.append(thing)

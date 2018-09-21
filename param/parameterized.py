@@ -512,8 +512,10 @@ class Parameter(object):
         super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
+            change = Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
             for subscriber in self.subscribers[attribute]:
-                subscriber(Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value))
+                if self.param._changed(change):
+                    subscriber(change)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -593,8 +595,11 @@ class Parameter(object):
             subscribers = self.subscribers.get("value",[])
         else:
             subscribers = getattr(obj,"_param_subscribers",{}).get(self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
+
+        change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
         for s in subscribers:
-            s(Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val))
+            if self._owner.param._changed(change):
+                s(change)
 
 
     def __delete__(self,obj):
@@ -801,6 +806,17 @@ class Parameters(object):
         inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
         return inner
 
+
+    @classmethod
+    def _changed(cls, change):
+        """
+        Predicate that determines whether a Change objects has actually
+        changed such that old!=new.
+        """
+        try:  # To be improve by value equality testing machinery
+            return (change.old != change.new)
+        except:
+            return True
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):

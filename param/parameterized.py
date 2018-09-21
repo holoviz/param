@@ -810,7 +810,7 @@ class Parameters(object):
     @classmethod
     def _changed(cls, change):
         """
-        Predicate that determines whether a Change objects has actually
+        Predicate that determines whether a Change object has actually
         changed such that old!=new.
         """
         try:  # To be improved by adding better machinery to test equality for complex types

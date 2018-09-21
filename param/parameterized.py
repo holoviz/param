@@ -249,7 +249,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-Subscriber = namedtuple("Subscriber","fn mode")
+Watcher = namedtuple("Watcher","fn mode")
 
 class ParameterMetaclass(type):
     """
@@ -433,7 +433,7 @@ class Parameter(object):
     __slots__ = ['_attrib_name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
                  'pickle_default_value','allow_None',
-                 'subscribers','_owner']
+                 'watchers','_owner']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -477,7 +477,7 @@ class Parameter(object):
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)
-        self.subscribers = {}
+        self.watchers = {}
 
 
     def _set_instantiate(self,instantiate):
@@ -498,13 +498,13 @@ class Parameter(object):
     # to the Parameterized instance, so no per-instance subscription.
 
     def __setattr__(self,attribute,value):
-        implemented = (attribute!="default" and hasattr(self,'subscribers') and attribute in self.subscribers)
+        implemented = (attribute!="default" and hasattr(self,'watchers') and attribute in self.watchers)
         try:
             old = getattr(self,attribute) if implemented else NotImplemented
         except AttributeError as e:
             if attribute in self.__slots__:
                 # If Parameter slot is defined but an AttributeError was raised
-                # we are in __setstate__ and subscribers should not be triggered
+                # we are in __setstate__ and watchers should not be triggered
                 old = NotImplemented
             else:
                 raise e
@@ -513,8 +513,8 @@ class Parameter(object):
 
         if old is not NotImplemented:
             change = Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
-            for subscriber in self.subscribers[attribute]:
-                self._owner.param._call_subscriber(subscriber, change)
+            for watcher in self.watchers[attribute]:
+                self._owner.param._call_watcher(watcher, change)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -591,13 +591,13 @@ class Parameter(object):
                 obj.__dict__[self._internal_name] = val
 
         if obj is None:
-            subscribers = self.subscribers.get("value",[])
+            watchers = self.watchers.get("value",[])
         else:
-            subscribers = getattr(obj,"_param_subscribers",{}).get(self._attrib_name,{}).get('value',self.subscribers.get("value",[]))
+            watchers = getattr(obj,"_param_watchers",{}).get(self._attrib_name,{}).get('value',self.watchers.get("value",[]))
 
         change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
-        for s in subscribers:
-            self._owner.param._call_subscriber(s, change)
+        for s in watchers:
+            self._owner.param._call_watcher(s, change)
 
 
     def __delete__(self,obj):
@@ -818,16 +818,16 @@ class Parameters(object):
 
 
     @classmethod
-    def _call_subscriber(cls, subscriber, change):
+    def _call_watcher(cls, watcher, change):
         """
-        Invoke the given the subscriber appropriately given a Change object.
+        Invoke the given the watcher appropriately given a Change object.
         """
         if not cls._changed(change):
             return
-        if subscriber.mode == 'args':
-            subscriber.fn(change)
+        if watcher.mode == 'args':
+            watcher.fn(change)
         else:
-            subscriber.fn(**{change.name: change.new})
+            watcher.fn(**{change.name: change.new})
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
@@ -1146,7 +1146,7 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,subscriber,parameter_name,parameter_attribute=None):
+    def _watch(self_,action,watcher,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.param.params()
@@ -1155,44 +1155,44 @@ class Parameters(object):
             parameter_attribute = "value"
 
         if self_.self is not None and parameter_attribute=="value":
-            subscribers = self_.self._param_subscribers
-            if parameter_name not in subscribers:
-                subscribers[parameter_name] = {}
-            if parameter_attribute not in subscribers[parameter_name]:
-                subscribers[parameter_name][parameter_attribute] = []
-            getattr(subscribers[parameter_name][parameter_attribute],action)(subscriber)
+            watchers = self_.self._param_watchers
+            if parameter_name not in watchers:
+                watchers[parameter_name] = {}
+            if parameter_attribute not in watchers[parameter_name]:
+                watchers[parameter_name][parameter_attribute] = []
+            getattr(watchers[parameter_name][parameter_attribute],action)(watcher)
         else:
-            subscribers = self_.cls.param.params(parameter_name).subscribers
-            if parameter_attribute not in subscribers:
-                subscribers[parameter_attribute] = []
-            getattr(subscribers[parameter_attribute],action)(subscriber)
+            watchers = self_.cls.param.params(parameter_name).watchers
+            if parameter_attribute not in watchers:
+                watchers[parameter_attribute] = []
+            getattr(watchers[parameter_attribute],action)(watcher)
 
     def watch(self_,fn,parameter_name,parameter_attribute=None):
-        subscriber = Subscriber(fn=fn, mode='args')
-        self_._watch('append',subscriber,parameter_name,parameter_attribute)
+        watcher = Watcher(fn=fn, mode='args')
+        self_._watch('append',watcher,parameter_name,parameter_attribute)
 
     def unwatch(self_,fn,parameter_name,parameter_attribute=None):
         """
-        Unwatch subscribers set either with watch or watch_values.
+        Unwatch watchers set either with watch or watch_values.
         """
         unwatched = False
         try:
-            subscriber = Subscriber(fn=fn, mode='args')
-            self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+            watcher = Watcher(fn=fn, mode='args')
+            self_._watch('remove',watcher,parameter_name,parameter_attribute)
             unwatched = True
         except: pass
         try:
-            subscriber = Subscriber(fn=fn, mode='kwargs')
-            self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+            watcher = Watcher(fn=fn, mode='kwargs')
+            self_._watch('remove',watcher,parameter_name,parameter_attribute)
             unwatched = True
         except: pass
 
         if not unwatched:
-            self_.warning('No effect unwatching subscriber that was not being watched')
+            self_.warning('No effect unwatching watcher that was not being watched')
 
     def watch_values(self_,fn,parameter_name,parameter_attribute=None):
-        subscriber = Subscriber(fn=fn, mode='kwargs')
-        self_._watch('append',subscriber,parameter_name,parameter_attribute)
+        watcher = Watcher(fn=fn, mode='kwargs')
+        self_._watch('append',watcher,parameter_name,parameter_attribute)
 
 
 
@@ -1790,7 +1790,7 @@ class Parameterized(object):
 
         # TODO: should move to param namespace? (like _param_value
         # etc should also move)
-        self._param_subscribers = {}
+        self._param_watchers = {}
 
         # add watched dependencies
         #

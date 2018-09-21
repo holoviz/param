@@ -12,30 +12,30 @@ class TestWatch(API1TestCase):
 
     def setUp(self):
         super(TestWatch, self).setUp()
-        self.switch = False
+        self.accumulator = 0
 
     def test_triggered_when_changed(self):
-        def switcher(*args):
-            self.switch = (not self.switch)
+        def accumulator(change):
+            self.accumulator += change.new
 
         obj = self.SimpleWatchExample()
-        obj.param.watch(switcher, 'a')
+        obj.param.watch(accumulator, 'a')
         obj.a = 1
-        self.assertEqual(self.switch, True)
+        self.assertEqual(self.accumulator, 1)
         obj.a = 2
-        self.assertEqual(self.switch, False)
+        self.assertEqual(self.accumulator, 3)
 
 
     def test_untriggered_when_unchanged(self):
-        def switcher(*args):
-            self.switch = (not self.switch)
+        def accumulator(change):
+            self.accumulator += change.new
 
         obj = self.SimpleWatchExample()
-        obj.param.watch(switcher, 'a')
+        obj.param.watch(accumulator, 'a')
         obj.a = 1
-        self.assertEqual(self.switch, True)
+        self.assertEqual(self.accumulator, 1)
         obj.a = 1
-        self.assertEqual(self.switch, True)
+        self.assertEqual(self.accumulator, 1)
 
 if __name__ == "__main__":
     import nose

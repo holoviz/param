@@ -249,7 +249,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-
+Subscriber = namedtuple("Subscriber","fn mode")
 
 class ParameterMetaclass(type):
     """
@@ -514,8 +514,7 @@ class Parameter(object):
         if old is not NotImplemented:
             change = Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
             for subscriber in self.subscribers[attribute]:
-                if self.param._changed(change):
-                    subscriber(change)
+                self.param._call_subscriber(subscriber, change)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -598,8 +597,7 @@ class Parameter(object):
 
         change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
         for s in subscribers:
-            if self._owner.param._changed(change):
-                s(change)
+            self._owner.param._call_subscriber(s, change)
 
 
     def __delete__(self,obj):
@@ -817,6 +815,19 @@ class Parameters(object):
             return (change.old != change.new)
         except:
             return True
+
+
+    @classmethod
+    def _call_subscriber(cls, subscriber, change):
+        """
+        Invoke the given the subscriber appropriately given a Change object.
+        """
+        if not cls._changed(change):
+            return
+        if subscriber.mode == 'args':
+            subscriber.fn(change)
+        else:
+            subscriber.fn(**{change.name: change.new})
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
@@ -1135,7 +1146,7 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
+    def _watch(self_,action,subscriber,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.param.params()
@@ -1149,18 +1160,40 @@ class Parameters(object):
                 subscribers[parameter_name] = {}
             if parameter_attribute not in subscribers[parameter_name]:
                 subscribers[parameter_name][parameter_attribute] = []
-            getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
+            getattr(subscribers[parameter_name][parameter_attribute],action)(subscriber)
         else:
             subscribers = self_.cls.param.params(parameter_name).subscribers
             if parameter_attribute not in subscribers:
                 subscribers[parameter_attribute] = []
-            getattr(subscribers[parameter_attribute],action)(fn)
+            getattr(subscribers[parameter_attribute],action)(subscriber)
 
     def watch(self_,fn,parameter_name,parameter_attribute=None):
-        self_._watch('append',fn,parameter_name,parameter_attribute)
+        subscriber = Subscriber(fn=fn, mode='args')
+        self_._watch('append',subscriber,parameter_name,parameter_attribute)
 
     def unwatch(self_,fn,parameter_name,parameter_attribute=None):
-        self_._watch('remove',fn,parameter_name,parameter_attribute)
+        """
+        Unwatch subscribers set either with watch or watch_values.
+        """
+        unwatched = False
+        try:
+            subscriber = Subscriber(fn=fn, mode='args')
+            self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+            unwatched = True
+        except: pass
+        try:
+            subscriber = Subscriber(fn=fn, mode='kwargs')
+            self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+            unwatched = True
+        except: pass
+
+        if not unwatched:
+            self_.warning('No effect unwatching subscriber that was not being watched')
+
+    def watch_values(self_,fn,parameter_name,parameter_attribute=None):
+        subscriber = Subscriber(fn=fn, mode='kwargs')
+        self_._watch('append',subscriber,parameter_name,parameter_attribute)
+
 
 
     # Instance methods

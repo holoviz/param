@@ -514,7 +514,7 @@ class Parameter(object):
         if old is not NotImplemented:
             change = Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
             for subscriber in self.subscribers[attribute]:
-                self.param._call_subscriber(subscriber, change)
+                self._owner.param._call_subscriber(subscriber, change)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613

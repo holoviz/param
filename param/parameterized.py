@@ -813,7 +813,7 @@ class Parameters(object):
         Predicate that determines whether a Change objects has actually
         changed such that old!=new.
         """
-        try:  # To be improve by value equality testing machinery
+        try:  # To be improved by adding better machinery to test equality for complex types
             return (change.old != change.new)
         except:
             return True

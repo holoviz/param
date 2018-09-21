@@ -514,8 +514,7 @@ class Parameter(object):
         if old is not NotImplemented:
             change = Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
             for subscriber in self.subscribers[attribute]:
-                if self.param._changed(change):
-                    subscriber(change)
+                self.param._call_subscriber(subscriber, change)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -598,8 +597,7 @@ class Parameter(object):
 
         change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
         for s in subscribers:
-            if self._owner.param._changed(change):
-                s(change)
+            self._owner.param._call_subscriber(s, change)
 
 
     def __delete__(self,obj):
@@ -817,6 +815,19 @@ class Parameters(object):
             return (change.old != change.new)
         except:
             return True
+
+
+    @classmethod
+    def _call_subscriber(cls, subscriber, change):
+        """
+        Invoke the given the subscriber appropriately given a Change object.
+        """
+        if not cls._changed(change):
+            return
+        if subscriber.mode == 'args':
+            subscriber.fn(change)
+        else:
+            subscriber.fn(**{change.name: change.new})
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
@@ -1157,10 +1168,20 @@ class Parameters(object):
             getattr(subscribers[parameter_attribute],action)(subscriber)
 
     def watch(self_,fn,parameter_name,parameter_attribute=None):
-        self_._watch('append',fn,parameter_name,parameter_attribute)
+        subscriber = Subscriber(fn=fn, mode='args')
+        self_._watch('append',subscriber,parameter_name,parameter_attribute)
 
     def unwatch(self_,fn,parameter_name,parameter_attribute=None):
-        self_._watch('remove',fn,parameter_name,parameter_attribute)
+        subscriber = Subscriber(fn=fn, mode='args')
+        self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+
+    def watch_values(self_,fn,parameter_name,parameter_attribute=None):
+        subscriber = Subscriber(fn=fn, mode='kwargs')
+        self_._watch('append',subscriber,parameter_name,parameter_attribute)
+
+    def unwatch_values(self_,fn,parameter_name,parameter_attribute=None):
+        subscriber = Subscriber(fn=fn, mode='kwargs')
+        self_._watch('remove',subscriber,parameter_name,parameter_attribute)
 
 
     # Instance methods

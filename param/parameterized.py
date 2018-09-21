@@ -1172,16 +1172,28 @@ class Parameters(object):
         self_._watch('append',subscriber,parameter_name,parameter_attribute)
 
     def unwatch(self_,fn,parameter_name,parameter_attribute=None):
-        subscriber = Subscriber(fn=fn, mode='args')
-        self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+        """
+        Unwatch subscribers set either with watch or watch_values.
+        """
+        unwatched = False
+        try:
+            subscriber = Subscriber(fn=fn, mode='args')
+            self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+            unwatched = True
+        except: pass
+        try:
+            subscriber = Subscriber(fn=fn, mode='kwargs')
+            self_._watch('remove',subscriber,parameter_name,parameter_attribute)
+            unwatched = True
+        except: pass
+
+        if not unwatched:
+            self_.warning('No effect unwatching subscriber that was not being watched')
 
     def watch_values(self_,fn,parameter_name,parameter_attribute=None):
         subscriber = Subscriber(fn=fn, mode='kwargs')
         self_._watch('append',subscriber,parameter_name,parameter_attribute)
 
-    def unwatch_values(self_,fn,parameter_name,parameter_attribute=None):
-        subscriber = Subscriber(fn=fn, mode='kwargs')
-        self_._watch('remove',subscriber,parameter_name,parameter_attribute)
 
 
     # Instance methods

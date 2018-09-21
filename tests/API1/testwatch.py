@@ -93,7 +93,7 @@ class TestWatchValues(API1TestCase):
         obj.param.watch_values(accumulator, 'a')
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
-        obj.param.unwatch_values(accumulator, 'a')
+        obj.param.unwatch(accumulator, 'a')
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
 

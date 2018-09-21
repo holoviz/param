@@ -70,7 +70,7 @@ class TestWatch(API1TestCase):
 
         obj.param.unwatch(accumulator, 'a')
         self.log_handler.assertEndsWith('WARNING',
-                            'No effect unwatching subscriber that was not being watched')
+                            'No effect unwatching watcher that was not being watched')
 
 
 

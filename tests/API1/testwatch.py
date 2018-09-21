@@ -3,12 +3,23 @@ Unit test for watch mechanism
 """
 from . import API1TestCase
 
+from .utils import MockLoggingHandler
 import param
+
 
 class TestWatch(API1TestCase):
 
     class SimpleWatchExample(param.Parameterized):
         a = param.Integer(default=0)
+
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestWatch, cls).setUpClass()
+        log = param.parameterized.get_logger()
+        cls.log_handler = MockLoggingHandler(level='DEBUG')
+        log.addHandler(cls.log_handler)
+
 
     def setUp(self):
         super(TestWatch, self).setUp()
@@ -49,6 +60,17 @@ class TestWatch(API1TestCase):
         obj.param.unwatch(accumulator, 'a')
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
+
+
+    def test_warning_unwatching_when_unwatched(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = self.SimpleWatchExample()
+
+        obj.param.unwatch(accumulator, 'a')
+        self.log_handler.assertEndsWith('WARNING',
+                            'No effect unwatching subscriber that was not being watched')
 
 
 

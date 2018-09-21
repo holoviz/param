@@ -249,7 +249,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-
+Subscriber = namedtuple("Subscriber","fn mode")
 
 class ParameterMetaclass(type):
     """
@@ -1135,7 +1135,7 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,fn,parameter_name,parameter_attribute=None):
+    def _watch(self_,action,subscriber,parameter_name,parameter_attribute=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.param.params()
@@ -1149,12 +1149,12 @@ class Parameters(object):
                 subscribers[parameter_name] = {}
             if parameter_attribute not in subscribers[parameter_name]:
                 subscribers[parameter_name][parameter_attribute] = []
-            getattr(subscribers[parameter_name][parameter_attribute],action)(fn)
+            getattr(subscribers[parameter_name][parameter_attribute],action)(subscriber)
         else:
             subscribers = self_.cls.param.params(parameter_name).subscribers
             if parameter_attribute not in subscribers:
                 subscribers[parameter_attribute] = []
-            getattr(subscribers[parameter_attribute],action)(fn)
+            getattr(subscribers[parameter_attribute],action)(subscriber)
 
     def watch(self_,fn,parameter_name,parameter_attribute=None):
         self_._watch('append',fn,parameter_name,parameter_attribute)

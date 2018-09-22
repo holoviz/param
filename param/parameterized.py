@@ -812,7 +812,7 @@ class Parameters(object):
         changed such that old!=new.
         """
         try:  # To be improved by adding better machinery to test equality for complex types
-            return (change.old != change.new)
+            return bool(change.old != change.new)
         except:
             return True
 

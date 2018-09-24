@@ -249,7 +249,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-Watcher = namedtuple("Watcher","fn mode")
+Watcher = namedtuple("Watcher","fn mode onlychanged")
 
 class ParameterMetaclass(type):
     """
@@ -822,7 +822,7 @@ class Parameters(object):
         """
         Invoke the given the watcher appropriately given a Change object.
         """
-        if not cls._changed(change):
+        if watcher.onlychanged and (not cls._changed(change)):
             return
         if watcher.mode == 'args':
             watcher.fn(change)
@@ -1167,8 +1167,8 @@ class Parameters(object):
                 watchers[parameter_attribute] = []
             getattr(watchers[parameter_attribute],action)(watcher)
 
-    def watch(self_,fn,parameter_name,parameter_attribute=None):
-        watcher = Watcher(fn=fn, mode='args')
+    def watch(self_,fn,parameter_name,parameter_attribute=None, onlychanged=True):
+        watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
         self_._watch('append',watcher,parameter_name,parameter_attribute)
 
     def unwatch(self_,fn,parameter_name,parameter_attribute=None):
@@ -1176,22 +1176,23 @@ class Parameters(object):
         Unwatch watchers set either with watch or watch_values.
         """
         unwatched = False
-        try:
-            watcher = Watcher(fn=fn, mode='args')
-            self_._watch('remove',watcher,parameter_name,parameter_attribute)
-            unwatched = True
-        except: pass
-        try:
-            watcher = Watcher(fn=fn, mode='kwargs')
-            self_._watch('remove',watcher,parameter_name,parameter_attribute)
-            unwatched = True
-        except: pass
+        for onlychanged in [True, False]:
+            try:
+                watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
+                self_._watch('remove',watcher,parameter_name,parameter_attribute)
+                unwatched = True
+            except: pass
+            try:
+                watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
+                self_._watch('remove',watcher,parameter_name,parameter_attribute)
+                unwatched = True
+            except: pass
 
         if not unwatched:
             self_.warning('No effect unwatching watcher that was not being watched')
 
-    def watch_values(self_,fn,parameter_name,parameter_attribute=None):
-        watcher = Watcher(fn=fn, mode='kwargs')
+    def watch_values(self_,fn,parameter_name,parameter_attribute=None, onlychanged=True):
+        watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
         self_._watch('append',watcher,parameter_name,parameter_attribute)
 
 

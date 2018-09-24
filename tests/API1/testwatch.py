@@ -10,8 +10,7 @@ import param
 class TestWatch(API1TestCase):
 
     class SimpleWatchExample(param.Parameterized):
-        a = param.Integer(default=0)
-
+        a = param.Parameter(default=0)
 
     @classmethod
     def setUpClass(cls):
@@ -47,6 +46,20 @@ class TestWatch(API1TestCase):
         self.assertEqual(self.accumulator, 1)
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
+
+
+    def test_triggered_when_unchanged_complex_type(self):
+        def accumulator(change):
+            self.accumulator += 1
+
+        obj = self.SimpleWatchExample()
+        obj.param.watch(accumulator, 'a')
+        subobj = object()
+        obj.a = subobj
+        self.assertEqual(self.accumulator, 1)
+        obj.a = subobj
+        self.assertEqual(self.accumulator, 2)
+
 
     def test_triggered_when_unchanged_if_not_onlychanged(self):
         def accumulator(change):

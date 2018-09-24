@@ -8,6 +8,7 @@ import re
 import sys
 import inspect
 import random
+import numbers
 
 from collections import namedtuple
 from operator import itemgetter,attrgetter
@@ -705,6 +706,18 @@ def as_uninitialized(fn):
     return override_initialization
 
 
+def is_comparable(obj):
+    """
+    Whether the object can be safely compared using a simple equality.
+    """
+    if isinstance(obj, (numbers.Number, String.basestring, bytes, type(None))):
+        return True
+    elif isinstance(obj, (list, tuple, set)):
+        return all(is_comparable(o) for o in obj)
+    elif isinstance(obj, dict):
+        return all(is_comparable(k) and is_comparable(v) for k, v in obj.items())
+    return False
+
 
 class Parameters(object):
     """Object that holds the namespace and implementation of Parameterized
@@ -804,7 +817,6 @@ class Parameters(object):
         inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
         return inner
 
-
     @classmethod
     def _changed(cls, change):
         """
@@ -812,10 +824,11 @@ class Parameters(object):
         changed such that old!=new.
         """
         try:  # To be improved by adding better machinery to test equality for complex types
+            if not is_comparable(change.new) or not is_comparable(change.old):
+                return True
             return bool(change.old != change.new)
         except:
             return True
-
 
     @classmethod
     def _call_watcher(cls, watcher, change):

@@ -48,6 +48,17 @@ class TestWatch(API1TestCase):
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
 
+    def test_triggered_when_unchanged_if_not_onlychanged(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = self.SimpleWatchExample()
+        obj.param.watch(accumulator, 'a', onlychanged=False)
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+        obj.a = 1
+        self.assertEqual(self.accumulator, 2)
+
 
     def test_untriggered_when_unwatched(self):
         def accumulator(change):

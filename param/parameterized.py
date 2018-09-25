@@ -8,6 +8,8 @@ import re
 import sys
 import inspect
 import random
+import numbers
+import operator
 
 from collections import namedtuple
 from operator import itemgetter,attrgetter
@@ -705,6 +707,64 @@ def as_uninitialized(fn):
     return override_initialization
 
 
+class Comparator(object):
+    """
+    Comparator defines methods for determining whether two objects
+    should be considered equal. It works by registering custom
+    comparison functions, which may either be registed by type or with
+    a predicate function. If no matching comparison can be found for
+    the two objects the comparison will return False.
+
+    If registered by type the Comparator will check whether both
+    objects are of that type and apply the comparison. If the equality
+    function is instead registered with a function it will call the
+    function with each object individually to check if the comparison
+    applies. This is useful for defining comparisons for objects
+    without explicitly importing them.
+
+    To use the Comparator simply call the is_equal function.
+    """
+
+    equalities = {
+        numbers.Number: operator.eq,
+        String.basestring: operator.eq,
+        bytes: operator.eq,
+        type(None): operator.eq
+    }
+
+    @classmethod
+    def is_equal(cls, obj1, obj2):
+        for eq_type, eq in cls.equalities.items():
+            if ((isinstance(eq_type, FunctionType) and
+                 eq_type(obj1) and eq_type(obj2)) or
+                (isinstance(obj1, eq_type) and isinstance(obj2, eq_type))):
+                return eq(obj1, obj2)
+        if isinstance(obj2, (list, set, tuple)):
+            return cls.compare_iterator(obj1, obj2)
+        elif isinstance(obj2, dict):
+            return cls.compare_mapping(obj1, obj2)
+        return False
+
+    @classmethod
+    def compare_iterator(cls, obj1, obj2):
+        if (len(obj1) != len(obj2)) or type(obj1) != type(obj2):
+            return False
+        for o1, o2 in zip(obj1, obj2):
+            if not cls.is_equal(o1, o2):
+                return False
+        return True
+
+    @classmethod
+    def compare_mapping(cls, obj1, obj2):
+        if len(obj1) != len(obj2): return False
+        for k in obj1:
+            if k in obj2:
+                if not cls.is_equal(obj1[k], obj2[k]):
+                    return False
+            else:
+                return False
+        return True
+
 
 class Parameters(object):
     """Object that holds the namespace and implementation of Parameterized
@@ -809,12 +869,9 @@ class Parameters(object):
     def _changed(cls, change):
         """
         Predicate that determines whether a Change object has actually
-        changed such that old!=new.
+        changed such that old != new.
         """
-        try:  # To be improved by adding better machinery to test equality for complex types
-            return bool(change.old != change.new)
-        except:
-            return True
+        return not Comparator.is_equal(change.old, change.new)
 
 
     @classmethod

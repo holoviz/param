@@ -439,7 +439,7 @@ class Parameter(object):
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
-    # (attribute name, internal name). Once the owning Parmaeterized
+    # (attribute name, internal name). Once the owning Parameterized
     # class is created, _owner, _attrib_name, and _internal name are
     # set.
 

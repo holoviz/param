@@ -1203,32 +1203,32 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,watcher,parameter_name,parameter_attribute=None):
+    def _watch(self_,action,watcher,parameter_name,what=None):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.param.params()
 
-        if parameter_attribute is None:
-            parameter_attribute = "value"
+        if what is None:
+            what = "value"
 
-        if self_.self is not None and parameter_attribute=="value":
+        if self_.self is not None and what=="value":
             watchers = self_.self._param_watchers
             if parameter_name not in watchers:
                 watchers[parameter_name] = {}
-            if parameter_attribute not in watchers[parameter_name]:
-                watchers[parameter_name][parameter_attribute] = []
-            getattr(watchers[parameter_name][parameter_attribute],action)(watcher)
+            if what not in watchers[parameter_name]:
+                watchers[parameter_name][what] = []
+            getattr(watchers[parameter_name][what],action)(watcher)
         else:
             watchers = self_.cls.param.params(parameter_name).watchers
-            if parameter_attribute not in watchers:
-                watchers[parameter_attribute] = []
-            getattr(watchers[parameter_attribute],action)(watcher)
+            if what not in watchers:
+                watchers[what] = []
+            getattr(watchers[what],action)(watcher)
 
-    def watch(self_,fn,parameter_name,parameter_attribute=None, onlychanged=True):
+    def watch(self_,fn,parameter_name,what=None, onlychanged=True):
         watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-        self_._watch('append',watcher,parameter_name,parameter_attribute)
+        self_._watch('append',watcher,parameter_name,what)
 
-    def unwatch(self_,fn,parameter_name,parameter_attribute=None):
+    def unwatch(self_,fn,parameter_name,what=None):
         """
         Unwatch watchers set either with watch or watch_values.
         """
@@ -1236,21 +1236,21 @@ class Parameters(object):
         for onlychanged in [True, False]:
             try:
                 watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_name,parameter_attribute)
+                self_._watch('remove',watcher,parameter_name,what)
                 unwatched = True
             except: pass
             try:
                 watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_name,parameter_attribute)
+                self_._watch('remove',watcher,parameter_name,what)
                 unwatched = True
             except: pass
 
         if not unwatched:
             self_.warning('No effect unwatching watcher that was not being watched')
 
-    def watch_values(self_,fn,parameter_name,parameter_attribute=None, onlychanged=True):
+    def watch_values(self_,fn,parameter_name,what=None, onlychanged=True):
         watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
-        self_._watch('append',watcher,parameter_name,parameter_attribute)
+        self_._watch('append',watcher,parameter_name,what)
 
 
 

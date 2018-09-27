@@ -786,7 +786,9 @@ class Parameters(object):
         """
         self_.cls = cls
         self_.self = self
-
+        self_._BATCH_WATCH = False  # If true, Change and watcher objects are queued.
+        self_._changes = []         # Queue of batched changed
+        self_._watchers = []         # Queue of batched watchers
 
     @property
     def self_or_cls(self_):
@@ -874,17 +876,47 @@ class Parameters(object):
         return not Comparator.is_equal(change.old, change.new)
 
 
-    @classmethod
-    def _call_watcher(cls, watcher, change):
+
+    def _call_watcher(self_, watcher, change):
         """
         Invoke the given the watcher appropriately given a Change object.
         """
-        if watcher.onlychanged and (not cls._changed(change)):
+        if watcher.onlychanged and (not self_._changed(change)):
             return
-        if watcher.mode == 'args':
+
+        if self_.cls.param._BATCH_WATCH:
+            self_._changes.append(change)
+            self_._watchers.append(watcher)
+        elif watcher.mode == 'args':
             watcher.fn(change)
         else:
             watcher.fn(**{change.name: change.new})
+
+
+    def _batch_call_watchers(self_):
+        """
+        Batch call a set of watchers based on the parameter value
+        settings in kwargs using the queued Change and watcher objects.
+        """
+        from collections import OrderedDict
+        change_dict = OrderedDict([(c.name,c) for c in self_.cls.param._changes])
+        watcher_set = []
+        for w in self_.cls.param._watchers:
+            if w not in watcher_set:
+                watcher_set.append(w)
+
+        for watcher in watcher_set:
+            changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
+            if watcher.mode == 'args':
+                watcher.fn(*changes)
+            else:
+                watcher.fn(**{c.name:c for c in changes})
+
+        self_.cls.param._changes = []
+        self_.cls.param._watchers = []
+        self_.cls.param._BATCH_WATCH = False
+
+
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
@@ -998,6 +1030,7 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
+        self_.cls.param._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
@@ -1010,6 +1043,10 @@ class Parameters(object):
             if k not in self_or_cls.param.params():
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
+
+
+        self_._batch_call_watchers()
+        self_.cls.param._BATCH_WATCH = False
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """

@@ -251,7 +251,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-Watcher = namedtuple("Watcher","fn mode onlychanged")
+Watcher = namedtuple("Watcher","fn mode onlychanged parameter_names")
 
 class ParameterMetaclass(type):
     """
@@ -1203,29 +1203,31 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,watcher,parameter_name,what='value'):
+    def _watch(self_,action,watcher,parameter_names,what='value'):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
-        assert parameter_name in self_.cls.param.params()
+        for parameter_name in parameter_names:
+            assert parameter_name in self_.cls.param.params()
 
-        if self_.self is not None and what=="value":
-            watchers = self_.self._param_watchers
-            if parameter_name not in watchers:
-                watchers[parameter_name] = {}
-            if what not in watchers[parameter_name]:
-                watchers[parameter_name][what] = []
-            getattr(watchers[parameter_name][what],action)(watcher)
-        else:
-            watchers = self_.cls.param.params(parameter_name).watchers
-            if what not in watchers:
-                watchers[what] = []
-            getattr(watchers[what],action)(watcher)
+            if self_.self is not None and what=="value":
+                watchers = self_.self._param_watchers
+                if parameter_name not in watchers:
+                    watchers[parameter_name] = {}
+                if what not in watchers[parameter_name]:
+                    watchers[parameter_name][what] = []
+                getattr(watchers[parameter_name][what],action)(watcher)
+            else:
+                watchers = self_.cls.param.params(parameter_name).watchers
+                if what not in watchers:
+                    watchers[what] = []
+                getattr(watchers[what],action)(watcher)
 
-    def watch(self_,fn,parameter_name,what='value', onlychanged=True):
-        watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-        self_._watch('append',watcher,parameter_name,what)
+    def watch(self_,fn,parameter_names,what='value', onlychanged=True):
+        parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
+        watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged, parameter_names=parameter_names)
+        self_._watch('append',watcher,parameter_names,what)
 
-    def unwatch(self_,fn,parameter_name,what='value'):
+    def unwatch(self_,fn,parameter_names,what='value'):
         """
         Unwatch watchers set either with watch or watch_values.
         """
@@ -1233,20 +1235,21 @@ class Parameters(object):
         for onlychanged in [True, False]:
             try:
                 watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_name,what)
+                self_._watch('remove',watcher,parameter_names,what)
                 unwatched = True
             except: pass
             try:
                 watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_name,what)
+                self_._watch('remove',watcher,parameter_names,what)
                 unwatched = True
             except: pass
 
         if not unwatched:
             self_.warning('No effect unwatching watcher that was not being watched')
 
-    def watch_values(self_,fn,parameter_name,what='value', onlychanged=True):
-        watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
+    def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
+        parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
+        watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged, parameter_names=parameter_names)
         self_._watch('append',watcher,parameter_name,what)
 
 

@@ -1203,13 +1203,10 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,watcher,parameter_name,what=None):
+    def _watch(self_,action,watcher,parameter_name,what='value'):
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
 
         assert parameter_name in self_.cls.param.params()
-
-        if what is None:
-            what = "value"
 
         if self_.self is not None and what=="value":
             watchers = self_.self._param_watchers
@@ -1224,11 +1221,11 @@ class Parameters(object):
                 watchers[what] = []
             getattr(watchers[what],action)(watcher)
 
-    def watch(self_,fn,parameter_name,what=None, onlychanged=True):
+    def watch(self_,fn,parameter_name,what='value', onlychanged=True):
         watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
         self_._watch('append',watcher,parameter_name,what)
 
-    def unwatch(self_,fn,parameter_name,what=None):
+    def unwatch(self_,fn,parameter_name,what='value'):
         """
         Unwatch watchers set either with watch or watch_values.
         """
@@ -1248,7 +1245,7 @@ class Parameters(object):
         if not unwatched:
             self_.warning('No effect unwatching watcher that was not being watched')
 
-    def watch_values(self_,fn,parameter_name,what=None, onlychanged=True):
+    def watch_values(self_,fn,parameter_name,what='value', onlychanged=True):
         watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
         self_._watch('append',watcher,parameter_name,what)
 

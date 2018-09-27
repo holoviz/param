@@ -11,7 +11,7 @@ import random
 import numbers
 import operator
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
 from types import FunctionType
 from functools import partial, wraps, reduce
@@ -898,7 +898,6 @@ class Parameters(object):
         Batch call a set of watchers based on the parameter value
         settings in kwargs using the queued Change and watcher objects.
         """
-        from collections import OrderedDict
         change_dict = OrderedDict([(c.name,c) for c in self_.cls.param._changes])
         watcher_set = []
         for w in self_.cls.param._watchers:

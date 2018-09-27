@@ -1287,7 +1287,7 @@ class Parameters(object):
     def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged, parameter_names=parameter_names)
-        self_._watch('append',watcher,parameter_name,what)
+        self_._watch('append',watcher,parameter_names,what)
 
 
 

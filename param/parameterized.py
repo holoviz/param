@@ -1271,13 +1271,14 @@ class Parameters(object):
         try:
             self_._watch('remove',watcher)
         except:
-            self_.warning('No such watcher {watcher}to remove.'.format(watcher=watcher))
+            self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
 
     def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged, parameter_names=parameter_names)
         self_._watch('append', watcher, what)
+        return watcher
 
 
 

@@ -78,10 +78,10 @@ class TestWatch(API1TestCase):
             self.accumulator += change.new
 
         obj = self.SimpleWatchExample()
-        obj.param.watch(accumulator, 'a')
+        watcher = obj.param.watch(accumulator, 'a')
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
-        obj.param.unwatch(accumulator, 'a')
+        obj.param.unwatch(watcher)
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
 
@@ -91,10 +91,11 @@ class TestWatch(API1TestCase):
             self.accumulator += change.new
 
         obj = self.SimpleWatchExample()
-
-        obj.param.unwatch(accumulator, 'a')
+        watcher = obj.param.watch(accumulator, 'a')
+        obj.param.unwatch(watcher)
+        obj.param.unwatch(watcher)
         self.log_handler.assertEndsWith('WARNING',
-                            'No effect unwatching watcher that was not being watched')
+                            ' to remove.')
 
 
 
@@ -136,10 +137,10 @@ class TestWatchValues(API1TestCase):
             self.accumulator += a
 
         obj = self.SimpleWatchExample()
-        obj.param.watch_values(accumulator, 'a')
+        watcher = obj.param.watch_values(accumulator, 'a')
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
-        obj.param.unwatch(accumulator, 'a')
+        obj.param.unwatch(watcher)
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
 

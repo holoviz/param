@@ -1239,9 +1239,9 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,watcher,parameter_names,what='value'):
+    def _watch(self_,action,watcher,what='value', operation='add'): #'add' | 'remove'
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
-
+        parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             assert parameter_name in self_.cls.param.params()
 
@@ -1258,10 +1258,10 @@ class Parameters(object):
                     watchers[what] = []
                 getattr(watchers[what],action)(watcher)
 
-    def watch(self_,fn,parameter_names,what='value', onlychanged=True):
+    def watch(self_,fn,parameter_names, what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged, parameter_names=parameter_names)
-        self_._watch('append',watcher,parameter_names,what)
+        self_._watch('append', watcher, what)
 
     def unwatch(self_,fn,parameter_names,what='value'):
         """

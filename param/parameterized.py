@@ -1262,6 +1262,7 @@ class Parameters(object):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged, parameter_names=parameter_names)
         self_._watch('append', watcher, what)
+        return watcher
 
     def unwatch(self_,fn,parameter_names,what='value'):
         """

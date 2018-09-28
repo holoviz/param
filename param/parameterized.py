@@ -900,15 +900,16 @@ class Parameters(object):
         settings in kwargs using the queued Change and watcher objects.
         """
         change_dict = OrderedDict([(c.name,c) for c in self_.cls.param._changes])
-        for watcher in self_.cls.param._watchers:
+        watchers = self_.cls.param._watchers[:]
+        self_.cls.param._changes = []
+        self_.cls.param._watchers = []
+        for watcher in watchers:
             changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
             if watcher.mode == 'args':
                 watcher.fn(*changes)
             else:
                 watcher.fn(**{c.name:c.new for c in changes})
 
-        self_.cls.param._changes = []
-        self_.cls.param._watchers = []
         self_.cls.param._BATCH_WATCH = False
 
 

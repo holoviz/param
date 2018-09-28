@@ -886,7 +886,7 @@ class Parameters(object):
 
         if self_.cls.param._BATCH_WATCH:
             self_._changes.append(change)
-            if watcher not in self._watchers:
+            if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
         elif watcher.mode == 'args':
             watcher.fn(change)

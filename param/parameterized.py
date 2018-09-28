@@ -905,7 +905,7 @@ class Parameters(object):
             if watcher.mode == 'args':
                 watcher.fn(*changes)
             else:
-                watcher.fn(**{c.name:c for c in changes})
+                watcher.fn(**{c.name:c.new for c in changes})
 
         self_.cls.param._changes = []
         self_.cls.param._watchers = []

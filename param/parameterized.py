@@ -11,7 +11,7 @@ import random
 import numbers
 import operator
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
 from types import FunctionType
 from functools import partial, wraps, reduce
@@ -251,7 +251,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-Watcher = namedtuple("Watcher","fn mode onlychanged")
+Watcher = namedtuple("Watcher","fn mode onlychanged parameter_names")
 
 class ParameterMetaclass(type):
     """
@@ -439,7 +439,7 @@ class Parameter(object):
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
-    # (attribute name, internal name). Once the owning Parmaeterized
+    # (attribute name, internal name). Once the owning Parameterized
     # class is created, _owner, _attrib_name, and _internal name are
     # set.
 
@@ -786,7 +786,9 @@ class Parameters(object):
         """
         self_.cls = cls
         self_.self = self
-
+        self_._BATCH_WATCH = False  # If true, Change and watcher objects are queued.
+        self_._changes = []         # Queue of batched changed
+        self_._watchers = []         # Queue of batched watchers
 
     @property
     def self_or_cls(self_):
@@ -874,17 +876,43 @@ class Parameters(object):
         return not Comparator.is_equal(change.old, change.new)
 
 
-    @classmethod
-    def _call_watcher(cls, watcher, change):
+
+    def _call_watcher(self_, watcher, change):
         """
         Invoke the given the watcher appropriately given a Change object.
         """
-        if watcher.onlychanged and (not cls._changed(change)):
+        if watcher.onlychanged and (not self_._changed(change)):
             return
-        if watcher.mode == 'args':
+
+        if self_.cls.param._BATCH_WATCH:
+            self_._changes.append(change)
+            if watcher not in self_._watchers:
+                self_._watchers.append(watcher)
+        elif watcher.mode == 'args':
             watcher.fn(change)
         else:
             watcher.fn(**{change.name: change.new})
+
+
+    def _batch_call_watchers(self_):
+        """
+        Batch call a set of watchers based on the parameter value
+        settings in kwargs using the queued Change and watcher objects.
+        """
+        change_dict = OrderedDict([(c.name,c) for c in self_.cls.param._changes])
+        watchers = self_.cls.param._watchers[:]
+        self_.cls.param._changes = []
+        self_.cls.param._watchers = []
+        for watcher in watchers:
+            changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
+            if watcher.mode == 'args':
+                watcher.fn(*changes)
+            else:
+                watcher.fn(**{c.name:c.new for c in changes})
+
+        self_.cls.param._BATCH_WATCH = False
+
+
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
@@ -998,6 +1026,7 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
+        self_.cls.param._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
@@ -1010,6 +1039,10 @@ class Parameters(object):
             if k not in self_or_cls.param.params():
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
+
+
+        self_._batch_call_watchers()
+        self_.cls.param._BATCH_WATCH = False
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """
@@ -1203,54 +1236,46 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,watcher,parameter_name,what=None):
+    def _watch(self_,action,watcher,what='value', operation='add'): #'add' | 'remove'
         #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
+        parameter_names = watcher.parameter_names
+        for parameter_name in parameter_names:
+            assert parameter_name in self_.cls.param.params()
 
-        assert parameter_name in self_.cls.param.params()
+            if self_.self is not None and what=="value":
+                watchers = self_.self._param_watchers
+                if parameter_name not in watchers:
+                    watchers[parameter_name] = {}
+                if what not in watchers[parameter_name]:
+                    watchers[parameter_name][what] = []
+                getattr(watchers[parameter_name][what],action)(watcher)
+            else:
+                watchers = self_.cls.param.params(parameter_name).watchers
+                if what not in watchers:
+                    watchers[what] = []
+                getattr(watchers[what],action)(watcher)
 
-        if what is None:
-            what = "value"
+    def watch(self_,fn,parameter_names, what='value', onlychanged=True):
+        parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
+        watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged, parameter_names=parameter_names)
+        self_._watch('append', watcher, what)
+        return watcher
 
-        if self_.self is not None and what=="value":
-            watchers = self_.self._param_watchers
-            if parameter_name not in watchers:
-                watchers[parameter_name] = {}
-            if what not in watchers[parameter_name]:
-                watchers[parameter_name][what] = []
-            getattr(watchers[parameter_name][what],action)(watcher)
-        else:
-            watchers = self_.cls.param.params(parameter_name).watchers
-            if what not in watchers:
-                watchers[what] = []
-            getattr(watchers[what],action)(watcher)
-
-    def watch(self_,fn,parameter_name,what=None, onlychanged=True):
-        watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-        self_._watch('append',watcher,parameter_name,what)
-
-    def unwatch(self_,fn,parameter_name,what=None):
+    def unwatch(self_,watcher):
         """
         Unwatch watchers set either with watch or watch_values.
         """
-        unwatched = False
-        for onlychanged in [True, False]:
-            try:
-                watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_name,what)
-                unwatched = True
-            except: pass
-            try:
-                watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_name,what)
-                unwatched = True
-            except: pass
+        try:
+            self_._watch('remove',watcher)
+        except:
+            self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
-        if not unwatched:
-            self_.warning('No effect unwatching watcher that was not being watched')
 
-    def watch_values(self_,fn,parameter_name,what=None, onlychanged=True):
-        watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
-        self_._watch('append',watcher,parameter_name,what)
+    def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
+        parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
+        watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged, parameter_names=parameter_names)
+        self_._watch('append', watcher, what)
+        return watcher
 
 
 

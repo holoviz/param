@@ -886,7 +886,8 @@ class Parameters(object):
 
         if self_.cls.param._BATCH_WATCH:
             self_._changes.append(change)
-            self_._watchers.append(watcher)
+            if watcher not in self._watchers:
+                self_._watchers.append(watcher)
         elif watcher.mode == 'args':
             watcher.fn(change)
         else:
@@ -899,12 +900,7 @@ class Parameters(object):
         settings in kwargs using the queued Change and watcher objects.
         """
         change_dict = OrderedDict([(c.name,c) for c in self_.cls.param._changes])
-        watcher_set = []
-        for w in self_.cls.param._watchers:
-            if w not in watcher_set:
-                watcher_set.append(w)
-
-        for watcher in watcher_set:
+        for watcher in self_.cls.param._watchers:
             changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
             if watcher.mode == 'args':
                 watcher.fn(*changes)

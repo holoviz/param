@@ -1264,30 +1264,20 @@ class Parameters(object):
         self_._watch('append', watcher, what)
         return watcher
 
-    def unwatch(self_,fn,parameter_names,what='value'):
+    def unwatch(self_,watcher):
         """
         Unwatch watchers set either with watch or watch_values.
         """
-        unwatched = False
-        for onlychanged in [True, False]:
-            try:
-                watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_names,what)
-                unwatched = True
-            except: pass
-            try:
-                watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged)
-                self_._watch('remove',watcher,parameter_names,what)
-                unwatched = True
-            except: pass
+        try:
+            self_._watch('remove',watcher)
+        except:
+            self_.warning('No such watcher {watcher}to remove.'.format(watcher=watcher))
 
-        if not unwatched:
-            self_.warning('No effect unwatching watcher that was not being watched')
 
     def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged, parameter_names=parameter_names)
-        self_._watch('append',watcher,parameter_names,what)
+        self_._watch('append', watcher, what)
 
 
 

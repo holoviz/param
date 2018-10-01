@@ -1287,6 +1287,27 @@ class Array(ClassSelector):
         super(Array,self).__init__(ndarray, allow_None=True, **params)
 
 
+class DataFrame(ClassSelector):
+    """
+    Parameter whose value is a pandas DataFrame.
+    """
+
+    def __init__(self, **params):
+        from pandas import DataFrame as pdDFrame
+        super(DataFrame,self).__init__(pdDFrame, allow_None=True, **params)
+
+
+class Series(ClassSelector):
+    """
+    Parameter whose value is a pandas Series.
+    """
+
+    def __init__(self, **params):
+        from pandas import Series as pdSeries
+        super(Series,self).__init__(pdSeries, allow_None=True, **params)
+
+
+
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
 #   - use resolve_file_path() for paths to existing files to be read,

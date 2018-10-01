@@ -251,7 +251,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Change = namedtuple("Change","what name obj cls old new")
-Watcher = namedtuple("Watcher","fn mode onlychanged parameter_names")
+Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names")
 
 class ParameterMetaclass(type):
     """
@@ -1279,7 +1279,8 @@ class Parameters(object):
 
     def watch(self_,fn,parameter_names, what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
-        watcher = Watcher(fn=fn, mode='args', onlychanged=onlychanged, parameter_names=parameter_names)
+        watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
+                          onlychanged=onlychanged, parameter_names=parameter_names)
         self_._watch('append', watcher, what)
         return watcher
 
@@ -1295,7 +1296,9 @@ class Parameters(object):
 
     def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
-        watcher = Watcher(fn=fn, mode='kwargs', onlychanged=onlychanged, parameter_names=parameter_names)
+        watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
+                          mode='kwargs', onlychanged=onlychanged,
+                          parameter_names=parameter_names)
         self_._watch('append', watcher, what)
         return watcher
 

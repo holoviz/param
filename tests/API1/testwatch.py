@@ -321,6 +321,62 @@ class TestWatchValues(API1TestCase):
                 raise Exception('Invalid number of arguments')
 
 
+
+class TestTrigger(API1TestCase):
+
+    def setUp(self):
+        super(TestTrigger, self).setUp()
+        self.accumulator = 0
+
+    def test_simple_trigger_one_param(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, ['a'])
+        obj.param.trigger('a')
+        self.assertEqual(accumulator.call_count(), 1)
+
+        args = accumulator.args_for_call(0)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 0)
+
+    def test_simple_trigger_one_param_change(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, ['a'])
+        obj.a = 42
+        self.assertEqual(accumulator.call_count(), 1)
+
+        obj.param.trigger('a')
+        self.assertEqual(accumulator.call_count(), 2)
+
+        args = accumulator.args_for_call(0)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 42)
+
+        args = accumulator.args_for_call(1)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 42)
+        self.assertEqual(args[0].new, 42)
+
+    def test_simple_trigger_two_params(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, ['a','b'])
+        obj.param.trigger('a','b')
+        self.assertEqual(accumulator.call_count(), 1)
+
+        args = accumulator.args_for_call(0)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 0)
+
+        self.assertEqual(args[1].name, 'b')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 0)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()

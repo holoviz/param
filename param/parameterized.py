@@ -881,7 +881,9 @@ class Parameters(object):
         """
         Invoke the given the watcher appropriately given a Change object.
         """
-        if watcher.onlychanged and (not self_._changed(change)):
+        if self_.cls.param._TRIGGER:
+            pass
+        elif watcher.onlychanged and (not self_._changed(change)):
             return
 
         if self_.cls.param._BATCH_WATCH:
@@ -894,6 +896,23 @@ class Parameters(object):
             watcher.fn(**{change.name: change.new})
 
 
+    def trigger(self_, *param_names):
+        """
+        Trigger watchers for the given set of parameter names. Watchers
+        will be triggered whether or not the parameter values have
+        actually changed.
+        """
+        changes = self_.cls.param._changes
+        watchers = self_.cls.param._watchers
+        self_.cls.param._changes  = []
+        self_.cls.param._watchers = []
+        param_values = self_.get_param_values()
+        params = {name:value for name, value in param_values if name in param_names}
+        self_.cls.param._TRIGGER = True
+        self_.set_param(**params)
+        self_.cls.param._TRIGGER = False
+        self_.cls.param._changes = changes
+        self_.cls.param._changes = watchers
     def _batch_call_watchers(self_):
         """
         Batch call a set of watchers based on the parameter value

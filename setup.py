@@ -21,6 +21,7 @@ extras_require = {
     'tests': [
         'nose',
         'flake8',
+        'pandas'
     ]
 }
 

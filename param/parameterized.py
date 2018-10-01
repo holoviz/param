@@ -907,13 +907,15 @@ class Parameters(object):
         watchers = self_.cls.param._watchers
         self_.cls.param._changes  = []
         self_.cls.param._watchers = []
-        param_values = self_.get_param_values()
-        params = {name:value for name, value in param_values if name in param_names}
+        param_values = dict(self_.get_param_values())
+        params = {name: param_values[name] for name in param_names}
         self_.cls.param._TRIGGER = True
         self_.set_param(**params)
         self_.cls.param._TRIGGER = False
         self_.cls.param._changes = changes
         self_.cls.param._changes = watchers
+
+
     def _batch_call_watchers(self_):
         """
         Batch call a set of watchers based on the parameter value

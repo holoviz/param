@@ -355,7 +355,7 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 42)
 
-        args = accumulator.args_for_call(1g)
+        args = accumulator.args_for_call(1)
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 42)
         self.assertEqual(args[0].new, 42)

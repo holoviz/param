@@ -64,6 +64,9 @@ jobs:
       env: TOX_ENV=with_numpy
 
     - <<: *default
+      env: TOX_ENV=with_pandas
+
+    - <<: *default
       env: TOX_ENV=coverage
 
     - <<: *default

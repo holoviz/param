@@ -1309,9 +1309,9 @@ class DataFrame(ClassSelector):
         elif isinstance(self.columns, list):
             if len(val.columns) != len(self.columns):
                 raise Exception(length_error.format(found=len(val.columns), expected=len(self.columns)))
-            difference = set(val.columns) ^ set(self.columns)
+            difference = set(self.columns) - set(val.columns)
             if difference:
-                msg = 'Provided DataFrame columns {found} differ from expected columns {expected}'
+                msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise Exception(msg.format(found=list(val.columns), expected=self.columns))
         else:
             if len(val.columns) != self.columns:

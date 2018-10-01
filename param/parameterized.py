@@ -787,6 +787,7 @@ class Parameters(object):
         self_.cls = cls
         self_.self = self
         self_._BATCH_WATCH = False  # If true, Change and watcher objects are queued.
+        self_._TRIGGER = False
         self_._changes = []         # Queue of batched changed
         self_._watchers = []         # Queue of batched watchers
 

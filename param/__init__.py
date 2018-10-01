@@ -1291,20 +1291,66 @@ class DataFrame(ClassSelector):
     """
     Parameter whose value is a pandas DataFrame.
     """
+    __slots__ = ['rows','columns']
 
-    def __init__(self, **params):
+    def __init__(self, rows=None, columns=None,**params):
         from pandas import DataFrame as pdDFrame
+        self.rows = rows
+        self.columns = columns
         super(DataFrame,self).__init__(pdDFrame, allow_None=True, **params)
+        self._check_value(self.default)
+
+    def _check_value(self,val,obj=None):
+        super(DataFrame, self)._check_value(val, obj)
+        length_error = 'Provided DataFrame has {found} columns when {expected} were expected'
+
+        if self.columns == None:
+            pass
+        elif isinstance(self.columns, list):
+            if len(val.columns) != len(self.columns):
+                raise Exception(length_error.format(found=len(val.columns), expected=len(self.columns)))
+            difference = set(val.columns) ^ set(self.columns)
+            if difference:
+                msg = 'Provided DataFrame columns {found} differ from expected columns {expected}'
+                raise Exception(msg.format(found=list(val.columns), expected=self.columns))
+        else:
+            if len(val.columns) != self.columns:
+                raise Exception(length_error.format(found=len(val.columns), expected=self.columns))
+
+        if self.rows == None:
+            pass
+        elif len(val) != self.rows:
+            msg = 'Provided DataFrame has {found} rows which does not match the expected {expected} rows'
+            raise Exception(msg.format(found=len(val), expected=self.rows))
+
+    def __set__(self,obj,val):
+        self._check_value(val,obj)
+        super(DataFrame,self).__set__(obj,val)
 
 
 class Series(ClassSelector):
     """
     Parameter whose value is a pandas Series.
     """
+    __slots__ = ['rows']
 
-    def __init__(self, **params):
+    def __init__(self, rows=None, **params):
         from pandas import Series as pdSeries
+        self.rows = rows
         super(Series,self).__init__(pdSeries, allow_None=True, **params)
+        self._check_value(self.default)
+
+    def _check_value(self,val,obj=None):
+        super(Series, self)._check_value(val, obj)
+        if self.rows == None:
+            pass
+        elif len(val) != self.rows:
+            msg = 'Provided Series has {found} rows which does not match the expected {expected} rows'
+            raise Exception(msg.format(found=len(val), expected=self.rows))
+
+    def __set__(self,obj,val):
+        self._check_value(val,obj)
+        super(Series,self).__set__(obj,val)
 
 
 

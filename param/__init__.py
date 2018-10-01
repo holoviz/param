@@ -1304,7 +1304,7 @@ class DataFrame(ClassSelector):
         super(DataFrame, self)._check_value(val, obj)
         length_error = 'Provided DataFrame has {found} columns when {expected} were expected'
 
-        if self.columns == None:
+        if self.columns is None:
             pass
         elif isinstance(self.columns, list):
             if len(val.columns) != len(self.columns):
@@ -1317,7 +1317,7 @@ class DataFrame(ClassSelector):
             if len(val.columns) != self.columns:
                 raise Exception(length_error.format(found=len(val.columns), expected=self.columns))
 
-        if self.rows == None:
+        if self.rows is None:
             pass
         elif len(val) != self.rows:
             msg = 'Provided DataFrame has {found} rows which does not match the expected {expected} rows'
@@ -1342,7 +1342,7 @@ class Series(ClassSelector):
 
     def _check_value(self,val,obj=None):
         super(Series, self)._check_value(val, obj)
-        if self.rows == None:
+        if self.rows is None:
             pass
         elif len(val) != self.rows:
             msg = 'Provided Series has {found} rows which does not match the expected {expected} rows'

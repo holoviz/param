@@ -22,6 +22,12 @@ try:
 except ImportError:
     skip.append('Array')
 
+try:
+    import pandas
+except ImportError:
+    skip.append('DataFrame')
+    skip.append('Series')
+
 
 class TestDefaultsMetaclass(type):
     def __new__(mcs, name, bases, dict_):

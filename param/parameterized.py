@@ -747,7 +747,7 @@ class Comparator(object):
 
     @classmethod
     def compare_iterator(cls, obj1, obj2):
-        if (len(obj1) != len(obj2)) or type(obj1) != type(obj2):
+        if type(obj1) != type(obj2) or len(obj1) != len(obj2):
             return False
         for o1, o2 in zip(obj1, obj2):
             if not cls.is_equal(o1, o2):
@@ -756,7 +756,7 @@ class Comparator(object):
 
     @classmethod
     def compare_mapping(cls, obj1, obj2):
-        if len(obj1) != len(obj2): return False
+        if type(obj1) != type(obj2) or len(obj1) != len(obj2): return False
         for k in obj1:
             if k in obj2:
                 if not cls.is_equal(obj1[k], obj2[k]):

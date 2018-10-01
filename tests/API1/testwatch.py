@@ -61,6 +61,30 @@ class TestWatch(API1TestCase):
         self.assertEqual(self.accumulator, 3)
 
 
+    def test_triggered_when_changed_iterator_type(self):
+        def accumulator(change):
+            self.accumulator = change.new
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, 'a')
+        obj.a = []
+        self.assertEqual(self.accumulator, [])
+        obj.a = tuple()
+        self.assertEqual(self.accumulator, tuple())
+
+
+    def test_triggered_when_changed_mapping_type(self):
+        def accumulator(change):
+            self.accumulator = change.new
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, 'a')
+        obj.a = []
+        self.assertEqual(self.accumulator, [])
+        obj.a = {}
+        self.assertEqual(self.accumulator, {})
+
+
     def test_untriggered_when_unchanged(self):
         def accumulator(change):
             self.accumulator += change.new

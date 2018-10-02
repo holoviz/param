@@ -1373,14 +1373,17 @@ class Series(ClassSelector):
     __slots__ = ['rows']
 
     def _length_bounds_check(self, bounds, length, name):
-        message = 'Length of {name} outside declared bounds of {bounds}'
+        message = '{name} length {length} does not match declared bounds of {bounds}'
+        if not isinstance(bounds, tuple):
+            if (bounds != length):
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+            else:
+                return
         (lower, upper) = bounds
-        if lower is not None:
-            if length < lower:
-                raise ValueError(message.format(name=name, bounds=bounds))
-        if upper is not None:
-            if length > upper:
-                raise ValueError(message.format(name=name, bounds=bounds))
+        failure = ((lower is not None and (length < lower))
+                   or (upper is not None and length > upper))
+        if failure:
+            raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def __init__(self, rows=None, **params):
         from pandas import Series as pdSeries
@@ -1390,13 +1393,9 @@ class Series(ClassSelector):
 
     def _check_value(self,val,obj=None):
         super(Series, self)._check_value(val, obj)
-        if self.rows is None:
-            pass
-        elif isinstance(self.rows, tuple):
-            self._length_bounds_check(self.rows, len(val), 'rows')
-        elif len(val) != self.rows:
-            msg = 'Provided Series has {found} rows which does not match the expected {expected} rows'
-            raise ValueError(msg.format(found=len(val), expected=self.rows))
+
+        if self.rows is not None:
+            self._length_bounds_check(self.rows, len(val), 'Row')
 
     def __set__(self,obj,val):
         self._check_value(val,obj)

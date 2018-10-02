@@ -877,60 +877,6 @@ class Parameters(object):
         return not Comparator.is_equal(change.old, change.new)
 
 
-    def _call_watcher(self_, watcher, change):
-        """
-        Invoke the given the watcher appropriately given a Change object.
-        """
-        if self_.self_or_cls.param._TRIGGER:
-            pass
-        elif watcher.onlychanged and (not self_._changed(change)):
-            return
-
-        if self_.self_or_cls.param._BATCH_WATCH:
-            self_._changes.append(change)
-            if watcher not in self_._watchers:
-                self_._watchers.append(watcher)
-        elif watcher.mode == 'args':
-            watcher.fn(change)
-        else:
-            watcher.fn(**{change.name: change.new})
-
-
-    def trigger(self_, *param_names):
-        """
-        Trigger watchers for the given set of parameter names. Watchers
-        will be triggered whether or not the parameter values have
-        actually changed.
-        """
-        changes = self_.self_or_cls.param._changes
-        watchers = self_.self_or_cls.param._watchers
-        self_.self_or_cls.param._changes  = []
-        self_.self_or_cls.param._watchers = []
-        param_values = dict(self_.get_param_values())
-        params = {name: param_values[name] for name in param_names}
-        self_.self_or_cls.param._TRIGGER = True
-        self_.set_param(**params)
-        self_.self_or_cls.param._TRIGGER = False
-        self_.self_or_cls.param._changes = changes
-        self_.self_or_cls.param._watchers = watchers
-
-
-    def _batch_call_watchers(self_):
-        """
-        Batch call a set of watchers based on the parameter value
-        settings in kwargs using the queued Change and watcher objects.
-        """
-        change_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._changes])
-        watchers = self_.self_or_cls.param._watchers[:]
-        self_.self_or_cls.param._changes = []
-        self_.self_or_cls.param._watchers = []
-        for watcher in watchers:
-            changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
-            if watcher.mode == 'args':
-                watcher.fn(*changes)
-            else:
-                watcher.fn(**{c.name:c.new for c in changes})
-
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
@@ -1059,6 +1005,62 @@ class Parameters(object):
 
         self_._batch_call_watchers()
         self_.self_or_cls.param._BATCH_WATCH = False
+
+
+    def trigger(self_, *param_names):
+        """
+        Trigger watchers for the given set of parameter names. Watchers
+        will be triggered whether or not the parameter values have
+        actually changed.
+        """
+        changes = self_.self_or_cls.param._changes
+        watchers = self_.self_or_cls.param._watchers
+        self_.self_or_cls.param._changes  = []
+        self_.self_or_cls.param._watchers = []
+        param_values = dict(self_.get_param_values())
+        params = {name: param_values[name] for name in param_names}
+        self_.self_or_cls.param._TRIGGER = True
+        self_.set_param(**params)
+        self_.self_or_cls.param._TRIGGER = False
+        self_.self_or_cls.param._changes = changes
+        self_.self_or_cls.param._watchers = watchers
+
+
+    def _call_watcher(self_, watcher, change):
+        """
+        Invoke the given the watcher appropriately given a Change object.
+        """
+        if self_.self_or_cls.param._TRIGGER:
+            pass
+        elif watcher.onlychanged and (not self_._changed(change)):
+            return
+
+        if self_.self_or_cls.param._BATCH_WATCH:
+            self_._changes.append(change)
+            if watcher not in self_._watchers:
+                self_._watchers.append(watcher)
+        elif watcher.mode == 'args':
+            watcher.fn(change)
+        else:
+            watcher.fn(**{change.name: change.new})
+
+
+    def _batch_call_watchers(self_):
+        """
+        Batch call a set of watchers based on the parameter value
+        settings in kwargs using the queued Change and watcher objects.
+        """
+        change_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._changes])
+        watchers = self_.self_or_cls.param._watchers[:]
+        self_.self_or_cls.param._changes = []
+        self_.self_or_cls.param._watchers = []
+        for watcher in watchers:
+            changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
+            if watcher.mode == 'args':
+                watcher.fn(*changes)
+            else:
+                watcher.fn(**{c.name:c.new for c in changes})
+
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """

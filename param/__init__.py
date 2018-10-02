@@ -1291,14 +1291,13 @@ class DataFrame(ClassSelector):
     """
     Parameter whose value is a pandas DataFrame.
     """
-    __slots__ = ['rows','columns', 'ordered', 'num_cols']
+    __slots__ = ['rows','columns', 'ordered']
 
-    def __init__(self, rows=None, columns=None, num_cols=None, ordered=None, **params):
+    def __init__(self, rows=None, columns=None, ordered=None, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        self.num_cols = num_cols
         super(DataFrame,self).__init__(pdDFrame, allow_None=True, **params)
         self._check_value(self.default)
 
@@ -1315,7 +1314,6 @@ class DataFrame(ClassSelector):
 
     def _check_value(self,val,obj=None):
         super(DataFrame, self)._check_value(val, obj)
-        length_error = 'Provided DataFrame has {found} columns when {expected} were expected'
         if self.columns is None:
             pass
         elif (isinstance(self.columns, tuple) and len(self.columns)==2
@@ -1323,16 +1321,12 @@ class DataFrame(ClassSelector):
             self._length_bounds_check(self.columns, len(val.columns), 'columns')
         elif isinstance(self.columns, list):
             self.ordered = True if self.ordered is None else self.ordered
-            self.num_cols = len(self.columns) if self.ordered is None else self.num_cols
 
         if isinstance(self.columns, (list, set)):
             difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise Exception(msg.format(found=list(val.columns), expected=self.columns))
-
-        if self.num_cols is not None and len(val.columns) != self.num_cols:
-            raise Exception(length_error.format(found=len(val.columns), expected=self.columns))
 
         if self.ordered:
             filtered = [col for col in val.columns if col in self.columns]

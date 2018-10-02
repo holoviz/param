@@ -29,9 +29,9 @@ class TestDataFrame(API1TestCase):
             test.df = 3
 
     def test_dataframe_unordered_column_set_valid(self):
-        valid = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a'])
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
         class Test(param.Parameterized):
-            df = param.DataFrame(default=valid, columns={'a', 'b'})
+            df = param.DataFrame(default=valid_df, columns={'a', 'b'})
 
 
     def test_dataframe_unordered_column_set_invalid(self):
@@ -49,9 +49,9 @@ class TestDataFrame(API1TestCase):
             test.df = invalid_df
 
     def test_dataframe_ordered_column_list_valid(self):
-        valid = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
         class Test(param.Parameterized):
-            test = param.DataFrame(default=valid, columns=['b', 'a', 'c'])
+            test = param.DataFrame(default=valid_df, columns=['b', 'a', 'c'])
 
 
     def test_dataframe_ordered_column_list_invalid(self):
@@ -67,6 +67,40 @@ class TestDataFrame(API1TestCase):
         exception = "Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
         with self.assertRaisesRegexp(Exception, exception):
             test.df = invalid_df
+
+
+    def test_dataframe_unordered_column_number_valid_df(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=valid_df, columns=3)
+
+    def test_dataframe_unordered_column_number_invalid(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3]}, columns=['b', 'a'])
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=valid_df, columns=3)
+
+        test = Test()
+        self.assertEquals(test.param.params('df').ordered, None)
+
+        exception = "Column length 2 does not match declared bounds of 3"
+        with self.assertRaisesRegexp(Exception, exception):
+            test.df = invalid_df
+
+
+    def test_dataframe_unordered_column_tuple_valid(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=valid_df, columns=(None,3))
+
+    def test_dataframe_unordered_column_tuple_invalid(self):
+
+        invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+
+        exception = "Columns length 3 does not match declared bounds of \(None, 2\)"
+        with self.assertRaisesRegexp(Exception, exception):
+            class Test(param.Parameterized):
+                df = param.DataFrame(default=invalid_df, columns=(None,2))
 
 
 if __name__ == "__main__":

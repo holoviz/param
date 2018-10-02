@@ -103,6 +103,38 @@ class TestDataFrame(API1TestCase):
                 df = param.DataFrame(default=invalid_df, columns=(None,2))
 
 
+
+
+    def test_dataframe_row_number_valid_df(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=valid_df, rows=2)
+
+    def test_dataframe_row_number_invalid(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3]}, columns=['b', 'a'])
+        invalid_df = pandas.DataFrame({'a':[1,2,4], 'b':[2,3,4]}, columns=['b', 'a'])
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=valid_df, rows=2)
+
+        test = Test()
+        exception = "Row length 3 does not match declared bounds of 2"
+        with self.assertRaisesRegexp(ValueError, exception):
+            test.df = invalid_df
+
+    def test_dataframe_unordered_row_tuple_valid(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=valid_df, rows=(None,3))
+
+    def test_dataframe_unordered_row_tuple_invalid(self):
+
+        invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+
+        exception = "Row length 2 does not match declared bounds of \(5, 7\)"
+        with self.assertRaisesRegexp(ValueError, exception):
+            class Test(param.Parameterized):
+                df = param.DataFrame(default=invalid_df, rows=(5,7))
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()

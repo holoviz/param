@@ -1329,7 +1329,7 @@ class DataFrame(ClassSelector):
             difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
-                raise Exception(msg.format(found=list(val.columns), expected=self.columns))
+                raise Exception(msg.format(found=list(val.columns), expected=sorted(self.columns)))
 
         if self.ordered:
             if list(val.columns) != list(self.columns):

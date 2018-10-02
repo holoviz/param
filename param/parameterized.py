@@ -599,7 +599,7 @@ class Parameter(object):
 
         change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
         for s in watchers:
-            self._owner.param._call_watcher(s, change)
+            obj.param._call_watcher(s, change)
 
 
     def __delete__(self,obj):
@@ -877,17 +877,16 @@ class Parameters(object):
         return not Comparator.is_equal(change.old, change.new)
 
 
-
     def _call_watcher(self_, watcher, change):
         """
         Invoke the given the watcher appropriately given a Change object.
         """
-        if self_.cls.param._TRIGGER:
+        if self_.self_or_cls.param._TRIGGER:
             pass
         elif watcher.onlychanged and (not self_._changed(change)):
             return
 
-        if self_.cls.param._BATCH_WATCH:
+        if self_.self_or_cls.param._BATCH_WATCH:
             self_._changes.append(change)
             if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
@@ -903,17 +902,17 @@ class Parameters(object):
         will be triggered whether or not the parameter values have
         actually changed.
         """
-        changes = self_.cls.param._changes
-        watchers = self_.cls.param._watchers
-        self_.cls.param._changes  = []
-        self_.cls.param._watchers = []
+        changes = self_.self_or_cls.param._changes
+        watchers = self_.self_or_cls.param._watchers
+        self_.self_or_cls.param._changes  = []
+        self_.self_or_cls.param._watchers = []
         param_values = dict(self_.get_param_values())
         params = {name: param_values[name] for name in param_names}
-        self_.cls.param._TRIGGER = True
+        self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**params)
-        self_.cls.param._TRIGGER = False
-        self_.cls.param._changes = changes
-        self_.cls.param._changes = watchers
+        self_.self_or_cls.param._TRIGGER = False
+        self_.self_or_cls.param._changes = changes
+        self_.self_or_cls.param._watchers = watchers
 
 
     def _batch_call_watchers(self_):
@@ -921,20 +920,16 @@ class Parameters(object):
         Batch call a set of watchers based on the parameter value
         settings in kwargs using the queued Change and watcher objects.
         """
-        change_dict = OrderedDict([(c.name,c) for c in self_.cls.param._changes])
-        watchers = self_.cls.param._watchers[:]
-        self_.cls.param._changes = []
-        self_.cls.param._watchers = []
+        change_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._changes])
+        watchers = self_.self_or_cls.param._watchers[:]
+        self_.self_or_cls.param._changes = []
+        self_.self_or_cls.param._watchers = []
         for watcher in watchers:
             changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
             if watcher.mode == 'args':
                 watcher.fn(*changes)
             else:
                 watcher.fn(**{c.name:c.new for c in changes})
-
-        self_.cls.param._BATCH_WATCH = False
-
-
 
     # CEBALERT: this is a bit ugly
     def _instantiate_param(self_,param_obj,dict_=None,key=None):
@@ -1048,7 +1043,8 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
-        self_.cls.param._BATCH_WATCH = True
+        in_batched = self_.self_or_cls.param._BATCH_WATCH
+        self_.self_or_cls.param._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
             if len(args)==2 and not args[0] in kwargs and not kwargs:
@@ -1062,9 +1058,8 @@ class Parameters(object):
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
 
-
         self_._batch_call_watchers()
-        self_.cls.param._BATCH_WATCH = False
+        self_.self_or_cls.param._BATCH_WATCH = in_batched
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """

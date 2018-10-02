@@ -1323,13 +1323,14 @@ class DataFrame(ClassSelector):
         elif (isinstance(self.columns, tuple) and len(self.columns)==2
               and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
             self._length_bounds_check(self.columns, len(val.columns), 'columns')
-
-        if isinstance(self.columns, (list, set)):
+        elif isinstance(self.columns, (list, set)):
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
             difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise Exception(msg.format(found=list(val.columns), expected=sorted(self.columns)))
+        else:
+            self._length_bounds_check(self.columns, len(val.columns), 'Column')
 
         if self.ordered:
             if list(val.columns) != list(self.columns):
@@ -1339,7 +1340,7 @@ class DataFrame(ClassSelector):
         if self.rows is None:
             pass
         elif isinstance(self.rows, tuple):
-            self._length_bounds_check(self.rows, len(val), 'rows')
+            self._length_bounds_check(self.rows, len(val), 'Row')
         elif len(val) != self.rows:
             msg = 'Provided DataFrame has {found} rows which does not match the expected {expected} rows'
             raise Exception(msg.format(found=len(val), expected=self.rows))

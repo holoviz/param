@@ -1303,7 +1303,7 @@ class DataFrame(ClassSelector):
     or set of strings, the column names will be validated. If a set is
     used, the supplied DataFrame must contain the specified columns and
     if a list is given, the supplied DataFrame must contain exactly the
-    same columns and in the same order.
+    same columns and in the same order and no other columns.
     """
     __slots__ = ['rows','columns', 'ordered']
 

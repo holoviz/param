@@ -1303,14 +1303,19 @@ class DataFrame(ClassSelector):
 
 
     def _length_bounds_check(self, bounds, length, name):
-        message = 'Length of {name} outside declared bounds of {bounds}'
+        message = '{name} length {length} does not match declared bounds of {bounds}'
+        if not isinstance(bounds, tuple):
+            if (bounds != length):
+                raise Exception(message.format(name=name, length=length, bounds=bounds))
+            else:
+                return
         (lower, upper) = bounds
         if lower is not None:
             if length < lower:
-                raise Exception(message.format(name=name, bounds=bounds))
+                raise Exception(message.format(name=name, length=length, bounds=bounds))
         if upper is not None:
             if length > upper:
-                raise Exception(message.format(name=name, bounds=bounds))
+                raise Exception(message.format(name=name,length=length, bounds=bounds))
 
     def _check_value(self,val,obj=None):
         super(DataFrame, self)._check_value(val, obj)
@@ -1322,7 +1327,7 @@ class DataFrame(ClassSelector):
             pass
         elif (isinstance(self.columns, tuple) and len(self.columns)==2
               and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
-            self._length_bounds_check(self.columns, len(val.columns), 'columns')
+            self._length_bounds_check(self.columns, len(val.columns), 'Columns')
         elif isinstance(self.columns, (list, set)):
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
             difference = set(self.columns) - set([str(el) for el in val.columns])

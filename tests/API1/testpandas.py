@@ -43,6 +43,7 @@ class TestDataFrame(API1TestCase):
 
 
         test = Test()
+        self.assertEquals(test.param.params('df').ordered, False)
         exception = "Provided DataFrame columns \['b', 'a', 'c'\] does not contain required columns \['a', 'd'\]"
         with self.assertRaisesRegexp(Exception, exception):
             test.df = invalid_df
@@ -60,8 +61,9 @@ class TestDataFrame(API1TestCase):
         class Test(param.Parameterized):
             df = param.DataFrame(default=valid_df, columns=['b', 'a', 'd'])
 
-
         test = Test()
+        self.assertEquals(test.param.params('df').ordered, True)
+
         exception = "Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
         with self.assertRaisesRegexp(Exception, exception):
             test.df = invalid_df

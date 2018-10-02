@@ -1290,6 +1290,20 @@ class Array(ClassSelector):
 class DataFrame(ClassSelector):
     """
     Parameter whose value is a pandas DataFrame.
+
+    The structure of the DataFrame can be constrained by the rows and
+    columns arguments:
+
+    rows: If specified, may be a number or an integer bounds tuple to
+    constrain the allowable number of rows.
+
+    columns: If specified, may be a number, an integer bounds tuple, a
+    list or a set. If the argument is numeric, constrains the number of
+    columns using the same semantics as used for rows. If either a list
+    or set of strings, the column names will be validated. If a set is
+    used, the supplied DataFrame must contain the specified columns and
+    if a list is given, the supplied DataFrame must contain exactly the
+    same columns and in the same order.
     """
     __slots__ = ['rows','columns', 'ordered']
 
@@ -1358,6 +1372,10 @@ class DataFrame(ClassSelector):
 class Series(ClassSelector):
     """
     Parameter whose value is a pandas Series.
+
+    The structure of the Series can be constrained by the rows argument
+    which may be a number or an integer bounds tuple to constrain the
+    allowable number of rows.
     """
     __slots__ = ['rows']
 

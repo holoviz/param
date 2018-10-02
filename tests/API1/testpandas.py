@@ -45,7 +45,7 @@ class TestDataFrame(API1TestCase):
         test = Test()
         self.assertEquals(test.param.params('df').ordered, False)
         exception = "Provided DataFrame columns \['b', 'a', 'c'\] does not contain required columns \['a', 'd'\]"
-        with self.assertRaisesRegexp(Exception, exception):
+        with self.assertRaisesRegexp(ValueError, exception):
             test.df = invalid_df
 
     def test_dataframe_ordered_column_list_valid(self):
@@ -65,7 +65,7 @@ class TestDataFrame(API1TestCase):
         self.assertEquals(test.param.params('df').ordered, True)
 
         exception = "Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
-        with self.assertRaisesRegexp(Exception, exception):
+        with self.assertRaisesRegexp(ValueError, exception):
             test.df = invalid_df
 
 
@@ -84,7 +84,7 @@ class TestDataFrame(API1TestCase):
         self.assertEquals(test.param.params('df').ordered, None)
 
         exception = "Column length 2 does not match declared bounds of 3"
-        with self.assertRaisesRegexp(Exception, exception):
+        with self.assertRaisesRegexp(ValueError, exception):
             test.df = invalid_df
 
 
@@ -98,7 +98,7 @@ class TestDataFrame(API1TestCase):
         invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
 
         exception = "Columns length 3 does not match declared bounds of \(None, 2\)"
-        with self.assertRaisesRegexp(Exception, exception):
+        with self.assertRaisesRegexp(ValueError, exception):
             class Test(param.Parameterized):
                 df = param.DataFrame(default=invalid_df, columns=(None,2))
 

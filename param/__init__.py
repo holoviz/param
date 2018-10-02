@@ -1320,22 +1320,22 @@ class DataFrame(ClassSelector):
         message = '{name} length {length} does not match declared bounds of {bounds}'
         if not isinstance(bounds, tuple):
             if (bounds != length):
-                raise Exception(message.format(name=name, length=length, bounds=bounds))
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
             else:
                 return
         (lower, upper) = bounds
         if lower is not None:
             if length < lower:
-                raise Exception(message.format(name=name, length=length, bounds=bounds))
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
         if upper is not None:
             if length > upper:
-                raise Exception(message.format(name=name,length=length, bounds=bounds))
+                raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def _check_value(self,val,obj=None):
         super(DataFrame, self)._check_value(val, obj)
 
         if isinstance(self.columns, set) and self.ordered is True:
-            raise Exception('Columns cannot be ordered when specified as a set')
+            raise ValueError('Columns cannot be ordered when specified as a set')
 
         if self.columns is None:
             pass
@@ -1347,14 +1347,14 @@ class DataFrame(ClassSelector):
             difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
-                raise Exception(msg.format(found=list(val.columns), expected=sorted(self.columns)))
+                raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
         else:
             self._length_bounds_check(self.columns, len(val.columns), 'Column')
 
         if self.ordered:
             if list(val.columns) != list(self.columns):
                 msg = 'Provided DataFrame columns {found} must exactly match {expected}'
-                raise Exception(msg.format(found=list(val.columns), expected=self.columns))
+                raise ValueError(msg.format(found=list(val.columns), expected=self.columns))
 
         if self.rows is None:
             pass
@@ -1362,7 +1362,7 @@ class DataFrame(ClassSelector):
             self._length_bounds_check(self.rows, len(val), 'Row')
         elif len(val) != self.rows:
             msg = 'Provided DataFrame has {found} rows which does not match the expected {expected} rows'
-            raise Exception(msg.format(found=len(val), expected=self.rows))
+            raise ValueError(msg.format(found=len(val), expected=self.rows))
 
     def __set__(self,obj,val):
         self._check_value(val,obj)
@@ -1384,10 +1384,10 @@ class Series(ClassSelector):
         (lower, upper) = bounds
         if lower is not None:
             if length < lower:
-                raise Exception(message.format(name=name, bounds=bounds))
+                raise ValueError(message.format(name=name, bounds=bounds))
         if upper is not None:
             if length > upper:
-                raise Exception(message.format(name=name, bounds=bounds))
+                raise ValueError(message.format(name=name, bounds=bounds))
 
     def __init__(self, rows=None, **params):
         from pandas import Series as pdSeries
@@ -1403,7 +1403,7 @@ class Series(ClassSelector):
             self._length_bounds_check(self.rows, len(val), 'rows')
         elif len(val) != self.rows:
             msg = 'Provided Series has {found} rows which does not match the expected {expected} rows'
-            raise Exception(msg.format(found=len(val), expected=self.rows))
+            raise ValueError(msg.format(found=len(val), expected=self.rows))
 
     def __set__(self,obj,val):
         self._check_value(val,obj)

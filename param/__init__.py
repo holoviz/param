@@ -1329,8 +1329,7 @@ class DataFrame(ClassSelector):
                 raise Exception(msg.format(found=list(val.columns), expected=self.columns))
 
         if self.ordered:
-            filtered = [col for col in val.columns if col in self.columns]
-            if filtered != self.columns:
+            if val.columns != self.columns:
                 msg = 'Provided DataFrame columns {found} must exactly match {expected}'
                 raise Exception(msg.format(found=list(val.columns), expected=self.columns))
 

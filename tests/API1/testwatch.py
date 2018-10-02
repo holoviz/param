@@ -34,6 +34,10 @@ class SimpleWatchExample(param.Parameterized):
     c = param.Parameter(default=0)
 
 
+class SimpleWatchSubclass(SimpleWatchExample):
+    pass
+
+
 
 class TestWatch(API1TestCase):
 
@@ -221,6 +225,29 @@ class TestWatch(API1TestCase):
                 self.assertEqual(args[1].new, 42)
             else:
                 raise Exception('Invalid number of arguments')
+
+
+    def test_subclass_batched_watch(self):
+
+        accumulator = Accumulator()
+
+        obj = SimpleWatchSubclass()
+
+        obj.param.watch(accumulator, ['b','c'])
+        obj.param.set_param(b=23, c=42)
+
+        self.assertEqual(accumulator.call_count(), 1)
+        args = accumulator.args_for_call(0)
+        self.assertEqual(len(args), 2)
+
+        self.assertEqual(args[0].name, 'b')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 23)
+
+        self.assertEqual(args[1].name, 'c')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 42)
+
 
 
 

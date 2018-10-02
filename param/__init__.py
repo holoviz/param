@@ -1314,15 +1314,18 @@ class DataFrame(ClassSelector):
 
     def _check_value(self,val,obj=None):
         super(DataFrame, self)._check_value(val, obj)
+
+        if isinstance(self.columns, set) and self.ordered is True:
+            raise Exception('Columns cannot be ordered when specified as a set')
+
         if self.columns is None:
             pass
         elif (isinstance(self.columns, tuple) and len(self.columns)==2
               and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
             self._length_bounds_check(self.columns, len(val.columns), 'columns')
-        elif isinstance(self.columns, list):
-            self.ordered = True if self.ordered is None else self.ordered
 
         if isinstance(self.columns, (list, set)):
+            self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
             difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'

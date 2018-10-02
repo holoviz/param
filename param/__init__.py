@@ -1287,6 +1287,122 @@ class Array(ClassSelector):
         super(Array,self).__init__(ndarray, allow_None=True, **params)
 
 
+class DataFrame(ClassSelector):
+    """
+    Parameter whose value is a pandas DataFrame.
+
+    The structure of the DataFrame can be constrained by the rows and
+    columns arguments:
+
+    rows: If specified, may be a number or an integer bounds tuple to
+    constrain the allowable number of rows.
+
+    columns: If specified, may be a number, an integer bounds tuple, a
+    list or a set. If the argument is numeric, constrains the number of
+    columns using the same semantics as used for rows. If either a list
+    or set of strings, the column names will be validated. If a set is
+    used, the supplied DataFrame must contain the specified columns and
+    if a list is given, the supplied DataFrame must contain exactly the
+    same columns and in the same order and no other columns.
+    """
+    __slots__ = ['rows','columns', 'ordered']
+
+    def __init__(self, rows=None, columns=None, ordered=None, **params):
+        from pandas import DataFrame as pdDFrame
+        self.rows = rows
+        self.columns = columns
+        self.ordered = ordered
+        super(DataFrame,self).__init__(pdDFrame, allow_None=True, **params)
+        self._check_value(self.default)
+
+
+    def _length_bounds_check(self, bounds, length, name):
+        message = '{name} length {length} does not match declared bounds of {bounds}'
+        if not isinstance(bounds, tuple):
+            if (bounds != length):
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+            else:
+                return
+        (lower, upper) = bounds
+        failure = ((lower is not None and (length < lower))
+                   or (upper is not None and length > upper))
+        if failure:
+            raise ValueError(message.format(name=name,length=length, bounds=bounds))
+
+    def _check_value(self,val,obj=None):
+        super(DataFrame, self)._check_value(val, obj)
+
+        if isinstance(self.columns, set) and self.ordered is True:
+            raise ValueError('Columns cannot be ordered when specified as a set')
+
+        if self.columns is None:
+            pass
+        elif (isinstance(self.columns, tuple) and len(self.columns)==2
+              and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
+            self._length_bounds_check(self.columns, len(val.columns), 'Columns')
+        elif isinstance(self.columns, (list, set)):
+            self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
+            difference = set(self.columns) - set([str(el) for el in val.columns])
+            if difference:
+                msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
+                raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
+        else:
+            self._length_bounds_check(self.columns, len(val.columns), 'Column')
+
+        if self.ordered:
+            if list(val.columns) != list(self.columns):
+                msg = 'Provided DataFrame columns {found} must exactly match {expected}'
+                raise ValueError(msg.format(found=list(val.columns), expected=self.columns))
+
+        if self.rows is not None:
+            self._length_bounds_check(self.rows, len(val), 'Row')
+
+    def __set__(self,obj,val):
+        self._check_value(val,obj)
+        super(DataFrame,self).__set__(obj,val)
+
+
+class Series(ClassSelector):
+    """
+    Parameter whose value is a pandas Series.
+
+    The structure of the Series can be constrained by the rows argument
+    which may be a number or an integer bounds tuple to constrain the
+    allowable number of rows.
+    """
+    __slots__ = ['rows']
+
+    def _length_bounds_check(self, bounds, length, name):
+        message = '{name} length {length} does not match declared bounds of {bounds}'
+        if not isinstance(bounds, tuple):
+            if (bounds != length):
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+            else:
+                return
+        (lower, upper) = bounds
+        failure = ((lower is not None and (length < lower))
+                   or (upper is not None and length > upper))
+        if failure:
+            raise ValueError(message.format(name=name,length=length, bounds=bounds))
+
+    def __init__(self, rows=None, **params):
+        from pandas import Series as pdSeries
+        self.rows = rows
+        super(Series,self).__init__(pdSeries, allow_None=True, **params)
+        self._check_value(self.default)
+
+    def _check_value(self,val,obj=None):
+        super(Series, self)._check_value(val, obj)
+
+        if self.rows is not None:
+            self._length_bounds_check(self.rows, len(val), 'Row')
+
+    def __set__(self,obj,val):
+        self._check_value(val,obj)
+        super(Series,self).__set__(obj,val)
+
+
+
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
 #   - use resolve_file_path() for paths to existing files to be read,

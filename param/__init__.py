@@ -1324,12 +1324,10 @@ class DataFrame(ClassSelector):
             else:
                 return
         (lower, upper) = bounds
-        if lower is not None:
-            if length < lower:
-                raise ValueError(message.format(name=name, length=length, bounds=bounds))
-        if upper is not None:
-            if length > upper:
-                raise ValueError(message.format(name=name,length=length, bounds=bounds))
+        failure = ((lower is not None and (length < lower))
+                   or (upper is not None and length > upper))
+        if failure:
+            raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def _check_value(self,val,obj=None):
         super(DataFrame, self)._check_value(val, obj)

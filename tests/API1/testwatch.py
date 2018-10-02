@@ -32,6 +32,7 @@ class SimpleWatchExample(param.Parameterized):
     a = param.Parameter(default=0)
     b = param.Parameter(default=0)
     c = param.Parameter(default=0)
+    d = param.Parameter(default=0)
 
 
 class SimpleWatchSubclass(SimpleWatchExample):
@@ -247,6 +248,43 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].name, 'c')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 42)
+
+
+    def test_nested_batched_watch(self):
+
+        accumulator = Accumulator()
+
+        obj = SimpleWatchExample()
+
+        def set_param(*changes):
+            obj.param.set_param(a=10, d=12)
+
+        obj.param.watch(accumulator, ['a', 'b','c', 'd'])
+        obj.param.watch(set_param, ['b', 'c'])
+        obj.param.set_param(b=23, c=42)
+
+        self.assertEqual(accumulator.call_count(), 2)
+        args = accumulator.args_for_call(0)
+        self.assertEqual(len(args), 2)
+
+        self.assertEqual(args[0].name, 'b')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 23)
+
+        self.assertEqual(args[1].name, 'c')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 42)
+
+        args = accumulator.args_for_call(1)
+        self.assertEqual(len(args), 2)
+
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 10)
+
+        self.assertEqual(args[1].name, 'd')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 12)
 
 
 

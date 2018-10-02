@@ -1043,7 +1043,6 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
-        in_batched = self_.self_or_cls.param._BATCH_WATCH
         self_.self_or_cls.param._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
@@ -1059,7 +1058,7 @@ class Parameters(object):
             setattr(self_or_cls,k,v)
 
         self_._batch_call_watchers()
-        self_.self_or_cls.param._BATCH_WATCH = in_batched
+        self_.self_or_cls.param._BATCH_WATCH = False
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """

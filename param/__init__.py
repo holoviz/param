@@ -1354,13 +1354,8 @@ class DataFrame(ClassSelector):
                 msg = 'Provided DataFrame columns {found} must exactly match {expected}'
                 raise ValueError(msg.format(found=list(val.columns), expected=self.columns))
 
-        if self.rows is None:
-            pass
-        elif isinstance(self.rows, tuple):
+        if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'Row')
-        elif len(val) != self.rows:
-            msg = 'Provided DataFrame has {found} rows which does not match the expected {expected} rows'
-            raise ValueError(msg.format(found=len(val), expected=self.rows))
 
     def __set__(self,obj,val):
         self._check_value(val,obj)

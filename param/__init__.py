@@ -1291,34 +1291,50 @@ class DataFrame(ClassSelector):
     """
     Parameter whose value is a pandas DataFrame.
     """
-    __slots__ = ['rows','columns']
+    __slots__ = ['rows','columns', 'ordered', 'num_cols']
 
-    def __init__(self, rows=None, columns=None,**params):
+    def __init__(self, rows=None, columns=None, num_cols=None, ordered=None, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
+        self.ordered = True
+        self.num_cols = num_cols
         super(DataFrame,self).__init__(pdDFrame, allow_None=True, **params)
         self._check_value(self.default)
 
+
+    def _length_bounds_check(self, bounds, length, name):
+        message = 'Length of {name} outside declared bounds of {bounds}'
+        (lower, upper) = bounds
+        if lower is not None:
+            if length < lower:
+                raise Exception(message.format(name=name, bounds=bounds))
+        if upper is not None:
+            if length > upper:
+                raise Exception(message.format(name=name, bounds=bounds))
+
     def _check_value(self,val,obj=None):
         super(DataFrame, self)._check_value(val, obj)
-        length_error = 'Provided DataFrame has {found} columns when {expected} were expected'
 
         if self.columns is None:
             pass
-        elif isinstance(self.columns, list):
-            if len(val.columns) != len(self.columns):
-                raise Exception(length_error.format(found=len(val.columns), expected=len(self.columns)))
-            difference = set(self.columns) - set(val.columns)
+        elif (isinstance(self.columns, tuple) and len(self.columns)==2
+              and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)):
+            self._length_bounds_check(self.columns, len(val.columns), 'columns')
+        elif isinstance(self.columns, (list, set)):
+            self.ordered = isinstance(self.columns, list)
+            difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise Exception(msg.format(found=list(val.columns), expected=self.columns))
-        else:
-            if len(val.columns) != self.columns:
-                raise Exception(length_error.format(found=len(val.columns), expected=self.columns))
+
+        if self.num_cols is not None and len(val.columns) != self.num_cols:
+            raise Exception(length_error.format(found=len(val.columns), expected=self.columns))
 
         if self.rows is None:
             pass
+        elif isinstance(self.rows, tuple):
+            self._length_bounds_check(self.rows, len(val), 'rows')
         elif len(val) != self.rows:
             msg = 'Provided DataFrame has {found} rows which does not match the expected {expected} rows'
             raise Exception(msg.format(found=len(val), expected=self.rows))
@@ -1334,6 +1350,16 @@ class Series(ClassSelector):
     """
     __slots__ = ['rows']
 
+    def _length_bounds_check(self, bounds, length, name):
+        message = 'Length of {name} outside declared bounds of {bounds}'
+        (lower, upper) = bounds
+        if lower is not None:
+            if length < lower:
+                raise Exception(message.format(name=name, bounds=bounds))
+        if upper is not None:
+            if length > upper:
+                raise Exception(message.format(name=name, bounds=bounds))
+
     def __init__(self, rows=None, **params):
         from pandas import Series as pdSeries
         self.rows = rows
@@ -1344,6 +1370,8 @@ class Series(ClassSelector):
         super(Series, self)._check_value(val, obj)
         if self.rows is None:
             pass
+        elif isinstance(self.rows, tuple):
+            self._length_bounds_check(self.rows, len(val), 'rows')
         elif len(val) != self.rows:
             msg = 'Provided Series has {found} rows which does not match the expected {expected} rows'
             raise Exception(msg.format(found=len(val), expected=self.rows))

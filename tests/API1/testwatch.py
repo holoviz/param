@@ -202,7 +202,7 @@ class TestWatch(API1TestCase):
 
         accumulator = Accumulator()
 
-        obj = SimpleWatchExample
+        obj = SimpleWatchSubclass
         watcher = obj.param.watch(accumulator, ['a','b'])
         obj.param.set_param(a=23, b=42)
 

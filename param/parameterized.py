@@ -1547,7 +1547,9 @@ class ParameterizedMetaclass(type):
 
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
-                type.__setattr__(mcs,attribute_name,copy.copy(parameter))
+                parameter = copy.copy(parameter)
+                parameter._owner = mcs
+                type.__setattr__(mcs,attribute_name,parameter)
             mcs.__dict__[attribute_name].__set__(None,value)
 
         else:

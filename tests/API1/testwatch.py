@@ -198,6 +198,30 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].new, 42)
 
 
+    def test_simple_class_batched_watch(self):
+
+        accumulator = Accumulator()
+
+        obj = SimpleWatchSubclass
+        watcher = obj.param.watch(accumulator, ['a','b'])
+        obj.param.set_param(a=23, b=42)
+
+        self.assertEqual(accumulator.call_count(), 1)
+        args = accumulator.args_for_call(0)
+        self.assertEqual(len(args), 2)
+
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 23)
+
+        self.assertEqual(args[1].name, 'b')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 42)
+
+        SimpleWatchExample.param.unwatch(watcher)
+        obj.param.set_param(a=0, b=0)
+
+
     def test_simple_batched_watch_callback_reuse(self):
 
         accumulator = Accumulator()

@@ -598,6 +598,7 @@ class Parameter(object):
             watchers = getattr(obj,"_param_watchers",{}).get(self._attrib_name,{}).get('value',self.watchers.get("value",[]))
 
         change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
+        obj = self._owner if obj is None else obj
         for s in watchers:
             obj.param._call_watcher(s, change)
 
@@ -1546,7 +1547,9 @@ class ParameterizedMetaclass(type):
 
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
-                type.__setattr__(mcs,attribute_name,copy.copy(parameter))
+                parameter = copy.copy(parameter)
+                parameter._owner = mcs
+                type.__setattr__(mcs,attribute_name,parameter)
             mcs.__dict__[attribute_name].__set__(None,value)
 
         else:

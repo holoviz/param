@@ -166,6 +166,7 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 2)
+        self.assertEqual(args[0].type, 'changed')
 
         obj.b = 3
         self.assertEqual(accumulator.call_count(), 2)
@@ -175,6 +176,7 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'b')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 3)
+        self.assertEqual(args[0].type, 'changed')
 
 
     def test_simple_batched_watch(self):
@@ -192,10 +194,12 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 23)
+        self.assertEqual(args[0].type, 'changed')
 
         self.assertEqual(args[1].name, 'b')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 42)
+        self.assertEqual(args[1].type, 'changed')
 
 
     def test_simple_class_batched_watch(self):
@@ -213,10 +217,12 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 23)
+        self.assertEqual(args[0].type, 'changed')
 
         self.assertEqual(args[1].name, 'b')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 42)
+        self.assertEqual(args[1].type, 'changed')
 
         SimpleWatchExample.param.unwatch(watcher)
         obj.param.set_param(a=0, b=0)
@@ -239,15 +245,18 @@ class TestWatch(API1TestCase):
                 self.assertEqual(args[0].name, 'c')
                 self.assertEqual(args[0].old, 0)
                 self.assertEqual(args[0].new, 99)
+                self.assertEqual(args[0].type, 'changed')
 
             elif len(args) == 2: # ['a', 'b']
                 self.assertEqual(args[0].name, 'a')
                 self.assertEqual(args[0].old, 0)
                 self.assertEqual(args[0].new, 23)
+                self.assertEqual(args[0].type, 'changed')
 
                 self.assertEqual(args[1].name, 'b')
                 self.assertEqual(args[1].old, 0)
                 self.assertEqual(args[1].new, 42)
+                self.assertEqual(args[0].type, 'changed')
             else:
                 raise Exception('Invalid number of arguments')
 
@@ -268,10 +277,12 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'b')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 23)
+        self.assertEqual(args[0].type, 'changed')
 
         self.assertEqual(args[1].name, 'c')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 42)
+        self.assertEqual(args[1].type, 'changed')
 
 
     def test_nested_batched_watch(self):
@@ -294,10 +305,12 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'b')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 23)
+        self.assertEqual(args[0].type, 'changed')
 
         self.assertEqual(args[1].name, 'c')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 42)
+        self.assertEqual(args[1].type, 'changed')
 
         args = accumulator.args_for_call(1)
         self.assertEqual(len(args), 2)
@@ -305,10 +318,12 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 10)
+        self.assertEqual(args[0].type, 'changed')
 
         self.assertEqual(args[1].name, 'd')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 12)
+        self.assertEqual(args[1].type, 'changed')
 
 
 
@@ -428,6 +443,7 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 0)
+        self.assertEqual(args[0].type, 'triggered')
 
     def test_simple_trigger_one_param_change(self):
         accumulator = Accumulator()
@@ -443,11 +459,13 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 42)
+        self.assertEqual(args[0].type, 'changed')
 
         args = accumulator.args_for_call(1)
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 42)
         self.assertEqual(args[0].new, 42)
+        self.assertEqual(args[0].type, 'triggered')
 
     def test_simple_trigger_two_params(self):
         accumulator = Accumulator()
@@ -460,10 +478,12 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[0].name, 'a')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 0)
+        self.assertEqual(args[0].type, 'triggered')
 
         self.assertEqual(args[1].name, 'b')
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
+        self.assertEqual(args[1].type, 'triggered')
 
 
 if __name__ == "__main__":

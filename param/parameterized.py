@@ -1028,6 +1028,9 @@ class Parameters(object):
 
 
     def _update_event_type(self_, watcher, event, triggered):
+        """
+        Returns an updated Event object with the type field set appropriately.
+        """
         if triggered:
             event_type = 'triggered'
         else:

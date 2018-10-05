@@ -250,7 +250,7 @@ def _m_caller(self,n):
 
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
-Event = namedtuple("Event","what name obj cls old new")
+Event = namedtuple("Event","what name obj cls old new type")
 Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names")
 
 class ParameterMetaclass(type):
@@ -514,7 +514,7 @@ class Parameter(object):
         super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
-            event = Event(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
+            event = Event(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value, type=None)
             for watcher in self.watchers[attribute]:
                 self._owner.param._call_watcher(watcher, event)
 
@@ -597,7 +597,7 @@ class Parameter(object):
         else:
             watchers = getattr(obj,"_param_watchers",{}).get(self._attrib_name,{}).get('value',self.watchers.get("value",[]))
 
-        event = Event(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
+        event = Event(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val, type=None)
         obj = self._owner if obj is None else obj
         for s in watchers:
             obj.param._call_watcher(s, event)
@@ -1027,6 +1027,14 @@ class Parameters(object):
         self_.self_or_cls.param._watchers = watchers
 
 
+    def _update_event_type(self_, watcher, event, triggered):
+        if triggered:
+            event_type = 'triggered'
+        else:
+            event_type = 'changed' if watcher.onlychanged else 'set'
+        return Event(what=event.what,name=event.name,obj=event.obj,cls=event.cls,
+                     old=event.old, new=event.new, type=event_type)
+
     def _call_watcher(self_, watcher, event):
         """
         Invoke the given the watcher appropriately given a Event object.
@@ -1041,8 +1049,9 @@ class Parameters(object):
             if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
         elif watcher.mode == 'args':
-            watcher.fn(event)
+            watcher.fn(self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER))
         else:
+            event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
             watcher.fn(**{event.name: event.new})
 
 
@@ -1055,8 +1064,10 @@ class Parameters(object):
         watchers = self_.self_or_cls.param._watchers[:]
         self_.self_or_cls.param._events = []
         self_.self_or_cls.param._watchers = []
+
         for watcher in watchers:
-            events = [event_dict[name] for name in watcher.parameter_names if name in event_dict]
+            events = [self_._update_event_type(watcher, event_dict[name], self_.self_or_cls.param._TRIGGER)
+                      for name in watcher.parameter_names if name in event_dict]
             if watcher.mode == 'args':
                 watcher.fn(*events)
             else:

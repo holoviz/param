@@ -116,15 +116,27 @@ class TestWatch(API1TestCase):
 
 
     def test_triggered_when_unchanged_if_not_onlychanged(self):
-        def accumulator(change):
-            self.accumulator += change.new
-
+        accumulator = Accumulator()
         obj = SimpleWatchExample()
         obj.param.watch(accumulator, 'a', onlychanged=False)
         obj.a = 1
-        self.assertEqual(self.accumulator, 1)
+
+        self.assertEqual(accumulator.call_count(), 1)
+        args = accumulator.args_for_call(0)
+        self.assertEqual(len(args), 1)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 1)
+        self.assertEqual(args[0].type, 'set')
+
         obj.a = 1
-        self.assertEqual(self.accumulator, 2)
+        args = accumulator.args_for_call(1)
+        self.assertEqual(len(args), 1)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 1)
+        self.assertEqual(args[0].new, 1)
+        self.assertEqual(args[0].type, 'set')
+
 
 
     def test_untriggered_when_unwatched(self):
@@ -333,7 +345,6 @@ class TestWatch(API1TestCase):
 
         obj.param.watch(accumulator, ['b','c'], onlychanged=False)
         obj.param.set_param(b=0, c=0)
-
 
         self.assertEqual(accumulator.call_count(), 1)
 

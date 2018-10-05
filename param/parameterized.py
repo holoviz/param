@@ -245,12 +245,12 @@ def _params_depended_on(minfo):
 
 
 def _m_caller(self,n):
-    return lambda change: getattr(self,n)()
+    return lambda event: getattr(self,n)()
 
 
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
-Change = namedtuple("Change","what name obj cls old new")
+Event = namedtuple("Event","what name obj cls old new")
 Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names")
 
 class ParameterMetaclass(type):
@@ -514,9 +514,9 @@ class Parameter(object):
         super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
-            change = Change(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
+            event = Event(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value)
             for watcher in self.watchers[attribute]:
-                self._owner.param._call_watcher(watcher, change)
+                self._owner.param._call_watcher(watcher, event)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -597,10 +597,10 @@ class Parameter(object):
         else:
             watchers = getattr(obj,"_param_watchers",{}).get(self._attrib_name,{}).get('value',self.watchers.get("value",[]))
 
-        change = Change(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
+        event = Event(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val)
         obj = self._owner if obj is None else obj
         for s in watchers:
-            obj.param._call_watcher(s, change)
+            obj.param._call_watcher(s, event)
 
 
     def __delete__(self,obj):
@@ -787,9 +787,9 @@ class Parameters(object):
         """
         self_.cls = cls
         self_.self = self
-        self_._BATCH_WATCH = False  # If true, Change and watcher objects are queued.
+        self_._BATCH_WATCH = False  # If true, Event and watcher objects are queued.
         self_._TRIGGER = False
-        self_._changes = []         # Queue of batched changed
+        self_._events = []         # Queue of batched eventd
         self_._watchers = []         # Queue of batched watchers
 
     @property
@@ -870,12 +870,12 @@ class Parameters(object):
 
 
     @classmethod
-    def _changed(cls, change):
+    def _changed(cls, event):
         """
-        Predicate that determines whether a Change object has actually
+        Predicate that determines whether a Event object has actually
         changed such that old != new.
         """
-        return not Comparator.is_equal(change.old, change.new)
+        return not Comparator.is_equal(event.old, event.new)
 
 
     # CEBALERT: this is a bit ugly
@@ -1014,53 +1014,53 @@ class Parameters(object):
         will be triggered whether or not the parameter values have
         actually changed.
         """
-        changes = self_.self_or_cls.param._changes
+        events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers
-        self_.self_or_cls.param._changes  = []
+        self_.self_or_cls.param._events  = []
         self_.self_or_cls.param._watchers = []
         param_values = dict(self_.get_param_values())
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**params)
         self_.self_or_cls.param._TRIGGER = False
-        self_.self_or_cls.param._changes = changes
+        self_.self_or_cls.param._events = events
         self_.self_or_cls.param._watchers = watchers
 
 
-    def _call_watcher(self_, watcher, change):
+    def _call_watcher(self_, watcher, event):
         """
-        Invoke the given the watcher appropriately given a Change object.
+        Invoke the given the watcher appropriately given a Event object.
         """
         if self_.self_or_cls.param._TRIGGER:
             pass
-        elif watcher.onlychanged and (not self_._changed(change)):
+        elif watcher.onlychanged and (not self_._changed(event)):
             return
 
         if self_.self_or_cls.param._BATCH_WATCH:
-            self_._changes.append(change)
+            self_._events.append(event)
             if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
         elif watcher.mode == 'args':
-            watcher.fn(change)
+            watcher.fn(event)
         else:
-            watcher.fn(**{change.name: change.new})
+            watcher.fn(**{event.name: event.new})
 
 
     def _batch_call_watchers(self_):
         """
         Batch call a set of watchers based on the parameter value
-        settings in kwargs using the queued Change and watcher objects.
+        settings in kwargs using the queued Event and watcher objects.
         """
-        change_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._changes])
+        event_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._events])
         watchers = self_.self_or_cls.param._watchers[:]
-        self_.self_or_cls.param._changes = []
+        self_.self_or_cls.param._events = []
         self_.self_or_cls.param._watchers = []
         for watcher in watchers:
-            changes = [change_dict[name] for name in watcher.parameter_names if name in change_dict]
+            events = [event_dict[name] for name in watcher.parameter_names if name in event_dict]
             if watcher.mode == 'args':
-                watcher.fn(*changes)
+                watcher.fn(*events)
             else:
-                watcher.fn(**{c.name:c.new for c in changes})
+                watcher.fn(**{c.name:c.new for c in events})
 
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):

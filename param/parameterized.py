@@ -1317,6 +1317,59 @@ class Parameters(object):
 
     # Instance methods
 
+    # TODO: instance only for now (just a demo)
+    @contextmanager
+    def subscribers_wait(self_,batch_fn=None):
+        """
+        no batch_fn: subscribers don't get called until the end, and each gets
+                     only the last relevant change
+
+        batch_fn: subscribers don't get called at all; instead,
+                  batch_fn(subscribers,changes) is called and can do
+                  whatever.  right now changes is dict of dicts
+                  organized like subscribers (i.e. indexed by param
+                  name and 'what' (e.g. 'value')
+        """
+        self = self_.self
+
+        changes = {}
+        
+        def store_change(change):
+            # overwrite previous change (note: just doing instance here)
+            if change.attribute not in changes:
+                changes[change.attribute] = {}
+            changes[change.attribute][change.what] = change
+        
+        subscribers = self._param_subscribers
+        storers = {}
+        
+        for pname in subscribers:
+            if pname not in storers:
+                storers[pname] = {}
+            for what in subscribers[pname]:
+                storers[pname][what] = [store_change]
+                break
+
+        self._param_subscribers = storers
+
+        # TODO: need try/except/finally
+        yield
+
+        self._param_subscribers = subscribers
+
+        if batch_fn is None:
+            for pname in changes:
+                for what in changes[pname]:
+                    for subscriber in subscribers[pname][what]:
+                        subscriber(changes[pname][what])
+        else:
+            batch_fn(subscribers,changes)
+
+    # TODO (not related to this PR): I left 'subscribers' as the name
+    # in the past, but I think I meant to call them `watchers'. I
+    # can't remember now. But what to call them and being consistent
+    # should go into the cleanup issue.
+            
 
     def defaults(self_):
         """

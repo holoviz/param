@@ -326,7 +326,29 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].type, 'changed')
 
 
+    def test_nested_batched_watch_not_onlychanged(self):
+        accumulator = Accumulator()
 
+        obj = SimpleWatchSubclass()
+
+        obj.param.watch(accumulator, ['b','c'], onlychanged=False)
+        obj.param.set_param(b=0, c=0)
+
+
+        self.assertEqual(accumulator.call_count(), 1)
+
+        args = accumulator.args_for_call(0)
+        self.assertEqual(len(args), 2)
+
+        self.assertEqual(args[0].name, 'b')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 0)
+        self.assertEqual(args[0].type, 'set')
+
+        self.assertEqual(args[1].name, 'c')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 0)
+        self.assertEqual(args[1].type, 'set')
 
 class TestWatchValues(API1TestCase):
 

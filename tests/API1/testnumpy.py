@@ -33,6 +33,14 @@ class TestNumpy(API1TestCase):
         z = Z(z=numpy.array([1,2]))
         _is_array_and_equal(z.z,[1,2])
 
+    def test_array_param_positional(self):
+        class Z(param.Parameterized):
+            z = param.Array(numpy.array([1]))
+
+        _is_array_and_equal(Z.z,[1])
+
+        z = Z(z=numpy.array([1,2]))
+        _is_array_and_equal(z.z,[1,2])
 
 if __name__ == "__main__":
     import nose

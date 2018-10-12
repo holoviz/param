@@ -1272,8 +1272,8 @@ class Dict(ClassSelector):
     """
     Parameter whose value is a dictionary.
     """
-    def __init__(self,**params):
-        super(Dict,self).__init__(dict,**params)
+    def __init__(self, default=None, **params):
+        super(Dict,self).__init__(dict, default=default, **params)
 
 
 class Array(ClassSelector):
@@ -1281,10 +1281,10 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
 
-    def __init__(self, **params):
+    def __init__(self, default=None, **params):
         # CEBALERT: instead use python array as default?
         from numpy import ndarray
-        super(Array,self).__init__(ndarray, allow_None=True, **params)
+        super(Array,self).__init__(ndarray, allow_None=True, default=default, **params)
 
 
 class DataFrame(ClassSelector):
@@ -1307,12 +1307,12 @@ class DataFrame(ClassSelector):
     """
     __slots__ = ['rows','columns', 'ordered']
 
-    def __init__(self, rows=None, columns=None, ordered=None, **params):
+    def __init__(self, default=None, rows=None, columns=None, ordered=None, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super(DataFrame,self).__init__(pdDFrame, allow_None=True, **params)
+        super(DataFrame,self).__init__(pdDFrame, default=default, allow_None=True, **params)
         self._check_value(self.default)
 
 
@@ -1385,10 +1385,10 @@ class Series(ClassSelector):
         if failure:
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
-    def __init__(self, rows=None, **params):
+    def __init__(self, default=None, rows=None, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super(Series,self).__init__(pdSeries, allow_None=True, **params)
+        super(Series,self).__init__(pdSeries, allow_None=True, default=default, **params)
         self._check_value(self.default)
 
     def _check_value(self,val,obj=None):

@@ -1004,8 +1004,8 @@ class Parameters(object):
                 raise ValueError("'%s' is not a parameter of %s"%(k,self_or_cls.name))
             setattr(self_or_cls,k,v)
 
-        self_._batch_call_watchers()
         self_.self_or_cls.param._BATCH_WATCH = False
+        self_._batch_call_watchers()
 
 
     def trigger(self_, *param_names):

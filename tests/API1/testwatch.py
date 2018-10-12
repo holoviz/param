@@ -191,6 +191,26 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].type, 'changed')
 
 
+    def test_nested_batched_watch_setattr(self):
+
+        obj = SimpleWatchExample()
+
+        accumulator = Accumulator()
+        watcher = obj.param.watch(accumulator, ['a', 'c'])
+
+        def set_c(*events):
+            obj.c = 3
+
+        watcher2 = obj.param.watch(set_c, ['a', 'b'])
+
+        obj.param.set_param(a=2)
+        self.assertEqual(obj.c, 3)
+
+        # Change inside watch callback should have triggered
+        # second call to accumulator
+        self.assertEqual(accumulator.call_count(), 2)
+
+
     def test_simple_batched_watch(self):
 
         accumulator = Accumulator()

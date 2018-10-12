@@ -64,3 +64,28 @@ class TestClassSelectorParameters(API1TestCase):
         exception = "Parameter 'float' must be a subclass of \(int, str\), not 'type'"
         with self.assertRaisesRegexp(ValueError, exception):
             p = self.P(h=float)
+
+
+class TestDictParameters(API1TestCase):
+
+    def test_valid_dict_parameter(self):
+        valid_dict = {1:2, 3:3}
+
+        class Test(param.Parameterized):
+            items = param.Dict(default=valid_dict)
+
+    def test_valid_dict_parameter_positional(self):
+        valid_dict = {1:2, 3:3}
+
+        class Test(param.Parameterized):
+            items = param.Dict(valid_dict)
+
+    def test_dict_invalid_set(self):
+        valid_dict = {1:2, 3:3}
+        class Test(param.Parameterized):
+            items = param.Dict(valid_dict)
+
+        test = Test()
+        exception = "Parameter 'items' value must be an instance of dict, not '3'"
+        with self.assertRaisesRegexp(ValueError, exception):
+            test.items = 3

@@ -129,7 +129,6 @@ jobs:
       install:
         - pip install nbsite sphinx_ioam_theme
         - pip install -e .
-        - pip install "nbconvert <5.4" # TODO: see https://github.com/pyviz/nbsite/issues/84
       script:
         # TODO: nbsite commands will be simplified eventually...
         - nbsite generate-rst --org ioam --project-name param --repo param --examples=./examples --doc=./doc

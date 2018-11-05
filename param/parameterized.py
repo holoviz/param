@@ -736,9 +736,9 @@ class Comparator(object):
     @classmethod
     def is_equal(cls, obj1, obj2):
         for eq_type, eq in cls.equalities.items():
-            if ((isinstance(eq_type, FunctionType) and
-                 eq_type(obj1) and eq_type(obj2)) or
-                (isinstance(obj1, eq_type) and isinstance(obj2, eq_type))):
+            if ((isinstance(eq_type, FunctionType)
+                 and eq_type(obj1) and eq_type(obj2))
+                or (isinstance(obj1, eq_type) and isinstance(obj2, eq_type))):
                 return eq(obj1, obj2)
         if isinstance(obj2, (list, set, tuple)):
             return cls.compare_iterator(obj1, obj2)
@@ -1249,7 +1249,7 @@ class Parameters(object):
         m = re.match("(?P<path>[^:]*):?(?P<what>.*)", spec)
         what = m.group('what')
         path = "."+m.group('path')
-        m = re.match("(?P<obj>.*)(\.)(?P<attr>.*)",path)
+        m = re.match(r"(?P<obj>.*)(\.)(?P<attr>.*)",path)
         obj = m.group('obj')
         attr = m.group("attr")
 
@@ -2025,8 +2025,8 @@ class Parameterized(object):
             if k in processed: continue
 
             # Suppresses automatically generated names.
-            if k == 'name' and (values[k] is not None and
-                                re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+            if k == 'name' and (values[k] is not None
+                                and re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
                 continue
 
             value = pprint(values[k], imports, prefix=prefix,settings=[],

@@ -249,7 +249,7 @@ def output(func, *output, **kw):
     expressing the Parameter type using a keyword argument.
 
     The simplest declaration simply declares the method returns an
-    object of without any Parameter type guarantees, e.g.:
+    object without any type guarantees, e.g.:
 
       @output()
 

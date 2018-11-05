@@ -522,7 +522,7 @@ def get_setupcfg_version():
     archive_commit_key = autover_section+'.configparser_workaround.archive_commit'
     for section in config.sections():
         if section.startswith(archive_commit_key):
-            archive_commit = re.match(".*=\s*(\S*)\s*",section).group(1)
+            archive_commit = re.match(r".*=\s*(\S*)\s*",section).group(1)
     ###
     return get_setup_version(cfg,reponame=reponame,pkgname=pkgname,archive_commit=archive_commit)
 

@@ -211,14 +211,23 @@ def accept_arguments(f):
 
 @accept_arguments
 def depends(func, *dependencies, **kw):
+    """
+    Annotates a Parameterized method to express its dependencies.
+    The specified dependencies can be either be Parameters of this
+    class, or Parameters of subobjects (Parameterized objects that
+    are values of this object's parameters).  Dependencies can either
+    be on Parameter values, or on other metadata about the Parameter.
+    """
+
     # python3 would allow kw-only args
     # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
     watch = kw.pop("watch",False)
     assert len(kw)==0, "@depends accepts only 'watch' kw"
 
     # TODO: rename dinfo
-    _dinfo = {'dependencies': dependencies,
-              'watch': watch}
+    _dinfo = getattr(func, '_dinfo', {})
+    _dinfo.update({'dependencies': dependencies,
+                   'watch': watch})
 
     @wraps(func)
     def _depends(*args,**kw):
@@ -229,6 +238,70 @@ def depends(func, *dependencies, **kw):
     _depends._dinfo = _dinfo
 
     return _depends
+
+
+@accept_arguments
+def output(func, *output, **kw):
+    """
+    output allows annotating a method on a Parameterized class to
+    declare that it returns an output of a specific type. The outputs
+    of a Parameterized class can be queried using the
+    Parameterized.param.outputs method. By default the output will
+    inherit the method name but a custom name can be declared by
+    expressing the Parameter type using a keyword argument.
+
+    The simplest declaration simply declares the method returns an
+    object without any type guarantees, e.g.:
+
+      @output()
+
+    If a specific parameter type is specified this is a declaration
+    that the method will return a value of that type, e.g.:
+
+      @output(param.Number())
+
+    To override the default name of the output the type may be declared
+    as a keyword argument, e.g.:
+
+      @output(custom_name=param.Number())
+
+    output also accepts Python object types which will be upgraded to
+    a ClassSelector, e.g.:
+
+      @output(int)
+    """
+    if output:
+        name, otype = None, output[0]
+    elif kw:
+        assert len(kw) <= 1
+        name, otype = list(kw.items())[0]
+    else:
+        name, otype = func.__name__, Parameter()
+
+    if isinstance(otype, type):
+        if issubclass(otype, Parameter):
+            otype = otype()
+        else:
+            from .import ClassSelector
+            otype = ClassSelector(class_=otype)
+    elif isinstance(otype, tuple) and all(isinstance(t, type) for t in otype):
+        from .import ClassSelector
+        otype = ClassSelector(class_=otype)
+
+    if not isinstance(otype, Parameter):
+        raise ValueError('output type must be declared with a Parameter class, '
+                         'instance or a Python object type.')
+
+    _dinfo = getattr(func, '_dinfo', {})
+    _dinfo.update({'output': (name, otype)})
+
+    @wraps(func)
+    def _output(*args,**kw):
+        return func(*args,**kw)
+
+    _output._dinfo = _dinfo
+
+    return _output
 
 
 def _params_depended_on(minfo):
@@ -1240,6 +1313,23 @@ class Parameters(object):
         return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
 
 
+    def outputs(self_):
+        """
+        Returns a mapping between any declared outputs and a tuple
+        of the declared Parameter type and the output method.
+        """
+        outputs = {}
+        for name in dir(self_.self_or_cls):
+            method = getattr(self_.self_or_cls, name)
+            dinfo = getattr(method, '_dinfo', {})
+            if 'output' not in dinfo:
+                continue
+            override, otype = dinfo['output']
+            if override is not None:
+                name = override
+            outputs[name] = (otype, method)
+        return outputs
+
     def _spec_to_obj(self_,spec):
         # TODO: when we decide on spec, this method should be
         # rewritten
@@ -1474,7 +1564,7 @@ class ParameterizedMetaclass(type):
         # everything else access from here rather than from method
         # object
         for n,dinfo in dependers:
-            if dinfo['watch']:
+            if dinfo.get('watch', False):
                 _watch.append(n)
 
         mcs.param._depends = {'watch':_watch}

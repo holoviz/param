@@ -212,9 +212,11 @@ def accept_arguments(f):
 @accept_arguments
 def depends(func, *dependencies, **kw):
     """
-    depends allows annotating a method on a Parameterized class to
-    express dependencies on Parameter or Parameter metadata on the
-    same class or one of its Parameters if it is also Parameterized.
+    Annotates a Parameterized method to express its dependencies.
+    The specified dependencies can be either be Parameters of this
+    class, or Parameters of subobjects (Parameterized objects that
+    are values of this object's parameters).  Dependencies can either
+    be on Parameter values, or on other metadata about the Parameter.
     """
 
     # python3 would allow kw-only args

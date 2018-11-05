@@ -8,7 +8,8 @@ from param.parameterized import add_metaclass
 from param import concrete_descendents, Parameter
 
 # import all parameter types
-from param import *
+from param import ClassSelector
+from param import * # noqa
 
 
 positional_args = {
@@ -18,12 +19,12 @@ positional_args = {
 skip = []
 
 try:
-    import numpy
+    import numpy # noqa
 except ImportError:
     skip.append('Array')
 
 try:
-    import pandas
+    import pandas # noqa
 except ImportError:
     skip.append('DataFrame')
     skip.append('Series')

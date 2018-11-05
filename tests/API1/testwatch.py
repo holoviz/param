@@ -168,7 +168,7 @@ class TestWatch(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        watcher = obj.param.watch(accumulator, ['a','b'])
+        obj.param.watch(accumulator, ['a','b'])
 
         obj.a = 2
         self.assertEqual(accumulator.call_count(), 1)
@@ -196,12 +196,12 @@ class TestWatch(API1TestCase):
         obj = SimpleWatchExample()
 
         accumulator = Accumulator()
-        watcher = obj.param.watch(accumulator, ['a', 'c'])
+        obj.param.watch(accumulator, ['a', 'c'])
 
         def set_c(*events):
             obj.c = 3
 
-        watcher2 = obj.param.watch(set_c, ['a', 'b'])
+        obj.param.watch(set_c, ['a', 'b'])
 
         obj.param.set_param(a=2)
         self.assertEqual(obj.c, 3)
@@ -216,7 +216,7 @@ class TestWatch(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        watcher = obj.param.watch(accumulator, ['a','b'])
+        obj.param.watch(accumulator, ['a','b'])
         obj.param.set_param(a=23, b=42)
 
         self.assertEqual(accumulator.call_count(), 1)
@@ -265,8 +265,8 @@ class TestWatch(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        watcher1 = obj.param.watch(accumulator, ['a','b'])
-        watcher2 = obj.param.watch(accumulator, ['c'])
+        obj.param.watch(accumulator, ['a','b'])
+        obj.param.watch(accumulator, ['c'])
 
         obj.param.set_param(a=23, b=42, c=99)
 
@@ -429,7 +429,7 @@ class TestWatchValues(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        watcher = obj.param.watch_values(accumulator, ['a','b'])
+        obj.param.watch_values(accumulator, ['a','b'])
 
         obj.a = 2
         self.assertEqual(accumulator.call_count(), 1)
@@ -449,7 +449,7 @@ class TestWatchValues(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        watcher = obj.param.watch_values(accumulator, ['a','b'])
+        obj.param.watch_values(accumulator, ['a','b'])
         obj.param.set_param(a=23, b=42)
 
         self.assertEqual(accumulator.call_count(), 1)
@@ -462,8 +462,8 @@ class TestWatchValues(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        watcher1 = obj.param.watch_values(accumulator, ['a','b'])
-        watcher2 = obj.param.watch_values(accumulator, ['c'])
+        obj.param.watch_values(accumulator, ['a','b'])
+        obj.param.watch_values(accumulator, ['c'])
 
         obj.param.set_param(a=23, b=42, c=99)
 
@@ -488,7 +488,7 @@ class TestTrigger(API1TestCase):
     def test_simple_trigger_one_param(self):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
-        watcher = obj.param.watch(accumulator, ['a'])
+        obj.param.watch(accumulator, ['a'])
         obj.param.trigger('a')
         self.assertEqual(accumulator.call_count(), 1)
 
@@ -501,7 +501,7 @@ class TestTrigger(API1TestCase):
     def test_simple_trigger_one_param_change(self):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
-        watcher = obj.param.watch(accumulator, ['a'])
+        obj.param.watch(accumulator, ['a'])
         obj.a = 42
         self.assertEqual(accumulator.call_count(), 1)
 
@@ -523,7 +523,7 @@ class TestTrigger(API1TestCase):
     def test_simple_trigger_two_params(self):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
-        watcher = obj.param.watch(accumulator, ['a','b'])
+        obj.param.watch(accumulator, ['a','b'])
         obj.param.trigger('a','b')
         self.assertEqual(accumulator.call_count(), 1)
 

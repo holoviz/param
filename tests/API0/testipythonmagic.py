@@ -9,7 +9,7 @@ import param
 
 
 try:
-    import IPython
+    import IPython # noqa
 except ImportError:
     import os
     if os.getenv('PARAM_TEST_IPYTHON','0') == '1':

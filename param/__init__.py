@@ -27,9 +27,10 @@ import collections
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
-from .parameterized import depends, output   # noqa: api import
-from .parameterized import logging_level     # noqa: api import
-from .parameterized import shared_parameters # noqa: api import
+from .parameterized import depends, output     # noqa: api import
+from .parameterized import logging_level       # noqa: api import
+from .parameterized import shared_parameters   # noqa: api import
+from .parameterized import instance_descriptor # noqa: api import
 
 from collections import OrderedDict
 
@@ -488,7 +489,7 @@ class Dynamic(Parameter):
         else:
             return self._produce_value(gen)
 
-
+    @instance_descriptor
     def __set__(self,obj,val):
         """
         Call the superclass's set and keep this parameter's
@@ -873,7 +874,6 @@ class Tuple(Parameter):
         if not len(val)==self.length:
             raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
                              (self._attrib_name,len(val),self.length))
-
 
 
 

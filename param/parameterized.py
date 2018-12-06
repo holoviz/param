@@ -209,6 +209,17 @@ def accept_arguments(f):
     return _f
 
 
+def instance_descriptor(f):
+    # If parameter has an instance Parameter delegate setting
+    def _f(self, obj, val):
+        instance_param = getattr(obj, '_instance__params', {}).get(self._attrib_name)
+        if instance_param is not None and self is not instance_param:
+            instance_param.__set__(obj, val)
+            return
+        return f(self, obj, val)
+    return _f
+
+
 @accept_arguments
 def depends(func, *dependencies, **kw):
     """
@@ -538,7 +549,7 @@ class Parameter(object):
     # persistent storage pickling); see __getstate__ and __setstate__.
     __slots__ = ['_attrib_name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
-                 'pickle_default_value','allow_None',
+                 'pickle_default_value','allow_None', 'per_instance',
                  'watchers','_owner']
 
     # Note: When initially created, a Parameter does not know which
@@ -553,7 +564,8 @@ class Parameter(object):
 
     def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
-                 pickle_default_value=True, allow_None=False):
+                 pickle_default_value=True, allow_None=False,
+                 per_instance=False):
         """
         Initialize a new Parameter object: store the supplied attributes.
 
@@ -584,6 +596,7 @@ class Parameter(object):
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)
         self.watchers = {}
+        self.per_instance = per_instance
 
 
     def _set_instantiate(self,instantiate):
@@ -948,8 +961,14 @@ class Parameters(object):
             if not issubclass(class_, Parameterized):
                 continue
             for (k,v) in class_.__dict__.items():
+                if not isinstance(v,Parameter):
+                    continue
+                if v.per_instance:
+                    v = copy.copy(v)
+                    self._instance__params[k] = v
+
                 # (avoid replacing name with the default of None)
-                if isinstance(v,Parameter) and v.instantiate and k!="name":
+                if v.instantiate and k!="name":
                     params_to_instantiate[k]=v
 
         for p in params_to_instantiate.values():
@@ -1070,6 +1089,7 @@ class Parameters(object):
         Includes Parameters from this class and its
         superclasses.
         """
+
         cls = self_.cls
         # CB: we cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
@@ -1088,6 +1108,10 @@ class Parameters(object):
             # _Parameterized.__params for all classes).
             setattr(cls,'_%s__params'%cls.__name__,paramdict)
             pdict= paramdict
+
+        if self_.self is not None:
+            pdict = dict(pdict)
+            pdict.update(self_.self._instance__params)
 
         if parameter_name is None:
             return pdict
@@ -1705,7 +1729,7 @@ class ParameterizedMetaclass(type):
 
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
-            elif  isinstance(value,Parameters):
+            elif isinstance(value,Parameters):
                 pass
             else:
                 # the purpose of the warning below is to catch
@@ -2040,6 +2064,7 @@ class Parameterized(object):
 
         self.param._generate_name()
 
+        self._instance__params = {}
         self.param._setup_params(**params)
         object_count += 1
 
@@ -2247,7 +2272,7 @@ class Parameterized(object):
     def _add_parameter(cls, param_name,param_obj):
         return cls.param._add_parameter(param_name,param_obj)
 
-    @classmethod
+    @bothmethod
     @Parameters.deprecate
     def params(cls,parameter_name=None):
         return cls.param.params(parameter_name=parameter_name)

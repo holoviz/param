@@ -21,11 +21,10 @@ import sys
 import glob
 import re
 import datetime as dt
-import warnings
 import collections
 
 from .parameterized import Parameterized, Parameter, String, \
-     descendents, ParameterizedFunction, ParamOverrides
+     descendents, ParameterizedFunction, ParamOverrides, get_logger
 
 from .parameterized import depends, output   # noqa: api import
 from .parameterized import logging_level     # noqa: api import
@@ -145,7 +144,7 @@ def param_union(*parameterizeds, **kwargs):
         for k, p in o.param.params().items():
             if k != 'name':
                 if k in d and warn:
-                    warnings.warn("overwriting parameter {}".format(k))
+                    get_logger().warning("overwriting parameter {}".format(k))
                 d[k] = getattr(o, k)
     return d
 

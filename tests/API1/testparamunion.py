@@ -2,12 +2,28 @@
 UnitTest for param_union helper
 """
 
-import warnings
-
+import logging
 import param
 from . import API1TestCase
 
+class MyHandler(logging.StreamHandler):
+
+    def __init__(self):
+        super(MyHandler, self).__init__()
+        self.records = []
+
+    def emit(self, record):
+        self.records.append(record)
+
 class TestParamUnion(API1TestCase):
+
+    def setUp(self):
+        self.logger = param.get_logger()
+        self.handler = MyHandler()
+        self.logger.addHandler(self.handler)
+
+    def tearDown(self):
+        self.logger.removeHandler(self.handler)
 
     def test_param_union_values(self):
         class A(param.Parameterized):
@@ -33,16 +49,15 @@ class TestParamUnion(API1TestCase):
         class A(param.Parameterized):
             a = param.Number(1)
         a = A()
-        with warnings.catch_warnings(record=True) as wlist:
-            A(**param.param_union(a))
-            self.assertFalse(wlist)
-            A(**param.param_union())
-            self.assertFalse(wlist)
-            A(**param.param_union(a, a))
-            self.assertTrue(wlist)
-            wlist.pop()
-            A(**param.param_union(a, a, warn=False))
-            self.assertFalse(wlist)
+        A(**param.param_union(a))
+        self.assertFalse(self.handler.records)
+        A(**param.param_union())
+        self.assertFalse(self.handler.records)
+        A(**param.param_union(a, a))
+        self.assertTrue(self.handler.records)
+        self.handler.records.pop()
+        A(**param.param_union(a, a, warn=False))
+        self.assertFalse(self.handler.records)
 
     def test_param_union_raises_on_unexpected_kwarg(self):
         with self.assertRaises(TypeError):

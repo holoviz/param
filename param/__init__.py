@@ -22,13 +22,15 @@ import copy
 import glob
 import re
 import datetime as dt
-import warnings
 import collections
 
-from .parameterized import Parameterized, Parameter, String, \
-     descendents, ParameterizedFunction, ParamOverrides
-from .parameterized import (depends, output, logging_level, # noqa: api import
-    shared_parameters, instance_descriptor, batch_watch)
+from .parameterized import (
+    Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
+    descendents, get_logger, instance_descriptor)
+
+from .parameterized import batch_watch, depends, output   # noqa: api import
+from .parameterized import logging_level     # noqa: api import
+from .parameterized import shared_parameters # noqa: api import
 
 from collections import OrderedDict
 from numbers import Real
@@ -154,7 +156,7 @@ def param_union(*parameterizeds, **kwargs):
         for k in o.param:
             if k != 'name':
                 if k in d and warn:
-                    warnings.warn("overwriting parameter {}".format(k))
+                    get_logger().warning("overwriting parameter {}".format(k))
                 d[k] = getattr(o, k)
     return d
 

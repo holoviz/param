@@ -7,6 +7,11 @@ testEnumerationParameter.txt
 
 import param
 from . import API1TestCase
+from collections import OrderedDict
+
+
+opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
+
 
 class TestObjectSelectorParameters(API1TestCase):
 
@@ -18,12 +23,32 @@ class TestObjectSelectorParameters(API1TestCase):
             h = param.ObjectSelector(default=None)
             g = param.ObjectSelector(default=None,objects=[7,8])
             i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
+            s = param.ObjectSelector(default=3,objects=OrderedDict(one=1,two=2,three=3))
+            d = param.ObjectSelector(default=opts['B'],objects=opts)
 
         self.P = P
 
     def test_set_object_constructor(self):
         p = self.P(e=6)
         self.assertEqual(p.e, 6)
+
+    def test_get_range_list(self):
+        r = self.P.param.params("g").get_range()
+        self.assertEqual(r['7'],7)
+        self.assertEqual(r['8'],8)
+
+    def test_get_range_dict(self):
+        r = self.P.param.params("s").get_range()
+        self.assertEqual(r['one'],1)
+        self.assertEqual(r['two'],2)
+
+    def test_get_range_mutable(self):
+        r = self.P.param.params("d").get_range()
+        self.assertEqual(r['A'],opts['A'])
+        self.assertEqual(r['C'],opts['C'])
+        self.d=opts['A']
+        self.d=opts['C']
+        self.d=opts['B']
 
     def test_set_object_outside_bounds(self):
         p = self.P(e=6)

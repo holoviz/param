@@ -21,11 +21,13 @@ import sys
 import glob
 import re
 import datetime as dt
+import warnings
+import collections
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 
-from .parameterized import depends           # noqa: api import
+from .parameterized import depends, output   # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
@@ -85,14 +87,38 @@ def as_unicode(obj):
     return unicode(obj)
 
 
-def named_objs(objlist):
+def hashable(x):
+    """
+    Return a hashable version of the given object x, with lists and
+    dictionaries converted to tuples.  Allows mutable objects to be
+    used as a lookup key in cases where the object has not actually
+    been mutated. Lookup will fail (appropriately) in cases where some
+    part of the object has changed.  Does not (currently) recursively
+    replace mutable subobjects.
+    """
+    if isinstance(x, collections.MutableSequence):
+        return tuple(x)
+    elif isinstance(x, collections.MutableMapping):
+        return tuple([(k,v) for k,v in x.items()])
+    else:
+        return x
+
+def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself.
+    string name for the object to the object itself. Accepts
+    an optional name,obj dictionary, which will override any other
+    name if that item is present in the dictionary.
     """
     objs = OrderedDict()
+
+    if namesdict is not None:
+        objtoname = {hashable(v): k for k, v in namesdict.items()}
+
     for obj in objlist:
-        if hasattr(obj, "name"):
+        if namesdict is not None and hashable(obj) in objtoname:
+            k = objtoname[hashable(obj)]
+        elif hasattr(obj, "name"):
             k = obj.name
         elif hasattr(obj, '__name__'):
             k = obj.__name__
@@ -101,6 +127,27 @@ def named_objs(objlist):
         objs[k] = obj
     return objs
 
+
+def param_union(*parameterizeds, **kwargs):
+    """
+    Given a set of Parameterized objects, returns a dictionary
+    with the union of all param name,value pairs across them.
+    If warn is True (default), warns if the same parameter has
+    been given multiple values; otherwise uses the last value
+    """
+    warn = kwargs.pop('warn', True)
+    if len(kwargs):
+        raise TypeError(
+            "param_union() got an unexpected keyword argument '{}'".format(
+                kwargs.popitem()[0]))
+    d = dict()
+    for o in parameterizeds:
+        for k, p in o.param.params().items():
+            if k != 'name':
+                if k in d and warn:
+                    warnings.warn("overwriting parameter {}".format(k))
+                d[k] = getattr(o, k)
+    return d
 
 
 class Infinity(object):
@@ -976,9 +1023,16 @@ class ObjectSelector(Selector):
     initially, or because it is explicitly specified), the default
     (initial) value must be among the list of objects (unless the
     default value is None).
+
+    The list of objects can be supplied as a list (appropriate for
+    selecting among a set of strings, or among a set of objects with a
+    "name" parameter), or as a (preferably ordered) dictionary from
+    names to objects.  If a dictionary is supplied, the objects
+    will need to be hashable so that their names can be looked
+    up from the object value.
     """
 
-    __slots__ = ['objects','compute_default_fn','check_on_set']
+    __slots__ = ['objects','compute_default_fn','check_on_set','names']
 
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -986,7 +1040,12 @@ class ObjectSelector(Selector):
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
         if objects is None:
             objects = []
-        self.objects = objects
+        if isinstance(objects, collections.Mapping):
+            self.names = objects
+            self.objects = list(objects.values())
+        else:
+            self.names = None
+            self.objects = objects
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
@@ -1073,7 +1132,7 @@ class ObjectSelector(Selector):
 
         (Returns the dictionary {object.name:object}.)
         """
-        return named_objs(self.objects)
+        return named_objs(self.objects, self.names)
 
 
 class ClassSelector(Selector):
@@ -1213,8 +1272,8 @@ class Dict(ClassSelector):
     """
     Parameter whose value is a dictionary.
     """
-    def __init__(self,**params):
-        super(Dict,self).__init__(dict,**params)
+    def __init__(self, default=None, **params):
+        super(Dict,self).__init__(dict, default=default, **params)
 
 
 class Array(ClassSelector):
@@ -1222,10 +1281,126 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
 
-    def __init__(self, **params):
+    def __init__(self, default=None, **params):
         # CEBALERT: instead use python array as default?
         from numpy import ndarray
-        super(Array,self).__init__(ndarray, allow_None=True, **params)
+        super(Array,self).__init__(ndarray, allow_None=True, default=default, **params)
+
+
+class DataFrame(ClassSelector):
+    """
+    Parameter whose value is a pandas DataFrame.
+
+    The structure of the DataFrame can be constrained by the rows and
+    columns arguments:
+
+    rows: If specified, may be a number or an integer bounds tuple to
+    constrain the allowable number of rows.
+
+    columns: If specified, may be a number, an integer bounds tuple, a
+    list or a set. If the argument is numeric, constrains the number of
+    columns using the same semantics as used for rows. If either a list
+    or set of strings, the column names will be validated. If a set is
+    used, the supplied DataFrame must contain the specified columns and
+    if a list is given, the supplied DataFrame must contain exactly the
+    same columns and in the same order and no other columns.
+    """
+    __slots__ = ['rows','columns', 'ordered']
+
+    def __init__(self, default=None, rows=None, columns=None, ordered=None, **params):
+        from pandas import DataFrame as pdDFrame
+        self.rows = rows
+        self.columns = columns
+        self.ordered = ordered
+        super(DataFrame,self).__init__(pdDFrame, default=default, allow_None=True, **params)
+        self._check_value(self.default)
+
+
+    def _length_bounds_check(self, bounds, length, name):
+        message = '{name} length {length} does not match declared bounds of {bounds}'
+        if not isinstance(bounds, tuple):
+            if (bounds != length):
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+            else:
+                return
+        (lower, upper) = bounds
+        failure = ((lower is not None and (length < lower))
+                   or (upper is not None and length > upper))
+        if failure:
+            raise ValueError(message.format(name=name,length=length, bounds=bounds))
+
+    def _check_value(self,val,obj=None):
+        super(DataFrame, self)._check_value(val, obj)
+
+        if isinstance(self.columns, set) and self.ordered is True:
+            raise ValueError('Columns cannot be ordered when specified as a set')
+
+        if self.columns is None:
+            pass
+        elif (isinstance(self.columns, tuple) and len(self.columns)==2
+              and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
+            self._length_bounds_check(self.columns, len(val.columns), 'Columns')
+        elif isinstance(self.columns, (list, set)):
+            self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
+            difference = set(self.columns) - set([str(el) for el in val.columns])
+            if difference:
+                msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
+                raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
+        else:
+            self._length_bounds_check(self.columns, len(val.columns), 'Column')
+
+        if self.ordered:
+            if list(val.columns) != list(self.columns):
+                msg = 'Provided DataFrame columns {found} must exactly match {expected}'
+                raise ValueError(msg.format(found=list(val.columns), expected=self.columns))
+
+        if self.rows is not None:
+            self._length_bounds_check(self.rows, len(val), 'Row')
+
+    def __set__(self,obj,val):
+        self._check_value(val,obj)
+        super(DataFrame,self).__set__(obj,val)
+
+
+class Series(ClassSelector):
+    """
+    Parameter whose value is a pandas Series.
+
+    The structure of the Series can be constrained by the rows argument
+    which may be a number or an integer bounds tuple to constrain the
+    allowable number of rows.
+    """
+    __slots__ = ['rows']
+
+    def _length_bounds_check(self, bounds, length, name):
+        message = '{name} length {length} does not match declared bounds of {bounds}'
+        if not isinstance(bounds, tuple):
+            if (bounds != length):
+                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+            else:
+                return
+        (lower, upper) = bounds
+        failure = ((lower is not None and (length < lower))
+                   or (upper is not None and length > upper))
+        if failure:
+            raise ValueError(message.format(name=name,length=length, bounds=bounds))
+
+    def __init__(self, default=None, rows=None, **params):
+        from pandas import Series as pdSeries
+        self.rows = rows
+        super(Series,self).__init__(pdSeries, allow_None=True, default=default, **params)
+        self._check_value(self.default)
+
+    def _check_value(self,val,obj=None):
+        super(Series, self)._check_value(val, obj)
+
+        if self.rows is not None:
+            self._length_bounds_check(self.rows, len(val), 'Row')
+
+    def __set__(self,obj,val):
+        self._check_value(val,obj)
+        super(Series,self).__set__(obj,val)
+
 
 
 # For portable code:

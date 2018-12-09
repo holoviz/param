@@ -655,8 +655,8 @@ class ExponentialDecay(NumberGenerator, TimeDependent):
     def __call__(self):
         Vi = self.starting_value
         Vm = self.ending_value
-        return Vm + (Vi - Vm) * self.base**(-1.0*float(self.time_fn())/
-                                                 float(self.time_constant))
+        exp = -1.0*float(self.time_fn())/float(self.time_constant)
+        return Vm + (Vi - Vm) * self.base**exp
 
 
 

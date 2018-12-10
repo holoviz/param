@@ -32,13 +32,13 @@ VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
 
 # Get the appropriate logging.Logger instance. If `logger` is None, a
-# logger named `"params"` will be instantiated. If `name` is set, a descendant
-# logger with the name ``"params.<name>"`` is returned (or
+# logger named `"param"` will be instantiated. If `name` is set, a descendant
+# logger with the name ``"param.<name>"`` is returned (or
 # ``logger.name + ".<name>"``)
 logger = None
 def get_logger(name=None):
     if logger is None:
-        root_logger = logging.getLogger('params')
+        root_logger = logging.getLogger('param')
         if not root_logger.handlers:
             formatter = logging.Formatter(
                 fmt='%(levelname)s:%(name)s: %(message)s')

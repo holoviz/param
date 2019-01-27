@@ -283,6 +283,7 @@ def output(func, *output, **kw):
     if output:
         outputs = []
         for i, out in enumerate(output):
+            i = i if len(output) > 1 else None
             if isinstance(out, tuple) and len(out) == 2 and isinstance(out[0], str):
                 outputs.append(out+(i,))
             elif isinstance(out, str):
@@ -295,9 +296,10 @@ def output(func, *output, **kw):
         if (py_major < 3 or (py_major == 3 and py_minor < 6)) and len(kw) > 1:
             raise ValueError('Multiple output declaration using keywords '
                              'only supported in Python >= 3.6.')
-        outputs = [(name, otype, i) for i, (name, otype) in enumerate(kw.items())]
+        outputs = [(name, otype, i if len(kw) > 1 else None)
+                   for i, (name, otype) in enumerate(kw.items())]
     else:
-        outputs = [(None, Parameter(), 0)]
+        outputs = [(None, Parameter(), None)]
 
     names, processed = [], []
     for name, otype, i in outputs:
@@ -1341,12 +1343,16 @@ class Parameters(object):
         return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
 
 
-    def outputs(self_):
+    def outputs(self_, evaluate=False):
         """
         Returns a mapping between any declared outputs and a tuple
-        of the declared Parameter type and the output method.
+        of the declared Parameter type, the output method and the
+        index into the output if multiple outputs are returned.
+        If evaluate is set to true, returns a dictionary of the output
+        values.
         """
         outputs = {}
+        method_output = {}
         for name in dir(self_.self_or_cls):
             method = getattr(self_.self_or_cls, name)
             dinfo = getattr(method, '_dinfo', {})
@@ -1355,7 +1361,15 @@ class Parameters(object):
             for override, otype, idx in dinfo['outputs']:
                 if override is not None:
                     name = override
-                outputs[name] = (otype, method, idx)
+                if evaluate:
+                    if method not in method_output:
+                        method_output[method] = method()
+                    out = method_output[method]
+                    if idx is not None:
+                        out = out[idx]
+                    outputs[name] = out
+                else:
+                    outputs[name] = (otype, method, idx)
         return outputs
 
     def _spec_to_obj(self_,spec):

@@ -17,14 +17,18 @@ class TestParamDepends(API1TestCase):
 
             @param.output()
             def single_output(self):
-                pass
+                return 1
 
         outputs = P.param.outputs()
         self.assertEqual(list(outputs), ['single_output'])
+
         otype, method, idx = outputs['single_output']
         self.assertIs(type(otype), param.Parameter)
         self.assertIs(method, P.single_output)
-        self.assertEqual(idx, 0)
+        self.assertEqual(idx, None)
+
+        self.assertEqual(P().param.outputs(evaluate=True),
+                         {'single_output': 1})
 
     def test_named_kwarg_output(self):
         class P(param.Parameterized):
@@ -35,10 +39,14 @@ class TestParamDepends(API1TestCase):
 
         outputs = P.param.outputs()
         self.assertEqual(list(outputs), ['value'])
+
         otype, method, idx = outputs['value']
         self.assertIs(type(otype), param.Integer)
         self.assertIs(method, P.single_output)
-        self.assertEqual(idx, 0)
+        self.assertEqual(idx, None)
+
+        self.assertEqual(P().param.outputs(evaluate=True),
+                         {'value': 1})
 
     def test_named_and_typed_arg_output(self):
         class P(param.Parameterized):
@@ -49,10 +57,13 @@ class TestParamDepends(API1TestCase):
 
         outputs = P.param.outputs()
         self.assertEqual(list(outputs), ['value'])
+
         otype, method, idx = outputs['value']
         self.assertIs(type(otype), param.Integer)
         self.assertIs(method, P.single_output)
-        self.assertEqual(idx, 0)
+        self.assertEqual(idx, None)
+
+        self.assertEqual(P().param.outputs(evaluate=True), {'value': 1})
 
     def test_named_arg_output(self):
         class P(param.Parameterized):
@@ -63,10 +74,13 @@ class TestParamDepends(API1TestCase):
 
         outputs = P.param.outputs()
         self.assertEqual(list(outputs), ['value'])
+
         otype, method, idx = outputs['value']
         self.assertIs(type(otype), param.Parameter)
         self.assertIs(method, P.single_output)
-        self.assertEqual(idx, 0)
+        self.assertEqual(idx, None)
+
+        self.assertEqual(P().param.outputs(evaluate=True), {'value': 1})
 
     def test_typed_arg_output(self):
         class P(param.Parameterized):
@@ -77,11 +91,14 @@ class TestParamDepends(API1TestCase):
         
         outputs = P.param.outputs()
         self.assertEqual(list(outputs), ['single_output'])
+
         otype, method, idx = outputs['single_output']
         self.assertIs(type(otype), param.ClassSelector)
         self.assertIs(otype.class_, int)
         self.assertIs(method, P.single_output)
-        self.assertEqual(idx, 0)
+        self.assertEqual(idx, None)
+
+        self.assertEqual(P().param.outputs(evaluate=True), {'single_output': 1})
 
     def test_multiple_named_kwarg_output(self):
         py_major = sys.version_info.major
@@ -98,6 +115,7 @@ class TestParamDepends(API1TestCase):
 
         outputs = P.param.outputs()
         self.assertEqual(list(outputs), ['value', 'value2'])
+
         otype, method, idx = outputs['value']
         self.assertIs(type(otype), param.Integer)
         self.assertIs(method, P.multi_output)
@@ -107,6 +125,9 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.String)
         self.assertIs(method, P.multi_output)
         self.assertEqual(idx, 1)
+
+        self.assertEqual(P().param.outputs(evaluate=True),
+                         {'value': 1, 'value2': 'string'})
 
     def test_multi_named_and_typed_arg_output(self):
         class P(param.Parameterized):
@@ -127,6 +148,9 @@ class TestParamDepends(API1TestCase):
         self.assertIs(method, P.multi_output)
         self.assertEqual(idx, 1)
 
+        self.assertEqual(P().param.outputs(evaluate=True),
+                         {'value': 1, 'value2': 'string'})
+
     def test_multi_named_arg_output(self):
         class P(param.Parameterized):
 
@@ -146,6 +170,9 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.Parameter)
         self.assertIs(method, P.multi_output)
         self.assertEqual(idx, 1)
+
+        self.assertEqual(P().param.outputs(evaluate=True),
+                         {'value': 1, 'value2': 2})
 
     def test_multi_typed_arg_output(self):
         with self.assertRaises(ValueError):
@@ -183,4 +210,7 @@ class TestParamDepends(API1TestCase):
         otype, method, idx = outputs['value3']
         self.assertIs(type(otype), param.Number)
         self.assertIs(method, P.single_output)
-        self.assertEqual(idx, 0)
+        self.assertEqual(idx, None)
+
+        self.assertEqual(P().param.outputs(evaluate=True),
+                         {'value': 1, 'value2': 'string', 'value3': 3.0})

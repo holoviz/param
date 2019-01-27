@@ -249,7 +249,7 @@ def output(func, *output, **kw):
     Parameterized.param.outputs method. By default the output will
     inherit the method name but a custom name can be declared by
     expressing the Parameter type using a keyword argument. Declaring
-    multiple return types is only supported in Python >= 3.6.
+    multiple return types using keywords is only supported in Python >= 3.6.
 
     The simplest declaration simply declares the method returns an
     object without any type guarantees, e.g.:
@@ -296,6 +296,7 @@ def output(func, *output, **kw):
         if (py_major < 3 or (py_major == 3 and py_minor < 6)) and len(kw) > 1:
             raise ValueError('Multiple output declaration using keywords '
                              'only supported in Python >= 3.6.')
+          # (requires keywords to be kept ordered, which was not true in previous versions)
         outputs = [(name, otype, i if len(kw) > 1 else None)
                    for i, (name, otype) in enumerate(kw.items())]
     else:
@@ -1346,7 +1347,7 @@ class Parameters(object):
     def outputs(self_, evaluate=False):
         """
         Returns a mapping between any declared outputs and a tuple
-        of the declared Parameter type, the output method and the
+        of the declared Parameter type, the output method, and the
         index into the output if multiple outputs are returned.
         If evaluate is set to true, returns a dictionary of the output
         values.

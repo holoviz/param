@@ -248,7 +248,8 @@ def output(func, *output, **kw):
     of a Parameterized class can be queried using the
     Parameterized.param.outputs method. By default the output will
     inherit the method name but a custom name can be declared by
-    expressing the Parameter type using a keyword argument.
+    expressing the Parameter type using a keyword argument. Declaring
+    multiple return types is only supported in Python >= 3.6.
 
     The simplest declaration simply declares the method returns an
     object without any type guarantees, e.g.:
@@ -265,35 +266,62 @@ def output(func, *output, **kw):
 
       @output(custom_name=param.Number())
 
+    Multiple outputs may be declared using keywords mapping from
+    output name to the type for Python >= 3.6 or using tuples of the
+    same format, which is supported for earlier versions, i.e. these
+    two declarations are equivalent:
+
+      @output(number=param.Number(), string=param.String())
+
+      @output(('number', param.Number()), ('string', param.String()))
+
     output also accepts Python object types which will be upgraded to
     a ClassSelector, e.g.:
 
       @output(int)
     """
     if output:
-        name, otype = None, output[0]
+        outputs = []
+        for i, out in enumerate(output):
+            if isinstance(out, tuple) and len(out) == 2 and isinstance(out[0], str):
+                outputs.append(out+(i,))
+            elif isinstance(out, str):
+                outputs.append((out, Parameter(), i))
+            else:
+                outputs.append((None, out, i))
     elif kw:
-        assert len(kw) <= 1
-        name, otype = list(kw.items())[0]
+        py_major = sys.version_info.major
+        py_minor = sys.version_info.minor
+        if (py_major < 3 or (py_major == 3 and py_minor < 6)) and len(kw) > 1:
+            raise ValueError('Multiple output declaration using keywords '
+                             'only supported in Python >= 3.6.')
+        outputs = [(name, otype, i) for i, (name, otype) in enumerate(kw.items())]
     else:
-        name, otype = func.__name__, Parameter()
+        outputs = [(None, Parameter(), 0)]
 
-    if isinstance(otype, type):
-        if issubclass(otype, Parameter):
-            otype = otype()
-        else:
+    names, processed = [], []
+    for name, otype, i in outputs:
+        if isinstance(otype, type):
+            if issubclass(otype, Parameter):
+                otype = otype()
+            else:
+                from .import ClassSelector
+                otype = ClassSelector(class_=otype)
+        elif isinstance(otype, tuple) and all(isinstance(t, type) for t in otype):
             from .import ClassSelector
             otype = ClassSelector(class_=otype)
-    elif isinstance(otype, tuple) and all(isinstance(t, type) for t in otype):
-        from .import ClassSelector
-        otype = ClassSelector(class_=otype)
+        if not isinstance(otype, Parameter):
+            raise ValueError('output type must be declared with a Parameter class, '
+                             'instance or a Python object type.')
+        processed.append((name, otype, i))
+        names.append(name)
 
-    if not isinstance(otype, Parameter):
-        raise ValueError('output type must be declared with a Parameter class, '
-                         'instance or a Python object type.')
+    if len(set(names)) != len(names):
+        raise ValueError('When declaring multiple outputs each value '
+                         'must be unique.')
 
     _dinfo = getattr(func, '_dinfo', {})
-    _dinfo.update({'output': (name, otype)})
+    _dinfo.update({'outputs': processed})
 
     @wraps(func)
     def _output(*args,**kw):
@@ -1322,12 +1350,12 @@ class Parameters(object):
         for name in dir(self_.self_or_cls):
             method = getattr(self_.self_or_cls, name)
             dinfo = getattr(method, '_dinfo', {})
-            if 'output' not in dinfo:
+            if 'outputs' not in dinfo:
                 continue
-            override, otype = dinfo['output']
-            if override is not None:
-                name = override
-            outputs[name] = (otype, method)
+            for override, otype, idx in dinfo['outputs']:
+                if override is not None:
+                    name = override
+                outputs[name] = (otype, method, idx)
         return outputs
 
     def _spec_to_obj(self_,spec):

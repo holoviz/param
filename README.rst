@@ -13,7 +13,7 @@ dependencies, and is provided freely for both non-commercial and
 commercial use under a BSD license, so that it can easily be included
 as part of other projects.
 
-Please see `param's website <http://ioam.github.com/param/>`_ for
+Please see `param's website <http://param.pyviz.org>`_ for
 official releases, installation instructions, documentation, and examples.
 
 .. |LinuxTests| image:: https://travis-ci.org/ioam/param.svg?branch=master

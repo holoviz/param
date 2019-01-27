@@ -3,8 +3,12 @@ Unit test for param.output.
 """
 import sys
 
+from unittest import SkipTest
+
 import param
+
 from . import API1TestCase
+
 
 class TestParamDepends(API1TestCase):
 
@@ -151,7 +155,7 @@ class TestParamDepends(API1TestCase):
                 def single_output(self):
                     return 1
 
-    def test_multi_named_and_typed_arg_output(self):
+    def test_multi_method_named_and_typed_arg_output(self):
         class P(param.Parameterized):
 
             @param.output(('value', param.Integer), ('value2', str))

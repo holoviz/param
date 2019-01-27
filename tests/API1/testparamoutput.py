@@ -194,7 +194,7 @@ class TestParamDepends(API1TestCase):
                 return 3.0
 
         outputs = P.param.outputs()
-        self.assertEqual(list(outputs), ['value', 'value2', 'value3'])
+        self.assertEqual(set(outputs), {'value', 'value2', 'value3'})
 
         otype, method, idx = outputs['value']
         self.assertIs(type(otype), param.Integer)

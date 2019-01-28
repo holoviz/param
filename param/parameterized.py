@@ -1351,7 +1351,6 @@ class Parameters(object):
         index into the output if multiple outputs are returned.
         """
         outputs = {}
-        method_output = {}
         for name in dir(self_.self_or_cls):
             method = getattr(self_.self_or_cls, name)
             dinfo = getattr(method, '_dinfo', {})

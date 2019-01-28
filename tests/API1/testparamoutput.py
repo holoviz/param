@@ -28,9 +28,6 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
 
-        self.assertEqual(p.param.outputs(evaluate=True),
-                         {'single_output': 1})
-
     def test_named_kwarg_output(self):
         class P(param.Parameterized):
 
@@ -46,9 +43,6 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.Integer)
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
-
-        self.assertEqual(p.param.outputs(evaluate=True),
-                         {'value': 1})
 
     def test_named_and_typed_arg_output(self):
         class P(param.Parameterized):
@@ -66,8 +60,6 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
 
-        self.assertEqual(p.param.outputs(evaluate=True), {'value': 1})
-
     def test_named_arg_output(self):
         class P(param.Parameterized):
 
@@ -83,8 +75,6 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.Parameter)
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
-
-        self.assertEqual(p.param.outputs(evaluate=True), {'value': 1})
 
     def test_typed_arg_output(self):
         class P(param.Parameterized):
@@ -102,8 +92,6 @@ class TestParamDepends(API1TestCase):
         self.assertIs(otype.class_, int)
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
-
-        self.assertEqual(p.param.outputs(evaluate=True), {'single_output': 1})
 
     def test_multiple_named_kwarg_output(self):
         py_major = sys.version_info.major
@@ -132,9 +120,6 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(method, p.multi_output)
         self.assertEqual(idx, 1)
 
-        self.assertEqual(p.param.outputs(evaluate=True),
-                         {'value': 1, 'value2': 'string'})
-
     def test_multi_named_and_typed_arg_output(self):
         class P(param.Parameterized):
 
@@ -154,9 +139,6 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.String)
         self.assertEqual(method, p.multi_output)
         self.assertEqual(idx, 1)
-
-        self.assertEqual(p.param.outputs(evaluate=True),
-                         {'value': 1, 'value2': 'string'})
 
     def test_multi_named_arg_output(self):
         class P(param.Parameterized):
@@ -178,9 +160,6 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.Parameter)
         self.assertEqual(method, p.multi_output)
         self.assertEqual(idx, 1)
-
-        self.assertEqual(p.param.outputs(evaluate=True),
-                         {'value': 1, 'value2': 2})
 
     def test_multi_typed_arg_output(self):
         with self.assertRaises(ValueError):
@@ -220,6 +199,3 @@ class TestParamDepends(API1TestCase):
         self.assertIs(type(otype), param.Number)
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
-
-        self.assertEqual(p.param.outputs(evaluate=True),
-                         {'value': 1, 'value2': 'string', 'value3': 3.0})

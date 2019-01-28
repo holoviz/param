@@ -1344,13 +1344,11 @@ class Parameters(object):
         return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
 
 
-    def outputs(self_, evaluate=False):
+    def outputs(self_):
         """
         Returns a mapping between any declared outputs and a tuple
         of the declared Parameter type, the output method, and the
         index into the output if multiple outputs are returned.
-        If evaluate is set to true, returns a dictionary of the output
-        values.
         """
         outputs = {}
         method_output = {}
@@ -1362,15 +1360,7 @@ class Parameters(object):
             for override, otype, idx in dinfo['outputs']:
                 if override is not None:
                     name = override
-                if evaluate:
-                    if method not in method_output:
-                        method_output[method] = method()
-                    out = method_output[method]
-                    if idx is not None:
-                        out = out[idx]
-                    outputs[name] = out
-                else:
-                    outputs[name] = (otype, method, idx)
+                outputs[name] = (otype, method, idx)
         return outputs
 
     def _spec_to_obj(self_,spec):

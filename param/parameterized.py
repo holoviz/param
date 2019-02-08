@@ -671,7 +671,13 @@ class Parameter(object):
         object stored in a constant or read-only Parameter (e.g. the
         left bound of a BoundingBox).
         """
-        # TODO: simplify this method!
+
+        # ALERT: Deprecated Number set_hook called here to avoid duplicating
+        #        setter, should be removed in 2.0
+        if hasattr(self, 'set_hook'):
+            val = self.set_hook(obj,val)
+
+        self._validate(val, obj)
 
         _old = NotImplemented
         # NB: obj can be None (when __set__ called for a
@@ -696,6 +702,8 @@ class Parameter(object):
                 _old = obj.__dict__.get(self._internal_name,self.default)
                 obj.__dict__[self._internal_name] = val
 
+        self._post_setter(obj, val)
+
         if obj is None:
             watchers = self.watchers.get("value",[])
         else:
@@ -705,6 +713,14 @@ class Parameter(object):
         obj = self._owner if obj is None else obj
         for s in watchers:
             obj.param._call_watcher(s, event)
+
+
+    def _validate(self, val, obj=None):
+        """Implements validation for the parameter"""
+
+
+    def _post_setter(self, obj, val):
+        """Called after the parameter value has been validated and set"""
 
 
     def __delete__(self,obj):
@@ -756,9 +772,9 @@ class String(Parameter):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
         self.allow_None = (default is None or allow_None)
-        self._check_value(default)
+        self._validate(default)
 
-    def _check_value(self,val):
+    def _validate(self, val, obj=None):
         if self.allow_None and val is None:
             return
 
@@ -767,10 +783,6 @@ class String(Parameter):
 
         if self.regex is not None and re.match(self.regex, val) is None:
             raise ValueError("String '%s': '%s' does not match regex '%s'."%(self._attrib_name,val,self.regex))
-
-    def __set__(self,obj,val):
-        self._check_value(val)
-        super(String,self).__set__(obj,val)
 
 
 class shared_parameters(object):

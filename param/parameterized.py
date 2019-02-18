@@ -677,7 +677,7 @@ class Parameter(object):
         if hasattr(self, 'set_hook'):
             val = self.set_hook(obj,val)
 
-        self._validate(val, obj)
+        self._validate(val)
 
         _old = NotImplemented
         # NB: obj can be None (when __set__ called for a
@@ -715,7 +715,7 @@ class Parameter(object):
             obj.param._call_watcher(s, event)
 
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         """Implements validation for the parameter"""
 
 
@@ -774,7 +774,7 @@ class String(Parameter):
         self.allow_None = (default is None or allow_None)
         self._validate(default)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if self.allow_None and val is None:
             return
 

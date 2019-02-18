@@ -643,7 +643,7 @@ class Number(Dynamic):
         # CEBALERT: results in extra lookups (_value_is_dynamic() is
         # also looking up 'result' - should just pass it in). Note
         # that this method is called often.
-        if self._value_is_dynamic(obj,objtype): self._validate(result, obj)
+        if self._value_is_dynamic(obj,objtype): self._validate(result)
         return result
 
     # Allow softbounds to be used like a normal attribute, as it
@@ -732,7 +732,7 @@ class Number(Dynamic):
 
 
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
@@ -781,7 +781,7 @@ class Integer(Number):
     def __init__(self,default=0,**params):
        Number.__init__(self,default=default,**params)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if callable(val): return
 
         if self.allow_None and val is None:
@@ -812,7 +812,7 @@ class Boolean(Parameter):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default,**params)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if self.allow_None:
             if not isinstance(val,bool) and val is not None:
                 raise ValueError("Boolean '%s' only takes a Boolean value or None."
@@ -826,7 +826,7 @@ class Boolean(Parameter):
 
             if val is not True and val is not False:
                 raise ValueError("Boolean '%s' must be True or False."%self._attrib_name)
-        super(Boolean, self)._validate(val, obj)
+        super(Boolean, self)._validate(val)
 
 
 
@@ -853,7 +853,7 @@ class Tuple(Parameter):
         self._validate(default)
 
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if val is None and self.allow_None:
             return
 
@@ -870,8 +870,8 @@ class Tuple(Parameter):
 class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
-    def _validate(self, val, obj=None):
-        super(NumericTuple, self)._validate(val, obj)
+    def _validate(self, val):
+        super(NumericTuple, self)._validate(val)
         if not (self.allow_None and val is None):
             for n in val:
                 if not _is_number(n):
@@ -898,10 +898,10 @@ class Callable(Parameter):
     2.4, so instantiate must be False for those values.
     """
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if not (self.allow_None and val is None) and (not callable(val)):
             raise ValueError("Callable '%s' only takes a callable object."%self._attrib_name)
-        super(Callable, self)._validate(val, obj)
+        super(Callable, self)._validate(val)
 
 
 
@@ -969,7 +969,7 @@ class Composite(Parameter):
         else:
             return [getattr(obj,a) for a in self.attribs]
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         assert len(val) == len(self.attribs),"Compound parameter '%s' got the wrong number of values (needed %d, but got %d)." % (self._attrib_name,len(self.attribs),len(val))
 
     def _post_setter(self, obj, val):
@@ -1065,7 +1065,7 @@ class ObjectSelector(Selector):
                 self.objects.append(self.default)
 
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         """
         val must be None or one of the objects in self.objects.
         """
@@ -1131,7 +1131,7 @@ class ClassSelector(Selector):
         self._validate(default)
 
 
-    def _validate(self,val, obj=None):
+    def _validate(self,val):
         """val must be None, an instance of self.class_ if self.is_instance=True or a subclass of self_class if self.is_instance=False"""
         if isinstance(self.class_, tuple):
             class_name = ('(%s)' % ', '.join(cl.__name__ for cl in self.class_))
@@ -1185,7 +1185,7 @@ class List(Parameter):
                            **params)
         self._validate(default)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         """
         Checks that the list is of the right length and has the right contents.
         Otherwise, an exception is raised.
@@ -1295,8 +1295,8 @@ class DataFrame(ClassSelector):
         if failure:
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
-    def _validate(self,val, obj=None):
-        super(DataFrame, self)._validate(val, obj)
+    def _validate(self, val):
+        super(DataFrame, self)._validate(val)
 
         if isinstance(self.columns, set) and self.ordered is True:
             raise ValueError('Columns cannot be ordered when specified as a set')
@@ -1353,8 +1353,8 @@ class Series(ClassSelector):
         super(Series,self).__init__(pdSeries, allow_None=True, default=default, **params)
         self._validate(self.default)
 
-    def _validate(self, val, obj=None):
-        super(Series, self)._validate(val, obj)
+    def _validate(self, val):
+        super(Series, self)._validate(val)
 
         if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'Row')
@@ -1490,15 +1490,15 @@ class Path(Parameter):
         else:
             return resolve_path(path)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('None is not allowed')
+                Parameterized(name="%s.%s"%(self._owner.name,self._attrib_name)).warning('None is not allowed')
         else:
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(obj.name,self._attrib_name)).warning('%s',e.args[0])
+                Parameterized(name="%s.%s"%(self._owner.name,self._attrib_name)).warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """
@@ -1613,9 +1613,9 @@ class ListSelector(ObjectSelector):
                 if o not in self.objects:
                     self.objects.append(o)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         for o in val:
-            super(ListSelector, self)._validate(o, obj)
+            super(ListSelector, self)._validate(o)
 
 
 
@@ -1648,7 +1648,7 @@ class Date(Number):
     def __init__(self, default=None, **kwargs):
         super(Date, self).__init__(default=default, **kwargs)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
@@ -1672,7 +1672,7 @@ class Color(Parameter):
         super(Color, self).__init__(default=default, **kwargs)
         self._validate(default)
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if (self.allow_None and val is None):
             return
         if not isinstance(val, String.basestring):
@@ -1697,14 +1697,14 @@ class Range(NumericTuple):
         super(Range,self).__init__(default=default,length=2,**params)
 
 
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         if self.allow_None and val is None:
             return
-        super(Range, self)._validate(val, obj)
+        super(Range, self)._validate(val)
 
         self._checkBounds(val)
 
@@ -1761,7 +1761,7 @@ class DateRange(Range):
     Dates must be specified as datetime-like types (see
     param.dt_types).
     """
-    def _validate(self, val, obj=None):
+    def _validate(self, val):
         if self.allow_None and val is None:
             return
 

@@ -1114,6 +1114,39 @@ class ObjectSelector(SelectorBase):
         return named_objs(self.objects, self.names)
 
 
+class Selector(ObjectSelector):
+    """
+    A more user friendly ObjectSelector that picks the first object for
+    the default (by default) given an ordered data collection. As the
+    first argument is now objects, this can be passed in as a positional
+    argument which sufficient in many common use cases.
+    """
+    def __init__(self,objects=None, default=None, instantiate=False,
+                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+
+
+        py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
+        vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
+
+        is_odict = isinstance(objects, (OrderedDict)) or (vanilla_odicts and isinstance(objects, dict))
+        if is_odict:
+            autodefault = list(objects.values())[0]
+        elif isinstance(objects, dict):
+            main.warning("Dictionaries prior to Python 3.6 are not ordered. Using random default.")
+            autodefault = list(objects.values())[0]
+        elif isinstance(objects, list):
+            autodefault = objects[0]
+        else:
+            autodefault = None
+
+        default = default if default else autodefault
+
+        super(Selector,self).__init__(default=default, objects=objects,
+                                      instantiate=instantiate,
+                                      compute_default_fn=compute_default_fn,
+                                      check_on_set=check_on_set,
+                                      allow_None=allow_None, **params)
+
 class ClassSelector(SelectorBase):
     """
     Parameter whose value is a specified class or an instance of that class.

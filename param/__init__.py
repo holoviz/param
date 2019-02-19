@@ -90,7 +90,7 @@ def as_unicode(obj):
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, an vanilla Python dictionaries are ordered for Python 3.6+
+    ordered, and vanilla Python dictionaries are ordered for Python 3.6+
     """
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
     vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts

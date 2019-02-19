@@ -87,6 +87,16 @@ def as_unicode(obj):
     return unicode(obj)
 
 
+def is_ordered_dict(d):
+    """
+    Predicate checking for ordered dictionaries. OrderedDict is always
+    ordered, and vanilla Python dictionaries are ordered for Python 3.6+
+    """
+    py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
+    vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
+    return isinstance(d, (OrderedDict))or (vanilla_odicts and isinstance(d, dict))
+
+
 def hashable(x):
     """
     Return a hashable version of the given object x, with lists and
@@ -981,7 +991,7 @@ class Composite(Parameter):
                 setattr(obj,a,v)
 
 
-class Selector(Parameter):
+class SelectorBase(Parameter):
     """
     Parameter whose value must be chosen from a list of possibilities.
 
@@ -994,7 +1004,7 @@ class Selector(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
-class ObjectSelector(Selector):
+class ObjectSelector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
 
@@ -1114,7 +1124,38 @@ class ObjectSelector(Selector):
         return named_objs(self.objects, self.names)
 
 
-class ClassSelector(Selector):
+class Selector(ObjectSelector):
+    """
+    A more user friendly ObjectSelector that picks the first object for
+    the default (by default) given an ordered data collection. As the
+    first argument is now objects, this can be passed in as a positional
+    argument which sufficient in many common use cases.
+    """
+    def __init__(self,objects=None, default=None, instantiate=False,
+                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+
+        if is_ordered_dict(objects):
+            autodefault = list(objects.values())[0]
+        elif isinstance(objects, dict):
+            main.param.warning("Parameter default value is arbitrary due to "
+                               "dictionaries prior to Python 3.6 not being "
+                               "ordered; should use an ordered dict or "
+                               "supply an explicit default value.")
+            autodefault = list(objects.values())[0]
+        elif isinstance(objects, list):
+            autodefault = objects[0]
+        else:
+            autodefault = None
+
+        default = default if default else autodefault
+
+        super(Selector,self).__init__(default=default, objects=objects,
+                                      instantiate=instantiate,
+                                      compute_default_fn=compute_default_fn,
+                                      check_on_set=check_on_set,
+                                      allow_None=allow_None, **params)
+
+class ClassSelector(SelectorBase):
     """
     Parameter whose value is a specified class or an instance of that class.
     By default, requires an instance, but if is_instance=False, accepts a class instead.

@@ -150,6 +150,38 @@ def param_union(*parameterizeds, **kwargs):
     return d
 
 
+def keywords_to_params(selector, **kwargs):
+    """
+    Given a set of keyword literals, promote to the appropriate
+    parameter type.
+    """
+    params = {}
+    for k, v in kwargs.items():
+        kws = dict(default=v, constant=True)
+        if isinstance(v, param.Parameter):
+            params[k] = v
+        elif isinstance(v, bool):
+            params[k] = param.Boolean(**kws)
+        elif isinstance(v, int):
+            params[k] = param.Integer(**kws)
+        elif isinstance(v, float):
+            params[k] = param.Number(**kws)
+        elif isinstance(v, str):
+            params[k] = param.String(**kws)
+        elif isinstance(v, dict):
+            params[k] = param.Dict(**kws)
+        elif isinstance(v, tuple):
+            params[k] = param.Tuple(**kws)
+        elif isinstance(v, list):
+            params[k] = param.List(**kws)
+        elif isinstance(v, np.ndarray):
+            params[k] = param.Array(**kws)
+        else:
+            params[k] = param.Parameter(**kws)
+
+    return params
+
+
 class Infinity(object):
     """
     An instance of this class represents an infinite value. Unlike

@@ -158,26 +158,26 @@ def keywords_to_params(selector, **kwargs):
     params = {}
     for k, v in kwargs.items():
         kws = dict(default=v, constant=True)
-        if isinstance(v, param.Parameter):
+        if isinstance(v, Parameter):
             params[k] = v
         elif isinstance(v, bool):
-            params[k] = param.Boolean(**kws)
+            params[k] = Boolean(**kws)
         elif isinstance(v, int):
-            params[k] = param.Integer(**kws)
+            params[k] = Integer(**kws)
         elif isinstance(v, float):
-            params[k] = param.Number(**kws)
+            params[k] = Number(**kws)
         elif isinstance(v, str):
-            params[k] = param.String(**kws)
+            params[k] = String(**kws)
         elif isinstance(v, dict):
-            params[k] = param.Dict(**kws)
+            params[k] = Dict(**kws)
         elif isinstance(v, tuple):
-            params[k] = param.Tuple(**kws)
+            params[k] = Tuple(**kws)
         elif isinstance(v, list):
-            params[k] = param.List(**kws)
+            params[k] = List(**kws)
         elif isinstance(v, np.ndarray):
-            params[k] = param.Array(**kws)
+            params[k] = Array(**kws)
         else:
-            params[k] = param.Parameter(**kws)
+            params[k] = Parameter(**kws)
 
     return params
 

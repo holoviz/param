@@ -1137,7 +1137,10 @@ class Selector(ObjectSelector):
         if is_ordered_dict(objects):
             autodefault = list(objects.values())[0]
         elif isinstance(objects, dict):
-            main.param.warning("Dictionaries prior to Python 3.6 are not ordered. Using random default.")
+            main.param.warning("Parameter default value is arbitrary due to "
+                               "dictionaries prior to Python 3.6 not being "
+                               "ordered; should use an ordered dict or "
+                               "supply an explicit default value.")
             autodefault = list(objects.values())[0]
         elif isinstance(objects, list):
             autodefault = objects[0]

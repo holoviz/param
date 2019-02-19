@@ -981,7 +981,7 @@ class Composite(Parameter):
                 setattr(obj,a,v)
 
 
-class Selector(Parameter):
+class SelectorBase(Parameter):
     """
     Parameter whose value must be chosen from a list of possibilities.
 
@@ -994,7 +994,7 @@ class Selector(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
-class ObjectSelector(Selector):
+class ObjectSelector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
 
@@ -1114,7 +1114,7 @@ class ObjectSelector(Selector):
         return named_objs(self.objects, self.names)
 
 
-class ClassSelector(Selector):
+class ClassSelector(SelectorBase):
     """
     Parameter whose value is a specified class or an instance of that class.
     By default, requires an instance, but if is_instance=False, accepts a class instead.

@@ -1132,7 +1132,7 @@ class Selector(ObjectSelector):
         if is_odict:
             autodefault = list(objects.values())[0]
         elif isinstance(objects, dict):
-            main.warning("Dictionaries prior to Python 3.6 are not ordered. Using random default.")
+            main.param.warning("Dictionaries prior to Python 3.6 are not ordered. Using random default.")
             autodefault = list(objects.values())[0]
         elif isinstance(objects, list):
             autodefault = objects[0]

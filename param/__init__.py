@@ -182,6 +182,19 @@ def keywords_to_params(**kwargs):
     return params
 
 
+def create_parameterized_class(name, params, bases=None):
+    """
+    Dynamically create a parameterized class with the given name and the
+    supplied parameters using the specified bases (if specified).
+    """
+    if bases is None:
+        bases = (Parameterized,)
+    if isinstance(bases, list):
+        bases = tuple(bases)
+    elif not isinstance(bases, tuple):
+        bases = (bases,)
+    return type(name, bases, params)
+
 def _get_min_max_value(min, max, value=None, step=None):
     """Return min, max, value given input values with possible None."""
     # Either min and max need to be given, or value needs to be given

@@ -999,7 +999,6 @@ class Parameters(object):
             if not issubclass(class_, Parameterized):
                 continue
             for (k,v) in class_.__dict__.items():
-
                 # (avoid replacing name with the default of None)
                 if isinstance(v,Parameter) and v.instantiate and k!="name":
                     params_to_instantiate[k]=v

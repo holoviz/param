@@ -18,6 +18,7 @@ Parameters and Parameterized classes.
 
 import os.path
 import sys
+import copy
 import glob
 import re
 import datetime as dt
@@ -194,6 +195,24 @@ def create_parameterized_class(name, params, bases=None):
     elif not isinstance(bases, tuple):
         bases = (bases,)
     return type(name, bases, params)
+
+
+def guess_bounds(params):
+    """
+    Given a dictionary of parameter instances, return a corresponding
+    set of copies with the bounds appropriately set.
+    """
+    guessed = {}
+    for name, p in params.items():
+        new_param = copy.copy(p)
+        if isinstance(p, (Integer, Number)):
+            minv, maxv, _ = _get_min_max_value(None, None, value=p.default)
+            new_param.bounds = (minv, maxv)
+            guessed[name] = new_param
+        else:
+            guessed[name] = new_param
+    return guessed
+
 
 def _get_min_max_value(min, max, value=None, step=None):
     """Return min, max, value given input values with possible None."""

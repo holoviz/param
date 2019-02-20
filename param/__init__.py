@@ -489,6 +489,7 @@ class Dynamic(Parameter):
         else:
             return self._produce_value(gen)
 
+
     @instance_descriptor
     def __set__(self,obj,val):
         """

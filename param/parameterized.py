@@ -565,7 +565,7 @@ class Parameter(object):
     def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
-                 per_instance=False):
+                 per_instance=True):
         """
         Initialize a new Parameter object: store the supplied attributes.
 
@@ -926,6 +926,34 @@ class Parameters(object):
         return self_.cls if self_.self is None else self_.self
 
 
+    def __getitem__(self_, key):
+        inst = self_.self
+        parameters = self_.params() if inst is None else inst.param.params()
+        p = parameters[key]
+        if inst is not None and p.per_instance and key not in inst._instance__params:
+            p = copy.copy(p)
+            p._owner = inst
+            inst._instance__params[key] = p
+        return p
+
+
+    def __dir__(self_):
+        completions = super(Parameters, self_).__dir__()
+        completions += list(self_.params())
+        return completions
+
+
+    def __getattr__(self_, attr):
+        if attr in self_.params():
+            return self_.__getitem__(attr)
+        elif self_.self is None:
+            raise AttributeError("type object '%s.param' has no attribute %r" %
+                                 (self_.cls.__name__, attr))
+        else:
+            raise AttributeError("'%s.param' object has no attribute %r" %
+                                 (self_.cls.__name__, attr))
+
+
     @as_uninitialized
     def _set_name(self_, name):
         self = self_.param.self
@@ -963,9 +991,6 @@ class Parameters(object):
             for (k,v) in class_.__dict__.items():
                 if not isinstance(v,Parameter):
                     continue
-                if v.per_instance:
-                    v = copy.copy(v)
-                    self._instance__params[k] = v
 
                 # (avoid replacing name with the default of None)
                 if v.instantiate and k!="name":
@@ -1046,6 +1071,7 @@ class Parameters(object):
         for key,val in cls.__dict__.items():
             if isinstance(val,Parameter):
                 print(cls.__name__+'.'+key+ '='+ repr(val.default))
+
 
     def set_default(self_,param_name,value):
         """
@@ -2272,7 +2298,7 @@ class Parameterized(object):
     def _add_parameter(cls, param_name,param_obj):
         return cls.param._add_parameter(param_name,param_obj)
 
-    @bothmethod
+    @classmethod
     @Parameters.deprecate
     def params(cls,parameter_name=None):
         return cls.param.params(parameter_name=parameter_name)

@@ -150,7 +150,7 @@ def param_union(*parameterizeds, **kwargs):
     return d
 
 
-def keywords_to_params(selector, **kwargs):
+def keywords_to_params(**kwargs):
     """
     Given a set of keyword literals, promote to the appropriate
     parameter type.

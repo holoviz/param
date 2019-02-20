@@ -32,7 +32,7 @@ from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
 from collections import OrderedDict
-
+from numbers import Real
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -180,6 +180,42 @@ def keywords_to_params(selector, **kwargs):
             params[k] = Parameter(**kws)
 
     return params
+
+
+def _get_min_max_value(min, max, value=None, step=None):
+    """Return min, max, value given input values with possible None."""
+    # Either min and max need to be given, or value needs to be given
+    if value is None:
+        if min is None or max is None:
+            raise ValueError('unable to infer range, value '
+                             'from: ({0}, {1}, {2})'.format(min, max, value))
+        diff = max - min
+        value = min + (diff / 2)
+        # Ensure that value has the same type as diff
+        if not isinstance(value, type(diff)):
+            value = min + (diff // 2)
+    else:  # value is not None
+        if not isinstance(value, Real):
+            raise TypeError('expected a real number, got: %r' % value)
+        # Infer min/max from value
+        if value == 0:
+            # This gives (0, 1) of the correct type
+            vrange = (value, value + 1)
+        elif value > 0:
+            vrange = (-value, 3*value)
+        else:
+            vrange = (3*value, -value)
+        if min is None:
+            min = vrange[0]
+        if max is None:
+            max = vrange[1]
+    if step is not None:
+        # ensure value is on a step
+        tick = int((value - min) / step)
+        value = min + tick * step
+    if not min <= value <= max:
+        raise ValueError('value must be between min and max (min={0}, value={1}, max={2})'.format(min, value, max))
+    return min, max, value
 
 
 class Infinity(object):

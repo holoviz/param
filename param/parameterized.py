@@ -944,7 +944,17 @@ class Parameters(object):
 
 
     def __getattr__(self_, attr):
-        if attr in self_.params():
+        cls = self_.__dict__.get('cls')
+        if cls is None: # Class not initialized
+            raise AttributeError
+
+        try:
+            params = list(getattr(cls, '_%s__params' % cls.__name__))
+        except AttributeError:
+            params = [n for class_ in classlist(cls) for n, v in class_.__dict__.items()
+                      if isinstance(v, Parameter)]
+
+        if attr in params:
             return self_.__getitem__(attr)
         elif self_.self is None:
             raise AttributeError("type object '%s.param' has no attribute %r" %
@@ -989,11 +999,9 @@ class Parameters(object):
             if not issubclass(class_, Parameterized):
                 continue
             for (k,v) in class_.__dict__.items():
-                if not isinstance(v,Parameter):
-                    continue
 
                 # (avoid replacing name with the default of None)
-                if v.instantiate and k!="name":
+                if isinstance(v,Parameter) and v.instantiate and k!="name":
                     params_to_instantiate[k]=v
 
         for p in params_to_instantiate.values():
@@ -1115,7 +1123,6 @@ class Parameters(object):
         Includes Parameters from this class and its
         superclasses.
         """
-
         cls = self_.cls
         # CB: we cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
@@ -1136,7 +1143,6 @@ class Parameters(object):
             pdict= paramdict
 
         if self_.self is not None:
-            pdict = dict(pdict)
             pdict.update(self_.self._instance__params)
 
         if parameter_name is None:

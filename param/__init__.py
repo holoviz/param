@@ -197,20 +197,24 @@ def create_parameterized_class(name, params, bases=None):
     return type(name, bases, params)
 
 
-def guess_bounds(params):
+def guess_bounds(params, **overrides):
     """
     Given a dictionary of parameter instances, return a corresponding
     set of copies with the bounds appropriately set.
+
+
+    If given a set of override keywords, use those numeric tuple bounds.
     """
     guessed = {}
     for name, p in params.items():
         new_param = copy.copy(p)
         if isinstance(p, (Integer, Number)):
-            minv, maxv, _ = _get_min_max_value(None, None, value=p.default)
+            if name in overrides:
+                minv,maxv = overrides[name]
+            else:
+                minv, maxv, _ = _get_min_max_value(None, None, value=p.default)
             new_param.bounds = (minv, maxv)
-            guessed[name] = new_param
-        else:
-            guessed[name] = new_param
+        guessed[name] = new_param
     return guessed
 
 

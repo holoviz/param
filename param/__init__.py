@@ -151,10 +151,10 @@ def param_union(*parameterizeds, **kwargs):
     return d
 
 
-def keywords_to_params(**kwargs):
+def guess_param_types(**kwargs):
     """
     Given a set of keyword literals, promote to the appropriate
-    parameter type.
+    parameter type based on some simple heuristics.
     """
     params = {}
     for k, v in kwargs.items():

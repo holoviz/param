@@ -161,6 +161,8 @@ def guess_param_types(**kwargs):
         kws = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
+        elif isinstance(v, dt_types):
+            params[k] = Date(**kws)
         elif isinstance(v, bool):
             params[k] = Boolean(**kws)
         elif isinstance(v, int):
@@ -172,7 +174,12 @@ def guess_param_types(**kwargs):
         elif isinstance(v, dict):
             params[k] = Dict(**kws)
         elif isinstance(v, tuple):
-            params[k] = Tuple(**kws)
+            if all(_is_number(el) for el in v):
+                params[k] = NumericTuple(**kws)
+            elif all(isinstance(el. dt_types) for el in v) and len(v)==2:
+                params[k] = DateRange(**kws)
+            else:
+                params[k] = Tuple(**kws)
         elif isinstance(v, list):
             params[k] = List(**kws)
         elif isinstance(v, np.ndarray):

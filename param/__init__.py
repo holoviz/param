@@ -183,7 +183,7 @@ def keywords_to_params(**kwargs):
     return params
 
 
-def create_parameterized_class(name, params, bases=None):
+def parameterized_class(name, params, bases=None):
     """
     Dynamically create a parameterized class with the given name and the
     supplied parameters using the specified bases (if specified).

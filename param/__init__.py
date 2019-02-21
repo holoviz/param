@@ -183,18 +183,14 @@ def keywords_to_params(**kwargs):
     return params
 
 
-def parameterized_class(name, params, bases=None):
+def parameterized_class(name, params, bases=Parameterized):
     """
     Dynamically create a parameterized class with the given name and the
     supplied parameters using the specified bases (if specified).
     """
-    if bases is None:
-        bases = (Parameterized,)
-    if isinstance(bases, list):
-        bases = tuple(bases)
-    elif not isinstance(bases, tuple):
-        bases = (bases,)
-    return type(name, bases, params)
+    if not (isinstance(bases, list) or isinstance(bases, tuple)):
+          bases=[bases]
+    return type(name, tuple(bases), params)
 
 
 def guess_bounds(params, **overrides):

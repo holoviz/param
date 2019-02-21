@@ -185,7 +185,15 @@ def guess_param_types(**kwargs):
         elif isinstance(v, np.ndarray):
             params[k] = Array(**kws)
         else:
-            params[k] = Parameter(**kws)
+            from pandas import DataFrame as pdDFrame
+            from pandas import Series as pdSeries
+
+            if isinstance(v, pdDFrame):
+                params[k] = DataFrame(**kws)
+            elif isinstance(v, pdSeries):
+                params[k] = Series(**kws)
+            else:
+                params[k] = Parameter(**kws)
 
     return params
 

@@ -199,7 +199,7 @@ def create_parameterized_class(name, params, bases=None):
 
 def guess_bounds(params, **overrides):
     """
-    Given a dictionary of parameter instances, return a corresponding
+    Given a dictionary of Parameter instances, return a corresponding
     set of copies with the bounds appropriately set.
 
 

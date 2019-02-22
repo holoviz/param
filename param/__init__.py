@@ -201,7 +201,7 @@ def guess_param_types(**kwargs):
 def parameterized_class(name, params, bases=Parameterized):
     """
     Dynamically create a parameterized class with the given name and the
-    supplied parameters using the specified bases (if specified).
+    supplied parameters, inheriting from the specified base(s).
     """
     if not (isinstance(bases, list) or isinstance(bases, tuple)):
           bases=[bases]

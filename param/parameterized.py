@@ -2437,52 +2437,6 @@ class Parameterized(object):
         return self.param.defaults()
 
 
-# CB: seems to work, but conflicts with (hides)
-# Simulation(OptionalSingleton)'s __deepcopy__ method. Guess it's
-# finally time to clean up that inheritance mess...
-
-##     def __deepcopy__(self,memo=None):
-##         # Deepcopy all attributes in __slots__ and __dict__, except
-##         # for attributes which are ObjectSelector parameters (which
-##         # are not copied at all).
-##         #
-##         # Should be equivalent to copy.deepcopy(self), but without copying
-##         # ObjectSelector parameters.
-
-##         if memo is None:
-##             memo = {}
-
-##         class_ = self.__class__
-##         new_instance = class_.__new__(class_)
-
-##         memo[id(self)]=new_instance
-
-##         ## attributes are in __dict__ and __slots__
-##         all_attributes = []
-##         if hasattr(self,'__dict__'):
-##             all_attributes+=self.__dict__.keys()
-##         if hasattr(self,'__slots__'):
-##             all_attributes+=self.__slots__
-##         attributes_to_copy = all_attributes[:]
-
-##         ## remove ObjectSelector parameters from list to be copied
-##         for param_name,param_obj in self.params().items():
-##             internal_param_name = "_%s_param_value"%param_name
-##             # (if param_obj has 'objects' slot, it's assumed to be an ObjectSelector)
-##             if hasattr(param_obj,'objects') and internal_param_name in attributes_to_copy:
-##                 attributes_to_copy.remove(internal_param_name)
-
-##         for attr in all_attributes:
-##             if attr in attributes_to_copy:
-##                 obj = copy.deepcopy(getattr(self,attr),memo)
-##             else:
-##                 obj = getattr(self,attr)
-##             setattr(new_instance,attr,obj)
-
-##         return new_instance
-
-
-
 
 def print_all_param_defaults():
     """Print the default values for all imported Parameters."""
@@ -2495,7 +2449,6 @@ def print_all_param_defaults():
     for c in classes:
         c.print_param_defaults()
     print("_______________________________________________________________________________")
-
 
 
 

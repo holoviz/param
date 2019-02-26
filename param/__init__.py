@@ -957,9 +957,6 @@ class Composite(Parameter):
     attributes.
     """
 
-    # Note: objtype is same as _owner, but objtype left for backwards
-    # compatibility (I think it's used in places to detect composite
-    # parameter)
     __slots__=['attribs','objtype']
 
     def __init__(self,attribs=None,**kw):
@@ -1532,12 +1529,12 @@ class Path(Parameter):
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(self._owner.name,self._attrib_name)).warning('None is not allowed')
+                Parameterized(name="%s.%s"%(self.owner.name,self._attrib_name)).warning('None is not allowed')
         else:
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(self._owner.name,self._attrib_name)).warning('%s',e.args[0])
+                Parameterized(name="%s.%s"%(self.owner.name,self._attrib_name)).warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """

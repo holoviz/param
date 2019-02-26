@@ -558,15 +558,15 @@ class Parameter(object):
     __slots__ = ['_attrib_name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
                  'pickle_default_value','allow_None', 'per_instance',
-                 'watchers','_owner']
+                 'watchers','owner']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
     # (attribute name, internal name). Once the owning Parameterized
-    # class is created, _owner, _attrib_name, and _internal name are
+    # class is created, owner, _attrib_name, and _internal name are
     # set.
 
-    # TODO regarding _attrib_name, _owner: what if someone re-uses
+    # TODO regarding _attrib_name, owner: what if someone re-uses
     # a parameter object across different classes? we should raise
     # an error if attrib name,owner already set
 
@@ -600,7 +600,7 @@ class Parameter(object):
         """
         self._attrib_name = None
         self._internal_name = None
-        self._owner = None
+        self.owner = None
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -645,9 +645,9 @@ class Parameter(object):
         super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
-            event = Event(what=attribute,name=self._attrib_name,obj=None,cls=self._owner,old=old,new=value, type=None)
+            event = Event(what=attribute,name=self._attrib_name,obj=None,cls=self.owner,old=old,new=value, type=None)
             for watcher in self.watchers[attribute]:
-                self._owner.param._call_watcher(watcher, event)
+                self.owner.param._call_watcher(watcher, event)
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -737,8 +737,8 @@ class Parameter(object):
         else:
             watchers = getattr(obj,"_param_watchers",{}).get(self._attrib_name,{}).get('value',self.watchers.get("value",[]))
 
-        event = Event(what='value',name=self._attrib_name,obj=obj,cls=self._owner,old=_old,new=val, type=None)
-        obj = self._owner if obj is None else obj
+        event = Event(what='value',name=self._attrib_name,obj=obj,cls=self.owner,old=_old,new=val, type=None)
+        obj = self.owner if obj is None else obj
         for s in watchers:
             obj.param._call_watcher(s, event)
 
@@ -960,7 +960,7 @@ class Parameters(object):
                     raise
                 finally:
                     p.watchers = watchers
-                p._owner = inst
+                p.owner = inst
                 inst._instance__params[key] = p
             else:
                 p = inst._instance__params[key]
@@ -1820,7 +1820,7 @@ class ParameterizedMetaclass(type):
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
                 parameter = copy.copy(parameter)
-                parameter._owner = mcs
+                parameter.owner = mcs
                 type.__setattr__(mcs,attribute_name,parameter)
             mcs.__dict__[attribute_name].__set__(None,value)
 
@@ -1888,8 +1888,8 @@ class ParameterizedMetaclass(type):
 
         # note for some eventual future: python 3.6+ descriptors grew
         # __set_name__, which could replace this and _set_names
-        setattr(param,'_owner',mcs)
-        del slots['_owner']
+        setattr(param,'owner',mcs)
+        del slots['owner']
 
         # backwards compatibility (see Composite parameter)
         if 'objtype' in slots:

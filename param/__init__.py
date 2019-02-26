@@ -153,7 +153,7 @@ def param_union(*parameterizeds, **kwargs):
                 kwargs.popitem()[0]))
     d = dict()
     for o in parameterizeds:
-        for k, p in o.param.params().items():
+        for k in o.param:
             if k != 'name':
                 if k in d and warn:
                     warnings.warn("overwriting parameter {}".format(k))
@@ -366,7 +366,7 @@ class Time(Parameterized):
         if time_type and val is None:
             raise Exception("Please specify a value for the new time_type.")
         if time_type:
-            type_param = self.param.params('time_type')
+            type_param = self.param.objects('current').get('time_type')
             type_param.constant = False
             self.time_type = time_type
             type_param.constant = True

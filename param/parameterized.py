@@ -1176,7 +1176,7 @@ class Parameters(object):
                           'APIs, which are incompatible with .params. '
                           'Either use the new APIs on the .param accessor, '
                           'i.e. either .param.objects to query all class '
-                          'or instance parameters or use .param[name] to '
+                          'or instance parameters, or use .param[name] to '
                           'access a specific parameter object by name.')
 
         if parameter_name is None:

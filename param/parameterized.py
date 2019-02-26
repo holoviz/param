@@ -1218,7 +1218,7 @@ class Parameters(object):
 
         if instance and self_.self is not None:
             if instance == 'current':
-                pdict = dict(pdict, self_.self._instance__params)
+                pdict = dict(pdict, **self_.self._instance__params)
             else:
                 pdict = {k: self_.self.param[k] for k in pdict}
 
@@ -2199,9 +2199,11 @@ class Parameterized(object):
         Returns 'classname(parameter1=x,parameter2=y,...)', listing
         all the parameters of this object.
         """
-        #settings = ['%s=%s' % (name,repr(val))
-        #            for name,val in self.param.get_param_values()]
-        settings =[]
+        try:
+            settings = ['%s=%s' % (name, repr(val))
+                        for name,val in self.param.get_param_values()]
+        except RuntimeError: # Handle recursion in parameter depth
+            settings = []
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
 
     def __str__(self):
@@ -2246,11 +2248,12 @@ class Parameterized(object):
         else:
             posargs, kwargs = args, []
 
+        parameters = self.param.objects('current')
         ordering = sorted(
-            sorted(changed_params.keys()), # alphanumeric tie-breaker
+            sorted(changed_params), # alphanumeric tie-breaker
             key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if self.param.objects()[k].precedence is None
-                           else self.param.objects()[k].precedence))
+                           if parameters[k].precedence is None else
+                           parameters[k].precedence))
 
         arglist, keywords, processed = [], [], []
         for k in args + ordering:

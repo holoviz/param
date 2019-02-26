@@ -1207,6 +1207,14 @@ class Parameters(object):
     def objects(self_, instance=True):
         """
         Returns the Parameters of this instance or class
+
+        If instance=True and called on a Parameterized instance it
+        will create instance parameters for all Parameters defined on
+        the class. To force class parameters to be returned use
+        instance=False. Since classes avoid creating instance
+        parameters unless necessary you may also request only existing
+        instance parameters to be returned by setting
+        instance='existing'.
         """
         cls = self_.cls
         # CB: we cache the parameters because this method is called often,
@@ -1228,11 +1236,10 @@ class Parameters(object):
             pdict = paramdict
 
         if instance and self_.self is not None:
-            if instance == 'current':
-                pdict = dict(pdict, **self_.self._instance__params)
+            if instance == 'existing':
+                return dict(pdict, **self_.self._instance__params)
             else:
-                pdict = {k: self_.self.param[k] for k in pdict}
-
+                return {k: self_.self.param[k] for k in pdict}
         return pdict
 
 
@@ -1331,7 +1338,7 @@ class Parameters(object):
         else:
             a = (self_or_cls,)
 
-        for n,p in self_or_cls.param.objects('current').items():
+        for n,p in self_or_cls.param.objects('existing').items():
             if hasattr(p, '_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
                     g = self_or_cls.param.get_value_generator(n)
@@ -1361,7 +1368,7 @@ class Parameters(object):
         # (would need to distinguish instantiation of default from
         # user setting of value).
         vals = []
-        for name,val in self_or_cls.param.objects('current').items():
+        for name,val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
             # (this is pointless for cls)
             if not onlychanged or not all_equal(value,val.default):
@@ -1380,7 +1387,7 @@ class Parameters(object):
         (i.e. equivalent to getattr(name).
         """
         cls_or_slf = self_.self_or_cls
-        param_obj = cls_or_slf.param.objects('current').get(name)
+        param_obj = cls_or_slf.param.objects('existing').get(name)
 
         if not param_obj:
             return getattr(cls_or_slf, name)
@@ -1407,7 +1414,7 @@ class Parameters(object):
         their value-generating object returned.
         """
         cls_or_slf = self_.self_or_cls
-        param_obj = cls_or_slf.param.objects('current').get(name)
+        param_obj = cls_or_slf.param.objects('existing').get(name)
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
@@ -1440,7 +1447,7 @@ class Parameters(object):
         last generated value returned.
         """
         cls_or_slf = self_.self_or_cls
-        param_obj = cls_or_slf.param.objects('current').get(name)
+        param_obj = cls_or_slf.param.objects('existing').get(name)
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
@@ -1569,7 +1576,7 @@ class Parameters(object):
         """
         self = self_.self
         d = {}
-        for param_name,param in self.param.objects('current').items():
+        for param_name,param in self.param.objects('existing').items():
             if param.constant:
                 pass
             elif param.instantiate:
@@ -2259,7 +2266,7 @@ class Parameterized(object):
         else:
             posargs, kwargs = args, []
 
-        parameters = self.param.objects('current')
+        parameters = self.param.objects('existing')
         ordering = sorted(
             sorted(changed_params), # alphanumeric tie-breaker
             key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
@@ -2327,7 +2334,7 @@ class Parameterized(object):
         Generally, this method is used by operations that need to test
         something without permanently altering the objects' state.
         """
-        for pname, p in self.param.objects('current').items():
+        for pname, p in self.param.objects('existing').items():
             g = self.param.get_value_generator(pname)
             if hasattr(g,'_Dynamic_last'):
                 g._saved_Dynamic_last.append(g._Dynamic_last)
@@ -2343,7 +2350,7 @@ class Parameterized(object):
 
         See state_push() for more details.
         """
-        for pname, p in self.param.objects('current').items():
+        for pname, p in self.param.objects('existing').items():
             g = self.param.get_value_generator(pname)
             if hasattr(g,'_Dynamic_last'):
                 g._Dynamic_last = g._saved_Dynamic_last.pop()

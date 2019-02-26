@@ -208,7 +208,7 @@ class TestParameterized(API1TestCase):
     def test_instance_param_objects_set_to_current(self):
         inst = TestPO()
         inst_param = inst.param.inst
-        objects = inst.param.objects(instance='current')
+        objects = inst.param.objects(instance='existing')
 
         for p, obj in objects.items():
             if p == 'inst':

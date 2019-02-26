@@ -26,11 +26,8 @@ import collections
 
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
-
-from .parameterized import depends, output     # noqa: api import
-from .parameterized import logging_level       # noqa: api import
-from .parameterized import shared_parameters   # noqa: api import
-from .parameterized import instance_descriptor # noqa: api import
+from .parameterized import (depends, output, logging_level, # noqa: api import
+     shared_parameters, instance_descriptor)
 
 from collections import OrderedDict
 

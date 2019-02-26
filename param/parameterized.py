@@ -939,10 +939,21 @@ class Parameters(object):
         inst = self_.self
         parameters = self_.objects(False) if inst is None else inst.param.objects(False)
         p = parameters[key]
-        if inst is not None and p.per_instance and key not in inst._instance__params:
-            p = copy.copy(p)
-            p._owner = inst
-            inst._instance__params[key] = p
+        if inst is not None and p.per_instance:
+            if key not in inst._instance__params:
+                try:
+                    # Do not copy watchers on class parameter
+                    watchers = p.watchers
+                    p.watchers = {}
+                    p = copy.copy(p)
+                except:
+                    raise
+                finally:
+                    p.watchers = watchers
+                p._owner = inst
+                inst._instance__params[key] = p
+            else:
+                p = inst._instance__params[key]
         return p
 
 
@@ -1513,7 +1524,7 @@ class Parameters(object):
                     watchers[parameter_name][what] = []
                 getattr(watchers[parameter_name][what], action)(watcher)
             else:
-                watchers = self_.cls.param[parameter_name].watchers
+                watchers = self_[parameter_name].watchers
                 if what not in watchers:
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)

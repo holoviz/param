@@ -33,6 +33,10 @@ class TestPO(param.Parameterized):
     dyn = param.Dynamic(default=1)
 
 @nottest
+class TestPOValidation(param.Parameterized):
+    value = param.Number(default=2, bounds=(0, 4))
+
+@nottest
 class AnotherTestPO(param.Parameterized):
     instPO = param.Parameter(default=TestPO(),instantiate=True)
     notinstPO = param.Parameter(default=TestPO(),instantiate=False)
@@ -129,6 +133,22 @@ class TestParameterized(API1TestCase):
         """Check that a class declared abstract actually shows up as abstract."""
         self.assertEqual(TestAbstractPO.abstract,True)
         self.assertEqual(TestPO.abstract,False)
+
+
+    def test_override_class_param_validation(self):
+        test = TestPOValidation()
+        test.param.value.bounds = (0, 3)
+        with self.assertRaises(ValueError):
+            test.value = 4
+        TestPOValidation.value = 4
+
+
+    def test_remove_class_param_validation(self):
+        test = TestPOValidation()
+        test.param.value.bounds = None
+        test.value = 20
+        with self.assertRaises(ValueError):
+            TestPOValidation.value = 10
 
 
     def test_params(self):

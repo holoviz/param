@@ -32,7 +32,7 @@ class SimpleWatchExample(param.Parameterized):
     a = param.Parameter(default=0)
     b = param.Parameter(default=0)
     c = param.Parameter(default=0)
-    d = param.Parameter(default=0)
+    d = param.Integer(default=0)
 
 
 class SimpleWatchSubclass(SimpleWatchExample):
@@ -381,6 +381,8 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'set')
 
+
+
 class TestWatchValues(API1TestCase):
 
     def setUp(self):
@@ -476,6 +478,41 @@ class TestWatchValues(API1TestCase):
                 self.assertEqual(kwargs, {'a':23, 'b':42})
             else:
                 raise Exception('Invalid number of arguments')
+
+
+
+
+
+class TestWatchAttributes(API1TestCase):
+
+    def setUp(self):
+        super(TestWatchAttributes, self).setUp()
+        self.accumulator = []
+
+    def tearDown(self):
+        SimpleWatchExample.param['d'].bounds = None
+
+    def test_watch_class_param_attribute(self):
+        def accumulator(a):
+            self.accumulator += [a.new]
+
+        SimpleWatchExample.param.watch(accumulator, ['d'], 'bounds')
+        SimpleWatchExample.param['d'].bounds = (0, 3)
+        assert self.accumulator == [(0, 3)]
+
+    def test_watch_instance_param_attribute(self):
+        def accumulator(a):
+            self.accumulator += [a.new]
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, ['d'], 'bounds')
+
+        # Ensure watching an instance parameter makes copy
+        assert obj.param.objects('current')['d'] is not SimpleWatchExample.param['d']
+
+        obj.param['d'].bounds = (0, 3)
+        assert SimpleWatchExample.param['d'].bounds is None
+        assert self.accumulator == [(0, 3)]
 
 
 

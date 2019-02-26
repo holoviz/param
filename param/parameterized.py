@@ -589,10 +589,11 @@ class Parameter(object):
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
 
-        per_instance defaults to False and controls whether a new
-        Parameter instance is created for every Parameterized
-        instance. Enabling this will share the same parameter for all
-        instances including all validation attributes.
+        per_instance defaults to True and controls whether a new
+        Parameter instance can be created for every Parameterized
+        instance. If False, all instances of a Parameterized class
+        will share the same parameter object, including all validation
+        attributes.
 
         In rare cases where the default value should not be pickled,
         set pickle_default_value=False (e.g. for file search paths).

@@ -209,6 +209,14 @@ def accept_arguments(f):
     return _f
 
 
+def disable_instance_params(cls):
+    """
+    Disables instance parameters on the class
+    """
+    cls._disable_instance__params = True
+    return cls
+
+
 def instance_descriptor(f):
     # If parameter has an instance Parameter delegate setting
     def _f(self, obj, val):
@@ -939,7 +947,8 @@ class Parameters(object):
         inst = self_.self
         parameters = self_.objects(False) if inst is None else inst.param.objects(False)
         p = parameters[key]
-        if inst is not None and p.per_instance:
+        if (inst is not None and p.per_instance and
+            not getattr(inst, '_disable_instance__params', False)):
             if key not in inst._instance__params:
                 try:
                     # Do not copy watchers on class parameter

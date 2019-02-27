@@ -726,18 +726,18 @@ class Number(Dynamic):
             if vmax is not None:
                 if incmax is True:
                     if not val <= vmax:
-                        raise ValueError("Parameter '%s' must be at most %s"%(self._attrib_name,vmax))
+                        raise ValueError("Parameter '%s' must be at most %s"%(self.name,vmax))
                 else:
                     if not val < vmax:
-                        raise ValueError("Parameter '%s' must be less than %s"%(self._attrib_name,vmax))
+                        raise ValueError("Parameter '%s' must be less than %s"%(self.name,vmax))
 
             if vmin is not None:
                 if incmin is True:
                     if not val >= vmin:
-                        raise ValueError("Parameter '%s' must be at least %s"%(self._attrib_name,vmin))
+                        raise ValueError("Parameter '%s' must be at least %s"%(self.name,vmin))
                 else:
                     if not val > vmin:
-                        raise ValueError("Parameter '%s' must be greater than %s"%(self._attrib_name,vmin))
+                        raise ValueError("Parameter '%s' must be greater than %s"%(self.name,vmin))
 
 
 
@@ -753,7 +753,7 @@ class Number(Dynamic):
             return
 
         if not _is_number(val):
-            raise ValueError("Parameter '%s' only takes numeric values"%(self._attrib_name))
+            raise ValueError("Parameter '%s' only takes numeric values"%(self.name))
 
         self._checkBounds(val)
 
@@ -797,7 +797,7 @@ class Integer(Number):
             return
 
         if not isinstance(val,int):
-            raise ValueError("Parameter '%s' must be an integer."%self._attrib_name)
+            raise ValueError("Parameter '%s' must be an integer."%self.name)
 
         self._checkBounds(val)
 
@@ -825,16 +825,16 @@ class Boolean(Parameter):
         if self.allow_None:
             if not isinstance(val,bool) and val is not None:
                 raise ValueError("Boolean '%s' only takes a Boolean value or None."
-                                 %self._attrib_name)
+                                 %self.name)
 
             if val is not True and val is not False and val is not None:
-                raise ValueError("Boolean '%s' must be True, False, or None."%self._attrib_name)
+                raise ValueError("Boolean '%s' must be True, False, or None."%self.name)
         else:
             if not isinstance(val,bool):
-                raise ValueError("Boolean '%s' only takes a Boolean value."%self._attrib_name)
+                raise ValueError("Boolean '%s' only takes a Boolean value."%self.name)
 
             if val is not True and val is not False:
-                raise ValueError("Boolean '%s' must be True or False."%self._attrib_name)
+                raise ValueError("Boolean '%s' must be True or False."%self.name)
         super(Boolean, self)._validate(val)
 
 
@@ -856,7 +856,7 @@ class Tuple(Parameter):
             self.length = len(default)
         elif length is None and default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
-                             (self._attrib_name))
+                             (self.name))
         else:
             self.length = length
         self._validate(default)
@@ -867,11 +867,11 @@ class Tuple(Parameter):
             return
 
         if not isinstance(val,tuple):
-            raise ValueError("Tuple '%s' only takes a tuple value."%self._attrib_name)
+            raise ValueError("Tuple '%s' only takes a tuple value."%self.name)
 
         if not len(val)==self.length:
             raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
-                             (self._attrib_name,len(val),self.length))
+                             (self.name,len(val),self.length))
 
 
 
@@ -884,7 +884,7 @@ class NumericTuple(Tuple):
             for n in val:
                 if not _is_number(n):
                     raise ValueError("%s: tuple element is not numeric: %s." %
-                                     (self._attrib_name,str(n)))
+                                     (self.name,str(n)))
 
 
 
@@ -908,7 +908,7 @@ class Callable(Parameter):
 
     def _validate(self, val):
         if not (self.allow_None and val is None) and (not callable(val)):
-            raise ValueError("Callable '%s' only takes a callable object."%self._attrib_name)
+            raise ValueError("Callable '%s' only takes a callable object."%self.name)
         super(Callable, self)._validate(val)
 
 
@@ -975,7 +975,7 @@ class Composite(Parameter):
             return [getattr(obj,a) for a in self.attribs]
 
     def _validate(self, val):
-        assert len(val) == len(self.attribs),"Compound parameter '%s' got the wrong number of values (needed %d, but got %d)." % (self._attrib_name,len(self.attribs),len(val))
+        assert len(val) == len(self.attribs),"Compound parameter '%s' got the wrong number of values (needed %d, but got %d)." % (self.name,len(self.attribs),len(val))
 
     def _post_setter(self, obj, val):
         if obj is None:
@@ -1082,7 +1082,7 @@ class ObjectSelector(SelectorBase):
             # CEBALERT: can be called before __init__ has called
             # super's __init__, i.e. before attrib_name has been set.
             try:
-                attrib_name = self._attrib_name
+                attrib_name = self.name
             except AttributeError:
                 attrib_name = ""
 
@@ -1177,7 +1177,7 @@ class ClassSelector(SelectorBase):
             if not (isinstance(val,self.class_)) and not (val is None and self.allow_None):
                 raise ValueError(
                     "Parameter '%s' value must be an instance of %s, not '%s'" %
-                    (self._attrib_name, class_name, val))
+                    (self.name, class_name, val))
         else:
             if not (val is None and self.allow_None) and not (issubclass(val,self.class_)):
                 raise ValueError(
@@ -1230,27 +1230,27 @@ class List(Parameter):
             return
 
         if not isinstance(val, list):
-            raise ValueError("List '%s' must be a list."%(self._attrib_name))
+            raise ValueError("List '%s' must be a list."%(self.name))
 
         if self.bounds is not None:
             min_length,max_length = self.bounds
             l=len(val)
             if min_length is not None and max_length is not None:
                 if not (min_length <= l <= max_length):
-                    raise ValueError("%s: list length must be between %s and %s (inclusive)"%(self._attrib_name,min_length,max_length))
+                    raise ValueError("%s: list length must be between %s and %s (inclusive)"%(self.name,min_length,max_length))
             elif min_length is not None:
                 if not min_length <= l:
-                    raise ValueError("%s: list length must be at least %s."%(self._attrib_name,min_length))
+                    raise ValueError("%s: list length must be at least %s."%(self.name,min_length))
             elif max_length is not None:
                 if not l <= max_length:
-                    raise ValueError("%s: list length must be at most %s."%(self._attrib_name,max_length))
+                    raise ValueError("%s: list length must be at most %s."%(self.name,max_length))
 
         self._check_type(val)
 
     def _check_type(self,val):
         if self.class_ is not None:
             for v in val:
-                assert isinstance(v,self.class_),repr(self._attrib_name)+": "+repr(v)+" is not an instance of " + repr(self.class_) + "."
+                assert isinstance(v,self.class_),repr(self.name)+": "+repr(v)+" is not an instance of " + repr(self.class_) + "."
 
 
 
@@ -1266,7 +1266,7 @@ class HookList(List):
 
     def _check_type(self,val):
         for v in val:
-            assert callable(v),repr(self._attrib_name)+": "+repr(v)+" is not callable."
+            assert callable(v),repr(self.name)+": "+repr(v)+" is not callable."
 
 
 
@@ -1529,12 +1529,12 @@ class Path(Parameter):
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(self.owner.name,self._attrib_name)).warning('None is not allowed')
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).warning('None is not allowed')
         else:
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(self.owner.name,self._attrib_name)).warning('%s',e.args[0])
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """
@@ -1693,7 +1693,7 @@ class Date(Number):
             return
 
         if not isinstance(val, dt_types) and not (self.allow_None and val is None):
-            raise ValueError("Date '%s' only takes datetime types."%self._attrib_name)
+            raise ValueError("Date '%s' only takes datetime types."%self.name)
 
         self._checkBounds(val)
 
@@ -1712,10 +1712,10 @@ class Color(Parameter):
         if (self.allow_None and val is None):
             return
         if not isinstance(val, String.basestring):
-            raise ValueError("Color '%s' only takes a string value."%self._attrib_name)
+            raise ValueError("Color '%s' only takes a string value."%self.name)
         if not re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val):
             raise ValueError("Color '%s' only accepts valid RGB hex codes."
-                             % self._attrib_name)
+                             % self.name)
 
 
 
@@ -1787,7 +1787,7 @@ class Range(NumericTuple):
                 too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
                 if too_low or too_high:
                     raise ValueError("Parameter '%s' %s bound must be in range %s"
-                                     % (self._attrib_name, bound, self.rangestr()))
+                                     % (self.name, bound, self.rangestr()))
 
 
 class DateRange(Range):
@@ -1803,11 +1803,11 @@ class DateRange(Range):
 
         for n in val:
             if not isinstance(n, dt_types):
-                raise ValueError("DateRange '%s' only takes datetime types: %s"%(self._attrib_name,val))
+                raise ValueError("DateRange '%s' only takes datetime types: %s"%(self.name,val))
 
         start, end = val
         if not end >= start:
-           raise ValueError("DateRange '%s': end date %s is before start date %s."%(self._attrib_name,val[1],val[0]))
+           raise ValueError("DateRange '%s': end date %s is before start date %s."%(self.name,val[1],val[0]))
 
         # Calling super(DateRange, self)._check(val) would also check
         # values are numeric, which is redundant, so just call

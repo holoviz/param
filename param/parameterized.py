@@ -220,7 +220,7 @@ def disable_instance_params(cls):
 def instance_descriptor(f):
     # If parameter has an instance Parameter delegate setting
     def _f(self, obj, val):
-        instance_param = getattr(obj, '_instance__params', {}).get(self._attrib_name)
+        instance_param = getattr(obj, '_instance__params', {}).get(self.name)
         if instance_param is not None and self is not instance_param:
             instance_param.__set__(obj, val)
             return
@@ -555,7 +555,7 @@ class Parameter(object):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['_attrib_name','_internal_name','default','doc',
+    __slots__ = ['name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
                  'pickle_default_value','allow_None', 'per_instance',
                  'watchers','owner']
@@ -563,10 +563,10 @@ class Parameter(object):
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
     # (attribute name, internal name). Once the owning Parameterized
-    # class is created, owner, _attrib_name, and _internal name are
+    # class is created, owner, name, and _internal name are
     # set.
 
-    # TODO regarding _attrib_name, owner: what if someone re-uses
+    # TODO regarding name, owner: what if someone re-uses
     # a parameter object across different classes? we should raise
     # an error if attrib name,owner already set
 
@@ -598,7 +598,7 @@ class Parameter(object):
         In rare cases where the default value should not be pickled,
         set pickle_default_value=False (e.g. for file search paths).
         """
-        self._attrib_name = None
+        self.name = None
         self._internal_name = None
         self.owner = None
         self.precedence = precedence
@@ -645,7 +645,7 @@ class Parameter(object):
         super(Parameter, self).__setattr__(attribute, value)
 
         if old is not NotImplemented:
-            event = Event(what=attribute,name=self._attrib_name,obj=None,cls=self.owner,old=old,new=value, type=None)
+            event = Event(what=attribute,name=self.name,obj=None,cls=self.owner,old=old,new=value, type=None)
             for watcher in self.watchers[attribute]:
                 self.owner.param._call_watcher(watcher, event)
 
@@ -712,7 +712,7 @@ class Parameter(object):
         # Parameterized class)
         if self.constant or self.readonly:
             if self.readonly:
-                raise TypeError("Read-only parameter '%s' cannot be modified"%self._attrib_name)
+                raise TypeError("Read-only parameter '%s' cannot be modified"%self.name)
             elif obj is None:  #not obj
                 _old = self.default
                 self.default = val
@@ -720,7 +720,7 @@ class Parameter(object):
                 _old = obj.__dict__.get(self._internal_name,self.default)
                 obj.__dict__[self._internal_name] = val
             else:
-                raise TypeError("Constant parameter '%s' cannot be modified"%self._attrib_name)
+                raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
 
         else:
             if obj is None:
@@ -735,9 +735,9 @@ class Parameter(object):
         if obj is None:
             watchers = self.watchers.get("value",[])
         else:
-            watchers = getattr(obj,"_param_watchers",{}).get(self._attrib_name,{}).get('value',self.watchers.get("value",[]))
+            watchers = getattr(obj,"_param_watchers",{}).get(self.name,{}).get('value',self.watchers.get("value",[]))
 
-        event = Event(what='value',name=self._attrib_name,obj=obj,cls=self.owner,old=_old,new=val, type=None)
+        event = Event(what='value',name=self.name,obj=obj,cls=self.owner,old=_old,new=val, type=None)
         obj = self.owner if obj is None else obj
         for s in watchers:
             obj.param._call_watcher(s, event)
@@ -752,11 +752,11 @@ class Parameter(object):
 
 
     def __delete__(self,obj):
-        raise TypeError("Cannot delete '%s': Parameters deletion not allowed."%self._attrib_name)
+        raise TypeError("Cannot delete '%s': Parameters deletion not allowed."%self.name)
 
 
     def _set_names(self,attrib_name):
-        self._attrib_name = attrib_name
+        self.name = attrib_name
         self._internal_name = "_%s_param_value"%attrib_name
 
 
@@ -807,10 +807,10 @@ class String(Parameter):
             return
 
         if not isinstance(val, self.basestring):
-            raise ValueError("String '%s' only takes a string value."%self._attrib_name)
+            raise ValueError("String '%s' only takes a string value."%self.name)
 
         if self.regex is not None and re.match(self.regex, val) is None:
-            raise ValueError("String '%s': '%s' does not match regex '%s'."%(self._attrib_name,val,self.regex))
+            raise ValueError("String '%s': '%s' does not match regex '%s'."%(self.name,val,self.regex))
 
 
 class shared_parameters(object):
@@ -1098,7 +1098,7 @@ class Parameters(object):
         self = self_.self
         dict_ = dict_ or self.__dict__
         key = key or param_obj._internal_name
-        param_key = (str(type(self)), param_obj._attrib_name)
+        param_key = (str(type(self)), param_obj.name)
         if shared_parameters._share:
             if param_key in shared_parameters._shared_cache:
                 new_object = shared_parameters._shared_cache[param_key]

@@ -756,7 +756,7 @@ class Parameter(object):
             raise AttributeError('The %s parameter %r has already been '
                                  'assigned a name by the %s class, '
                                  'could not assign new name %r. Parameters '
-                                 'may not be shared by multiple classes, '
+                                 'may not be shared by multiple classes; '
                                  'ensure that you create a new parameter '
                                  'instance for each new class.'
                                  % (type(self).__name__, self.name,

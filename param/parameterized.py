@@ -563,12 +563,8 @@ class Parameter(object):
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
     # (attribute name, internal name). Once the owning Parameterized
-    # class is created, owner, name, and _internal name are
+    # class is created, owner, name, and _internal_name are
     # set.
-
-    # TODO regarding name, owner: what if someone re-uses
-    # a parameter object across different classes? we should raise
-    # an error if attrib name,owner already set
 
     def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
@@ -752,10 +748,19 @@ class Parameter(object):
 
 
     def __delete__(self,obj):
-        raise TypeError("Cannot delete '%s': Parameters deletion not allowed."%self.name)
+        raise TypeError("Cannot delete '%s': Parameters deletion not allowed." % self.name)
 
 
-    def _set_names(self,attrib_name):
+    def _set_names(self, attrib_name):
+        if None not in (self.owner, self.name) and attrib_name != self.name:
+            raise AttributeError('The %s parameter %r has already been '
+                                 'assigned a name by the %s class, '
+                                 'could not assign new name %r. Parameters '
+                                 'may not be shared by multiple classes, '
+                                 'ensure that you create a new parameter '
+                                 'instance for each new class.'
+                                 % (type(self).__name__, self.name,
+                                    self.owner.name, attrib_name))
         self.name = attrib_name
         self._internal_name = "_%s_param_value"%attrib_name
 

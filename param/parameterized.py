@@ -209,7 +209,7 @@ def accept_arguments(f):
     return _f
 
 
-def disable_instance_params(cls):
+def no_instance_params(cls):
     """
     Disables instance parameters on the class
     """

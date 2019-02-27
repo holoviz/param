@@ -15,7 +15,7 @@ import random
 from nose.tools import istest, nottest
 
 
-from param.parameterized import ParamOverrides, shared_parameters
+from param.parameterized import ParamOverrides, shared_parameters, no_instance_params
 
 @nottest
 class _SomeRandomNumbers(object):
@@ -35,6 +35,11 @@ class TestPO(param.Parameterized):
 @nottest
 class TestPOValidation(param.Parameterized):
     value = param.Number(default=2, bounds=(0, 4))
+
+@nottest
+@no_instance_params
+class TestPONoInstance(TestPO):
+    pass
 
 @nottest
 class AnotherTestPO(param.Parameterized):
@@ -234,6 +239,11 @@ class TestParameterized(API1TestCase):
     def test_instance_param_getitem_not_per_instance(self):
         test = TestPO()
         assert test.param['notinst'] is TestPO.param['notinst']
+
+
+    def test_instance_param_getitem_no_instance_params(self):
+        test = TestPONoInstance()
+        assert test.param['inst'] is TestPO.param['inst']
 
 
     def test_instance_param_getattr(self):

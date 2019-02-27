@@ -18,6 +18,7 @@ Parameters and Parameterized classes.
 
 import os.path
 import sys
+import copy
 import glob
 import re
 import datetime as dt
@@ -32,7 +33,7 @@ from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
 from collections import OrderedDict
-
+from numbers import Real
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -158,6 +159,120 @@ def param_union(*parameterizeds, **kwargs):
                     warnings.warn("overwriting parameter {}".format(k))
                 d[k] = getattr(o, k)
     return d
+
+
+def guess_param_types(**kwargs):
+    """
+    Given a set of keyword literals, promote to the appropriate
+    parameter type based on some simple heuristics.
+    """
+    params = {}
+    for k, v in kwargs.items():
+        kws = dict(default=v, constant=True)
+        if isinstance(v, Parameter):
+            params[k] = v
+        elif isinstance(v, dt_types):
+            params[k] = Date(**kws)
+        elif isinstance(v, bool):
+            params[k] = Boolean(**kws)
+        elif isinstance(v, int):
+            params[k] = Integer(**kws)
+        elif isinstance(v, float):
+            params[k] = Number(**kws)
+        elif isinstance(v, str):
+            params[k] = String(**kws)
+        elif isinstance(v, dict):
+            params[k] = Dict(**kws)
+        elif isinstance(v, tuple):
+            if all(_is_number(el) for el in v):
+                params[k] = NumericTuple(**kws)
+            elif all(isinstance(el. dt_types) for el in v) and len(v)==2:
+                params[k] = DateRange(**kws)
+            else:
+                params[k] = Tuple(**kws)
+        elif isinstance(v, list):
+            params[k] = List(**kws)
+        elif isinstance(v, np.ndarray):
+            params[k] = Array(**kws)
+        else:
+            from pandas import DataFrame as pdDFrame
+            from pandas import Series as pdSeries
+
+            if isinstance(v, pdDFrame):
+                params[k] = DataFrame(**kws)
+            elif isinstance(v, pdSeries):
+                params[k] = Series(**kws)
+            else:
+                params[k] = Parameter(**kws)
+
+    return params
+
+
+def parameterized_class(name, params, bases=Parameterized):
+    """
+    Dynamically create a parameterized class with the given name and the
+    supplied parameters, inheriting from the specified base(s).
+    """
+    if not (isinstance(bases, list) or isinstance(bases, tuple)):
+          bases=[bases]
+    return type(name, tuple(bases), params)
+
+
+def guess_bounds(params, **overrides):
+    """
+    Given a dictionary of Parameter instances, return a corresponding
+    set of copies with the bounds appropriately set.
+
+
+    If given a set of override keywords, use those numeric tuple bounds.
+    """
+    guessed = {}
+    for name, p in params.items():
+        new_param = copy.copy(p)
+        if isinstance(p, (Integer, Number)):
+            if name in overrides:
+                minv,maxv = overrides[name]
+            else:
+                minv, maxv, _ = _get_min_max_value(None, None, value=p.default)
+            new_param.bounds = (minv, maxv)
+        guessed[name] = new_param
+    return guessed
+
+
+def _get_min_max_value(min, max, value=None, step=None):
+    """Return min, max, value given input values with possible None."""
+    # Either min and max need to be given, or value needs to be given
+    if value is None:
+        if min is None or max is None:
+            raise ValueError('unable to infer range, value '
+                             'from: ({0}, {1}, {2})'.format(min, max, value))
+        diff = max - min
+        value = min + (diff / 2)
+        # Ensure that value has the same type as diff
+        if not isinstance(value, type(diff)):
+            value = min + (diff // 2)
+    else:  # value is not None
+        if not isinstance(value, Real):
+            raise TypeError('expected a real number, got: %r' % value)
+        # Infer min/max from value
+        if value == 0:
+            # This gives (0, 1) of the correct type
+            vrange = (value, value + 1)
+        elif value > 0:
+            vrange = (-value, 3*value)
+        else:
+            vrange = (3*value, -value)
+        if min is None:
+            min = vrange[0]
+        if max is None:
+            max = vrange[1]
+    if step is not None:
+        # ensure value is on a step
+        tick = int((value - min) / step)
+        value = min + tick * step
+    if not min <= value <= max:
+        raise ValueError('value must be between min and max (min={0}, value={1}, max={2})'.format(min, value, max))
+    return min, max, value
 
 
 class Infinity(object):

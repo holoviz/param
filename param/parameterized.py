@@ -777,6 +777,17 @@ class Parameter(object):
 
     def __setstate__(self,state):
         # set values of __slots__ (instead of in non-existent __dict__)
+
+        # Handle renamed slots introduced for instance params
+        if '_attrib_name' in state:
+            state['name'] = state.pop('_attrib_name')
+        if '_owner' in state:
+            state['owner'] = state.pop('_owner')
+        if 'watchers' not in state:
+            state['watchers'] = {}
+        if 'per_instance' not in state:
+            state['per_instance'] = False
+
         for (k,v) in state.items():
             setattr(self,k,v)
 
@@ -2218,13 +2229,19 @@ class Parameterized(object):
 
         return state
 
-    def __setstate__(self,state):
+    def __setstate__(self, state):
         """
         Restore objects from the state dictionary to this object.
 
         During this process the object is considered uninitialized.
         """
         self.initialized=False
+
+        if '_instance__params' not in state:
+            state['_instance__params'] = {}
+        if '_param_watchers' not in state:
+            state['_param_watchers'] = {}
+
         for name,value in state.items():
             setattr(self,name,value)
         self.initialized=True

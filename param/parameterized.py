@@ -1174,16 +1174,19 @@ class Parameters(object):
         Includes Parameters from this class and its
         superclasses.
         """
-        pdict = self_.objects(instance=False)
         if self_.self is not None and self_.self._instance__params:
             self_.warning('The Parameterized instance has instance '
                           'parameters created using new-style param '
                           'APIs, which are incompatible with .params. '
-                          'Either use the new APIs on the .param accessor, '
-                          'i.e. either .param.objects to query all class '
-                          'or instance parameters, or use .param[name] to '
+                          'Use the new more explicit APIs on the '
+                          '.param accessor to query parameter instances.'
+                          'To query all parameter instances use '
+                          '.param.objects with the option to return '
+                          'either class or instance parameter objects. '
+                          'Alternatively use .param[name] indexing to '
                           'access a specific parameter object by name.')
 
+        pdict = self_.objects(instance='existing')
         if parameter_name is None:
             return pdict
         else:

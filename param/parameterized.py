@@ -1255,7 +1255,9 @@ class Parameters(object):
 
         if instance and self_.self is not None:
             if instance == 'existing':
-                return dict(pdict, **self_.self._instance__params)
+                if self_.self._instance__params:
+                    return dict(pdict, **self_.self._instance__params)
+                return pdict
             else:
                 return {k: self_.self.param[k] for k in pdict}
         return pdict

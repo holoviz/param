@@ -558,7 +558,7 @@ class Parameter(object):
     __slots__ = ['name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
                  'pickle_default_value','allow_None', 'per_instance',
-                 'watchers','owner']
+                 'watchers', 'owner', 'label']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -566,7 +566,7 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
-    def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
+    def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
                  per_instance=True):
@@ -597,6 +597,7 @@ class Parameter(object):
         self.name = None
         self._internal_name = None
         self.owner = None
+        self.label = label
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -787,6 +788,8 @@ class Parameter(object):
             state['watchers'] = {}
         if 'per_instance' not in state:
             state['per_instance'] = False
+        if 'label' not in state:
+            state['label'] = None
 
         for (k,v) in state.items():
             setattr(self,k,v)

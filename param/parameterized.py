@@ -2409,7 +2409,7 @@ class Parameterized(object):
     def _add_parameter(cls, param_name,param_obj):
         return cls.param._add_parameter(param_name,param_obj)
 
-    @classmethod
+    @bothmethod
     @Parameters.deprecate
     def params(cls,parameter_name=None):
         return cls.param.params(parameter_name=parameter_name)

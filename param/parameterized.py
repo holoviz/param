@@ -1221,13 +1221,19 @@ class Parameters(object):
             if len(args) == 2 and not args[0] in kwargs and not kwargs:
                 kwargs[args[0]] = args[1]
             else:
+                self_.self_or_cls.param._BATCH_WATCH = False
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
+                self_.self_or_cls.param._BATCH_WATCH = False
                 raise ValueError("'%s' is not a parameter of %s" % (k, self_or_cls.name))
-            setattr(self_or_cls, k, v)
+            try:
+                setattr(self_or_cls, k, v)
+            except:
+                self_.self_or_cls.param._BATCH_WATCH = False
+                raise
 
         self_.self_or_cls.param._BATCH_WATCH = False
         self_._batch_call_watchers()

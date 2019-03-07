@@ -30,6 +30,8 @@ class TestPO(param.Parameterized):
     const = param.Parameter(default=1,constant=True)
     ro = param.Parameter(default="Hello",readonly=True)
     ro2 = param.Parameter(default=object(),readonly=True,instantiate=True)
+    ro_label = param.Parameter(default=object(), label='Ro Label')
+    ro_format = param.Parameter(default=object())
 
     dyn = param.Dynamic(default=1)
 
@@ -175,7 +177,8 @@ class TestParameterized(API1TestCase):
 
 
     def test_param_iterator(self):
-        self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn', 'ro', 'ro2'})
+        self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn',
+                                             'ro', 'ro2', 'ro_label', 'ro_format'})
 
 
     def test_param_contains(self):
@@ -186,7 +189,9 @@ class TestParameterized(API1TestCase):
     def test_class_param_objects(self):
         objects = TestPO.param.objects()
 
-        self.assertEqual(set(objects), {'name', 'inst', 'notinst', 'const', 'dyn', 'ro', 'ro2'})
+        self.assertEqual(set(objects),
+                         {'name', 'inst', 'notinst', 'const', 'dyn',
+                          'ro', 'ro2', 'ro_label', 'ro_format'})
 
         # Check caching
         assert TestPO.param.objects() is objects
@@ -299,6 +304,33 @@ class TestParameterized(API1TestCase):
         t.state_pop()
         assert t.param.inspect_value('dyn')==orig
 
+
+    def test_label(self):
+        t = TestPO()
+        assert t.param.params('ro_label').label == 'Ro Label'
+
+    def test_label_set(self):
+        t = TestPO()
+        assert t.param.params('ro_label').label == 'Ro Label'
+        t.param.params('ro_label').label = 'Ro relabeled'
+        assert t.param.params('ro_label').label == 'Ro relabeled'
+
+    def test_label_default_format(self):
+        t = TestPO()
+        assert t.param.params('ro_format').label == 'Ro format'
+
+
+    def test_label_custom_format(self):
+        param.parameterized.label_formatter = create_label_formatter(capitalize=False)
+        t = TestPO()
+        assert t.param.params('ro_format').label == 'ro format'
+        param.parameterized.label_formatter = create_label_formatter()
+
+    def test_label_constant_format(self):
+        param.parameterized.label_formatter = lambda x: 'Foo'
+        t = TestPO()
+        assert t.param.params('ro_format').label == 'Foo'
+        param.parameterized.label_formatter = create_label_formatter()
 
 
 from param import parameterized

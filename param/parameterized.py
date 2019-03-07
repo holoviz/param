@@ -635,7 +635,7 @@ class Parameter(object):
         else:
             return self._label
 
-    @label.setterg
+    @label.setter
     def label(self, val):
         self._label = val
 

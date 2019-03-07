@@ -54,6 +54,24 @@ object_count = 0
 warning_count = 0
 
 
+def create_label_formatter(capitalize=True, replace_underscores=True, overrides={}):
+    """
+    Utility to create a simple, custom label formatter.
+    """
+    def label_formatter(pname):
+        if pname in overrides:
+            return overrides[pname]
+        if replace_underscores:
+            pname = pname.replace('_',' ')
+        if capitalize:
+            pname = pname[:1].upper() + pname[1:]
+        return pname
+    return label_formatter
+
+
+label_formatter = create_label_formatter()
+
+
 @contextmanager
 def logging_level(level):
     """
@@ -763,6 +781,9 @@ class Parameter(object):
                                  % (type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
+
+        if self.label is None:
+            self.label = label_formatter(self.name)
         self._internal_name = "_%s_param_value"%attrib_name
 
 

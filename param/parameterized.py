@@ -576,7 +576,7 @@ class Parameter(object):
     __slots__ = ['name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
                  'pickle_default_value','allow_None', 'per_instance',
-                 'watchers', 'owner', 'label']
+                 'watchers', 'owner', '_label']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -615,7 +615,7 @@ class Parameter(object):
         self.name = None
         self._internal_name = None
         self.owner = None
-        self.label = label
+        self._label = label
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -627,6 +627,17 @@ class Parameter(object):
         self.watchers = {}
         self.per_instance = per_instance
 
+
+    @property
+    def label(self):
+        if self.name and self._label is None:
+            return label_formatter(self.name)
+        else:
+            return self._label
+
+    @label.setterg
+    def label(self, val):
+        self._label = val
 
     def _set_instantiate(self,instantiate):
         """Constant parameters must be instantiated."""
@@ -782,8 +793,6 @@ class Parameter(object):
                                     self.owner.name, attrib_name))
         self.name = attrib_name
 
-        if self.label is None:
-            self.label = label_formatter(self.name)
         self._internal_name = "_%s_param_value"%attrib_name
 
 
@@ -809,8 +818,8 @@ class Parameter(object):
             state['watchers'] = {}
         if 'per_instance' not in state:
             state['per_instance'] = False
-        if 'label' not in state:
-            state['label'] = None
+        if '_label' not in state:
+            state['_label'] = None
 
         for (k,v) in state.items():
             setattr(self,k,v)

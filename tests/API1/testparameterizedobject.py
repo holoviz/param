@@ -16,7 +16,7 @@ from nose.tools import istest, nottest
 
 
 from param.parameterized import ParamOverrides, shared_parameters
-from param.parameterized import create_label_formatter, no_instance_params
+from param.parameterized import default_label_formatter, no_instance_params
 
 @nottest
 class _SomeRandomNumbers(object):
@@ -321,16 +321,16 @@ class TestParameterized(API1TestCase):
 
 
     def test_label_custom_format(self):
-        param.parameterized.label_formatter = create_label_formatter(capitalize=False)
+        param.parameterized.label_formatter = default_label_formatter.instance(capitalize=False)
         t = TestPO()
         assert t.param.params('ro_format').label == 'ro format'
-        param.parameterized.label_formatter = create_label_formatter()
+        param.parameterized.label_formatter = default_label_formatter
 
     def test_label_constant_format(self):
         param.parameterized.label_formatter = lambda x: 'Foo'
         t = TestPO()
         assert t.param.params('ro_format').label == 'Foo'
-        param.parameterized.label_formatter = create_label_formatter()
+        param.parameterized.label_formatter = default_label_formatter
 
 
 from param import parameterized
@@ -438,23 +438,17 @@ class TestParameterizedUtilities(API1TestCase):
 
 
     def test_default_label_formatter(self):
-        default_label_formatter = create_label_formatter()
         assert default_label_formatter('a_b_C') == 'A b C'
 
 
     def test_default_label_formatter_not_capitalized(self):
-        default_label_formatter = create_label_formatter(capitalize=False)
-        assert default_label_formatter('a_b_C') == 'a b C'
+        assert default_label_formatter.instance(capitalize=False)('a_b_C') == 'a b C'
 
 
     def test_default_label_formatter_not_replace_underscores(self):
-        default_label_formatter = create_label_formatter(replace_underscores=False)
-        assert default_label_formatter('a_b_C') == 'A_b_C'
-
-
+        assert default_label_formatter.instance(replace_underscores=False)('a_b_C') == 'A_b_C'
     def test_default_label_formatter_overrides(self):
-        default_label_formatter = create_label_formatter(overrides={'a': 'b'})
-        assert default_label_formatter('a') == 'b'
+        assert default_label_formatter.instance(overrides={'a': 'b'})('a') == 'b'
 
 @istest
 class TestParamOverrides(API1TestCase):

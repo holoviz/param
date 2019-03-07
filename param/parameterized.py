@@ -54,24 +54,6 @@ object_count = 0
 warning_count = 0
 
 
-def create_label_formatter(capitalize=True, replace_underscores=True, overrides={}):
-    """
-    Utility to create a simple, custom label formatter.
-    """
-    def label_formatter(pname):
-        if pname in overrides:
-            return overrides[pname]
-        if replace_underscores:
-            pname = pname.replace('_',' ')
-        if capitalize:
-            pname = pname[:1].upper() + pname[1:]
-        return pname
-    return label_formatter
-
-
-label_formatter = create_label_formatter()
-
-
 @contextmanager
 def logging_level(level):
     """
@@ -2730,6 +2712,32 @@ class ParameterizedFunction(Parameterized):
         return r.replace(".%s("%classname,".%s.instance("%classname)
 
 
+
+class default_label_formatter(ParameterizedFunction):
+    "Default formatter to turn parameter names into appropriate widget labels."
+
+    capitalize = Parameter(default=True, doc="""
+        Whether or not the label should be capitalized.""")
+
+    replace_underscores = Parameter(default=True, doc="""
+        Whether or not underscores should be replaced with spaces.""")
+
+    overrides = Parameter(default={}, doc="""
+        Allows custom labels to be specified for specific parameter
+        names using a dictionary where key is the parameter name and the
+        value is the desired label.""")
+
+    def __call__(self, pname):
+        if pname in self.overrides:
+            return self.overrides[pname]
+        if self.replace_underscores:
+            pname = pname.replace('_',' ')
+        if self.capitalize:
+            pname = pname[:1].upper() + pname[1:]
+        return pname
+
+
+label_formatter = default_label_formatter.instance()
 
 
 # CBENHANCEMENT: should be able to remove overridable_property when we

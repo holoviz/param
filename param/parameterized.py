@@ -78,8 +78,11 @@ def logging_level(level):
 @contextmanager
 def batch_watch(parameterized, run=True):
     """
-    Context manager which batches the watchers on the parameterized.
-    If run=True it will dispatch the accumulated events on the watchers.
+    Context manager to batch watcher events on a parameterized object.
+    The context manager will queue any events triggered by setting a
+    parameter on the supplied parameterized object and dispatch them
+    all at once when the context manager exits. If run=False the
+    queued events are not dispatched and should be processed manually.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True

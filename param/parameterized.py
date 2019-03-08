@@ -2737,7 +2737,7 @@ class default_label_formatter(ParameterizedFunction):
         return pname
 
 
-label_formatter = default_label_formatter.instance()
+label_formatter = default_label_formatter
 
 
 # CBENHANCEMENT: should be able to remove overridable_property when we

@@ -28,7 +28,7 @@ import collections
 from .parameterized import Parameterized, Parameter, String, \
      descendents, ParameterizedFunction, ParamOverrides
 from .parameterized import (depends, output, logging_level, # noqa: api import
-     shared_parameters, instance_descriptor)
+    shared_parameters, instance_descriptor, batch_watch)
 
 from collections import OrderedDict
 from numbers import Real

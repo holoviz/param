@@ -75,6 +75,25 @@ def logging_level(level):
         param_logger.setLevel(logging_level)
 
 
+@contextmanager
+def batch_watch(parameterized, run=True):
+    """
+    Context manager to batch watcher events on a parameterized object.
+    The context manager will queue any events triggered by setting a
+    parameter on the supplied parameterized object and dispatch them
+    all at once when the context manager exits. If run=False the
+    queued events are not dispatched and should be processed manually.
+    """
+    BATCH_WATCH = parameterized.param._BATCH_WATCH
+    parameterized.param._BATCH_WATCH = True
+    try:
+        yield
+    finally:
+        parameterized.param._BATCH_WATCH = BATCH_WATCH
+        if run and not BATCH_WATCH:
+            parameterized.param._batch_call_watchers()
+
+
 def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
@@ -656,6 +675,8 @@ class Parameter(object):
             event = Event(what=attribute,name=self.name,obj=None,cls=self.owner,old=old,new=value, type=None)
             for watcher in self.watchers[attribute]:
                 self.owner.param._call_watcher(watcher, event)
+            if not self.owner.param._BATCH_WATCH:
+                self.owner.param._batch_call_watchers()
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -747,8 +768,13 @@ class Parameter(object):
 
         event = Event(what='value',name=self.name,obj=obj,cls=self.owner,old=_old,new=val, type=None)
         obj = self.owner if obj is None else obj
-        for s in watchers:
-            obj.param._call_watcher(s, event)
+        if obj is None:
+            return
+
+        for watcher in watchers:
+            obj.param._call_watcher(watcher, event)
+        if not obj.param._BATCH_WATCH:
+            obj.param._batch_call_watchers()
 
 
     def _validate(self, val):
@@ -1230,6 +1256,7 @@ class Parameters(object):
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
         """
+        BATCH_WATCH = self_.self_or_cls.param._BATCH_WATCH
         self_.self_or_cls.param._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
@@ -1250,8 +1277,9 @@ class Parameters(object):
                 self_.self_or_cls.param._BATCH_WATCH = False
                 raise
 
-        self_.self_or_cls.param._BATCH_WATCH = False
-        self_._batch_call_watchers()
+        self_.self_or_cls.param._BATCH_WATCH = BATCH_WATCH
+        if not BATCH_WATCH:
+            self_._batch_call_watchers()
 
 
     def objects(self_, instance=True):
@@ -1339,10 +1367,12 @@ class Parameters(object):
             if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
         elif watcher.mode == 'args':
-            watcher.fn(self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER))
+            with batch_watch(self_.self_or_cls, run=False):
+                watcher.fn(self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER))
         else:
-            event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
-            watcher.fn(**{event.name: event.new})
+            with batch_watch(self_.self_or_cls, run=False):
+                event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
+                watcher.fn(**{event.name: event.new})
 
 
     def _batch_call_watchers(self_):
@@ -1350,18 +1380,25 @@ class Parameters(object):
         Batch call a set of watchers based on the parameter value
         settings in kwargs using the queued Event and watcher objects.
         """
-        event_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._events])
-        watchers = self_.self_or_cls.param._watchers[:]
-        self_.self_or_cls.param._events = []
-        self_.self_or_cls.param._watchers = []
+        while self_.self_or_cls.param._events:
+            event_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._events])
+            watchers = self_.self_or_cls.param._watchers[:]
+            self_.self_or_cls.param._events = []
+            self_.self_or_cls.param._watchers = []
 
-        for watcher in watchers:
-            events = [self_._update_event_type(watcher, event_dict[name], self_.self_or_cls.param._TRIGGER)
-                      for name in watcher.parameter_names if name in event_dict]
-            if watcher.mode == 'args':
-                watcher.fn(*events)
-            else:
-                watcher.fn(**{c.name:c.new for c in events})
+            for watcher in watchers:
+                events = [self_._update_event_type(watcher, event_dict[name], self_.self_or_cls.param._TRIGGER)
+                          for name in watcher.parameter_names if name in event_dict]
+                self_.self_or_cls.param._BATCH_WATCH = True
+                try:
+                    if watcher.mode == 'args':
+                        watcher.fn(*events)
+                    else:
+                        watcher.fn(**{c.name:c.new for c in events})
+                except:
+                    raise
+                finally:
+                    self_.self_or_cls.param._BATCH_WATCH = False
 
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
@@ -2203,19 +2240,14 @@ class Parameterized(object):
         self.initialized=False
         # Override class level param namespace with instance namespace
         self.param = Parameters(self.__class__, self=self)
+        self._instance__params = {}
+        self._param_watchers = {}
 
         self.param._generate_name()
-
-        self._instance__params = {}
         self.param._setup_params(**params)
         object_count += 1
 
-        # TODO: should move to param namespace? (like _param_value
-        # etc should also move)
-        self._param_watchers = {}
-
         # add watched dependencies
-        #
         for n in self.__class__.param._depends['watch']:
             # TODO: should improve this - will happen for every
             # instantiation of Parameterized with watched deps. Will

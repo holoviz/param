@@ -39,6 +39,18 @@ class SimpleWatchSubclass(SimpleWatchExample):
     pass
 
 
+class WatchMethodExample(SimpleWatchSubclass):
+
+    @param.depends('a', watch=True)
+    def _clip_a(self):
+        if self.a > 3:
+            self.a = 3
+
+    @param.depends('b', watch=True)
+    def _set_c(self):
+        self.c = self.b*2
+
+
 
 class TestWatch(API1TestCase):
 
@@ -190,6 +202,29 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[0].new, 3)
         self.assertEqual(args[0].type, 'changed')
 
+    def test_batched_watch_context_manager(self):
+
+        accumulator = Accumulator()
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, ['a','b'])
+
+        with param.batch_watch(obj):
+            obj.a = 2
+            obj.b = 3
+
+        self.assertEqual(accumulator.call_count(), 1)
+        args = accumulator.args_for_call(0)
+
+        self.assertEqual(len(args), 2)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 2)
+        self.assertEqual(args[0].type, 'changed')
+        self.assertEqual(args[1].name, 'b')
+        self.assertEqual(args[1].old, 0)
+        self.assertEqual(args[1].new, 3)
+        self.assertEqual(args[1].type, 'changed')
 
     def test_nested_batched_watch_setattr(self):
 
@@ -380,6 +415,28 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'set')
+
+
+
+class TestWatchMethod(API1TestCase):
+
+    def test_dependent_params(self):
+        obj = WatchMethodExample()
+
+        obj.b = 3
+        self.assertEqual(obj.c, 6)
+
+    def test_multiple_watcher_dispatch(self):
+        obj = WatchMethodExample()
+        obj2 = SimpleWatchExample()
+
+        def link(event):
+            obj2.a = event.new
+
+        obj.param.watch(link, 'a')
+        obj.a = 4
+        self.assertEqual(obj.a, 3)
+        self.assertEqual(obj2.a, 3)
 
 
 

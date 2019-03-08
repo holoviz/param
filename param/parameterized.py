@@ -75,6 +75,22 @@ def logging_level(level):
         param_logger.setLevel(logging_level)
 
 
+@contextmanager
+def batch_watch(parameterized, run=True):
+    """
+    Context manager which batches the watchers on the parameterized.
+    If run=True it will dispatch the accumulated events on the watchers.
+    """
+    BATCH_WATCH = parameterized.param._BATCH_WATCH
+    parameterized.param._BATCH_WATCH = True
+    try:
+        yield
+    finally:
+        parameterized.param._BATCH_WATCH = BATCH_WATCH
+        if run and not BATCH_WATCH:
+            obj.param._batch_call_watchers()
+
+
 def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
@@ -644,6 +660,8 @@ class Parameter(object):
             event = Event(what=attribute,name=self.name,obj=None,cls=self.owner,old=old,new=value, type=None)
             for watcher in self.watchers[attribute]:
                 self.owner.param._call_watcher(watcher, event)
+            if not self.owner.param._BATCH_WATCH:
+                self.owner.param._batch_call_watchers()
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -1331,14 +1349,12 @@ class Parameters(object):
             if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
         elif watcher.mode == 'args':
-            self_.self_or_cls.param._BATCH_WATCH = True
-            watcher.fn(self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER))
-            self_.self_or_cls.param._BATCH_WATCH = False
+            with batch_watch(self_.self_or_cls, run=False):
+                watcher.fn(self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER))
         else:
-            self_.self_or_cls.param._BATCH_WATCH = True
-            event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
-            watcher.fn(**{event.name: event.new})
-            self_.self_or_cls.param._BATCH_WATCH = False
+            with batch_watch(self_.self_or_cls, run=False):
+                event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
+                watcher.fn(**{event.name: event.new})
 
 
     def _batch_call_watchers(self_):

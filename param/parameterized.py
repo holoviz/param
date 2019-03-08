@@ -558,7 +558,7 @@ class Parameter(object):
     __slots__ = ['name','_internal_name','default','doc',
                  'precedence','instantiate','constant','readonly',
                  'pickle_default_value','allow_None', 'per_instance',
-                 'watchers','owner']
+                 'watchers', 'owner', '_label']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -566,7 +566,7 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
-    def __init__(self,default=None,doc=None,precedence=None,  # pylint: disable-msg=R0913
+    def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
                  per_instance=True):
@@ -597,6 +597,7 @@ class Parameter(object):
         self.name = None
         self._internal_name = None
         self.owner = None
+        self._label = label
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -608,6 +609,17 @@ class Parameter(object):
         self.watchers = {}
         self.per_instance = per_instance
 
+
+    @property
+    def label(self):
+        if self.name and self._label is None:
+            return label_formatter(self.name)
+        else:
+            return self._label
+
+    @label.setter
+    def label(self, val):
+        self._label = val
 
     def _set_instantiate(self,instantiate):
         """Constant parameters must be instantiated."""
@@ -762,6 +774,7 @@ class Parameter(object):
                                  % (type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
+
         self._internal_name = "_%s_param_value"%attrib_name
 
 
@@ -787,6 +800,8 @@ class Parameter(object):
             state['watchers'] = {}
         if 'per_instance' not in state:
             state['per_instance'] = False
+        if '_label' not in state:
+            state['_label'] = None
 
         for (k,v) in state.items():
             setattr(self,k,v)
@@ -2703,6 +2718,32 @@ class ParameterizedFunction(Parameterized):
         return r.replace(".%s("%classname,".%s.instance("%classname)
 
 
+
+class default_label_formatter(ParameterizedFunction):
+    "Default formatter to turn parameter names into appropriate widget labels."
+
+    capitalize = Parameter(default=True, doc="""
+        Whether or not the label should be capitalized.""")
+
+    replace_underscores = Parameter(default=True, doc="""
+        Whether or not underscores should be replaced with spaces.""")
+
+    overrides = Parameter(default={}, doc="""
+        Allows custom labels to be specified for specific parameter
+        names using a dictionary where key is the parameter name and the
+        value is the desired label.""")
+
+    def __call__(self, pname):
+        if pname in self.overrides:
+            return self.overrides[pname]
+        if self.replace_underscores:
+            pname = pname.replace('_',' ')
+        if self.capitalize:
+            pname = pname[:1].upper() + pname[1:]
+        return pname
+
+
+label_formatter = default_label_formatter
 
 
 # CBENHANCEMENT: should be able to remove overridable_property when we

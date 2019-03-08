@@ -88,7 +88,7 @@ def batch_watch(parameterized, run=True):
     finally:
         parameterized.param._BATCH_WATCH = BATCH_WATCH
         if run and not BATCH_WATCH:
-            obj.param._batch_call_watchers()
+            parameterized.param._batch_call_watchers()
 
 
 def classlist(class_):

@@ -393,7 +393,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Event = namedtuple("Event","what name obj cls old new type")
-Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names")
+Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names what")
 
 class ParameterMetaclass(type):
     """
@@ -1381,24 +1381,22 @@ class Parameters(object):
         settings in kwargs using the queued Event and watcher objects.
         """
         while self_.self_or_cls.param._events:
-            event_dict = OrderedDict([(c.name,c) for c in self_.self_or_cls.param._events])
+            event_dict = OrderedDict([((event.name, event.what), event)
+                                      for event in self_.self_or_cls.param._events])
             watchers = self_.self_or_cls.param._watchers[:]
             self_.self_or_cls.param._events = []
             self_.self_or_cls.param._watchers = []
 
             for watcher in watchers:
-                events = [self_._update_event_type(watcher, event_dict[name], self_.self_or_cls.param._TRIGGER)
-                          for name in watcher.parameter_names if name in event_dict]
-                self_.self_or_cls.param._BATCH_WATCH = True
-                try:
+                events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],
+                                                   self_.self_or_cls.param._TRIGGER)
+                          for name in watcher.parameter_names
+                          if (name, watcher.what) in event_dict]
+                with batch_watch(self_.self_or_cls, run=False):
                     if watcher.mode == 'args':
                         watcher.fn(*events)
                     else:
                         watcher.fn(**{c.name:c.new for c in events})
-                except:
-                    raise
-                finally:
-                    self_.self_or_cls.param._BATCH_WATCH = False
 
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
@@ -1606,8 +1604,7 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_,action,watcher,what='value', operation='add'): #'add' | 'remove'
-        #cls,obj = (slf_or_cls,None) if isinstance(slf_or_cls,ParameterizedMetaclass) else (slf_or_cls.__class__,slf_or_cls)
+    def _watch(self_, action, watcher, what='value', operation='add'): #'add' | 'remove'
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             assert parameter_name in self_.cls.param
@@ -1628,7 +1625,8 @@ class Parameters(object):
     def watch(self_,fn,parameter_names, what='value', onlychanged=True):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
-                          onlychanged=onlychanged, parameter_names=parameter_names)
+                          onlychanged=onlychanged, parameter_names=parameter_names,
+                          what=what)
         self_._watch('append', watcher, what)
         return watcher
 
@@ -1646,7 +1644,7 @@ class Parameters(object):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
-                          parameter_names=parameter_names)
+                          parameter_names=parameter_names, what='value')
         self_._watch('append', watcher, what)
         return watcher
 

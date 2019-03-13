@@ -50,6 +50,10 @@ class WatchMethodExample(SimpleWatchSubclass):
     def _set_c(self):
         self.c = self.b*2
 
+    @param.depends('c', watch=True)
+    def _set_d_bounds(self):
+        self.param.d.bounds = (self.c, self.c*2)
+
 
 
 class TestWatch(API1TestCase):
@@ -437,6 +441,15 @@ class TestWatchMethod(API1TestCase):
         obj.a = 4
         self.assertEqual(obj.a, 3)
         self.assertEqual(obj2.a, 3)
+
+    def test_multiple_watcher_dispatch_on_param_attribute(self):
+        obj = WatchMethodExample()
+        accumulator = Accumulator()
+
+        obj.param.watch(accumulator, 'd', 'bounds')
+        obj.c = 2
+        self.assertEqual(obj.param.d.bounds, (2, 4))
+        self.assertEqual(accumulator.call_count(), 1)
 
 
 

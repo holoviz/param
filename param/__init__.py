@@ -741,9 +741,10 @@ class Number(Dynamic):
 
     """
 
-    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook']
+    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook', 'step']
 
-    def __init__(self,default=0.0,bounds=None,softbounds=None,inclusive_bounds=(True,True),**params):
+    def __init__(self,default=0.0,bounds=None,softbounds=None,
+                 inclusive_bounds=(True,True), step=None, **params):
         """
         Initialize this parameter object and store the bounds.
 
@@ -756,6 +757,7 @@ class Number(Dynamic):
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
         self._validate(default)
+        self.step = step
 
 
     def __get__(self,obj,objtype):
@@ -896,6 +898,13 @@ class Number(Dynamic):
         else:          u = su
 
         return (l,u)
+
+
+    def __setstate__(self,state):
+        if 'step' not in state:
+            state['step'] = None
+
+        super(Number,self).__setstate__(state)
 
 
 

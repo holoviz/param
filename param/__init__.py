@@ -756,8 +756,8 @@ class Number(Dynamic):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
-        self._validate(default)
         self.step = step
+        self._validate(default)
 
 
     def __get__(self,obj,objtype):
@@ -872,6 +872,9 @@ class Number(Dynamic):
         if not _is_number(val):
             raise ValueError("Parameter '%s' only takes numeric values"%(self.name))
 
+        if self.step is not None and not _is_number(self.step):
+            raise ValueError("Step parameter can only be None or a numeric value")
+
         self._checkBounds(val)
 
 
@@ -922,6 +925,10 @@ class Integer(Number):
 
         if not isinstance(val,int):
             raise ValueError("Parameter '%s' must be an integer."%self.name)
+
+        if self.step is not None and not isinstance(self.step, int):
+            raise ValueError("Step parameter can only be None or an integer value")
+
 
         self._checkBounds(val)
 
@@ -1818,6 +1825,9 @@ class Date(Number):
 
         if not isinstance(val, dt_types) and not (self.allow_None and val is None):
             raise ValueError("Date '%s' only takes datetime types."%self.name)
+
+        if self.step is not None and not isinstance(self.step, dt_types):
+            raise ValueError("Step parameter can only be None or a datetime type")
 
         self._checkBounds(val)
 

@@ -55,6 +55,11 @@ class WatchMethodExample(SimpleWatchSubclass):
         self.param.d.bounds = (self.c, self.c*2)
 
 
+class WatchSubclassExample(WatchMethodExample):
+
+    pass
+
+
 
 class TestWatch(API1TestCase):
 
@@ -450,6 +455,13 @@ class TestWatchMethod(API1TestCase):
         obj.c = 2
         self.assertEqual(obj.param.d.bounds, (2, 4))
         self.assertEqual(accumulator.call_count(), 1)
+
+    def test_depends_with_watch_on_subclass(self):
+        obj = WatchSubclassExample()
+
+        obj.b = 3
+        self.assertEqual(obj.c, 6)
+
 
 
 

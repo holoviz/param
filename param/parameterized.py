@@ -2246,14 +2246,17 @@ class Parameterized(object):
         object_count += 1
 
         # add watched dependencies
-        for n in self.__class__.param._depends['watch']:
-            # TODO: should improve this - will happen for every
-            # instantiation of Parameterized with watched deps. Will
-            # probably store expanded deps on class - see metaclass
-            # 'dependers'.
-            for p in self.param.params_depended_on(n):
-                # TODO: can't remember why not just pass m (rather than _m_caller) here
-                (p.inst or p.cls).param.watch(_m_caller(self,n),p.name,p.what)
+        for cls in classlist(self.__class__):
+            if not issubclass(cls, Parameterized):
+                continue
+            for n in cls.param._depends['watch']:
+                # TODO: should improve this - will happen for every
+                # instantiation of Parameterized with watched deps. Will
+                # probably store expanded deps on class - see metaclass
+                # 'dependers'.
+                for p in self.param.params_depended_on(n):
+                    # TODO: can't remember why not just pass m (rather than _m_caller) here
+                    (p.inst or p.cls).param.watch(_m_caller(self,n),p.name,p.what)
 
         self.initialized=True
 

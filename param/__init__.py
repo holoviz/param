@@ -741,9 +741,10 @@ class Number(Dynamic):
 
     """
 
-    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook']
+    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook', 'step']
 
-    def __init__(self,default=0.0,bounds=None,softbounds=None,inclusive_bounds=(True,True),**params):
+    def __init__(self,default=0.0,bounds=None,softbounds=None,
+                 inclusive_bounds=(True,True), step=None, **params):
         """
         Initialize this parameter object and store the bounds.
 
@@ -755,6 +756,7 @@ class Number(Dynamic):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self._softbounds = softbounds
+        self.step = step
         self._validate(default)
 
 
@@ -870,6 +872,9 @@ class Number(Dynamic):
         if not _is_number(val):
             raise ValueError("Parameter '%s' only takes numeric values"%(self.name))
 
+        if self.step is not None and not _is_number(self.step):
+            raise ValueError("Step parameter can only be None or a numeric value")
+
         self._checkBounds(val)
 
 
@@ -898,6 +903,13 @@ class Number(Dynamic):
         return (l,u)
 
 
+    def __setstate__(self,state):
+        if 'step' not in state:
+            state['step'] = None
+
+        super(Number,self).__setstate__(state)
+
+
 
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
@@ -913,6 +925,10 @@ class Integer(Number):
 
         if not isinstance(val,int):
             raise ValueError("Parameter '%s' must be an integer."%self.name)
+
+        if self.step is not None and not isinstance(self.step, int):
+            raise ValueError("Step parameter can only be None or an integer value")
+
 
         self._checkBounds(val)
 
@@ -1809,6 +1825,9 @@ class Date(Number):
 
         if not isinstance(val, dt_types) and not (self.allow_None and val is None):
             raise ValueError("Date '%s' only takes datetime types."%self.name)
+
+        if self.step is not None and not isinstance(self.step, dt_types):
+            raise ValueError("Step parameter can only be None or a datetime type")
 
         self._checkBounds(val)
 

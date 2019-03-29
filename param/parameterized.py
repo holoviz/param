@@ -1562,16 +1562,18 @@ class Parameters(object):
         index into the output if multiple outputs are returned.
         """
         outputs = {}
-        for name in dir(self_.self_or_cls):
-            method = getattr(self_.self_or_cls, name)
-            dinfo = getattr(method, '_dinfo', {})
-            if 'outputs' not in dinfo:
-                continue
-            for override, otype, idx in dinfo['outputs']:
-                if override is not None:
-                    name = override
-                outputs[name] = (otype, method, idx)
+        for cls in classlist(self_.cls):
+            for name in dir(cls):
+                method = getattr(self_.self_or_cls, name)
+                dinfo = getattr(method, '_dinfo', {})
+                if 'outputs' not in dinfo:
+                    continue
+                for override, otype, idx in dinfo['outputs']:
+                    if override is not None:
+                        name = override
+                    outputs[name] = (otype, method, idx)
         return outputs
+
 
     def _spec_to_obj(self_,spec):
         # TODO: when we decide on spec, this method should be

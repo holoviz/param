@@ -40,6 +40,7 @@ def get_logger(name=None):
     if logger is None:
         root_logger = logging.getLogger('param')
         if not root_logger.handlers:
+            root_logger.setLevel(logging.INFO)
             formatter = logging.Formatter(
                 fmt='%(levelname)s:%(name)s: %(message)s')
             handler = logging.StreamHandler()

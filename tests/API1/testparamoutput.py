@@ -28,6 +28,37 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(method, p.single_output)
         self.assertEqual(idx, None)
 
+    def test_subclass_output(self):
+        class A(param.Parameterized):
+
+            @param.output()
+            def single_output(self):
+                return 1
+
+        class B(param.Parameterized):
+
+            @param.output()
+            def another_output(self):
+                return 2
+
+        class C(A, B):
+            pass
+
+        p = C()
+        outputs = p.param.outputs()
+        self.assertEqual(sorted(outputs), ['another_output', 'single_output'])
+
+        otype, method, idx = outputs['single_output']
+        self.assertIs(type(otype), param.Parameter)
+        self.assertEqual(method, p.single_output)
+        self.assertEqual(idx, None)
+
+        otype, method, idx = outputs['another_output']
+        self.assertIs(type(otype), param.Parameter)
+        self.assertEqual(method, p.another_output)
+        self.assertEqual(idx, None)
+
+
     def test_named_kwarg_output(self):
         class P(param.Parameterized):
 

@@ -1135,14 +1135,13 @@ class Parameters(object):
         appropriate method.
         """
         def inner(*args, **kwargs):
-            info = (args[0].__class__.__name__,  fn.__name__)
             if cls._disable_stubs:
                 raise AssertionError('Stubs supporting old API disabled')
             elif cls._disable_stubs is None:
                 pass
             elif cls._disable_stubs is False:
-                get_logger(name=args[0].__class__.__name__).log(WARNING,
-                                 'Use method %r via param namespace ' % fn.__name__)
+                get_logger(name=args[0].__class__.__name__).log(
+                    WARNING, 'Use method %r via param namespace ' % fn.__name__)
             return fn(*args, **kwargs)
 
         inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__

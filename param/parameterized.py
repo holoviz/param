@@ -31,17 +31,28 @@ except:
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
 
-# Logger instance to use for param; if "logger" is set to None, the root logger
-# will be used.
+# Get the appropriate logging.Logger instance. If `logger` is None, a
+# logger named `"param"` will be instantiated. If `name` is set, a descendant
+# logger with the name ``"param.<name>"`` is returned (or
+# ``logger.name + ".<name>"``)
 logger = None
-def get_logger():
+def get_logger(name=None):
     if logger is None:
-        # If it was not configured before, do default initialization
-        if not logging.getLogger().handlers:
-            logging.basicConfig(level=INFO)
-        return logging.getLogger()
+        root_logger = logging.getLogger('param')
+        if not root_logger.handlers:
+            root_logger.setLevel(logging.INFO)
+            formatter = logging.Formatter(
+                fmt='%(levelname)s:%(name)s: %(message)s')
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            root_logger.addHandler(handler)
     else:
-        return logger
+        root_logger = logger
+    if name is None:
+        return root_logger
+    else:
+        return logging.getLogger(root_logger.name + '.' + name)
+
 
 # Indicates whether warnings should be raised as errors, stopping
 # processing.
@@ -1125,14 +1136,13 @@ class Parameters(object):
         appropriate method.
         """
         def inner(*args, **kwargs):
-            info = (args[0].__class__.__name__,  fn.__name__)
             if cls._disable_stubs:
                 raise AssertionError('Stubs supporting old API disabled')
             elif cls._disable_stubs is None:
                 pass
             elif cls._disable_stubs is False:
-                get_logger().log(WARNING,
-                                 '%s: Use method %r via param namespace ' % info)
+                get_logger(name=args[0].__class__.__name__).log(
+                    WARNING, 'Use method %r via param namespace ' % fn.__name__)
             return fn(*args, **kwargs)
 
         inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
@@ -1686,14 +1696,12 @@ class Parameters(object):
         See python's logging module for details.
         """
         self_or_cls = self_.self_or_cls
-        if get_logger().isEnabledFor(level):
+        if get_logger(name=self_or_cls.name).isEnabledFor(level):
 
             if dbprint_prefix and callable(dbprint_prefix):
-                prefix=dbprint_prefix() # pylint: disable-msg=E1102
-            else:
-                prefix=""
+                msg = dbprint_prefix() + ": " + msg  # pylint: disable-msg=E1102
 
-            get_logger().log(level, '%s%s: '+msg, prefix, self_or_cls.name, *args, **kw)
+            get_logger(name=self_or_cls.name).log(level, msg, *args, **kw)
 
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""

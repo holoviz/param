@@ -294,9 +294,6 @@ def depends(func, *dependencies, **kw):
         _dinfo.update({'dependencies': dependencies,
                        'watch': watch})
 
-        def _depends(*args,**kw):
-            return func(*args,**kw)
-
         # storing here risks it being tricky to find if other libraries
         # mess around with methods
         _depends._dinfo = _dinfo

@@ -259,7 +259,7 @@ def instance_descriptor(f):
 
 
 def ismethod(obj):
-    if sys.version == 2:
+    if sys.version_info.major == 2:
         return hasattr(obj, 'imclass')
     else:
         if '.' in obj.__qualname__:

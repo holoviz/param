@@ -262,9 +262,9 @@ def ismethod(obj):
     if sys.version_info.major == 2:
         return hasattr(obj, 'im_class')
     else:
-        if '.' in obj.__qualname__:
-            return True
-        return 'self' in inspect.signature(obj).parameters
+        owner = getattr(inspect.getmodule(meth),
+                        meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
+        return isinstance(owner, type)
 
 
 @accept_arguments

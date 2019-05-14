@@ -258,33 +258,73 @@ def instance_descriptor(f):
     return _f
 
 
+def ismethod(obj):
+    if sys.version == 2:
+        return hasattr(obj, 'imclass')
+    else:
+        if '.' in obj.__qualname__:
+            return True
+        return 'self' in inspect.signature(obj).parameters
+
+
 @accept_arguments
 def depends(func, *dependencies, **kw):
     """
-    Annotates a Parameterized method to express its dependencies.
-    The specified dependencies can be either be Parameters of this
-    class, or Parameters of subobjects (Parameterized objects that
-    are values of this object's parameters).  Dependencies can either
-    be on Parameter values, or on other metadata about the Parameter.
+    Annotates a function or Parameterized method to express its
+    dependencies.  The specified dependencies can be either be
+    Parameter instances or if a method is supplied they can be
+    defined as strings referring to Parameters of the class,
+    or Parameters of subobjects (Parameterized objects that are
+    values of this object's parameters).  Dependencies can either be
+    on Parameter values, or on other metadata about the Parameter.
     """
 
     # python3 would allow kw-only args
     # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
     watch = kw.pop("watch",False)
-    assert len(kw)==0, "@depends accepts only 'watch' kw"
 
-    # TODO: rename dinfo
-    _dinfo = getattr(func, '_dinfo', {})
-    _dinfo.update({'dependencies': dependencies,
-                   'watch': watch})
-
-    @wraps(func)
     def _depends(*args,**kw):
         return func(*args,**kw)
 
-    # storing here risks it being tricky to find if other libraries
-    # mess around with methods
-    _depends._dinfo = _dinfo
+    if ismethod(func):
+        assert len(kw)==0, "@depends accepts only 'watch' kw"
+
+        # TODO: rename dinfo
+        _dinfo = getattr(func, '_dinfo', {})
+        _dinfo.update({'dependencies': dependencies,
+                       'watch': watch})
+
+        def _depends(*args,**kw):
+            return func(*args,**kw)
+
+        # storing here risks it being tricky to find if other libraries
+        # mess around with methods
+        _depends._dinfo = _dinfo
+    elif isinstance(func, FunctionType):
+        deps = list(dependencies)+list(kw.values())
+
+        for dep in deps:
+            if not isinstance(dep, Parameter):
+                raise ValueError('Reactive functions must have '
+                                 'only parameters as dependencies. '
+                                 'Found %s type instead.' %
+                                 type(dep).__name__)
+            elif not (isinstance(dep.owner, Parameterized) or
+                      (isinstance(dep.owner, type) and not issubclass(dep.owner, Parameterized))):
+                owner = 'None' if dep.owner is None else '%s class' % type(dep.owner).__name__
+                raise ValueError('Reactive functions input parameters '
+                                 'must be associated with a Parameterized '
+                                 'instance, parameter owner is %s.' % owner)
+        if watch:
+            def cb(event):
+                args = (getattr(d.owner, d.name) for d in dependencies)
+                dep_kwargs = {n: getattr(d.owner, d.name) for n, d in kw}
+                return func(*args, **dep_kwargs)
+
+            for dep in deps:
+                dep.owner.param.watch(cb, dep.name)
+
+        _depends._dinfo = {'dependencies': {'args': dependencies, 'kwargs': kw}}
 
     return _depends
 

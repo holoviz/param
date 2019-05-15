@@ -26,7 +26,7 @@ import collections
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor)
+    descendents, get_logger, instance_descriptor, basestring)
 
 from .parameterized import batch_watch, depends, output   # noqa: api import
 from .parameterized import logging_level     # noqa: api import
@@ -1847,7 +1847,7 @@ class Color(Parameter):
     def _validate(self, val):
         if (self.allow_None and val is None):
             return
-        if not isinstance(val, String.basestring):
+        if not isinstance(val, basestring):
             raise ValueError("Color '%s' only takes a string value."%self.name)
         if not re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val):
             raise ValueError("Color '%s' only accepts valid RGB hex codes."

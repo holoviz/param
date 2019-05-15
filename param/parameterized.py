@@ -27,6 +27,7 @@ try:
 except:
     param_pager = None
 
+basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -258,15 +259,6 @@ def instance_descriptor(f):
     return _f
 
 
-def ismethod(obj):
-    if sys.version_info.major == 2:
-        return hasattr(obj, 'im_class')
-    else:
-        owner = getattr(inspect.getmodule(meth),
-                        meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
-        return isinstance(owner, type)
-
-
 @accept_arguments
 def depends(func, *dependencies, **kw):
     """
@@ -283,45 +275,52 @@ def depends(func, *dependencies, **kw):
     # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
     watch = kw.pop("watch",False)
 
+    @wraps(func)
     def _depends(*args,**kw):
         return func(*args,**kw)
 
-    if ismethod(func):
-        assert len(kw)==0, "@depends accepts only 'watch' kw"
+    deps = list(dependencies)+list(kw.values())
+    string_specs = False
+    for dep in deps:
+        if isinstance(dep, basestring):
+            string_specs = True
+        elif not isinstance(dep, Parameter):
+            raise ValueError('Reactive functions must have '
+                             'only parameters as dependencies. '
+                             'Found %s type instead.' %
+                             type(dep).__name__)
+        elif not (isinstance(dep.owner, Parameterized) or
+                  (isinstance(dep.owner, ParameterizedMetaclass))):
+            owner = 'None' if dep.owner is None else '%s class' % type(dep.owner).__name__
+            raise ValueError('Reactive functions input parameters '
+                             'must be associated with a Parameterized '
+                             'instance, parameter owner is %s.' % owner)
 
-        # TODO: rename dinfo
-        _dinfo = getattr(func, '_dinfo', {})
-        _dinfo.update({'dependencies': dependencies,
-                       'watch': watch})
+    if len({type(dep) for dep in deps}) > 1:
+        raise ValueError('Dependencies must either be defined as strings '
+                         'referencing parameters on the class defining '
+                         'the decorated method or as parameter instances, '
+                         'mixing of string specs and parameter instances '
+                         'is not supported.')
+    elif string_specs and kw:
+        raise AssertionError('Supplying keywords to the decorated method '
+                             'or function is not supported when referencing '
+                             'parameters by name.')
 
-        # storing here risks it being tricky to find if other libraries
-        # mess around with methods
-        _depends._dinfo = _dinfo
-    elif isinstance(func, FunctionType):
-        deps = list(dependencies)+list(kw.values())
+    if not string_specs and watch:
+        def cb(event):
+            args = (getattr(dep.owner, dep.name) for dep in dependencies)
+            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+            return func(*args, **dep_kwargs)
 
         for dep in deps:
-            if not isinstance(dep, Parameter):
-                raise ValueError('Reactive functions must have '
-                                 'only parameters as dependencies. '
-                                 'Found %s type instead.' %
-                                 type(dep).__name__)
-            elif not (isinstance(dep.owner, Parameterized) or
-                      (isinstance(dep.owner, type) and not issubclass(dep.owner, Parameterized))):
-                owner = 'None' if dep.owner is None else '%s class' % type(dep.owner).__name__
-                raise ValueError('Reactive functions input parameters '
-                                 'must be associated with a Parameterized '
-                                 'instance, parameter owner is %s.' % owner)
-        if watch:
-            def cb(event):
-                args = (getattr(d.owner, d.name) for d in dependencies)
-                dep_kwargs = {n: getattr(d.owner, d.name) for n, d in kw}
-                return func(*args, **dep_kwargs)
+            dep.owner.param.watch(cb, dep.name)
 
-            for dep in deps:
-                dep.owner.param.watch(cb, dep.name)
+    _dinfo = getattr(func, '_dinfo', {})
+    _dinfo.update({'dependencies': dependencies,
+                   'kw': kw, 'watch': watch})
 
-        _depends._dinfo = {'dependencies': {'args': dependencies, 'kwargs': kw}}
+    _depends._dinfo = _dinfo
 
     return _depends
 
@@ -899,8 +898,6 @@ class String(Parameter):
 
     __slots__ = ['regex']
 
-    basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
-
     def __init__(self, default="", regex=None, allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
@@ -911,7 +908,7 @@ class String(Parameter):
         if self.allow_None and val is None:
             return
 
-        if not isinstance(val, self.basestring):
+        if not isinstance(val, basestring):
             raise ValueError("String '%s' only takes a string value."%self.name)
 
         if self.regex is not None and re.match(self.regex, val) is None:
@@ -977,7 +974,7 @@ class Comparator(object):
 
     equalities = {
         numbers.Number: operator.eq,
-        String.basestring: operator.eq,
+        basestring: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq
     }

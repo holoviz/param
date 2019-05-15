@@ -1622,6 +1622,14 @@ class Parameters(object):
     def _spec_to_obj(self_,spec):
         # TODO: when we decide on spec, this method should be
         # rewritten
+
+        if isinstance(spec, Parameter):
+            inst = spec.owner if isinstance(spec.owner, Parameterized) else None
+            cls = spec.owner if inst is None else type(inst)
+            info = PInfo(inst=inst, cls=cls, name=spec.name,
+                         pobj=spec, what='value')
+            return [info]
+
         assert spec.count(":")<=1
 
         spec = spec.strip()

@@ -26,7 +26,14 @@ class TestParamDepends(API1TestCase):
             def nested(self):
                 pass
 
+        class P2(param.Parameterized):
+
+            @param.depends(P.param.a)
+            def external_param(self, a):
+                pass
+
         self.P = P
+        self.P2 = P2
 
     def test_param_depends_instance(self):
         p = self.P()
@@ -70,6 +77,15 @@ class TestParamDepends(API1TestCase):
             info = pinfos[(inst.a, p)]
             self.assertEqual(info.name, p)
             self.assertIs(info.inst, inst.a)
+
+    def test_param_external_param_instance(self):
+        inst = self.P2()
+        pinfos = inst.param.params_depended_on('external_param')
+        pinfo = pinfos[0]
+        self.assertIs(pinfo.cls, self.P)
+        self.assertIs(pinfo.inst, None)
+        self.assertEqual(pinfo.name, 'a')
+        self.assertEqual(pinfo.what, 'value')
 
 
 

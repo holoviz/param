@@ -285,22 +285,22 @@ def depends(func, *dependencies, **kw):
         if isinstance(dep, basestring):
             string_specs = True
         elif not isinstance(dep, Parameter):
-            raise ValueError('Reactive functions must have '
-                             'only parameters as dependencies. '
-                             'Found %s type instead.' %
+            raise ValueError('The depends decorator only accepts string '
+                             'types referencing a parameter or parameter '
+                             'instances, found %s type instead.' %
                              type(dep).__name__)
         elif not (isinstance(dep.owner, Parameterized) or
                   (isinstance(dep.owner, ParameterizedMetaclass))):
             owner = 'None' if dep.owner is None else '%s class' % type(dep.owner).__name__
-            raise ValueError('Reactive functions input parameters '
-                             'must be associated with a Parameterized '
-                             'instance, parameter owner is %s.' % owner)
+            raise ValueError('Parameters supplied to the depends decorator, '
+                             'must be bound to a Parameterized class or '
+                             'instance not %s.' % owner)
 
     if len({type(dep) for dep in deps}) > 1:
         raise ValueError('Dependencies must either be defined as strings '
                          'referencing parameters on the class defining '
-                         'the decorated method or as parameter instances, '
-                         'mixing of string specs and parameter instances '
+                         'the decorated method or as parameter instances. '
+                         'Mixing of string specs and parameter instances '
                          'is not supported.')
     elif string_specs and kw:
         raise AssertionError('Supplying keywords to the decorated method '

@@ -26,7 +26,14 @@ class TestParamDepends(API1TestCase):
             def nested(self):
                 pass
 
+        class P2(param.Parameterized):
+
+            @param.depends(P.param.a)
+            def external_param(self, a):
+                pass
+
         self.P = P
+        self.P2 = P2
 
     def test_param_depends_instance(self):
         p = self.P()
@@ -70,3 +77,82 @@ class TestParamDepends(API1TestCase):
             info = pinfos[(inst.a, p)]
             self.assertEqual(info.name, p)
             self.assertIs(info.inst, inst.a)
+
+    def test_param_external_param_instance(self):
+        inst = self.P2()
+        pinfos = inst.param.params_depended_on('external_param')
+        pinfo = pinfos[0]
+        self.assertIs(pinfo.cls, self.P)
+        self.assertIs(pinfo.inst, None)
+        self.assertEqual(pinfo.name, 'a')
+        self.assertEqual(pinfo.what, 'value')
+
+
+
+class TestParamDependsFunction(API1TestCase):
+
+    def setUp(self):
+        class P(param.Parameterized):
+            a = param.Parameter()
+            b = param.Parameter()
+
+
+        self.P = P
+
+    def test_param_depends_function_instance_params(self):
+        p = self.P()
+
+        @param.depends(p.param.a, c=p.param.b)
+        def function(value, c):
+            pass
+
+        dependencies = {
+            'dependencies': (p.param.a,),
+            'kw': {'c': p.param.b},
+            'watch': False
+        }
+        self.assertEqual(function._dinfo, dependencies)
+
+    def test_param_depends_function_class_params(self):
+        p = self.P
+
+        @param.depends(p.param.a, c=p.param.b)
+        def function(value, c):
+            pass
+
+        dependencies = {
+            'dependencies': (p.param.a,),
+            'kw': {'c': p.param.b},
+            'watch': False
+        }
+        self.assertEqual(function._dinfo, dependencies)
+
+    def test_param_depends_function_instance_params_watch(self):
+        p = self.P(a=1, b=2)
+
+        d = []
+
+        @param.depends(p.param.a, c=p.param.b, watch=True)
+        def function(value, c):
+            d.append(value+c)
+
+        p.a = 2
+        self.assertEqual(d, [4])
+        p.b = 3
+        self.assertEqual(d, [4, 5])
+
+    def test_param_depends_function_class_params_watch(self):
+        p = self.P
+        p.a = 1
+        p.b = 2
+
+        d = []
+
+        @param.depends(p.param.a, c=p.param.b, watch=True)
+        def function(value, c):
+            d.append(value+c)
+
+        p.a = 2
+        self.assertEqual(d, [4])
+        p.b = 3
+        self.assertEqual(d, [4, 5])

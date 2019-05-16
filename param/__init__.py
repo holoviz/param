@@ -1275,7 +1275,7 @@ class Selector(ObjectSelector):
         else:
             autodefault = None
 
-        default = default if default else autodefault
+        default = autodefault if default is None else default
 
         super(Selector,self).__init__(default=default, objects=objects,
                                       instantiate=instantiate,

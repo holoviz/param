@@ -296,7 +296,8 @@ def depends(func, *dependencies, **kw):
                              'must be bound to a Parameterized class or '
                              'instance not %s.' % owner)
 
-    if len({type(dep) for dep in deps}) > 1:
+    if (any(isinstance(dep, Parameter) for dep in deps) and
+        any(isinstance(dep, basestring) for dep in deps)):
         raise ValueError('Dependencies must either be defined as strings '
                          'referencing parameters on the class defining '
                          'the decorated method or as parameter instances. '

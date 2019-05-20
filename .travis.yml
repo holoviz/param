@@ -131,11 +131,9 @@ jobs:
         - pip install -e .
       script:
         # TODO: nbsite commands will be simplified eventually...
-        - nbsite generate-rst --org ioam --project-name param --repo param --examples=./examples --doc=./doc
+        - nbsite generate-rst --org pyviz --repo param
         - mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
-        - nbsite build --what=html --examples=examples --doc=doc --output=builtdocs --examples-assets=''
-        - touch ./builtdocs/.nojekyll # for github pages
-        - nbsite_cleandisthtml.py ./builtdocs take_a_chance
+        - nbsite build --examples-assets=''
       deploy:
         - provider: pages
           skip_cleanup: true
@@ -148,13 +146,13 @@ jobs:
 
     - <<: *website
       stage: website_dev
-      env: DESC="ioam-docs.github.io/parambokeh-dev"
+      env: DESC="pyviz-dev.github.io/param"
       deploy:
         - provider: pages
           skip_cleanup: true
           github_token: $GITHUB_TOKEN
           local_dir: ./builtdocs
-          repo: ioam-docs/param-dev
+          repo: pyviz-dev/param
           on:
             tags: true
             all_branches: true

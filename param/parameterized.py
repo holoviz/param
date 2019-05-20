@@ -1662,7 +1662,10 @@ class Parameters(object):
     def _watch(self_, action, watcher, what='value', operation='add'): #'add' | 'remove'
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
-            assert parameter_name in self_.cls.param
+            if parameter_name not in self_.cls.param:
+                raise ValueError("%s parameter was not found in list of "
+                                 "parameters of class %s" %
+                                 (parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
                 watchers = self_.self._param_watchers

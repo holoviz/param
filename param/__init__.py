@@ -45,7 +45,7 @@ except:
     __version__ = "0.0.0+unknown"
 
 
-dt_types = (dt.datetime,)
+dt_types = (dt.datetime, dt.date)
 
 try:
     import numpy as np

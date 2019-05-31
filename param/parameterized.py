@@ -106,6 +106,44 @@ def batch_watch(parameterized, run=True):
             parameterized.param._batch_call_watchers()
 
 
+@contextmanager
+def edit_constant(parameterized):
+    """
+    Temporarily set parameters on Parameterized object to constant=False
+    to allow editing them.
+    """
+    params = parameterized.objects('existing').values()
+    constants = [p.constant for p in params]
+    for p in params:
+        p.constant = False
+    try:
+        yield
+    except:
+        raise
+    finally:
+        for (p, const) in zip(params, constants):
+            p.constant = const
+
+
+@contextmanager
+def discard_events(parameterized):
+    """
+    Context manager which discards any events within its scope
+    triggered on the supplied parameterized object.
+    """
+    batch_watch = parameterized.param._BATCH_WATCH
+    parameterized.param._BATCH_WATCH = True
+    watchers, events = parameterized.param._watchers, parameterized.param._events
+    try:
+        yield
+    except:
+        raise
+    finally:
+        parameterized.param._BATCH_WATCH = batch_watch
+        parameterized.param._watchers = watchers
+        parameterized.param._events = events
+
+
 def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.

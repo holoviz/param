@@ -1383,8 +1383,8 @@ class Parameters(object):
         self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**params)
         self_.self_or_cls.param._TRIGGER = False
-        self_.self_or_cls.param._events = events
-        self_.self_or_cls.param._watchers = watchers
+        self_.self_or_cls.param._events += events
+        self_.self_or_cls.param._watchers += watchers
 
 
     def _update_event_type(self_, watcher, event, triggered):

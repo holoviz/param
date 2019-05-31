@@ -617,6 +617,21 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[0].new, 0)
         self.assertEqual(args[0].type, 'triggered')
 
+    def test_simple_trigger_when_batched(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, ['a'])
+        with param.batch_watch(obj):
+            obj.param.trigger('a')
+        self.assertEqual(accumulator.call_count(), 1)
+
+        args = accumulator.args_for_call(0)
+        self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].old, 0)
+        self.assertEqual(args[0].new, 0)
+        # Note: This is not strictly correct
+        self.assertEqual(args[0].type, 'changed')
+
     def test_simple_trigger_one_param_change(self):
         accumulator = Accumulator()
         obj = SimpleWatchExample()

@@ -128,7 +128,7 @@ def edit_constant(parameterized):
 @contextmanager
 def discard_events(parameterized):
     """
-    Context manager which discards any events within its scope
+    Context manager that discards any events within its scope
     triggered on the supplied parameterized object.
     """
     batch_watch = parameterized.param._BATCH_WATCH

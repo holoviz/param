@@ -4,7 +4,10 @@ Unit test for watch mechanism
 from . import API1TestCase
 
 from .utils import MockLoggingHandler
+
 import param
+
+from param.parameterized import discard_events
 
 
 class Accumulator(object):
@@ -83,6 +86,19 @@ class TestWatch(API1TestCase):
         obj.param.watch(accumulator, 'a')
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
+        obj.a = 2
+        self.assertEqual(self.accumulator, 3)
+
+
+    def test_discard_events_decorator(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, 'a')
+        with discard_events(obj):
+            obj.a = 1
+        self.assertEqual(self.accumulator, 0)
         obj.a = 2
         self.assertEqual(self.accumulator, 3)
 

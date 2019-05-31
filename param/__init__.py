@@ -28,7 +28,8 @@ from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, basestring)
 
-from .parameterized import batch_watch, depends, output   # noqa: api import
+from .parameterized import (batch_watch, depends, output, # noqa: api import
+                            discard_events, edit_constant)
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 

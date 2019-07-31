@@ -1812,7 +1812,7 @@ class MultiFileSelector(ListSelector):
 
 class Date(Number):
     """
-    Date parameter of datetime type.
+    Date parameter of datetime or date type.
     """
 
     def __init__(self, default=None, **kwargs):
@@ -1827,10 +1827,35 @@ class Date(Number):
             return
 
         if not isinstance(val, dt_types) and not (self.allow_None and val is None):
-            raise ValueError("Date '%s' only takes datetime types."%self.name)
+            raise ValueError("Date '%s' only takes datetime and date types."%self.name)
 
         if self.step is not None and not isinstance(self.step, dt_types):
-            raise ValueError("Step parameter can only be None or a datetime type")
+            raise ValueError("Step parameter can only be None, a datetime or datetime type")
+
+        self._checkBounds(val)
+
+
+class CalendarDate(Number):
+    """
+    CalendarDate parameter of date type.
+    """
+
+    def __init__(self, default=None, **kwargs):
+        super(CalendarDate, self).__init__(default=default, **kwargs)
+
+    def _validate(self, val):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        if self.allow_None and val is None:
+            return
+
+        if not isinstance(val, dt.date) and not (self.allow_None and val is None):
+            raise ValueError("CalendarDate '%s' only takes datetime types."%self.name)
+
+        if self.step is not None and not isinstance(self.step, dt.date):
+            raise ValueError("Step parameter can only be None or a date type")
 
         self._checkBounds(val)
 
@@ -1929,10 +1954,9 @@ class Range(NumericTuple):
 
 class DateRange(Range):
     """
-    A date range specified as (start_date, end_date).
+    A datetime or date range specified as (start, end).
 
-    Dates must be specified as datetime-like types (see
-    param.dt_types).
+    Bounds must be specified as datetime or date types (see param.dt_types).
     """
     def _validate(self, val):
         if self.allow_None and val is None:
@@ -1944,9 +1968,31 @@ class DateRange(Range):
 
         start, end = val
         if not end >= start:
-           raise ValueError("DateRange '%s': end date %s is before start date %s."%(self.name,val[1],val[0]))
+           raise ValueError("DateRange '%s': end datetime %s is before start datetime %s."%(self.name,val[1],val[0]))
 
         # Calling super(DateRange, self)._check(val) would also check
+        # values are numeric, which is redundant, so just call
+        # _checkBounds().
+        self._checkBounds(val)
+
+
+class CalendarDateRange(Range):
+    """
+    A date range specified as (start_date, end_date).
+    """
+    def _validate(self, val):
+        if self.allow_None and val is None:
+            return
+
+        for n in val:
+            if not isinstance(n, dt.date):
+                raise ValueError("CalendarDateRange '%s' only takes date types: %s"%(self.name,val))
+
+        start, end = val
+        if not end >= start:
+           raise ValueError("CalendarDateRange '%s': end date %s is before start date %s."%(self.name,val[1],val[0]))
+
+        # Calling super(CalendarDateRange, self)._check(val) would also check
         # values are numeric, which is redundant, so just call
         # _checkBounds().
         self._checkBounds(val)

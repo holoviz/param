@@ -43,7 +43,12 @@ class TestNumberParameters(API1TestCase):
         with self.assertRaisesRegexp(ValueError, exception):
             param.Integer(step=3.4)
 
-    def test_step_invalid_type_date_parameter(self):
-        exception = "Step parameter can only be None or a datetime type"
+    def test_step_invalid_type_datetime_parameter(self):
+        exception = "Step parameter can only be None, a datetime or datetime type"
         with self.assertRaisesRegexp(ValueError, exception):
             param.Date(dt.datetime(2017,2,27), step=3.2)
+
+    def test_step_invalid_type_date_parameter(self):
+        exception = "Step parameter can only be None or a date type"
+        with self.assertRaisesRegexp(ValueError, exception):
+            param.CalendarDate(dt.date(2017,2,27), step=3.2)

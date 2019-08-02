@@ -479,7 +479,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Event = namedtuple("Event","what name obj cls old new type")
-Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names what eager")
+Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names what queued")
 
 class ParameterMetaclass(type):
     """
@@ -1451,7 +1451,7 @@ class Parameters(object):
                 self_._watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
-            with batch_watch(self_.self_or_cls, enable=not watcher.eager, run=False):
+            with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
                 if watcher.mode == 'args':
                     watcher.fn(event)
                 else:
@@ -1475,7 +1475,7 @@ class Parameters(object):
                                                    self_.self_or_cls.param._TRIGGER)
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
-                with batch_watch(self_.self_or_cls, enable=not watcher.eager, run=False):
+                with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
                     if watcher.mode == 'args':
                         watcher.fn(*events)
                     else:
@@ -1718,11 +1718,11 @@ class Parameters(object):
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)
 
-    def watch(self_,fn,parameter_names, what='value', onlychanged=True, eager=False):
+    def watch(self_,fn,parameter_names, what='value', onlychanged=True, queued=False):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
                           onlychanged=onlychanged, parameter_names=parameter_names,
-                          what=what, eager=eager)
+                          what=what, queued=queued)
         self_._watch('append', watcher, what)
         return watcher
 
@@ -1736,15 +1736,14 @@ class Parameters(object):
             self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
 
-    def watch_values(self_,fn,parameter_names,what='value', onlychanged=True, eager=False):
+    def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
                           parameter_names=parameter_names, what='value',
-                          eager=eager)
+                          queued=queued)
         self_._watch('append', watcher, what)
         return watcher
-
 
 
     # Instance methods
@@ -1906,7 +1905,7 @@ class ParameterizedMetaclass(type):
         for n,dinfo in dependers:
             watch = dinfo.get('watch', False)
             if watch:
-                _watch.append((n, watch == 'eager'))
+                _watch.append((n, watch == 'queued'))
 
         mcs.param._depends = {'watch': _watch}
 
@@ -2345,14 +2344,14 @@ class Parameterized(object):
         for cls in classlist(self.__class__):
             if not issubclass(cls, Parameterized):
                 continue
-            for n, eager in cls.param._depends['watch']:
+            for n, queued in cls.param._depends['watch']:
                 # TODO: should improve this - will happen for every
                 # instantiation of Parameterized with watched deps. Will
                 # probably store expanded deps on class - see metaclass
                 # 'dependers'.
                 for p in self.param.params_depended_on(n):
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, eager=eager)
+                    (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
 
         self.initialized=True
 

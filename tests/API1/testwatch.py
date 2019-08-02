@@ -44,10 +44,15 @@ class SimpleWatchSubclass(SimpleWatchExample):
 
 class WatchMethodExample(SimpleWatchSubclass):
 
-    @param.depends('a', watch=True)
+    @param.depends('a', watch='queued')
     def _clip_a(self):
         if self.a > 3:
             self.a = 3
+
+    @param.depends('b', watch=True)
+    def _clip_b(self):
+        if self.b > 10:
+            self.b = 10
 
     @param.depends('b', watch=True)
     def _set_c(self):
@@ -451,17 +456,29 @@ class TestWatchMethod(API1TestCase):
         obj.b = 3
         self.assertEqual(obj.c, 6)
 
-    def test_multiple_watcher_dispatch(self):
+    def test_multiple_watcher_dispatch_queued(self):
         obj = WatchMethodExample()
         obj2 = SimpleWatchExample()
 
         def link(event):
             obj2.a = event.new
 
-        obj.param.watch(link, 'a')
+        obj.param.watch(link, 'a', queued=True)
         obj.a = 4
         self.assertEqual(obj.a, 3)
         self.assertEqual(obj2.a, 3)
+
+    def test_multiple_watcher_dispatch(self):
+        obj = WatchMethodExample()
+        obj2 = SimpleWatchExample()
+
+        def link(event):
+            obj2.b = event.new
+
+        obj.param.watch(link, 'b')
+        obj.b = 11
+        self.assertEqual(obj.b, 10)
+        self.assertEqual(obj2.b, 11)
 
     def test_multiple_watcher_dispatch_on_param_attribute(self):
         obj = WatchMethodExample()

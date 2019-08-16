@@ -54,6 +54,12 @@ try:
 except:
     pass
 
+
+try:
+    import collections.abc as collections_abc
+except ImportError:
+    collections_abc = collections
+
 if sys.version_info[0] >= 3:
     unicode = str
 
@@ -108,9 +114,9 @@ def hashable(x):
     part of the object has changed.  Does not (currently) recursively
     replace mutable subobjects.
     """
-    if isinstance(x, collections.MutableSequence):
+    if isinstance(x, collections_abc.MutableSequence):
         return tuple(x)
-    elif isinstance(x, collections.MutableMapping):
+    elif isinstance(x, collections_abc.MutableMapping):
         return tuple([(k,v) for k,v in x.items()])
     else:
         return x
@@ -1164,7 +1170,7 @@ class ObjectSelector(SelectorBase):
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
         if objects is None:
             objects = []
-        if isinstance(objects, collections.Mapping):
+        if isinstance(objects, collections_abc.Mapping):
             self.names = objects
             self.objects = list(objects.values())
         else:

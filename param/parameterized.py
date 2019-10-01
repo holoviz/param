@@ -88,7 +88,7 @@ def logging_level(level):
 
 
 @contextmanager
-def batch_watch(parameterized, run=True):
+def batch_watch(parameterized, enable=True, run=True):
     """
     Context manager to batch watcher events on a parameterized object.
     The context manager will queue any events triggered by setting a
@@ -97,7 +97,7 @@ def batch_watch(parameterized, run=True):
     queued events are not dispatched and should be processed manually.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
-    parameterized.param._BATCH_WATCH = True
+    parameterized.param._BATCH_WATCH = enable or parameterized.param._BATCH_WATCH
     try:
         yield
     finally:
@@ -112,7 +112,7 @@ def edit_constant(parameterized):
     Temporarily set parameters on Parameterized object to constant=False
     to allow editing them.
     """
-    params = parameterized.objects('existing').values()
+    params = parameterized.param.objects('existing').values()
     constants = [p.constant for p in params]
     for p in params:
         p.constant = False
@@ -479,7 +479,7 @@ def _m_caller(self,n):
 PInfo = namedtuple("PInfo","inst cls name pobj what")
 MInfo = namedtuple("MInfo","inst cls name method")
 Event = namedtuple("Event","what name obj cls old new type")
-Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names what")
+Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names what queued")
 
 class ParameterMetaclass(type):
     """
@@ -1449,13 +1449,13 @@ class Parameters(object):
             self_._events.append(event)
             if watcher not in self_._watchers:
                 self_._watchers.append(watcher)
-        elif watcher.mode == 'args':
-            with batch_watch(self_.self_or_cls, run=False):
-                watcher.fn(self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER))
         else:
-            with batch_watch(self_.self_or_cls, run=False):
-                event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
-                watcher.fn(**{event.name: event.new})
+            event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
+            with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
+                if watcher.mode == 'args':
+                    watcher.fn(event)
+                else:
+                    watcher.fn(**{event.name: event.new})
 
 
     def _batch_call_watchers(self_):
@@ -1475,7 +1475,7 @@ class Parameters(object):
                                                    self_.self_or_cls.param._TRIGGER)
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
-                with batch_watch(self_.self_or_cls, run=False):
+                with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
                     if watcher.mode == 'args':
                         watcher.fn(*events)
                     else:
@@ -1718,11 +1718,11 @@ class Parameters(object):
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)
 
-    def watch(self_,fn,parameter_names, what='value', onlychanged=True):
+    def watch(self_,fn,parameter_names, what='value', onlychanged=True, queued=False):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
                           onlychanged=onlychanged, parameter_names=parameter_names,
-                          what=what)
+                          what=what, queued=queued)
         self_._watch('append', watcher, what)
         return watcher
 
@@ -1736,14 +1736,14 @@ class Parameters(object):
             self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
 
-    def watch_values(self_,fn,parameter_names,what='value', onlychanged=True):
+    def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
-                          parameter_names=parameter_names, what='value')
+                          parameter_names=parameter_names, what='value',
+                          queued=queued)
         self_._watch('append', watcher, what)
         return watcher
-
 
 
     # Instance methods
@@ -1903,10 +1903,11 @@ class ParameterizedMetaclass(type):
         # everything else access from here rather than from method
         # object
         for n,dinfo in dependers:
-            if dinfo.get('watch', False):
-                _watch.append(n)
+            watch = dinfo.get('watch', False)
+            if watch:
+                _watch.append((n, watch == 'queued'))
 
-        mcs.param._depends = {'watch':_watch}
+        mcs.param._depends = {'watch': _watch}
 
         if docstring_signature:
             mcs.__class_docstring_signature()
@@ -2343,14 +2344,14 @@ class Parameterized(object):
         for cls in classlist(self.__class__):
             if not issubclass(cls, Parameterized):
                 continue
-            for n in cls.param._depends['watch']:
+            for n, queued in cls.param._depends['watch']:
                 # TODO: should improve this - will happen for every
                 # instantiation of Parameterized with watched deps. Will
                 # probably store expanded deps on class - see metaclass
                 # 'dependers'.
                 for p in self.param.params_depended_on(n):
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    (p.inst or p.cls).param.watch(_m_caller(self,n),p.name,p.what)
+                    (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
 
         self.initialized=True
 

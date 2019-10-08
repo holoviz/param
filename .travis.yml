@@ -131,7 +131,7 @@ jobs:
         - pip install -e .
       script:
         # TODO: nbsite commands will be simplified eventually...
-        - nbsite generate-rst --org pyviz --repo param
+        - nbsite generate-rst --org pyviz --repo param --project-name param
         - mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
         - nbsite build --examples-assets=''
       deploy:

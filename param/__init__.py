@@ -1335,8 +1335,11 @@ class ClassSelector(SelectorBase):
         Only classes from modules that have been imported are added
         (see concrete_descendents()).
         """
-        classes = concrete_descendents(self.class_)
-        d=OrderedDict((name,class_) for name,class_ in classes.items())
+        classes = self.class_ if isinstance(self.class_, tuple) else (self.class_,)
+        all_classes = {}
+        for cls in classes:
+            all_classes.update(concrete_descendents(cls))
+        d=OrderedDict((name,class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None']=None
         return d

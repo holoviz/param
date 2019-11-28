@@ -1,8 +1,9 @@
 environment:
   matrix:
+    - TOXENV: py38
+    - TOXENV: py37
     - TOXENV: py36
     - TOXENV: py35
-    - TOXENV: py34
     - TOXENV: py27
 
 matrix:
@@ -10,6 +11,6 @@ matrix:
 
 build: false
 
-install: C:\Python36\python -m pip install -U tox
+install: pip install tox
 
-test_script: C:\Python36\scripts\tox
+test_script: tox

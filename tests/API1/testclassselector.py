@@ -60,6 +60,12 @@ class TestClassSelectorParameters(API1TestCase):
         p = self.P(h=str)
         self.assertEqual(p.h, str)
 
+    def test_class_selector_get_range(self):
+        p = self.P()
+        classes = p.param.g.get_range()
+        self.assertIn('int', classes)
+        self.assertIn('str', classes)
+
     def test_multiple_class_type_error(self):
         exception = "Parameter 'float' must be a subclass of \(int, str\), not 'type'"
         with self.assertRaisesRegexp(ValueError, exception):

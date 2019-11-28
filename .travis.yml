@@ -1,5 +1,3 @@
-sudo: false
-
 language: python
 
 # quick hack to determine what tag is (improvements welcomed)
@@ -28,24 +26,20 @@ jobs:
   include:
     - &default
       stage: test
-      python: 3.6
-      env: TOX_ENV=py36
+      python: 3.7
+      env: TOX_ENV=py37
       install:
         - pip install tox
       script:
         - tox -e $TOX_ENV
 
     - <<: *default
-      python: 3.7-dev
-      env: TOX_ENV=py37
+      python: 3.6
+      env: TOX_ENV=py36
 
     - <<: *default
       python: 3.5
       env: TOX_ENV=py35
-
-    - <<: *default
-      python: 3.4
-      env: TOX_ENV=py34
 
     - <<: *default
       python: 2.7
@@ -54,8 +48,6 @@ jobs:
     - <<: *default
       python: pypy
       env: TOX_ENV=pypy
-
-    # could consider running with_ipython,numpy over py36 and 27
 
     - <<: *default
       env: TOX_ENV=with_ipython

@@ -22,8 +22,8 @@ official releases, installation instructions, documentation, and examples.
 .. |WinTests| image:: https://ci.appveyor.com/api/projects/status/1p5aom8o0tfgok1r?svg=true
 .. _WinTests: https://ci.appveyor.com/project/holoviz-developers/param/branch/master
 
-.. |Coverage| image:: https://img.shields.io/coveralls/pyviz/param.svg
-.. _Coverage: https://coveralls.io/r/pyviz/param?branch=master
+.. |Coverage| image:: https://coveralls.io/repos/github/holoviz/param/badge.svg?branch=master
+.. _Coverage: https://coveralls.io/github/holoviz/param?branch=master
 
 .. |PyPIVersion| image:: http://img.shields.io/pypi/v/param.svg
 .. _PyPIVersion: https://pypi.python.org/pypi/param

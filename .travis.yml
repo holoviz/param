@@ -34,6 +34,10 @@ jobs:
         - tox -e $TOX_ENV
 
     - <<: *default
+      python: 3.8
+      env: TOX_ENV=py38
+
+    - <<: *default
       python: 3.6
       env: TOX_ENV=py36
 

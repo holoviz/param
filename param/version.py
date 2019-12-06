@@ -2,7 +2,7 @@
 Provide consistent and up-to-date ``__version__`` strings for
 Python packages.
 
-See https://github.com/pyviz/autover for more information.
+See https://github.com/holoviz/autover for more information.
 """
 
 # The Version class is a copy of autover.version.Version v0.2.5,

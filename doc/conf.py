@@ -3,7 +3,7 @@
 from nbsite.shared_conf import *
 
 project = u'Param'
-authors = u'PyViz authors'
+authors = u'HoloViz authors'
 copyright = u'\u00a9 2005-2018, ' + authors
 description = 'Declarative Python programming using Parameters.'
 
@@ -28,7 +28,7 @@ html_context.update({
     'DESCRIPTION': description,
     'AUTHOR': authors,
     # canonical URL (for search engines); can ignore for local builds
-    'WEBSITE_SERVER': 'https://param.pyviz.org',
+    'WEBSITE_SERVER': 'https://param.holoviz.org',
     'VERSION': version,
     'NAV': _NAV,
     'LINKS': _NAV,

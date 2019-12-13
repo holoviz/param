@@ -1166,8 +1166,9 @@ class ObjectSelector(SelectorBase):
 
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self,default=None,objects=None,instantiate=False,
-                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+    def __init__(self, default=None, objects=None, instantiate=False,
+                 compute_default_fn=None, check_on_set=None, allow_None=False,
+                 **params):
         if objects is None:
             objects = []
         if isinstance(objects, collections_abc.Mapping):

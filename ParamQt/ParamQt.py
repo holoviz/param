@@ -8,7 +8,7 @@ import inspect
 import traceback
 import math
 import re
-from typing import Tuple, List, Union, Any, Iterable, Dict, Callable
+from typing import List, Callable
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
@@ -1193,9 +1193,9 @@ def menu_control(window, obj: pm.Parameterized, name: str, *args, **kwargs):
     if param.constant:
         raise ValueError('No menu control for constant parameter')
     else:
-        preferred_style = (param.user['style']
-                           if isinstance(param, GraphicParameter)
-                           else None)
+        # preferred_style = (param.user['style']
+        #                    if isinstance(param, GraphicParameter)
+        #                    else None)
         if param_base_cls == pm.ObjectSelector:
             control_cls = SelectMenu
         elif param_base_cls == pm.Boolean:

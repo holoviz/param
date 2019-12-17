@@ -2,8 +2,6 @@
 # - new slot 'visible' (was added below manually for each class but this is
 #   not very nice)
 # - public method for '_batch_call_watchers'
-# - check value again when changing bounds, objects, etc.
-# - ObjectSelector default allow_None=False instead of None
 
 import time
 import inspect
@@ -489,6 +487,10 @@ class _SelectorControlBase(_ParameterControlBase):
 
     def all_value_names(self):
         names = self.param.names
+        if names is None:
+            names = [str(obj) for obj in self.param.objects]
+        else:
+            names = [key for key in self.param.names.keys()]
         if self._control_has_None():
             return ['-'] + names
         else:
@@ -1602,7 +1604,6 @@ class ControlMenu(_PanelBase, QtWidgets.QMenu):
 if __name__ == "__main__":
 
     import numpy as np
-    import math
 
     # define dummy 'translation' functions
     def to_upper_case(s: str):

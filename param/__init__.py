@@ -1172,10 +1172,10 @@ class ObjectSelector(SelectorBase):
         if objects is None:
             objects = []
         if isinstance(objects, collections_abc.Mapping):
-            self.names = list(objects.keys())
+            self.names = objects
             self.objects = list(objects.values())
         else:
-            self.names = objects
+            self.names = None
             self.objects = objects
         self.compute_default_fn = compute_default_fn
 

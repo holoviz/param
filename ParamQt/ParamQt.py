@@ -140,10 +140,10 @@ class GraphicParameter(pm.Parameter):
     """A subclass Parameters with additional attributes, which for the
     moment will all be stored in the available 'precedence' slot."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, style=None, **kwargs):
         user = kwargs.pop('precedence', dict())
         # new attribute 'style' (default None)
-        user['style'] = kwargs.pop('style', None)
+        user['style'] = style
         # any additional attribute can be created
         slots = [key
                  for cls in inspect.getmro(type(self)) if issubclass(cls, pm.Parameter)
@@ -172,8 +172,8 @@ class GBoolean(GraphicParameter, pm.Boolean):
     # using pm.Parameterized.watch
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GBoolean, self).__init__(*args, **kwargs)
 
 
@@ -181,8 +181,8 @@ class GInteger(GraphicParameter, pm.Integer):
 
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GInteger, self).__init__(*args, **kwargs)
 
 
@@ -190,8 +190,8 @@ class GNumber(GraphicParameter, pm.Number):
 
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GNumber, self).__init__(*args, **kwargs)
 
 
@@ -199,8 +199,8 @@ class GString(GraphicParameter, pm.String):
 
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GString, self).__init__(*args, **kwargs)
 
 
@@ -208,8 +208,8 @@ class GObjectSelector(GraphicParameter, pm.ObjectSelector):
 
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GObjectSelector, self).__init__(*args, **kwargs)
 
 
@@ -217,8 +217,8 @@ class GList(GraphicParameter, pm.List):
 
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GList, self).__init__(*args, **kwargs)
 
 
@@ -226,8 +226,8 @@ class GColor(GraphicParameter, pm.Color):
 
     __slots__ = ['visible']
 
-    def __init__(self, *args, **kwargs):
-        self.visible = kwargs.pop('visible', True)
+    def __init__(self, *args, visible=True, **kwargs):
+        self.visible = visible
         super(GColor, self).__init__(*args, **kwargs)
 
 

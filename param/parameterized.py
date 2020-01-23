@@ -1309,7 +1309,8 @@ class Parameters(object):
         Includes Parameters from this class and its
         superclasses.
         """
-        if self_.self is not None and self_.self._instance__params:
+        if (self_.self is not None and self_.self._instance__params
+            and self_._disable_stubs is None):
             self_.warning('The Parameterized instance has instance '
                           'parameters created using new-style param '
                           'APIs, which are incompatible with .params. '

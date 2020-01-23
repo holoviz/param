@@ -1312,7 +1312,7 @@ class Parameters(object):
         if (self_.self is not None and self_.self._instance__params
             and self_._disable_stubs is None):
             self_.warning('The Parameterized instance has instance '
-                          'parameters created using new-style param '
+                          'parameters created using the new-style param '
                           'APIs, which are incompatible with .params. '
                           'Use the new more explicit APIs on the '
                           '.param accessor to query parameter instances.'

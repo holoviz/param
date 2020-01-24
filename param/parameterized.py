@@ -2795,7 +2795,7 @@ class ParameterizedFunction(Parameterized):
 
     def __new__(class_,*args,**params):
         # Create and __call__() an instance of this class.
-        inst = class_.instance(**params)
+        inst = class_.instance()
         inst.param._set_name(class_.__name__)
         return inst.__call__(*args,**params)
 

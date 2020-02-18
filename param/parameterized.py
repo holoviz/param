@@ -1171,7 +1171,7 @@ class Parameters(object):
         First, ensures that all Parameters with 'instantiate=True'
         (typically used for mutable Parameters) are copied directly
         into each object, to ensure that there is an independent copy
-        (to avoid suprising aliasing errors).  Then sets each of the
+        (to avoid surprising aliasing errors).  Then sets each of the
         keyword arguments, warning when any of them are not defined as
         parameters.
 

@@ -10,6 +10,7 @@ import inspect
 import random
 import numbers
 import operator
+import weakref
 
 from collections import namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
@@ -1071,7 +1072,7 @@ class Parameters(object):
         self is the instance if set.
         """
         self_.cls = cls
-        self_.self = self
+        self_._self = None if self is None else weakref.ref(self)
         self_._BATCH_WATCH = False  # If true, Event and watcher objects are queued.
         self_._TRIGGER = False
         self_._events = []         # Queue of batched eventd
@@ -1081,6 +1082,9 @@ class Parameters(object):
     def self_or_cls(self_):
         return self_.cls if self_.self is None else self_.self
 
+    @property
+    def self(self_):
+        return None if self_._self is None else self_._self()
 
     def __getitem__(self_, key):
         """

@@ -1109,6 +1109,16 @@ class Parameters(object):
     def self_or_cls(self_):
         return self_.cls if self_.self is None else self_.self
 
+    def __setstate__(self, state):
+        # Set old parameters state on Parameterized._parameters_state
+        self_or_cls = state.get('self', state.get('cls'))
+        for k in self_or_cls._parameters_state:
+            key = '_'+k
+            if key in state:
+                self_or_cls._parameters_state[k] = state.pop(key)
+        for k, v in state.items():
+            setattr(self, k, v)
+            
     def __getitem__(self_, key):
         """
         Returns the class or instance parameter
@@ -2421,6 +2431,7 @@ class Parameterized(object):
             state['_instance__params'] = {}
         if '_param_watchers' not in state:
             state['_param_watchers'] = {}
+        state.pop('param', None)
 
         for name,value in state.items():
             setattr(self,name,value)

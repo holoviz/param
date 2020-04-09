@@ -1072,16 +1072,53 @@ class Parameters(object):
         """
         self_.cls = cls
         self_.self = self
-        self_._BATCH_WATCH = False  # If true, Event and watcher objects are queued.
-        self_._TRIGGER = False
-        self_._events = []         # Queue of batched eventd
-        self_._watchers = []         # Queue of batched watchers
+
+    @property
+    def _BATCH_WATCH(self_):
+        return self_.self_or_cls._parameters_state['BATCH_WATCH']
+
+    @_BATCH_WATCH.setter
+    def _BATCH_WATCH(self_, value):
+        self_.self_or_cls._parameters_state['BATCH_WATCH'] = value
+
+    @property
+    def _TRIGGER(self_):
+        return self_.self_or_cls._parameters_state['TRIGGER']
+
+    @_TRIGGER.setter
+    def _TRIGGER(self_, value):
+        self_.self_or_cls._parameters_state['TRIGGER'] = value
+
+    @property
+    def _events(self_):
+        return self_.self_or_cls._parameters_state['events']
+
+    @_events.setter
+    def _events(self_, value):
+        self_.self_or_cls._parameters_state['events'] = value
+
+    @property
+    def _watchers(self_):
+        return self_.self_or_cls._parameters_state['watchers']
+
+    @_watchers.setter
+    def _watchers(self_, value):
+        self_.self_or_cls._parameters_state['watchers'] = value
 
     @property
     def self_or_cls(self_):
         return self_.cls if self_.self is None else self_.self
 
-
+    def __setstate__(self, state):
+        # Set old parameters state on Parameterized._parameters_state
+        self_or_cls = state.get('self', state.get('cls'))
+        for k in self_or_cls._parameters_state:
+            key = '_'+k
+            if key in state:
+                self_or_cls._parameters_state[k] = state.pop(key)
+        for k, v in state.items():
+            setattr(self, k, v)
+            
     def __getitem__(self_, key):
         """
         Returns the class or instance parameter
@@ -1089,7 +1126,7 @@ class Parameters(object):
         inst = self_.self
         parameters = self_.objects(False) if inst is None else inst.param.objects(False)
         p = parameters[key]
-        if (inst is not None and p.per_instance and
+        if (inst is not None and getattr(inst, 'initialized', False) and p.per_instance and
             not getattr(inst, '_disable_instance__params', False)):
             if key not in inst._instance__params:
                 try:
@@ -1872,7 +1909,14 @@ class ParameterizedMetaclass(type):
         # 'name' to '__name__'?)
         mcs.name = name
 
-        mcs.param = Parameters(mcs)
+        mcs._parameters_state = {
+            "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
+            "TRIGGER": False,
+            "events": [], # Queue of batched events
+            "watchers": [] # Queue of batched watchers
+        }
+        mcs._param = Parameters(mcs)
+        
 
         # All objects (with their names) of type Parameter that are
         # defined in this class
@@ -1957,7 +2001,10 @@ class ParameterizedMetaclass(type):
 
     abstract = property(__is_abstract)
 
+    def _get_param(mcs):
+        return mcs._param
 
+    param = property(_get_param)
 
     def __setattr__(mcs,attribute_name,value):
         """
@@ -2309,18 +2356,21 @@ class Parameterized(object):
     see documentation for the 'logging' module.
     """
 
-    name           = String(default=None,constant=True,doc="""
-    String identifier for this object.""")
+    name = String(default=None, constant=True, doc="""
+        String identifier for this object.""")
 
-
-    def __init__(self,**params):
+    def __init__(self, **params):
         global object_count
 
         # Flag that can be tested to see if e.g. constant Parameters
         # can still be set
-        self.initialized=False
-        # Override class level param namespace with instance namespace
-        self.param = Parameters(self.__class__, self=self)
+        self.initialized = False
+        self._parameters_state = {
+            "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
+            "TRIGGER": False,
+            "events": [], # Queue of batched events
+            "watchers": [] # Queue of batched watchers
+        }
         self._instance__params = {}
         self._param_watchers = {}
 
@@ -2341,7 +2391,11 @@ class Parameterized(object):
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
                     (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
 
-        self.initialized=True
+        self.initialized = True
+
+    @property
+    def param(self):
+        return Parameters(self.__class__, self=self)
 
     # 'Special' methods
 
@@ -2353,7 +2407,6 @@ class Parameterized(object):
         """
         # remind me, why is it a copy? why not just state.update(self.__dict__)?
         state = self.__dict__.copy()
-
         for slot in get_occupied_slots(self):
             state[slot] = getattr(self,slot)
 
@@ -2378,6 +2431,7 @@ class Parameterized(object):
             state['_instance__params'] = {}
         if '_param_watchers' not in state:
             state['_param_watchers'] = {}
+        state.pop('param', None)
 
         for name,value in state.items():
             setattr(self,name,value)

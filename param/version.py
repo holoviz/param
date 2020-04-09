@@ -26,7 +26,7 @@ def run_cmd(args, cwd=None):
                             cwd=cwd)
     output, error = (str(s.decode()).strip() for s in proc.communicate())
 
-    if proc.returncode != 0:
+    if proc.returncode != 0 or len(error) > 0:
         raise Exception(proc.returncode, error)
     return output
 

@@ -1068,7 +1068,6 @@ def _is_abstract(class_):
         return False
 
 
-
 # CEBALERT: this should be a method of ClassSelector.
 def concrete_descendents(parentclass):
     """
@@ -1082,7 +1081,6 @@ def concrete_descendents(parentclass):
     """
     return dict((c.__name__,c) for c in descendents(parentclass)
                 if not _is_abstract(c))
-
 
 
 class Composite(Parameter):
@@ -1291,6 +1289,7 @@ class Selector(ObjectSelector):
                                       check_on_set=check_on_set,
                                       allow_None=allow_None, **params)
 
+
 class ClassSelector(SelectorBase):
     """
     Parameter allowing selection of either a subclass or an instance of a given set of classes.
@@ -1306,7 +1305,6 @@ class ClassSelector(SelectorBase):
         self.is_instance = is_instance
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
         self._validate(default)
-
 
     def _validate(self,val):
         """val must be None, an instance of self.class_ if self.is_instance=True or a subclass of self_class if self.is_instance=False"""
@@ -1324,7 +1322,6 @@ class ClassSelector(SelectorBase):
                 raise ValueError(
                     "Parameter '%s' must be a subclass of %s, not '%s'" %
                     (val.__name__, class_name, val.__class__.__name__))
-
 
     def get_range(self):
         """
@@ -1397,7 +1394,6 @@ class List(Parameter):
                 assert isinstance(v,self.class_),repr(self.name)+": "+repr(v)+" is not an instance of " + repr(self.class_) + "."
 
 
-
 class HookList(List):
     """
     Parameter whose value is a list of callable objects.
@@ -1411,7 +1407,6 @@ class HookList(List):
     def _check_type(self,val):
         for v in val:
             assert callable(v),repr(self.name)+": "+repr(v)+" is not callable."
-
 
 
 class Dict(ClassSelector):

@@ -233,8 +233,9 @@ class TestParameterized(API1TestCase):
         inst.param['inst']
 
         inst.param.params()
-        self.log_handler.assertContains(
-            'WARNING', 'The Parameterized instance has instance parameters')
+        if param.parameterized.Parameters._disable_stubs is None:
+            self.log_handler.assertContains(
+                'WARNING', 'The Parameterized instance has instance parameters')
 
 
     def test_instance_param_getitem(self):

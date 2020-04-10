@@ -68,7 +68,6 @@ class WatchSubclassExample(WatchMethodExample):
     pass
 
 
-
 class TestWatch(API1TestCase):
 
     @classmethod
@@ -77,7 +76,6 @@ class TestWatch(API1TestCase):
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
-
 
     def setUp(self):
         super(TestWatch, self).setUp()
@@ -94,7 +92,6 @@ class TestWatch(API1TestCase):
         obj.a = 2
         self.assertEqual(self.accumulator, 3)
 
-
     def test_discard_events_decorator(self):
         def accumulator(change):
             self.accumulator += change.new
@@ -107,7 +104,6 @@ class TestWatch(API1TestCase):
         obj.a = 2
         self.assertEqual(self.accumulator, 3)
 
-
     def test_triggered_when_changed_iterator_type(self):
         def accumulator(change):
             self.accumulator = change.new
@@ -118,7 +114,6 @@ class TestWatch(API1TestCase):
         self.assertEqual(self.accumulator, [])
         obj.a = tuple()
         self.assertEqual(self.accumulator, tuple())
-
 
     def test_triggered_when_changed_mapping_type(self):
         def accumulator(change):
@@ -131,7 +126,6 @@ class TestWatch(API1TestCase):
         obj.a = {}
         self.assertEqual(self.accumulator, {})
 
-
     def test_untriggered_when_unchanged(self):
         def accumulator(change):
             self.accumulator += change.new
@@ -142,7 +136,6 @@ class TestWatch(API1TestCase):
         self.assertEqual(self.accumulator, 1)
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
-
 
     def test_triggered_when_unchanged_complex_type(self):
         def accumulator(change):
@@ -156,7 +149,6 @@ class TestWatch(API1TestCase):
         obj.a = subobj
         self.assertEqual(self.accumulator, 2)
 
-
     def test_triggered_when_unchanged_if_not_onlychanged(self):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
@@ -167,6 +159,7 @@ class TestWatch(API1TestCase):
         args = accumulator.args_for_call(0)
         self.assertEqual(len(args), 1)
         self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].what, 'value')
         self.assertEqual(args[0].old, 0)
         self.assertEqual(args[0].new, 1)
         self.assertEqual(args[0].type, 'set')
@@ -175,11 +168,10 @@ class TestWatch(API1TestCase):
         args = accumulator.args_for_call(1)
         self.assertEqual(len(args), 1)
         self.assertEqual(args[0].name, 'a')
+        self.assertEqual(args[0].what, 'value')
         self.assertEqual(args[0].old, 1)
         self.assertEqual(args[0].new, 1)
         self.assertEqual(args[0].type, 'set')
-
-
 
     def test_untriggered_when_unwatched(self):
         def accumulator(change):
@@ -192,7 +184,6 @@ class TestWatch(API1TestCase):
         obj.param.unwatch(watcher)
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
-
 
     def test_warning_unwatching_when_unwatched(self):
         def accumulator(change):
@@ -210,7 +201,7 @@ class TestWatch(API1TestCase):
         accumulator = Accumulator()
 
         obj = SimpleWatchExample()
-        obj.param.watch(accumulator, ['a','b'])
+        obj.param.watch(accumulator, ['a', 'b'])
 
         obj.a = 2
         self.assertEqual(accumulator.call_count(), 1)
@@ -275,7 +266,6 @@ class TestWatch(API1TestCase):
         # second call to accumulator
         self.assertEqual(accumulator.call_count(), 2)
 
-
     def test_simple_batched_watch(self):
 
         accumulator = Accumulator()
@@ -297,7 +287,6 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 42)
         self.assertEqual(args[1].type, 'changed')
-
 
     def test_simple_class_batched_watch(self):
 
@@ -323,7 +312,6 @@ class TestWatch(API1TestCase):
 
         SimpleWatchExample.param.unwatch(watcher)
         obj.param.set_param(a=0, b=0)
-
 
     def test_simple_batched_watch_callback_reuse(self):
 
@@ -357,6 +345,40 @@ class TestWatch(API1TestCase):
             else:
                 raise Exception('Invalid number of arguments')
 
+    def test_context_manager_batched_watch_reuse(self):
+
+        accumulator = Accumulator()
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, ['a','b'])
+        obj.param.watch(accumulator, ['c'])
+
+        with param.batch_watch(obj):
+            obj.a = 23
+            obj.b = 42
+            obj.c = 99
+
+        self.assertEqual(accumulator.call_count(), 2)
+        # Order may be undefined for Python <3.6
+        for args in [accumulator.args_for_call(i) for i in [0, 1]]:
+            if len(args) == 1:  # ['c']
+                self.assertEqual(args[0].name, 'c')
+                self.assertEqual(args[0].old, 0)
+                self.assertEqual(args[0].new, 99)
+                self.assertEqual(args[0].type, 'changed')
+
+            elif len(args) == 2:  # ['a', 'b']
+                self.assertEqual(args[0].name, 'a')
+                self.assertEqual(args[0].old, 0)
+                self.assertEqual(args[0].new, 23)
+                self.assertEqual(args[0].type, 'changed')
+
+                self.assertEqual(args[1].name, 'b')
+                self.assertEqual(args[1].old, 0)
+                self.assertEqual(args[1].new, 42)
+                self.assertEqual(args[0].type, 'changed')
+            else:
+                raise Exception('Invalid number of arguments')
 
     def test_subclass_batched_watch(self):
 
@@ -381,7 +403,6 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].new, 42)
         self.assertEqual(args[1].type, 'changed')
 
-
     def test_nested_batched_watch(self):
 
         accumulator = Accumulator()
@@ -391,7 +412,7 @@ class TestWatch(API1TestCase):
         def set_param(*changes):
             obj.param.set_param(a=10, d=12)
 
-        obj.param.watch(accumulator, ['a', 'b','c', 'd'])
+        obj.param.watch(accumulator, ['a', 'b', 'c', 'd'])
         obj.param.watch(set_param, ['b', 'c'])
         obj.param.set_param(b=23, c=42)
 
@@ -422,7 +443,6 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].new, 12)
         self.assertEqual(args[1].type, 'changed')
 
-
     def test_nested_batched_watch_not_onlychanged(self):
         accumulator = Accumulator()
 
@@ -445,7 +465,6 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'set')
-
 
 
 class TestWatchMethod(API1TestCase):
@@ -489,13 +508,20 @@ class TestWatchMethod(API1TestCase):
         self.assertEqual(obj.param.d.bounds, (2, 4))
         self.assertEqual(accumulator.call_count(), 1)
 
+        args = accumulator.args_for_call(0)
+        self.assertEqual(len(args), 1)
+
+        self.assertEqual(args[0].name, 'd')
+        self.assertEqual(args[0].what, 'bounds')
+        self.assertEqual(args[0].old, None)
+        self.assertEqual(args[0].new, (2, 4))
+        self.assertEqual(args[0].type, 'changed')
+
     def test_depends_with_watch_on_subclass(self):
         obj = WatchSubclassExample()
 
         obj.b = 3
         self.assertEqual(obj.c, 6)
-
-
 
 
 class TestWatchValues(API1TestCase):
@@ -515,7 +541,6 @@ class TestWatchValues(API1TestCase):
         obj.a = 2
         self.assertEqual(self.accumulator, 3)
 
-
     def test_untriggered_when_values_unchanged(self):
         def accumulator(a):
             self.accumulator += a
@@ -526,7 +551,6 @@ class TestWatchValues(API1TestCase):
         self.assertEqual(self.accumulator, 1)
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
-
 
     def test_untriggered_when_values_unwatched(self):
         def accumulator(a):
@@ -539,7 +563,6 @@ class TestWatchValues(API1TestCase):
         obj.param.unwatch(watcher)
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
-
 
     def test_simple_batched_watch_values_setattr(self):
 
@@ -560,7 +583,6 @@ class TestWatchValues(API1TestCase):
         kwargs = accumulator.kwargs_for_call(1)
         self.assertEqual(kwargs, {'b':3})
 
-
     def test_simple_batched_watch_values(self):
 
         accumulator = Accumulator()
@@ -572,7 +594,6 @@ class TestWatchValues(API1TestCase):
         self.assertEqual(accumulator.call_count(), 1)
         kwargs = accumulator.kwargs_for_call(0)
         self.assertEqual(kwargs, {'a':23, 'b':42})
-
 
     def test_simple_batched_watch_values_callback_reuse(self):
 
@@ -593,9 +614,6 @@ class TestWatchValues(API1TestCase):
                 self.assertEqual(kwargs, {'a':23, 'b':42})
             else:
                 raise Exception('Invalid number of arguments')
-
-
-
 
 
 class TestWatchAttributes(API1TestCase):
@@ -628,7 +646,6 @@ class TestWatchAttributes(API1TestCase):
         obj.param['d'].bounds = (0, 3)
         assert SimpleWatchExample.param['d'].bounds is None
         assert self.accumulator == [(0, 3)]
-
 
 
 class TestTrigger(API1TestCase):

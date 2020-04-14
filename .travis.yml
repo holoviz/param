@@ -128,7 +128,7 @@ jobs:
       before_install:
         - pip install graphviz
       install:
-        - pip install nbsite sphinx_ioam_theme "tornado<6"
+        - pip install nbsite sphinx_holoviz_theme "tornado<6"
         - pip install -e .
       script:
         # TODO: nbsite commands will be simplified eventually...

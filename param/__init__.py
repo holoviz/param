@@ -1266,7 +1266,7 @@ class Selector(ObjectSelector):
     argument which sufficient in many common use cases.
     """
     def __init__(self,objects=None, default=None, instantiate=False,
-                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+                 compute_default_fn=None,check_on_set=None,allow_None=False,**params):
 
         if is_ordered_dict(objects):
             autodefault = list(objects.values())[0]

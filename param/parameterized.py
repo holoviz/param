@@ -11,7 +11,7 @@ import random
 import numbers
 import operator
 
-from collections import namedtuple, OrderedDict
+from collections import defaultdict, namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
 from types import FunctionType
 from functools import partial, wraps, reduce
@@ -347,13 +347,16 @@ def depends(func, *dependencies, **kw):
                              'parameters by name.')
 
     if not string_specs and watch:
-        def cb(event):
+        def cb(*events):
             args = (getattr(dep.owner, dep.name) for dep in dependencies)
             dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
             return func(*args, **dep_kwargs)
 
+        grouped = defaultdict(list)
         for dep in deps:
-            dep.owner.param.watch(cb, dep.name)
+            grouped[id(dep.owner)].append(dep)
+        for group in grouped.values():
+            group[0].owner.param.watch(cb, [dep.name for dep in group])
 
     _dinfo = getattr(func, '_dinfo', {})
     _dinfo.update({'dependencies': dependencies,

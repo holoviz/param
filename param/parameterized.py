@@ -835,7 +835,9 @@ class Parameter(object):
                 _old = obj.__dict__.get(self._internal_name,self.default)
                 obj.__dict__[self._internal_name] = val
             else:
-                raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
+                _old = obj.__dict__.get(self._internal_name,self.default)
+                if val is not _old:
+                    raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
 
         else:
             if obj is None:

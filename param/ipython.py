@@ -279,7 +279,7 @@ class ParamPager(object):
         return "%s\n\n%s\n\n%s\n\n%s" % (top_heading, table, docstring_heading, docstrings)
 
 
-message = """Welcome to the param IPython extension! (http://ioam.github.io/param/)"""
+message = """Welcome to the param IPython extension! (https://param.holoviz.org/)"""
 message += '\nAvailable magics: %params'
 
 _loaded = False

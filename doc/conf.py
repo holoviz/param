@@ -30,6 +30,7 @@ html_context.update({
     # canonical URL (for search engines); can ignore for local builds
     'WEBSITE_SERVER': 'https://param.holoviz.org',
     'VERSION': version,
+    'GOOGLE_ANALYTICS_UA': 'UA-154795830-6',
     'NAV': _NAV,
     'LINKS': _NAV,
     'SOCIAL': (

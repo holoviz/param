@@ -1729,6 +1729,9 @@ class DataArray(ClassSelector, _XrBase):
 
 
     def _validate(self, val):
+        if self.allow_None and val is None:
+            return
+
         super(DataArray, self)._validate(val)
         self._validate_dims_coords(val)
 
@@ -1763,6 +1766,9 @@ class Dataset(ClassSelector, _XrBase):
 
 
     def _validate(self, val):
+        if self.allow_None and val is None:
+            return
+            
         super(Dataset, self)._validate(val)
 
         self._validate_dims_coords(val)

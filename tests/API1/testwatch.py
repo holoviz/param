@@ -1,13 +1,14 @@
 """
 Unit test for watch mechanism
 """
-from . import API1TestCase
-
-from .utils import MockLoggingHandler
+import copy
 
 import param
 
 from param.parameterized import discard_events
+
+from . import API1TestCase
+from .utils import MockLoggingHandler
 
 
 class Accumulator(object):
@@ -36,6 +37,9 @@ class SimpleWatchExample(param.Parameterized):
     b = param.Parameter(default=0)
     c = param.Parameter(default=0)
     d = param.Integer(default=0)
+
+    def method(self, event):
+        self.b = self.a * 2
 
 
 class SimpleWatchSubclass(SimpleWatchExample):
@@ -466,6 +470,18 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'set')
 
+    def test_watch_deepcopy(self):
+        obj = SimpleWatchExample()
+
+        obj.param.watch(obj.method, ['a'])
+
+        copied = copy.deepcopy(obj)
+
+        copied.a = 2
+
+        self.assertEqual(copied.b, 4)
+        self.assertEqual(obj.b, 0)
+
 
 class TestWatchMethod(API1TestCase):
 
@@ -522,6 +538,15 @@ class TestWatchMethod(API1TestCase):
 
         obj.b = 3
         self.assertEqual(obj.c, 6)
+
+    def test_watcher_method_deepcopy(self):
+        obj = WatchMethodExample(b=5)
+
+        copied = copy.deepcopy(obj)
+
+        copied.b = 11
+        self.assertEqual(copied.b, 10)
+        self.assertEqual(obj.b, 5)
 
 
 class TestWatchValues(API1TestCase):

@@ -297,6 +297,17 @@ def instance_descriptor(f):
     return _f
 
 
+def get_method_owner(method):
+    """
+    Gets the instance that owns the supplied method
+    """
+    if not inspect.ismethod(method):
+        return None
+    if isinstance(method, partial):
+        method = method.func
+    return method.__self__ if sys.version_info.major >= 3 else method.im_self
+
+
 @accept_arguments
 def depends(func, *dependencies, **kw):
     """
@@ -475,8 +486,10 @@ def _params_depended_on(minfo):
     return params
 
 
-def _m_caller(self,n):
-    return lambda event: getattr(self,n)()
+def _m_caller(self, n):
+    caller = lambda event: getattr(self,n)()
+    caller._watcher_name = n
+    return caller
 
 
 PInfo = namedtuple("PInfo","inst cls name pobj what")
@@ -2431,6 +2444,25 @@ class Parameterized(object):
         During this process the object is considered uninitialized.
         """
         self.initialized=False
+
+        # When making a copy the internal watchers have to be
+        # recreated and point to the new instance
+        if '_param_watchers' in state:
+            param_watchers = state['_param_watchers']
+            for p, attrs in param_watchers.items():
+                for attr, watchers in attrs.items():
+                    new_watchers = []
+                    for watcher in watchers:
+                        watcher_args = list(watcher)
+                        if watcher.inst is not None:
+                            watcher_args[0] = self
+                        fn = watcher.fn
+                        if hasattr(fn, '_watcher_name'):
+                            watcher_args[2] = _m_caller(self, fn._watcher_name)
+                        elif get_method_owner(fn) is watcher.inst:
+                            watcher_args[2] = getattr(self, fn.__name__)
+                        new_watchers.append(Watcher(*watcher_args))
+                    param_watchers[p][attr] = new_watchers
 
         if '_instance__params' not in state:
             state['_instance__params'] = {}

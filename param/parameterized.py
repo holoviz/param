@@ -864,7 +864,7 @@ class Parameter(object):
                 obj.__dict__[self._internal_name] = val
 
         self._post_setter(obj, val)
-        if hasattr(val, '_setup_dependencies'):
+        if obj is not None and hasattr(val, '_setup_dependencies'):
             obj._setup_dependencies()
 
         if obj is None:

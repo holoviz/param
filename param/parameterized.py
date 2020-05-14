@@ -864,6 +864,8 @@ class Parameter(object):
                 obj.__dict__[self._internal_name] = val
 
         self._post_setter(obj, val)
+        if hasattr(val, '_setup_dependencies'):
+            obj._setup_dependencies()
 
         if obj is None:
             watchers = self.watchers.get("value",[])
@@ -1723,7 +1725,10 @@ class Parameters(object):
         attr = m.group("attr")
 
         src = self_.self_or_cls if obj=='' else _getattrr(self_.self_or_cls,obj[1::])
-        cls,inst = (src, None) if isinstance(src, type) else (type(src), src)
+        if src is None:
+            return []
+
+        cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
 
         if attr == 'param':
             dependencies = self_._spec_to_obj(obj[1:])
@@ -2396,6 +2401,12 @@ class Parameterized(object):
         self.param._setup_params(**params)
         object_count += 1
 
+        self._dependencies = {}
+        self._setup_dependencies()
+
+        self.initialized = True
+
+    def _setup_dependencies(self):
         # add watched dependencies
         for cls in classlist(self.__class__):
             if not issubclass(cls, Parameterized):
@@ -2407,9 +2418,15 @@ class Parameterized(object):
                 # 'dependers'.
                 for p in self.param.params_depended_on(n):
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
-
-        self.initialized = True
+                    key = (n, p.name, p.what)
+                    owner = p.cls if p.inst is None else p.inst
+                    prev = self._dependencies.get(key)
+                    if prev:
+                        prev_owner = prev.cls if prev.inst is None else prev.inst
+                        if owner is prev_owner:
+                            continue
+                        prev_owner.param.unwatch(prev)
+                    self._dependencies[key] = owner.param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
 
     @property
     def param(self):

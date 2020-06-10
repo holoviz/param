@@ -4,7 +4,7 @@ Parameterized objects.
 """
 
 import json
-
+import datetime as dt
 
 class UnserializableException(Exception):
     pass
@@ -57,7 +57,6 @@ class JSONSerialization(Serialization):
     @classmethod
     def serialize_parameters(cls, pobj):
         components = {}
-        json_string = ''
         for name, p in pobj.param.objects('existing').items():
             value = pobj.param.get_value_generator(name)
             components[name] = p._serialize(value)
@@ -95,7 +94,7 @@ class JSONSerialization(Serialization):
     def deserialize(cls, ptype, string):
         dispatch_method = cls._get_method(ptype, 'deserialize')
         if dispatch_method:
-            return dispatch_method(value)
+            return dispatch_method(string)
         else:
             return json.loads(string)
 

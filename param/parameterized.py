@@ -10,7 +10,6 @@ import inspect
 import random
 import numbers
 import operator
-import json
 from .serializer import JSONSerialization
 
 from collections import defaultdict, namedtuple, OrderedDict

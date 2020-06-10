@@ -14,7 +14,23 @@ def JSONNullable(json_type):
     return { "anyOf": [ json_type, { "type": "null"}] }
 
 
-class JSONSerialization(object):
+
+class Serialization(object):
+    """
+    Base class used to implement different types of serialization.
+    """
+
+    @classmethod
+    def schema(cls, pobj):
+        raise NotImplementedError
+
+    @classmethod
+    def serialize_parameters(cls, pobj):
+        raise NotImplementedError
+
+
+
+class JSONSerialization(Serialization):
     """
     Class responsible for specifying JSON serialization, deserialization
     and JSON schemas for Parameters and Parameterized classes and

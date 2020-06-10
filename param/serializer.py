@@ -9,6 +9,9 @@ import json
 class UnserializableException(Exception):
     pass
 
+class UnsafeserializableException(Exception):
+    pass
+
 def JSONNullable(json_type):
     "Express a JSON schema type as nullable to easily support Parameters that allow_None"
     return { "anyOf": [ json_type, { "type": "null"}] }
@@ -43,10 +46,10 @@ class JSONSerialization(Serialization):
 
 
     @classmethod
-    def schema(cls, pobj):
+    def schema(cls, pobj, safe=False):
         schema = {}
         for name, p in pobj.param.objects('existing').items():
-            schema[name] = p._schema()
+            schema[name] = p._schema(safe=safe)
             if p.doc:
                 schema[name]["description"] = p.doc.strip()
         return schema
@@ -71,12 +74,12 @@ class JSONSerialization(Serialization):
         return getattr(cls, method_name, None)
 
     @classmethod
-    def parameter_schema(cls, ptype, p):
+    def parameter_schema(cls, ptype, p, safe=False):
         if ptype in cls.unserializable_parameter_types:
             raise UnserializableException
         dispatch_method = cls._get_method(ptype, 'schema')
         if dispatch_method:
-            return dispatch_method(p)
+            return dispatch_method(p, safe=safe)
         else:
             return { "type": ptype.lower()}
 
@@ -116,15 +119,15 @@ class JSONSerialization(Serialization):
     # Custom Schemas
 
     @classmethod
-    def date_schema(cls, p):
+    def date_schema(cls, p, safe=False):
         return { "type": "string", "format": "date-time"}
 
     @classmethod
-    def tuple_schema(cls, p):
+    def tuple_schema(cls, p, safe=False):
         return { "type": "array"}
 
     @classmethod
-    def number_schema(cls, p):
+    def number_schema(cls, p, safe=False):
         schema = { "type": p.__class__.__name__.lower() }
         if p.bounds is not None:
             (low, high) = p.bounds
@@ -138,16 +141,16 @@ class JSONSerialization(Serialization):
         return JSONNullable(schema) if p.allow_None else schema
 
     @classmethod
-    def integer_schema(cls, p):
+    def integer_schema(cls, p, safe=False):
         return cls.number_schema(p)
 
     @classmethod
-    def numerictuple_schema(cls, p):
+    def numerictuple_schema(cls, p, safe=False):
         return {"type": "array",
                 "additionalItems": { "type": "number" }}
 
     @classmethod
-    def xycoordinates_schema(cls, p):
+    def xycoordinates_schema(cls, p, safe=False):
         return  {
             "type": "array",
             "items": [
@@ -156,15 +159,21 @@ class JSONSerialization(Serialization):
         }
 
     @classmethod
-    def range_schema(cls, p):
+    def range_schema(cls, p, safe=False):
+        # Extend for allow None
         return  {
             "type": "array",
             "items": [{"type": "number"},{"type": "number"}],
+            #"additionalItems": "false"
         }
 
     @classmethod
-    def list_schema(cls, p):
+    def list_schema(cls, p, safe=False):
         schema =  { "type": "array"}
+        if safe is True and p.class_ is None:
+            msg = ('List without a class specified cannot be guaranteed '
+                   'to be safe for serialization')
+            raise UnsafeserializableException(msg)
         if p.class_ is not None and p.class_ in cls.json_schema_literal_types:
             schema['items'] = {"type": cls.json_schema_literal_types[p.class_]}
         return schema

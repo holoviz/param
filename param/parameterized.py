@@ -741,8 +741,8 @@ class Parameter(object):
     def _deserialize(self, string):
         return JSONSerialization.deserialize(self.__class__.__name__, string)
 
-    def _schema(self):
-        return JSONSerialization.parameter_schema(self.__class__.__name__, self)
+    def _schema(self, safe=False):
+        return JSONSerialization.parameter_schema(self.__class__.__name__, self, safe=safe)
 
     @property
     def label(self):
@@ -1583,9 +1583,9 @@ class Parameters(object):
         self_or_cls = self_.self_or_cls
         return Parameter._serializer.serialize_parameters(self_or_cls)
 
-    def schema(self_):
+    def schema(self_, safe=False):
         self_or_cls = self_.self_or_cls
-        return Parameter._serializer.schema(self_or_cls)
+        return Parameter._serializer.schema(self_or_cls, safe=safe)
 
     def get_param_values(self_,onlychanged=False):
         """

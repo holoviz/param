@@ -10,6 +10,8 @@ import inspect
 import random
 import numbers
 import operator
+import json
+from .serializer import JSONSerialization
 
 from collections import defaultdict, namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
@@ -687,6 +689,8 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
+    _serializer = JSONSerialization
+
     def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
@@ -730,6 +734,15 @@ class Parameter(object):
         self.watchers = {}
         self.per_instance = per_instance
 
+
+    def _serialize(self, value):
+        return JSONSerialization.serialize(self.__class__.__name__, value)
+
+    def _deserialize(self, string):
+        return JSONSerialization.deserialize(self.__class__.__name__, string)
+
+    def _schema(self):
+        return JSONSerialization.parameter_schema(self.__class__.__name__, self)
 
     @property
     def label(self):
@@ -1565,6 +1578,14 @@ class Parameters(object):
 
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
+
+    def serialize_parameters(self_):
+        self_or_cls = self_.self_or_cls
+        return Parameter._serializer.serialize_parameters(self_or_cls)
+
+    def schema(self_):
+        self_or_cls = self_.self_or_cls
+        return Parameter._serializer.schema(self_or_cls)
 
     def get_param_values(self_,onlychanged=False):
         """

@@ -4,7 +4,6 @@ Parameterized objects.
 """
 
 import json
-import datetime as dt
 
 class UnserializableException(Exception):
     pass

@@ -734,11 +734,13 @@ class Parameter(object):
         self.per_instance = per_instance
 
 
-    def serialize(self, value):
+    @classmethod
+    def serialize(cls, value):
         "Given the parameter value, return a Python value suitable for serialization"
         return value
 
-    def deserialize(self, value):
+    @classmethod
+    def deserialize(cls, value):
         "Given a serializable Python value, return a value that the parameter can be set to"
         return value
 

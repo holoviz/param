@@ -735,13 +735,15 @@ class Parameter(object):
 
 
     def _serialize(self, value):
-        return JSONSerialization.serialize(self.__class__.__name__, value)
+        "Given the parameter value, return a Python value suitable for serialization"
+        return value
 
-    def _deserialize(self, string):
-        return JSONSerialization.deserialize(self.__class__.__name__, string)
+    def _deserialize(self, value):
+        "Given a serializable Python value, return a value that the parameter can be set to"
+        return value
 
     def _schema(self, safe=False):
-        return JSONSerialization.parameter_schema(self.__class__.__name__, self, safe=safe)
+        return self._serializer.parameter_schema(self.__class__.__name__, self, safe=safe)
 
     @property
     def label(self):

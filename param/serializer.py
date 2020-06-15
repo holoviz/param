@@ -32,6 +32,12 @@ class Serialization(object):
         raise NotImplementedError
 
 
+class ParamJSONEncoder(json.JSONEncoder):
+    "Custom encoder used to support more value types than vanilla JSON"
+    def default(self, obj):
+        if isinstance(obj, dt.datetime):
+            return obj.replace(microsecond=0).isoformat()
+        return json.JSONEncoder.default(self, obj)
 
 class JSONSerialization(Serialization):
     """
@@ -59,7 +65,8 @@ class JSONSerialization(Serialization):
         components = {}
         for name, p in pobj.param.objects('existing').items():
             value = pobj.param.get_value_generator(name)
-            components[name] = p._serialize(value)
+            serializable_value = p._serialize(value)
+            components[name] = json.dumps(value, cls=ParamJSONEncoder)
 
         contents = ', '.join('"%s":%s' % (name, sval) for name, sval in components.items())
         return '{{{contents}}}'.format(contents=contents)
@@ -81,39 +88,6 @@ class JSONSerialization(Serialization):
             return dispatch_method(p, safe=safe)
         else:
             return { "type": ptype.lower()}
-
-    @classmethod
-    def serialize(cls, ptype, value):
-        dispatch_method = cls._get_method(ptype, 'serialize')
-        if dispatch_method:
-            return dispatch_method(value)
-        else:
-            return json.dumps(value)
-
-    @classmethod
-    def deserialize(cls, ptype, string):
-        dispatch_method = cls._get_method(ptype, 'deserialize')
-        if dispatch_method:
-            return dispatch_method(string)
-        else:
-            return json.loads(string)
-
-    # Custom Serializers
-
-    @classmethod
-    def date_serialize(cls, value):
-        string = value.replace(microsecond=0).isoformat() # Test *with* microseconds.
-        return json.dumps(string)
-
-    # Custom Deserializers
-
-    @classmethod
-    def date_deserialize(cls, string):
-        return dt.datetime.fromisoformat(string)  # FIX: 3.7+ only
-
-    @classmethod
-    def tuple_deserialize(cls, string):
-        return tuple(json.loads(string))
 
     # Custom Schemas
 

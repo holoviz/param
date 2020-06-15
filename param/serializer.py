@@ -56,7 +56,7 @@ class JSONSerialization(Serialization):
     def schema(cls, pobj, safe=False):
         schema = {}
         for name, p in pobj.param.objects('existing').items():
-            schema[name] = p._schema(safe=safe)
+            schema[name] = p.schema(safe=safe)
             if p.doc:
                 schema[name]["description"] = p.doc.strip()
             if p.label:
@@ -68,7 +68,7 @@ class JSONSerialization(Serialization):
         components = {}
         for name, p in pobj.param.objects('existing').items():
             value = pobj.param.get_value_generator(name)
-            serializable_value = p._serialize(value)
+            serializable_value = p.serialize(value)
             components[name] = json.dumps(serializable_value, cls=ParamJSONEncoder)
 
         contents = ', '.join('"%s":%s' % (name, sval) for name, sval in components.items())

@@ -1014,7 +1014,7 @@ class Tuple(Parameter):
                              (self.name,len(val),self.length))
 
 
-    def _deserialize(self, value):
+    def deserialize(self, value):
         return tuple(value) # As JSON has no tuple representation
 
 
@@ -1841,7 +1841,7 @@ class Date(Number):
 
         self._checkBounds(val)
 
-    def _deserialize(self, value):
+    def deserialize(self, value):
         return dt.datetime.fromisoformat(value)
 
 class CalendarDate(Number):

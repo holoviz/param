@@ -734,15 +734,15 @@ class Parameter(object):
         self.per_instance = per_instance
 
 
-    def _serialize(self, value):
+    def serialize(self, value):
         "Given the parameter value, return a Python value suitable for serialization"
         return value
 
-    def _deserialize(self, value):
+    def deserialize(self, value):
         "Given a serializable Python value, return a value that the parameter can be set to"
         return value
 
-    def _schema(self, safe=False):
+    def schema(self, safe=False):
         return self._serializer.parameter_schema(self.__class__.__name__, self, safe=safe)
 
     @property

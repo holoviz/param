@@ -1843,6 +1843,9 @@ class Date(Number):
         self._checkBounds(val)
 
     @classmethod
+    def serialize(cls, value):
+        return value.replace(microsecond=0).isoformat()
+    @classmethod
     def deserialize(cls, value):
         return dt.datetime.fromisoformat(value)
 

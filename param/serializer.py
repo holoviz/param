@@ -99,7 +99,11 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def tuple_schema(cls, p, safe=False):
-        return { "type": "array"}
+        schema = { "type": "array"}
+        if p.length is not None:
+            schema['minItems'] =  p.length
+            schema['maxItems'] =  p.length
+        return schema
 
     @classmethod
     def number_schema(cls, p, safe=False):
@@ -120,26 +124,17 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def numerictuple_schema(cls, p, safe=False):
-        return {"type": "array",
-                "additionalItems": { "type": "number" }}
+        schema = cls.tuple_schema(p, safe=safe)
+        schema["additionalItems"] = { "type": "number" }
+        return schema
 
     @classmethod
     def xycoordinates_schema(cls, p, safe=False):
-        return  {
-            "type": "array",
-            "items": [
-                {"type": "number"}, {"type": "number"}],
-            "additionalItems": False
-        }
+        return cls.numerictuple_schema(p, safe=safe)
 
     @classmethod
     def range_schema(cls, p, safe=False):
-        # Extend for allow None
-        return  {
-            "type": "array",
-            "items": [{"type": "number"},{"type": "number"}],
-            #"additionalItems": "false"
-        }
+        return cls.numerictuple_schema(p, safe=safe)
 
     @classmethod
     def list_schema(cls, p, safe=False):

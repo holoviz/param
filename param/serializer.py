@@ -85,9 +85,11 @@ class JSONSerialization(Serialization):
             raise UnserializableException
         dispatch_method = cls._get_method(ptype, 'schema')
         if dispatch_method:
-            return dispatch_method(p, safe=safe)
+            schema = dispatch_method(p, safe=safe)
         else:
-            return { "type": ptype.lower()}
+            schema = { "type": ptype.lower()}
+
+        return JSONNullable(schema) if p.allow_None else schema
 
     # Custom Schemas
 
@@ -110,8 +112,7 @@ class JSONSerialization(Serialization):
             if high is not None:
                 key = 'maximum' if p.inclusive_bounds[0] else 'exclusiveMaximum'
                 schema[key] = high
-
-        return JSONNullable(schema) if p.allow_None else schema
+        return schema
 
     @classmethod
     def integer_schema(cls, p, safe=False):

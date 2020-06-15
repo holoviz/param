@@ -108,13 +108,18 @@ class JSONSerialization(Serialization):
     @classmethod
     def number_schema(cls, p, safe=False):
         schema = { "type": p.__class__.__name__.lower() }
-        if p.bounds is not None:
-            (low, high) = p.bounds
+        return cls.declare_numeric_bounds(schema, p.bounds, p.inclusive_bounds)
+
+    @classmethod
+    def declare_numeric_bounds(cls, schema, bounds, inclusive_bounds):
+        "Given an applicable numeric schema, augment with bounds information"
+        if bounds is not None:
+            (low, high) = bounds
             if low is not None:
-                key = 'minimum' if p.inclusive_bounds[0] else 'exclusiveMinimum'
+                key = 'minimum' if inclusive_bounds[0] else 'exclusiveMinimum'
                 schema[key] = low
             if high is not None:
-                key = 'maximum' if p.inclusive_bounds[0] else 'exclusiveMaximum'
+                key = 'maximum' if inclusive_bounds[1] else 'exclusiveMaximum'
                 schema[key] = high
         return schema
 
@@ -134,7 +139,11 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def range_schema(cls, p, safe=False):
-        return cls.numerictuple_schema(p, safe=safe)
+        schema =  cls.tuple_schema(p, safe=safe)
+        bounded_number = cls.declare_numeric_bounds({ "type": "number" },
+                                                    p.bounds, p.inclusive_bounds)
+        schema["additionalItems"] = bounded_number
+        return schema
 
     @classmethod
     def list_schema(cls, p, safe=False):

@@ -58,6 +58,8 @@ class JSONSerialization(Serialization):
             schema[name] = p._schema(safe=safe)
             if p.doc:
                 schema[name]["description"] = p.doc.strip()
+            if p.label:
+                schema[name]["title"] = p.label
         return schema
 
     @classmethod

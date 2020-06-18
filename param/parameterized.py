@@ -10,7 +10,13 @@ import inspect
 import random
 import numbers
 import operator
-from .serializer import JSONSerialization
+
+# Allow this file to be used standalone if desired, albeit without JSON serialization
+try:
+   from .serializer import JSONSerialization
+except ImportError:
+   JSONSerialization = None
+
 
 from collections import defaultdict, namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
@@ -745,6 +751,8 @@ class Parameter(object):
         return value
 
     def schema(self, safe=False):
+        if self._serializer is None:
+            raise ImportError('Cannot import serializer.py needed to generate schema')
         return self._serializer.parameter_schema(self.__class__.__name__, self, safe=safe)
 
     @property

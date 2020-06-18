@@ -187,6 +187,7 @@ class JSONSerialization(Serialization):
         if safe is True:
             msg = ('DataFrame is not guaranteed to be safe for '
                    'serialization as the column dtypes are unknown')
+            raise UnsafeserializableException(msg)
         if p.columns is None:
             schema['items'] = {'type': 'object'}
             return schema

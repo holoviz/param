@@ -1501,6 +1501,15 @@ class DataFrame(ClassSelector):
         if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'Row')
 
+    @classmethod
+    def serialize(cls, value):
+        return value.to_dict('records')
+
+    @classmethod
+    def deserialize(cls, value):
+        from pandas import DataFrame as pdDFrame
+        return pdDFrame(value)
+
 
 class Series(ClassSelector):
     """

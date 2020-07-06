@@ -71,6 +71,18 @@ class JSONSerialization(Serialization):
         contents = ', '.join('"%s":%s' % (name, sval) for name, sval in components.items())
         return '{{{contents}}}'.format(contents=contents)
 
+
+    @classmethod
+    def deserialize_parameters(cls, pobj, serialization, subset=None):
+        components = {}
+        for name, value in serialization.items():
+            if subset is not None and name not in subset:
+                continue
+            deserialized = pobj.param[name].deserialize(value)
+            components[name] = deserialized
+
+        return components
+
     # Parameter level methods
 
     @classmethod

@@ -13,9 +13,9 @@ import operator
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
-   from .serializer import JSONSerialization
+   from . import serializer
 except ImportError:
-   JSONSerialization = None
+   serializer = None
 
 
 from collections import defaultdict, namedtuple, OrderedDict
@@ -694,7 +694,7 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
-    _serializer = JSONSerialization
+    _serializers = {'json':serializer.JSONSerialization}
 
     def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
@@ -750,11 +750,14 @@ class Parameter(object):
         "Given a serializable Python value, return a value that the parameter can be set to"
         return value
 
-    def schema(self, safe=False, subset=None):
-        if self._serializer is None:
+    def schema(self, safe=False, subset=None, mode='json'):
+        if serializer is None:
             raise ImportError('Cannot import serializer.py needed to generate schema')
-        return self._serializer.parameter_schema(self.__class__.__name__, self,
-                                                 safe=safe, subset=subset)
+        if mode not in  self._serializers:
+           raise KeyError('Mode %r not in available serialization formats %r'
+                          % (mode, list(self._serializers.keys())))
+        return self._serializers[mode].parameter_schema(self.__class__.__name__, self,
+                                                        safe=safe, subset=subset)
 
     @property
     def label(self):
@@ -1591,13 +1594,22 @@ class Parameters(object):
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_, subset=None):
+    def serialize_parameters(self_, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
-        return Parameter._serializer.serialize_parameters(self_or_cls, subset=subset)
 
-    def schema(self_, safe=False, subset=None):
+        if mode not in Parameter._serializers:
+           raise KeyError('Mode %r not in available serialization formats %r'
+                          % (mode, list(Parameter._serializers.keys())))
+        serializer = Parameter._serializers[mode]
+        return serializer.serialize_parameters(self_or_cls, subset=subset)
+
+    def schema(self_, safe=False, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
-        return Parameter._serializer.schema(self_or_cls, safe=safe, subset=subset)
+        if mode not in Parameter._serializers:
+           raise KeyError('Mode %r not in available serialization formats %r'
+                          % (mode, list(Parameter._serializers.keys())))
+        serializer = Parameter._serializers[mode]
+        return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
     def get_param_values(self_,onlychanged=False):
         """

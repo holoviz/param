@@ -1456,7 +1456,7 @@ class DataFrame(ClassSelector):
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super(DataFrame,self).__init__(pdDFrame, default=default, allow_None=True, **params)
+        super(DataFrame,self).__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
 
 

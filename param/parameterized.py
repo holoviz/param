@@ -1164,7 +1164,7 @@ class Parameters(object):
                 self_or_cls._parameters_state[k] = state.pop(key)
         for k, v in state.items():
             setattr(self, k, v)
-            
+
     def __getitem__(self_, key):
         """
         Returns the class or instance parameter
@@ -1979,7 +1979,7 @@ class ParameterizedMetaclass(type):
             "watchers": [] # Queue of batched watchers
         }
         mcs._param = Parameters(mcs)
-        
+
 
         # All objects (with their names) of type Parameter that are
         # defined in this class

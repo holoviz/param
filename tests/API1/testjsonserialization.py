@@ -34,10 +34,16 @@ class TestSet(param.Parameterized):
     l = param.String(default='baz', allow_None=True)
     m = param.ObjectSelector(default=3, objects=[3,'foo'], allow_None=False)
     n = param.ListSelector(default=[1,4,5], objects=[1,2,3,4,5,6])
-    o = param.DataFrame(default=pd.DataFrame({'A':[1.,2.,3.], 'B':[1.1,2.2,3.3]}), columns=2)
-    p = param.DataFrame(default=pd.DataFrame({'A':[1.,2.,3.], 'B':[1.1,2.2,3.3]}), columns=(1,4), rows=(2,5))
-    q = param.DataFrame(default=pd.DataFrame({'A':[1.1,2.2,3.3],
-                                              'B':[1.1,2.2,3.3]}), columns=['A', 'B'])
+
+
+df1 = None if (pd is None) else pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
+df2 = None if (pd is None) else pd.DataFrame({'A':[1.1,2.2,3.3],
+                                              'B':[1.1,2.2,3.3]})
+
+class PandasSet(param.Parameterized):
+    o = param.DataFrame(default=df1, columns=2, allow_None=True)
+    p = param.DataFrame(default=df1, columns=(1,4), rows=(2,5), allow_None=True)
+    q = param.DataFrame(default=df2, columns=['A', 'B'], allow_None=True)
 
 test = TestSet(a=29)
 

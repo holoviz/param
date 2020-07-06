@@ -98,8 +98,7 @@ class TestJSONSerialization(API1TestCase):
 
 
     def test_instance_serialization(self):
-        param_names = [el for el in test.param if el != 'name']
-        for param_name in param_names:
+        for param_name in list(test.param):
             original_value = getattr(test, param_name)
             serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
             json_loaded = json.loads(serialization)
@@ -112,8 +111,7 @@ class TestJSONSerialization(API1TestCase):
 
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):
-        param_names = [el for el in test.param if el != 'name']
-        for param_name in param_names:
+        for param_name in list(test.param):
             class_schema = TestSet.param.schema(safe=False, subset=[param_name], mode='json')
             instance_schema = test.param.schema(safe=False, subset=[param_name], mode='json')
             self.assertEqual(class_schema, instance_schema)

@@ -750,10 +750,11 @@ class Parameter(object):
         "Given a serializable Python value, return a value that the parameter can be set to"
         return value
 
-    def schema(self, safe=False):
+    def schema(self, safe=False, subset=None):
         if self._serializer is None:
             raise ImportError('Cannot import serializer.py needed to generate schema')
-        return self._serializer.parameter_schema(self.__class__.__name__, self, safe=safe)
+        return self._serializer.parameter_schema(self.__class__.__name__, self,
+                                                 safe=safe, subset=subset)
 
     @property
     def label(self):
@@ -1590,13 +1591,13 @@ class Parameters(object):
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_):
+    def serialize_parameters(self_, subset=None):
         self_or_cls = self_.self_or_cls
-        return Parameter._serializer.serialize_parameters(self_or_cls)
+        return Parameter._serializer.serialize_parameters(self_or_cls, subset=subset)
 
-    def schema(self_, safe=False):
+    def schema(self_, safe=False, subset=None):
         self_or_cls = self_.self_or_cls
-        return Parameter._serializer.schema(self_or_cls, safe=safe)
+        return Parameter._serializer.schema(self_or_cls, safe=safe, subset=subset)
 
     def get_param_values(self_,onlychanged=False):
         """

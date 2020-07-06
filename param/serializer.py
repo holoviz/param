@@ -23,11 +23,11 @@ class Serialization(object):
     """
 
     @classmethod
-    def schema(cls, pobj):
+    def schema(cls, pobj, subset=None):
         raise NotImplementedError
 
     @classmethod
-    def serialize_parameters(cls, pobj):
+    def serialize_parameters(cls, pobj, subset=None):
         raise NotImplementedError
 
 
@@ -46,9 +46,11 @@ class JSONSerialization(Serialization):
 
 
     @classmethod
-    def schema(cls, pobj, safe=False):
+    def schema(cls, pobj, safe=False, subset=None):
         schema = {}
         for name, p in pobj.param.objects('existing').items():
+            if subset is not None and name not in subset:
+                continue
             schema[name] = p.schema(safe=safe)
             if p.doc:
                 schema[name]["description"] = p.doc.strip()
@@ -57,9 +59,11 @@ class JSONSerialization(Serialization):
         return schema
 
     @classmethod
-    def serialize_parameters(cls, pobj):
+    def serialize_parameters(cls, pobj, subset=None):
         components = {}
         for name, p in pobj.param.objects('existing').items():
+            if subset is not None and name not in subset:
+                continue
             value = pobj.param.get_value_generator(name)
             serializable_value = p.serialize(value)
             components[name] = json.dumps(serializable_value)
@@ -76,7 +80,7 @@ class JSONSerialization(Serialization):
         return getattr(cls, method_name, None)
 
     @classmethod
-    def parameter_schema(cls, ptype, p, safe=False):
+    def parameter_schema(cls, ptype, p, safe=False, subset=None):
         if ptype in cls.unserializable_parameter_types:
             raise UnserializableException
         dispatch_method = cls._get_method(ptype, 'schema')

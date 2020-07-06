@@ -73,7 +73,6 @@ class TestJSONSerialization(API1TestCase):
             raise SkipTest('jsonschema needed for schema validation testing')
         param_schema = TestSet.param.schema(safe=True, subset=['a'], mode='json')
         schema = {"type" : "object", "properties" : param_schema}
-        serialized = json.loads(TestSet.param.serialize_parameters(subset=['a']))
         self.assertEqual({'a':
                           {'type': 'integer', 'minimum': 2, 'exclusiveMaximum': 30,
                            'description': 'Example doc', 'title': 'A'}},

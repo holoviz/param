@@ -1853,7 +1853,7 @@ class Date(Number):
 
     @classmethod
     def serialize(cls, value):
-        return value.replace(microsecond=0).isoformat()
+        return value.isoformat()
     @classmethod
     def deserialize(cls, value):
         return dt.datetime.fromisoformat(value)

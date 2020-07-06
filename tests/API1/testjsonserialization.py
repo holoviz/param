@@ -99,6 +99,9 @@ class TestJSONSerialization(API1TestCase):
 
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):
+        if validate is None:
+            raise SkipTest('jsonschema needed for schema validation testing')
+
         for param_name in list(test.param):
             class_schema = TestSet.param.schema(safe=False, subset=[param_name], mode='json')
             instance_schema = test.param.schema(safe=False, subset=[param_name], mode='json')

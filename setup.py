@@ -20,7 +20,9 @@ extras_require = {
     # (https://github.com/pypa/pip/issues/1197)
     'tests': [
         'nose',
-        'flake8'
+        'flake8',
+        'jsonschema',
+        'pandas'
     ]
 }
 

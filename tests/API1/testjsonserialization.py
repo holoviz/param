@@ -95,10 +95,7 @@ class TestJSONSerialization(API1TestCase):
             json_loaded = json.loads(serialization)
             deserialized_values = test.param.deserialize_parameters(json_loaded)
             deserialized_value = deserialized_values[param_name]
-            if isinstance(original_value, pd.DataFrame):
-                self.assertEqual(original_value.equals(deserialized_value), True)
-            else:
-                self.assertEqual(original_value, deserialized_value)
+            self.assertEqual(original_value, deserialized_value)
 
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):

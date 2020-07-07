@@ -22,7 +22,6 @@ extras_require = {
         'nose',
         'flake8',
         'jsonschema',
-        'pandas'
     ]
 }
 

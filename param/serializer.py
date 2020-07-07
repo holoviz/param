@@ -106,6 +106,14 @@ class JSONSerialization(Serialization):
     # Custom Schemas
 
     @classmethod
+    def dict_schema(cls, p, safe=False):
+        if safe is True:
+            msg = ('Dict is not guaranteed to be safe for '
+                   'serialization as the key and value types are unknown')
+            raise UnsafeserializableException(msg)
+        return { "type": "object"}
+
+    @classmethod
     def date_schema(cls, p, safe=False):
         return { "type": "string", "format": "date-time"}
 

@@ -1854,9 +1854,10 @@ class Date(Number):
     @classmethod
     def serialize(cls, value):
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
+
     @classmethod
     def deserialize(cls, value):
-        return dt.datetime.fromisoformat(value)
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 class CalendarDate(Number):
     """

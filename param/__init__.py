@@ -1853,6 +1853,8 @@ class Date(Number):
 
     @classmethod
     def serialize(cls, value):
+        if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
+            value = value.astype(dt.datetime)
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod

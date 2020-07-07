@@ -1857,7 +1857,8 @@ class Date(Number):
 
     @classmethod
     def deserialize(cls, value):
-        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+        return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+
 
 class CalendarDate(Number):
     """

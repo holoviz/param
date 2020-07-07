@@ -1884,6 +1884,14 @@ class CalendarDate(Number):
 
         self._checkBounds(val)
 
+    @classmethod
+    def serialize(cls, value):
+        return value.strftime("%Y-%m-%d")
+
+    @classmethod
+    def deserialize(cls, value):
+        return dt.datetime.strptime(value, "%Y-%m-%d").date()
+
 
 class Color(Parameter):
     """

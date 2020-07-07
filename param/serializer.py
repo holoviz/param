@@ -118,6 +118,10 @@ class JSONSerialization(Serialization):
         return { "type": "string", "format": "date-time"}
 
     @classmethod
+    def calendardate_schema(cls, p, safe=False):
+        return { "type": "string", "format": "date"}
+
+    @classmethod
     def tuple_schema(cls, p, safe=False):
         schema = { "type": "array"}
         if p.length is not None:

@@ -1853,7 +1853,7 @@ class Date(Number):
 
     @classmethod
     def serialize(cls, value):
-        return value.isoformat()
+        return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
     @classmethod
     def deserialize(cls, value):
         return dt.datetime.fromisoformat(value)

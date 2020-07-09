@@ -32,7 +32,6 @@ class TestSet(param.Parameterized):
 
     numpy_params = ['p']
     pandas_params = ['q','r','s']
-    always_unsafe = numpy_params + pandas_params
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
     b = param.Number(default=4.3, allow_None=True)
@@ -125,7 +124,7 @@ class TestJSONSerialization(API1TestCase):
 
     def test_numpy_instance_serialization(self):
         if np is None:
-            raise SkipTest('Numpy needed test test array serialization')
+            raise SkipTest('Numpy needed test array serialization')
 
         for param_name in test.numpy_params:
             original_value = getattr(test, param_name)
@@ -135,9 +134,17 @@ class TestJSONSerialization(API1TestCase):
             deserialized_value = deserialized_values[param_name]
             self.assertEqual(np.array_equal(original_value, deserialized_value), True)
 
+    def test_numpy_schemas_always_unsafe(self):
+        if np is None:
+            raise SkipTest('Numpy needed test array serialization')
+
+        for param_name in test.numpy_params:
+            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+                test.param.schema(safe=True, subset=[param_name], mode='json')
+
     def test_pandas_instance_serialization(self):
         if pd is None:
-            raise SkipTest('Pandas needed test test array serialization')
+            raise SkipTest('Pandas needed to test dataframe serialization')
 
         for param_name in test.pandas_params:
             original_value = getattr(test, param_name)
@@ -146,6 +153,14 @@ class TestJSONSerialization(API1TestCase):
             deserialized_values = test.param.deserialize_parameters(json_loaded)
             deserialized_value = deserialized_values[param_name]
             self.assertEqual(original_value.equals(deserialized_value), True)
+
+    def test_pandas_schemas_always_unsafe(self):
+        if pd is None:
+            raise SkipTest('Pandas needed test dataframe serialization')
+
+        for param_name in test.pandas_params:
+            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+                test.param.schema(safe=True, subset=[param_name], mode='json')
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):
         if validate is None:
@@ -162,10 +177,3 @@ class TestJSONSerialization(API1TestCase):
             class_serialization_val = TestSet.param.serialize_parameters(subset=[param_name])
             validate(instance=class_serialization_val, schema=class_schema)
 
-    def test_class_instance_schemas_match_and_validate_always_unsafe(self):
-        if validate is None:
-            raise SkipTest('jsonschema needed for schema validation testing')
-
-        for param_name in test.always_unsafe:
-            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
-                test.param.schema(safe=True, subset=[param_name], mode='json')

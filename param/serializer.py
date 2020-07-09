@@ -106,6 +106,13 @@ class JSONSerialization(Serialization):
     # Custom Schemas
 
     @classmethod
+    def array_schema(cls, p, safe=False):
+        if safe is True:
+            msg = ('Array is not guaranteed to be safe for '
+                   'serialization as the dtype is unknown')
+        return { "type": "array"}
+
+    @classmethod
     def dict_schema(cls, p, safe=False):
         if safe is True:
             msg = ('Dict is not guaranteed to be safe for '

@@ -1430,6 +1430,15 @@ class Array(ClassSelector):
         from numpy import ndarray
         super(Array,self).__init__(ndarray, allow_None=True, default=default, **params)
 
+    @classmethod
+    def serialize(cls, value):
+        return value.tolist()
+
+    @classmethod
+    def deserialize(cls, value):
+        from numpy import array
+        return array(value)
+
 
 class DataFrame(ClassSelector):
     """

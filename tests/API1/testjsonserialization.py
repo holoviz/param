@@ -27,32 +27,36 @@ except:
     pd, df1, df2 = None, None, None
 
 
+simple_list = [1]
 
 class TestSet(param.Parameterized):
 
-    numpy_params = ['p']
-    pandas_params = ['q','r','s']
+    numpy_params = ['r']
+    pandas_params = ['s','t','u']
+    conditionally_unsafe = ['f', 'o']
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
     b = param.Number(default=4.3, allow_None=True)
     c = param.String(default='foo')
     d = param.Boolean(default=False)
     e = param.List([1,2,3], class_=int)
-    f = param.Date(default=datetime.datetime.now())
-    g = param.Tuple(default=(1,2,3), length=3)
-    h = param.NumericTuple(default=(1,2,3,4))
-    i = param.XYCoordinates(default=(32.1, 51.5))
-    j = param.Integer(default=1)
-    k = param.Range(default=(1.1,2.3), bounds=(1,3))
-    l = param.String(default='baz', allow_None=True)
-    m = param.ObjectSelector(default=3, objects=[3,'foo'], allow_None=False)
-    n = param.ListSelector(default=[1,4,5], objects=[1,2,3,4,5,6])
-    o = param.CalendarDate(default=datetime.date.today())
-    p = None if np is None else param.Array(default=ndarray)
-    q = None if pd is None else param.DataFrame(default=df1, columns=2)
-    r = None if pd is None else param.DataFrame(default=pd.DataFrame(
+    f = param.List([1,2,3])
+    g = param.Date(default=datetime.datetime.now())
+    h = param.Tuple(default=(1,2,3), length=3)
+    i = param.NumericTuple(default=(1,2,3,4))
+    j = param.XYCoordinates(default=(32.1, 51.5))
+    k = param.Integer(default=1)
+    l = param.Range(default=(1.1,2.3), bounds=(1,3))
+    m = param.String(default='baz', allow_None=True)
+    n = param.ObjectSelector(default=3, objects=[3,'foo'], allow_None=False)
+    o = param.ObjectSelector(default=simple_list, objects=[simple_list], allow_None=False)
+    p = param.ListSelector(default=[1,4,5], objects=[1,2,3,4,5,6])
+    q = param.CalendarDate(default=datetime.date.today())
+    r = None if np is None else param.Array(default=ndarray)
+    s = None if pd is None else param.DataFrame(default=df1, columns=2)
+    t = None if pd is None else param.DataFrame(default=pd.DataFrame(
         {'A':[1,2,3], 'B':[1.1,2.2,3.3]}), columns=(1,4), rows=(2,5))
-    s = None if pd is None else param.DataFrame(default=df2, columns=['A', 'B'])
+    u = None if pd is None else param.DataFrame(default=df2, columns=['A', 'B'])
 
 
 test = TestSet(a=29)
@@ -177,3 +181,8 @@ class TestJSONSerialization(API1TestCase):
             class_serialization_val = TestSet.param.serialize_parameters(subset=[param_name])
             validate(instance=class_serialization_val, schema=class_schema)
 
+
+    def test_conditionally_unsafe(self):
+        for param_name in test.conditionally_unsafe:
+            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+                test.param.schema(safe=True, subset=[param_name], mode='json')

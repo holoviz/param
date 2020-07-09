@@ -1015,7 +1015,7 @@ class Tuple(Parameter):
 
 
     @classmethod
-    def deserialize(cls, value):
+    def ir_deserialize(cls, value):
         return tuple(value) # As JSON has no tuple representation
 
 
@@ -1431,11 +1431,11 @@ class Array(ClassSelector):
         super(Array,self).__init__(ndarray, allow_None=True, default=default, **params)
 
     @classmethod
-    def serialize(cls, value):
+    def ir_serialize(cls, value):
         return value.tolist()
 
     @classmethod
-    def deserialize(cls, value):
+    def ir_deserialize(cls, value):
         from numpy import array
         return array(value)
 
@@ -1511,11 +1511,11 @@ class DataFrame(ClassSelector):
             self._length_bounds_check(self.rows, len(val), 'Row')
 
     @classmethod
-    def serialize(cls, value):
+    def ir_serialize(cls, value):
         return value.to_dict('records')
 
     @classmethod
-    def deserialize(cls, value):
+    def ir_deserialize(cls, value):
         from pandas import DataFrame as pdDFrame
         return pdDFrame(value)
 
@@ -1861,13 +1861,13 @@ class Date(Number):
         self._checkBounds(val)
 
     @classmethod
-    def serialize(cls, value):
+    def ir_serialize(cls, value):
         if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
             value = value.astype(dt.datetime)
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod
-    def deserialize(cls, value):
+    def ir_deserialize(cls, value):
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
@@ -1896,11 +1896,11 @@ class CalendarDate(Number):
         self._checkBounds(val)
 
     @classmethod
-    def serialize(cls, value):
+    def ir_serialize(cls, value):
         return value.strftime("%Y-%m-%d")
 
     @classmethod
-    def deserialize(cls, value):
+    def ir_deserialize(cls, value):
         return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
 

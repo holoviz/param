@@ -65,7 +65,7 @@ class JSONSerialization(Serialization):
             if subset is not None and name not in subset:
                 continue
             value = pobj.param.get_value_generator(name)
-            serializable_value = p.serialize(value)
+            serializable_value = p.ir_serialize(value)
             components[name] = json.dumps(serializable_value)
 
         contents = ', '.join('"%s":%s' % (name, sval) for name, sval in components.items())
@@ -78,7 +78,7 @@ class JSONSerialization(Serialization):
         for name, value in serialization.items():
             if subset is not None and name not in subset:
                 continue
-            deserialized = pobj.param[name].deserialize(value)
+            deserialized = pobj.param[name].ir_deserialize(value)
             components[name] = deserialized
 
         return components

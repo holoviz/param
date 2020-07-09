@@ -13,6 +13,15 @@ try:
 except ImportError:
     validate = None
 
+try:
+    import numpy as np
+    ndarray = np.array([[1,2,3],[4,5,6]])
+except:
+    np = None
+    ndarray =  None
+
+
+
 
 class TestSet(param.Parameterized):
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
@@ -30,6 +39,7 @@ class TestSet(param.Parameterized):
     m = param.ObjectSelector(default=3, objects=[3,'foo'], allow_None=False)
     n = param.ListSelector(default=[1,4,5], objects=[1,2,3,4,5,6])
     o = param.CalendarDate(default=datetime.date.today())
+    p = param.Array(default=ndarray)
 
 
 test = TestSet(a=29)
@@ -96,7 +106,10 @@ class TestJSONSerialization(API1TestCase):
             json_loaded = json.loads(serialization)
             deserialized_values = test.param.deserialize_parameters(json_loaded)
             deserialized_value = deserialized_values[param_name]
-            self.assertEqual(original_value, deserialized_value)
+            if (np is not None) and isinstance(original_value, np.ndarray):
+                self.assertEqual(np.array_equal(original_value, deserialized_value), True)
+            else:
+                self.assertEqual(original_value, deserialized_value)
 
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):

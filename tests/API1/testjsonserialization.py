@@ -32,6 +32,7 @@ class TestSet(param.Parameterized):
 
     numpy_params = ['p']
     pandas_params = ['q','r','s']
+    always_unsafe = numpy_params + pandas_params
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
     b = param.Number(default=4.3, allow_None=True)
@@ -160,3 +161,11 @@ class TestJSONSerialization(API1TestCase):
 
             class_serialization_val = TestSet.param.serialize_parameters(subset=[param_name])
             validate(instance=class_serialization_val, schema=class_schema)
+
+    def test_class_instance_schemas_match_and_validate_always_unsafe(self):
+        if validate is None:
+            raise SkipTest('jsonschema needed for schema validation testing')
+
+        for param_name in test.always_unsafe:
+            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+                test.param.schema(safe=True, subset=[param_name], mode='json')

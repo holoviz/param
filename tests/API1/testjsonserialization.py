@@ -29,6 +29,7 @@ class TestSet(param.Parameterized):
     l = param.String(default='baz', allow_None=True)
     m = param.ObjectSelector(default=3, objects=[3,'foo'], allow_None=False)
     n = param.ListSelector(default=[1,4,5], objects=[1,2,3,4,5,6])
+    o = param.CalendarDate(default=datetime.date.today())
 
 
 test = TestSet(a=29)

@@ -111,7 +111,10 @@ class TestJSONSerialization(API1TestCase):
         validate(instance=serialized, schema=schema)
 
     def test_instance_serialization(self):
+        excluded = test.numpy_params + test.pandas_params
         for param_name in list(test.param):
+            if param_name in excluded:
+                continue
             original_value = getattr(test, param_name)
             serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
             json_loaded = json.loads(serialization)

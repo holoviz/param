@@ -17,13 +17,22 @@ try:
     import numpy as np
     ndarray = np.array([[1,2,3],[4,5,6]])
 except:
-    np = None
-    ndarray =  None
+    np, ndarray = None, None
 
+try:
+    import pandas as pd
+    df1 = pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
+    df2 = pd.DataFrame({'A':[1.1,2.2,3.3], 'B':[1.1,2.2,3.3]})
+except:
+    pd, df1, df2 = None, None, None
 
 
 
 class TestSet(param.Parameterized):
+
+    numpy_params = ['p']
+    pandas_params = ['q','r','s']
+
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
     b = param.Number(default=4.3, allow_None=True)
     c = param.String(default='foo')
@@ -39,7 +48,11 @@ class TestSet(param.Parameterized):
     m = param.ObjectSelector(default=3, objects=[3,'foo'], allow_None=False)
     n = param.ListSelector(default=[1,4,5], objects=[1,2,3,4,5,6])
     o = param.CalendarDate(default=datetime.date.today())
-    p = param.Array(default=ndarray)
+    p = None if np is None else param.Array(default=ndarray)
+    q = None if pd is None else param.DataFrame(default=df1, columns=2)
+    r = None if pd is None else param.DataFrame(default=pd.DataFrame(
+        {'A':[1,2,3], 'B':[1.1,2.2,3.3]}), columns=(1,4), rows=(2,5))
+    s = None if pd is None else param.DataFrame(default=df2, columns=['A', 'B'])
 
 
 test = TestSet(a=29)
@@ -85,7 +98,6 @@ class TestJSONSerialization(API1TestCase):
         with self.assertRaisesRegexp(ValidationError, exception):
             validate(instance=1, schema=schema)
 
-
     def test_serialize_integer_schema_instance(self):
         if validate is None:
             raise SkipTest('jsonschema needed for schema validation testing')
@@ -98,7 +110,6 @@ class TestJSONSerialization(API1TestCase):
                          param_schema)
         validate(instance=serialized, schema=schema)
 
-
     def test_instance_serialization(self):
         for param_name in list(test.param):
             original_value = getattr(test, param_name)
@@ -106,11 +117,31 @@ class TestJSONSerialization(API1TestCase):
             json_loaded = json.loads(serialization)
             deserialized_values = test.param.deserialize_parameters(json_loaded)
             deserialized_value = deserialized_values[param_name]
-            if (np is not None) and isinstance(original_value, np.ndarray):
-                self.assertEqual(np.array_equal(original_value, deserialized_value), True)
-            else:
-                self.assertEqual(original_value, deserialized_value)
+            self.assertEqual(original_value, deserialized_value)
 
+    def test_numpy_instance_serialization(self):
+        if np is None:
+            raise SkipTest('Numpy needed test test array serialization')
+
+        for param_name in test.numpy_params:
+            original_value = getattr(test, param_name)
+            serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
+            json_loaded = json.loads(serialization)
+            deserialized_values = test.param.deserialize_parameters(json_loaded)
+            deserialized_value = deserialized_values[param_name]
+            self.assertEqual(np.array_equal(original_value, deserialized_value), True)
+
+    def test_pandas_instance_serialization(self):
+        if pd is None:
+            raise SkipTest('Pandas needed test test array serialization')
+
+        for param_name in test.pandas_params:
+            original_value = getattr(test, param_name)
+            serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
+            json_loaded = json.loads(serialization)
+            deserialized_values = test.param.deserialize_parameters(json_loaded)
+            deserialized_value = deserialized_values[param_name]
+            self.assertEqual(original_value.equals(deserialized_value), True)
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):
         if validate is None:

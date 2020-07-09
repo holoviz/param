@@ -24,11 +24,11 @@ class Serialization(object):
 
     @classmethod
     def schema(cls, pobj, subset=None):
-        raise NotImplementedError
+        raise NotImplementedError        # noqa: unimplemented method
 
     @classmethod
     def serialize_parameters(cls, pobj, subset=None):
-        raise NotImplementedError
+        raise NotImplementedError        # noqa: unimplemented method
 
 
 

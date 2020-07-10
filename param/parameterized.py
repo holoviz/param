@@ -741,12 +741,12 @@ class Parameter(object):
 
 
     @classmethod
-    def ir_serialize(cls, value):
+    def serialize(cls, value):
         "Given the parameter value, return a Python value suitable for serialization"
         return value
 
     @classmethod
-    def ir_deserialize(cls, value):
+    def deserialize(cls, value):
         "Given a serializable Python value, return a value that the parameter can be set to"
         return value
 

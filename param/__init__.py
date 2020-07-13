@@ -1436,8 +1436,8 @@ class Array(ClassSelector):
 
     @classmethod
     def deserialize(cls, value):
-        from numpy import array
-        return array(value)
+        from numpy import asarray
+        return asarray(value)
 
 
 class DataFrame(ClassSelector):

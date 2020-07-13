@@ -11,6 +11,13 @@ import random
 import numbers
 import operator
 
+# Allow this file to be used standalone if desired, albeit without JSON serialization
+try:
+   from . import serializer
+except ImportError:
+   serializer = None
+
+
 from collections import defaultdict, namedtuple, OrderedDict
 from operator import itemgetter,attrgetter
 from types import FunctionType
@@ -687,6 +694,8 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
+    _serializers = {'json':serializer.JSONSerialization}
+
     def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
@@ -730,6 +739,25 @@ class Parameter(object):
         self.watchers = {}
         self.per_instance = per_instance
 
+
+    @classmethod
+    def serialize(cls, value):
+        "Given the parameter value, return a Python value suitable for serialization"
+        return value
+
+    @classmethod
+    def deserialize(cls, value):
+        "Given a serializable Python value, return a value that the parameter can be set to"
+        return value
+
+    def schema(self, safe=False, subset=None, mode='json'):
+        if serializer is None:
+            raise ImportError('Cannot import serializer.py needed to generate schema')
+        if mode not in  self._serializers:
+           raise KeyError('Mode %r not in available serialization formats %r'
+                          % (mode, list(self._serializers.keys())))
+        return self._serializers[mode].parameter_schema(self.__class__.__name__, self,
+                                                        safe=safe, subset=subset)
 
     @property
     def label(self):
@@ -1136,7 +1164,7 @@ class Parameters(object):
                 self_or_cls._parameters_state[k] = state.pop(key)
         for k, v in state.items():
             setattr(self, k, v)
-            
+
     def __getitem__(self_, key):
         """
         Returns the class or instance parameter
@@ -1566,6 +1594,27 @@ class Parameters(object):
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
+    def serialize_parameters(self_, subset=None, mode='json'):
+        self_or_cls = self_.self_or_cls
+        if mode not in Parameter._serializers:
+           raise KeyError('Mode %r not in available serialization formats %r'
+                          % (mode, list(Parameter._serializers.keys())))
+        serializer = Parameter._serializers[mode]
+        return serializer.serialize_parameters(self_or_cls, subset=subset)
+
+    def deserialize_parameters(self_, serialization, subset=None, mode='json'):
+       self_or_cls = self_.self_or_cls
+       serializer = Parameter._serializers[mode]
+       return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
+
+    def schema(self_, safe=False, subset=None, mode='json'):
+        self_or_cls = self_.self_or_cls
+        if mode not in Parameter._serializers:
+           raise KeyError('Mode %r not in available serialization formats %r'
+                          % (mode, list(Parameter._serializers.keys())))
+        serializer = Parameter._serializers[mode]
+        return serializer.schema(self_or_cls, safe=safe, subset=subset)
+
     def get_param_values(self_,onlychanged=False):
         """
         Return a list of name,value pairs for all Parameters of this
@@ -1934,7 +1983,7 @@ class ParameterizedMetaclass(type):
             "watchers": [] # Queue of batched watchers
         }
         mcs._param = Parameters(mcs)
-        
+
 
         # All objects (with their names) of type Parameter that are
         # defined in this class

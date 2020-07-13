@@ -1014,6 +1014,10 @@ class Tuple(Parameter):
                              (self.name,len(val),self.length))
 
 
+    @classmethod
+    def deserialize(cls, value):
+        return tuple(value) # As JSON has no tuple representation
+
 
 class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
@@ -1426,6 +1430,15 @@ class Array(ClassSelector):
         from numpy import ndarray
         super(Array,self).__init__(ndarray, allow_None=True, default=default, **params)
 
+    @classmethod
+    def serialize(cls, value):
+        return value.tolist()
+
+    @classmethod
+    def deserialize(cls, value):
+        from numpy import asarray
+        return asarray(value)
+
 
 class DataFrame(ClassSelector):
     """
@@ -1452,7 +1465,7 @@ class DataFrame(ClassSelector):
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super(DataFrame,self).__init__(pdDFrame, default=default, allow_None=True, **params)
+        super(DataFrame,self).__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
 
 
@@ -1496,6 +1509,15 @@ class DataFrame(ClassSelector):
 
         if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'Row')
+
+    @classmethod
+    def serialize(cls, value):
+        return value.to_dict('records')
+
+    @classmethod
+    def deserialize(cls, value):
+        from pandas import DataFrame as pdDFrame
+        return pdDFrame(value)
 
 
 class Series(ClassSelector):
@@ -1838,6 +1860,16 @@ class Date(Number):
 
         self._checkBounds(val)
 
+    @classmethod
+    def serialize(cls, value):
+        if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
+            value = value.astype(dt.datetime)
+        return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+    @classmethod
+    def deserialize(cls, value):
+        return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+
 
 class CalendarDate(Number):
     """
@@ -1862,6 +1894,14 @@ class CalendarDate(Number):
             raise ValueError("Step parameter can only be None or a date type")
 
         self._checkBounds(val)
+
+    @classmethod
+    def serialize(cls, value):
+        return value.strftime("%Y-%m-%d")
+
+    @classmethod
+    def deserialize(cls, value):
+        return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
 
 class Color(Parameter):

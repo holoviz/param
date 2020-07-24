@@ -1183,7 +1183,7 @@ class Parameters(object):
                 except:
                     raise
                 finally:
-                    p.watchers = watchers
+                    p.watchers = {k: list(v) for k, v in watchers.items()}
                 p.owner = inst
                 inst._instance__params[key] = p
             else:

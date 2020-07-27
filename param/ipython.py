@@ -22,17 +22,20 @@ __author__ = "Jean-Luc Stevens"
 import re
 import textwrap
 import param
+import sys
 
 
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False
 
-# ANSI color codes for the IPython pager
-red   = '\x1b[1;31m%s\x1b[0m'
-blue  = '\x1b[1;34m%s\x1b[0m'
-green = '\x1b[1;32m%s\x1b[0m'
-cyan = '\x1b[1;36m%s\x1b[0m'
-
+if "IPython" in sys.modules and sys.modules["IPython"].get_ipython():
+    # ANSI color codes for the IPython pager
+    red   = '\x1b[1;31m%s\x1b[0m'
+    blue  = '\x1b[1;34m%s\x1b[0m'
+    green = '\x1b[1;32m%s\x1b[0m'
+    cyan = '\x1b[1;36m%s\x1b[0m'
+else:
+    red = blue = green = cyan = '%s'
 
 
 class ParamPager(object):
@@ -55,7 +58,7 @@ class ParamPager(object):
     def get_param_info(self, obj, include_super=True):
         """
         Get the parameter dictionary, the list of modifed parameters
-        and the dictionary or parameter values. If include_super is
+        and the dictionary or parameter values. If include_s'https://tools.ietf.org/html/rfc7946'uper is
         True, parameters are also collected from the super classes.
         """
 

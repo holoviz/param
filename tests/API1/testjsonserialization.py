@@ -2,10 +2,12 @@
 Testing JSON serialization of parameters and the corresponding schemas.
 """
 
-import json
 import datetime
+import json
+
 import param
-from unittest import SkipTest
+
+from unittest import SkipTest, skipIf
 from . import API1TestCase
 
 try:
@@ -19,6 +21,8 @@ try:
 except:
     np, ndarray = None, None
 
+np_skip = skipIf(np is None, "NumPy is not available")
+
 try:
     import pandas as pd
     df1 = pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
@@ -26,6 +30,7 @@ try:
 except:
     pd, df1, df2 = None, None, None
 
+pd_skip = skipIf(pd is None, "pandas is not available")
 
 simple_list = [1]
 
@@ -63,19 +68,129 @@ class TestSet(param.Parameterized):
 test = TestSet(a=29)
 
 
-class TestJSONSerialization(API1TestCase):
+class TestSerialization(API1TestCase):
+    """
+    Base class for testing serialization of Parameter values
+    """
+
+    mode = None
+
+    __test__ = False
+
+    def _test_serialize(self, obj, pname):
+        serialized = obj.param.serialize_value(pname, mode=self.mode)
+        deserialized = obj.param.deserialize_value(pname, serialized, mode=self.mode)
+        self.assertEqual(deserialized, getattr(obj, pname))
 
     def test_serialize_integer_class(self):
-        serialization = TestSet.param.serialize_parameters(subset=['a'], mode='json')
-        deserialized = json.loads(serialization)
-        self.assertEqual(TestSet.a, 5)
-        self.assertEqual(deserialized, {'a':TestSet.a})
+        self._test_serialize(TestSet, 'a')
 
     def test_serialize_integer_instance(self):
-        serialization = test.param.serialize_parameters(subset=['a'], mode='json')
-        deserialized = json.loads(serialization)
-        self.assertEqual(test.a, 29)
-        self.assertEqual(deserialized, {'a':test.a})
+        self._test_serialize(test, 'a')
+
+    def test_serialize_number_class(self):
+        self._test_serialize(TestSet, 'b')
+
+    def test_serialize_number_instance(self):
+        self._test_serialize(test, 'b')
+
+    def test_serialize_string_class(self):
+        self._test_serialize(TestSet, 'c')
+
+    def test_serialize_string_instance(self):
+        self._test_serialize(test, 'c')
+
+    def test_serialize_boolean_class(self):
+        self._test_serialize(TestSet, 'd')
+
+    def test_serialize_boolean_instance(self):
+        self._test_serialize(test, 'd')
+
+    def test_serialize_list_class(self):
+        self._test_serialize(TestSet, 'e')
+
+    def test_serialize_list_instance(self):
+        self._test_serialize(test, 'e')
+
+    def test_serialize_date_class(self):
+        self._test_serialize(TestSet, 'g')
+
+    def test_serialize_date_instance(self):
+        self._test_serialize(test, 'g')
+
+    def test_serialize_tuple_class(self):
+        self._test_serialize(TestSet, 'h')
+
+    def test_serialize_tuple_instance(self):
+        self._test_serialize(test, 'h')
+
+    def test_serialize_calendar_date_class(self):
+        self._test_serialize(TestSet, 'q')
+
+    def test_serialize_calendar_date_instance(self):
+        self._test_serialize(test, 'q')
+
+    @np_skip
+    def test_serialize_array_class(self):
+        serialized = TestSet.param.serialize_value('r', mode=self.mode)
+        deserialized = TestSet.param.deserialize_value('r', serialized, mode=self.mode)
+        self.assertTrue(np.array_equal(deserialized, getattr(TestSet, 'r')))
+
+    @np_skip
+    def test_serialize_array_instance(self):
+        serialized = test.param.serialize_value('r', mode=self.mode)
+        deserialized = test.param.deserialize_value('r', serialized, mode=self.mode)
+        self.assertTrue(np.array_equal(deserialized, getattr(test, 'r')))
+
+    @pd_skip
+    def test_serialize_dataframe_class(self):
+        serialized = TestSet.param.serialize_value('s', mode=self.mode)
+        deserialized = TestSet.param.deserialize_value('s', serialized, mode=self.mode)
+        self.assertTrue(getattr(TestSet, 's').equals(deserialized))
+
+    @pd_skip
+    def test_serialize_dataframe_instance(self):
+        serialized = test.param.serialize_value('s', mode=self.mode)
+        deserialized = test.param.deserialize_value('s', serialized, mode=self.mode)
+        self.assertTrue(getattr(test, 's').equals(deserialized))
+
+    def test_serialize_dict_class(self):
+        self._test_serialize(TestSet, 'v')
+
+    def test_serialize_dict_instance(self):
+        self._test_serialize(test, 'v')
+
+    def test_instance_serialization(self):
+        parameters = [p for p in test.param if p not in test.numpy_params + test.pandas_params]
+        serialized = test.param.serialize_parameters(subset=parameters, mode=self.mode)
+        deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
+        for pname in parameters:
+            self.assertEqual(deserialized[pname], getattr(test, pname))
+
+    @np_skip
+    def test_numpy_instance_serialization(self):
+        serialized = test.param.serialize_parameters(subset=test.numpy_params, mode=self.mode)
+        deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
+        for pname in test.numpy_params:
+            self.assertTrue(np.array_equal(deserialized[pname], getattr(test, pname)))
+
+    @pd_skip
+    def test_pandas_instance_serialization(self):
+        serialized = test.param.serialize_parameters(subset=test.pandas_params, mode=self.mode)
+        deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
+        for pname in test.pandas_params:
+            self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
+
+
+
+class TestJSONSerialization(TestSerialization):
+
+    mode = 'json'
+
+    __test__ = True
+
+
+class TestJSONSchema(API1TestCase):
 
     def test_serialize_integer_schema_class(self):
         if validate is None:
@@ -115,54 +230,14 @@ class TestJSONSerialization(API1TestCase):
                          param_schema)
         validate(instance=serialized, schema=schema)
 
-    def test_instance_serialization(self):
-        excluded = test.numpy_params + test.pandas_params
-        for param_name in list(test.param):
-            if param_name in excluded:
-                continue
-            original_value = getattr(test, param_name)
-            serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
-            json_loaded = json.loads(serialization)
-            deserialized_values = test.param.deserialize_parameters(json_loaded)
-            deserialized_value = deserialized_values[param_name]
-            self.assertEqual(original_value, deserialized_value)
-
-    def test_numpy_instance_serialization(self):
-        if np is None:
-            raise SkipTest('Numpy needed test array serialization')
-
-        for param_name in test.numpy_params:
-            original_value = getattr(test, param_name)
-            serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
-            json_loaded = json.loads(serialization)
-            deserialized_values = test.param.deserialize_parameters(json_loaded)
-            deserialized_value = deserialized_values[param_name]
-            self.assertEqual(np.array_equal(original_value, deserialized_value), True)
-
+    @np_skip
     def test_numpy_schemas_always_unsafe(self):
-        if np is None:
-            raise SkipTest('Numpy needed test array serialization')
-
         for param_name in test.numpy_params:
             with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
                 test.param.schema(safe=True, subset=[param_name], mode='json')
 
-    def test_pandas_instance_serialization(self):
-        if pd is None:
-            raise SkipTest('Pandas needed to test dataframe serialization')
-
-        for param_name in test.pandas_params:
-            original_value = getattr(test, param_name)
-            serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
-            json_loaded = json.loads(serialization)
-            deserialized_values = test.param.deserialize_parameters(json_loaded)
-            deserialized_value = deserialized_values[param_name]
-            self.assertEqual(original_value.equals(deserialized_value), True)
-
+    @pd_skip
     def test_pandas_schemas_always_unsafe(self):
-        if pd is None:
-            raise SkipTest('Pandas needed test dataframe serialization')
-
         for param_name in test.pandas_params:
             with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
                 test.param.schema(safe=True, subset=[param_name], mode='json')
@@ -181,7 +256,6 @@ class TestJSONSerialization(API1TestCase):
 
             class_serialization_val = TestSet.param.serialize_parameters(subset=[param_name])
             validate(instance=class_serialization_val, schema=class_schema)
-
 
     def test_conditionally_unsafe(self):
         for param_name in test.conditionally_unsafe:

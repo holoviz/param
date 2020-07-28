@@ -29,15 +29,15 @@ class Serialization(object):
     @classmethod
     def serialize_parameters(cls, pobj, subset=None):
         """
-        Should serialize the parameters on a Parameterized object
-        into a single serialized object, e.g. a JSON string.
+        Serialize the parameters on a Parameterized object into a
+        single serialized object, e.g. a JSON string.
         """
         raise NotImplementedError        # noqa: unimplemented method
 
     @classmethod
     def deserialize_parameters(cls, pobj, serialized, subset=None):
         """
-        Should deserialize a serialized object representing one or
+        Deserialize a serialized object representing one or
         more Parameters into a dictionary of parameter values.
         """
         raise NotImplementedError        # noqa: unimplemented method
@@ -45,19 +45,16 @@ class Serialization(object):
     @classmethod
     def serialize_parameter_value(cls, pobj, pname):
         """
-        Should serialize a single parameter value into a serialized
-        format.
+        Serialize a single parameter value.
         """
-        value = pobj.param.get_value_generator(pname)
-        return cls.dumps(pobj.param[pname].serialize(value))
+        raise NotImplementedError        # noqa: unimplemented method
 
     @classmethod
     def deserialize_parameter_value(cls, pobj, pname, value):
         """
-        Should deserialize a single parameter value.
+        Deserialize a single parameter value.
         """
-        value = cls.loads(value)
-        return pobj.param[pname].deserialize(value)
+        raise NotImplementedError        # noqa: unimplemented method
 
 
 class JSONSerialization(Serialization):

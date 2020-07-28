@@ -739,7 +739,6 @@ class Parameter(object):
         self.watchers = {}
         self.per_instance = per_instance
 
-
     @classmethod
     def serialize(cls, value):
         "Given the parameter value, return a Python value suitable for serialization"
@@ -1597,21 +1596,40 @@ class Parameters(object):
     def serialize_parameters(self_, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-           raise KeyError('Mode %r not in available serialization formats %r'
-                          % (mode, list(Parameter._serializers.keys())))
+           raise ValueError('Mode %r not in available serialization formats %r'
+                            % (mode, list(Parameter._serializers.keys())))
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
+
+    def serialize_value(self_, pname, mode='json'):
+        self_or_cls = self_.self_or_cls
+        if mode not in Parameter._serializers:
+           raise ValueError('Mode %r not in available serialization formats %r'
+                            % (mode, list(Parameter._serializers.keys())))
+        serializer = Parameter._serializers[mode]
+        return serializer.serialize_parameter_value(self_or_cls, pname)
 
     def deserialize_parameters(self_, serialization, subset=None, mode='json'):
        self_or_cls = self_.self_or_cls
        serializer = Parameter._serializers[mode]
        return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
 
-    def schema(self_, safe=False, subset=None, mode='json'):
+    def deserialize_value(self_, pname, value, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-           raise KeyError('Mode %r not in available serialization formats %r'
-                          % (mode, list(Parameter._serializers.keys())))
+           raise ValueError('Mode %r not in available serialization formats %r'
+                            % (mode, list(Parameter._serializers.keys())))
+        serializer = Parameter._serializers[mode]
+        return serializer.deserialize_parameter_value(self_or_cls, pname, value)
+
+    def schema(self_, safe=False, subset=None, mode='json'):
+        """
+        Returns a schema for the parameters on this Parameterized object.
+        """
+        self_or_cls = self_.self_or_cls
+        if mode not in Parameter._serializers:
+           raise ValueError('Mode %r not in available serialization formats %r'
+                            % (mode, list(Parameter._serializers.keys())))
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 

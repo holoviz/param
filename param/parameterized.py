@@ -1468,7 +1468,7 @@ class Parameters(object):
 
         if instance and self_.self is not None:
             if instance == 'existing':
-                if self_.self._instance__params:
+                if getattr(self_.self, 'initialized', False) and self_.self._instance__params:
                     return dict(pdict, **self_.self._instance__params)
                 return pdict
             else:

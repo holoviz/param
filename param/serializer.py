@@ -28,8 +28,36 @@ class Serialization(object):
 
     @classmethod
     def serialize_parameters(cls, pobj, subset=None):
+        """
+        Should serialize the parameters on a Parameterized object
+        into a single serialized object, e.g. a JSON string.
+        """
         raise NotImplementedError        # noqa: unimplemented method
 
+    @classmethod
+    def deserialize_parameters(cls, pobj, serialized, subset=None):
+        """
+        Should deserialize a serialized object representing one or
+        more Parameters into a dictionary of parameter values.
+        """
+        raise NotImplementedError        # noqa: unimplemented method
+
+    @classmethod
+    def serialize_parameter_value(cls, pobj, pname):
+        """
+        Should serialize a single parameter value into a serialized
+        format.
+        """
+        value = pobj.param.get_value_generator(pname)
+        return cls.dumps(pobj.param[pname].serialize(value))
+
+    @classmethod
+    def deserialize_parameter_value(cls, pobj, pname, value):
+        """
+        Should deserialize a single parameter value.
+        """
+        value = cls.loads(value)
+        return pobj.param[pname].deserialize(value)
 
 
 class JSONSerialization(Serialization):
@@ -44,6 +72,13 @@ class JSONSerialization(Serialization):
     json_schema_literal_types = {int:'integer', float:'number', str:'string',
                                  type(None):'null'}
 
+    @classmethod
+    def loads(cls, serialized):
+        return json.loads(serialized)
+
+    @classmethod
+    def dumps(cls, obj):
+        return json.dumps(obj)
 
     @classmethod
     def schema(cls, pobj, safe=False, subset=None):
@@ -65,22 +100,18 @@ class JSONSerialization(Serialization):
             if subset is not None and name not in subset:
                 continue
             value = pobj.param.get_value_generator(name)
-            serializable_value = p.serialize(value)
-            components[name] = json.dumps(serializable_value)
-
-        contents = ', '.join('"%s":%s' % (name, sval) for name, sval in components.items())
-        return '{{{contents}}}'.format(contents=contents)
-
+            components[name] = p.serialize(value)
+        return cls.dumps(components)
 
     @classmethod
     def deserialize_parameters(cls, pobj, serialization, subset=None):
+        deserialized = cls.loads(serialization)
         components = {}
-        for name, value in serialization.items():
+        for name, value in deserialized.items():
             if subset is not None and name not in subset:
                 continue
             deserialized = pobj.param[name].deserialize(value)
             components[name] = deserialized
-
         return components
 
     # Parameter level methods
@@ -102,6 +133,16 @@ class JSONSerialization(Serialization):
             schema = { "type": ptype.lower()}
 
         return JSONNullable(schema) if p.allow_None else schema
+
+    @classmethod
+    def serialize_parameter_value(cls, pobj, pname):
+        value = pobj.param.get_value_generator(pname)
+        return cls.dumps(pobj.param[pname].serialize(value))
+
+    @classmethod
+    def deserialize_parameter_value(cls, pobj, pname, value):
+        value = cls.loads(value)
+        return pobj.param[pname].deserialize(value)
 
     # Custom Schemas
 

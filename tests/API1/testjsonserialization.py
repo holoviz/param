@@ -122,8 +122,7 @@ class TestJSONSerialization(API1TestCase):
                 continue
             original_value = getattr(test, param_name)
             serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
-            json_loaded = json.loads(serialization)
-            deserialized_values = test.param.deserialize_parameters(json_loaded)
+            deserialized_values = test.param.deserialize_parameters(serialization)
             deserialized_value = deserialized_values[param_name]
             self.assertEqual(original_value, deserialized_value)
 
@@ -134,10 +133,9 @@ class TestJSONSerialization(API1TestCase):
         for param_name in test.numpy_params:
             original_value = getattr(test, param_name)
             serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
-            json_loaded = json.loads(serialization)
-            deserialized_values = test.param.deserialize_parameters(json_loaded)
+            deserialized_values = test.param.deserialize_parameters(serialization)
             deserialized_value = deserialized_values[param_name]
-            self.assertEqual(np.array_equal(original_value, deserialized_value), True)
+            self.assertTrue(np.array_equal(original_value, deserialized_value))
 
     def test_numpy_schemas_always_unsafe(self):
         if np is None:
@@ -154,10 +152,9 @@ class TestJSONSerialization(API1TestCase):
         for param_name in test.pandas_params:
             original_value = getattr(test, param_name)
             serialization = test.param.serialize_parameters(subset=[param_name], mode='json')
-            json_loaded = json.loads(serialization)
-            deserialized_values = test.param.deserialize_parameters(json_loaded)
+            deserialized_values = test.param.deserialize_parameters(serialization)
             deserialized_value = deserialized_values[param_name]
-            self.assertEqual(original_value.equals(deserialized_value), True)
+            self.assertTrue(original_value.equals(deserialized_value))
 
     def test_pandas_schemas_always_unsafe(self):
         if pd is None:
@@ -187,3 +184,20 @@ class TestJSONSerialization(API1TestCase):
         for param_name in test.conditionally_unsafe:
             with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
                 test.param.schema(safe=True, subset=[param_name], mode='json')
+
+
+    def test_roundtrip(self):
+        if np is None:
+            raise SkipTest('Numpy needed test array serialization')
+        if pd is None:
+            raise SkipTest('Pandas needed test dataframe serialization')
+
+        serialized = TestSet.param.serialize_parameters(mode='json')
+        deserialized = TestSet.param.deserialize_parameters(serialized)
+        for k, v in TestSet.param.get_param_values():
+            if k in TestSet.numpy_params:
+                self.assertTrue(np.array_equal(deserialized[k], v))
+            elif k in TestSet.pandas_params:
+                self.assertTrue(v.equals(deserialized[k]))
+            else:
+                self.assertEqual(deserialized[k], v)

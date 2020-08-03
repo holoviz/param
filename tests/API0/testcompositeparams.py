@@ -94,6 +94,4 @@ class TestCompositeParameters(unittest.TestCase):
         self.assertEqual(iy(), 5)
 
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

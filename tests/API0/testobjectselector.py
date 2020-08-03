@@ -23,7 +23,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
             g = param.ObjectSelector(default=None,objects=[7,8])
             i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
             d = param.ObjectSelector(default=opts['B'],objects=opts)
-            
+
         self.P = P
 
     def test_set_object_constructor(self):
@@ -103,6 +103,4 @@ class TestObjectSelectorParameters(unittest.TestCase):
             raise AssertionError("ObjectSelector created without range.")
 
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

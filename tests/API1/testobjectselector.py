@@ -115,6 +115,4 @@ class TestObjectSelectorParameters(API1TestCase):
             raise AssertionError("ObjectSelector created without range.")
 
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

@@ -7,7 +7,7 @@ import param
 import numbergen
 import copy
 
-from nose.plugins.skip import SkipTest
+from unittest import SkipTest
 import fractions
 
 try:
@@ -297,6 +297,4 @@ class TestTimeDependentDynamic(unittest.TestCase):
 
 
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

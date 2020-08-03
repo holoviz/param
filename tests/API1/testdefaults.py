@@ -27,11 +27,11 @@ except ImportError:
     skip.append('Series')
 
 
-class TestDefaultsMetaclass(type):
+class _TestDefaultsMetaclass(type):
     def __new__(mcs, name, bases, dict_):
 
         def test_skip(*args,**kw):
-            from nose.exc import SkipTest
+            from unittest import SkipTest
             raise SkipTest
 
         def add_test(p):
@@ -47,11 +47,6 @@ class TestDefaultsMetaclass(type):
         return type.__new__(mcs, name, bases, dict_)
 
 
-@add_metaclass(TestDefaultsMetaclass)
+@add_metaclass(_TestDefaultsMetaclass)
 class TestDefaults(API1TestCase):
     pass
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

@@ -156,6 +156,4 @@ class TestListSelectorParameters(unittest.TestCase):
         with self.assertRaises(TypeError):
             Q.params('r').compute_default()
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

@@ -31,7 +31,7 @@ class TestDataFrame(API1TestCase):
 
         test = Test()
         exception = "Parameter 'df' value must be an instance of DataFrame, not '3'"
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             test.df = 3
 
     def test_dataframe_unordered_column_set_valid(self):
@@ -50,8 +50,8 @@ class TestDataFrame(API1TestCase):
 
         test = Test()
         self.assertEquals(test.param.params('df').ordered, False)
-        exception = "Provided DataFrame columns \['b', 'a', 'c'\] does not contain required columns \['a', 'd'\]"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = r"Provided DataFrame columns \['b', 'a', 'c'\] does not contain required columns \['a', 'd'\]"
+        with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
     def test_dataframe_ordered_column_list_valid(self):
@@ -70,8 +70,8 @@ class TestDataFrame(API1TestCase):
         test = Test()
         self.assertEquals(test.param.params('df').ordered, True)
 
-        exception = "Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = r"Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
+        with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
 
@@ -90,7 +90,7 @@ class TestDataFrame(API1TestCase):
         self.assertEquals(test.param.params('df').ordered, None)
 
         exception = "Column length 2 does not match declared bounds of 3"
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
 
@@ -103,8 +103,8 @@ class TestDataFrame(API1TestCase):
 
         invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
 
-        exception = "Columns length 3 does not match declared bounds of \(None, 2\)"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = r"Columns length 3 does not match declared bounds of \(None, 2\)"
+        with self.assertRaisesRegex(ValueError, exception):
             class Test(param.Parameterized):
                 df = param.DataFrame(default=invalid_df, columns=(None,2))
 
@@ -121,7 +121,7 @@ class TestDataFrame(API1TestCase):
 
         test = Test()
         exception = "Row length 3 does not match declared bounds of 2"
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
     def test_dataframe_unordered_row_tuple_valid(self):
@@ -133,8 +133,8 @@ class TestDataFrame(API1TestCase):
 
         invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
 
-        exception = "Row length 2 does not match declared bounds of \(5, 7\)"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = r"Row length 2 does not match declared bounds of \(5, 7\)"
+        with self.assertRaisesRegex(ValueError, exception):
             class Test(param.Parameterized):
                 df = param.DataFrame(default=invalid_df, rows=(5,7))
 
@@ -159,7 +159,7 @@ class TestSeries(API1TestCase):
 
         test = Test()
         exception = "Row length 3 does not match declared bounds of 2"
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             test.series = invalid_series
 
     def test_series_unordered_row_tuple_valid(self):
@@ -171,11 +171,7 @@ class TestSeries(API1TestCase):
 
         invalid_series = pandas.Series([1,2])
 
-        exception = "Row length 2 does not match declared bounds of \(5, 7\)"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = r"Row length 2 does not match declared bounds of \(5, 7\)"
+        with self.assertRaisesRegex(ValueError, exception):
             class Test(param.Parameterized):
                 series = param.Series(default=invalid_series, rows=(5,7))
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

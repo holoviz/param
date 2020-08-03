@@ -974,7 +974,7 @@ class String(Parameter):
       class IPAddress(String):
         '''IPv4 address as a string (dotted decimal notation)'''
        def __init__(self, default="0.0.0.0", allow_None=False, **kwargs):
-           ip_regex = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+           ip_regex = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
            super(IPAddress, self).__init__(default=default, regex=ip_regex, **kwargs)
 
 

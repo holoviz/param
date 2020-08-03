@@ -34,6 +34,4 @@ class TestUniformRandomOffset(unittest.TestCase):
             value = gen()
             self.assertTrue(lbound <= value < ubound)
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

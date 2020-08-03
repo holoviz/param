@@ -7,7 +7,7 @@ import unittest
 import param
 
 
-ip_regex = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+ip_regex = r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
 class TestStringParameters(unittest.TestCase):
 
@@ -25,7 +25,7 @@ class TestStringParameters(unittest.TestCase):
         a = A()
 
         exception = "String 's' only takes a string value."
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 
     def test_default_none(self):
@@ -44,13 +44,13 @@ class TestStringParameters(unittest.TestCase):
         a = A()
 
         exception = "String 's': '123.123.0.256' does not match regex"
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             a.s = '123.123.0.256'
 
     def test_regex_incorrect_default(self):
 
         exception = "String 'None': '' does not match regex"
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             class A(param.Parameterized):
                 s = param.String(regex=ip_regex)  # default value '' does not match regular expression
 

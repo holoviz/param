@@ -249,9 +249,7 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
 
 
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+
 
 
 # Commented out block in the original doctest version.

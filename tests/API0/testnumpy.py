@@ -35,6 +35,4 @@ class TestNumpy(unittest.TestCase):
         _is_array_and_equal(z.z,[1,2])
 
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+

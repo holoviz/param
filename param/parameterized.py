@@ -19,7 +19,7 @@ except ImportError:
 
 
 from collections import defaultdict, namedtuple, OrderedDict
-from functools import partial, wraps, reduce, lru_cache
+from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
 from types import FunctionType
 
@@ -151,7 +151,6 @@ def discard_events(parameterized):
         parameterized.param._events = events
 
 
-@lru_cache(maxsize=128)
 def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.

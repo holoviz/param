@@ -19,9 +19,9 @@ except ImportError:
 
 
 from collections import defaultdict, namedtuple, OrderedDict
+from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
 from types import FunctionType
-from functools import partial, wraps, reduce
 
 import logging
 from contextlib import contextmanager
@@ -800,12 +800,15 @@ class Parameter(object):
 
         super(Parameter, self).__setattr__(attribute, value)
 
-        if old is not NotImplemented:
-            event = Event(what=attribute,name=self.name,obj=None,cls=self.owner,old=old,new=value, type=None)
-            for watcher in self.watchers[attribute]:
-                self.owner.param._call_watcher(watcher, event)
-            if not self.owner.param._BATCH_WATCH:
-                self.owner.param._batch_call_watchers()
+        if old is NotImplemented:
+            return
+
+        event = Event(what=attribute,name=self.name, obj=None, cls=self.owner,
+                      old=old, new=value, type=None)
+        for watcher in self.watchers[attribute]:
+            self.owner.param._call_watcher(watcher, event)
+        if not self.owner.param._BATCH_WATCH:
+            self.owner.param._batch_call_watchers()
 
 
     def __get__(self,obj,objtype): # pylint: disable-msg=W0613
@@ -870,18 +873,17 @@ class Parameter(object):
         # Parameterized class)
         if self.constant or self.readonly:
             if self.readonly:
-                raise TypeError("Read-only parameter '%s' cannot be modified"%self.name)
-            elif obj is None:  #not obj
+                raise TypeError("Read-only parameter '%s' cannot be modified" % self.name)
+            elif obj is None:
                 _old = self.default
                 self.default = val
             elif not obj.initialized:
-                _old = obj.__dict__.get(self._internal_name,self.default)
+                _old = obj.__dict__.get(self._internal_name, self.default)
                 obj.__dict__[self._internal_name] = val
             else:
-                _old = obj.__dict__.get(self._internal_name,self.default)
+                _old = obj.__dict__.get(self._internal_name, self.default)
                 if val is not _old:
                     raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
-
         else:
             if obj is None:
                 _old = self.default
@@ -893,15 +895,20 @@ class Parameter(object):
         self._post_setter(obj, val)
 
         if obj is None:
-            watchers = self.watchers.get("value",[])
+            watchers = self.watchers.get("value")
+        elif hasattr(obj, '_param_watchers') and self.name in obj._param_watchers:
+            watchers = obj._param_watchers[self.name].get('value')
+            if watchers is None:
+                watchers = self.watchers.get("value")
         else:
-            watchers = getattr(obj,"_param_watchers",{}).get(self.name,{}).get('value',self.watchers.get("value",[]))
+            watchers = None
 
-        event = Event(what='value',name=self.name,obj=obj,cls=self.owner,old=_old,new=val, type=None)
         obj = self.owner if obj is None else obj
-        if obj is None:
+        if obj is None or not watchers:
             return
 
+        event = Event(what='value',name=self.name, obj=obj, cls=self.owner,
+                      old=_old, new=val, type=None)
         for watcher in watchers:
             obj.param._call_watcher(watcher, event)
         if not obj.param._BATCH_WATCH:
@@ -931,8 +938,7 @@ class Parameter(object):
                                  % (type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
-
-        self._internal_name = "_%s_param_value"%attrib_name
+        self._internal_name = "_%s_param_value" % attrib_name
 
 
     def __getstate__(self):
@@ -1031,10 +1037,10 @@ def as_uninitialized(fn):
     @wraps(fn)
     def override_initialization(self_,*args,**kw):
         parameterized_instance = self_.self
-        original_initialized=parameterized_instance.initialized
-        parameterized_instance.initialized=False
-        fn(parameterized_instance,*args,**kw)
-        parameterized_instance.initialized=original_initialized
+        original_initialized = parameterized_instance.initialized
+        parameterized_instance.initialized = False
+        fn(parameterized_instance, *args, **kw)
+        parameterized_instance.initialized = original_initialized
     return override_initialization
 
 
@@ -1267,21 +1273,21 @@ class Parameters(object):
         for class_ in classlist(type(self)):
             if not issubclass(class_, Parameterized):
                 continue
-            for (k,v) in class_.__dict__.items():
+            for (k, v) in class_.param._parameters.items():
                 # (avoid replacing name with the default of None)
-                if isinstance(v,Parameter) and v.instantiate and k!="name":
-                    params_to_instantiate[k]=v
+                if v.instantiate and k != "name":
+                    params_to_instantiate[k] = v
 
         for p in params_to_instantiate.values():
             self.param._instantiate_param(p)
 
         ## keyword arg setting
-        for name,val in params.items():
+        for name, val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters",name,val)
+                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
-            setattr(self,name,val)
+            setattr(self, name, val)
 
     @classmethod
     def deprecate(cls, fn):
@@ -1314,14 +1320,14 @@ class Parameters(object):
 
 
     # CEBALERT: this is a bit ugly
-    def _instantiate_param(self_,param_obj,dict_=None,key=None):
+    def _instantiate_param(self_, param_obj, dict_=None, key=None):
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
         # under the parameter's _internal_name (or key if supplied)
         self = self_.self
         dict_ = dict_ or self.__dict__
         key = key or param_obj._internal_name
-        param_key = (str(type(self)), param_obj.name)
         if shared_parameters._share:
+            param_key = (str(type(self)), param_obj.name)
             if param_key in shared_parameters._shared_cache:
                 new_object = shared_parameters._shared_cache[param_key]
             else:
@@ -1329,11 +1335,12 @@ class Parameters(object):
                 shared_parameters._shared_cache[param_key] = new_object
         else:
             new_object = copy.deepcopy(param_obj.default)
-        dict_[key]=new_object
 
-        if isinstance(new_object,Parameterized):
+        dict_[key] = new_object
+
+        if isinstance(new_object, Parameterized):
             global object_count
-            object_count+=1
+            object_count += 1
             # CB: writes over name given to the original object;
             # should it instead keep the same name?
             new_object.param._generate_name()
@@ -1633,7 +1640,7 @@ class Parameters(object):
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    def get_param_values(self_,onlychanged=False):
+    def get_param_values(self_, onlychanged=False):
         """
         Return a list of name,value pairs for all Parameters of this
         object.
@@ -1648,11 +1655,11 @@ class Parameters(object):
         # (would need to distinguish instantiation of default from
         # user setting of value).
         vals = []
-        for name,val in self_or_cls.param.objects('existing').items():
+        for name, val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
             # (this is pointless for cls)
-            if not onlychanged or not all_equal(value,val.default):
-                vals.append((name,value))
+            if not onlychanged or not all_equal(value, val.default):
+                vals.append((name, value))
 
         vals.sort(key=itemgetter(0))
         return vals
@@ -2002,11 +2009,12 @@ class ParameterizedMetaclass(type):
         }
         mcs._param = Parameters(mcs)
 
-
         # All objects (with their names) of type Parameter that are
         # defined in this class
         parameters = [(n,o) for (n,o) in dict_.items()
-                      if isinstance(o,Parameter)]
+                      if isinstance(o, Parameter)]
+
+        mcs._param._parameters = dict(parameters)
 
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name,param)

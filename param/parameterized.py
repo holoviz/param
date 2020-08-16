@@ -3134,10 +3134,16 @@ script_repr_reg[FunctionType]=function_script_repr
 #: as some indicator of the global state).
 dbprint_prefix=None
 
+def name_if_set(parameterized):
+    """Return the name of this Parameterized if explicitly set to other than the default"""
+    class_name = parameterized.__class__.__name__
+    default_name = re.match('^'+class_name+'[0-9]+$', parameterized.name)
+    return '' if default_name else parameterized.name
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
 if sys.version_info.major >= 3:
     from threading import get_ident
+
     def recursive_repr(fillvalue='...'):
         'Decorator to make a repr function return fillvalue for a recursive call'
 
@@ -3162,6 +3168,49 @@ else:
         def decorating_function(user_function):
             return user_function
         return decorating_function
+
+def _get_param_repr(key, val, p, truncate=40):
+    """HTML representation for a single Parameter object and its value"""
+    if hasattr(val, "_repr_html_"):
+        try:
+            value = val._repr_html_(open=False)
+        except:
+            value = val._repr_html_()
+    else:
+        rep = repr(val)
+        value = (rep[:truncate] + '..') if len(rep) > truncate else rep
+
+    constant   = 'C' if p.constant else 'V'
+    readonly   = 'RO' if p.readonly else 'RW'
+    allow_None = ' AN' if hasattr(p, 'allow_None') and p.allow_None else ''
+    mode       = '%s %s%s' % (constant, readonly, allow_None)
+
+    return f'   <tr>' \
+        f'<td><tt>{key}</tt></td>' \
+        f'<td>{p.__class__.__name__}</td>' \
+        f'<td>{getattr(p,"bounds","")}</td>' \
+        f'<td>{mode}</td>' \
+        f'<td>{value}</td>' \
+        f'</tr>\n'
+
+
+def _parameterized_repr_html(p, open):
+    """HTML representation for a Parameterized object"""
+    title = p.__class__.name + " " + name_if_set(p)
+    openstr = " open" if open else ""
+    contents = "".join(_get_param_repr(key, val, p.param.params(key))
+                       for key, val in p.param.get_param_values())
+    return (
+        f'<details {openstr}>\n'
+        ' <summary style="display:list-item; outline:none;">\n'
+        f'  <tt>{title}</tt>\n'
+        ' </summary>\n'
+        ' <div style="padding-left:10px;padding-bottom:5px;">\n'
+        '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
+        '   <tr><th>Name</th><th>Type</th><th>Bounds</th><th>Mode</th><th>Value</th></tr>\n'
+        f'{contents}\n'
+        '  </table>\n </div>\n</details>\n'
+    )
 
 
 @add_metaclass(ParameterizedMetaclass)
@@ -3452,6 +3501,9 @@ class Parameterized(object):
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
+
+    def _repr_html_(self, open=True):
+        return _parameterized_repr_html(self, open)
 
 
 

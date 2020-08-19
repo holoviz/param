@@ -49,6 +49,12 @@ setup_args = dict(
     install_requires=[],
     extras_require=extras_require,
     tests_require=extras_require['tests'],
+    project_urls={
+        "Documentation": "https://param.holoviz.org/",
+        "Releases": "https://param.holoviz.org/historical_release_notes.html",
+        "Bug Tracker": "https://github.com/ioam/param/issues",
+        "Source Code": "https://github.com/holoviz/param",
+    },
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",

@@ -54,6 +54,7 @@ setup_args = dict(
         "Releases": "https://param.holoviz.org/historical_release_notes.html",
         "Bug Tracker": "https://github.com/ioam/param/issues",
         "Source Code": "https://github.com/holoviz/param",
+        "Panel Examples": "https://panel.holoviz.org/user_guide/Param.html",
     },
     classifiers=[
         "License :: OSI Approved :: BSD License",

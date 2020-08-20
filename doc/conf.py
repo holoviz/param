@@ -2,39 +2,52 @@
 
 from nbsite.shared_conf import *
 
-project = u'Param'
-authors = u'HoloViz authors'
-copyright = u'\u00a9 2005-2018, ' + authors
-description = 'Declarative Python programming using Parameters.'
+project = u'param'
+authors = u'HoloViz developers'
+copyright = u'2003-2020 ' + authors
+description = 'Declarative Python programming using Parameters'
 
 import param
-version = release = param.__version__
+version = release = str(param.__version__)
+
+param.parameterized.docstring_signature = False
+param.parameterized.docstring_describe_params = False
+
+nbbuild_cell_timeout = 600
 
 html_static_path += ['_static']
 html_theme = 'sphinx_holoviz_theme'
 html_theme_options = {
-    'logo':'logo.png',
-    'favicon':'favicon.ico',
+    'favicon': 'favicon.ico',
+    'logo': 'logo_horizontal_white.svg',
+    'include_logo_text': False,
+    'primary_color': '#266498',
+    'primary_color_dark': '#1b486e',
+    'secondary_color': '#5f9df0',
 #    'css':'site.css'
+    'second_nav': True,
+    'footer': False,
 }
 
 _NAV =  (
-    ('API', 'Reference_Manual/param'),
-    ('About', 'About'),
+    ('Getting Started', 'getting_started'),
+    ('User Guide', 'user_guide/index'),
+    ('API', 'Reference_Manual/index'),
+    ('About', 'about')
 )
 
 html_context.update({
     'PROJECT': project,
     'DESCRIPTION': description,
     'AUTHOR': authors,
-    # canonical URL (for search engines); can ignore for local builds
-    'WEBSITE_SERVER': 'https://param.holoviz.org',
     'VERSION': version,
     'GOOGLE_ANALYTICS_UA': 'UA-154795830-6',
+    'WEBSITE_URL': 'https://param.holoviz.org',
+    'WEBSITE_SERVER': 'https://param.holoviz.org',
     'NAV': _NAV,
     'LINKS': _NAV,
     'SOCIAL': (
-        ('Gitter', '//gitter.im/pyviz/pyviz'),
-        ('Github', '//github.com/ioam/param'),
+        ('Discourse', '//discourse.holoviz.org'),
+        ('Github', '//github.com/holoviz/param'),
     )
 })

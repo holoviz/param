@@ -1910,7 +1910,7 @@ class Color(Parameter):
     prefix.
     """
 
-    def __init__(self, default=None, allow_None=False, **kwargs):
+    def __init__(self, default=None, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
         self._validate(default)
 

@@ -140,7 +140,8 @@ def discard_events(parameterized):
     """
     batch_watch = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
-    watchers, events = parameterized.param._watchers, parameterized.param._events
+    watchers = copy.copy(parameterized.param._watchers)
+    events = copy.copy(parameterized.param._events)
     try:
         yield
     except:

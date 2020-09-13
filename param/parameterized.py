@@ -494,7 +494,7 @@ def _params_depended_on(minfo):
 
 
 def _m_caller(self, n):
-    def caller(event):
+    def caller(*events):
         return getattr(self,n)()
     caller._watcher_name = n
     return caller
@@ -2481,9 +2481,12 @@ class Parameterized(object):
                 # instantiation of Parameterized with watched deps. Will
                 # probably store expanded deps on class - see metaclass
                 # 'dependers'.
-                for p in self.param.params_depended_on(n):
+                grouped = defaultdict(list)                
+                for dep in self.param.params_depended_on(n):
+                    grouped[(id(dep.inst),id(dep.cls),dep.what)].append(dep)                    
+                for group in grouped.values():
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
+                    (dep.inst or dep.cls).param.watch(_m_caller(self, n), [dep.name for dep in group], dep.what, queued=queued)
 
         self.initialized = True
 

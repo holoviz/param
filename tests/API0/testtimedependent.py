@@ -12,9 +12,12 @@ import fractions
 
 try:
     import gmpy
-except:
-    gmpy = None
-
+except ImportError:
+    import os
+    if os.getenv('PARAM_TEST_GMPY','0') == '1':
+        raise ImportError("PARAM_TEST_GMPY=1 but gmpy not available.")
+    else:
+        gmpy = None
 
 
 class TestTimeClass(unittest.TestCase):

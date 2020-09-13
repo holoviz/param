@@ -13,9 +13,9 @@ import operator
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
-   from . import serializer
+    from . import serializer
 except ImportError:
-   serializer = None
+    serializer = None
 
 
 from collections import defaultdict, namedtuple, OrderedDict

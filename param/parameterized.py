@@ -697,6 +697,12 @@ class Parameter(object):
 
     _serializers = {'json':serializer.JSONSerialization}
 
+    def __set_name__(self, owner, name):
+        self.name = name
+        self._internal_name = "_%s_param_value" % name
+        self.owner = owner
+
+        
     def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
@@ -725,9 +731,6 @@ class Parameter(object):
         In rare cases where the default value should not be pickled,
         set pickle_default_value=False (e.g. for file search paths).
         """
-        self.name = None
-        self._internal_name = None
-        self.owner = None
         self._label = label
         self.precedence = precedence
         self.default = default
@@ -926,20 +929,6 @@ class Parameter(object):
 
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed." % self.name)
-
-
-    def _set_names(self, attrib_name):
-        if None not in (self.owner, self.name) and attrib_name != self.name:
-            raise AttributeError('The %s parameter %r has already been '
-                                 'assigned a name by the %s class, '
-                                 'could not assign new name %r. Parameters '
-                                 'may not be shared by multiple classes; '
-                                 'ensure that you create a new parameter '
-                                 'instance for each new class.'
-                                 % (type(self).__name__, self.name,
-                                    self.owner.name, attrib_name))
-        self.name = attrib_name
-        self._internal_name = "_%s_param_value" % attrib_name
 
 
     def __getstate__(self):
@@ -2067,7 +2056,6 @@ class ParameterizedMetaclass(type):
     def _initialize_parameter(mcs,param_name,param):
         # parameter has no way to find out the name a
         # Parameterized class has for it
-        param._set_names(param_name)
         mcs.__param_inheritance(param_name,param)
 
 
@@ -2186,10 +2174,6 @@ class ParameterizedMetaclass(type):
         for p_class in classlist(type(param))[1::]:
             slots.update(dict.fromkeys(p_class.__slots__))
 
-
-        # note for some eventual future: python 3.6+ descriptors grew
-        # __set_name__, which could replace this and _set_names
-        setattr(param,'owner',mcs)
         del slots['owner']
 
         # backwards compatibility (see Composite parameter)

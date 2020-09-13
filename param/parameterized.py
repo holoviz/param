@@ -2481,9 +2481,9 @@ class Parameterized(object):
                 # instantiation of Parameterized with watched deps. Will
                 # probably store expanded deps on class - see metaclass
                 # 'dependers'.
-                grouped = defaultdict(list)                
+                grouped = defaultdict(list)
                 for dep in self.param.params_depended_on(n):
-                    grouped[(id(dep.inst),id(dep.cls),dep.what)].append(dep)                    
+                    grouped[(id(dep.inst),id(dep.cls),dep.what)].append(dep)
                 for group in grouped.values():
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
                     (dep.inst or dep.cls).param.watch(_m_caller(self, n), [dep.name for dep in group], dep.what, queued=queued)

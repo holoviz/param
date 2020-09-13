@@ -13,6 +13,9 @@ from . import API1TestCase
 try:
     from jsonschema import validate, ValidationError
 except ImportError:
+    import os
+    if os.getenv('PARAM_TEST_JSONSCHEMA','0') == '1':
+        raise ImportError("PARAM_TEST_JSONSCHEMA=1 but jsonschema not available.")
     validate = None
 
 try:

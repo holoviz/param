@@ -494,7 +494,8 @@ def _params_depended_on(minfo):
 
 
 def _m_caller(self, n):
-    caller = lambda event: getattr(self,n)()
+    def caller(event):
+        return getattr(self,n)()
     caller._watcher_name = n
     return caller
 
@@ -753,8 +754,8 @@ class Parameter(object):
         if serializer is None:
             raise ImportError('Cannot import serializer.py needed to generate schema')
         if mode not in  self._serializers:
-           raise KeyError('Mode %r not in available serialization formats %r'
-                          % (mode, list(self._serializers.keys())))
+            raise KeyError('Mode %r not in available serialization formats %r'
+                           % (mode, list(self._serializers.keys())))
         return self._serializers[mode].parameter_schema(self.__class__.__name__, self,
                                                         safe=safe, subset=subset)
 
@@ -1603,29 +1604,29 @@ class Parameters(object):
     def serialize_parameters(self_, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-           raise ValueError('Mode %r not in available serialization formats %r'
-                            % (mode, list(Parameter._serializers.keys())))
+            raise ValueError('Mode %r not in available serialization formats %r'
+                             % (mode, list(Parameter._serializers.keys())))
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
 
     def serialize_value(self_, pname, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-           raise ValueError('Mode %r not in available serialization formats %r'
-                            % (mode, list(Parameter._serializers.keys())))
+            raise ValueError('Mode %r not in available serialization formats %r'
+                             % (mode, list(Parameter._serializers.keys())))
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
     def deserialize_parameters(self_, serialization, subset=None, mode='json'):
-       self_or_cls = self_.self_or_cls
-       serializer = Parameter._serializers[mode]
-       return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
+        self_or_cls = self_.self_or_cls
+        serializer = Parameter._serializers[mode]
+        return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
 
     def deserialize_value(self_, pname, value, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-           raise ValueError('Mode %r not in available serialization formats %r'
-                            % (mode, list(Parameter._serializers.keys())))
+            raise ValueError('Mode %r not in available serialization formats %r'
+                             % (mode, list(Parameter._serializers.keys())))
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
@@ -1635,8 +1636,8 @@ class Parameters(object):
         """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-           raise ValueError('Mode %r not in available serialization formats %r'
-                            % (mode, list(Parameter._serializers.keys())))
+            raise ValueError('Mode %r not in available serialization formats %r'
+                             % (mode, list(Parameter._serializers.keys())))
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 

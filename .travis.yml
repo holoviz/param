@@ -43,6 +43,10 @@ jobs:
       env: TOX_ENV=py38
 
     - <<: *default
+      python: 3.9-dev
+      env: TOX_ENV=py39
+
+    - <<: *default
       python: 3.6
       env: TOX_ENV=py36
 
@@ -66,6 +70,25 @@ jobs:
 
     - <<: *default
       env: TOX_ENV=with_pandas
+
+    - <<: *default
+      env: TOX_ENV=with_jsonschema
+
+    - <<: *default
+      env: TOX_ENV=with_gmpy
+      addons:
+        apt:
+          packages:
+          - libgmp10
+          - libgmp-dev
+
+    - <<: *default
+      env: TOX_ENV=with_all
+      addons:
+        apt:
+          packages:
+          - libgmp10
+          - libgmp-dev
 
     - <<: *default
       env: TOX_ENV=coverage

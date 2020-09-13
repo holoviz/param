@@ -364,7 +364,7 @@ def depends(func, *dependencies, **kw):
                              'or function is not supported when referencing '
                              'parameters by name.')
 
-    if not string_specs and watch:
+    if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         def cb(*events):
             args = (getattr(dep.owner, dep.name) for dep in dependencies)
             dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}

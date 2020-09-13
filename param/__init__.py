@@ -221,7 +221,7 @@ def parameterized_class(name, params, bases=Parameterized):
     supplied parameters, inheriting from the specified base(s).
     """
     if not (isinstance(bases, list) or isinstance(bases, tuple)):
-          bases=[bases]
+        bases=[bases]
     return type(name, tuple(bases), params)
 
 
@@ -924,7 +924,7 @@ class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
     def __init__(self,default=0,**params):
-       Number.__init__(self,default=default,**params)
+        Number.__init__(self,default=default,**params)
 
     def _validate(self, val):
         if callable(val): return
@@ -1250,7 +1250,7 @@ class ObjectSelector(SelectorBase):
         to check each item instead.
         """
         if not (val in self.objects):
-           self.objects.append(val)
+            self.objects.append(val)
 
     def get_range(self):
         """
@@ -2012,7 +2012,7 @@ class DateRange(Range):
 
         start, end = val
         if not end >= start:
-           raise ValueError("DateRange '%s': end datetime %s is before start datetime %s."%(self.name,val[1],val[0]))
+            raise ValueError("DateRange '%s': end datetime %s is before start datetime %s."%(self.name,val[1],val[0]))
 
         # Calling super(DateRange, self)._check(val) would also check
         # values are numeric, which is redundant, so just call
@@ -2034,7 +2034,7 @@ class CalendarDateRange(Range):
 
         start, end = val
         if not end >= start:
-           raise ValueError("CalendarDateRange '%s': end date %s is before start date %s."%(self.name,val[1],val[0]))
+            raise ValueError("CalendarDateRange '%s': end date %s is before start date %s."%(self.name,val[1],val[0]))
 
         # Calling super(CalendarDateRange, self)._check(val) would also check
         # values are numeric, which is redundant, so just call

@@ -202,7 +202,7 @@ class Hash(object):
 
         I32 = 4294967296 # Maximum 32 bit unsigned int (i.e. 'I') value
         if isinstance(val, int):
-             numer, denom = val, 1
+            numer, denom = val, 1
         elif isinstance(val, fractions.Fraction):
             numer, denom = val.numerator, val.denominator
         elif hasattr(val, 'numer'):

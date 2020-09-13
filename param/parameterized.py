@@ -494,7 +494,8 @@ def _params_depended_on(minfo):
 
 
 def _m_caller(self, n):
-    caller = lambda event: getattr(self,n)()
+    def caller(event):
+       return getattr(self,n)()
     caller._watcher_name = n
     return caller
 

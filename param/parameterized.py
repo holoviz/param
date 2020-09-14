@@ -1645,9 +1645,9 @@ class Parameters(object):
         only return values that are not equal to the default value
         (onlychanged has no effect when called on a class).
 
-        If suppress_auto_name is True, then auto-generated instance 
-        names will not be shown. Probably, though, this should be called 
-        suppress_name and should suppress the name if True (no matter 
+        If suppress_auto_name is True, then auto-generated instance
+        names will not be shown. Probably, though, this should be called
+        suppress_name and should suppress the name if True (no matter
         what the name is).
         """
         self_or_cls = self_.self_or_cls
@@ -1659,7 +1659,7 @@ class Parameters(object):
         for name, val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
             if name=='name' and suppress_auto_name and _is_auto_name(self_.cls.__name__,value):
-                continue            
+                continue
             # (this is pointless for cls)
             if not onlychanged or not all_equal(value, val.default):
                 vals.append((name, value))

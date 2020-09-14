@@ -495,7 +495,59 @@ class TestSharedParameters(API1TestCase):
         self.assertTrue(self.p1.param.params('inst').default is not self.p2.inst)
 
 
+class TestGetParamValues(API1TestCase):
+    def setUp(self):
+        class A(param.Parameterized):
+            a = param.List(default=[1,2,3])
+            b = param.Parameter(default=1)
+        self.A = A
 
+    def test_basic(self):
+        self.assertEqual(sorted(self.A().param.get_param_values()),
+                         sorted([('a', [1,2,3]), ('b', 1)]))
+
+    def test_basic_manual_name(self):
+        self.assertEqual(sorted(self.A(name='basic').param.get_param_values()),
+                         sorted([('a', [1,2,3]), ('b', 1), ('name', 'basic')]))
+        
+    def test_only_changed(self):
+        self.assertEqual(sorted(self.A(b=2).param.get_param_values(onlychanged=True)),
+                         sorted([('b', 2)]))
+
+    def test_only_changed_list1(self):
+        # partially matching list, shorter
+        self.assertEqual(sorted(self.A(a=[1,2]).param.get_param_values(onlychanged=True)),
+                         sorted([('a', [1,2])]))
+
+    def test_only_changed_list2(self):
+        # partially matching list, longer
+        self.assertEqual(sorted(self.A(a=[1,2,3,4]).param.get_param_values(onlychanged=True)),
+                         sorted([('a', [1,2,3,4])]))
+        
+
+    def test_only_changed_array(self):
+        try:
+            import numpy
+            import numpy.testing
+        except ImportError:
+            raise SkipTest
+        
+        class B(param.Parameterized):
+            a = param.Parameter(default=numpy.array([[1,2],[3,4]]))
+
+        # arrays differ
+        b = B(a=numpy.array([[1,2],[3,5]]))
+        param_vals = sorted(b.param.get_param_values(onlychanged=True))
+        self.assertEqual(len(param_vals),1)
+        self.assertEqual(param_vals[0][0],'a')
+        numpy.testing.assert_array_equal(b.a,numpy.array([[1,2],[3,5]]))
+
+        # arrays same
+        b = B(a=numpy.array([[1,2],[3,4]]))
+        self.assertEqual(sorted(b.param.get_param_values(onlychanged=True)),
+                         sorted([]))
+
+        
 if __name__ == "__main__":
     import nose
     nose.runmodule()

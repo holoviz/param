@@ -209,21 +209,16 @@ def get_occupied_slots(instance):
 
 def all_equal(arg1,arg2):
     """
-    Return a single boolean for arg1==arg2, even for numpy arrays
-    using element-wise comparison.
-
-    Uses all(arg1==arg2) for sequences, and arg1==arg2 otherwise.
+    Return True is arg1 and arg2 are equal, otherwise False.
 
     If both objects have an '_infinitely_iterable' attribute, they are
-    not be zipped together and are compared directly instead.
+    tested for equality directly, otherwise Comparator.is_equal() is
+    used.
     """
     if all(hasattr(el, '_infinitely_iterable') for el in [arg1,arg2]):
         return arg1==arg2
-    try:
-        return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
-    except TypeError:
-        return arg1==arg2
-
+    else:
+        return Comparator.is_equal(arg1, arg2)
 
 
 # For Python 2 compatibility.
@@ -1641,7 +1636,7 @@ class Parameters(object):
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    def get_param_values(self_, onlychanged=False):
+    def get_param_values(self_, onlychanged=False, suppress_auto_name=True):
         """
         Return a list of name,value pairs for all Parameters of this
         object.
@@ -1649,6 +1644,11 @@ class Parameters(object):
         When called on an instance with onlychanged set to True, will
         only return values that are not equal to the default value
         (onlychanged has no effect when called on a class).
+
+        If suppress_auto_name is True, then auto-generated instance 
+        names will not be shown. Probably, though, this should be called 
+        suppress_name and should suppress the name if True (no matter 
+        what the name is).
         """
         self_or_cls = self_.self_or_cls
         # CEB: we'd actually like to know whether a value has been
@@ -1658,6 +1658,8 @@ class Parameters(object):
         vals = []
         for name, val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
+            if name=='name' and suppress_auto_name and _is_auto_name(self_.cls.__name__,value):
+                continue            
             # (this is pointless for cls)
             if not onlychanged or not all_equal(value, val.default):
                 vals.append((name, value))
@@ -2402,6 +2404,8 @@ dbprint_prefix=None
 
 
 
+def _is_auto_name(class_name, instance_name):
+    return re.match('^'+class_name+'[0-9]+$', instance_name)
 
 
 
@@ -2620,7 +2624,7 @@ class Parameterized(object):
 
             # Suppresses automatically generated names.
             if k == 'name' and (values[k] is not None
-                                and re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+                                and _is_auto_name(self.__class__.__name__,values[k])):
                 continue
 
             value = pprint(values[k], imports, prefix=prefix,settings=[],
@@ -2735,7 +2739,7 @@ class Parameterized(object):
     @bothmethod
     @Parameters.deprecate
     def get_param_values(self_or_cls,onlychanged=False):
-        return self_or_cls.param.get_param_values(onlychanged=onlychanged)
+        return self_or_cls.param.get_param_values(onlychanged=onlychanged,suppress_auto_name=True)
 
     @bothmethod
     @Parameters.deprecate

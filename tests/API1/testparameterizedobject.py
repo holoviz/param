@@ -13,6 +13,7 @@ from .utils import MockLoggingHandler
 
 import random
 from nose.tools import istest, nottest
+from nose.plugins.skip import SkipTest
 
 
 from param.parameterized import ParamOverrides, shared_parameters

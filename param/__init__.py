@@ -2040,3 +2040,6 @@ class CalendarDateRange(Range):
         # values are numeric, which is redundant, so just call
         # _checkBounds().
         self._checkBounds(val)
+
+
+class Trigger(Boolean): pass

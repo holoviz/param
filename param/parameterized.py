@@ -1490,6 +1490,15 @@ class Parameters(object):
         will be triggered whether or not the parameter values have
         actually changed.
         """
+        for p in self_.self_or_cls.param:
+            is_trigger = (self_.self_or_cls.param[p].__class__.__name__ == 'Trigger')
+            if is_trigger and (p in param_names):
+               with discard_events(self_.self_or_cls):
+                  self_.self_or_cls.param.set_param(**{p:True})
+            elif is_trigger:
+               with discard_events(self_.self_or_cls):
+                  self_.self_or_cls.param.set_param(**{p:False})
+
         events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
@@ -1501,15 +1510,7 @@ class Parameters(object):
         self_.self_or_cls.param._TRIGGER = False
         self_.self_or_cls.param._events += events
         self_.self_or_cls.param._watchers += watchers
-        for p in self_.self_or_cls.param:
-            is_trigger = (self_.self_or_cls.param[p].__class__.__name__ == 'Trigger')
-            if is_trigger and (p in param_names):
-               with discard_events(self_.self_or_cls):
-                  self_.self_or_cls.param.set_param(**{p:True})
-            elif is_trigger:
-               with discard_events(self_.self_or_cls):
-                  self_.self_or_cls.param.set_param(**{p:False})
-
+ 
 
     def _update_event_type(self_, watcher, event, triggered):
         """

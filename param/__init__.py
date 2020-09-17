@@ -29,7 +29,7 @@ from .parameterized import (
     descendents, get_logger, instance_descriptor, basestring)
 
 from .parameterized import (batch_watch, depends, output, # noqa: api import
-                            discard_events, edit_constant)
+                            discard_events, edit_constant, instance_descriptor)
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
@@ -2042,4 +2042,14 @@ class CalendarDateRange(Range):
         self._checkBounds(val)
 
 
-class Trigger(Boolean): pass
+class Trigger(Boolean):
+
+    @instance_descriptor
+    def __set__(self,obj,val):
+        super(Trigger, self).__set__(obj, val)
+        val = False
+        if obj is None:
+            self.default = val
+        else:
+            obj.__dict__[self._internal_name] = val
+        self._post_setter(obj, val)

@@ -702,7 +702,6 @@ class Parameter(object):
         self._internal_name = "_%s_param_value" % name
         self.owner = owner
 
-        
     def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,

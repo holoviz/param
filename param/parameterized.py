@@ -935,7 +935,7 @@ class Parameter(object):
             self.name = None
             self._internal_name = None
             return
-            
+
         if None not in (self.owner, self.name) and attrib_name != self.name:
             raise AttributeError('The %s parameter %r has already been '
                                  'assigned a name by the %s class, '

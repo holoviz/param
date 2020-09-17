@@ -731,6 +731,11 @@ class Parameter(object):
         In rare cases where the default value should not be pickled,
         set pickle_default_value=False (e.g. for file search paths).
         """
+        # name and owner will be set when the owner is created, which
+        # can be after some stuff (e.g. check of default value)
+        self.name = None
+        self.owner = None
+
         self._label = label
         self.precedence = precedence
         self.default = default

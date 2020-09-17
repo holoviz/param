@@ -9,6 +9,11 @@ matrix:
 
 build: false
 
-install: pip install tox
+install:
+  # use python 3.7 to set things up rather than appveyor's default of 2.7
+  - set PYTHON="C:\\Python37"
+  - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
+  - python --version
+  - pip install tox
 
 test_script: tox

@@ -697,11 +697,6 @@ class Parameter(object):
 
     _serializers = {'json':serializer.JSONSerialization}
 
-    def __set_name__(self, owner, name):
-        self.name = name
-        self._internal_name = "_%s_param_value" % name
-        self.owner = owner
-
     def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False,constant=False,readonly=False,
                  pickle_default_value=True, allow_None=False,
@@ -730,9 +725,9 @@ class Parameter(object):
         In rare cases where the default value should not be pickled,
         set pickle_default_value=False (e.g. for file search paths).
         """
-        # name and owner will be set when the owner is created, which
+        # names and owner will be set when the owner is created, which
         # can be after some stuff (e.g. check of default value)
-        self.name = None
+        self._set_names(None)
         self.owner = None
 
         self._label = label
@@ -933,6 +928,30 @@ class Parameter(object):
 
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed." % self.name)
+
+
+    def _set_names(self, attrib_name):
+        if attrib_name is None:
+            self.name = None
+            self._internal_name = None
+            return
+            
+        if None not in (self.owner, self.name) and attrib_name != self.name:
+            raise AttributeError('The %s parameter %r has already been '
+                                 'assigned a name by the %s class, '
+                                 'could not assign new name %r. Parameters '
+                                 'may not be shared by multiple classes; '
+                                 'ensure that you create a new parameter '
+                                 'instance for each new class.'
+                                 % (type(self).__name__, self.name,
+                                    self.owner.name, attrib_name))
+        self.name = attrib_name
+        self._internal_name = "_%s_param_value" % attrib_name
+
+
+    def __set_name__(self, owner, name):
+        self.owner = owner
+        self._set_names(name)
 
 
     def __getstate__(self):
@@ -1955,7 +1974,6 @@ class Parameters(object):
     # stuff and repeated code in methods using it.
 
 
-
 class ParameterizedMetaclass(type):
     """
     The metaclass of Parameterized (and all its descendents).
@@ -2387,11 +2405,6 @@ script_repr_reg[FunctionType]=function_script_repr
 #: string that is suitable for prefixing messages and warnings (such
 #: as some indicator of the global state).
 dbprint_prefix=None
-
-
-
-
-
 
 
 @add_metaclass(ParameterizedMetaclass)

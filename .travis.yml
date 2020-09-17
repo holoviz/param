@@ -51,14 +51,6 @@ jobs:
       env: TOX_ENV=py36
 
     - <<: *default
-      python: 3.5
-      env: TOX_ENV=py35
-
-    - <<: *default
-      python: 2.7
-      env: TOX_ENV=py27
-
-    - <<: *default
       python: pypy
       env: TOX_ENV=pypy
 

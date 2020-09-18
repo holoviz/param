@@ -2045,7 +2045,7 @@ class CalendarDateRange(Range):
 class Trigger(Boolean):
 
     @instance_descriptor
-    def __set__(self,obj,val):
+    def __set__(self, obj, val):
         super(Trigger, self).__set__(obj, val)
         val = False
         if obj is None:

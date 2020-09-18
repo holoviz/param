@@ -8,17 +8,12 @@ import numbergen
 
 # CEBALERT: not anything like a complete test of Parameterized!
 
-import random
-
 from param.parameterized import ParamOverrides, shared_parameters
 
-
-class _SomeRandomNumbers(object):
-    def __call__(self):
-        return random.random()
+from tests.API1.utils import SomeRandomNumbers
 
 
-class _TestPO(param.Parameterized):
+class MyTestPO(param.Parameterized):
     inst = param.Parameter(default=[1,2,3],instantiate=True)
     notinst = param.Parameter(default=[1,2,3],instantiate=False)
     const = param.Parameter(default=1,constant=True)
@@ -28,45 +23,45 @@ class _TestPO(param.Parameterized):
     dyn = param.Dynamic(default=1)
 
 
-class _AnotherTestPO(param.Parameterized):
-    instPO = param.Parameter(default=_TestPO(), instantiate=True)
-    notinstPO = param.Parameter(default=_TestPO(), instantiate=False)
+class MyAnotherTestPO(param.Parameterized):
+    instPO = param.Parameter(default=MyTestPO(), instantiate=True)
+    notinstPO = param.Parameter(default=MyTestPO(), instantiate=False)
 
 
-class _TestAbstractPO(param.Parameterized):
+class MyTestAbstractPO(param.Parameterized):
     __abstract = True
 
 
-class _TestParamInstantiation(_AnotherTestPO):
-    instPO = param.Parameter(default=_AnotherTestPO(), instantiate=False)
+class MyTestParamInstantiation(MyAnotherTestPO):
+    instPO = param.Parameter(default=MyAnotherTestPO(), instantiate=False)
 
 
 class TestParameterized(unittest.TestCase):
 
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""
-        testpo = _TestPO(const=17)
+        testpo = MyTestPO(const=17)
         self.assertEqual(testpo.const,17)
         self.assertRaises(TypeError,setattr,testpo,'const',10)
 
         # check you can set on class
-        _TestPO.const=9
-        testpo = _TestPO()
+        MyTestPO.const=9
+        testpo = MyTestPO()
         self.assertEqual(testpo.const,9)
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""
-        testpo = _TestPO()
+        testpo = MyTestPO()
         self.assertEqual(testpo.ro,"Hello")
 
         with self.assertRaises(TypeError):
-            t = _TestPO(ro=20)
+            t = MyTestPO(ro=20)
 
-        t=_TestPO()
+        t=MyTestPO()
         self.assertRaises(TypeError,setattr,t,'ro',10)
 
         # check you cannot set on class
-        self.assertRaises(TypeError,setattr,_TestPO,'ro',5)
+        self.assertRaises(TypeError,setattr,MyTestPO,'ro',5)
 
         self.assertEqual(testpo.params()['ro'].constant,True)
 
@@ -78,13 +73,13 @@ class TestParameterized(unittest.TestCase):
     def test_basic_instantiation(self):
         """Check that instantiated parameters are copied into objects."""
 
-        testpo = _TestPO()
+        testpo = MyTestPO()
 
-        self.assertEqual(testpo.inst,_TestPO.inst)
-        self.assertEqual(testpo.notinst,_TestPO.notinst)
+        self.assertEqual(testpo.inst,MyTestPO.inst)
+        self.assertEqual(testpo.notinst,MyTestPO.notinst)
 
-        _TestPO.inst[1]=7
-        _TestPO.notinst[1]=7
+        MyTestPO.inst[1]=7
+        MyTestPO.notinst[1]=7
 
         self.assertEqual(testpo.notinst,[1,7,3])
         self.assertEqual(testpo.inst,[1,2,3])
@@ -92,14 +87,14 @@ class TestParameterized(unittest.TestCase):
 
     def test_more_instantiation(self):
         """Show that objects in instantiated Parameters can still share data."""
-        anothertestpo = _AnotherTestPO()
+        anothertestpo = MyAnotherTestPO()
 
         ### CB: _AnotherTestPO.instPO is instantiated, but
         ### _TestPO.notinst is not instantiated - so notinst is still
         ### shared, even by instantiated parameters of _AnotherTestPO.
         ### Seems like this behavior of Parameterized could be
         ### confusing, so maybe mention it in documentation somewhere.
-        _TestPO.notinst[1]=7
+        MyTestPO.notinst[1]=7
         # (if you thought your instPO was completely an independent object, you
         # might be expecting [1,2,3] here)
         self.assertEqual(anothertestpo.instPO.notinst,[1,7,3])
@@ -107,15 +102,15 @@ class TestParameterized(unittest.TestCase):
 
     def test_instantiation_inheritance(self):
         """Check that instantiate=True is always inherited (SF.net #2483932)."""
-        t = _TestParamInstantiation()
+        t = MyTestParamInstantiation()
         assert t.params('instPO').instantiate is True
-        assert isinstance(t.instPO,_AnotherTestPO)
+        assert isinstance(t.instPO,MyAnotherTestPO)
 
 
     def test_abstract_class(self):
         """Check that a class declared abstract actually shows up as abstract."""
-        self.assertEqual(_TestAbstractPO.abstract,True)
-        self.assertEqual(_TestPO.abstract,False)
+        self.assertEqual(MyTestAbstractPO.abstract,True)
+        self.assertEqual(MyTestPO.abstract,False)
 
 
     def test_params(self):
@@ -129,15 +124,15 @@ class TestParameterized(unittest.TestCase):
 
         ## check for bug where subclass Parameters were not showing up
         ## if params() already called on a super class.
-        assert 'inst' in _TestPO.params()
-        assert 'notinst' in _TestPO.params()
+        assert 'inst' in MyTestPO.params()
+        assert 'notinst' in MyTestPO.params()
 
         ## check caching
         assert param.Parameterized.params() is param.Parameterized().params(), "Results of params() should be cached." # just for performance reasons
 
 
     def test_state_saving(self):
-        t = _TestPO(dyn=_SomeRandomNumbers())
+        t = MyTestPO(dyn=SomeRandomNumbers())
         g = t.get_value_generator('dyn')
         g._Dynamic_time_fn=None
         assert t.dyn!=t.dyn
@@ -191,14 +186,14 @@ class TestParameterizedFunction(unittest.TestCase):
         self.assertEqual(i(),(0.3,18,[10,20,30]))
 
 
-class _TestPO1(param.Parameterized):
+class MyTestPO1(param.Parameterized):
     x = param.Number(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=1),bounds=(-1,1))
     y = param.Number(default=1,bounds=(-1,1))
 
 class TestNumberParameter(unittest.TestCase):
 
     def test_outside_bounds(self):
-        t1 = _TestPO1()
+        t1 = MyTestPO1()
         # Test bounds (non-dynamic number)
         try:
             t1.y = 10
@@ -208,7 +203,7 @@ class TestNumberParameter(unittest.TestCase):
             assert False, "Should raise ValueError."
 
     def test_outside_bounds_numbergen(self):
-        t1 = _TestPO1()
+        t1 = MyTestPO1()
         # Test bounds (dynamic number)
         t1.x = numbergen.UniformRandom(lbound=2,ubound=3)  # bounds not checked on set
         try:
@@ -271,10 +266,10 @@ class TestSharedParameters(unittest.TestCase):
 
     def setUp(self):
         with shared_parameters():
-            self.p1 = _TestPO(name='A', print_level=0)
-            self.p2 = _TestPO(name='B', print_level=0)
-            self.ap1 = _AnotherTestPO(name='A', print_level=0)
-            self.ap2 = _AnotherTestPO(name='B', print_level=0)
+            self.p1 = MyTestPO(name='A', print_level=0)
+            self.p2 = MyTestPO(name='B', print_level=0)
+            self.ap1 = MyAnotherTestPO(name='A', print_level=0)
+            self.ap2 = MyAnotherTestPO(name='B', print_level=0)
 
     def test_shared_object(self):
         self.assertTrue(self.ap1.instPO is self.ap2.instPO)

@@ -1,3 +1,4 @@
+import random
 import logging
 
 class MockLoggingHandler(logging.Handler):
@@ -75,3 +76,8 @@ class MockLoggingHandler(logging.Handler):
             raise AssertionError(msg.format(method=self.param_methods[level],
                                             last_line=repr(last_line[0]),
                                             substring=repr(substring)))
+
+
+class SomeRandomNumbers(object):
+    def __call__(self):
+        return random.random()

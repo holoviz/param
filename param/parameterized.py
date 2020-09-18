@@ -1490,12 +1490,18 @@ class Parameters(object):
         will be triggered whether or not the parameter values have
         actually changed.
         """
+        trigger_params = [p for p in self_.self_or_cls.param
+                          if (self_.self_or_cls.param[p].__class__.__name__ == 'Trigger')]
+        for pname in [p for p in trigger_params if p in param_names]:
+            setattr(self_.self_or_cls, pname, True)
+
         events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
         self_.self_or_cls.param._watchers = []
         param_values = dict(self_.get_param_values())
-        params = {name: param_values[name] for name in param_names}
+        params = {name: param_values[name] for name in param_names
+                  if (name not in trigger_params)}
         self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**params)
         self_.self_or_cls.param._TRIGGER = False

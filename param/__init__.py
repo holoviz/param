@@ -2042,7 +2042,21 @@ class CalendarDateRange(Range):
         self._checkBounds(val)
 
 
-class Trigger(Boolean):
+class Event(Boolean):
+     """
+    An Event Parameter is one whose value is intimately linked to the
+    triggering of events for watchers to consume. Event has a Boolean
+    value, which when set to True triggers the associated watchers (as
+    any Parameter does) and then is automatically set back to
+    False. Conversely, if events are triggered directly via `.trigger`,
+    the value is transiently set to True (so that it's clear which of
+    many parameters being watched may have changed), then restored to
+    False when the triggering completes. An Event parameter is thus like
+    a momentary switch or pushbutton with a transient True value that
+    serves only to launch some other action (e.g. via a param.depends
+    decorator), rather than encapsulating the action itself as
+    param.Action does.
+    """
 
     @instance_descriptor
     def __set__(self, obj, val):

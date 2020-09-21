@@ -1488,10 +1488,12 @@ class Parameters(object):
         """
         Trigger watchers for the given set of parameter names. Watchers
         will be triggered whether or not the parameter values have
-        actually changed.
+        actually changed. As a special case, the value will actually be
+        changed for a Parameter of type Event, setting it to True so
+        that it is clear which Event parameter has been triggered.
         """
         trigger_params = [p for p in self_.self_or_cls.param
-                          if (self_.self_or_cls.param[p].__class__.__name__ == 'Trigger')]
+                          if (self_.self_or_cls.param[p].__class__.__name__ == 'Event')]
         for pname in [p for p in trigger_params if p in param_names]:
             setattr(self_.self_or_cls, pname, True)
 

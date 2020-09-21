@@ -1494,8 +1494,11 @@ class Parameters(object):
         """
         trigger_params = [p for p in self_.self_or_cls.param
                           if (self_.self_or_cls.param[p].__class__.__name__ == 'Event')]
-        for pname in [p for p in trigger_params if p in param_names]:
-            setattr(self_.self_or_cls, pname, True)
+        triggers = {p:True for p in trigger_params if p in param_names}
+        self_.set_param(**triggers)
+
+        if set(param_names).issubset(set(trigger_params)):
+            return
 
         events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers

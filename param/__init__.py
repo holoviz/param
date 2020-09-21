@@ -2043,7 +2043,7 @@ class CalendarDateRange(Range):
 
 
 class Event(Boolean):
-     """
+    """
     An Event Parameter is one whose value is intimately linked to the
     triggering of events for watchers to consume. Event has a Boolean
     value, which when set to True triggers the associated watchers (as

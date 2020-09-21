@@ -2060,7 +2060,7 @@ class Event(Boolean):
 
     @instance_descriptor
     def __set__(self, obj, val):
-        super(Trigger, self).__set__(obj, val)
+        super(Event, self).__set__(obj, val)
         val = False
         if obj is None:
             self.default = val

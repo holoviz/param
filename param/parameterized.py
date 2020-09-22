@@ -1493,8 +1493,9 @@ class Parameters(object):
         that it is clear which Event parameter has been triggered.
         """
         trigger_params = [p for p in self_.self_or_cls.param
-                          if (self_.self_or_cls.param[p].__class__.__name__ == 'Event')]
-        triggers = {p:True for p in trigger_params if p in param_names}
+                          if hasattr(self_.self_or_cls.param[p], '_autotrigger_value')]
+        triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
+                    for p in trigger_params if p in param_names}
         self_.set_param(**triggers)
 
         if set(param_names).issubset(set(trigger_params)):

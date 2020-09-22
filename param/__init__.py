@@ -2058,6 +2058,15 @@ class Event(Boolean):
     param.Action does.
     """
 
+    # _autotrigger_value specifies the value used to set the parameter
+    # to when the parameter is supplied to the trigger method. This
+    # value change is then what triggers the watcher callbacks.
+    __slots__ = ['_autotrigger_value']
+
+    def __init__(self,default=False,bounds=(0,1),**params):
+        self._autotrigger_value = True
+        super(Event, self).__init__(default=default,**params)
+
     @instance_descriptor
     def __set__(self, obj, val):
         super(Event, self).__set__(obj, val)

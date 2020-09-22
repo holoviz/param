@@ -2061,18 +2061,25 @@ class Event(Boolean):
     # _autotrigger_value specifies the value used to set the parameter
     # to when the parameter is supplied to the trigger method. This
     # value change is then what triggers the watcher callbacks.
-    __slots__ = ['_autotrigger_value']
+    __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
     def __init__(self,default=False,bounds=(0,1),**params):
         self._autotrigger_value = True
+        self._autotrigger_reset_value = False
+        self._mode = 'set-reset'
         super(Event, self).__init__(default=default,**params)
 
-    @instance_descriptor
-    def __set__(self, obj, val):
-        super(Event, self).__set__(obj, val)
+    def _reset_event(self, obj, val):
         val = False
         if obj is None:
             self.default = val
         else:
             obj.__dict__[self._internal_name] = val
         self._post_setter(obj, val)
+
+    @instance_descriptor
+    def __set__(self, obj, val):
+        if self._mode in ['set-reset', 'set']:
+            super(Event, self).__set__(obj, val)
+        if self._mode in ['set-reset', 'reset']:
+            self._reset_event(obj, val)

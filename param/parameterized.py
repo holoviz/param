@@ -1428,6 +1428,13 @@ class Parameters(object):
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
+        all_trigger_params = [p for p in self_.self_or_cls.param
+                              if hasattr(self_.self_or_cls.param[p],
+                                         '_autotrigger_value')]
+        trigger_params = [p for p in all_trigger_params if p in kwargs.keys()]
+        for tp in trigger_params:
+            self_.self_or_cls.param[tp]._mode = 'set'
+
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
                 self_.self_or_cls.param._BATCH_WATCH = False
@@ -1442,6 +1449,11 @@ class Parameters(object):
         if not BATCH_WATCH:
             self_._batch_call_watchers()
 
+        for tp in trigger_params:
+            p = self_.self_or_cls.param[tp]
+            p._mode = 'reset'
+            setattr(self_or_cls, tp, p._autotrigger_reset_value)
+            p._mode = 'set-reset'
 
     def objects(self_, instance=True):
         """

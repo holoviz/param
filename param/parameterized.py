@@ -364,7 +364,7 @@ def depends(func, *dependencies, **kw):
                              'or function is not supported when referencing '
                              'parameters by name.')
 
-    if not string_specs and watch:
+    if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         def cb(*events):
             args = (getattr(dep.owner, dep.name) for dep in dependencies)
             dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
@@ -494,7 +494,7 @@ def _params_depended_on(minfo):
 
 
 def _m_caller(self, n):
-    def caller(event):
+    def caller(*events):
         return getattr(self,n)()
     caller._watcher_name = n
     return caller
@@ -2481,9 +2481,13 @@ class Parameterized(object):
                 # instantiation of Parameterized with watched deps. Will
                 # probably store expanded deps on class - see metaclass
                 # 'dependers'.
-                for p in self.param.params_depended_on(n):
+                grouped = defaultdict(list)
+                for dep in self.param.params_depended_on(n):
+                    grouped[(id(dep.inst),id(dep.cls),dep.what)].append(dep)
+                for group in grouped.values():
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    (p.inst or p.cls).param.watch(_m_caller(self, n), p.name, p.what, queued=queued)
+                    gdep = group[0] # Need to grab representative dep from this group
+                    (gdep.inst or gdep.cls).param.watch(_m_caller(self, n), [d.name for d in group], gdep.what, queued=queued)
 
         self.initialized = True
 

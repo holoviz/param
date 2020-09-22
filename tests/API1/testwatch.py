@@ -37,6 +37,7 @@ class SimpleWatchExample(param.Parameterized):
     b = param.Parameter(default=0)
     c = param.Parameter(default=0)
     d = param.Integer(default=0)
+    e = param.Event()
 
     def method(self, event):
         self.b = self.a * 2
@@ -66,6 +67,10 @@ class WatchMethodExample(SimpleWatchSubclass):
     def _set_d_bounds(self):
         self.param.d.bounds = (self.c, self.c*2)
 
+    @param.depends('e', watch=True)
+    def _event_triggered(self):
+        assert self.e is True
+        self.d = 42
 
 class WatchSubclassExample(WatchMethodExample):
 
@@ -481,6 +486,16 @@ class TestWatch(API1TestCase):
 
         self.assertEqual(copied.b, 4)
         self.assertEqual(obj.b, 0)
+
+    def test_watch_event_value_trigger(self):
+        obj = WatchMethodExample()
+        obj.e = True
+        self.assertEqual(obj.d, 42)
+
+    def test_watch_event_trigger_method(self):
+        obj = WatchMethodExample()
+        obj.param.trigger('e')
+        self.assertEqual(obj.d, 42)
 
 
 class TestWatchMethod(API1TestCase):

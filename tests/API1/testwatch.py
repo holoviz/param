@@ -71,7 +71,7 @@ class WatchMethodExample(SimpleWatchSubclass):
     @param.depends('e', watch=True)
     def _e_event_triggered(self):
         assert self.e is True
-        self.d = 42
+        self.d = 30
 
     @param.depends('f', watch=True)
     def _f_event_triggered(self):
@@ -496,19 +496,19 @@ class TestWatch(API1TestCase):
     def test_watch_event_value_trigger(self):
         obj = WatchMethodExample()
         obj.e = True
-        self.assertEqual(obj.d, 42)
+        self.assertEqual(obj.d, 30)
         self.assertEqual(obj.e, False)
 
     def test_watch_event_trigger_method(self):
         obj = WatchMethodExample()
         obj.param.trigger('e')
-        self.assertEqual(obj.d, 42)
+        self.assertEqual(obj.d, 30)
         self.assertEqual(obj.e, False)
 
     def test_watch_event_batched_trigger_method(self):
         obj = WatchMethodExample()
         obj.param.trigger('e', 'f')
-        self.assertEqual(obj.d, 42)
+        self.assertEqual(obj.d, 30)
         self.b = 420
         self.assertEqual(obj.e, False)
         self.assertEqual(obj.f, False)

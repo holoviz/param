@@ -2486,7 +2486,8 @@ class Parameterized(object):
                     grouped[(id(dep.inst),id(dep.cls),dep.what)].append(dep)
                 for group in grouped.values():
                     # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    (dep.inst or dep.cls).param.watch(_m_caller(self, n), [dep.name for dep in group], dep.what, queued=queued)
+                    gdep = group[0] # Need to grab representative dep from this group
+                    (gdep.inst or gdep.cls).param.watch(_m_caller(self, n), [d.name for d in group], gdep.what, queued=queued)
 
         self.initialized = True
 

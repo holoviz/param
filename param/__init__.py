@@ -1164,25 +1164,19 @@ class ObjectSelector(SelectorBase):
     up from the object value.
     """
 
-    __slots__ = ['objects','compute_default_fn','check_on_set','names']
+    __slots__ = ['_objects','compute_default_fn','check_on_set','names']
 
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self,default=None,objects=None,instantiate=False,
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
-        if objects is None:
-            objects = []
-        if isinstance(objects, collections_abc.Mapping):
-            self.names = objects
-            self.objects = list(objects.values())
-        else:
-            self.names = None
-            self.objects = objects
+        self.names = None        
+        self.objects = objects
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
             self.check_on_set=check_on_set
-        elif len(objects)==0:
+        elif len(self.objects)==0:
             self.check_on_set=False
         else:
             self.check_on_set=True
@@ -1194,6 +1188,29 @@ class ObjectSelector(SelectorBase):
         if default is not None and self.check_on_set is True:
             self._validate(default)
 
+    @property
+    def objects(self):
+        """
+        self.objects is a property managing separate names and objects lists.
+        self.objects can be set after this Parameter's construction, and provides
+        the same semantics as in the initial creation, i.e. that if it's given
+        a dictionary it will store that dictionary as self.names, and otherwise
+        uses only the list of actual objects, not a mapping from names to objects.
+        """
+        return self._objects
+
+    @objects.setter
+    def objects(self, value):
+        if value is None:
+            value = []
+        if isinstance(value, collections_abc.Mapping):
+            self.names = value
+            self._objects = list(value.values())
+        else:
+            self._objects = value
+            # Special case to allow names and objects to be set separately in any order
+            if self.names is not None and len(self.names) != len(value):
+                self.names = None
 
     # CBNOTE: if the list of objects is changed, the current value for
     # this parameter in existing POs could be out of the new range.
@@ -1271,18 +1288,18 @@ class Selector(ObjectSelector):
     def __init__(self,objects=None, default=None, instantiate=False,
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
 
-        if is_ordered_dict(objects):
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, dict):
-            main.param.warning("Parameter default value is arbitrary due to "
-                               "dictionaries prior to Python 3.6 not being "
-                               "ordered; should use an ordered dict or "
-                               "supply an explicit default value.")
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, list):
-            autodefault = objects[0]
-        else:
-            autodefault = None
+        autodefault=None
+        if objects is not None and len(objects)>0:
+            if is_ordered_dict(objects):
+                autodefault = list(objects.values())[0]
+            elif isinstance(objects, dict):
+                main.param.warning("Parameter default value is arbitrary due to "
+                                   "dictionaries prior to Python 3.6 not being "
+                                   "ordered; should use an ordered dict or "
+                                   "supply an explicit default value.")
+                autodefault = list(objects.values())[0]
+            elif isinstance(objects, list):
+                autodefault = objects[0]
 
         default = autodefault if default is None else default
 

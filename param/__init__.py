@@ -1208,8 +1208,9 @@ class ObjectSelector(SelectorBase):
             self._objects = list(value.values())
         else:
             self._objects = value
-            # Special case to allow names and objects to be set separately in any order
-            if self.names is not None and len(self.names) != len(value):
+            # Delete stale names mapping, if it doesn't cover the new object list
+            if len(value)==0 or (self.names is not None and 
+                                 not all([o in value for o in self.names.values()])):
                 self.names = None
 
     # CBNOTE: if the list of objects is changed, the current value for

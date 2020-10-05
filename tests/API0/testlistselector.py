@@ -147,7 +147,7 @@ class TestListSelectorParameters(unittest.TestCase):
         self.assertEqual(Q.r, None)
         Q.params('r').compute_default()
         self.assertEqual(Q.r, [1,2,3])
-        self.assertEqual(Q.params('r').objects, [1,2,3])
+        self.assertEqual(Q.params('r').objects.values(), [1,2,3])
 
     def test_bad_compute_default(self):
         class Q(param.Parameterized):

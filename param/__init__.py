@@ -121,29 +121,61 @@ def hashable(x):
     else:
         return x
 
+def named_obj(obj, objtoname=None):
+    """
+    Return a name,obj pair for the given obj
+
+    Looks up the name in the provided object->name mapping, if any,
+    and otherwise introspects a string name.
+    """
+    if objtoname is not None and hashable(obj) in objtoname:
+        k = objtoname[hashable(obj)]
+    elif hasattr(obj, "name"):
+        k = obj.name
+    elif hasattr(obj, '__name__'):
+        k = obj.__name__
+    else:
+        k = as_unicode(obj)
+    return k,obj
+            
+
 def named_objs(objlist, namesdict=None):
     """
-    Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself. Accepts
-    an optional name,obj dictionary, which will override any other
-    name if that item is present in the dictionary.
+    Return a dictionary name->object for the given objlist.
+
+    If objlist is already a dictionary, it is simply returned, but
+    otherwise a name->object dictionary is constructed, using a name
+    from namesdict (if provided) or otherwise an introspected name.
     """
-    objs = OrderedDict()
+    if objlist is None:
+        objs = {}
 
-    if namesdict is not None:
-        objtoname = {hashable(v): k for k, v in namesdict.items()}
+    elif isinstance(objlist, collections_abc.Mapping):
+        objs = objlist
 
-    for obj in objlist:
-        if namesdict is not None and hashable(obj) in objtoname:
-            k = objtoname[hashable(obj)]
-        elif hasattr(obj, "name"):
-            k = obj.name
-        elif hasattr(obj, '__name__'):
-            k = obj.__name__
-        else:
-            k = as_unicode(obj)
-        objs[k] = obj
+    else:
+        objtoname = None if namesdict is None else \
+            {hashable(v): k for k, v in namesdict.items()}
+        
+        objs = OrderedDict()
+        for obj in objlist:
+            objs[named_obj(obj, objtoname)] = obj
+
     return objs
+
+
+def named_obj_default(objs, default=None):
+    """
+    Pick a default value from the given name->obj mapping
+    """
+    if not objs:
+        return None
+
+    elif default in objs.values():
+        return default
+
+    else:
+        return list(objs.values())[0]
 
 
 def param_union(*parameterizeds, **kwargs):
@@ -1170,19 +1202,13 @@ class ObjectSelector(SelectorBase):
     # existing objects, therefore instantiate is False by default.
     def __init__(self,default=None,objects=None,instantiate=False,
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
-        if objects is None:
-            objects = []
-        if isinstance(objects, collections_abc.Mapping):
-            self.names = objects
-            self.objects = list(objects.values())
-        else:
-            self.names = None
-            self.objects = objects
+        self.names = None
+        self.objects = named_objs(objects)
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
             self.check_on_set=check_on_set
-        elif len(objects)==0:
+        elif len(self.objects)==0:
             self.check_on_set=False
         else:
             self.check_on_set=True
@@ -1202,15 +1228,10 @@ class ObjectSelector(SelectorBase):
         """
         If this parameter's compute_default_fn is callable, call it
         and store the result in self.default.
-
-        Also removes None from the list of objects (if the default is
-        no longer None).
         """
         if self.default is None and callable(self.compute_default_fn):
             self.default=self.compute_default_fn()
-            if self.default not in self.objects:
-                self.objects.append(self.default)
-
+            self._ensure_value_is_in_objects(self.default)
 
     def _validate(self, val):
         """
@@ -1220,7 +1241,7 @@ class ObjectSelector(SelectorBase):
             self._ensure_value_is_in_objects(val)
             return
 
-        if not (val in self.objects or (self.allow_None and val is None)):
+        if not (val in self.objects.values() or (self.allow_None and val is None)):
             # CEBALERT: can be called before __init__ has called
             # super's __init__, i.e. before attrib_name has been set.
             try:
@@ -1243,14 +1264,15 @@ class ObjectSelector(SelectorBase):
             raise ValueError("%s not in Parameter %s's list of possible objects, "
                              "valid options include %s"%(val,attrib_name, items))
 
-    def _ensure_value_is_in_objects(self,val):
+    def _ensure_value_is_in_objects(self,val, name=None):
         """
         Make sure that the provided value is present on the objects list.
         Subclasses can override if they support multiple items on a list,
         to check each item instead.
         """
-        if not (val in self.objects):
-            self.objects.append(val)
+        if not (val in self.objects.values()):
+            k,v = named_obj(val)
+            self.objects[k]=val
 
     def get_range(self):
         """
@@ -1258,7 +1280,7 @@ class ObjectSelector(SelectorBase):
 
         (Returns the dictionary {object.name:object}.)
         """
-        return named_objs(self.objects, self.names)
+        return self.objects
 
 
 class Selector(ObjectSelector):
@@ -1269,23 +1291,20 @@ class Selector(ObjectSelector):
     argument which sufficient in many common use cases.
     """
     def __init__(self,objects=None, default=None, instantiate=False,
-                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+                  compute_default_fn=None, check_on_set=None,
+                  allow_None=None,**params):
 
-        if is_ordered_dict(objects):
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, dict):
-            main.param.warning("Parameter default value is arbitrary due to "
-                               "dictionaries prior to Python 3.6 not being "
-                               "ordered; should use an ordered dict or "
-                               "supply an explicit default value.")
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, list):
-            autodefault = objects[0]
-        else:
-            autodefault = None
-
-        default = autodefault if default is None else default
-
+        if default is None:
+            if objects is not None and len(objects)>0 and \
+               isinstance(objects, dict) and not is_ordered_dict(objects):
+                main.param.warning("Parameter default value is arbitrary due to "
+                                   "dictionaries prior to Python 3.6 not being "
+                                   "ordered; should use an ordered dict or "
+                                   "supply an explicit default value.")
+                
+            objects = named_objs(objects)
+            default = named_obj_default(objects)
+        
         super(Selector,self).__init__(default=default, objects=objects,
                                       instantiate=instantiate,
                                       compute_default_fn=compute_default_fn,
@@ -1787,10 +1806,8 @@ class FileSelector(ObjectSelector):
         self.update()
 
     def update(self):
-        self.objects = sorted(glob.glob(self.path))
-        if self.default in self.objects:
-            return
-        self.default = self.objects[0] if self.objects else None
+        self.objects = named_objs(sorted(glob.glob(self.path)))
+        self.default = named_obj_default(self.objects, self.default)
 
     def get_range(self):
         return abbreviate_paths(self.path,super(FileSelector, self).get_range())
@@ -1806,9 +1823,8 @@ class ListSelector(ObjectSelector):
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
             for o in self.default:
-                if o not in self.objects:
-                    self.objects.append(o)
-
+                self._ensure_value_is_in_objects(o)
+                    
     def _validate(self, val):
         for o in val:
             super(ListSelector, self)._validate(o)
@@ -1827,10 +1843,10 @@ class MultiFileSelector(ListSelector):
         self.update()
 
     def update(self):
-        self.objects = sorted(glob.glob(self.path))
-        if self.default and all([o in self.objects for o in self.default]):
+        self.objects = named_objs(sorted(glob.glob(self.path)))
+        if self.default and all([o in self.objects.values() for o in self.default]):
             return
-        self.default = self.objects
+        self.default = self.objects.values()
 
     def get_range(self):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())

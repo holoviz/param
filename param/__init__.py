@@ -137,7 +137,7 @@ def named_obj(obj, objtoname=None):
     else:
         k = as_unicode(obj)
     return k,obj
-            
+
 
 def named_objs(objlist, namesdict=None):
     """
@@ -156,7 +156,7 @@ def named_objs(objlist, namesdict=None):
     else:
         objtoname = None if namesdict is None else \
             {hashable(v): k for k, v in namesdict.items()}
-        
+
         objs = OrderedDict()
         for obj in objlist:
             objs[named_obj(obj, objtoname)] = obj
@@ -1291,8 +1291,8 @@ class Selector(ObjectSelector):
     argument which sufficient in many common use cases.
     """
     def __init__(self,objects=None, default=None, instantiate=False,
-                  compute_default_fn=None, check_on_set=None,
-                  allow_None=None,**params):
+                 compute_default_fn=None, check_on_set=None,
+                 allow_None=None,**params):
 
         if default is None:
             if objects is not None and len(objects)>0 and \
@@ -1301,10 +1301,10 @@ class Selector(ObjectSelector):
                                    "dictionaries prior to Python 3.6 not being "
                                    "ordered; should use an ordered dict or "
                                    "supply an explicit default value.")
-                
+
             objects = named_objs(objects)
             default = named_obj_default(objects)
-        
+
         super(Selector,self).__init__(default=default, objects=objects,
                                       instantiate=instantiate,
                                       compute_default_fn=compute_default_fn,
@@ -1824,7 +1824,7 @@ class ListSelector(ObjectSelector):
             self.default = self.compute_default_fn()
             for o in self.default:
                 self._ensure_value_is_in_objects(o)
-                    
+
     def _validate(self, val):
         for o in val:
             super(ListSelector, self)._validate(o)

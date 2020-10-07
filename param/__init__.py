@@ -121,9 +121,9 @@ def hashable(x):
     else:
         return x
 
-def named_obj(obj, objtoname=None):
+def name_for_obj(obj, objtoname=None):
     """
-    Return a name,obj pair for the given obj
+    Return a string name for the given obj
 
     Looks up the name in the provided object->name mapping, if any,
     and otherwise introspects a string name.
@@ -136,10 +136,10 @@ def named_obj(obj, objtoname=None):
         k = obj.__name__
     else:
         k = as_unicode(obj)
-    return k,obj
+    return k
 
 
-def named_objs(objlist, namesdict=None):
+def named_objs(objects, namesdict=None):
     """
     Return a dictionary name->object for the given objlist.
 
@@ -147,19 +147,23 @@ def named_objs(objlist, namesdict=None):
     otherwise a name->object dictionary is constructed, using a name
     from namesdict (if provided) or otherwise an introspected name.
     """
-    if objlist is None:
-        objs = {}
+    objs = OrderedDict()
 
-    elif isinstance(objlist, collections_abc.Mapping):
-        objs = objlist
+    if objects is None:
+        return objs
 
+    if isinstance(objects, collections_abc.Mapping):
+        objlist = objects.values() if isinstance(objects, collections_abc.Mapping) else objects
+        if namesdict is None:
+            namesdict = objects
     else:
-        objtoname = None if namesdict is None else \
-            {hashable(v): k for k, v in namesdict.items()}
+        objlist = objects
 
-        objs = OrderedDict()
-        for obj in objlist:
-            objs[named_obj(obj, objtoname)] = obj
+    objtoname = None if namesdict is None else \
+        {hashable(v): k for k, v in namesdict.items()}
+
+    for obj in objlist:
+        objs[name_for_obj(obj, objtoname)] = obj
 
     return objs
 
@@ -1194,16 +1198,21 @@ class ObjectSelector(SelectorBase):
     names to objects.  If a dictionary is supplied, the objects
     will need to be hashable so that their names can be looked
     up from the object value.
+
+    For backwards compatibility, the optional property "self.names", if
+    set to a mapping, will override any other names provided, for any
+    objects in that mapping. self.names should not be used for new code.
     """
 
-    __slots__ = ['objects','compute_default_fn','check_on_set','names']
+    __slots__ = ['_objects','compute_default_fn','check_on_set','_names']
 
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self,default=None,objects=None,instantiate=False,
                  compute_default_fn=None,check_on_set=None,allow_None=None,**params):
-        self.names = None
-        self.objects = named_objs(objects)
+        self._names = None
+        self._objects = None
+        self.objects = objects
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
@@ -1271,8 +1280,7 @@ class ObjectSelector(SelectorBase):
         to check each item instead.
         """
         if not (val in self.objects.values()):
-            k,v = named_obj(val)
-            self.objects[k]=val
+            self.objects[name_for_obj(val)]=val
 
     def get_range(self):
         """
@@ -1281,6 +1289,23 @@ class ObjectSelector(SelectorBase):
         (Returns the dictionary {object.name:object}.)
         """
         return self.objects
+
+    @property
+    def names(self):
+        return self._names
+
+    @names.setter
+    def names(self, value):
+        self._names=value
+        self._objects=named_objs(self._objects, self._names)
+
+    @property
+    def objects(self):
+        return self._objects
+
+    @objects.setter
+    def objects(self, value):
+        self._objects=named_objs(value, self._names)
 
 
 class Selector(ObjectSelector):

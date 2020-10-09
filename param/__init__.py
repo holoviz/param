@@ -1871,7 +1871,7 @@ class MultiFileSelector(ListSelector):
         self.objects = named_objs(sorted(glob.glob(self.path)))
         if self.default and all([o in self.objects.values() for o in self.default]):
             return
-        self.default = self.objects.values()
+        self.default = list(self.objects.values())
 
     def get_range(self):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())

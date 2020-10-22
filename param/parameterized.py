@@ -2087,9 +2087,9 @@ class ParameterizedMetaclass(type):
         # _ParameterizedMetaclass__abstract before running, but
         # the actual class object will have an attribute
         # _ClassName__abstract.  So, we have to mangle it ourselves at
-        # runtime.
+        # runtime. Mangling follows description in https://docs.python.org/2/tutorial/classes.html#private-variables-and-class-local-references
         try:
-            return getattr(mcs,'_%s__abstract'%mcs.__name__)
+            return getattr(mcs,'_%s__abstract'%mcs.__name__.lstrip("_"))
         except AttributeError:
             return False
 

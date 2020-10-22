@@ -53,6 +53,9 @@ class AnotherTestPO(param.Parameterized):
 class TestAbstractPO(param.Parameterized):
     __abstract = True
 
+class _AnotherAbstractPO(param.Parameterized):
+    __abstract = True
+
 @nottest
 class TestParamInstantiation(AnotherTestPO):
     instPO = param.Parameter(default=AnotherTestPO(),instantiate=False)
@@ -140,6 +143,7 @@ class TestParameterized(API1TestCase):
     def test_abstract_class(self):
         """Check that a class declared abstract actually shows up as abstract."""
         self.assertEqual(TestAbstractPO.abstract,True)
+        self.assertEqual(_AnotherAbstractPO.abstract,True)
         self.assertEqual(TestPO.abstract,False)
 
 

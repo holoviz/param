@@ -106,7 +106,7 @@ class TestWatch(API1TestCase):
             obj.a = 1
         self.assertEqual(self.accumulator, 0)
         obj.a = 2
-        self.assertEqual(self.accumulator, 3)
+        self.assertEqual(self.accumulator, 2)
 
     def test_triggered_when_changed_iterator_type(self):
         def accumulator(change):

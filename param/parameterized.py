@@ -1504,22 +1504,12 @@ class Parameters(object):
         changed for a Parameter of type Event, setting it to True so
         that it is clear which Event parameter has been triggered.
         """
-        trigger_params = [p for p in self_.self_or_cls.param
-                          if hasattr(self_.self_or_cls.param[p], '_autotrigger_value')]
-        triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
-                    for p in trigger_params if p in param_names}
-        self_.set_param(**triggers)
-
-        if set(param_names).issubset(set(trigger_params)):
-            return
-
         events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
         self_.self_or_cls.param._watchers = []
         param_values = dict(self_.get_param_values())
-        params = {name: param_values[name] for name in param_names
-                  if (name not in trigger_params)}
+        params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**params)
         self_.self_or_cls.param._TRIGGER = False

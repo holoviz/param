@@ -8,7 +8,7 @@ Simplifying Codebases
 *********************
 
 .. notebook:: param ../../examples/user_guide/Simplifying_Codebases.ipynb
-    :offset: 1
+    :offset: 0
 
 
 -------

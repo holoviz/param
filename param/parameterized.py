@@ -1428,10 +1428,10 @@ class Parameters(object):
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
-        all_trigger_params = [p for p in self_.self_or_cls.param
-                              if hasattr(self_.self_or_cls.param[p],
-                                         '_autotrigger_value')]
-        trigger_params = [p for p in all_trigger_params if p in kwargs.keys()]
+        trigger_params = [k for k in kwargs
+                          if ((k in self_.self_or_cls.param) and
+                              hasattr(self_.self_or_cls.param[k], '_autotrigger_value'))]
+
         for tp in trigger_params:
             self_.self_or_cls.param[tp]._mode = 'set'
 

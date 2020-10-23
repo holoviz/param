@@ -1521,6 +1521,7 @@ class Parameters(object):
         self_.self_or_cls.param._events += events
         self_.self_or_cls.param._watchers += watchers
 
+
     def _update_event_type(self_, watcher, event, triggered):
         """
         Returns an updated Event object with the type field set appropriately.

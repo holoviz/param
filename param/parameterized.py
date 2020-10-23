@@ -1429,6 +1429,13 @@ class Parameters(object):
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
 
+        trigger_params = [k for k in kwargs
+                          if ((k in self_.self_or_cls.param) and
+                              hasattr(self_.self_or_cls.param[k], '_autotrigger_value'))]
+
+        for tp in trigger_params:
+            self_.self_or_cls.param[tp]._mode = 'set'
+
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
                 self_.self_or_cls.param._BATCH_WATCH = False
@@ -1443,6 +1450,11 @@ class Parameters(object):
         if not BATCH_WATCH:
             self_._batch_call_watchers()
 
+        for tp in trigger_params:
+            p = self_.self_or_cls.param[tp]
+            p._mode = 'reset'
+            setattr(self_or_cls, tp, p._autotrigger_reset_value)
+            p._mode = 'set-reset'
 
     def objects(self_, instance=True):
         """
@@ -1489,8 +1501,15 @@ class Parameters(object):
         """
         Trigger watchers for the given set of parameter names. Watchers
         will be triggered whether or not the parameter values have
-        actually changed.
+        actually changed. As a special case, the value will actually be
+        changed for a Parameter of type Event, setting it to True so
+        that it is clear which Event parameter has been triggered.
         """
+        trigger_params = [p for p in self_.self_or_cls.param
+                          if hasattr(self_.self_or_cls.param[p], '_autotrigger_value')]
+        triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
+                    for p in trigger_params if p in param_names}
+
         events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
@@ -1498,7 +1517,7 @@ class Parameters(object):
         param_values = dict(self_.get_param_values())
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
-        self_.set_param(**params)
+        self_.set_param(**dict(params, **triggers))
         self_.self_or_cls.param._TRIGGER = False
         self_.self_or_cls.param._events += events
         self_.self_or_cls.param._watchers += watchers

@@ -29,7 +29,7 @@ from .parameterized import (
     descendents, get_logger, instance_descriptor, basestring)
 
 from .parameterized import (batch_watch, depends, output, # noqa: api import
-                            discard_events, edit_constant)
+                            discard_events, edit_constant, instance_descriptor)
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
 
@@ -2040,3 +2040,46 @@ class CalendarDateRange(Range):
         # values are numeric, which is redundant, so just call
         # _checkBounds().
         self._checkBounds(val)
+
+
+class Event(Boolean):
+    """
+    An Event Parameter is one whose value is intimately linked to the
+    triggering of events for watchers to consume. Event has a Boolean
+    value, which when set to True triggers the associated watchers (as
+    any Parameter does) and then is automatically set back to
+    False. Conversely, if events are triggered directly via `.trigger`,
+    the value is transiently set to True (so that it's clear which of
+    many parameters being watched may have changed), then restored to
+    False when the triggering completes. An Event parameter is thus like
+    a momentary switch or pushbutton with a transient True value that
+    serves only to launch some other action (e.g. via a param.depends
+    decorator), rather than encapsulating the action itself as
+    param.Action does.
+    """
+
+    # _autotrigger_value specifies the value used to set the parameter
+    # to when the parameter is supplied to the trigger method. This
+    # value change is then what triggers the watcher callbacks.
+    __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
+
+    def __init__(self,default=False,bounds=(0,1),**params):
+        self._autotrigger_value = True
+        self._autotrigger_reset_value = False
+        self._mode = 'set-reset'
+        super(Event, self).__init__(default=default,**params)
+
+    def _reset_event(self, obj, val):
+        val = False
+        if obj is None:
+            self.default = val
+        else:
+            obj.__dict__[self._internal_name] = val
+        self._post_setter(obj, val)
+
+    @instance_descriptor
+    def __set__(self, obj, val):
+        if self._mode in ['set-reset', 'set']:
+            super(Event, self).__set__(obj, val)
+        if self._mode in ['set-reset', 'reset']:
+            self._reset_event(obj, val)

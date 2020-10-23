@@ -2067,6 +2067,21 @@ class Event(Boolean):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'
+        # Mode can be one of 'set', 'set-reset' or 'reset'
+
+        # 'set' is normal Boolean parameter behavior when set with a value.
+        # 'set-reset' temporarily sets the parameter (which triggers
+        # watching callbacks) but immediately resets the value back to
+        # False.
+        # 'reset' applies the reset from True to False without
+        # triggering watched callbacks
+
+        # This _mode attribute is one of the few places where a specific
+        # parameter has a special behavior that is relied upon by the
+        # core functionality implemented in
+        # parameterized.py. Specifically, the set_param method
+        # temporarily sets this attribute in order to disable resetting
+        # back to False while triggered callbacks are executing
         super(Event, self).__init__(default=default,**params)
 
     def _reset_event(self, obj, val):

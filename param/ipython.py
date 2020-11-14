@@ -134,7 +134,14 @@ class ParamPager(object):
         (params, val_dict, changed) = info
         col_widths = dict((k,0) for k in order)
 
-        for name, p in params.items():
+        ordering = sorted(
+            sorted(params), # alphanumeric tie-breaker
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if params[k].precedence is None else
+                           params[k].precedence))
+
+        for name in ordering:
+            p = params[name]
             if only_changed and not (name in changed):
                 continue
 
@@ -172,13 +179,6 @@ class ParamPager(object):
             for col in info_dict[name]:
                 max_width = max([col_widths[col], len(info_dict[name][col])])
                 col_widths[col] = max_width
-
-        ordering = sorted(
-            sorted(info_dict), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if params[k].precedence is None else
-                           params[k].precedence))
-        info_dict = {k: info_dict[k] for k in ordering}
 
         return self._tabulate(info_dict, col_widths, changed, order, bounds_dict)
 

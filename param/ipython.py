@@ -173,6 +173,13 @@ class ParamPager(object):
                 max_width = max([col_widths[col], len(info_dict[name][col])])
                 col_widths[col] = max_width
 
+        ordering = sorted(
+            sorted(info_dict), # alphanumeric tie-breaker
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if params[k].precedence is None else
+                           params[k].precedence))
+        info_dict = {k: info_dict[k] for k in ordering}
+
         return self._tabulate(info_dict, col_widths, changed, order, bounds_dict)
 
 
@@ -202,7 +209,7 @@ class ParamPager(object):
         contents.append(blue % ''.join(title_row)+"\n")
 
         # Format the table rows
-        for row in sorted(info_dict):
+        for row in info_dict:
             row_list = []
             info = info_dict[row]
             for i,col in enumerate(columns):

@@ -20,6 +20,8 @@ exist in the active namespace.
 __author__ = "Jean-Luc Stevens"
 
 import re
+import sys
+import itertools
 import textwrap
 import param
 
@@ -124,6 +126,21 @@ class ParamPager(object):
         return "\n".join(contents)
 
 
+    def _ordered_params(self, parameters):
+        params = [(p, pobj) for p, pobj in parameters.items()]
+        key_fn = lambda x: x[1].precedence if x[1].precedence is not None else 1e-8
+        sorted_precedence = sorted(params, key=key_fn)
+        filtered = [(k, p) for k, p in sorted_precedence]
+        groups = itertools.groupby(filtered, key=key_fn)
+        # Params preserve definition order in Python 3.6+
+        dict_ordered_py3 = (sys.version_info.major == 3 and sys.version_info.minor >= 6)
+        dict_ordered = dict_ordered_py3 or (sys.version_info.major > 3)
+        ordered_groups = [list(grp) if dict_ordered else sorted(grp) for (_, grp) in groups]
+        ordered_params = [el[0] for group in ordered_groups for el in group
+                          if (el[0] != 'name' or el[0] in parameters)]
+        return ordered_params
+
+
     def _build_table(self, info, order, max_col_len=40, only_changed=False):
         """
         Collect the information about parameters needed to build a
@@ -134,12 +151,7 @@ class ParamPager(object):
         (params, val_dict, changed) = info
         col_widths = dict((k,0) for k in order)
 
-        ordering = sorted(
-            sorted(params), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if params[k].precedence is None else
-                           params[k].precedence))
-
+        ordering = self._ordered_params(params)
         for name in ordering:
             p = params[name]
             if only_changed and not (name in changed):

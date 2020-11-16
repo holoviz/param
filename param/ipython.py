@@ -126,7 +126,10 @@ class ParamPager(object):
         return "\n".join(contents)
 
 
-    def _ordered_params(self, parameters):
+    def sort_by_precedence(self, parameters):
+        """Sort the provided dictionary of parameters by their precedence value.
+        In Python 3, preserves the original ordering for parameters with the
+        same precedence; for Python 2 sorts them lexicographically by name."""
         params = [(p, pobj) for p, pobj in parameters.items()]
         key_fn = lambda x: x[1].precedence if x[1].precedence is not None else 1e-8
         sorted_precedence = sorted(params, key=key_fn)
@@ -151,7 +154,7 @@ class ParamPager(object):
         (params, val_dict, changed) = info
         col_widths = dict((k,0) for k in order)
 
-        ordering = self._ordered_params(params)
+        ordering = self.sort_by_precedence(params)
         for name in ordering:
             p = params[name]
             if only_changed and not (name in changed):

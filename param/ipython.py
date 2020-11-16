@@ -127,9 +127,11 @@ class ParamPager(object):
 
 
     def sort_by_precedence(self, parameters):
-        """Sort the provided dictionary of parameters by their precedence value.
+        """
+        Sort the provided dictionary of parameters by their precedence value.
         In Python 3, preserves the original ordering for parameters with the
-        same precedence; for Python 2 sorts them lexicographically by name."""
+        same precedence; for Python 2 sorts them lexicographically by name.
+        """
         params = [(p, pobj) for p, pobj in parameters.items()]
         key_fn = lambda x: x[1].precedence if x[1].precedence is not None else 1e-8
         sorted_precedence = sorted(params, key=key_fn)

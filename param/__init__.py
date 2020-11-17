@@ -1015,6 +1015,10 @@ class Tuple(Parameter):
 
 
     @classmethod
+    def serialize(cls, value):
+        return list(value) # As JSON has no tuple representation
+
+    @classmethod
     def deserialize(cls, value):
         return tuple(value) # As JSON has no tuple representation
 

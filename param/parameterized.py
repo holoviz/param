@@ -152,6 +152,11 @@ def discard_events(parameterized):
         parameterized.param._events = events
 
 
+# External components can register an async executor which will run
+# async functions
+async_executor = None
+
+
 def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
@@ -292,6 +297,15 @@ def no_instance_params(cls):
     """
     cls._disable_instance__params = True
     return cls
+
+
+def iscoroutinefunction(function):
+    """
+    Whether the function is an asynchronous coroutine function.
+    """
+    if not hasattr(inspect, 'iscoroutinefunction'):
+        return False
+    return inspect.iscoroutinefunction(function)
 
 
 def instance_descriptor(f):
@@ -495,8 +509,15 @@ def _params_depended_on(minfo):
 
 
 def _m_caller(self, n):
-    def caller(*events):
-        return getattr(self,n)()
+    function = getattr(self, n)
+    if iscoroutinefunction(function):
+        import asyncio
+        @asyncio.coroutine
+        def caller(*events):
+            yield function()
+    else:
+        def caller(*events):
+            return function()
     caller._watcher_name = n
     return caller
 
@@ -1534,6 +1555,23 @@ class Parameters(object):
         return Event(what=event.what, name=event.name, obj=event.obj, cls=event.cls,
                      old=event.old, new=event.new, type=event_type)
 
+    def _execute_watcher(self, watcher, events):
+        if watcher.mode == 'args':
+            args, kwargs = events, {}
+        else:
+            args, kwargs = (), {event.name: event.new for event in events}
+
+        if iscoroutinefunction(watcher.fn):
+            if async_executor is None:
+                raise RuntimeError("Could not execute %s coroutine function. "
+                                   "Please register a asynchronous executor on "
+                                   "param.parameterized.async_executor, which "
+                                   "schedules the function on an event loop." %
+                                   watcher.fn)
+            async_executor(partial(watcher.fn, *args, **kwargs))
+        else:
+            watcher.fn(*args, **kwargs)
+
     def _call_watcher(self_, watcher, event):
         """
         Invoke the given the watcher appropriately given a Event object.
@@ -1550,11 +1588,7 @@ class Parameters(object):
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
             with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
-                if watcher.mode == 'args':
-                    watcher.fn(event)
-                else:
-                    watcher.fn(**{event.name: event.new})
-
+                self_._execute_watcher(watcher, (event,))
 
     def _batch_call_watchers(self_):
         """
@@ -1574,11 +1608,7 @@ class Parameters(object):
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
                 with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
-                    if watcher.mode == 'args':
-                        watcher.fn(*events)
-                    else:
-                        watcher.fn(**{c.name:c.new for c in events})
-
+                    self_._execute_watcher(watcher, events)
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """

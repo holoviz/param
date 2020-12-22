@@ -33,11 +33,18 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: set tox-env
+      - name: set pypy tox-env
         id: vars
+        if: (!startsWith(matrix.python-version, "py"))
         run: |
           pyver="${{ matrix.python-version }}"
           echo "::set-output name=tox_env::py${pyver//.}"
+      - name: set python tox-env
+        id: vars
+        if: startsWith(matrix.python-version, "py")
+        run: |
+          pyver="${{ matrix.python-version }}"
+          echo "::set-output name=tox_env::${pyver//.}"
       - name: Fetch
         run: git fetch --prune --tags
       - name: env setup

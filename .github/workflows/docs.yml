@@ -31,8 +31,8 @@ jobs:
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
       - name: env setup
         run: |
-          pip install graphviz nbsite sphinx_holoviz_theme "nbconvert <=5.3.1"
-          pip install -e .
+          python -m pip install graphviz nbsite sphinx_holoviz_theme "nbconvert <=5.3.1"
+          python -m pip install -e .
       - name: build docs
         run: |
           nbsite generate-rst --org pyviz --repo param --project-name param

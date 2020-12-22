@@ -33,18 +33,6 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: set pypy tox-env
-        id: vars
-        if: (!startsWith(matrix.python-version, "py"))
-        run: |
-          pyver="${{ matrix.python-version }}"
-          echo "::set-output name=tox_env::py${pyver//.}"
-      - name: set python tox-env
-        id: vars
-        if: startsWith(matrix.python-version, "py")
-        run: |
-          pyver="${{ matrix.python-version }}"
-          echo "::set-output name=tox_env::${pyver//.}"
       - name: Fetch
         run: git fetch --prune --tags
       - name: env setup
@@ -57,6 +45,15 @@ jobs:
       - name: doit test_lint
         run: |
           flake8
-      - name: doit test_unit
+      - name: doit test_unit pypy
+        if: (!startsWith(matrix.python-version, "py"))
         run: |
-          tox -e ${{ steps.vars.outputs.tox_env }}
+          pyver="${{ matrix.python-version }}"
+          tox_env="${pyver//.}"
+          tox -e $tox_env
+      - name: doit test_unit python
+        if: startsWith(matrix.python-version, "py")
+        run: |
+          pyver="${{ matrix.python-version }}"
+          tox_env="py${pyver//.}"
+          tox -e $tox_env

@@ -26,7 +26,7 @@ jobs:
         run: git fetch --prune --tags --unshallow -f
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.7"
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
@@ -70,7 +70,7 @@ jobs:
         run: git fetch --prune --tags --unshallow -f
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.7"
       - name: env setup
         run: |
           python -m pip install --upgrade pip
@@ -80,4 +80,4 @@ jobs:
           python setup.py sdist bdist_wheel
       - name: pip upload
         run: |
-          twine upload -r $PYPI dist/* 
+          python -m twine upload -r $PYPI dist/* 

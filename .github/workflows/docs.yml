@@ -35,9 +35,9 @@ jobs:
           python -m pip install -e .
       - name: build docs
         run: |
-          nbsite generate-rst --org pyviz --repo param --project-name param
+          python -m nbsite generate-rst --org pyviz --repo param --project-name param
           mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
-          nbsite build --examples-assets=''
+          python -m nbsite build --examples-assets=''
       - name: Deploy dev
         uses: peaceiris/actions-gh-pages@v3
         if: (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc'))

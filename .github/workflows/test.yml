@@ -35,7 +35,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: set tox-env
         run: |
-          pyver="{{ matrix.python-version }}"
+          pyver="${{ matrix.python-version }}"
           echo "::set-env name=TOX_ENV::${pyver//.}"
       - name: Fetch
         run: git fetch --prune --tags

@@ -66,8 +66,8 @@ jobs:
       - name: unit with_jsonschema
         run: tox -e with_jsonschema
       - name: unit with_gmpy
-        if: (!contains(matrix.os, 'windows'))
+        if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_gmpy
       - name: unit all_deps
-        if: (!contains(matrix.os, 'windows'))
+        if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all

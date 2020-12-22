@@ -46,13 +46,13 @@ jobs:
         run: |
           flake8
       - name: doit test_unit pypy
-        if: (!startsWith(matrix.python-version, "py"))
+        if: (!startsWith(matrix.python-version, 'py'))
         run: |
           pyver="${{ matrix.python-version }}"
           tox_env="${pyver//.}"
           tox -e $tox_env
       - name: doit test_unit python
-        if: startsWith(matrix.python-version, "py")
+        if: startsWith(matrix.python-version, 'py')
         run: |
           pyver="${{ matrix.python-version }}"
           tox_env="py${pyver//.}"

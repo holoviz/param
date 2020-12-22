@@ -34,9 +34,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: set tox-env
+        id: vars
         run: |
           pyver="${{ matrix.python-version }}"
-          echo "::set-env name=TOX_ENV::${pyver//.}"
+          echo "::set-output name=tox_env::${pyver//.}"
       - name: Fetch
         run: git fetch --prune --tags
       - name: env setup
@@ -48,4 +49,4 @@ jobs:
           flake8
       - name: doit test_unit
         run: |
-          tox -e $TOX_ENV
+          tox -e ${{ steps.vars.outputs.tox_env }}

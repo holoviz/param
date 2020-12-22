@@ -80,4 +80,4 @@ jobs:
           python setup.py sdist bdist_wheel
       - name: pip upload
         run: |
-          python -m twine upload -r $PYPI dist/* 
+          python -m twine upload dist/* 

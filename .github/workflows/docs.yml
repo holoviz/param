@@ -25,7 +25,7 @@ jobs:
         run: git fetch --prune --tags --unshallow -f
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.7
       - name: Set output
         id: vars
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}

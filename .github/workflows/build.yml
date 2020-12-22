@@ -40,8 +40,9 @@ jobs:
           conda update conda
           conda install anaconda-client conda-build
       - name: conda build
-        eval "$(conda shell.bash hook)"
-        run: conda build conda.recipe/
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda build conda.recipe/
       - name: conda dev upload
         if: (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc'))
         run: |

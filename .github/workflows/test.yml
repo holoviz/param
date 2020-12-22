@@ -49,11 +49,11 @@ jobs:
         if: (!startsWith(matrix.python-version, 'py'))
         run: |
           pyver="${{ matrix.python-version }}"
-          tox_env="${pyver//.}"
+          tox_env="py${pyver//.}"
           tox -e $tox_env
       - name: doit test_unit python
         if: startsWith(matrix.python-version, 'py')
         run: |
           pyver="${{ matrix.python-version }}"
-          tox_env="py${pyver//.}"
+          tox_env="${pyver//.}"
           tox -e $tox_env

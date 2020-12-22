@@ -61,9 +61,6 @@ jobs:
         shell: bash -l {0}
     env:
       TOX_ENV: "py3.7"
-      TWINE_USERNAME: ${{ secrets.PPU }}
-      TWINE_PASSWOR: ${{ secrets.PPP }}
-      PYPI: "https://upload.pypi.org/legacy/"
     steps:
       - uses: actions/checkout@v2
       - name: Fetch unshallow
@@ -78,6 +75,9 @@ jobs:
       - name: pip build
         run: |
           python setup.py sdist bdist_wheel
-      - name: pip upload
-        run: |
-          python -m twine upload dist/* 
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: ${{ secrets.PPU }}
+          password: ${{ secrets.PPP }}
+          packages_dir: dist/

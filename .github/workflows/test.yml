@@ -1,0 +1,73 @@
+# things not included
+# language
+# notifications - no email notifications set up
+
+name: pytest
+on:
+  pull_request:
+    branches:
+    - '*'
+
+jobs:
+  test_suite:
+    name: Tox on ${{ matrix.python-version }}, ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest']
+        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -l {0} 
+    env:
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      CHANS_DEV: "-c pyviz/label/dev"
+      CHANS: "-c pyviz"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: "100"
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Fetch
+        run: git fetch --prune --tags
+      - name: env setup
+        run: |
+          set -xe
+          python -VV
+          python -m site
+          python -m pip install --upgrade pip
+          python -m pip install tox flake8
+      - name: lint
+        run: |
+          flake8
+      - name: unit python
+        if: (!startsWith(matrix.python-version, 'py'))
+        run: |
+          pyver="${{ matrix.python-version }}"
+          tox_env="py${pyver//.}"
+          tox -e $tox_env
+      - name: unit pypy
+        if: startsWith(matrix.python-version, 'py')
+        run: |
+          pyver="${{ matrix.python-version }}"
+          tox_env="${pyver//.}"
+          tox -e $tox_env
+      - name: unit with_ipython
+        run: tox -e with_ipython
+      - name: unit with_numpy
+        run: tox -e with_numpy
+      - name: unit with_pandas
+        run: tox -e with_pandas
+      - name: unit with_jsonschema
+        run: tox -e with_jsonschema
+      - name: unit with_gmpy
+        if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
+        run: tox -e with_gmpy
+      - name: unit all_deps
+        if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
+        run: tox -e with_all

@@ -37,7 +37,7 @@ jobs:
         id: vars
         run: |
           pyver="${{ matrix.python-version }}"
-          echo "::set-output name=tox_env::${pyver//.}"
+          echo "::set-output name=tox_env::py${pyver//.}"
       - name: Fetch
         run: git fetch --prune --tags
       - name: env setup

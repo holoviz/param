@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        os: ['ubuntu-latest', 'windows-latest']
         python-version: [2.7, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
     timeout-minutes: 30
     defaults:
@@ -42,18 +42,28 @@ jobs:
           python -m site
           python -m pip install --upgrade pip
           python -m pip install tox flake8
-      - name: doit test_lint
+      - name: lint
         run: |
           flake8
-      - name: doit test_unit pypy
+      - name: unit python
         if: (!startsWith(matrix.python-version, 'py'))
         run: |
           pyver="${{ matrix.python-version }}"
           tox_env="py${pyver//.}"
           tox -e $tox_env
-      - name: doit test_unit python
+      - name: unit pypy
         if: startsWith(matrix.python-version, 'py')
         run: |
           pyver="${{ matrix.python-version }}"
           tox_env="${pyver//.}"
           tox -e $tox_env
+      - name: unit with_ipython
+        run: tox -e with_ipython
+      - name: unit with_numpy
+        run: tox -e with_numpy
+      - name: unit with_pandas
+        run: tox -e with_pandas
+      - name: unit with_jsonschema
+        run: tox -e with_jsonschema
+      - name: unit all_deps
+        run: tox -e with_all

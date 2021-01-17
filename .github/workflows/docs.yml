@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m nbsite generate-rst --org pyviz --repo param --project-name param
           mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
-          python -m nbsite build --examples-assets=''
+          python -m nbsite build --examples-assets='' --org holoviz --project-name param
       - name: Deploy dev
         uses: peaceiris/actions-gh-pages@v3
         if: (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc'))

@@ -1359,11 +1359,12 @@ class List(Parameter):
     items in the list are checked to be of that type.
     """
 
-    __slots__ = ['bounds', 'item_type']
+    __slots__ = ['bounds', 'item_type', 'class_']
 
     def __init__(self,default=[],class_=None,item_type=None,instantiate=True,
                  bounds=(0,None),**params):
         self.item_type = item_type or class_
+        self.class_ = class_
         self.bounds = bounds
         Parameter.__init__(self,default=default,instantiate=instantiate,
                            **params)

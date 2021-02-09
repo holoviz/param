@@ -218,12 +218,12 @@ class JSONSerialization(Serialization):
     @classmethod
     def list_schema(cls, p, safe=False):
         schema =  { "type": "array"}
-        if safe is True and p.list_class is None:
+        if safe is True and p.item_type is None:
             msg = ('List without a class specified cannot be guaranteed '
                    'to be safe for serialization')
             raise UnsafeserializableException(msg)
-        if p.list_class is not None and p.list_class in cls.json_schema_literal_types:
-            schema['items'] = {"type": cls.json_schema_literal_types[p.list_class]}
+        if p.item_type is not None and p.item_type in cls.json_schema_literal_types:
+            schema['items'] = {"type": cls.json_schema_literal_types[p.item_type]}
         return schema
 
     @classmethod

@@ -1359,11 +1359,11 @@ class List(Parameter):
     items in the list are checked to be of that type.
     """
 
-    __slots__ = ['bounds', 'list_class']
+    __slots__ = ['bounds', 'item_type']
 
     def __init__(self,default=[],class_=None,instantiate=True,
                  bounds=(0,None),**params):
-        self.list_class = class_
+        self.item_type = class_
         self.bounds = bounds
         Parameter.__init__(self,default=default,instantiate=instantiate,
                            **params)
@@ -1396,9 +1396,9 @@ class List(Parameter):
         self._check_type(val)
 
     def _check_type(self,val):
-        if self.list_class is not None:
+        if self.item_type is not None:
             for v in val:
-                assert isinstance(v,self.list_class),repr(self.name)+": "+repr(v)+" is not an instance of " + repr(self.list_class) + "."
+                assert isinstance(v,self.item_type),repr(self.name)+": "+repr(v)+" is not an instance of " + repr(self.item_type) + "."
 
 
 class HookList(List):

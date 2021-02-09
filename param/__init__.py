@@ -1361,9 +1361,9 @@ class List(Parameter):
 
     __slots__ = ['bounds', 'item_type']
 
-    def __init__(self,default=[],class_=None,instantiate=True,
+    def __init__(self,default=[],class_=None,item_type=None,instantiate=True,
                  bounds=(0,None),**params):
-        self.item_type = class_
+        self.item_type = class_ or item_type
         self.bounds = bounds
         Parameter.__init__(self,default=default,instantiate=instantiate,
                            **params)

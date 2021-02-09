@@ -1363,7 +1363,7 @@ class List(Parameter):
 
     def __init__(self,default=[],class_=None,item_type=None,instantiate=True,
                  bounds=(0,None),**params):
-        self.item_type = class_ or item_type
+        self.item_type = item_type or class_
         self.bounds = bounds
         Parameter.__init__(self,default=default,instantiate=instantiate,
                            **params)

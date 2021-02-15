@@ -4,6 +4,7 @@ Parameterized objects.
 """
 
 import json
+import textwrap
 
 class UnserializableException(Exception):
     pass
@@ -87,7 +88,7 @@ class JSONSerialization(Serialization):
                 continue
             schema[name] = p.schema(safe=safe)
             if p.doc:
-                schema[name]['description'] = p.doc.strip()
+                schema[name]['description'] = textwrap.dedent(p.doc).replace('\n', ' ').strip()
             if p.label:
                 schema[name]['title'] = p.label
         return schema
@@ -152,7 +153,7 @@ class JSONSerialization(Serialization):
         elif class_ in cls.json_schema_literal_types:
             return {'type': cls.json_schema_literal_types[class_]}
         elif issubclass(class_, Parameterized):
-            return class_.param.schema(safe)
+            return {'type': 'object', 'properties': class_.param.schema(safe)}
         else:
             return {'type': 'object'}
 
@@ -311,7 +312,7 @@ class JSONSerialization(Serialization):
             literal_types = [{'type':el} for el in cls.json_schema_literal_types.values()]
             allowable_types = {'anyOf': literal_types}
             properties = {name: allowable_types for name in p.columns}
-            schema['items'] =  {'type': 'object', 'properties' : properties}
+            schema['items'] =  {'type': 'object', 'properties': properties}
 
         minrows, maxrows = None, None
         if isinstance(p.rows, int):

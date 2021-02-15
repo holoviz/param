@@ -826,8 +826,8 @@ class Parameter(object):
         if mode not in  self._serializers:
             raise KeyError('Mode %r not in available serialization formats %r'
                            % (mode, list(self._serializers.keys())))
-        return self._serializers[mode].parameter_schema(self.__class__.__name__, self,
-                                                        safe=safe, subset=subset)
+        return self._serializers[mode].param_schema(self.__class__.__name__, self,
+                                                    safe=safe, subset=subset)
 
     @property
     def label(self):

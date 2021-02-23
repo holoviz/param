@@ -562,6 +562,64 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
     return _depends
 
 
+def bind(function, *args, **kwargs):
+    """
+    Given a function, returns a wrapper function that binds the values
+    of some or all arguments to Parameter values and expresses Param
+    dependencies on those values, so that the function can be invoked
+    whenever the underlying values change and the output will reflect
+    those updated values.
+
+    As for functools.partial, arguments can also be bound to constants, 
+    which allows all of the arguments to be bound, leaving a simple
+    callable object.
+
+    Arguments
+    ---------
+    function: callable
+        The function to bind constant or dynamic args and kwargs to.
+    args: object, param.Parameter
+        Positional arguments to bind to the function.
+    kwargs: object, param.Parameter
+        Keyword arguments to bind to the function.
+
+    Returns
+    -------
+    Returns a new function with the args and kwargs bound to it and
+    annotated with all dependencies.
+    """
+    dependencies = {}
+    for i, arg in enumerate(args):
+        p = param_value_if_widget(arg)
+        if isinstance(p, param.Parameter):
+            dependencies[f'__arg{i}'] = p
+    for kw, v in kwargs.items():
+        p = param_value_if_widget(v)
+        if isinstance(p, param.Parameter):
+            dependencies[kw] = p
+
+    @depends(**dependencies)
+    def wrapped(*wargs, **wkwargs):
+        combined_args = []
+        for arg in args:
+            if isinstance(arg, param.Parameter):
+                combined_args.append(getattr(arg.owner, arg.name))
+            else:
+                combined_args.append(arg)
+        combined_args += list(wargs)
+        combined_kwargs = {}
+        for kw, arg in kwargs.items():
+            if isinstance(arg, param.Parameter):
+                arg = getattr(arg.owner, arg.name)
+            combined_kwargs[kw] = arg
+        for kw, arg in wkwargs.items():
+            if kw.startswith('__arg'):
+                continue
+            combined_kwargs[kw] = arg
+        return function(*combined_args, **combined_kwargs)
+    return wrapped
+
+
 @accept_arguments
 def output(func, *output, **kw):
     """

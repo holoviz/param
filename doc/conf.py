@@ -2,39 +2,34 @@
 
 from nbsite.shared_conf import *
 
-project = u'Param'
-authors = u'HoloViz authors'
-copyright = u'\u00a9 2005-2018, ' + authors
-description = 'Declarative Python programming using Parameters.'
+project = u'param'
+authors = u'HoloViz developers'
+copyright = u'2003-2021 ' + authors
+description = 'Declarative Python programming using Parameters'
 
 import param
-version = release = param.__version__
+version = release = str(param.__version__)
+
+param.parameterized.docstring_signature = False
+param.parameterized.docstring_describe_params = False
+
+extensions.append("myst_parser")
+
+nbbuild_cell_timeout = 600
 
 html_static_path += ['_static']
-html_theme = 'sphinx_holoviz_theme'
-html_theme_options = {
-    'logo':'logo.png',
-    'favicon':'favicon.ico',
-#    'css':'site.css'
-}
 
-_NAV =  (
-    ('API', 'Reference_Manual/param'),
-    ('About', 'About'),
-)
+html_theme = "pydata_sphinx_theme"
+
+html_logo = "_static/logo_horizontal.png"
+
+html_css_files = ['site.css']
 
 html_context.update({
     'PROJECT': project,
     'DESCRIPTION': description,
     'AUTHOR': authors,
-    # canonical URL (for search engines); can ignore for local builds
-    'WEBSITE_SERVER': 'https://param.holoviz.org',
     'VERSION': version,
-    'GOOGLE_ANALYTICS_UA': 'UA-154795830-6',
-    'NAV': _NAV,
-    'LINKS': _NAV,
-    'SOCIAL': (
-        ('Gitter', '//gitter.im/pyviz/pyviz'),
-        ('Github', '//github.com/ioam/param'),
-    )
+    'theme_google_analytics_id': 'UA-154795830-6',
+    'theme_github_url': 'https://github.com/holoviz/param',
 })

@@ -21,6 +21,13 @@ extras_require = {
     'tests': [
         'nose',
         'flake8',
+    ],
+    'doc': [
+        'pygraphviz',
+        'nbsite >=0.6.1',
+        'pydata-sphinx-theme',
+        'myst-parser',
+        'nbconvert <0.6'
     ]
 }
 

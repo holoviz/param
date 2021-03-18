@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/holoviz/param/master/docs/_static/logo_horizontal" width=200>
+<img src="https://raw.githubusercontent.com/holoviz/param/master/doc/_static/logo_horizontal.png" width=250>
 
 |    |    |
 | --- | --- |

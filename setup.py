@@ -27,7 +27,7 @@ extras_require = {
         'nbsite >=0.6.1',
         'pydata-sphinx-theme',
         'myst-parser',
-        'nbconvert <0.6'
+        'nbconvert <6.0'
     ]
 }
 

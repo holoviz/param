@@ -25,7 +25,8 @@ extras_require = {
     'doc': [
         'pygraphviz',
         'nbsite >=0.6.1',
-        'sphinx_holoviz_theme',
+        'pydata-sphinx-theme',
+        'myst-parser',
         'nbconvert <0.6'
     ]
 }

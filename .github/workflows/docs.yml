@@ -36,7 +36,6 @@ jobs:
           python -m pip install -e .
       - name: build docs
         run: |
-          python -m nbsite generate-rst --org pyviz --repo param --project-name param
           mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
           python -m nbsite build --examples-assets='' --org holoviz --project-name param
       - name: Deploy dev

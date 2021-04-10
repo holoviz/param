@@ -28,7 +28,7 @@ extras_require = {
         'pydata-sphinx-theme',
         'myst-parser',
         'nbconvert <6.0',
-        'nbsphinx'
+        'myst_nb'
     ]
 }
 

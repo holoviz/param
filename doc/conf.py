@@ -13,7 +13,7 @@ version = release = str(param.__version__)
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
-extensions += ["myst_parser", "nbsphinx"]
+extensions += ["myst_nb"]
 
 nbbuild_cell_timeout = 600
 

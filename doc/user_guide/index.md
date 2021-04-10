@@ -15,5 +15,6 @@ This user guide provides a detailed introduction to the API and features of Para
 ---
 hidden: true
 ---
+Overview <index>
 Simplifying Codebases <Simplifying_Codebases>
 ```

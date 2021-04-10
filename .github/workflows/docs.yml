@@ -37,6 +37,7 @@ jobs:
       - name: build docs
         run: |
           mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests
+          cp examples/user_guide/*.ipynb doc/user_guide/
           python -m nbsite build --examples-assets='' --org holoviz --project-name param
       - name: Deploy dev
         uses: peaceiris/actions-gh-pages@v3

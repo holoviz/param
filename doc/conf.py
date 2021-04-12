@@ -7,10 +7,10 @@ authors = u'HoloViz developers'
 copyright = u'2003-2021 ' + authors
 description = 'Declarative Python programming using Parameters'
 
+import param
+
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
-
-import param
 
 version = release = str(param.__version__)
 

@@ -7,13 +7,12 @@ authors = u'HoloViz developers'
 copyright = u'2003-2021 ' + authors
 description = 'Declarative Python programming using Parameters'
 
-import param
-version = release = str(param.__version__)
-
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
-extensions += ["myst_nb"]
+import param
+
+version = release = str(param.__version__)
 
 nbbuild_cell_timeout = 600
 

@@ -1933,14 +1933,15 @@ class Color(Parameter):
 class Range(NumericTuple):
     "A numeric range with optional bounds and softbounds"
 
-    __slots__ = ['bounds', 'inclusive_bounds', 'softbounds']
+    __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
 
     def __init__(self,default=None, bounds=None, softbounds=None,
-                 inclusive_bounds=(True,True), **params):
+                 inclusive_bounds=(True,True), step=None, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
+        self.step = step
         super(Range,self).__init__(default=default,length=2,**params)
 
 

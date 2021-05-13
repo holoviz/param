@@ -1022,10 +1022,12 @@ class String(Parameter):
             return
 
         if not isinstance(val, basestring):
-            raise ValueError("String '%s' only takes a string value."%self.name)
+            raise ValueError("String '%s' only takes a string value, "
+                             "received value of type %s." % (self.name, type(val)))
 
         if self.regex is not None and re.match(self.regex, val) is None:
-            raise ValueError("String '%s': '%s' does not match regex '%s'."%(self.name,val,self.regex))
+            raise ValueError("String '%s': '%s' does not match regex '%s'."
+                             % (self.name, val, self.regex))
 
 
 class shared_parameters(object):

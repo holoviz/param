@@ -1818,6 +1818,10 @@ class FileSelector(ObjectSelector):
         self.path = path
         self.update()
 
+    def _on_set(self, attribute, old, new):
+        if attribute == 'path':
+            self.update()
+
     def update(self):
         self.objects = sorted(glob.glob(self.path))
         if self.default in self.objects:

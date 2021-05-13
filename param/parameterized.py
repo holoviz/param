@@ -851,18 +851,19 @@ class Parameter(object):
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
 
 
-    # TODO: quick trick to allow subscription to the setting of
-    # parameter metadata. ParameterParameter?
+    def _on_set(self, attribute, old, value):
+        """Called when a parameter attribute is changed"""
 
-    # Note that unlike with parameter value setting, there's no access
-    # to the Parameterized instance, so no per-instance subscription.
 
-    def __setattr__(self,attribute,value):
-        implemented = (attribute!="default" and hasattr(self,'watchers') and attribute in self.watchers)
+    def __setattr__(self, attribute, value):
+        implemented = (attribute != "default" and hasattr(self,'watchers') and attribute in self.watchers)
+        slot_attribute = attribute in self.__slots__
         try:
-            old = getattr(self,attribute) if implemented else NotImplemented
+            old = getattr(self, attribute) if implemented else NotImplemented
+            if slot_attribute:
+                self._on_set(attribute, old, value)
         except AttributeError as e:
-            if attribute in self.__slots__:
+            if slot_attribute:
                 # If Parameter slot is defined but an AttributeError was raised
                 # we are in __setstate__ and watchers should not be triggered
                 old = NotImplemented
@@ -905,7 +906,7 @@ class Parameter(object):
 
 
     @instance_descriptor
-    def __set__(self,obj,val):
+    def __set__(self, obj, val):
         """
         Set the value for this Parameter.
 

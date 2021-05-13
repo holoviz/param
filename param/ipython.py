@@ -88,16 +88,15 @@ class ParamPager(object):
 
         (params, val_dict, changed) = info
         contents = []
-        displayed_params = {}
-        for name, p in params.items():
+        displayed_params = []
+        for name in self.sort_by_precedence(params):
             if only_changed and not (name in changed):
                 continue
-            displayed_params[name] = p
+            displayed_params.append((name, params[name]))
 
-        right_shift = max(len(name) for name in displayed_params.keys())+2
+        right_shift = max(len(name) for name, _ in displayed_params)+2
 
-        for i, name in enumerate(sorted(displayed_params)):
-            p = displayed_params[name]
+        for i, (name, p) in enumerate(displayed_params):
             heading = "%s: " % name
             unindented = textwrap.dedent("< No docstring available >" if p.doc is None else p.doc)
 
@@ -286,7 +285,6 @@ class ParamPager(object):
         heading_text = "%s\n%s\n" % (title, heading_line)
 
         param_info = self.get_param_info(param_obj, include_super=True)
-
         if not param_info[0]:
             return "%s\n%s" % ((green % heading_text), "Object has no parameters.")
 
@@ -294,7 +292,6 @@ class ParamPager(object):
                                   only_changed=False)
 
         docstrings = self.param_docstrings(param_info, max_col_len=100, only_changed=False)
-
         dflt_msg = "Parameters changed from their default values are marked in red."
         top_heading = (green % heading_text)
         top_heading += "\n%s" % (red % dflt_msg)

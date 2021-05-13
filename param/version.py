@@ -26,6 +26,9 @@ def run_cmd(args, cwd=None):
                             cwd=cwd)
     output, error = (str(s.decode()).strip() for s in proc.communicate())
 
+    # Detects errors as _either_ a non-zero return code _or_ messages
+    # printed to stderr, because the return code is erroneously fixed at
+    # zero in some cases (see https://github.com/holoviz/param/pull/389).
     if proc.returncode != 0 or len(error) > 0:
         raise Exception(proc.returncode, error)
     return output
@@ -174,19 +177,22 @@ class Version(object):
                 # Verify this is the correct repository (since fpath could
                 # be an unrelated git repository, and autover could just have
                 # been copied/installed into it).
-                output = run_cmd([cmd, 'remote', '-v'],
-                                 cwd=os.path.dirname(self.fpath))
-                repo_matches = ['', # No remote set
-                                '/' + self.reponame + '.git' ,
+                remotes = run_cmd([cmd, 'remote', '-v'],
+                                  cwd=os.path.dirname(self.fpath))
+                repo_matches = ['/' + self.reponame + '.git' ,
                                 # A remote 'server:reponame.git' can also be referred
                                 # to (i.e. cloned) as `server:reponame`.
                                 '/' + self.reponame + ' ']
-                if not any(m in output for m in repo_matches):
-                    return self
-
-            output = run_cmd([cmd, 'describe', '--long', '--match',
-                              "v[0-9]*.[0-9]*.[0-9]*", '--dirty'],
-                             cwd=os.path.dirname(self.fpath))
+                if not any(m in remotes for m in repo_matches):
+                    try:
+                        output = self._output_from_file()
+                        if output is not None:
+                            self._update_from_vcs(output)
+                    except: pass
+            if output is None:
+                output = run_cmd([cmd, 'describe', '--long', '--match',
+                                  "v[0-9]*.[0-9]*.[0-9]*", '--dirty'],
+                                 cwd=os.path.dirname(self.fpath))
             if as_string: return output
         except Exception as e1:
             try:

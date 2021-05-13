@@ -1927,13 +1927,12 @@ class Parameters(object):
         """
         self = self_.self
         d = {}
-        for param_name,param in self.param.objects('existing').items():
+        for param_name, param in self.param.objects('existing').items():
             if param.constant:
                 pass
-            elif param.instantiate:
-                self.param._instantiate_param(param,dict_=d,key=param_name)
-            else:
-                d[param_name]=param.default
+            if param.instantiate:
+                self.param._instantiate_param(param, dict_=d, key=param_name)
+            d[param_name] = param.default
         return d
 
     # CEBALERT: designed to avoid any processing unless the print

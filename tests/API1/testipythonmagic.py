@@ -29,13 +29,14 @@ class TestParamPager(API1TestCase):
     def setUp(self):
         super(TestParamPager, self).setUp()
         self.maxDiff = None
+
         class TestClass(param.Parameterized):
-            u = param.Number(4)
-            v = param.Number(4, constant=True)
-            w = param.Number(4, readonly=True)
-            x = param.String(None, allow_None=True)
-            y = param.Number(4, bounds=(-1, None))
-            z = param.Number(4, bounds=(-1, 100), softbounds=(-100, -200))
+            u = param.Number(4, precedence=0)
+            v = param.Number(4, constant=True, precedence=1)
+            w = param.Number(4, readonly=True, precedence=2)
+            x = param.String(None, allow_None=True, precedence=3)
+            y = param.Number(4, bounds=(-1, None), precedence=4)
+            z = param.Number(4, bounds=(-1, 100), softbounds=(-100, -200), precedence=5)
 
         self.TestClass = TestClass
         self.pager = ParamPager()

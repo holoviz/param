@@ -1915,6 +1915,7 @@ class Color(Parameter):
     prefix.
     """
 
+    # CSS3 color specification https://www.w3.org/TR/css-color-3/#svg-color
     _named_colors = [ 'aliceblue', 'antiquewhite', 'aqua',
         'aquamarine', 'azure', 'beige', 'bisque', 'black',
         'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood',

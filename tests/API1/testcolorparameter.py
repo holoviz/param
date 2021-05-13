@@ -25,6 +25,26 @@ class TestColorParameters(API1TestCase):
         else:
             raise AssertionError("No exception raised on invalid color")
 
+    def test_set_invalid_named_color(self):
+        class Q(param.Parameterized):
+            q = param.Color(allow_named=True)
+        try:
+            Q.q = 'razzmatazz'
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("No exception raised on invalid color")
+
+    def test_invalid_long_hex(self):
+        class Q(param.Parameterized):
+            q = param.Color()
+        try:
+            Q.q = '#gfffff'
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("No exception raised on invalid color")
+
     def test_valid_long_hex(self):
         class Q(param.Parameterized):
             q = param.Color()

@@ -1915,18 +1915,64 @@ class Color(Parameter):
     prefix.
     """
 
-    def __init__(self, default=None, **kwargs):
+    # CSS3 color specification https://www.w3.org/TR/css-color-3/#svg-color
+    _named_colors = [ 'aliceblue', 'antiquewhite', 'aqua',
+        'aquamarine', 'azure', 'beige', 'bisque', 'black',
+        'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood',
+        'cadetblue', 'chartreuse', 'chocolate', 'coral',
+        'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue',
+        'darkcyan', 'darkgoldenrod', 'darkgray', 'darkgrey',
+        'darkgreen', 'darkkhaki', 'darkmagenta', 'darkolivegreen',
+        'darkorange', 'darkorchid', 'darkred', 'darksalmon',
+        'darkseagreen', 'darkslateblue', 'darkslategray',
+        'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink',
+        'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue',
+        'firebrick', 'floralwhite', 'forestgreen', 'fuchsia',
+        'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'gray',
+        'grey', 'green', 'greenyellow', 'honeydew', 'hotpink',
+        'indianred', 'indigo', 'ivory', 'khaki', 'lavender',
+        'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue',
+        'lightcoral', 'lightcyan', 'lightgoldenrodyellow',
+        'lightgray', 'lightgrey', 'lightgreen', 'lightpink',
+        'lightsalmon', 'lightseagreen', 'lightskyblue',
+        'lightslategray', 'lightslategrey', 'lightsteelblue',
+        'lightyellow', 'lime', 'limegreen', 'linen', 'magenta',
+        'maroon', 'mediumaquamarine', 'mediumblue', 'mediumorchid',
+        'mediumpurple', 'mediumseagreen', 'mediumslateblue',
+        'mediumspringgreen', 'mediumturquoise', 'mediumvioletred',
+        'midnightblue', 'mintcream', 'mistyrose', 'moccasin',
+        'navajowhite', 'navy', 'oldlace', 'olive', 'olivedrab',
+        'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen',
+        'paleturquoise', 'palevioletred', 'papayawhip', 'peachpuff',
+        'peru', 'pink', 'plum', 'powderblue', 'purple', 'red',
+        'rosybrown', 'royalblue', 'saddlebrown', 'salmon',
+        'sandybrown', 'seagreen', 'seashell', 'sienna', 'silver',
+        'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow',
+        'springgreen', 'steelblue', 'tan', 'teal', 'thistle',
+        'tomato', 'turquoise', 'violet', 'wheat', 'white',
+        'whitesmoke', 'yellow', 'yellowgreen']
+
+    __slots__ = ['allow_named']
+
+    def __init__(self, default=None, allow_named=True, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
+        self.allow_named = allow_named
         self._validate(default)
 
     def _validate(self, val):
         if (self.allow_None and val is None):
             return
         if not isinstance(val, basestring):
-            raise ValueError("Color '%s' only takes a string value."%self.name)
-        if not re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val):
-            raise ValueError("Color '%s' only accepts valid RGB hex codes."
-                             % self.name)
+            raise ValueError("Color '%s' only takes a string value, "
+                             "received %s." % (self.name, type(val)))
+        is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
+        if self.allow_named:
+            if not is_hex and val not in self._named_colors:
+                raise ValueError("Color '%s' only takes RGB hex codes "
+                                 "or named colors, received '%s'." % (self.name, val))
+        elif not is_hex:
+            raise ValueError("Color '%s' only accepts valid RGB hex "
+                             "codes, received '%s'." % (self.name, val))
 
 
 

@@ -1399,7 +1399,7 @@ class List(Parameter):
             return
 
         if not isinstance(val, list):
-            raise ValueError("List '%s' must be a list, not %s."
+            raise ValueError("List '%s' must be a list, not an object of type %s."
                              % (self.name, type(val)))
 
         if self.bounds is not None:

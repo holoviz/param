@@ -972,22 +972,12 @@ class Boolean(Parameter):
     def _validate(self, val):
         if self.allow_None:
             if not isinstance(val, bool) and val is not None:
-                raise ValueError("Boolean '%s' only takes a Boolean value "
-                                 "or None, not type %s."
-                                 % (self.name, type(val)))
-
-            if val is not True and val is not False and val is not None:
-                raise ValueError("Boolean '%s' must be True, False, or None, "
-                                 "not %s."% (self.name, val))
-        else:
-            if not isinstance(val,bool):
-                raise ValueError("Boolean '%s' only takes a Boolean value, "
-                                 "not type %s."
-                                 % (self.name, type(val)))
-
-            if val is not True and val is not False:
-                raise ValueError("Boolean '%s' must be True or False, "
-                                 "not %s." % (self.name, val))
+                raise ValueError("Boolean parameter %r only takes a "
+                                 "Boolean value or None, not %s."
+                                 % (self.name, val))
+        elif not isinstance(val, bool):
+            raise ValueError("Boolean parameter %r must be True or False, "
+                             "not %s." % (self.name, val))
         super(Boolean, self)._validate(val)
 
 
@@ -1047,7 +1037,7 @@ class NumericTuple(Tuple):
             if _is_number(n):
                 continue
             raise ValueError("NumericTuple parameter %r only takes numeric "
-                             "values, not type %r." (self.name, type(n)))
+                             "values, not type %r." % (self.name, type(n)))
 
 
 
@@ -1075,7 +1065,7 @@ class Callable(Parameter):
         if (self.allow_None and val is None) or callable(val):
             return
 
-        raise ValueError("Callable %r only takes a callable object, "
+        raise ValueError("Callable parameter %r only takes a callable object, "
                          "not objects of type %r." % (self.name, type(val)))
 
 
@@ -1425,8 +1415,8 @@ class List(Parameter):
         for v in val:
             if isinstance(v, self.item_type):
                 continue
-            raise TypeError("Parameter %r is not an instance of type %r, "
-                            "not %r." % (self.name, self.item_type, val))
+            raise TypeError("List parameter %r items must be instances "
+                            "of type %r, not %r." % (self.name, self.item_type, val))
 
 
 class HookList(List):
@@ -1439,9 +1429,12 @@ class HookList(List):
     """
     __slots__ = ['class_','bounds']
 
-    def _check_type(self,val):
+    def _check_type(self, val):
         for v in val:
-            assert callable(v),repr(self.name)+": "+repr(v)+" is not callable."
+            if callable(v):
+                continue
+            raise ValueError("HookList parameter %r items must be callable, "
+                             "not %r." % (self.name, v))
 
 
 class Dict(ClassSelector):

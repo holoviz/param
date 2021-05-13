@@ -1022,11 +1022,11 @@ class String(Parameter):
             return
 
         if not isinstance(val, basestring):
-            raise ValueError("String '%s' only takes a string value, "
-                             "received value of type %s." % (self.name, type(val)))
+            raise ValueError("String parameter %r only takes a string value, "
+                             "not value of type %s." % (self.name, type(val)))
 
         if self.regex is not None and re.match(self.regex, val) is None:
-            raise ValueError("String '%s': '%s' does not match regex '%s'."
+            raise ValueError("String parameter %r value %r does not match regex %r."
                              % (self.name, val, self.regex))
 
 

@@ -24,6 +24,28 @@ class TestDataFrame(API1TestCase):
         class Test(param.Parameterized):
             df = param.DataFrame(valid_df)
 
+    def test_dataframe_allow_none(self):
+        class Test(param.Parameterized):
+            df = param.DataFrame(default=None, rows=3)
+
+        test = Test()
+        self.assertIs(test.df, None)
+
+    def test_dataframe_allow_none_constructor(self):
+        class Test(param.Parameterized):
+            df = param.DataFrame(allow_None=True, rows=3)
+
+        test = Test(df=None)
+        self.assertIs(test.df, None)
+
+    def test_dataframe_allow_none_set_value(self):
+        class Test(param.Parameterized):
+            df = param.DataFrame(allow_None=True, rows=3)
+
+        test = Test()
+        test.df = None
+        self.assertIs(test.df, None)
+
     def test_empty_dataframe_param_invalid_set(self):
         empty = pandas.DataFrame()
         class Test(param.Parameterized):
@@ -176,6 +198,28 @@ class TestSeries(API1TestCase):
             class Test(param.Parameterized):
                 series = param.Series(default=invalid_series, rows=(5,7))
 
+    def test_series_allow_none(self):
+        class Test(param.Parameterized):
+            series = param.Series(default=None, rows=3)
+
+        test = Test()
+        self.assertIs(test.series, None)
+
+    def test_series_allow_none_constructor(self):
+        class Test(param.Parameterized):
+            series = param.Series(allow_None=True, rows=3)
+
+        test = Test(series=None)
+        self.assertIs(test.series, None)
+
+    def test_series_allow_none_set_value(self):
+        class Test(param.Parameterized):
+            series = param.Series(allow_None=True, rows=3)
+
+        test = Test()
+        test.series = None
+        self.assertIs(test.series, None)
+                
 if __name__ == "__main__":
     import nose
     nose.runmodule()

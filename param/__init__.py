@@ -1473,7 +1473,6 @@ class DataFrame(ClassSelector):
         super(DataFrame,self).__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
 
-
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
         if not isinstance(bounds, tuple):
@@ -1492,6 +1491,9 @@ class DataFrame(ClassSelector):
 
         if isinstance(self.columns, set) and self.ordered is True:
             raise ValueError('Columns cannot be ordered when specified as a set')
+
+        if self.allow_None and val is None:
+            return
 
         if self.columns is None:
             pass
@@ -1548,14 +1550,18 @@ class Series(ClassSelector):
         if failure:
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
-    def __init__(self, default=None, rows=None, **params):
+    def __init__(self, default=None, rows=None, allow_None=False, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super(Series,self).__init__(pdSeries, allow_None=True, default=default, **params)
+        super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
+                                    **params)
         self._validate(self.default)
 
     def _validate(self, val):
         super(Series, self)._validate(val)
+
+        if self.allow_None and val is None:
+            return
 
         if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'Row')

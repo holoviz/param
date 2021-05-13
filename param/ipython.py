@@ -135,9 +135,8 @@ class ParamPager(object):
         """
         params = [(p, pobj) for p, pobj in parameters.items()]
         key_fn = lambda x: x[1].precedence if x[1].precedence is not None else 1e-8
-        sorted_precedence = sorted(params, key=key_fn)
-        filtered = [(k, p) for k, p in sorted_precedence]
-        groups = itertools.groupby(filtered, key=key_fn)
+        sorted_params = sorted(params, key=key_fn)
+        groups = itertools.groupby(sorted_params, key=key_fn)
         # Params preserve definition order in Python 3.6+
         dict_ordered = (
             (sys.version_info.major == 3 and sys.version_info.minor >= 6) or
@@ -156,7 +155,7 @@ class ParamPager(object):
         properly formatted table and then tabulate it.
         """
 
-        info_dict, bounds_dict = {}, {}
+        info_list, bounds_dict = [], {}
         (params, val_dict, changed) = info
         col_widths = dict((k,0) for k in order)
 
@@ -171,8 +170,13 @@ class ParamPager(object):
             allow_None = ' AN' if hasattr(p, 'allow_None') and p.allow_None else ''
 
             mode = '%s %s%s' % (constant, readonly, allow_None)
-            info_dict[name] = {'name': name, 'type':p.__class__.__name__,
-                               'mode':mode}
+
+            value = repr(val_dict[name])
+            if len(value) > (max_col_len - 3):
+                value = value[:max_col_len-3] + '...'
+
+            p_dict = {'name': name, 'type': p.__class__.__name__,
+                      'mode': mode, 'value': value}
 
             if hasattr(p, 'bounds'):
                 lbound, ubound = (None,None) if p.bounds is None else p.bounds
@@ -190,26 +194,23 @@ class ParamPager(object):
 
                 if (lbound, ubound) != (None,None):
                     bounds_dict[name] = (mark_lbound, mark_ubound)
-                    info_dict[name]['bounds'] = '(%s, %s)' % (lbound, ubound)
+                    p_dict['bounds'] = '(%s, %s)' % (lbound, ubound)
 
-            value = repr(val_dict[name])
-            if len(value) > (max_col_len - 3):
-                value = value[:max_col_len-3] + '...'
-            info_dict[name]['value'] = value
-
-            for col in info_dict[name]:
-                max_width = max([col_widths[col], len(info_dict[name][col])])
+            for col in p_dict:
+                max_width = max([col_widths[col], len(p_dict[col])])
                 col_widths[col] = max_width
 
-        return self._tabulate(info_dict, col_widths, changed, order, bounds_dict)
+            info_list.append((name, p_dict))
+
+        return self._tabulate(info_list, col_widths, changed, order, bounds_dict)
 
 
-    def _tabulate(self, info_dict, col_widths, changed, order, bounds_dict):
+    def _tabulate(self, info_list, col_widths, changed, order, bounds_dict):
         """
         Returns the supplied information as a table suitable for
         printing or paging.
 
-        info_dict:  Dictionary of the parameters name, type and mode.
+        info_list:  List of the parameters name, type and mode.
         col_widths: Dictionary of column widths in characters
         changed:    List of parameters modified from their defaults.
         order:      The order of the table columns
@@ -217,7 +218,7 @@ class ParamPager(object):
         """
 
         contents, tail = [], []
-        column_set = set(k for row in info_dict.values() for k in row)
+        column_set = set(k for _, row in info_list for k in row)
         columns = [col for col in order if col in column_set]
 
         title_row = []
@@ -230,9 +231,8 @@ class ParamPager(object):
         contents.append(blue % ''.join(title_row)+"\n")
 
         # Format the table rows
-        for row in info_dict:
+        for row, info in info_list:
             row_list = []
-            info = info_dict[row]
             for i,col in enumerate(columns):
                 width = col_widths[col]+2
                 val = info[col] if (col in info) else ''

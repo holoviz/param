@@ -26,21 +26,21 @@ class TestDataFrame(API1TestCase):
 
     def test_dataframe_allow_none(self):
         class Test(param.Parameterized):
-            df = param.DataFrame(default=None, length=3)
+            df = param.DataFrame(default=None, rows=3)
 
         test = Test()
         self.assertIs(test.df, None)
 
     def test_dataframe_allow_none_constructor(self):
         class Test(param.Parameterized):
-            df = param.DataFrame(allow_None=True, length=3)
+            df = param.DataFrame(allow_None=True, rows=3)
 
         test = Test(df=None)
         self.assertIs(test.df, None)
 
     def test_dataframe_allow_none_set_value(self):
         class Test(param.Parameterized):
-            df = param.DataFrame(allow_None=True, length=3)
+            df = param.DataFrame(allow_None=True, rows=3)
 
         test = Test()
         test.df = None
@@ -200,21 +200,21 @@ class TestSeries(API1TestCase):
 
     def test_series_allow_none(self):
         class Test(param.Parameterized):
-            series = param.Series(default=None, length=3)
+            series = param.Series(default=None, rows=3)
 
         test = Test()
         self.assertIs(test.series, None)
 
     def test_series_allow_none_constructor(self):
         class Test(param.Parameterized):
-            series = param.Series(allow_None=True, length=3)
+            series = param.Series(allow_None=True, rows=3)
 
         test = Test(series=None)
-        self.assertIs(test.df, None)
+        self.assertIs(test.series, None)
 
     def test_series_allow_none_set_value(self):
         class Test(param.Parameterized):
-            series = param.Series(allow_None=True, length=3)
+            series = param.Series(allow_None=True, rows=3)
 
         test = Test()
         test.series = None

@@ -1075,6 +1075,8 @@ class String(Parameter):
             self._validate_value(getattr(self.owner, self.name), new)
 
     def _validate_regex(self, val, regex):
+        if (val is None and self.allow_None):
+            return
         if regex is not None and re.match(regex, val) is None:
             raise ValueError("String parameter %r value %r does not match regex %r."
                              % (self.name, val, regex))

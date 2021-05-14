@@ -25,7 +25,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.e, 6)
 
     def test_single_class_instance_error(self):
-        exception = "Parameter 'e' value must be an instance of int, not 'a'"
+        exception = "ClassSelector parameter 'e' value must be an instance of int, not 'a'."
         with self.assertRaisesRegexp(ValueError, exception):
             self.P(e='a')
 
@@ -34,7 +34,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.f, float)
 
     def test_single_class_type_error(self):
-        exception = "Parameter 'str' must be a subclass of Number, not 'type'"
+        exception = "ClassSelector parameter 'f' must be a subclass of Number, not 'str'."
         with self.assertRaisesRegexp(ValueError, exception):
             self.P(f=str)
 
@@ -47,7 +47,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.g, 'A')
 
     def test_multiple_class_instance_error(self):
-        exception = "Parameter 'g' value must be an instance of \(int, str\), not '3.0'"
+        exception = "ClassSelector parameter 'g' value must be an instance of \(int, str\), not 3.0."
         with self.assertRaisesRegexp(ValueError, exception):
             self.P(g=3.0)
 
@@ -60,6 +60,6 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.h, str)
 
     def test_multiple_class_type_error(self):
-        exception = "Parameter 'float' must be a subclass of \(int, str\), not 'type'"
+        exception = "ClassSelector parameter 'h' must be a subclass of \(int, str\), not 'float'."
         with self.assertRaisesRegexp(ValueError, exception):
             self.P(h=float)

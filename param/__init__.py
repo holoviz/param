@@ -750,16 +750,16 @@ class Number(Dynamic):
 
     """
 
-    __slots__ = ['bounds','_softbounds','inclusive_bounds','set_hook', 'step']
+    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    def __init__(self,default=0.0,bounds=None,softbounds=None,
+    def __init__(self, default=0.0, bounds=None, softbounds=None,
                  inclusive_bounds=(True,True), step=None, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
-        super(Number,self).__init__(default=default,**params)
+        super(Number,self).__init__(default=default, **params)
 
         self.set_hook = identity_hook
         self.bounds = bounds
@@ -832,7 +832,7 @@ class Number(Dynamic):
         return val
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
-        if bounds is None:
+        if bounds is None or (val is None and self.allow_None):
             return
         vmin, vmax = bounds
         incmin, incmax = inclusive_bounds
@@ -1004,6 +1004,9 @@ class Tuple(Parameter):
                              "not %r." % (self.name, type(val)))
 
     def _validate_length(self, val, length):
+        if val is None and self.allow_None:
+            return
+
         if not len(val) == length:
             raise ValueError("Tuple parameter %r is not of the correct "
                              "length (%d instead of %d)." %
@@ -1339,16 +1342,17 @@ class ClassSelector(SelectorBase):
             class_name = ('(%s)' % ', '.join(cl.__name__ for cl in class_))
         else:
             class_name = class_.__name__
+        param_cls = self.__class__.__name__
         if is_instance:
             if not (isinstance(val, class_)):
                 raise ValueError(
-                    "ClassSelector parameter %r value must be an instance of %s, not %r." %
-                    (self.name, class_name, val))
+                    "%s parameter %r value must be an instance of %s, not %r." %
+                    (param_cls, self.name, class_name, val))
         else:
             if not (issubclass(val, class_)):
                 raise ValueError(
-                    "ClassSelector parameter %r must be a subclass of %s, not %r." %
-                    (self.name, class_name, val.__name__))
+                    "%s parameter %r must be a subclass of %s, not %r." %
+                    (param_cls, self.name, class_name, val.__name__))
 
     def get_range(self):
         """
@@ -2011,6 +2015,8 @@ class Color(Parameter):
                              "not an object of type %s." % (self.name, type(val)))
 
     def _validate_allow_named(self, val, allow_named):
+        if (val is None and self.allow_None):
+            return
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
             if not is_hex and val not in self._named_colors:
@@ -2025,7 +2031,6 @@ class Range(NumericTuple):
     "A numeric range with optional bounds and softbounds"
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
-
 
     def __init__(self,default=None, bounds=None, softbounds=None,
                  inclusive_bounds=(True,True), step=None, **params):

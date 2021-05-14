@@ -1,6 +1,7 @@
 """
 Unit test for String parameters
 """
+import sys
 import unittest
 
 import param
@@ -23,7 +24,8 @@ class TestStringParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "String parameter 's' only takes a string value, not value of type <class 'NoneType'>."
+        cls = 'class' if sys.version_info.major > 2 else 'type'
+        exception = "String parameter 's' only takes a string value, not value of type <%s 'NoneType'>." % cls
         with self.assertRaisesRegexp(ValueError, exception):
             a.s = None  # because allow_None should be False
 

@@ -1,7 +1,7 @@
 """
 Unit test for String parameters
 """
-
+import sys
 import unittest
 
 import param
@@ -24,7 +24,8 @@ class TestStringParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "String 's' only takes a string value."
+        cls = 'class' if sys.version_info.major > 2 else 'type'
+        exception = "String parameter 's' only takes a string value, not value of type <%s 'NoneType'>." % cls
         with self.assertRaisesRegexp(ValueError, exception):
             a.s = None  # because allow_None should be False
 
@@ -37,21 +38,19 @@ class TestStringParameters(unittest.TestCase):
         a.s = None  # because allow_None should be True with default of None
 
     def test_regex_incorrect(self):
-
         class A(param.Parameterized):
             s = param.String('0.0.0.0', regex=ip_regex)
 
         a = A()
 
-        exception = "String 's': '123.123.0.256' does not match regex"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = "String parameter 's' value '123.123.0.256' does not match regex '%s'."  % ip_regex
+        with self.assertRaises(ValueError) as e:
             a.s = '123.123.0.256'
+        self.assertEqual(str(e.exception), exception.replace('\\', '\\\\'))
 
     def test_regex_incorrect_default(self):
-
-        exception = "String 'None': '' does not match regex"
-        with self.assertRaisesRegexp(ValueError, exception):
+        exception = "String parameter None value '' does not match regex '%s'." % ip_regex
+        with self.assertRaises(ValueError) as e:
             class A(param.Parameterized):
                 s = param.String(regex=ip_regex)  # default value '' does not match regular expression
-
-
+        self.assertEqual(str(e.exception), exception.replace('\\', '\\\\'))

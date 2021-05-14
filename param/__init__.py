@@ -852,18 +852,22 @@ class Number(Dynamic):
             if vmax is not None:
                 if incmax is True:
                     if not val <= vmax:
-                        raise ValueError("Parameter '%s' must be at most %s"%(self.name,vmax))
+                        raise ValueError("Parameter '%s' must be at most %s, "
+                                         "not %s." % (self.name, vmax, val))
                 else:
                     if not val < vmax:
-                        raise ValueError("Parameter '%s' must be less than %s"%(self.name,vmax))
+                        raise ValueError("Parameter '%s' must be less than %s, "
+                                         "not %s." % (self.name, vmax, val))
 
             if vmin is not None:
                 if incmin is True:
                     if not val >= vmin:
-                        raise ValueError("Parameter '%s' must be at least %s"%(self.name,vmin))
+                        raise ValueError("Parameter '%s' must be at least %s, "
+                                         "not %s." % (self.name, vmin, val))
                 else:
                     if not val > vmin:
-                        raise ValueError("Parameter '%s' must be greater than %s"%(self.name,vmin))
+                        raise ValueError("Parameter '%s' must be greater than %s, "
+                                         "not %s." % (self.name, vmin, val))
 
 
 
@@ -879,18 +883,21 @@ class Number(Dynamic):
             return
 
         if not _is_number(val):
-            raise ValueError("Parameter '%s' only takes numeric values"%(self.name))
+            raise ValueError("Parameter %r only takes numeric values, "
+                             "not type %r." % (self.name, type(val)))
 
         if self.step is not None and not _is_number(self.step):
-            raise ValueError("Step parameter can only be None or a numeric value")
+            raise ValueError("Step parameter can only be None or a "
+                             "numeric value, not type %r." % type(val))
 
         self._checkBounds(val)
 
 
     def get_soft_bounds(self):
         """
-        For each soft bound (upper and lower), if there is a defined bound (not equal to None)
-        then it is returned, otherwise it defaults to the hard bound. The hard bound could still be None.
+        For each soft bound (upper and lower), if there is a defined
+        bound (not equal to None) then it is returned, otherwise it
+        defaults to the hard bound. The hard bound could still be None.
         """
         if self.bounds is None:
             hl,hu=(None,None)
@@ -923,8 +930,8 @@ class Number(Dynamic):
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
-    def __init__(self,default=0,**params):
-        Number.__init__(self,default=default,**params)
+    def __init__(self, default=0, **params):
+        Number.__init__(self, default=default, **params)
 
     def _validate(self, val):
         if callable(val): return
@@ -932,12 +939,13 @@ class Integer(Number):
         if self.allow_None and val is None:
             return
 
-        if not isinstance(val,int):
-            raise ValueError("Parameter '%s' must be an integer."%self.name)
+        if not isinstance(val, int):
+            raise ValueError("Parameter %r must be an integer, not type %r."
+                             % (self.name, type(val)))
 
         if self.step is not None and not isinstance(self.step, int):
-            raise ValueError("Step parameter can only be None or an integer value")
-
+            raise ValueError("Step parameter can only be None or an "
+                             "integer value, not type %r" % type(self.step))
 
         self._checkBounds(val)
 
@@ -946,8 +954,8 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    def __init__(self,default=1.0,softbounds=None,**params):
-        Number.__init__(self,default=default,bounds=(0.0,1.0),softbounds=softbounds,**params)
+    def __init__(self, default=1.0, softbounds=None, **params):
+        Number.__init__(self, default=default, bounds=(0.0,1.0), softbounds=softbounds, **params)
 
 
 
@@ -956,25 +964,20 @@ class Boolean(Parameter):
 
     __slots__ = ['bounds']
 
-    # CB: bounds have no effect; see https://github.com/ioam/param/issues/82
-    def __init__(self,default=False,bounds=(0,1),**params):
+    # CB: bounds have no effect; see https://github.com/holoviz/param/issues/82
+    def __init__(self, default=False, bounds=(0,1), **params):
         self.bounds = bounds
-        super(Boolean, self).__init__(default=default,**params)
+        super(Boolean, self).__init__(default=default, **params)
 
     def _validate(self, val):
         if self.allow_None:
-            if not isinstance(val,bool) and val is not None:
-                raise ValueError("Boolean '%s' only takes a Boolean value or None."
-                                 %self.name)
-
-            if val is not True and val is not False and val is not None:
-                raise ValueError("Boolean '%s' must be True, False, or None."%self.name)
-        else:
-            if not isinstance(val,bool):
-                raise ValueError("Boolean '%s' only takes a Boolean value."%self.name)
-
-            if val is not True and val is not False:
-                raise ValueError("Boolean '%s' must be True or False."%self.name)
+            if not isinstance(val, bool) and val is not None:
+                raise ValueError("Boolean parameter %r only takes a "
+                                 "Boolean value or None, not %s."
+                                 % (self.name, val))
+        elif not isinstance(val, bool):
+            raise ValueError("Boolean parameter %r must be True or False, "
+                             "not %s." % (self.name, val))
         super(Boolean, self)._validate(val)
 
 
@@ -1001,18 +1004,18 @@ class Tuple(Parameter):
             self.length = length
         self._validate(default)
 
-
     def _validate(self, val):
         if val is None and self.allow_None:
             return
 
-        if not isinstance(val,tuple):
-            raise ValueError("Tuple '%s' only takes a tuple value."%self.name)
+        if not isinstance(val, tuple):
+            raise ValueError("Tuple parameter %r only takes a tuple value, "
+                             "not %r." % (self.name, type(val)))
 
-        if not len(val)==self.length:
-            raise ValueError("%s: tuple is not of the correct length (%d instead of %d)." %
-                             (self.name,len(val),self.length))
-
+        if not len(val) == self.length:
+            raise ValueError("Tuple parameter %r is not of the correct "
+                             "length (%d instead of %d)." %
+                             (self.name, len(val), self.length))
 
     @classmethod
     def serialize(cls, value):
@@ -1028,19 +1031,21 @@ class NumericTuple(Tuple):
 
     def _validate(self, val):
         super(NumericTuple, self)._validate(val)
-        if not (self.allow_None and val is None):
-            for n in val:
-                if not _is_number(n):
-                    raise ValueError("%s: tuple element is not numeric: %s." %
-                                     (self.name,str(n)))
+        if self.allow_None and val is None:
+            return
+        for n in val:
+            if _is_number(n):
+                continue
+            raise ValueError("NumericTuple parameter %r only takes numeric "
+                             "values, not type %r." % (self.name, type(n)))
 
 
 
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    def __init__(self,default=(0.0,0.0),**params):
-        super(XYCoordinates,self).__init__(default=default,length=2,**params)
+    def __init__(self, default=(0.0, 0.0), **params):
+        super(XYCoordinates,self).__init__(default=default, length=2, **params)
 
 
 
@@ -1055,9 +1060,13 @@ class Callable(Parameter):
     """
 
     def _validate(self, val):
-        if not (self.allow_None and val is None) and (not callable(val)):
-            raise ValueError("Callable '%s' only takes a callable object."%self.name)
         super(Callable, self)._validate(val)
+
+        if (self.allow_None and val is None) or callable(val):
+            return
+
+        raise ValueError("Callable parameter %r only takes a callable object, "
+                         "not objects of type %r." % (self.name, type(val)))
 
 
 
@@ -1168,12 +1177,13 @@ class ObjectSelector(SelectorBase):
     up from the object value.
     """
 
-    __slots__ = ['objects','compute_default_fn','check_on_set','names']
+    __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
     # ObjectSelector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self,default=None,objects=None,instantiate=False,
-                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+    def __init__(self, default=None, objects=None,  instantiate=False,
+                 compute_default_fn=None, check_on_set=None,
+                 allow_None=None, **params):
         if objects is None:
             objects = []
         if isinstance(objects, collections_abc.Mapping):
@@ -1186,12 +1196,12 @@ class ObjectSelector(SelectorBase):
 
         if check_on_set is not None:
             self.check_on_set=check_on_set
-        elif len(objects)==0:
+        elif len(objects) == 0:
             self.check_on_set=False
         else:
             self.check_on_set=True
 
-        super(ObjectSelector,self).__init__(default=default,instantiate=instantiate,
+        super(ObjectSelector,self).__init__(default=default, instantiate=instantiate,
                                             **params)
         # Required as Parameter sets allow_None=True if default is None
         self.allow_None = allow_None
@@ -1245,7 +1255,7 @@ class ObjectSelector(SelectorBase):
                     break
             items = '[' + ', '.join(items) + limiter
             raise ValueError("%s not in Parameter %s's list of possible objects, "
-                             "valid options include %s"%(val,attrib_name, items))
+                             "valid options include %s" % (val, attrib_name, items))
 
     def _ensure_value_is_in_objects(self,val):
         """
@@ -1322,7 +1332,7 @@ class ClassSelector(SelectorBase):
         if self.is_instance:
             if not (isinstance(val,self.class_)) and not (val is None and self.allow_None):
                 raise ValueError(
-                    "Parameter '%s' value must be an instance of %s, not '%s'" %
+                    "Parameter %r value must be an instance of %s, not '%s'." %
                     (self.name, class_name, val))
         else:
             if not (val is None and self.allow_None) and not (issubclass(val,self.class_)):
@@ -1344,7 +1354,7 @@ class ClassSelector(SelectorBase):
         all_classes = {}
         for cls in classes:
             all_classes.update(concrete_descendents(cls))
-        d=OrderedDict((name,class_) for name,class_ in all_classes.items())
+        d = OrderedDict((name,class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None']=None
         return d
@@ -1379,7 +1389,8 @@ class List(Parameter):
             return
 
         if not isinstance(val, list):
-            raise ValueError("List '%s' must be a list."%(self.name))
+            raise ValueError("List '%s' must be a list, not an object of type %s."
+                             % (self.name, type(val)))
 
         if self.bounds is not None:
             min_length,max_length = self.bounds
@@ -1389,17 +1400,23 @@ class List(Parameter):
                     raise ValueError("%s: list length must be between %s and %s (inclusive)"%(self.name,min_length,max_length))
             elif min_length is not None:
                 if not min_length <= l:
-                    raise ValueError("%s: list length must be at least %s."%(self.name,min_length))
+                    raise ValueError("%s: list length must be at least %s."
+                                     % (self.name, min_length))
             elif max_length is not None:
                 if not l <= max_length:
-                    raise ValueError("%s: list length must be at most %s."%(self.name,max_length))
+                    raise ValueError("%s: list length must be at most %s."
+                                     % (self.name, max_length))
 
         self._check_type(val)
 
     def _check_type(self,val):
-        if self.item_type is not None:
-            for v in val:
-                assert isinstance(v,self.item_type),repr(self.name)+": "+repr(v)+" is not an instance of " + repr(self.item_type) + "."
+        if self.item_type is None:
+            return
+        for v in val:
+            if isinstance(v, self.item_type):
+                continue
+            raise TypeError("List parameter %r items must be instances "
+                            "of type %r, not %r." % (self.name, self.item_type, val))
 
 
 class HookList(List):
@@ -1412,17 +1429,21 @@ class HookList(List):
     """
     __slots__ = ['class_','bounds']
 
-    def _check_type(self,val):
+    def _check_type(self, val):
         for v in val:
-            assert callable(v),repr(self.name)+": "+repr(v)+" is not callable."
+            if callable(v):
+                continue
+            raise ValueError("HookList parameter %r items must be callable, "
+                             "not %r." % (self.name, v))
 
 
 class Dict(ClassSelector):
     """
     Parameter whose value is a dictionary.
     """
+
     def __init__(self, default=None, **params):
-        super(Dict,self).__init__(dict, default=default, **params)
+        super(Dict, self).__init__(dict, default=default, **params)
 
 
 class Array(ClassSelector):
@@ -1431,9 +1452,8 @@ class Array(ClassSelector):
     """
 
     def __init__(self, default=None, **params):
-        # CEBALERT: instead use python array as default?
         from numpy import ndarray
-        super(Array,self).__init__(ndarray, allow_None=True, default=default, **params)
+        super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
 
     @classmethod
     def serialize(cls, value):
@@ -1463,7 +1483,8 @@ class DataFrame(ClassSelector):
     if a list is given, the supplied DataFrame must contain exactly the
     same columns and in the same order and no other columns.
     """
-    __slots__ = ['rows','columns', 'ordered']
+
+    __slots__ = ['rows', 'columns', 'ordered']
 
     def __init__(self, default=None, rows=None, columns=None, ordered=None, **params):
         from pandas import DataFrame as pdDFrame

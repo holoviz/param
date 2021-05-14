@@ -832,7 +832,7 @@ class Number(Dynamic):
         return val
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
-        if bounds is None or (val is None and self.allow_None):
+        if bounds is None or (val is None and self.allow_None) or callable(val):
             return
         vmin, vmax = bounds
         incmin, incmax = inclusive_bounds
@@ -879,7 +879,7 @@ class Number(Dynamic):
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
 
     def _on_set(self, attribute, old, new):
-        if self.owner is None:
+        if self.owner is None or self.time_fn:
             return
         if attribute == 'inclusive_bounds':
             return self._validate_bounds(getattr(self.owner, self.name), self.bounds, new)

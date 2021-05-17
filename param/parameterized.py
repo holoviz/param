@@ -726,17 +726,42 @@ class Parameter(object):
         """
         Initialize a new Parameter object: store the supplied attributes.
 
-        default: the owning class's value for the attribute
+        default is the owning class's value for the attribute
         represented by this Parameter.
+
+        doc is a docstring explaining this parameter.
+
+        label is a text label to be used instead of the parameter's name,
+        if any.
 
         precedence is a value, usually in the range 0.0 to 1.0, that
         allows the order of Parameters in a class to be defined (for
         e.g. in GUI menus). A negative precedence indicates a
         parameter that should be hidden in e.g. GUI menus.
 
+        instantiate controls whether a separate Parameter object is 
+        created per Paramterized instance. Useful when a parameter value
+        may be mutable, but prevents the value of this Parameter from 
+        being controlled at the Parameterized class level.
+
+        constant controls whether the parameter value can be changed after
+        the Parameterized class is instantiated. A constant Parameter can
+        be changed at the Parameterized class level, but after instantiation
+        the value can never be changed on the instance.
+
+        readonly controls whether the parameter value can ever be changed,
+        even before the Parameterized class is instantiated. A readonly
+        Paramter can not be changed either on the class or the instance.
+        The value is as declared in the Parameterized class.        
+
         default, doc, and precedence default to None. This is to allow
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
+
+        pickle_default_value determines whether the default value should be 
+        pickled. Usually, you would want the default value to be pickled,
+        but there are rare cases where that would not be the case (e.g. 
+        for file search paths).
 
         per_instance defaults to True and controls whether a new
         Parameter instance can be created for every Parameterized
@@ -744,9 +769,12 @@ class Parameter(object):
         will share the same parameter object, including all validation
         attributes.
 
-        In rare cases where the default value should not be pickled,
-        set pickle_default_value=False (e.g. for file search paths).
+        allow_None declares that the parameter can be set to None, in 
+        addition to any other values that are allowed for this Parameter type. 
+        If the default value is None, allow_None is taken as True 
+        automatically.
         """
+
         self.name = None
         self._internal_name = None
         self.owner = None

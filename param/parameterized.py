@@ -719,34 +719,82 @@ class Parameter(object):
 
     _serializers = {'json':serializer.JSONSerialization}
 
-    def __init__(self,default=None,doc=None,label=None,precedence=None,  # pylint: disable-msg=R0913
-                 instantiate=False,constant=False,readonly=False,
+    def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
+                 instantiate=False, constant=False, readonly=False,
                  pickle_default_value=True, allow_None=False,
                  per_instance=True):
-        """
-        Initialize a new Parameter object: store the supplied attributes.
 
-        default: the owning class's value for the attribute
-        represented by this Parameter.
+        """Initialize a new Parameter object and store the supplied attributes:
 
-        precedence is a value, usually in the range 0.0 to 1.0, that
-        allows the order of Parameters in a class to be defined (for
-        e.g. in GUI menus). A negative precedence indicates a
-        parameter that should be hidden in e.g. GUI menus.
+        default: the owning class's value for the attribute represented
+        by this Parameter, which can be overridden in an instance.
 
-        default, doc, and precedence default to None. This is to allow
+        doc: docstring explaining what this parameter represents.
+
+        label: optional text label to be used when this Parameter is
+        shown in a listing. If no label is supplied, the attribute name
+        for this parameter in the owning Parameterized object is used.
+
+        precedence: a numeric value, usually in the range 0.0 to 1.0, 
+        which allows the order of Parameters in a class to be defined in
+        a listing or e.g. in GUI menus. A negative precedence indicates
+        a parameter that should be hidden in such listings.
+
+        instantiate: controls whether the value of this Parameter will
+        be deepcopied when a Parameterized object is instantiated (if
+        True), or if the single default value will be shared by all
+        Parameterized instances (if False). For an immutable Parameter
+        value, it is best to leave instantiate at the default of
+        False, so that a user can choose to change the value at the
+        Parameterized instance level (affecting only that instance) or
+        at the Parameterized class or superclass level (affecting all
+        instances of that class or superclass). For a mutable
+        Parameter value, the default of False is also appropriate if
+        you want all instances to share the same value state, e.g. if
+        they are each simply referring to a single global object like
+        a singleton. If each Parameterized should have its own
+        independently mutable value, instantiate should be set to
+        True, but note that there is then no simple way to change the
+        value of this Parameter at the class or superclass level,
+        because each instance will now have an independently
+        instantiated value.
+
+        constant: if true, the Parameter value can be changed only at 
+        the class level or in a Parameterized constructor call. The 
+        value is otherwise constant on the Parameterized instance,
+        once it has been constructed.
+
+        readonly: if true, the Parameter value cannot ordinarily be
+        changed by setting the attribute at the class or instance
+        levels at all. The value can still be changed in code by
+        temporarily overriding the value of this slot and then
+        restoring it, which is useful for reporting values that the
+        _user_ should never change but which do change during code
+        execution.
+
+        pickle_default_value: whether the default value should be 
+        pickled. Usually, you would want the default value to be pickled,
+        but there are rare cases where that would not be the case (e.g. 
+        for file search paths that are specific to a certain system).
+
+        per_instance: whether a separate Parameter instance will be
+        created for every Parameterized instance. True by default.
+        If False, all instances of a Parameterized class will share
+        the same Parameter object, including all validation
+        attributes (bounds, etc.). See also instantiate, which is
+        conceptually similar but affects the Parameter value rather
+        than the Parameter object.
+
+        allow_None: if True, None is accepted as a valid value for
+        this Parameter, in addition to any other values that are
+        allowed. If the default value is defined as None, allow_None
+        is set to True automatically.
+
+        default, doc, and precedence all default to None, which allows
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
-
-        per_instance defaults to True and controls whether a new
-        Parameter instance can be created for every Parameterized
-        instance. If False, all instances of a Parameterized class
-        will share the same parameter object, including all validation
-        attributes.
-
-        In rare cases where the default value should not be pickled,
-        set pickle_default_value=False (e.g. for file search paths).
         """
+
         self.name = None
         self._internal_name = None
         self.owner = None

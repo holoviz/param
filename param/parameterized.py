@@ -735,7 +735,7 @@ class Parameter(object):
         shown in a listing. If no label is supplied, the attribute name
         for this parameter in the owning Parameterized object is used.
 
-        precedence: a numeric value, usually in the range 0.0 to 1.0, 
+        precedence: a numeric value, usually in the range 0.0 to 1.0,
         which allows the order of Parameters in a class to be defined in
         a listing or e.g. in GUI menus. A negative precedence indicates
         a parameter that should be hidden in such listings.
@@ -759,8 +759,8 @@ class Parameter(object):
         because each instance will now have an independently
         instantiated value.
 
-        constant: if true, the Parameter value can be changed only at 
-        the class level or in a Parameterized constructor call. The 
+        constant: if true, the Parameter value can be changed only at
+        the class level or in a Parameterized constructor call. The
         value is otherwise constant on the Parameterized instance,
         once it has been constructed.
 
@@ -772,9 +772,9 @@ class Parameter(object):
         _user_ should never change but which do change during code
         execution.
 
-        pickle_default_value: whether the default value should be 
+        pickle_default_value: whether the default value should be
         pickled. Usually, you would want the default value to be pickled,
-        but there are rare cases where that would not be the case (e.g. 
+        but there are rare cases where that would not be the case (e.g.
         for file search paths that are specific to a certain system).
 
         per_instance: whether a separate Parameter instance will be

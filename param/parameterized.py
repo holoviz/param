@@ -748,7 +748,7 @@ class Parameter(object):
         False, so that a user can choose to change the value at the
         Parameterized instance level (affecting only that instance) or
         at the Parameterized class or superclass level (affecting all
-        instances of that class or superclass). For a mutable
+        existing and future instances of that class or superclass). For a mutable
         Parameter value, the default of False is also appropriate if
         you want all instances to share the same value state, e.g. if
         they are each simply referring to a single global object like
@@ -756,7 +756,7 @@ class Parameter(object):
         independently mutable value, instantiate should be set to
         True, but note that there is then no simple way to change the
         value of this Parameter at the class or superclass level,
-        because each instance will now have an independently
+        because each instance, once created, will then have an independently
         instantiated value.
 
         constant: if true, the Parameter value can be changed only at

@@ -2807,7 +2807,7 @@ class Parameterized(object):
 
     @classmethod
     @Parameters.deprecate
-    def add_parameter(cls, param_name,param_obj):
+    def _add_parameter(cls, param_name,param_obj):
         return cls.param.add_parameter(param_name,param_obj)
 
     @bothmethod

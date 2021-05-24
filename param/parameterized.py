@@ -1438,7 +1438,7 @@ class Parameters(object):
         setattr(cls,param_name,value)
 
 
-    def _add_parameter(self_, param_name,param_obj):
+    def add_parameter(self_, param_name,param_obj):
         """
         Add a new Parameter object into this object's class.
 
@@ -2807,8 +2807,8 @@ class Parameterized(object):
 
     @classmethod
     @Parameters.deprecate
-    def _add_parameter(cls, param_name,param_obj):
-        return cls.param._add_parameter(param_name,param_obj)
+    def add_parameter(cls, param_name,param_obj):
+        return cls.param.add_parameter(param_name,param_obj)
 
     @bothmethod
     @Parameters.deprecate

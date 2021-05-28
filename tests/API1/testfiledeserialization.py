@@ -170,14 +170,22 @@ class TestFileDeserialization(API1TestCase):
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
+    @pd_skip
     @feather_skip
     def test_data_frame_feather(self):
         path = '{}/val.feather'.format(self.temp_dir)
         TestSet.data_frame.to_feather(path)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
+    @pd_skip
     @parquet_skip
     def test_data_frame_parquet(self):
         path = '{}/val.parquet'.format(self.temp_dir)
         TestSet.data_frame.to_parquet(path)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @pd_skip
+    def test_data_frame_stata(self):
+        path = '{}/val.dta'.format(self.temp_dir)
+        TestSet.data_frame.to_stata(path, write_index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')

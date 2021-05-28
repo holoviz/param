@@ -1579,6 +1579,7 @@ class DataFrame(ClassSelector):
             return _deserialize_from_path(
                 {
                     '.csv': pandas.read_csv,
+                    '.dta': pandas.read_stata,
                     '.feather': pandas.read_feather,
                     '.json': pandas.read_json,
                     '.ods': pandas.read_excel,

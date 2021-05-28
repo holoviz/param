@@ -46,6 +46,12 @@ except:
     __version__ = "0.0.0+unknown"
 
 
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
+
 dt_types = (dt.datetime, dt.date)
 
 try:

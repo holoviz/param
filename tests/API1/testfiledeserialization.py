@@ -22,11 +22,14 @@ np_skip = skipIf(np is None, "NumPy is not available")
 
 try:
     import pandas as pd
+    pd_ver = pd.__version__.split('.')
     df = pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
+    modern_pd = pd if (int(pd_ver[0]) >= 1 and int(pd_ver[1]) >= 2) else None
 except:
-    pd, df1, df2 = None, None, None
+    pd, df1, df2, modern_pd = None, None, None
 
 pd_skip = skipIf(pd is None, "pandas is not available")
+modern_pd_skip = skipIf(modern_pd is None, "pandas is too old")
 
 
 # The writer could be xlsxwriter, but the sufficient condition is the presence of
@@ -148,21 +151,21 @@ class TestFileDeserialization(API1TestCase):
     # store the serialized file as a byte array to future-proof somewhat, but that would
     # break if we ever decided to change the default data_frame value. Who cares.
 
-    @pd_skip
+    @modern_pd_skip
     @xlsxm_skip
     def test_data_frame_xlsm(self):
         path = '{}/val.xlsm'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
-    @pd_skip
+    @modern_pd_skip
     @xlsxm_skip
     def test_data_frame_xlsx(self):
         path = '{}/val.xlsx'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
-    @pd_skip
+    @modern_pd_skip
     @ods_skip
     def test_data_frame_ods(self):
         path = '{}/val.ods'.format(self.temp_dir)

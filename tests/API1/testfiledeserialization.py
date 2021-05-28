@@ -15,7 +15,7 @@ try:
     import numpy as np
     ndarray = np.array([[1,2,3],[4,5,6]])
 except:
-    np, ndarray = None, None
+    np = ndarray = None
 
 np_skip = skipIf(np is None, "NumPy is not available")
 
@@ -26,7 +26,7 @@ try:
     df = pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
     modern_pd = pd if (int(pd_ver[0]) >= 1 and int(pd_ver[1]) >= 2) else None
 except:
-    pd, df1, df2, modern_pd = None, None, None
+    pd = df1 = df2 = modern_pd = None
 
 pd_skip = skipIf(pd is None, "pandas is not available")
 modern_pd_skip = skipIf(modern_pd is None, "pandas is too old")

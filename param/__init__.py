@@ -282,11 +282,8 @@ def _get_min_max_value(min, max, value=None, step=None):
     return min, max, value
 
 
-def _deserialize_from_path(ext_to_routine, path):
-    """Call deserialization routine with path according to extension
-
-    If None is a key in ext_to_routine, it is considered the fallback
-    """
+def _deserialize_from_path(ext_to_routine, path, type_name):
+    """Call deserialization routine with path according to extension"""
     if not os.path.isfile(path):
         raise FileNotFoundError("'{}' does not exist or is not a file".format(path))
     root, ext = os.path.splitext(path)
@@ -294,10 +291,14 @@ def _deserialize_from_path(ext_to_routine, path):
         # A compressed type. We'll assume the routines can handle such extensions
         # transparently
         ext = os.path.splitext(root)[1]
-    if ext in ext_to_routine:
-        return ext_to_routine[ext](path)
-    if None in ext_to_routine:
-        return ext_to_routine[None](path)
+    # If the extension does match, this is likely the correct routine and we will error
+    # later on. Let's warn the user.
+    try:
+        if ext in ext_to_routine:
+            return ext_to_routine[ext](path)
+    except:
+        get_logger().warning(
+            "Could not parse file '{}' as {}".format(path, type_name), exc_info=True)
     raise ValueError(
         "No deserialization routine for files with '{}' extension".format(path))
 
@@ -1485,7 +1486,7 @@ class Array(ClassSelector):
         try:
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': numpy.loadtxt},
-                value
+                value, 'Array'
             )
         except:
             pass
@@ -1582,7 +1583,7 @@ class DataFrame(ClassSelector):
                     '.xlsm': pandas.read_excel,
                     '.xlsx': pandas.read_excel,
                     '.ods': pandas.read_excel,
-                }, value)
+                }, value, 'DataFrame')
         except:
             pass
         return pandas.DataFrame(value)

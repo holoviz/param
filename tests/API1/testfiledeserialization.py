@@ -2,6 +2,8 @@
 Test deserialization routines that read from file
 """
 
+import logging
+from param.parameterized import get_logger
 import param
 
 from . import API1TestCase
@@ -60,17 +62,29 @@ class TestFileDeserialization(API1TestCase):
             rmtree(self.temp_dir, ignore_errors=True)
 
     @np_skip
-    def _test_deserialize_array(self, obj, path, pname):
+    def _test_deserialize_array(self, obj, path, pname, check=True):
         # assumes the parameter has already been serialized to path!
         deserialized = obj.param.deserialize_value(
             pname, '"{}"'.format(path), mode='json')
-        self.assertTrue(np.array_equal(deserialized, getattr(obj, pname)))
+        if check:
+            self.assertTrue(np.array_equal(deserialized, getattr(obj, pname)))
 
     @np_skip
     def test_array_npy(self):
         path = '{}/val.npy'.format(self.temp_dir)
         np.save(path, TestSet.array)
         self._test_deserialize_array(TestSet, path, 'array')
+
+    @np_skip
+    def test_bad_deserialization_warns(self):
+        path = '{}/val.npy'.format(self.temp_dir)
+        with open(path, 'w'):
+            pass
+        with self.assertLogs(get_logger(), level=logging.WARN) as cm:
+            # this parses successfully as a string array, but it's probably not what
+            # the user wanted. Should warn
+            self._test_deserialize_array(TestSet, path, 'array', False)
+        self.assertRegex(cm.output[0], "Could not parse")
 
     @np_skip
     def test_array_txt(self):

@@ -1576,6 +1576,7 @@ class DataFrame(ClassSelector):
             return _deserialize_from_path(
                 {
                     '.csv': pandas.read_csv,
+                    '.json': pandas.read_json,
                     '.pkl': pandas.read_pickle,
                     '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
                 }, value)

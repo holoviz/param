@@ -83,3 +83,9 @@ class TestFileDeserialization(API1TestCase):
         path = '{}/val.tsv'.format(self.temp_dir)
         TestSet.data_frame.to_csv(path, index=False, sep='\t')
         self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @pd_skip
+    def test_pandas_json(self):
+        path = '{}/val.json'.format(self.temp_dir)
+        TestSet.data_frame.to_json(path)
+        self._test_deserialize_array(TestSet, path, 'data_frame')

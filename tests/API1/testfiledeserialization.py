@@ -3,13 +3,16 @@ Test deserialization routines that read from file
 """
 
 import logging
-from param.parameterized import get_logger
+from unittest.case import skip
 import param
+import sys
 
 from . import API1TestCase
 from unittest import skipIf
 from tempfile import mkdtemp
 from shutil import rmtree
+from param.parameterized import get_logger
+
 
 try:
     import numpy as np
@@ -100,6 +103,7 @@ class TestFileDeserialization(API1TestCase):
         self._test_deserialize_array(TestSet, path, 'array')
 
     @np_skip
+    @skipIf(sys.version_info[0] < 3, "assertLogs not in py2k")
     def test_bad_deserialization_warns(self):
         path = '{}/val.npy'.format(self.temp_dir)
         with open(path, 'w'):

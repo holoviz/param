@@ -3,6 +3,7 @@ Test deserialization routines that read from file
 """
 
 import logging
+from unittest.case import skip
 from param.parameterized import get_logger
 import param
 
@@ -45,6 +46,14 @@ except:
     ods = None
 
 ods_skip = skipIf(ods is None, "odfpy is not available")
+
+
+try:
+    import feather
+except:
+    feather = None
+
+feather_skip = skipIf(feather is None, "feather-format is not available")
 
 
 class TestSet(param.Parameterized):
@@ -146,4 +155,10 @@ class TestFileDeserialization(API1TestCase):
     def test_data_frame_ods(self):
         path = '{}/val.ods'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @feather_skip
+    def test_data_frame_feather(self):
+        path = '{}/val.feather'.format(self.temp_dir)
+        TestSet.data_frame.to_feather(path)
         self._test_deserialize_array(TestSet, path, 'data_frame')

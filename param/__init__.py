@@ -1574,15 +1574,18 @@ class DataFrame(ClassSelector):
     def deserialize(cls, value):
         import pandas
         try:
+            # FIXME(sdrobert): pandas.read_hdf5 requires pytables which can be
+            # installed no prob with conda but requires hdf5 headers for pip.
             return _deserialize_from_path(
                 {
                     '.csv': pandas.read_csv,
+                    '.feather': pandas.read_feather,
                     '.json': pandas.read_json,
+                    '.ods': pandas.read_excel,
                     '.pkl': pandas.read_pickle,
                     '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
                     '.xlsm': pandas.read_excel,
                     '.xlsx': pandas.read_excel,
-                    '.ods': pandas.read_excel,
                 }, value, 'DataFrame')
         except:
             pass

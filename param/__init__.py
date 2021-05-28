@@ -1571,8 +1571,12 @@ class DataFrame(ClassSelector):
 
     @classmethod
     def deserialize(cls, value):
-        from pandas import DataFrame as pdDFrame
-        return pdDFrame(value)
+        import pandas
+        try:
+            return _deserialize_from_path({'.pkl': pandas.read_pickle}, value)
+        except:
+            pass
+        return pandas.DataFrame(value)
 
 
 class Series(ClassSelector):

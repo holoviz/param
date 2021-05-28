@@ -1573,7 +1573,11 @@ class DataFrame(ClassSelector):
     def deserialize(cls, value):
         import pandas
         try:
-            return _deserialize_from_path({'.pkl': pandas.read_pickle}, value)
+            return _deserialize_from_path(
+                {
+                    '.csv': pandas.read_csv,
+                    '.pkl': pandas.read_pickle,
+                }, value)
         except:
             pass
         return pandas.DataFrame(value)

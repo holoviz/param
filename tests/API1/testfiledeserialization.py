@@ -68,12 +68,12 @@ class TestFileDeserialization(API1TestCase):
 
     @pd_skip
     def test_pandas_pkl(self):
-        path = '{}/val.pkl'.format(self.temp_dir)
+        path = '{}/val.pkl.zip'.format(self.temp_dir)
         TestSet.data_frame.to_pickle(path)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
     @pd_skip
-    def test_pandas_pkl_zip(self):
-        path = '{}/val.pkl.zip'.format(self.temp_dir)
-        TestSet.data_frame.to_pickle(path)
+    def test_pandas_csv(self):
+        path = '{}/val.csv.bz2'.format(self.temp_dir)
+        TestSet.data_frame.to_csv(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')

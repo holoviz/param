@@ -3,7 +3,6 @@ Test deserialization routines that read from file
 """
 
 import logging
-from unittest.case import skip
 from param.parameterized import get_logger
 import param
 
@@ -79,7 +78,7 @@ class TestFileDeserialization(API1TestCase):
     def run(self, result):
         self.temp_dir = mkdtemp().replace('\\', '/')
         try:
-            return super().run(result=result)
+            return super(TestFileDeserialization, self).run(result=result)
         finally:
             rmtree(self.temp_dir, ignore_errors=True)
 

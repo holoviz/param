@@ -56,6 +56,19 @@ except:
 feather_skip = skipIf(feather is None, "feather-format is not available")
 
 
+try:
+    import fastparquet as parquet
+except:
+    parquet = None
+
+try:
+    import pyarrow as parquet
+except:
+    pass
+
+parquet_skip = skipIf(parquet is None, "fastparquet and pyarrow are not available")
+
+
 class TestSet(param.Parameterized):
     array = None if np is None else param.Array(default=ndarray)
     data_frame = None if pd is None else param.DataFrame(default=df)
@@ -161,4 +174,10 @@ class TestFileDeserialization(API1TestCase):
     def test_data_frame_feather(self):
         path = '{}/val.feather'.format(self.temp_dir)
         TestSet.data_frame.to_feather(path)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @parquet_skip
+    def test_data_frame_parquet(self):
+        path = '{}/val.parquet'.format(self.temp_dir)
+        TestSet.data_frame.to_parquet(path)
         self._test_deserialize_array(TestSet, path, 'data_frame')

@@ -1582,6 +1582,7 @@ class DataFrame(ClassSelector):
                     '.feather': pandas.read_feather,
                     '.json': pandas.read_json,
                     '.ods': pandas.read_excel,
+                    '.parquet': pandas.read_parquet,
                     '.pkl': pandas.read_pickle,
                     '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
                     '.xlsm': pandas.read_excel,

@@ -67,43 +67,43 @@ class TestFileDeserialization(API1TestCase):
         self.assertTrue(np.array_equal(deserialized, getattr(obj, pname)))
 
     @np_skip
-    def test_numpy_npy(self):
+    def test_array_npy(self):
         path = '{}/val.npy'.format(self.temp_dir)
         np.save(path, TestSet.array)
         self._test_deserialize_array(TestSet, path, 'array')
 
     @np_skip
-    def test_numpy_txt(self):
+    def test_array_txt(self):
         path = '{}/val.txt'.format(self.temp_dir)
         np.savetxt(path, TestSet.array)
         self._test_deserialize_array(TestSet, path, 'array')
 
     @np_skip
-    def test_numpy_txt_gz(self):
+    def test_array_txt_gz(self):
         path = '{}/val.txt.gz'.format(self.temp_dir)
         np.savetxt(path, TestSet.array)
         self._test_deserialize_array(TestSet, path, 'array')
 
     @pd_skip
-    def test_pandas_pkl(self):
+    def test_data_frame_pkl(self):
         path = '{}/val.pkl.zip'.format(self.temp_dir)
         TestSet.data_frame.to_pickle(path)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
     @pd_skip
-    def test_pandas_csv(self):
+    def test_data_frame_csv(self):
         path = '{}/val.csv.bz2'.format(self.temp_dir)
         TestSet.data_frame.to_csv(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
     @pd_skip
-    def test_pandas_tsv(self):
+    def test_data_frame_tsv(self):
         path = '{}/val.tsv'.format(self.temp_dir)
         TestSet.data_frame.to_csv(path, index=False, sep='\t')
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
     @pd_skip
-    def test_pandas_json(self):
+    def test_data_frame_json(self):
         path = '{}/val.json'.format(self.temp_dir)
         TestSet.data_frame.to_json(path)
         self._test_deserialize_array(TestSet, path, 'data_frame')
@@ -115,21 +115,21 @@ class TestFileDeserialization(API1TestCase):
 
     @pd_skip
     @xlsxm_skip
-    def test_pandas_xlsm(self):
+    def test_data_frame_xlsm(self):
         path = '{}/val.xlsm'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
     @pd_skip
     @xlsxm_skip
-    def test_pandas_xlsx(self):
+    def test_data_frame_xlsx(self):
         path = '{}/val.xlsx'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
     @pd_skip
     @ods_skip
-    def test_pandas_ods(self):
+    def test_data_frame_ods(self):
         path = '{}/val.ods'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')

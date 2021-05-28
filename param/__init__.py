@@ -282,6 +282,22 @@ def _get_min_max_value(min, max, value=None, step=None):
     return min, max, value
 
 
+def _deserialize_from_path(ext_to_routine, path):
+    """Call deserialization routine with path according to extension
+
+    If None is a key in ext_to_routine, it is considered the fallback
+    """
+    if not os.path.isfile(path):
+        raise FileNotFoundError("'{}' does not exist or is not a file".format(path))
+    ext = os.path.splitext(path)[1]
+    if ext in ext_to_routine:
+        return ext_to_routine[ext](path)
+    if None in ext_to_routine:
+        return ext_to_routine[None](path)
+    raise ValueError(
+        "No deserialization routine for files with '{}' extension".format(path))
+
+
 class Infinity(object):
     """
     An instance of this class represents an infinite value. Unlike
@@ -1461,8 +1477,12 @@ class Array(ClassSelector):
 
     @classmethod
     def deserialize(cls, value):
-        from numpy import asarray
-        return asarray(value)
+        import numpy
+        try:
+            return _deserialize_from_path({'.npy': numpy.load}, value)
+        except:
+            pass
+        return numpy.asarray(value)
 
 
 class DataFrame(ClassSelector):

@@ -1579,6 +1579,9 @@ class DataFrame(ClassSelector):
                     '.json': pandas.read_json,
                     '.pkl': pandas.read_pickle,
                     '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
+                    '.xlsm': pandas.read_excel,
+                    '.xlsx': pandas.read_excel,
+                    '.ods': pandas.read_excel,
                 }, value)
         except:
             pass

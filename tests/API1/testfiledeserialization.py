@@ -27,6 +27,24 @@ except:
 pd_skip = skipIf(pd is None, "pandas is not available")
 
 
+# The writer could be xlsxwriter, but the sufficient condition is the presence of
+# openpyxl
+try:
+    import openpyxl as xlsxm
+except:
+    xlsxm = None
+
+xlsxm_skip = skipIf(xlsxm is None, "openpyxl is not available")
+
+
+try:
+    import odf as ods
+except:
+    ods = None
+
+ods_skip = skipIf(ods is None, "odfpy is not available")
+
+
 class TestSet(param.Parameterized):
     array = None if np is None else param.Array(default=ndarray)
     data_frame = None if pd is None else param.DataFrame(default=df)
@@ -88,4 +106,30 @@ class TestFileDeserialization(API1TestCase):
     def test_pandas_json(self):
         path = '{}/val.json'.format(self.temp_dir)
         TestSet.data_frame.to_json(path)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    # FIXME(sdrobert): xls are old-style excel files. There are two distinct engines for
+    # reading and writing these, and the writer engine is deprecated by pandas. We could
+    # store the serialized file as a byte array to future-proof somewhat, but that would
+    # break if we ever decided to change the default data_frame value. Who cares.
+
+    @pd_skip
+    @xlsxm_skip
+    def test_pandas_xlsm(self):
+        path = '{}/val.xlsm'.format(self.temp_dir)
+        TestSet.data_frame.to_excel(path, index=False)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @pd_skip
+    @xlsxm_skip
+    def test_pandas_xlsx(self):
+        path = '{}/val.xlsx'.format(self.temp_dir)
+        TestSet.data_frame.to_excel(path, index=False)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @pd_skip
+    @ods_skip
+    def test_pandas_ods(self):
+        path = '{}/val.ods'.format(self.temp_dir)
+        TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')

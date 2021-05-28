@@ -1577,6 +1577,7 @@ class DataFrame(ClassSelector):
                 {
                     '.csv': pandas.read_csv,
                     '.pkl': pandas.read_pickle,
+                    '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
                 }, value)
         except:
             pass

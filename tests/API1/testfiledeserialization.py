@@ -77,3 +77,9 @@ class TestFileDeserialization(API1TestCase):
         path = '{}/val.csv.bz2'.format(self.temp_dir)
         TestSet.data_frame.to_csv(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @pd_skip
+    def test_pandas_tsv(self):
+        path = '{}/val.tsv'.format(self.temp_dir)
+        TestSet.data_frame.to_csv(path, index=False, sep='\t')
+        self._test_deserialize_array(TestSet, path, 'data_frame')

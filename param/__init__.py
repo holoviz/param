@@ -289,7 +289,11 @@ def _deserialize_from_path(ext_to_routine, path):
     """
     if not os.path.isfile(path):
         raise FileNotFoundError("'{}' does not exist or is not a file".format(path))
-    ext = os.path.splitext(path)[1]
+    root, ext = os.path.splitext(path)
+    if ext in {'.gz', '.bz2', '.xz', '.zip'}:
+        # A compressed type. We'll assume the routines can handle such extensions
+        # transparently
+        ext = os.path.splitext(root)[1]
     if ext in ext_to_routine:
         return ext_to_routine[ext](path)
     if None in ext_to_routine:
@@ -1480,7 +1484,7 @@ class Array(ClassSelector):
         import numpy
         try:
             return _deserialize_from_path(
-                {'.npy': numpy.load, '.txt': numpy.loadtxt, '.gz': numpy.loadtxt},
+                {'.npy': numpy.load, '.txt': numpy.loadtxt},
                 value
             )
         except:

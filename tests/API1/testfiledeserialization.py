@@ -44,3 +44,17 @@ class TestFileDeserialization(API1TestCase):
         np.save(path, TestSet.array)
         deserialized = self._test_deserialize(TestSet, path, 'array', False)
         self.assertTrue(np.array_equal(deserialized, getattr(TestSet, 'array')))
+
+    @np_skip
+    def test_numpy_txt(self):
+        path = '{}/val.txt'.format(self.temp_dir)
+        np.savetxt(path, TestSet.array)
+        deserialized = self._test_deserialize(TestSet, path, 'array', False)
+        self.assertTrue(np.array_equal(deserialized, getattr(TestSet, 'array')))
+
+    @np_skip
+    def test_numpy_txt_gz(self):
+        path = '{}/val.txt.gz'.format(self.temp_dir)
+        np.savetxt(path, TestSet.array)
+        deserialized = self._test_deserialize(TestSet, path, 'array', False)
+        self.assertTrue(np.array_equal(deserialized, getattr(TestSet, 'array')))

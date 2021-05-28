@@ -1479,7 +1479,10 @@ class Array(ClassSelector):
     def deserialize(cls, value):
         import numpy
         try:
-            return _deserialize_from_path({'.npy': numpy.load}, value)
+            return _deserialize_from_path(
+                {'.npy': numpy.load, '.txt': numpy.loadtxt, '.gz': numpy.loadtxt},
+                value
+            )
         except:
             pass
         return numpy.asarray(value)

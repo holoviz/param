@@ -706,9 +706,9 @@ class Parameter(object):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['name','_internal_name','default','doc',
-                 'precedence','instantiate','constant','readonly',
-                 'pickle_default_value','allow_None', 'per_instance',
+    __slots__ = ['name', '_internal_name', 'default', 'doc',
+                 'precedence', 'instantiate', 'constant', 'readonly',
+                 'pickle_default_value', 'allow_None', 'per_instance',
                  'watchers', 'owner', '_label']
 
     # Note: When initially created, a Parameter does not know which
@@ -717,7 +717,7 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
-    _serializers = {'json':serializer.JSONSerialization}
+    _serializers = {'json': serializer.JSONSerialization}
 
     def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False, constant=False, readonly=False,
@@ -796,14 +796,14 @@ class Parameter(object):
         """
 
         self.name = None
-        self._internal_name = None
         self.owner = None
-        self._label = label
         self.precedence = precedence
         self.default = default
         self.doc = doc
         self.constant = constant or readonly # readonly => constant
         self.readonly = readonly
+        self._label = label
+        self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)

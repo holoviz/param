@@ -706,9 +706,9 @@ class Parameter(object):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['name','_internal_name','default','doc',
-                 'precedence','instantiate','constant','readonly',
-                 'pickle_default_value','allow_None', 'per_instance',
+    __slots__ = ['name', '_internal_name', 'default', 'doc',
+                 'precedence', 'instantiate', 'constant', 'readonly',
+                 'pickle_default_value', 'allow_None', 'per_instance',
                  'watchers', 'owner', '_label']
 
     # Note: When initially created, a Parameter does not know which
@@ -717,7 +717,7 @@ class Parameter(object):
     # class is created, owner, name, and _internal_name are
     # set.
 
-    _serializers = {'json':serializer.JSONSerialization}
+    _serializers = {'json': serializer.JSONSerialization}
 
     def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False, constant=False, readonly=False,
@@ -748,7 +748,7 @@ class Parameter(object):
         False, so that a user can choose to change the value at the
         Parameterized instance level (affecting only that instance) or
         at the Parameterized class or superclass level (affecting all
-        existing and future instances of that class or superclass). For 
+        existing and future instances of that class or superclass). For
         a mutable Parameter value, the default of False is also appropriate
         if you want all instances to share the same value state, e.g. if
         they are each simply referring to a single global object like
@@ -796,14 +796,14 @@ class Parameter(object):
         """
 
         self.name = None
-        self._internal_name = None
         self.owner = None
-        self._label = label
         self.precedence = precedence
         self.default = default
         self.doc = doc
         self.constant = constant or readonly # readonly => constant
         self.readonly = readonly
+        self._label = label
+        self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)
@@ -850,19 +850,15 @@ class Parameter(object):
         else:
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
 
-
-    # TODO: quick trick to allow subscription to the setting of
-    # parameter metadata. ParameterParameter?
-
-    # Note that unlike with parameter value setting, there's no access
-    # to the Parameterized instance, so no per-instance subscription.
-
-    def __setattr__(self,attribute,value):
-        implemented = (attribute!="default" and hasattr(self,'watchers') and attribute in self.watchers)
+    def __setattr__(self, attribute, value):
+        implemented = (attribute != "default" and hasattr(self,'watchers') and attribute in self.watchers)
+        slot_attribute = attribute in self.__slots__
         try:
-            old = getattr(self,attribute) if implemented else NotImplemented
+            old = getattr(self, attribute) if implemented else NotImplemented
+            if slot_attribute:
+                self._on_set(attribute, old, value)
         except AttributeError as e:
-            if attribute in self.__slots__:
+            if slot_attribute:
                 # If Parameter slot is defined but an AttributeError was raised
                 # we are in __setstate__ and watchers should not be triggered
                 old = NotImplemented
@@ -881,8 +877,7 @@ class Parameter(object):
         if not self.owner.param._BATCH_WATCH:
             self.owner.param._batch_call_watchers()
 
-
-    def __get__(self,obj,objtype): # pylint: disable-msg=W0613
+    def __get__(self, obj, objtype): # pylint: disable-msg=W0613
         """
         Return the value for this Parameter.
 
@@ -903,9 +898,8 @@ class Parameter(object):
             result = obj.__dict__.get(self._internal_name,self.default)
         return result
 
-
     @instance_descriptor
-    def __set__(self,obj,val):
+    def __set__(self, obj, val):
         """
         Set the value for this Parameter.
 
@@ -985,18 +979,18 @@ class Parameter(object):
         if not obj.param._BATCH_WATCH:
             obj.param._batch_call_watchers()
 
+    def _validate_value(self, value, allow_None):
+        """Implements validation for parameter value"""
 
     def _validate(self, val):
-        """Implements validation for the parameter"""
-
+        """Implements validation for the parameter value and attributes"""
+        self._validate_value(val, self.allow_None)
 
     def _post_setter(self, obj, val):
         """Called after the parameter value has been validated and set"""
 
-
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed." % self.name)
-
 
     def _set_names(self, attrib_name):
         if None not in (self.owner, self.name) and attrib_name != self.name:
@@ -1010,7 +1004,6 @@ class Parameter(object):
                                     self.owner.name, attrib_name))
         self.name = attrib_name
         self._internal_name = "_%s_param_value" % attrib_name
-
 
     def __getstate__(self):
         """
@@ -1054,7 +1047,6 @@ class String(Parameter):
            ip_regex = '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
            super(IPAddress, self).__init__(default=default, regex=ip_regex, **kwargs)
 
-
     """
 
     __slots__ = ['regex']
@@ -1065,17 +1057,23 @@ class String(Parameter):
         self.allow_None = (default is None or allow_None)
         self._validate(default)
 
-    def _validate(self, val):
-        if self.allow_None and val is None:
+    def _validate_regex(self, val, regex):
+        if (val is None and self.allow_None):
             return
+        if regex is not None and re.match(regex, val) is None:
+            raise ValueError("String parameter %r value %r does not match regex %r."
+                             % (self.name, val, regex))
 
+    def _validate_value(self, val, allow_None):
+        if allow_None and val is None:
+            return
         if not isinstance(val, basestring):
             raise ValueError("String parameter %r only takes a string value, "
                              "not value of type %s." % (self.name, type(val)))
 
-        if self.regex is not None and re.match(self.regex, val) is None:
-            raise ValueError("String parameter %r value %r does not match regex %r."
-                             % (self.name, val, self.regex))
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
+        self._validate_regex(val, self.regex)
 
 
 class shared_parameters(object):

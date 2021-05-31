@@ -52,7 +52,7 @@ class TestDataFrame(API1TestCase):
             df = param.DataFrame(default=empty)
 
         test = Test()
-        exception = "Parameter 'df' value must be an instance of DataFrame, not '3'"
+        exception = "DataFrame parameter 'df' value must be an instance of DataFrame, not 3."
         with self.assertRaisesRegexp(ValueError, exception):
             test.df = 3
 

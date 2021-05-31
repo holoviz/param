@@ -1859,6 +1859,11 @@ class MultiFileSelector(ListSelector):
         self.path = path
         self.update()
 
+    def _on_set(self, attribute, old, new):
+        super(MultiFileSelector, self)._on_set(attribute, new, old)
+        if attribute == 'path':
+            self.update()
+
     def update(self):
         self.objects = sorted(glob.glob(self.path))
         if self.default and all([o in self.objects for o in self.default]):

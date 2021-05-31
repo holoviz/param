@@ -979,15 +979,6 @@ class Parameter(object):
         if not obj.param._BATCH_WATCH:
             obj.param._batch_call_watchers()
 
-    def _on_set(self, attribute, old, new):
-        if self.owner is None:
-            return
-        if attribute == 'allow_None':
-            attribute = 'value'
-        validator = '_validate_%s' % attribute
-        if hasattr(self, validator):
-            getattr(self, validator)(getattr(self.owner, self.name), new)
-
     def _validate_value(self, value, allow_None):
         """Implements validation for parameter value"""
 
@@ -1065,14 +1056,6 @@ class String(Parameter):
         self.regex = regex
         self.allow_None = (default is None or allow_None)
         self._validate(default)
-
-    def _on_set(self, attribute, old, new):
-        if self.owner is None:
-            return
-        if attribute == 'regex':
-            self._validate_regex(getattr(self.owner, self.name), new)
-        elif attribute == 'allow_None':
-            self._validate_value(getattr(self.owner, self.name), new)
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):

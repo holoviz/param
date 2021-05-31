@@ -878,15 +878,6 @@ class Number(Dynamic):
         self._validate_step(val, self.step)
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
 
-    def _on_set(self, attribute, old, new):
-        if self.owner is None or self.time_fn:
-            return
-        if attribute == 'inclusive_bounds':
-            return self._validate_bounds(getattr(self.owner, self.name), self.bounds, new)
-        elif attribute == 'bounds':
-            return self._validate_bounds(getattr(self.owner, self.name), new, self.inclusive_bounds)
-        super(Number, self)._on_set(attribute, old, new)
-
     def get_soft_bounds(self):
         """
         For each soft bound (upper and lower), if there is a defined
@@ -1281,8 +1272,9 @@ class Selector(ObjectSelector):
     first argument is now objects, this can be passed in as a positional
     argument which sufficient in many common use cases.
     """
-    def __init__(self,objects=None, default=None, instantiate=False,
-                 compute_default_fn=None,check_on_set=None,allow_None=None,**params):
+    def __init__(self, objects=None, default=None, instantiate=False,
+                 compute_default_fn=None, check_on_set=None,
+                 allow_None=None, **params):
 
         if is_ordered_dict(objects):
             autodefault = list(objects.values())[0]
@@ -1299,11 +1291,10 @@ class Selector(ObjectSelector):
 
         default = autodefault if default is None else default
 
-        super(Selector,self).__init__(default=default, objects=objects,
-                                      instantiate=instantiate,
-                                      compute_default_fn=compute_default_fn,
-                                      check_on_set=check_on_set,
-                                      allow_None=allow_None, **params)
+        super(Selector,self).__init__(
+            default=default, objects=objects, instantiate=instantiate,
+            compute_default_fn=compute_default_fn,
+            check_on_set=check_on_set, allow_None=allow_None, **params)
 
 
 class ClassSelector(SelectorBase):
@@ -1321,15 +1312,6 @@ class ClassSelector(SelectorBase):
         self.is_instance = is_instance
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
         self._validate(default)
-
-    def _on_set(self, attribute, old, new):
-        if self.owner is None:
-            return
-        if attribute == 'class_':
-            return self._validate_class_(getattr(self.owner, self.name), new, self.is_instance)
-        elif attribute == 'is_instance':
-            return self._validate_class_(getattr(self.owner, self.name), self.class_, new)
-        super(ClassSelector, self)._on_set(attribute, old, new)
 
     def _validate(self, val):
         super(ClassSelector, self)._validate(val)
@@ -2039,15 +2021,6 @@ class Range(NumericTuple):
         self.softbounds = softbounds
         self.step = step
         super(Range,self).__init__(default=default,length=2,**params)
-
-    def _on_set(self, attribute, old, new):
-        if self.owner is None:
-            return
-        if attribute == 'inclusive_bounds':
-            return self._validate_bounds(getattr(self.owner, self.name), self.bounds, new)
-        elif attribute == 'bounds':
-            return self._validate_bounds(getattr(self.owner, self.name), new, self.inclusive_bounds)
-        super(Range, self)._on_set(attribute, old, new)
 
     def _validate(self, val):
         super(Range, self)._validate(val)

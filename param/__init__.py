@@ -1491,7 +1491,7 @@ class Array(ClassSelector):
         import numpy
         try:
             return _deserialize_from_path(
-                {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(unicode(x))},
+                {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
                 value, 'Array'
             )
         except:

@@ -20,9 +20,6 @@ try:
 except:
     np = ndarray = None
 
-np_skip = skipIf(np is None, "NumPy is not available")
-
-
 try:
     import pandas as pd
     pd_ver = pd.__version__.split('.')
@@ -31,10 +28,6 @@ try:
 except:
     pd = df1 = df2 = modern_pd = None
 
-pd_skip = skipIf(pd is None, "pandas is not available")
-modern_pd_skip = skipIf(modern_pd is None, "pandas is too old")
-
-
 # The writer could be xlsxwriter, but the sufficient condition is the presence of
 # openpyxl
 try:
@@ -42,35 +35,44 @@ try:
 except:
     xlsxm = None
 
-xlsxm_skip = skipIf(xlsxm is None, "openpyxl is not available")
-
-
 try:
     import odf as ods
 except:
     ods = None
 
-ods_skip = skipIf(ods is None, "odfpy is not available")
-
+# prior to pandas version 1.2, xlrd was always the default excel reader (though it
+# had to be be of a version before xlrd's 2.0).
+xls = None
+try:
+    import xlrd as xls
+    if int(xls.__version__.split('.')[0]) > 2:
+        raise Exception()
+except:
+    if modern_pd is None:
+        xlsxm = None
 
 try:
     import feather
 except:
     feather = None
 
-feather_skip = skipIf(feather is None, "feather-format is not available")
-
-
 try:
     import fastparquet as parquet
 except:
     parquet = None
-
 try:
     import pyarrow as parquet
 except:
     pass
 
+
+np_skip = skipIf(np is None, "NumPy is not available")
+pd_skip = skipIf(pd is None, "pandas is not available")
+modern_pd_skip = skipIf(modern_pd is None, "pandas is too old")
+xlsxm_skip = skipIf(xlsxm is None, "openpyxl is not available")
+ods_skip = skipIf(ods is None, "odfpy is not available")
+xls_skip = skipIf(xls is None, "xlrd is not available")
+feather_skip = skipIf(feather is None, "feather-format is not available")
 parquet_skip = skipIf(parquet is None, "fastparquet and pyarrow are not available")
 
 
@@ -155,22 +157,23 @@ class TestFileDeserialization(API1TestCase):
     # store the serialized file as a byte array to future-proof somewhat, but that would
     # break if we ever decided to change the default data_frame value. Who cares.
 
-    @modern_pd_skip
+    @pd_skip
     @xlsxm_skip
     def test_data_frame_xlsm(self):
         path = '{}/val.xlsm'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
-    @modern_pd_skip
+    @pd_skip
     @xlsxm_skip
     def test_data_frame_xlsx(self):
         path = '{}/val.xlsx'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)
         self._test_deserialize_array(TestSet, path, 'data_frame')
 
-    @modern_pd_skip
+    @pd_skip
     @ods_skip
+    @skipIf(sys.version_info[0] < 3, "py2k pandas does not support 'ods'")
     def test_data_frame_ods(self):
         path = '{}/val.ods'.format(self.temp_dir)
         TestSet.data_frame.to_excel(path, index=False)

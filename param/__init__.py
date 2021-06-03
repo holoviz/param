@@ -306,7 +306,7 @@ def _deserialize_from_path(ext_to_routine, path, type_name):
         get_logger().warning(
             "Could not parse file '{}' as {}".format(path, type_name), exc_info=True)
     raise ValueError(
-        "No deserialization routine for files with '{}' extension".format(path))
+        "No deserialization method for files with '{}' extension".format(path))
 
 
 class Infinity(object):

@@ -20,10 +20,9 @@ hidden: true
 ---
 Overview <index>
 Simplifying Codebases <Simplifying_Codebases>
-Simplifying_Codebases <Simplifying_Codebases>
 Parameters <Parameters>
-Parameter_Types <Parameter_Types>
-Logging_and_Messages <Logging_and_Messages>
+Parameter Types <Parameter_Types>
+Logging and Messages <Logging_and_Messages>
 ParameterizedFunctions <ParameterizedFunctions>
-How_Param_Works <How_Param_Works>
+How Param Works <How_Param_Works>
 ```

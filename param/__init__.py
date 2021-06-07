@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 Parameters are a kind of class attribute allowing special behavior,
 including dynamically generated parameter values, documentation
@@ -2176,3 +2177,17 @@ class Event(Boolean):
             super(Event, self).__set__(obj, val)
         if self._mode in ['set-reset', 'reset']:
             self._reset_event(obj, val)
+
+
+from contextlib import contextmanager
+@contextmanager
+def exceptions_summarized():
+    """Useful utility for writing docs that need to show expected errors.
+    Shows exception only, concisely, without a traceback.
+    """
+    try:
+        yield
+    except Exception:
+        import sys
+        etype, value, tb = sys.exc_info()
+        print("{}: {}".format(etype.__name__,value), file=sys.stderr)            

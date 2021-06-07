@@ -4,13 +4,13 @@ Param is a mature library (originally from 2003) that changes very slowly and ve
 
 Currently scheduled plans:
 
-- Make there be documentation. We have funding for this and will do it in 2020. This includes both user guide/tutorial material and reference material, covering both how it's currently used in HoloViz and on the underlying design and general functionality independent of HoloViz (as indeed it predates all of HoloViz). This will be a major step forward in how suitable Param is for general usage.
+- Make there be documentation. We have funding for this and work is already underway. This includes both user guide/tutorial material and reference material, covering both how it's currently used in HoloViz and on the underlying design and general functionality independent of HoloViz (as indeed it predates all of HoloViz). This will be a major step forward in how suitable Param is for general usage.
 
 - Improve the Param website (same time as docs; just make it look decent!)
 
 - Clean up the Parameterized namespace (remove nearly all methods not on .param) and other API warts, scheduled for Param 2.0 since those are breaking changes. See https://github.com/holoviz/param/issues/154 and https://github.com/holoviz/param/issues/233.
 
-- More powerful serialization (to JSON, YAML, and URLs) to make it simpler to persist the state of a Parameterized object. Some support already merged as https://github.com/holoviz/param/pull/414 , but still to be further developed as support for using Parameterized objects to build REST APIS (see https://github.com/holoviz/monitor for example usage).
+- More powerful serialization (to JSON, YAML, and URLs) to make it simpler to persist the state of a Parameterized object. Some support already merged as https://github.com/holoviz/param/pull/414 , but still to be further developed as support for using Parameterized objects to build REST APIS (see https://github.com/holoviz/lumen for example usage).
 
 Other items that are not yet scheduled but would be great to have:
 

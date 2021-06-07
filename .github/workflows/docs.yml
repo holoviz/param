@@ -32,6 +32,8 @@ jobs:
       - name: env setup
         run: |
           python -m pip install pip==21.0.0
+          python -m pip install graphviz
+          python -m pip install nbsite --pre
           python -m pip install -e .[doc] --use-feature=fast-deps --use-deprecated=legacy-resolver
       - name: build docs
         run: |

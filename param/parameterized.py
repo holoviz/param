@@ -851,7 +851,7 @@ class Parameter(object):
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
 
     def __setattr__(self, attribute, value):
-        implemented = (attribute != "default" and hasattr(self,'watchers') and attribute in self.watchers)
+        implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
         slot_attribute = attribute in self.__slots__
         try:
             old = getattr(self, attribute) if implemented else NotImplemented
@@ -876,6 +876,12 @@ class Parameter(object):
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
             self.owner.param._batch_call_watchers()
+
+    def _on_set(self, attribute, old, value):
+        """
+        Can be overridden on subclasses to handle changes when parameter
+        attribute is set.
+        """
 
     def __get__(self, obj, objtype): # pylint: disable-msg=W0613
         """

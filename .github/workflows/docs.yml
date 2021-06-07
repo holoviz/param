@@ -31,9 +31,7 @@ jobs:
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
       - name: env setup
         run: |
-          python -m pip install graphviz myst_parser pydata-sphinx-theme "nbconvert <6.0" "myst-nb"
-          python -m pip install nbsite --pre
-          python -m pip install -e .
+          python -m pip install -e .[doc]
       - name: build docs
         run: |
           mkdir doc/Reference_Manual && nbsite_generate_modules.py param -d ./doc/Reference_Manual -n param -e tests

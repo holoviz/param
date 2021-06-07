@@ -2189,4 +2189,4 @@ def exceptions_summarized():
     except Exception:
         import sys
         etype, value, tb = sys.exc_info()
-        print("{}: {}".format(etype.__name__,value), file=sys.stderr)            
+        print("{}: {}".format(etype.__name__,value), file=sys.stderr)

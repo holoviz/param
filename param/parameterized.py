@@ -2275,7 +2275,7 @@ class ParameterizedMetaclass(type):
         Note that instantiate is handled differently: if there is a
         parameter with the same name in one of the superclasses with
         instantiate set to True, this parameter will inherit
-        instatiate=True.
+        instantiate=True.
         """
         # get all relevant slots (i.e. slots defined in all
         # superclasses of this parameter)

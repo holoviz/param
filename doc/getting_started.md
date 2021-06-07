@@ -26,9 +26,9 @@ The very latest changes can be obtained via `conda install -c pyviz/label/dev pa
 
 ## Using Param to get simple, robust code
 
-The `param` library gives you Parameters and Parameterized classes. 
+The `param` library gives you Parameters, which are used in Parameterized classes. 
 
-A Parameter is a special type of Python attribute extended to have various optional features such as type and range checking, dynamically generated values, documentation strings, default values, etc., each of which is inherited from parent classes if not specified in a subclass:
+A Parameter is a special type of Python class attribute extended to have various optional features such as type and range checking, dynamically generated values, documentation strings, default values, etc., each of which is inherited from parent classes if not specified in a subclass or instance:
 
 ```{code-block} python
 import param
@@ -56,7 +56,7 @@ class B(A):
 4
 ```
 
-As you can see, the Parameters defined here work precisely like any other Python attributes in your code, so it's generally quite straightforward to migrate an existing class to use Param. Just inherit from `param.Parameterized`, then provide an optional `Parameter` declaration for each parameter the object accepts, including ranges and allowed values if appropriate. You only need to declare and document each parameter _once_, at the highest class where it applies, and all the metadata will be inherited by subclasses.
+As you can see, the Parameters defined here work precisely like any other Python attributes in your code, so it's generally quite straightforward to migrate an existing class to use Param. Just inherit from `param.Parameterized`, then provide an optional `Parameter` declaration for each parameter the object accepts, including ranges and allowed values if appropriate. You only need to declare and document each parameter _once_, at the highest superclass where it applies, and its default value all the other metadata will be inherited by each subclass.
 
 Once you've declared your parameters, a whole wealth of features and better behavior is now unlocked! For instance, what happens if a user tries to supply some inappropriate data? With Param, such errors will be caught immediately:
 
@@ -71,7 +71,7 @@ ValueError: Parameter 'b' must be at least 0
 
 Of course, you could always add more code to an ordinary Python class to check for errors like that, but as described in the [User Guide](user_guide/Simplifying_Codebases), that quickly gets unwieldy, with dozens of lines of exceptions, assertions, property definitions, and decorators that obscure what you actually wrote your code to do. Param lets you focus on the code you're writing, while letting your users know exactly what inputs they can supply. 
 
-The types in Param may remind you of the static types found in some languages, but here the validation is done at runtime and is checking not just types but also numeric ranges or for specific allowed values. Param thus helps you not just with programming correctness, as for static types, but also for validating user inputs, which is generally a large fraction of a program's code.
+The types in Param may remind you of the static types found in some languages, but here the validation is done at runtime and is checking not just types but also numeric ranges or for specific allowed values. Param thus helps you not just with programming correctness, as for static types, but also for validating user inputs. Validating user inputs is generally a large fraction of a program's code, because such inputs are a huge source of vulnerabilities and potential error conditions, and Param lets you avoid ever having to write nearly any of that code.
 
 The [User Guide](user_guide/index) explains all the other Param features for simplifying your codebase, improving input validation, allowing flexible configuration, and supporting serialization.
 
@@ -123,7 +123,7 @@ Param includes a separate and optional module `numbergen` that makes it simple t
 ('The sum is: 11', 'The sum is: 3', 'The sum is: 13', 'The sum is: 7')
 ```
 
-Numbergen objects support the usual arithmetic operations like +, -, *, /, //, %, **, and `abs()`, and so they can be freely combined with each other or with mathematical constants. They also optionally respect a global "time" (e.g. a simulation time or a logical counter), which lets you synchronize changes to dynamic values without any speciall coordination code.
+Numbergen objects support the usual arithmetic operations like +, -, *, /, //, %, **, and `abs()`, and so they can be freely combined with each other or with mathematical constants. They also optionally respect a global "time" (e.g. a simulation time or a logical counter), which lets you synchronize changes to dynamic values without any special coordination code.
 
 ## Using Param to build GUIs
 

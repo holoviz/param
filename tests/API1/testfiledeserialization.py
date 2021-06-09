@@ -106,7 +106,7 @@ class TestFileDeserialization(API1TestCase):
             self._test_deserialize_array(TestSet, path, 'array')
         with open(path, 'w'):
             pass
-        with self.assertRaisesRegex(ValueError, "no deserialization method for files"):
+        with self.assertRaisesRegexp(ValueError, "no deserialization method for files"):
             self._test_deserialize_array(TestSet, path, 'array')
         path = '{}/val.npy'.format(self.temp_dir)
         with open(path, 'w'):

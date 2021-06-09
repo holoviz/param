@@ -1490,7 +1490,7 @@ class Array(ClassSelector):
     @classmethod
     def deserialize(cls, value):
         import numpy
-        if isinstance(value, str):
+        if isinstance(value, unicode):
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
                 value, 'Array'
@@ -1579,7 +1579,7 @@ class DataFrame(ClassSelector):
     @classmethod
     def deserialize(cls, value):
         import pandas
-        if isinstance(value, str):
+        if isinstance(value, unicode):
             return _deserialize_from_path(
                 {
                     '.csv': pandas.read_csv,

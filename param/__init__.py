@@ -1585,6 +1585,8 @@ class DataFrame(ClassSelector):
                     '.csv': pandas.read_csv,
                     '.dta': pandas.read_stata,
                     '.feather': pandas.read_feather,
+                    '.h5': pandas.read_hdf,
+                    '.hdf5': pandas.read_hdf,
                     '.json': pandas.read_json,
                     '.ods': pandas.read_excel,
                     '.parquet': pandas.read_parquet,

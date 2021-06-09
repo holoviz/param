@@ -2,8 +2,6 @@
 Test deserialization routines that read from file
 """
 
-import logging
-from unittest.case import skip
 import param
 import sys
 
@@ -11,8 +9,6 @@ from . import API1TestCase
 from unittest import skipIf
 from tempfile import mkdtemp
 from shutil import rmtree
-from param.parameterized import get_logger
-
 
 try:
     import numpy as np
@@ -65,6 +61,10 @@ try:
 except:
     pass
 
+try:
+    import tables as hdf5
+except:
+    hdf5 = None
 
 np_skip = skipIf(np is None, "NumPy is not available")
 pd_skip = skipIf(pd is None, "pandas is not available")
@@ -74,6 +74,7 @@ ods_skip = skipIf(ods is None, "odfpy is not available")
 xls_skip = skipIf(xls is None, "xlrd is not available")
 feather_skip = skipIf(feather is None, "feather-format is not available")
 parquet_skip = skipIf(parquet is None, "fastparquet and pyarrow are not available")
+hdf5_skip = skipIf(hdf5 is None, "pytables is not available")
 
 
 class TestSet(param.Parameterized):
@@ -200,4 +201,14 @@ class TestFileDeserialization(API1TestCase):
     def test_data_frame_stata(self):
         path = '{}/val.dta'.format(self.temp_dir)
         TestSet.data_frame.to_stata(path, write_index=False)
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+
+    @pd_skip
+    @hdf5_skip
+    def test_data_frame_hdf5(self):
+        path = '{}/val.h5'.format(self.temp_dir)
+        TestSet.data_frame.to_hdf(path, 'df')
+        self._test_deserialize_array(TestSet, path, 'data_frame')
+        path = '{}/val.hdf5'.format(self.temp_dir)
+        TestSet.data_frame.to_hdf(path, 'df')
         self._test_deserialize_array(TestSet, path, 'data_frame')

@@ -99,22 +99,25 @@ class TestFileDeserialization(API1TestCase):
             self.assertTrue(np.array_equal(deserialized, getattr(obj, pname)))
 
     @np_skip
+    def test_fail_to_deserialize(self):
+        path = '{}/val.foo'.format(self.temp_dir)
+        with self.assertRaisesRegexp(IOError, "does not exist or is not a file"):
+            self._test_deserialize_array(TestSet, path, 'array')
+        with open(path, 'w'):
+            pass
+        with self.assertRaisesRegex(ValueError, "no deserialization method for files"):
+            self._test_deserialize_array(TestSet, path, 'array')
+        path = '{}/val.npy'.format(self.temp_dir)
+        with open(path, 'w'):
+            pass
+        with self.assertRaises(Exception):
+            self._test_deserialize_array(TestSet, path, 'array')
+
+    @np_skip
     def test_array_npy(self):
         path = '{}/val.npy'.format(self.temp_dir)
         np.save(path, TestSet.array)
         self._test_deserialize_array(TestSet, path, 'array')
-
-    @np_skip
-    @skipIf(sys.version_info[0] < 3, "assertLogs not in py2k")
-    def test_bad_deserialization_warns(self):
-        path = '{}/val.npy'.format(self.temp_dir)
-        with open(path, 'w'):
-            pass
-        with self.assertLogs(get_logger(), level=logging.WARN) as cm:
-            # this parses successfully as a string array, but it's probably not what
-            # the user wanted. Should warn
-            self._test_deserialize_array(TestSet, path, 'array', False)
-        self.assertRegex(cm.output[0], "Could not parse")
 
     @np_skip
     def test_array_txt(self):

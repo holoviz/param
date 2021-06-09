@@ -291,22 +291,23 @@ def _get_min_max_value(min, max, value=None, step=None):
 def _deserialize_from_path(ext_to_routine, path, type_name):
     """Call deserialization routine with path according to extension"""
     if not os.path.isfile(path):
-        raise FileNotFoundError("'{}' does not exist or is not a file".format(path))
+        raise FileNotFoundError(
+            "Could not parse file '{}' as {}: does not exist or is not a file"
+            "".format(path, type_name))
     root, ext = os.path.splitext(path)
     if ext in {'.gz', '.bz2', '.xz', '.zip'}:
         # A compressed type. We'll assume the routines can handle such extensions
-        # transparently
+        # transparently (if not, we'll fail later)
         ext = os.path.splitext(root)[1]
-    # If the extension does match, this is likely the correct routine and we will error
-    # later on. Let's warn the user.
-    try:
-        if ext in ext_to_routine:
-            return ext_to_routine[ext](path)
-    except:
-        get_logger().warning(
-            "Could not parse file '{}' as {}".format(path, type_name), exc_info=True)
+    # FIXME(sdrobert): try...except block below with "raise from" might be a good idea
+    # once py2.7 support is removed. Provides error + fact that failure occurred in
+    # deserialization
+    if ext in ext_to_routine:
+        return ext_to_routine[ext](path)
     raise ValueError(
-        "No deserialization method for files with '{}' extension".format(path))
+        "Could not parse file '{}' as {}: no deserialization method for files with "
+        "'{}' extension. Supported extensions: {}"
+        "".format(path, type_name, ext, ', '.join(sorted(ext_to_routine))))
 
 
 class Infinity(object):
@@ -1489,14 +1490,13 @@ class Array(ClassSelector):
     @classmethod
     def deserialize(cls, value):
         import numpy
-        try:
+        if isinstance(value, str):
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
                 value, 'Array'
             )
-        except:
-            pass
-        return numpy.asarray(value)
+        else:
+            return numpy.asarray(value)
 
 
 class DataFrame(ClassSelector):
@@ -1579,9 +1579,7 @@ class DataFrame(ClassSelector):
     @classmethod
     def deserialize(cls, value):
         import pandas
-        try:
-            # FIXME(sdrobert): pandas.read_hdf5 requires pytables which can be
-            # installed no prob with conda but requires hdf5 headers for pip.
+        if isinstance(value, str):
             return _deserialize_from_path(
                 {
                     '.csv': pandas.read_csv,
@@ -1595,9 +1593,8 @@ class DataFrame(ClassSelector):
                     '.xlsm': pandas.read_excel,
                     '.xlsx': pandas.read_excel,
                 }, value, 'DataFrame')
-        except:
-            pass
-        return pandas.DataFrame(value)
+        else:
+            return pandas.DataFrame(value)
 
 
 class Series(ClassSelector):

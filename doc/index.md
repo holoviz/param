@@ -23,7 +23,7 @@ Getting Started <getting_started>
 User Guide <user_guide/index>
 Comparisons <comparisons>
 Roadmap <roadmap>
-API <Reference_Manual/index>
+API <reference>
 Github Source <https://github.com/holoviz/param>
 About <about>
 ```

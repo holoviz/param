@@ -24,6 +24,17 @@ html_logo = "_static/logo_horizontal.png"
 
 html_css_files = ['site.css']
 
+html_theme_options = {
+    "github_url": "https://github.com/holoviz/param",
+    "icon_links": [
+        {
+            "name": "Discourse",
+            "url": "https://discourse.holoviz.org/",
+            "icon": "fab fa-discourse",
+        },
+    ]
+}
+
 html_context.update({
     'PROJECT': project,
     'DESCRIPTION': description,

@@ -9,3 +9,5 @@
 *.o
 *.out
 *.lock
+.ipynb_checkpoints
+.vscode

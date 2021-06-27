@@ -1640,7 +1640,7 @@ class resolve_path(ParameterizedFunction):
 
         if not p.search_paths:
             p.search_paths = [os.getcwd()]
-            
+
         if os.path.isabs(path):
             if ((p.path_to_file is None  and os.path.exists(path)) or
                 (p.path_to_file is True  and os.path.isfile(path)) or

@@ -4,7 +4,7 @@ This user guide provides a detailed introduction to the API and features of Para
 
 - [Simplifying Codebases](./Simplifying_Codebases): How Param allows you to eliminate boilerplate and unsafe code 
 - [Parameters](./Parameters): Using parameters (Class vs. instance parameters, setting defaults, etc.)
-- [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use MORE TODO
+- [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use
 - [Dependencies and Watchers](./Dependencies_and_Watchers): Expressing relationships between parameters and parameters or code, and triggering events TODO
 - [Serialization and Persistence](./Serialization_and_Persistence): Saving the state of a Parameterized object to a text, script, or pickle file TODO
 - [Customization](./Customization): Extending Param with custom Parameter types TODO

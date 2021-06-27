@@ -1096,7 +1096,7 @@ class Composite(Parameter):
     sequence of values and sets the value of the constituent
     attributes.
 
-    This Parameter type has not been tested with watchers and 
+    This Parameter type has not been tested with watchers and
     dependencies, and may not support them properly.
     """
 
@@ -1367,7 +1367,7 @@ class List(Parameter):
     list to be enforced.  If the item_type is non-None, all
     items in the list are checked to be of that type.
 
-    `class_` is accepted as an alias for `item_type`, but is 
+    `class_` is accepted as an alias for `item_type`, but is
     deprecated due to conflict with how the `class_` slot is
     used in Selector classes.
     """
@@ -1391,7 +1391,7 @@ class List(Parameter):
         self._validate_value(val, self.allow_None)
         self._validate_bounds(val, self.bounds)
         self._validate_item_type(val, self.item_type)
-        
+
     def _validate_bounds(self, val, bounds):
         "Checks that the list is of the right length and has the right contents."
         if bounds is None:

@@ -1096,6 +1096,9 @@ class Composite(Parameter):
     in the order specified.  Likewise, setting the parameter takes a
     sequence of values and sets the value of the constituent
     attributes.
+
+    This Parameter type has not been tested with watchers and
+    dependencies, and may not support them properly.
     """
 
     __slots__ = ['attribs', 'objtype']
@@ -1365,8 +1368,12 @@ class List(Parameter):
     Parameter whose value is a list of objects, usually of a specified type.
 
     The bounds allow a minimum and/or maximum length of
-    list to be enforced.  If the class is non-None, all
+    list to be enforced.  If the item_type is non-None, all
     items in the list are checked to be of that type.
+
+    `class_` is accepted as an alias for `item_type`, but is
+    deprecated due to conflict with how the `class_` slot is
+    used in Selector classes.
     """
 
     __slots__ = ['bounds', 'item_type', 'class_']
@@ -1379,6 +1386,15 @@ class List(Parameter):
         Parameter.__init__(self, default=default, instantiate=instantiate,
                            **params)
         self._validate(default)
+
+    def _validate(self, val):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        self._validate_value(val, self.allow_None)
+        self._validate_bounds(val, self.bounds)
+        self._validate_item_type(val, self.item_type)
 
     def _validate_bounds(self, val, bounds):
         "Checks that the list is of the right length and has the right contents."

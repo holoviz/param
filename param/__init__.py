@@ -1153,7 +1153,7 @@ class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
 
-    By default, if no default is specfied, picks the first object from 
+    By default, if no default is specfied, picks the first object from
     the provided set of objects, as long as the objects are in an ordered
     data collection.
 

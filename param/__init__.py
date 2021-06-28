@@ -1182,7 +1182,7 @@ class Selector(SelectorBase):
     # existing objects, therefore instantiate is False by default.
     def __init__(self, default=None, objects=None,  instantiate=False,
                  compute_default_fn=None, check_on_set=None,
-                 allow_None=None, **params):
+                 allow_None=None, empty_default=False, **params):
 
         if is_ordered_dict(objects):
             autodefault = list(objects.values())[0]
@@ -1197,7 +1197,7 @@ class Selector(SelectorBase):
         else:
             autodefault = None
 
-        default = autodefault if default is None else default
+        default = autodefault if (not empty_default and default is None) else default
 
         if objects is None:
             objects = []
@@ -1293,14 +1293,9 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
-    def __init__(self, objects=None, default=None, instantiate=False,
-                 compute_default_fn=None, check_on_set=None,
-                 allow_None=None, **params):
-
-        super(ObjectSelector,self).__init__(
-            default=default, objects=objects, instantiate=instantiate,
-            compute_default_fn=compute_default_fn,
-            check_on_set=check_on_set, allow_None=allow_None, **params)
+    def __init__(self, default=None, objects=None, **kwargs):
+        super(ObjectSelector,self).__init__(objects=objects, default=default, 
+                                            empty_default=True, **kwargs)
 
 
 class ClassSelector(SelectorBase):
@@ -1814,7 +1809,7 @@ class FileSelector(Selector):
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(FileSelector, self).__init__(default, **kwargs)
+        super(FileSelector, self).__init__(default=default, empty_default=True, **kwargs)
         self.path = path
         self.update()
 
@@ -1839,6 +1834,10 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
+    def __init__(self, default=None, objects=None, **kwargs):
+        super(ListSelector,self).__init__(
+            objects=objects, default=default, empty_default=True, **kwargs)
+
     def compute_default(self):
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
@@ -1859,7 +1858,7 @@ class MultiFileSelector(ListSelector):
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(MultiFileSelector, self).__init__(default, **kwargs)
+        super(MultiFileSelector, self).__init__(default=default, empty_default=True, **kwargs)
         self.path = path
         self.update()
 

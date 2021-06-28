@@ -1297,7 +1297,7 @@ class ObjectSelector(Selector):
                  compute_default_fn=None, check_on_set=None,
                  allow_None=None, **params):
 
-        super(Selector,self).__init__(
+        super(ObjectSelector,self).__init__(
             default=default, objects=objects, instantiate=instantiate,
             compute_default_fn=compute_default_fn,
             check_on_set=check_on_set, allow_None=allow_None, **params)

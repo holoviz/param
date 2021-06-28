@@ -1858,7 +1858,7 @@ class MultiFileSelector(ListSelector):
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(MultiFileSelector, self).__init__(default=default, empty_default=True, **kwargs)
+        super(MultiFileSelector, self).__init__(default=default, **kwargs)
         self.path = path
         self.update()
 

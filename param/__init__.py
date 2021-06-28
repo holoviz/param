@@ -1294,7 +1294,7 @@ class ObjectSelector(Selector):
     historical reasons.
     """
     def __init__(self, default=None, objects=None, **kwargs):
-        super(ObjectSelector,self).__init__(objects=objects, default=default, 
+        super(ObjectSelector,self).__init__(objects=objects, default=default,
                                             empty_default=True, **kwargs)
 
 

@@ -18,13 +18,13 @@ class TestObjectSelectorParameters(API1TestCase):
     def setUp(self):
         super(TestObjectSelectorParameters, self).setUp()
         class P(param.Parameterized):
-            e = param.ObjectSelector(default=5,objects=[5,6,7])
-            f = param.ObjectSelector(default=10)
-            h = param.ObjectSelector(default=None)
-            g = param.ObjectSelector(default=None,objects=[7,8])
-            i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
-            s = param.ObjectSelector(default=3,objects=OrderedDict(one=1,two=2,three=3))
-            d = param.ObjectSelector(default=opts['B'],objects=opts)
+            e = param.Selector(default=5,objects=[5,6,7])
+            f = param.Selector(default=10)
+            h = param.Selector(default=None)
+            g = param.Selector(default=None,objects=[7,8])
+            i = param.Selector(default=7,objects=[9],check_on_set=False)
+            s = param.Selector(default=3,objects=OrderedDict(one=1,two=2,three=3))
+            d = param.Selector(default=opts['B'],objects=opts)
 
         self.P = P
 
@@ -98,7 +98,7 @@ class TestObjectSelectorParameters(API1TestCase):
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.ObjectSelector(5,objects=[4])
+                q = param.Selector(default=5,objects=[4])
         except ValueError:
             pass
         else:
@@ -106,6 +106,26 @@ class TestObjectSelectorParameters(API1TestCase):
 
 
     def test_initialization_no_bounds(self):
+        try:
+            class Q(param.Parameterized):
+                q = param.Selector(default=5,objects=10)
+        except TypeError:
+            pass
+        else:
+            raise AssertionError("ObjectSelector created without range.")
+
+
+    def test_initialization_out_of_bounds_objsel(self):
+        try:
+            class Q(param.Parameterized):
+                q = param.ObjectSelector(5,objects=[4])
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("ObjectSelector created outside range.")
+
+
+    def test_initialization_no_bounds_objsel(self):
         try:
             class Q(param.Parameterized):
                 q = param.ObjectSelector(5,objects=10)

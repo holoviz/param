@@ -1181,8 +1181,8 @@ class Selector(SelectorBase):
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self, objects=None, default=None, instantiate=False,
-                  compute_default_fn=None, check_on_set=None,
-                  allow_None=None, empty_default=False, **params):
+                 compute_default_fn=None, check_on_set=None,
+                 allow_None=None, empty_default=False, **params):
 
         if is_ordered_dict(objects):
             autodefault = list(objects.values())[0]

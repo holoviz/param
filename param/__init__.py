@@ -1632,45 +1632,39 @@ class resolve_path(ParameterizedFunction):
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=False, doc="""
+    path_to_file = Boolean(default=True, pickle_default_value=False,
+                           allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a 'Folder'.""")
 
     def __call__(self, path, **params):
         p = ParamOverrides(self, params)
-
         path = os.path.normpath(path)
+        ftype = "File" if p.path_to_file is True \
+            else "Folder" if p.path_to_file is False else "Path"
+
+        if not p.search_paths:
+            p.search_paths = [os.getcwd()]
 
         if os.path.isabs(path):
-            if p.path_to_file:
-                if os.path.isfile(path):
-                    return path
-                else:
-                    raise IOError("File '%s' not found." %path)
-            elif not p.path_to_file:
-                if os.path.isdir(path):
-                    return path
-                else:
-                    raise IOError("Folder '%s' not found." %path)
-            else:
-                raise IOError("Type '%s' not recognised." %p.path_type)
+            if ((p.path_to_file is None  and os.path.exists(path)) or
+                (p.path_to_file is True  and os.path.isfile(path)) or
+                (p.path_to_file is False and os.path.isdir( path))):
+                return path
+            raise IOError("%s '%s' not found." % (ftype,path))
 
         else:
             paths_tried = []
             for prefix in p.search_paths:
                 try_path = os.path.join(os.path.normpath(prefix), path)
 
-                if p.path_to_file:
-                    if os.path.isfile(try_path):
-                        return try_path
-                elif not p.path_to_file:
-                    if os.path.isdir(try_path):
-                        return try_path
-                else:
-                    raise IOError("Type '%s' not recognised." %p.path_type)
+                if ((p.path_to_file is None  and os.path.exists(try_path)) or
+                    (p.path_to_file is True  and os.path.isfile(try_path)) or
+                    (p.path_to_file is False and os.path.isdir( try_path))):
+                    return try_path
 
                 paths_tried.append(try_path)
 
-            raise IOError(os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
+            raise IOError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
 class normalize_path(ParameterizedFunction):
@@ -1729,20 +1723,17 @@ class Path(Parameter):
         super(Path,self).__init__(default,**params)
 
     def _resolve(self, path):
-        if self.search_paths:
-            return resolve_path(path, search_paths=self.search_paths)
-        else:
-            return resolve_path(path)
+        return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
 
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).warning('None is not allowed')
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('None is not allowed')
         else:
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).warning('%s',e.args[0])
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """
@@ -1780,10 +1771,7 @@ class Filename(Path):
     """
 
     def _resolve(self, path):
-        if self.search_paths:
-            return resolve_path(path, path_to_file=True, search_paths=self.search_paths)
-        else:
-            return resolve_path(path, path_to_file=True)
+        return resolve_path(path, path_to_file=True, search_paths=self.search_paths)
 
 
 class Foldername(Path):
@@ -1804,10 +1792,7 @@ class Foldername(Path):
     """
 
     def _resolve(self, path):
-        if self.search_paths:
-            return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
-        else:
-            return resolve_path(path, path_to_file=False)
+        return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
 
 
 

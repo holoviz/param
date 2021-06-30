@@ -703,6 +703,34 @@ def _is_number(obj):
 
 def identity_hook(obj,val): return val
 
+def get_soft_bounds(bounds, softbounds):
+    """
+    For each soft bound (upper and lower), if there is a defined bound
+    (not equal to None) and does not exceed the hard bound, then it is
+    returned. Otherwise it defaults to the hard bound. The hard bound
+    could still be None.
+    """
+    if bounds is None:
+        hl, hu = (None, None)
+    else:
+        hl, hu = bounds
+
+    if softbounds is None:
+        sl, su = (None, None)
+    else:
+        sl, su = softbounds
+
+    if sl is None or (hl is not None and sl<hl):
+        l = hl
+    else:
+        l = sl
+
+    if su is None or (hu is not None and su>hu):
+        u = hu
+    else:
+        u = su
+
+    return (l, u)
 
 
 class Number(Dynamic):
@@ -879,28 +907,7 @@ class Number(Dynamic):
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
 
     def get_soft_bounds(self):
-        """
-        For each soft bound (upper and lower), if there is a defined
-        bound (not equal to None) then it is returned, otherwise it
-        defaults to the hard bound. The hard bound could still be None.
-        """
-        if self.bounds is None:
-            hl, hu = (None, None)
-        else:
-            hl, hu= self.bounds
-
-        if self.softbounds is None:
-            sl, su = (None, None)
-        else:
-            sl, su = self.softbounds
-
-        if sl is None: l = hl
-        else:          l = sl
-
-        if su is None: u = hu
-        else:          u = su
-
-        return (l, u)
+        return get_soft_bounds(self.bounds, self.softbounds)
 
     def __setstate__(self,state):
         if 'step' not in state:
@@ -2044,28 +2051,10 @@ class Range(NumericTuple):
                 raise ValueError("Range parameter %r's %s bound must be in range %s."
                                  % (self.name, bound, self.rangestr()))
 
+
     def get_soft_bounds(self):
-        """
-        For each soft bound (upper and lower), if there is a defined bound (not equal to None)
-        then it is returned, otherwise it defaults to the hard bound. The hard bound could still be None.
-        """
-        if self.bounds is None:
-            hl, hu = (None, None)
-        else:
-            hl, hu = self.bounds
+        return get_soft_bounds(self.bounds, self.softbounds)
 
-        if self.softbounds is None:
-            sl, su = (None, None)
-        else:
-            sl, su = self.softbounds
-
-        if sl is None: l = hl
-        else:          l = sl
-
-        if su is None: u = hu
-        else:          u = su
-
-        return (l, u)
 
     def rangestr(self):
         vmin, vmax = self.bounds

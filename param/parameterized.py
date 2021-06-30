@@ -2509,10 +2509,10 @@ if sys.version_info.major >= 3:
     from threading import get_ident
     def recursive_repr(fillvalue='...'):
         'Decorator to make a repr function return fillvalue for a recursive call'
-    
+
         def decorating_function(user_function):
             repr_running = set()
-    
+
             def wrapper(self, *args, **kwargs):
                 key = id(self), get_ident()
                 if key in repr_running:
@@ -2524,14 +2524,14 @@ if sys.version_info.major >= 3:
                     repr_running.discard(key)
                 return result
             return wrapper
-    
+
         return decorating_function
 else:
     def recursive_repr(fillvalue='...'):
         def decorating_function(user_function):
             return user_function
         return decorating_function
-    
+
 
 @add_metaclass(ParameterizedMetaclass)
 class Parameterized(object):

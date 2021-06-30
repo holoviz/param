@@ -2051,7 +2051,7 @@ class Range(NumericTuple):
                 raise ValueError("Range parameter %r's %s bound must be in range %s."
                                  % (self.name, bound, self.rangestr()))
 
-            
+
     def get_soft_bounds(self):
         return get_soft_bounds(self.bounds, self.softbounds)
 

@@ -1248,11 +1248,11 @@ class Selector(SelectorBase):
             return
 
         if not (val in self.objects or (self.allow_None and val is None)):
-            # CEBALERT: can be called before __init__ has called
-            # super's __init__, i.e. before attrib_name has been set.
-            try:
-                attrib_name = self.name
-            except AttributeError:
+            # This method can be called before __init__ has called
+            # super's __init__, so there may not be any name set yet.
+            if (hasattr(self, "name") and self.name):
+                attrib_name = " " + self.name
+            else:
                 attrib_name = ""
 
             items = []
@@ -1267,7 +1267,7 @@ class Selector(SelectorBase):
                     limiter = ', ...]'
                     break
             items = '[' + ', '.join(items) + limiter
-            raise ValueError("%s not in Parameter %s's list of possible objects, "
+            raise ValueError("%s not in parameter%s's list of possible objects, "
                              "valid options include %s" % (val, attrib_name, items))
 
     def _ensure_value_is_in_objects(self,val):
@@ -1809,9 +1809,11 @@ class FileSelector(Selector):
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(FileSelector, self).__init__(default=default, empty_default=True, **kwargs)
+        self.default = default
         self.path = path
         self.update()
+        super(FileSelector, self).__init__(default=default, objects=self.objects,
+                                           empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super(FileSelector, self)._on_set(attribute, new, old)
@@ -1858,9 +1860,10 @@ class MultiFileSelector(ListSelector):
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(MultiFileSelector, self).__init__(default=default, **kwargs)
+        self.default = default
         self.path = path
         self.update()
+        super(MultiFileSelector, self).__init__(default=default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super(MultiFileSelector, self)._on_set(attribute, new, old)

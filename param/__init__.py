@@ -1184,18 +1184,18 @@ class Selector(SelectorBase):
                  compute_default_fn=None, check_on_set=None,
                  allow_None=None, empty_default=False, **params):
 
-        if is_ordered_dict(objects):
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, dict):
-            main.param.warning("Parameter default value is arbitrary due to "
-                               "dictionaries prior to Python 3.6 not being "
-                               "ordered; should use an ordered dict or "
-                               "supply an explicit default value.")
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, list):
-            autodefault = objects[0]
-        else:
-            autodefault = None
+        autodefault = None
+        if objects:
+            if is_ordered_dict(objects):
+                autodefault = list(objects.values())[0]
+            elif isinstance(objects, dict):
+                main.param.warning("Parameter default value is arbitrary due to "
+                                   "dictionaries prior to Python 3.6 not being "
+                                   "ordered; should use an ordered dict or "
+                                   "supply an explicit default value.")
+                autodefault = list(objects.values())[0]
+            elif isinstance(objects, list):
+                autodefault = objects[0]
 
         default = autodefault if (not empty_default and default is None) else default
 

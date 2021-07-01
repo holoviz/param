@@ -2702,7 +2702,6 @@ class Parameterized(object):
         return "<%s %s>" % (self.__class__.__name__,self.name)
 
 
-    @recursive_repr()
     def script_repr(self,imports=[],prefix="    "):
         """
         Variant of __repr__ designed for generating a runnable script.

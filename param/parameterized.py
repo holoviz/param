@@ -2504,9 +2504,33 @@ script_repr_reg[FunctionType]=function_script_repr
 dbprint_prefix=None
 
 
+# Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
+if sys.version_info.major >= 3:
+    from threading import get_ident
+    def recursive_repr(fillvalue='...'):
+        'Decorator to make a repr function return fillvalue for a recursive call'
 
+        def decorating_function(user_function):
+            repr_running = set()
 
+            def wrapper(self, *args, **kwargs):
+                key = id(self), get_ident()
+                if key in repr_running:
+                    return fillvalue
+                repr_running.add(key)
+                try:
+                    result = user_function(self, *args, **kwargs)
+                finally:
+                    repr_running.discard(key)
+                return result
+            return wrapper
 
+        return decorating_function
+else:
+    def recursive_repr(fillvalue='...'):
+        def decorating_function(user_function):
+            return user_function
+        return decorating_function
 
 
 @add_metaclass(ParameterizedMetaclass)
@@ -2657,6 +2681,7 @@ class Parameterized(object):
             setattr(self,name,value)
         self.initialized=True
 
+    @recursive_repr()
     def __repr__(self):
         """
         Provide a nearly valid Python representation that could be used to recreate
@@ -2684,6 +2709,7 @@ class Parameterized(object):
         return self.pprint(imports,prefix, unknown_value=None, qualify=True,
                            separator="\n")
 
+    @recursive_repr()
     # CEBALERT: not yet properly documented
     def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):

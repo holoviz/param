@@ -28,7 +28,8 @@ extras_require = {
         'pydata-sphinx-theme',
         'myst-parser',
         'nbconvert <6.0',
-        'myst_nb'
+        'graphviz',
+        'myst_nb ==0.12.2'
     ]
 }
 

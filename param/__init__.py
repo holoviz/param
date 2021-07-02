@@ -1156,9 +1156,13 @@ class SelectorBase(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
-class ObjectSelector(SelectorBase):
+class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
+
+    By default, if no default is specfied, picks the first object from
+    the provided set of objects, as long as the objects are in an ordered
+    data collection.
 
     check_on_set restricts the value to be among the current list of
     objects. By default, if objects are initially supplied,
@@ -1181,11 +1185,27 @@ class ObjectSelector(SelectorBase):
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    # ObjectSelector is usually used to allow selection from a list of
+    # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, default=None, objects=None,  instantiate=False,
+    def __init__(self, objects=None, default=None, instantiate=False,
                  compute_default_fn=None, check_on_set=None,
-                 allow_None=None, **params):
+                 allow_None=None, empty_default=False, **params):
+
+        autodefault = None
+        if objects:
+            if is_ordered_dict(objects):
+                autodefault = list(objects.values())[0]
+            elif isinstance(objects, dict):
+                main.param.warning("Parameter default value is arbitrary due to "
+                                   "dictionaries prior to Python 3.6 not being "
+                                   "ordered; should use an ordered dict or "
+                                   "supply an explicit default value.")
+                autodefault = list(objects.values())[0]
+            elif isinstance(objects, list):
+                autodefault = objects[0]
+
+        default = autodefault if (not empty_default and default is None) else default
+
         if objects is None:
             objects = []
         if isinstance(objects, collections_abc.Mapping):
@@ -1203,7 +1223,7 @@ class ObjectSelector(SelectorBase):
         else:
             self.check_on_set = True
 
-        super(ObjectSelector,self).__init__(
+        super(Selector,self).__init__(
             default=default, instantiate=instantiate, **params)
         # Required as Parameter sets allow_None=True if default is None
         self.allow_None = allow_None
@@ -1235,11 +1255,11 @@ class ObjectSelector(SelectorBase):
             return
 
         if not (val in self.objects or (self.allow_None and val is None)):
-            # CEBALERT: can be called before __init__ has called
-            # super's __init__, i.e. before attrib_name has been set.
-            try:
-                attrib_name = self.name
-            except AttributeError:
+            # This method can be called before __init__ has called
+            # super's __init__, so there may not be any name set yet.
+            if (hasattr(self, "name") and self.name):
+                attrib_name = " " + self.name
+            else:
                 attrib_name = ""
 
             items = []
@@ -1254,7 +1274,7 @@ class ObjectSelector(SelectorBase):
                     limiter = ', ...]'
                     break
             items = '[' + ', '.join(items) + limiter
-            raise ValueError("%s not in Parameter %s's list of possible objects, "
+            raise ValueError("%s not in parameter%s's list of possible objects, "
                              "valid options include %s" % (val, attrib_name, items))
 
     def _ensure_value_is_in_objects(self,val):
@@ -1275,36 +1295,14 @@ class ObjectSelector(SelectorBase):
         return named_objs(self.objects, self.names)
 
 
-class Selector(ObjectSelector):
+class ObjectSelector(Selector):
     """
-    A more user friendly ObjectSelector that picks the first object for
-    the default (by default) given an ordered data collection. As the
-    first argument is now objects, this can be passed in as a positional
-    argument which sufficient in many common use cases.
+    Deprecated. Same as Selector, but with a different constructor for
+    historical reasons.
     """
-    def __init__(self, objects=None, default=None, instantiate=False,
-                 compute_default_fn=None, check_on_set=None,
-                 allow_None=None, **params):
-
-        if is_ordered_dict(objects):
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, dict):
-            main.param.warning("Parameter default value is arbitrary due to "
-                               "dictionaries prior to Python 3.6 not being "
-                               "ordered; should use an ordered dict or "
-                               "supply an explicit default value.")
-            autodefault = list(objects.values())[0]
-        elif isinstance(objects, list):
-            autodefault = objects[0]
-        else:
-            autodefault = None
-
-        default = autodefault if default is None else default
-
-        super(Selector,self).__init__(
-            default=default, objects=objects, instantiate=instantiate,
-            compute_default_fn=compute_default_fn,
-            check_on_set=check_on_set, allow_None=allow_None, **params)
+    def __init__(self, default=None, objects=None, **kwargs):
+        super(ObjectSelector,self).__init__(objects=objects, default=default,
+                                            empty_default=True, **kwargs)
 
 
 class ClassSelector(SelectorBase):
@@ -1811,16 +1809,18 @@ def abbreviate_paths(pathspec,named_paths):
 
 
 
-class FileSelector(ObjectSelector):
+class FileSelector(Selector):
     """
     Given a path glob, allows one file to be selected from those matching.
     """
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(FileSelector, self).__init__(default, **kwargs)
+        self.default = default
         self.path = path
         self.update()
+        super(FileSelector, self).__init__(default=default, objects=self.objects,
+                                           empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super(FileSelector, self)._on_set(attribute, new, old)
@@ -1837,11 +1837,15 @@ class FileSelector(ObjectSelector):
         return abbreviate_paths(self.path,super(FileSelector, self).get_range())
 
 
-class ListSelector(ObjectSelector):
+class ListSelector(Selector):
     """
-    Variant of ObjectSelector where the value can be multiple objects from
+    Variant of Selector where the value can be multiple objects from
     a list of possible objects.
     """
+
+    def __init__(self, default=None, objects=None, **kwargs):
+        super(ListSelector,self).__init__(
+            objects=objects, default=default, empty_default=True, **kwargs)
 
     def compute_default(self):
         if self.default is None and callable(self.compute_default_fn):
@@ -1863,9 +1867,10 @@ class MultiFileSelector(ListSelector):
     __slots__ = ['path']
 
     def __init__(self, default=None, path="", **kwargs):
-        super(MultiFileSelector, self).__init__(default, **kwargs)
+        self.default = default
         self.path = path
         self.update()
+        super(MultiFileSelector, self).__init__(default=default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super(MultiFileSelector, self)._on_set(attribute, new, old)

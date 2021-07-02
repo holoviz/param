@@ -131,6 +131,6 @@ Param is useful for any sort of programming, but if you need a GUI with widgets,
 
 Panel and other GUI libraries can of course explicitly instantiate widgets, so why use Param in this way? Simply put, this approach lets you cleanly separate your domain-specific code, clearly declaring the parameters it requires and respects, from your GUI code. The GUI code controls GUI issues like layout and font size, but the fundamental declaration of what parameters are available is done at the level of the code that actually uses it (classes A and B in this case). With Param, you can _separately_ declare all your Parameters right where they are used, achieving robustness, type checking, and clear documentation, while avoiding having your GUI code be tightly bound up with your domain-specific details. This approach helps you build maintainable, general-purpose codebases that can easily be used with or without GUI interfaces, with unattended batch operation not needing any GUI support and GUIs not needing to be updated every time someone adds a new option or parameter to the underlying code.
 
-# Learning more
+## Learning more
 
 The [User Guide](user_guide/index) goes through the major features of Param and how to use them. If you are interested in GUI programming, also see the [Param guide](https://panel.holoviz.org/user_guide/Param.html) in Panel, and the rest of the [Panel](https://panel.holoviz.org) docs. Have fun making your life better with Param!

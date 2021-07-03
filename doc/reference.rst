@@ -13,7 +13,7 @@ Param subpackages
 
 `parameterized`_
  Parameter, Parameterized, and other core classes and methods
-`__init__`_
+`param`_
  Optional predefined parameter types like Number, Selector, etc.
 `ipython`_
  Optional help functions tailored for Jupyter and IPython
@@ -28,13 +28,13 @@ Param subpackages
    :hidden:
 
    parameterized <param.parameterized>
-   __init__ <param.__init__>
+   param <param>
    ipython <param.ipython>
    serializer <param.serializer>
    version <param.version>
 
 .. _parameterized: param.parameterized.html
-.. ___init__: param.__init__.html
+.. _param: param.html
 .. _ipython: param.ipython.html
 .. _serializer: param.serializer.html
 .. _version: param.version.html

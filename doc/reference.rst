@@ -1,66 +1,40 @@
-Reference Manual
-****************
+********************
+API Reference Manual
+********************
 
-__init__ Module
-===============
+The Param API Reference Manual provides a comprehensive reference for
+all functions, classes, and methods provided by Param.
 
-.. inheritance-diagram:: __init__.param
-:mod:`__init__` Module
-----------------------
+Module Structure
+________________
 
-.. automodule:: param.__init__
-    :members:
-    :inherited-members:
-    :show-inheritance:
+Param subpackages
+-----------------
 
-
-parameterized Module
-====================
-
-.. inheritance-diagram:: parameterized.param
-:mod:`parameterized` Module
----------------------------
-
-.. automodule:: param.parameterized
-    :members:
-    :inherited-members:
-    :show-inheritance:
+`parameterized`_
+ Parameter, Parameterized, and other core classes and methods
+`__init__`_
+ Optional predefined parameter types like Number, Selector, etc.
+`ipython`_
+ Optional help functions tailored for Jupyter and IPython
+`serializer`_
+ Optional JSON serialization
+`version`_
+ Automatic generation of version strings using version control
 
 
-ipython Module
-==============
+.. toctree::
+   :maxdepth: 2
+   :hidden:
 
-.. inheritance-diagram:: ipython.param
-:mod:`ipython` Module
----------------------
+   parameterized <param.parameterized>
+   __init__ <param.__init__>
+   ipython <param.ipython>
+   serializer <param.serializer>
+   version <param.version>
 
-.. automodule:: param.ipython
-    :members:
-    :inherited-members:
-    :show-inheritance:
-
-
-serializer Module
-=================
-
-.. inheritance-diagram:: serializer.param
-:mod:`serializer` Module
-------------------------
-
-.. automodule:: param.serializer
-    :members:
-    :inherited-members:
-    :show-inheritance:
-
-
-version Module
-==============
-
-.. inheritance-diagram:: version.param
-:mod:`version` Module
----------------------
-
-.. automodule:: param.version
-    :members:
-    :inherited-members:
-    :show-inheritance:
+.. _parameterized: param.parameterized.html
+.. ___init__: param.__init__.html
+.. _ipython: param.ipython.html
+.. _serializer: param.serializer.html
+.. _version: param.version.html

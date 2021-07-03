@@ -4,9 +4,9 @@ Param is a mature library (originally from 2003) that changes very slowly and ve
 
 Currently scheduled plans:
 
-- Make there be documentation. We have funding for this and work is already underway. This includes both user guide/tutorial material and reference material, covering both how it's currently used in HoloViz and on the underlying design and general functionality independent of HoloViz (as indeed it predates all of HoloViz). This will be a major step forward in how suitable Param is for general usage.
+- Make there be documentation. (Currently underway, as of 7/2021!). This will be a major step forward in how suitable Param is for general usage.
 
-- Improve the Param website (same time as docs; just make it look decent!)
+- Improve the Param website (Currently very basic!)
 
 - Clean up the Parameterized namespace (remove nearly all methods not on .param) and other API warts, scheduled for Param 2.0 since those are breaking changes. See https://github.com/holoviz/param/issues/154 and https://github.com/holoviz/param/issues/233.
 
@@ -16,7 +16,7 @@ Other items that are not yet scheduled but would be great to have:
 
 - Integrate more fully with Python 3 language features like [type annotations](https://www.python.org/dev/peps/pep-0526) and/or [data classes], e.g. to respect and validate against declared types without requiring an explicit `param.Parameter` declaration, and to better support IDE type-checking features.
 
-- Integrate and interoperate more fully with other frameworks like Django models, Traitlets, attrs, Django models, or swagger/OpenAPI, each of which capture or can use similar information about parameter names, values, and constraints and so in many cases can easily be converted from one to the other.
+- Integrate and interoperate more fully with other frameworks like Django models, Traitlets, attrs, Django models, Pydantic, or swagger/OpenAPI, each of which capture or can use similar information about parameter names, values, and constraints and so in many cases can easily be converted from one to the other.
 
 - Improve support for Param in editors, automatic formatting tools, linters, document generators, and other tools that process Python code and could be made to have special-purpose optimizations specifically for Parameterized objects.
 

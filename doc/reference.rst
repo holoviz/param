@@ -3,13 +3,10 @@ API Reference Manual
 ********************
 
 The Param API Reference Manual provides a comprehensive reference for
-all functions, classes, and methods provided by Param.
+all modules, functions, classes, and methods provided by Param.
 
 Module Structure
 ________________
-
-Param subpackages
------------------
 
 `parameterized`_
  Parameter, Parameterized, and other core classes and methods
@@ -22,19 +19,79 @@ Param subpackages
 `version`_
  Automatic generation of version strings using version control
 
+Modules
+_______
 
-.. toctree::
-   :maxdepth: 2
-   :hidden:
 
-   parameterized <param.parameterized>
-   param <param>
-   ipython <param.ipython>
-   serializer <param.serializer>
-   version <param.version>
 
-.. _parameterized: param.parameterized.html
-.. _param: param.html
-.. _ipython: param.ipython.html
-.. _serializer: param.serializer.html
-.. _version: param.version.html
+parameterized Module
+====================
+
+.. inheritance-diagram:: parameterized.param
+:mod:`parameterized` Module
+---------------------------
+
+.. automodule:: param.parameterized
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+
+param Module
+===============
+
+.. inheritance-diagram:: __init__.param
+:mod:`__init__` Module
+----------------------
+
+.. automodule:: param.__init__
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+
+ipython Module
+==============
+
+.. inheritance-diagram:: ipython.param
+:mod:`ipython` Module
+---------------------
+
+.. automodule:: param.ipython
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+
+serializer Module
+=================
+
+.. inheritance-diagram:: serializer.param
+:mod:`serializer` Module
+------------------------
+
+.. automodule:: param.serializer
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+
+version Module
+==============
+
+.. inheritance-diagram:: version.param
+:mod:`version` Module
+---------------------
+
+.. automodule:: param.version
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+
+.. _parameterized: #parameterized-module
+.. _param: #__init__-module
+.. _ipython: #ipython-module
+.. _serializer: #serializer-module
+.. _version: #version-module
+       

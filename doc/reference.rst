@@ -3,10 +3,9 @@ API Reference Manual
 ********************
 
 The Param API Reference Manual provides a comprehensive reference for
-all modules, functions, classes, and methods provided by Param.
-
-Module Structure
-________________
+all modules, functions, classes, and methods provided by Param. See the
+`User Guide <../user_guide>`_ for a more readable overview and explanations;
+this material duplicates what is available from `help(obj)` for each object.
 
 `parameterized`_
  Parameter, Parameterized, and other core classes and methods
@@ -18,10 +17,6 @@ ________________
  Optional JSON serialization
 `version`_
  Automatic generation of version strings using version control
-
-Modules
-_______
-
 
 
 parameterized Module
@@ -90,7 +85,7 @@ version Module
 
 
 .. _parameterized: #parameterized-module
-.. _param: #__init__-module
+.. _param: #param-module
 .. _ipython: #ipython-module
 .. _serializer: #serializer-module
 .. _version: #version-module

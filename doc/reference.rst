@@ -1,17 +1,27 @@
-Reference Manual
-****************
+********************
+API Reference Manual
+********************
 
-__init__ Module
-===============
+The Param API Reference Manual provides a comprehensive reference for
+all modules, functions, classes, and methods provided by Param.
 
-.. inheritance-diagram:: __init__.param
-:mod:`__init__` Module
-----------------------
+Module Structure
+________________
 
-.. automodule:: param.__init__
-    :members:
-    :inherited-members:
-    :show-inheritance:
+`parameterized`_
+ Parameter, Parameterized, and other core classes and methods
+`param`_
+ Optional predefined parameter types like Number, Selector, etc.
+`ipython`_
+ Optional help functions tailored for Jupyter and IPython
+`serializer`_
+ Optional JSON serialization
+`version`_
+ Automatic generation of version strings using version control
+
+Modules
+_______
+
 
 
 parameterized Module
@@ -22,6 +32,19 @@ parameterized Module
 ---------------------------
 
 .. automodule:: param.parameterized
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+
+param Module
+===============
+
+.. inheritance-diagram:: __init__.param
+:mod:`__init__` Module
+----------------------
+
+.. automodule:: param.__init__
     :members:
     :inherited-members:
     :show-inheritance:
@@ -64,3 +87,11 @@ version Module
     :members:
     :inherited-members:
     :show-inheritance:
+
+
+.. _parameterized: #parameterized-module
+.. _param: #__init__-module
+.. _ipython: #ipython-module
+.. _serializer: #serializer-module
+.. _version: #version-module
+       

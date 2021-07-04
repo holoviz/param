@@ -1400,7 +1400,7 @@ class List(Parameter):
 
     def _validate_bounds(self, val, bounds):
         "Checks that the list is of the right length and has the right contents."
-        if bounds is None:
+        if bounds is None or (val is None and self.allow_None):
             return
         min_length, max_length = bounds
         l = len(val)

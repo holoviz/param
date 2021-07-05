@@ -1161,9 +1161,9 @@ class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
 
-    By default, if no default is specfied, picks the first object from
-    the provided set of objects, as long as the objects are in an ordered
-    data collection.
+    By default, if no default is specified, picks the first object from
+    the provided set of objects, as long as the objects are in an
+    ordered data collection.
 
     check_on_set restricts the value to be among the current list of
     objects. By default, if objects are initially supplied,
@@ -1636,7 +1636,9 @@ class resolve_path(ParameterizedFunction):
 
     path_to_file = Boolean(default=True, pickle_default_value=False,
                            allow_None=True, doc="""
-        String specifying whether the path refers to a 'File' or a 'Folder'.""")
+        String specifying whether the path refers to a 'File' or a
+        'Folder'. If None, the path may point to *either* a 'File' *or*
+        a 'Folder'.""")
 
     def __call__(self, path, **params):
         p = ParamOverrides(self, params)

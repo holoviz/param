@@ -1161,9 +1161,9 @@ class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
 
-    By default, if no default is specfied, picks the first object from
-    the provided set of objects, as long as the objects are in an ordered
-    data collection.
+    By default, if no default is specified, picks the first object from
+    the provided set of objects, as long as the objects are in an
+    ordered data collection.
 
     check_on_set restricts the value to be among the current list of
     objects. By default, if objects are initially supplied,

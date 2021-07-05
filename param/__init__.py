@@ -1636,7 +1636,9 @@ class resolve_path(ParameterizedFunction):
 
     path_to_file = Boolean(default=True, pickle_default_value=False,
                            allow_None=True, doc="""
-        String specifying whether the path refers to a 'File' or a 'Folder'.""")
+        String specifying whether the path refers to a 'File' or a
+        'Folder'. If None, the path may point to *either* a 'File' *or*
+        a 'Folder'.""")
 
     def __call__(self, path, **params):
         p = ParamOverrides(self, params)

@@ -19,7 +19,7 @@ extras_require = {
     # pip doesn't support tests_require
     # (https://github.com/pypa/pip/issues/1197)
     'tests': [
-        'nose',
+        'pytest',
         'flake8',
     ],
     'doc': [

@@ -219,7 +219,3 @@ class TestSeries(API1TestCase):
         test = Test()
         test.series = None
         self.assertIs(test.series, None)
-                
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

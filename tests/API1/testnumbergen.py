@@ -31,7 +31,3 @@ class TestUniformRandomOffset(API1TestCase):
         for _ in range(_iterations):
             value = gen()
             self.assertTrue(lbound <= value < ubound)
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

@@ -50,8 +50,3 @@ class TestDefaultsMetaclass(type):
 @add_metaclass(TestDefaultsMetaclass)
 class TestDefaults(API1TestCase):
     pass
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

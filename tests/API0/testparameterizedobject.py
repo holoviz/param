@@ -297,9 +297,3 @@ class TestSharedParameters(unittest.TestCase):
     def test_shared_list(self):
         self.assertTrue(self.p1.inst is self.p2.inst)
         self.assertTrue(self.p1.params('inst').default is not self.p2.inst)
-
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

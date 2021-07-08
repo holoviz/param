@@ -296,10 +296,3 @@ class TestTimeDependentDynamic(API1TestCase):
         hashfn = numbergen.Hash("test", input_count=1)
         self.assertEqual(hashfn(0.5), hashfn(gmpy.mpq(0.5)))
         self.assertEqual(hashfn(pi), hashfn(gmpy.mpq(3.141592)))
-
-
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

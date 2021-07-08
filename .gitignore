@@ -11,3 +11,4 @@
 *.lock
 .ipynb_checkpoints
 .vscode
+.tox

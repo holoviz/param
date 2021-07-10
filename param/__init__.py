@@ -1858,6 +1858,8 @@ class ListSelector(Selector):
                     self.objects.append(o)
 
     def _validate(self, val):
+        if (val is None and self.allow_None):
+            return
         for o in val:
             super(ListSelector, self)._validate(o)
 

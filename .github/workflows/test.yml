@@ -72,6 +72,7 @@ jobs:
         if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all
       - name: run coveralls
+        if: matrix.python-version != '2.7'
         env:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         run: tox -e coveralls

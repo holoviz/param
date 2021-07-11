@@ -71,3 +71,7 @@ jobs:
       - name: unit all_deps
         if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all
+      - name: run coveralls
+        env:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: tox -e coveralls

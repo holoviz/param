@@ -20,6 +20,7 @@ extras_require = {
     # (https://github.com/pypa/pip/issues/1197)
     'tests': [
         'pytest',
+        'pytest-cov',
         'flake8',
     ],
     'doc': [

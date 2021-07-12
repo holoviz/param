@@ -28,7 +28,7 @@ except ImportError:
     skip.append('Series')
 
 
-class TestDefaultsMetaclass(type):
+class DefaultsMetaclassTest(type):
     def __new__(mcs, name, bases, dict_):
 
         def test_skip(*args,**kw):
@@ -47,6 +47,6 @@ class TestDefaultsMetaclass(type):
         return type.__new__(mcs, name, bases, dict_)
 
 
-@add_metaclass(TestDefaultsMetaclass)
+@add_metaclass(DefaultsMetaclassTest)
 class TestDefaults(API1TestCase):
     pass

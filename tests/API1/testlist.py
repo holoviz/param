@@ -51,8 +51,3 @@ class TestListParameters(API1TestCase):
             pass
         else:
             raise AssertionError("Object set outside range.")
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

@@ -33,8 +33,3 @@ class TestNumpy(unittest.TestCase):
 
         z = Z(z=numpy.array([1,2]))
         _is_array_and_equal(z.z,[1,2])
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

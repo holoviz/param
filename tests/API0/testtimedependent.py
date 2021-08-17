@@ -7,7 +7,7 @@ import param
 import numbergen
 import copy
 
-from nose.plugins.skip import SkipTest
+import pytest
 import fractions
 
 try:
@@ -81,16 +81,15 @@ class TestTimeClass(unittest.TestCase):
         self.assertEqual(t(), 1)
         self.assertEqual(t.time_type, fractions.Fraction)
 
+    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
     def test_time_init_gmpy(self):
-        if gmpy is None: raise SkipTest
-
         t = param.Time(time_type=gmpy.mpq)
         self.assertEqual(t(), gmpy.mpq(0))
         t.advance(gmpy.mpq(0.25))
         self.assertEqual(t(), gmpy.mpq(1,4))
 
+    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
     def test_time_init_gmpy_advanced(self):
-        if gmpy is None: raise SkipTest
         t = param.Time(time_type=gmpy.mpq,
                        timestep=gmpy.mpq(0.25),
                        until=1.5)
@@ -270,12 +269,12 @@ class TestTimeDependentDynamic(unittest.TestCase):
         self.assertEqual(hashfn(pi), hashfn(fractions.Fraction(pi)))
 
 
+    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
     def test_time_hashing_integers_gmpy(self):
         """
         Check that hashes for gmpy values at the integers also matches
         those of ints, fractions and strings.
         """
-        if gmpy is None: raise SkipTest
         hashfn = numbergen.Hash("test", input_count=1)
         hash_1 = hashfn(1)
         hash_42 = hashfn(42)
@@ -286,20 +285,13 @@ class TestTimeDependentDynamic(unittest.TestCase):
         self.assertEqual(hash_42, hashfn(gmpy.mpq(42)))
         self.assertEqual(hash_42, hashfn(42))
 
+    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
     def test_time_hashing_rationals_gmpy(self):
         """
         Check that hashes of fractions and gmpy mpqs match for some
         reasonable rational numbers.
         """
-        if gmpy is None: raise SkipTest
         pi = "3.141592"
         hashfn = numbergen.Hash("test", input_count=1)
         self.assertEqual(hashfn(0.5), hashfn(gmpy.mpq(0.5)))
         self.assertEqual(hashfn(pi), hashfn(gmpy.mpq(3.141592)))
-
-
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

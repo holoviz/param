@@ -12,19 +12,17 @@ from .utils import MockLoggingHandler
 
 
 import random
-from nose.tools import istest, nottest
-
 
 from param.parameterized import ParamOverrides, shared_parameters
 from param.parameterized import default_label_formatter, no_instance_params
 
-@nottest
 class _SomeRandomNumbers(object):
     def __call__(self):
         return random.random()
 
-@nottest
 class TestPO(param.Parameterized):
+    __test__ = False
+
     inst = param.Parameter(default=[1,2,3],instantiate=True)
     notinst = param.Parameter(default=[1,2,3],instantiate=False, per_instance=False)
     const = param.Parameter(default=1,constant=True)
@@ -35,32 +33,33 @@ class TestPO(param.Parameterized):
 
     dyn = param.Dynamic(default=1)
 
-@nottest
 class TestPOValidation(param.Parameterized):
+    __test__ = False
+
     value = param.Number(default=2, bounds=(0, 4))
 
-@nottest
 @no_instance_params
 class TestPONoInstance(TestPO):
+    __test__ = False
     pass
 
-@nottest
 class AnotherTestPO(param.Parameterized):
     instPO = param.Parameter(default=TestPO(),instantiate=True)
     notinstPO = param.Parameter(default=TestPO(),instantiate=False)
 
-@nottest
 class TestAbstractPO(param.Parameterized):
+    __test__ = False
+
     __abstract = True
 
 class _AnotherAbstractPO(param.Parameterized):
     __abstract = True
 
-@nottest
 class TestParamInstantiation(AnotherTestPO):
+    __test__ = False
+
     instPO = param.Parameter(default=AnotherTestPO(),instantiate=False)
 
-@istest
 class TestParameterized(API1TestCase):
 
     @classmethod
@@ -340,22 +339,22 @@ class TestParameterized(API1TestCase):
 
 from param import parameterized
 
-@nottest
 class some_fn(param.ParameterizedFunction):
-   num_phase = param.Number(18)
-   frequencies = param.List([99])
-   scale = param.Number(0.3)
+    __test__ = False
 
-   def __call__(self,**params_to_override):
-       params = parameterized.ParamOverrides(self,params_to_override)
-       num_phase = params['num_phase']
-       frequencies = params['frequencies']
-       scale = params['scale']
-       return scale,num_phase,frequencies
+    num_phase = param.Number(18)
+    frequencies = param.List([99])
+    scale = param.Number(0.3)
+
+    def __call__(self,**params_to_override):
+        params = parameterized.ParamOverrides(self,params_to_override)
+        num_phase = params['num_phase']
+        frequencies = params['frequencies']
+        scale = params['scale']
+        return scale,num_phase,frequencies
 
 instance = some_fn.instance()
 
-@istest
 class TestParameterizedFunction(API1TestCase):
 
     def _basic_tests(self,fn):
@@ -381,12 +380,12 @@ class TestParameterizedFunction(API1TestCase):
         self.assertEqual(i(),(0.3,18,[10,20,30]))
 
 
-@nottest
 class TestPO1(param.Parameterized):
+    __test__ = False
+
     x = param.Number(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=1),bounds=(-1,1))
     y = param.Number(default=1,bounds=(-1,1))
 
-@istest
 class TestNumberParameter(API1TestCase):
 
     def test_outside_bounds(self):
@@ -411,7 +410,6 @@ class TestNumberParameter(API1TestCase):
             assert False, "Should raise ValueError."
 
 
-@istest
 class TestStringParameter(API1TestCase):
 
     def setUp(self):
@@ -435,7 +433,6 @@ class TestStringParameter(API1TestCase):
         assert t.c is None
 
 
-@istest
 class TestParameterizedUtilities(API1TestCase):
 
     def setUp(self):
@@ -455,7 +452,6 @@ class TestParameterizedUtilities(API1TestCase):
     def test_default_label_formatter_overrides(self):
         assert default_label_formatter.instance(overrides={'a': 'b'})('a') == 'b'
 
-@istest
 class TestParamOverrides(API1TestCase):
 
     def setUp(self):
@@ -497,9 +493,3 @@ class TestSharedParameters(API1TestCase):
     def test_shared_list(self):
         self.assertTrue(self.p1.inst is self.p2.inst)
         self.assertTrue(self.p1.param.params('inst').default is not self.p2.inst)
-
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

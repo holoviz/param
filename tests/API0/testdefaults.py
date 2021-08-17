@@ -4,6 +4,8 @@ Do all subclasses of Parameter supply a valid default?
 
 import unittest
 
+import pytest
+
 from param.parameterized import add_metaclass
 from param import concrete_descendents, Parameter
 
@@ -30,12 +32,11 @@ except ImportError:
     skip.append('Series')
 
 
-class TestDefaultsMetaclass(type):
+class DefaultsMetaclassTest(type):
     def __new__(mcs, name, bases, dict_):
 
         def test_skip(*args,**kw):
-            from nose.exc import SkipTest
-            raise SkipTest
+            pytest.skip()
 
         def add_test(p):
             def test(self):
@@ -50,11 +51,6 @@ class TestDefaultsMetaclass(type):
         return type.__new__(mcs, name, bases, dict_)
 
 
-@add_metaclass(TestDefaultsMetaclass)
+@add_metaclass(DefaultsMetaclassTest)
 class TestDefaults(unittest.TestCase):
     pass
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

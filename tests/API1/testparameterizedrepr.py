@@ -159,9 +159,3 @@ class TestParameterizedRepr(API1TestCase):
 
         self.assertEqual(obj.pprint(qualify=True),
                          "tests.API1.testparameterizedrepr."+r)
-
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

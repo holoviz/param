@@ -776,8 +776,3 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'triggered')
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

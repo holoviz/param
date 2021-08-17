@@ -39,6 +39,8 @@ simple_list = [1]
 
 class TestSet(param.Parameterized):
 
+    __test__ = False
+
     numpy_params = ['r']
     pandas_params = ['s','t','u']
     conditionally_unsafe = ['f', 'o']

@@ -247,12 +247,6 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
             self.assertNotEqual(call_1, t12.x)
 
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
-
-
 # Commented out block in the original doctest version.
 # Maybe these are features originally planned but never implemented
 

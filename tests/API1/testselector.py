@@ -113,8 +113,3 @@ class TestSelectorParameters(API1TestCase):
             pass
         else:
             raise AssertionError("Selector created without range.")
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

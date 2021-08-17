@@ -92,8 +92,3 @@ class TestCompositeParameters(unittest.TestCase):
         # get_value_generator() should give the objects
         self.assertEqual(ix(), 2)
         self.assertEqual(iy(), 5)
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

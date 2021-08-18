@@ -4,6 +4,7 @@ Unit test for CalendarDate parameters.
 
 
 import datetime as dt
+import pytest
 import param
 from . import API1TestCase
 
@@ -52,3 +53,7 @@ class TestDateTimeParameters(API1TestCase):
                                            dt.date(2017,2,25)))
         self.assertEqual(q.get_soft_bounds(), (dt.date(2017,2,1),
                                                dt.date(2017,2,25)))
+
+    def test_datetime_not_accepted(self):
+        with pytest.raises(ValueError):
+            param.CalendarDate(dt.datetime(2021, 8, 16, 10))

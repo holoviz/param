@@ -1942,8 +1942,8 @@ class CalendarDate(Number):
         if self.allow_None and val is None:
             return
 
-        if not isinstance(val, dt.date) and not (allow_None and val is None):
-            raise ValueError("CalendarDate parameter %r only takes datetime types." % self.name)
+        if (not isinstance(val, dt.date) or isinstance(val, dt.datetime)) and not (allow_None and val is None):
+            raise ValueError("CalendarDate parameter %r only takes date types." % self.name)
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt.date):

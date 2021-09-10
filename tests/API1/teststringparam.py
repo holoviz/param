@@ -27,7 +27,7 @@ class TestStringParameters(API1TestCase):
 
         cls = 'class' if sys.version_info.major > 2 else 'type'
         exception = "String parameter 's' only takes a string value, not value of type <%s 'NoneType'>." % cls
-        with self.assertRaisesRegexp(ValueError, exception):
+        with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 
     def test_default_none(self):

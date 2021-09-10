@@ -15,10 +15,10 @@ from param import * # noqa
 
 
 positional_args = {
-    ClassSelector: (object,)
+#    ClassSelector: (object,)
 }
 
-skip = []
+skip = ['ClassSelector']
 
 try:
     import numpy # noqa

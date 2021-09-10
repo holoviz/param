@@ -12,10 +12,10 @@ from param import ClassSelector
 from . import API1TestCase
 
 positional_args = {
-    ClassSelector: (object,)
+#    ClassSelector: (object,)
 }
 
-skip = []
+skip = ['ClassSelector']
 
 try:
     import numpy # noqa

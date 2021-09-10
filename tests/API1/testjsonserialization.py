@@ -220,7 +220,7 @@ class TestJSONSchema(API1TestCase):
                          param_schema)
 
         exception = "1 is not of type 'object'"
-        with self.assertRaisesRegexp(ValidationError, exception):
+        with self.assertRaisesRegex(ValidationError, exception):
             validate(instance=1, schema=schema)
 
     def test_serialize_integer_schema_instance(self):
@@ -238,13 +238,13 @@ class TestJSONSchema(API1TestCase):
     @np_skip
     def test_numpy_schemas_always_unsafe(self):
         for param_name in test.numpy_params:
-            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+            with self.assertRaisesRegex(param.serializer.UnsafeserializableException,''):
                 test.param.schema(safe=True, subset=[param_name], mode='json')
 
     @pd_skip
     def test_pandas_schemas_always_unsafe(self):
         for param_name in test.pandas_params:
-            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+            with self.assertRaisesRegex(param.serializer.UnsafeserializableException,''):
                 test.param.schema(safe=True, subset=[param_name], mode='json')
 
     def test_class_instance_schemas_match_and_validate_unsafe(self):
@@ -264,5 +264,5 @@ class TestJSONSchema(API1TestCase):
 
     def test_conditionally_unsafe(self):
         for param_name in test.conditionally_unsafe:
-            with self.assertRaisesRegexp(param.serializer.UnsafeserializableException,''):
+            with self.assertRaisesRegex(param.serializer.UnsafeserializableException,''):
                 test.param.schema(safe=True, subset=[param_name], mode='json')

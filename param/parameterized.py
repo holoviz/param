@@ -34,6 +34,11 @@ try:
 except:
     param_pager = None
 
+try:
+    from inspect import getfullargspec
+except:
+    from inspect import getargspec as getfullargspec # python2
+
 basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
 VERBOSE = INFO - 1
@@ -2731,7 +2736,7 @@ class Parameterized(object):
 
         changed_params = dict(self.param.get_param_values(onlychanged=script_repr_suppress_defaults))
         values = dict(self.param.get_param_values())
-        spec = inspect.getargspec(self.__init__)
+        spec = getfullargspec(self.__init__)
         args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
         if spec.defaults is not None:
@@ -2775,7 +2780,9 @@ class Parameterized(object):
             if k in posargs:
                 # value will be unknown_value unless k is a parameter
                 arglist.append(value)
-            elif k in kwargs or (spec.keywords is not None):
+            elif (k in kwargs or
+                  (hasattr(spec, 'varkw') and (spec.varkw is not None)) or
+                  (hasattr(spec, 'keywords') and (spec.keywords is not None))):
                 # Explicit modified keywords or parameters in
                 # precendence order (if **kwargs present)
                 keywords.append('%s=%s' % (k, value))

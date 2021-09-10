@@ -44,8 +44,8 @@ class TestParamPager(unittest.TestCase):
     def test_parameterized_class(self):
         page_string = self.pager(self.TestClass)
         # Remove params automatic numbered names
-        page_string = re.sub('TestClass(\d+)', 'TestClass', page_string)
-        ref_string = re.sub('TestClass(\d+)', 'TestClass', test1_repr)
+        page_string = re.sub(r'TestClass(\d+)', 'TestClass', page_string)
+        ref_string = re.sub(r'TestClass(\d+)', 'TestClass', test1_repr)
 
         try:
             self.assertEqual(page_string, ref_string)
@@ -57,8 +57,8 @@ class TestParamPager(unittest.TestCase):
     def test_parameterized_instance(self):
         page_string = self.pager(self.TestClass())
         # Remove params automatic numbered names
-        page_string = re.sub('TestClass(\d+)', 'TestClass', page_string)
-        ref_string = re.sub('TestClass(\d+)', 'TestClass', test2_repr)
+        page_string = re.sub(r'TestClass(\d+)', 'TestClass', page_string)
+        ref_string = re.sub(r'TestClass(\d+)', 'TestClass', test2_repr)
 
         try:
             self.assertEqual(page_string, ref_string)

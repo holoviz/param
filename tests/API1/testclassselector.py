@@ -48,7 +48,7 @@ class TestClassSelectorParameters(API1TestCase):
         self.assertEqual(p.g, 'A')
 
     def test_multiple_class_instance_error(self):
-        exception = "ClassSelector parameter 'g' value must be an instance of \(int, str\), not 3.0."
+        exception = r"ClassSelector parameter 'g' value must be an instance of \(int, str\), not 3.0."
         with self.assertRaisesRegexp(ValueError, exception):
             self.P(g=3.0)
 
@@ -67,7 +67,7 @@ class TestClassSelectorParameters(API1TestCase):
         self.assertIn('str', classes)
 
     def test_multiple_class_type_error(self):
-        exception = "ClassSelector parameter 'h' must be a subclass of \(int, str\), not 'float'."
+        exception = r"ClassSelector parameter 'h' must be a subclass of \(int, str\), not 'float'."
         with self.assertRaisesRegexp(ValueError, exception):
             self.P(h=float)
 

@@ -2359,8 +2359,8 @@ script_repr_suppress_defaults=True
 
 
 def script_repr(val, imports=None, prefix="\n    ", settings=[],
-                  qualify=True, unknown_value=None, separator="\n",
-                  show_imports=True):
+        qualify=True, unknown_value=None, separator="\n",
+        show_imports=True):
     """
     Variant of pprint() designed for generating a (nearly) runnable script.
 

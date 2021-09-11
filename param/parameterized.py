@@ -2359,8 +2359,8 @@ script_repr_suppress_defaults=True
 
 
 def script_repr(val, imports=None, prefix="\n    ", settings=[],
-                 qualify=True, unknown_value=None, separator="\n",
-                 show_imports=True):
+                  qualify=True, unknown_value=None, separator="\n",
+                  show_imports=True):
     """
     Variant of pprint() designed for generating a (nearly) runnable script.
 
@@ -2378,7 +2378,7 @@ def script_repr(val, imports=None, prefix="\n    ", settings=[],
     attributes it may have.
 
     If show_imports is True (default), includes import statements
-    for each of the modules required for the objects being 
+    for each of the modules required for the objects being
     instantiated. This list may not be complete, as it typically
     includes only the imports needed for the Parameterized object
     itself, not for values that may have been supplied to Parameters.
@@ -2392,13 +2392,13 @@ def script_repr(val, imports=None, prefix="\n    ", settings=[],
 
     if imports is None:
         imports = []
-    
+
     rep = pprint(val, imports, prefix, settings, unknown_value,
                  qualify, separator)
 
     imports = list(set(imports))
     imports_str = ("\n".join(imports) + "\n\n") if show_imports else ""
-    
+
     return imports_str + rep
 
 
@@ -2450,7 +2450,7 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
 
     if imports is None:
         imports = []
-    
+
     # JLS: The settings argument is not used anywhere. To be removed
     # in a separate PR.
     if isinstance(val,type):

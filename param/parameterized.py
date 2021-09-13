@@ -2059,6 +2059,12 @@ class Parameters(object):
         self_.__db_print(DEBUG,msg,*args,**kw)
 
 
+    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
+        """See Parameterized.pprint"""
+        self = self_.self
+        return self.pprint(imports, prefix, unknown_value, qualify, separator)
+
     # CEBALERT: I think I've noted elsewhere the fact that we
     # sometimes have a method on Parameter that requires passing the
     # owning Parameterized instance or class, and other times we have
@@ -2737,7 +2743,6 @@ class Parameterized(object):
                            separator="\n")
 
     @recursive_repr()
-    # CEBALERT: not yet properly documented
     def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
         """

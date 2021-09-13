@@ -2059,6 +2059,12 @@ class Parameters(object):
         self_.__db_print(DEBUG,msg,*args,**kw)
 
 
+    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
+        """See Parameterized.pprint"""
+        self = self_.self
+        return self.pprint(imports, prefix, unknown_value, qualify, separator)
+
     # CEBALERT: I think I've noted elsewhere the fact that we
     # sometimes have a method on Parameter that requires passing the
     # owning Parameterized instance or class, and other times we have
@@ -2350,42 +2356,63 @@ class ParameterizedMetaclass(type):
 
 
 
-# JABALERT: Only partially achieved so far -- objects of the same
-# type and parameter values are treated as different, so anything
-# for which instantiate == True is reported as being non-default.
-
 # Whether script_repr should avoid reporting the values of parameters
 # that are just inheriting their values from the class defaults.
+# Because deepcopying creates a new object, cannot detect such
+# inheritance when instantiate = True, so such values will be printed
+# even if they are just being copied from the default.
 script_repr_suppress_defaults=True
 
 
-# CEBALERT: How about some defaults?
-# Also, do we need an option to return repr without path, if desired?
-# E.g. to get 'pre_plot_hooks()' instead of
-# 'topo.command.analysis.pre_plot_hooks()' in the gui?
-def script_repr(val,imports,prefix,settings):
+def script_repr(val, imports=None, prefix="\n    ", settings=[],
+        qualify=True, unknown_value=None, separator="\n",
+        show_imports=True):
     """
-    Variant of repr() designed for generating a runnable script.
+    Variant of pprint() designed for generating a (nearly) runnable script.
 
-    Instances of types that require special handling can use the
-    script_repr_reg dictionary. Using the type as a key, add a
-    function that returns a suitable representation of instances of
-    that type, and adds the required import statement.
+    The output of script_repr(parameterized_obj) is meant to be a
+    string suitable for running using `python file.py`. Not every
+    object is guaranteed to have a runnable script_repr
+    representation, but it is meant to be a good starting point for
+    generating a Python script that (after minor edits) can be
+    evaluated to get a newly initialized object similar to the one
+    provided.
 
-    The repr of a parameter can be suppressed by returning None from
-    the appropriate hook in script_repr_reg.
+    The new object will only have the same parameter state, not the
+    same internal (attribute) state; the script_repr captures only
+    the state of the Parameters of that object and not any other
+    attributes it may have.
+
+    If show_imports is True (default), includes import statements
+    for each of the modules required for the objects being
+    instantiated. This list may not be complete, as it typically
+    includes only the imports needed for the Parameterized object
+    itself, not for values that may have been supplied to Parameters.
+
+    Apart from show_imports, accepts the same arguments as pprint(),
+    so see pprint() for explanations of the arguments accepted. The
+    default values of each of these arguments differ from pprint() in
+    ways that are more suitable for saving as a separate script than
+    for e.g. pretty-printing at the Python prompt.
     """
-    return pprint(val,imports,prefix,settings,unknown_value=None,
-                  qualify=True,separator="\n")
+
+    if imports is None:
+        imports = []
+
+    rep = pprint(val, imports, prefix, settings, unknown_value,
+                 qualify, separator)
+
+    imports = list(set(imports))
+    imports_str = ("\n".join(imports) + "\n\n") if show_imports else ""
+
+    return imports_str + rep
 
 
-# CB: when removing script_repr, merge its docstring here and improve.
-# And the ALERT by script_repr about defaults can go.
-# CEBALERT: remove settings, add default argument for imports
-def pprint(val,imports, prefix="\n    ", settings=[],
+
+def pprint(val,imports=None, prefix="\n    ", settings=[],
            unknown_value='<?>', qualify=False, separator=''):
     """
-    (Experimental) Pretty printed representation of a parameterized
+    Pretty printed representation of a parameterized
     object that may be evaluated with eval.
 
     Similar to repr except introspection of the constructor (__init__)
@@ -2419,11 +2446,17 @@ def pprint(val,imports, prefix="\n    ", settings=[],
     (e.g. a newline could be supplied to have each Parameter appear on a
     separate line).
 
-    NOTE: pprint will replace script_repr in a future version of
-    param, but is not yet a complete replacement for script_repr.
+    Instances of types that require special handling can use the
+    script_repr_reg dictionary. Using the type as a key, add a
+    function that returns a suitable representation of instances of
+    that type, and adds the required import statement. The repr of a
+    parameter can be suppressed by returning None from the appropriate
+    hook in script_repr_reg.
     """
-    # CB: doc prefix & settings or realize they don't need to be
-    # passed around, etc.
+
+    if imports is None:
+        imports = []
+
     # JLS: The settings argument is not used anywhere. To be removed
     # in a separate PR.
     if isinstance(val,type):
@@ -2432,22 +2465,17 @@ def pprint(val,imports, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
-    # CEBALERT: remove with script_repr
-    elif hasattr(val,'script_repr'):
-        rep=val.script_repr(imports, prefix+"    ")
-
     elif hasattr(val,'pprint'):
         rep=val.pprint(imports=imports, prefix=prefix+"    ",
                        qualify=qualify, unknown_value=unknown_value,
                        separator=separator)
-
     else:
         rep=repr(val)
 
     return rep
 
 
-#: see script_repr()
+# Registry for special handling for certain types in script_repr and pprint
 script_repr_reg = {}
 
 
@@ -2484,7 +2512,6 @@ except ImportError:
     pass # Support added only if those libraries are available
 
 
-# why I have to type prefix and settings?
 def function_script_repr(fn,imports,prefix,settings):
     name = fn.__name__
     module = fn.__module__
@@ -2707,15 +2734,15 @@ class Parameterized(object):
         return "<%s %s>" % (self.__class__.__name__,self.name)
 
 
+    # deprecated as of Param 1.12; use self.pprint instead
     def script_repr(self,imports=[],prefix="    "):
         """
-        Variant of __repr__ designed for generating a runnable script.
+        Deprecated variant of __repr__ designed for generating a runnable script.
         """
         return self.pprint(imports,prefix, unknown_value=None, qualify=True,
                            separator="\n")
 
     @recursive_repr()
-    # CEBALERT: not yet properly documented
     def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
         """

@@ -6,9 +6,8 @@ This user guide provides detailed information about how to use Param, assuming y
 - [Parameters](./Parameters): Using parameters (Class vs. instance parameters, setting defaults, etc.)
 - [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use
 - Dependencies and Watchers: Expressing relationships between parameters and parameters or code, and triggering events (TODO)
-- Serialization and Persistence: Saving the state of a Parameterized object to a text, script, or pickle file (TODO)
-- Customization: Extending Param with custom Parameter types (TODO)
-- Outputs: Output types and connecting output to Parameter inputs (TODO)
+- [Serialization and Persistence](./Serialization_and_Persistence): Saving the state of a Parameterized object to a text, script, or pickle file
+- [Outputs](./Outputs): Output types and connecting output to Parameter inputs
 - [Logging and Messages](./Logging_and_Messages): Logging, messaging, warning, and raising errors on Parameterized objects
 - [ParameterizedFunctions](./ParameterizedFunctions): Parameterized function objects, for configurable callables
 - Dynamic Parameters: Using dynamic parameter values with and without Numbergen (TODO)

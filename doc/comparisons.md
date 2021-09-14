@@ -55,7 +55,7 @@ Several of these packages support automatically mapping parameters/traits/attrib
 
 ## Dynamic values
 
-Param, Traits, Traitlets, Pydandic, and attrs all allow any Python expression to be supplied for initializing parameters, allowing parameter default values to be computed at the time a module is first loaded. Pydantic, Traits, and Traitlets also allow a class author to add code for a given parameter to compute a default value on first access.
+Param, Traits, Traitlets, Pydantic, and attrs all allow any Python expression to be supplied for initializing parameters, allowing parameter default values to be computed at the time a module is first loaded. Pydantic, Traits, and Traitlets also allow a class author to add code for a given parameter to compute a default value on first access.
 
   ```python
   >>> from time import time
@@ -76,7 +76,7 @@ Param, Traits, Traitlets, Pydandic, and attrs all allow any Python expression to
   1475587164.750875
   ```
 
-Param does not currently provide any special support for programmatic default values, though any such values can be calculated explicitly in the Parameterized object's constructor. On the other hand, Param does allow fully dynamic values for *any* numeric Parameter instance:
+Param's equivalent `compute_default_fn` is only supported for some Parameters; for others any computed default values need to be calculated explicitly in the Parameterized object's constructor. On the other hand, Param does allow fully dynamic values for *any* access to a numeric Parameter instance, not just the original instantiation:
 
   ```python
   >>> from time import time

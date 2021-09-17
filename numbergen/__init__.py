@@ -120,6 +120,23 @@ class NumberGenerator(param.Parameterized):
     def __abs__ (self): return UnaryOperator(self,operator.abs)
 
 
+operator_symbols = {
+    operator.add:'+',
+    operator.sub:'-',
+    operator.mul:'*',
+    operator.mod:'%',
+    operator.pow:'**',
+    operator.truediv:'/',
+    operator.floordiv:'//',
+    operator.neg:'-',
+    operator.pos:'+',
+    operator.abs:'abs',
+}
+
+def pprint(x, *args, **kwargs):
+    "Pretty-print the provided item, translating operators to their symbols"
+    return x.pprint(*args, **kwargs) if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
+
 
 class BinaryOperator(NumberGenerator):
     """Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator."""
@@ -148,6 +165,10 @@ class BinaryOperator(NumberGenerator):
         return self.operator(self.lhs() if callable(self.lhs) else self.lhs,
                              self.rhs() if callable(self.rhs) else self.rhs, **self.args)
 
+    def pprint(self, *args, **kwargs):
+        return (pprint(self.lhs,      *args, **kwargs) +
+                pprint(self.operator, *args, **kwargs) +
+                pprint(self.rhs,      *args, **kwargs))
 
 
 class UnaryOperator(NumberGenerator):
@@ -171,6 +192,9 @@ class UnaryOperator(NumberGenerator):
     def __call__(self):
         return self.operator(self.operand(),**self.args)
 
+    def pprint(self, *args, **kwargs):
+        return (pprint(self.operator, *args, **kwargs) + '(' +
+                pprint(self.operand,  *args, **kwargs) + ')')
 
 
 class Hash(object):
@@ -413,7 +437,6 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
     def __call__(self):
         if self.time_dependent:
             self._hash_and_seed()
-
 
 
 class UniformRandom(RandomDistribution):

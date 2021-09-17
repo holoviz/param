@@ -10,7 +10,7 @@ This user guide provides detailed information about how to use Param, assuming y
 - [Outputs](./Outputs): Output types and connecting output to Parameter inputs
 - [Logging and Messages](./Logging_and_Messages): Logging, messaging, warning, and raising errors on Parameterized objects
 - [ParameterizedFunctions](./ParameterizedFunctions): Parameterized function objects, for configurable callables
-- Dynamic Parameters: Using dynamic parameter values with and without Numbergen (TODO)
+- [Dynamic Parameters](./Dynamic_Parameters): Using dynamic parameter values with and without Numbergen
 - [How Param works](How_Param_Works): Internal details, for Param developers and power users
 
 ```{toctree}

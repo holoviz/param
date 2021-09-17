@@ -12,3 +12,4 @@
 .ipynb_checkpoints
 .vscode
 .tox
+data.pickle

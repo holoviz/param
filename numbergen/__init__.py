@@ -133,9 +133,9 @@ operator_symbols = {
     operator.abs:'abs',
 }
 
-def pprint(x):
+def pprint(x, *args, **kwargs):
     "Pretty-print the provided item, translating operators to their symbols"
-    return x.pprint() if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
+    return x.pprint(*args, **kwargs) if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
 
 
 class BinaryOperator(NumberGenerator):
@@ -165,9 +165,10 @@ class BinaryOperator(NumberGenerator):
         return self.operator(self.lhs() if callable(self.lhs) else self.lhs,
                              self.rhs() if callable(self.rhs) else self.rhs, **self.args)
 
-    def pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
-               qualify=False, separator=""):
-        return pprint(self.lhs) + pprint(self.operator) + pprint(self.rhs)
+    def pprint(self, *args, **kwargs):
+        return (pprint(self.lhs,      *args, **kwargs) +
+                pprint(self.operator, *args, **kwargs) +
+                pprint(self.rhs,      *args, **kwargs))
 
 
 class UnaryOperator(NumberGenerator):
@@ -191,9 +192,9 @@ class UnaryOperator(NumberGenerator):
     def __call__(self):
         return self.operator(self.operand(),**self.args)
 
-    def pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
-               qualify=False, separator=""):
-        return pprint(self.operator) + '(' + pprint(self.operand) + ')'
+    def pprint(self, *args, **kwargs):
+        return (pprint(self.operator, *args, **kwargs) + '(' +
+                pprint(self.operand,  *args, **kwargs) + ')')
 
 
 class Hash(object):

@@ -24,7 +24,8 @@ class TestNumberParameters(API1TestCase):
         class Q(param.Parameterized):
             q = param.Number(default=1)
 
-        self.assertEqual(Q.param['q'].step, None)
+        qobj = Q()
+        self.assertEqual(qobj.param['q'].step, None)
 
     def test_initialization_with_step_instance(self):
         class Q(param.Parameterized):

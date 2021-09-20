@@ -52,7 +52,7 @@ class TestListSelectorParameters(API1TestCase):
         p.g = [7]
         try:
             p.g = None
-        except TypeError:
+        except ValueError:
             pass
         else:
             raise AssertionError("Object set outside range.")
@@ -109,12 +109,12 @@ class TestListSelectorParameters(API1TestCase):
     ### new tests (not copied from testobjectselector)
 
     def test_bad_default(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=6,check_on_set=True)
 
     def test_implied_check_on_set(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=7,objects=[7,8])
 
@@ -134,7 +134,7 @@ class TestListSelectorParameters(API1TestCase):
         class Q(param.Parameterized):
             r = param.ListSelector(default=6,check_on_set=False)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             Q.r = 6
     ##########################
 
@@ -154,3 +154,16 @@ class TestListSelectorParameters(API1TestCase):
 
         with self.assertRaises(TypeError):
             Q.param.params('r').compute_default()
+
+    def test_initialization_bad_iterable(self):
+        with self.assertRaises(ValueError):
+            class Q(param.Parameterized):
+                j = param.ListSelector('ab', ['a', 'b', 'c', 'd'])
+
+    def test_set_bad_iterable(self):
+        class Q(param.Parameterized):
+            r = param.ListSelector(objects=['a', 'b', 'c', 'd'])
+
+        q = Q()
+        with self.assertRaises(ValueError):
+            q.r = 'ab'

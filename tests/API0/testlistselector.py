@@ -53,7 +53,7 @@ class TestListSelectorParameters(unittest.TestCase):
         p.g = [7]
         try:
             p.g = None
-        except TypeError:
+        except ValueError:
             pass
         else:
             raise AssertionError("Object set outside range.")
@@ -110,12 +110,12 @@ class TestListSelectorParameters(unittest.TestCase):
     ### new tests (not copied from testobjectselector)
 
     def test_bad_default(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=6,check_on_set=True)
 
     def test_implied_check_on_set(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=7,objects=[7,8])
 
@@ -135,7 +135,7 @@ class TestListSelectorParameters(unittest.TestCase):
         class Q(param.Parameterized):
             r = param.ListSelector(default=6,check_on_set=False)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             Q.r = 6
     ##########################
 

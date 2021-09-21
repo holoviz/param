@@ -191,7 +191,7 @@ class Version(object):
                     except: pass
             if output is None:
                 output = run_cmd([cmd, 'describe', '--long', '--match',
-                                  "v[0-9]*.[0-9]*.[0-9]*", '--dirty'],
+                                  "v[0-9]*[.][0-9]*[.][0-9]*", '--dirty'],
                                  cwd=os.path.dirname(self.fpath))
             if as_string: return output
         except Exception as e1:

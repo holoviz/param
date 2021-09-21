@@ -2033,7 +2033,9 @@ class Color(Parameter):
 
 
 class Range(NumericTuple):
-    "A numeric range with optional bounds and softbounds"
+    """
+    A numeric range with optional bounds and softbounds.
+    """
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 

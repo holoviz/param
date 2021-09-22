@@ -536,7 +536,7 @@ def _params_depended_on(minfo):
 def _resolve_mcs_deps(obj, resolved, deferred):
     dependencies = []
     for dep in resolved:
-        inst = obj if dep.inst is None and type(obj) is dep.cls else dep.inst
+        inst = obj if dep.inst is None and issubclass(type(obj), dep.cls) else dep.inst
         dep = PInfo(inst=inst, cls=dep.cls, name=dep.name,
                     pobj=inst.param[dep.name], what=dep.what)
         dependencies.append(dep)

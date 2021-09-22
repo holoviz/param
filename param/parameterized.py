@@ -1012,14 +1012,11 @@ class Parameter(object):
 
 
     def _update_deps(self, obj, attribute, old, new):
-        print(attribute)
         for n, queued, _, deferred in type(obj).param._depends['watch']:
             grouped = defaultdict(list)
             deferred = [dep for dep in deferred if dep.obj[1::] == attribute]
-            print(deferred)
             for dep in _resolve_mcs_deps(obj, [], deferred):
                 grouped[(id(dep.inst), id(dep.cls), dep.what)].append(dep)
-            print(grouped)
             for group in grouped.values():
                 mcaller = _m_caller(obj, n)
                 params = [d.name for d in group]

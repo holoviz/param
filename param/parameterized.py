@@ -520,15 +520,38 @@ def output(func, *output, **kw):
 
 def _params_depended_on(minfo):
     params = []
-    dinfo = getattr(minfo.method,"_dinfo", {})
+    deferred_deps = []
+    dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
-        things = (minfo.inst or minfo.cls).param._spec_to_obj(d)
-        for thing in things:
-            if isinstance(thing,PInfo):
-                params.append(thing)
+        resolved, deferred = (minfo.inst or minfo.cls).param._spec_to_obj(d)
+        deferred_deps += deferred
+        for dep in resolved:
+            if isinstance(dep, PInfo):
+                params.append(dep)
             else:
-                params += _params_depended_on(thing)
-    return params
+                params += _params_depended_on(dep)
+    return params, deferred_deps
+
+
+def _resolve_mcs_deps(obj, resolved, deferred):
+    dependencies = []
+    for dep in resolved:
+        inst = obj if dep.inst is None else dep.inst
+        dep = PInfo(inst=inst, cls=dep.cls, name=dep.name,
+                    pobj=inst.param[dep.name], what=dep.what)
+        dependencies.append(dep)
+    for dep in deferred:
+        subobj = _getattrr(obj, dep.obj[1::])
+        if subobj is None:
+            continue
+        spec = '%s:%s' % (dep.attr, dep.what) if dep.what else dep.attr
+        subresolved, _ = subobj.param._spec_to_obj(spec)
+        for subdep in subresolved:
+            if isinstance(subdep, PInfo):
+                dependencies.append(subdep)
+            else:
+                dependencies += _params_depended_on(subdep)
+    return dependencies
 
 
 def _m_caller(self, n):
@@ -570,6 +593,16 @@ MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
     `method`: bound method of the object being watched
     """)
 
+DInfo = namedtuple("DInfo", "inst cls obj attr what"); _add_doc(DInfo,
+    """
+    Object describing dynamic dependencies.
+    `inst`: Parameterized instance owning the method, or None
+    `cls`: Parameterized class owning the method
+    `obj`: Parameterized instance owning the watched Parameter, or None
+    `attr`: Parameter or method being watched.
+    `what`: What is being watched on the Parameter (either 'value' or a slot name)
+    """)
+
 Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
     """
     Object representing an event that triggers a Watcher
@@ -599,7 +632,6 @@ Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names wh
     `queued`: Immediately invoke callbacks triggered during processing of an Event (if False), or
             queue them up for processing later, after this event has been handled (if True)
     """)
-
 
 class ParameterMetaclass(type):
     """
@@ -944,7 +976,7 @@ class Parameter(object):
         if old is NotImplemented:
             return
 
-        event = Event(what=attribute,name=self.name, obj=None, cls=self.owner,
+        event = Event(what=attribute, name=self.name, obj=None, cls=self.owner,
                       old=old, new=value, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
@@ -977,6 +1009,23 @@ class Parameter(object):
         else:
             result = obj.__dict__.get(self._internal_name,self.default)
         return result
+
+
+    def _update_deps(self, obj, attribute, old, new):
+        print(attribute)
+        for n, queued, _, deferred in type(obj).param._depends['watch']:
+            grouped = defaultdict(list)
+            deferred = [dep for dep in deferred if dep.obj[1::] == attribute]
+            print(deferred)
+            for dep in _resolve_mcs_deps(obj, [], deferred):
+                grouped[(id(dep.inst), id(dep.cls), dep.what)].append(dep)
+            print(grouped)
+            for group in grouped.values():
+                mcaller = _m_caller(obj, n)
+                params = [d.name for d in group]
+                gdep = group[0] # Need to grab representative dep from this group
+                (gdep.inst or gdep.cls).param.watch(mcaller, params, gdep.what, queued=queued)
+
 
     @instance_descriptor
     def __set__(self, obj, val):
@@ -1034,8 +1083,11 @@ class Parameter(object):
                 _old = self.default
                 self.default = val
             else:
-                _old = obj.__dict__.get(self._internal_name,self.default)
+                _old = obj.__dict__.get(self._internal_name, self.default)
                 obj.__dict__[self._internal_name] = val
+
+        if obj is not None:
+            self._update_deps(obj, self.name, _old, val)
 
         self._post_setter(obj, val)
 
@@ -1049,6 +1101,7 @@ class Parameter(object):
             watchers = None
 
         obj = self.owner if obj is None else obj
+
         if obj is None or not watchers:
             return
 
@@ -1935,7 +1988,10 @@ class Parameters(object):
         Given the name of a method, returns a PInfo object for each dependency
         of this method. See help(PInfo) for the contents of these objects.
         """
-        return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
+        method = getattr(self_.self_or_cls, name)
+        minfo = MInfo(cls=self_.cls, inst=self_.self, name=name,
+                      method=method)
+        return _params_depended_on(minfo)[0]
 
 
     def outputs(self_):
@@ -1958,16 +2014,13 @@ class Parameters(object):
         return outputs
 
 
-    def _spec_to_obj(self_,spec):
-        # TODO: when we decide on spec, this method should be
-        # rewritten
-
+    def _spec_to_obj(self_, spec):
         if isinstance(spec, Parameter):
             inst = spec.owner if isinstance(spec.owner, Parameterized) else None
             cls = spec.owner if inst is None else type(inst)
             info = PInfo(inst=inst, cls=cls, name=spec.name,
                          pobj=spec, what='value')
-            return [info]
+            return [info], []
 
         assert spec.count(":")<=1
 
@@ -1975,26 +2028,35 @@ class Parameters(object):
         m = re.match("(?P<path>[^:]*):?(?P<what>.*)", spec)
         what = m.group('what')
         path = "."+m.group('path')
-        m = re.match(r"(?P<obj>.*)(\.)(?P<attr>.*)",path)
+        m = re.match(r"(?P<obj>.*)(\.)(?P<attr>.*)", path)
         obj = m.group('obj')
         attr = m.group("attr")
 
-        src = self_.self_or_cls if obj=='' else _getattrr(self_.self_or_cls,obj[1::])
-        cls,inst = (src, None) if isinstance(src, type) else (type(src), src)
+        src = self_.self_or_cls if obj == '' else _getattrr(self_.self_or_cls, obj[1::])
+
+        cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
+
+        deferred = [DInfo(inst=inst, cls=cls, obj=obj, attr=attr, what=what)] if src is None else []
+
+        # If src is not yet assigned skip
+        if src is None:
+            return [], deferred
 
         if attr == 'param':
-            dependencies = self_._spec_to_obj(obj[1:])
+            deps, deferred  = self_._spec_to_obj(obj[1:])
             for p in src.param:
-                dependencies += src.param._spec_to_obj(p)
-            return dependencies
+                ndeps, ndeferred = src.param._spec_to_obj(p)
+                deps += ndeps
+                deferred += ndeferred
+            return deps, deferred
         elif attr in src.param:
             what = what if what != '' else 'value'
             info = PInfo(inst=inst, cls=cls, name=attr,
                          pobj=src.param[attr], what=what)
         else:
             info = MInfo(inst=inst, cls=cls, name=attr,
-                         method=getattr(src,attr))
-        return [info]
+                         method=getattr(src, attr))
+        return [info], deferred
 
 
     def _watch(self_, action, watcher, what='value'):
@@ -2056,7 +2118,7 @@ class Parameters(object):
         self_._watch('append', watcher, what)
         return watcher
 
-    def unwatch(self_,watcher):
+    def unwatch(self_, watcher):
         """
         Remove the given Watcher object (from `watch` or `watch_values`) from this object's list.
         """
@@ -2084,7 +2146,6 @@ class Parameters(object):
 
 
     # Instance methods
-
 
     def defaults(self_):
         """
@@ -2210,7 +2271,7 @@ class ParameterizedMetaclass(type):
     attribute __abstract set to True. The 'abstract' attribute can be
     used to find out if a class is abstract or not.
     """
-    def __init__(mcs,name,bases,dict_):
+    def __init__(mcs, name, bases, dict_):
         """
         Initialize the class object (not an instance of the class, but
         the class itself).
@@ -2219,7 +2280,7 @@ class ParameterizedMetaclass(type):
         default values (see __param_inheritance()) and setting
         attrib_names (see _set_names()).
         """
-        type.__init__(mcs,name,bases,dict_)
+        type.__init__(mcs, name, bases, dict_)
 
         # Give Parameterized classes a useful 'name' attribute.
         # (Could instead consider changing the instance Parameter
@@ -2236,26 +2297,35 @@ class ParameterizedMetaclass(type):
 
         # All objects (with their names) of type Parameter that are
         # defined in this class
-        parameters = [(n,o) for (n,o) in dict_.items()
+        parameters = [(n, o) for (n, o) in dict_.items()
                       if isinstance(o, Parameter)]
 
         mcs._param._parameters = dict(parameters)
 
         for param_name,param in parameters:
-            mcs._initialize_parameter(param_name,param)
+            mcs._initialize_parameter(param_name, param)
 
         # retrieve depends info from methods and store more conveniently
-        dependers = [(n,m._dinfo) for (n,m) in dict_.items()
-                     if hasattr(m,'_dinfo')]
+        dependers = [(n, m, m._dinfo) for (n, m) in dict_.items()
+                     if hasattr(m, '_dinfo')]
 
         _watch = []
-        # TODO: probably copy dependencies here too and have
-        # everything else access from here rather than from method
-        # object
-        for n,dinfo in dependers:
+        for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
-            if watch:
-                _watch.append((n, watch == 'queued'))
+            if not watch:
+                continue
+            minfo = MInfo(cls=mcs, inst=None, name=name,
+                          method=method)
+            resolved, deferred = _params_depended_on(minfo)
+            _watch.append((name, watch == 'queued', resolved, deferred))
+
+        # Resolve other dependencies in remainder of class hierarchy
+        for cls in classlist(mcs)[:-1][::-1]:
+            if not hasattr(cls, '_param'):
+                continue
+            for dep in cls.param._depends['watch']:
+                if not any(dep[0] == name for name, _, _, _ in _watch):
+                    _watch.append(dep)
 
         mcs.param._depends = {'watch': _watch}
 
@@ -2324,7 +2394,7 @@ class ParameterizedMetaclass(type):
 
     param = property(_get_param)
 
-    def __setattr__(mcs,attribute_name,value):
+    def __setattr__(mcs, attribute_name, value):
         """
         Implements 'self.attribute_name=value' in a way that also supports Parameters.
 
@@ -2742,21 +2812,15 @@ class Parameterized(object):
         object_count += 1
 
         # add watched dependencies
-        for cls in classlist(self.__class__):
-            if not issubclass(cls, Parameterized):
-                continue
-            for n, queued in cls.param._depends['watch']:
-                # TODO: should improve this - will happen for every
-                # instantiation of Parameterized with watched deps. Will
-                # probably store expanded deps on class - see metaclass
-                # 'dependers'.
-                grouped = defaultdict(list)
-                for dep in self.param.params_depended_on(n):
-                    grouped[(id(dep.inst),id(dep.cls),dep.what)].append(dep)
-                for group in grouped.values():
-                    # TODO: can't remember why not just pass m (rather than _m_caller) here
-                    gdep = group[0] # Need to grab representative dep from this group
-                    (gdep.inst or gdep.cls).param.watch(_m_caller(self, n), [d.name for d in group], gdep.what, queued=queued)
+        for n, queued, resolved, deferred in type(self).param._depends['watch']:
+            grouped = defaultdict(list)
+            for dep in _resolve_mcs_deps(self, resolved, deferred):
+                grouped[(id(dep.inst), id(dep.cls), dep.what)].append(dep)
+            for group in grouped.values():
+                mcaller = _m_caller(self, n)
+                params = [d.name for d in group]
+                gdep = group[0] # Need to grab representative dep from this group
+                (gdep.inst or gdep.cls).param.watch(mcaller, params, gdep.what, queued=queued)
 
         self.initialized = True
 

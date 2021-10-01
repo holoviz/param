@@ -100,13 +100,11 @@ def logging_level(level):
 
 
 @contextmanager
-def batch_watch(parameterized, enable=True, run=True):
+def _batch_call_watchers(parameterized, enable=True, run=True):
     """
-    Context manager to batch watcher events on a parameterized object.
-    The context manager will queue any events triggered by setting a
-    parameter on the supplied parameterized object and dispatch them
-    all at once when the context manager exits. If run=False the
-    queued events are not dispatched and should be processed manually.
+    Internal version of batch_call_watchers, adding control over queueing and running.
+    Only actually batches events if enable=True; otherwise a no-op. Only actually
+    calls the accumulated watchers on exit if run=True; otherwise they remain queued.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = enable or parameterized.param._BATCH_WATCH
@@ -115,6 +113,26 @@ def batch_watch(parameterized, enable=True, run=True):
     finally:
         parameterized.param._BATCH_WATCH = BATCH_WATCH
         if run and not BATCH_WATCH:
+            parameterized.param._batch_call_watchers()
+
+batch_watch = _batch_call_watchers # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later.
+
+@contextmanager
+def batch_call_watchers(parameterized):
+    """
+    Context manager to batch events to provide to Watchers on a
+    parameterized object.  This context manager queues any events
+    triggered by setting a parameter on the supplied parameterized
+    object, saving them up to dispatch them all at once when the
+    context manager exits.
+    """
+    BATCH_WATCH = parameterized.param._BATCH_WATCH
+    parameterized.param._BATCH_WATCH = True
+    try:
+        yield
+    finally:
+        parameterized.param._BATCH_WATCH = BATCH_WATCH
+        if not BATCH_WATCH:
             parameterized.param._batch_call_watchers()
 
 
@@ -527,10 +545,61 @@ def _m_caller(self, n):
     return caller
 
 
-PInfo = namedtuple("PInfo","inst cls name pobj what")
-MInfo = namedtuple("MInfo","inst cls name method")
-Event = namedtuple("Event","what name obj cls old new type")
-Watcher = namedtuple("Watcher","inst cls fn mode onlychanged parameter_names what queued")
+def _add_doc(obj, docstring):
+    """Add a docstring to a namedtuple, if on python3 where that's allowed"""
+    if sys.version_info[0]>2:
+        obj.__doc__ = docstring
+
+
+PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
+    """
+    Object describing something being watched about a Parameter.
+    `inst`: Parameterized instance owning the Parameter, or None
+    `cls`: Parameterized class owning the Parameter
+    `name`: Name of the Parameter being watched
+    `pobj`: Parameter object being watched
+    `what`: What is being watched on the Parameter (either 'value' or a slot name)
+    """)
+
+MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
+    """
+    Object describing a Parameterized method being watched.
+    `inst`: Parameterized instance owning the method, or None
+    `cls`: Parameterized class owning the method
+    `name`: Name of the method being watched
+    `method`: bound method of the object being watched
+    """)
+
+Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
+    """
+    Object representing an event that triggers a Watcher
+    `what`: What is being watched on the Parameter (either value or a slot name)
+    `name`: Name of the Parameter that was set or triggered
+    `obj`: Parameterized instance owning the watched Parameter, or None
+    `cls`: Parameterized class owning the watched Parameter
+    `old`: Previous value of the item being watched
+    `new`: New value of the item being watched
+    `type`: `triggered` if this event was triggered explicitly),
+            `changed` if the item was set and watching for `onlychanged`,
+            `set` if the item was set, or
+            None if type not yet known
+    """)
+
+Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued"); _add_doc(Watcher,
+    """
+    Object declaring a callback function to invoke when an Event is triggered on a watched item
+    `inst`: Parameterized instance owning the watched Parameter, or None
+    `cls`: Parameterized class owning the watched Parameter
+    `fn`: Callback function to invoke when triggered by a watched Parameter
+    `mode`: 'args' for param.watch (call `fn` with PInfo object positional args), or
+            'kwargs' for param.watch_values (call `fn` with <param_name>:<new_value> keywords)
+    `onlychanged`: If True, only trigger for actual changes, not setting to the current value
+    `parameter_names`: List of Parameters to watch, by name
+    `what`: What to watch on the Parameters (either 'value' or a slot name)
+    `queued`: Immediately invoke callbacks triggered during processing of an Event (if False), or
+            queue them up for processing later, after this event has been handled (if True)
+    """)
+
 
 class ParameterMetaclass(type):
     """
@@ -1633,7 +1702,7 @@ class Parameters(object):
 
     def _call_watcher(self_, watcher, event):
         """
-        Invoke the given the watcher appropriately given a Event object.
+        Invoke the given watcher appropriately given an Event object.
         """
         if self_.self_or_cls.param._TRIGGER:
             pass
@@ -1646,7 +1715,7 @@ class Parameters(object):
                 self_._watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
-            with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
+            with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                 self_._execute_watcher(watcher, (event,))
 
     def _batch_call_watchers(self_):
@@ -1666,7 +1735,7 @@ class Parameters(object):
                                                    self_.self_or_cls.param._TRIGGER)
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
-                with batch_watch(self_.self_or_cls, enable=watcher.queued, run=False):
+                with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                     self_._execute_watcher(watcher, events)
 
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
@@ -1861,7 +1930,11 @@ class Parameters(object):
         return value
 
 
-    def params_depended_on(self_,name):
+    def params_depended_on(self_, name):
+        """
+        Given the name of a method, returns a PInfo object for each dependency
+        of this method. See help(PInfo) for the contents of these objects.
+        """
         return _params_depended_on(MInfo(cls=self_.cls,inst=self_.self,name=name,method=getattr(self_.self_or_cls,name)))
 
 
@@ -1924,7 +1997,7 @@ class Parameters(object):
         return [info]
 
 
-    def _watch(self_, action, watcher, what='value', operation='add'): #'add' | 'remove'
+    def _watch(self_, action, watcher, what='value'):
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:
@@ -1945,7 +2018,37 @@ class Parameters(object):
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)
 
-    def watch(self_,fn,parameter_names, what='value', onlychanged=True, queued=False):
+    def watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
+        """
+        Register the given callback function `fn` to be invoked for
+        events on the indicated parameters.
+
+        `what`: What to watch on each parameter; either the value (by
+        default) or else the indicated slot (e.g. 'constant').
+
+        `onlychanged`: By default, only invokes the function when the
+        watched item changes, but if `onlychanged=False` also invokes
+        it when the `what` item is set to its current value again.
+
+        `queued`: By default, additional watcher events generated
+        inside the callback fn are dispatched immediately, effectively
+        doing depth-first processing of Watcher events. However, in
+        certain scenarios, it is helpful to wait to dispatch such
+        downstream events until all events that triggered this watcher
+        have been processed. In such cases setting `queued=True` on
+        this Watcher will queue up new downstream events generated
+        during `fn` until `fn` completes and all other watchers
+        invoked by that same event have finished executing),
+        effectively doing breadth-first processing of Watcher events.
+
+        When the `fn` is called, it will be provided the relevant
+        Event objects as positional arguments, which allows it to
+        determine which of the possible triggering events occurred.
+
+        Returns a Watcher object.
+
+        See help(Watcher) and help(Event) for the contents of those objects.
+        """
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
                           onlychanged=onlychanged, parameter_names=parameter_names,
@@ -1955,7 +2058,7 @@ class Parameters(object):
 
     def unwatch(self_,watcher):
         """
-        Unwatch watchers set either with watch or watch_values.
+        Remove the given Watcher object (from `watch` or `watch_values`) from this object's list.
         """
         try:
             self_._watch('remove',watcher)
@@ -1964,10 +2067,17 @@ class Parameters(object):
 
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
+        """
+        Easier-to-use version of `watch` specific to watching for changes in parameter values.
+
+        Only allows `what` to be 'value', and invokes the callback `fn` using keyword
+        arguments <param_name>=<new_value> rather than with a list of Event objects.
+        """
+        assert(what=='value')
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
-                          parameter_names=parameter_names, what='value',
+                          parameter_names=parameter_names, what=what,
                           queued=queued)
         self_._watch('append', watcher, what)
         return watcher
@@ -2734,7 +2844,7 @@ class Parameterized(object):
         return "<%s %s>" % (self.__class__.__name__,self.name)
 
 
-    # deprecated as of Param 1.12; use self.pprint instead
+    # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.pprint instead
     def script_repr(self,imports=[],prefix="    "):
         """
         Deprecated variant of __repr__ designed for generating a runnable script.

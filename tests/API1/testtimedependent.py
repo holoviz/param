@@ -82,7 +82,7 @@ class TestTimeClass(API1TestCase):
         self.assertEqual(t.time_type, fractions.Fraction)
 
     def test_time_integration(self):
-        # This used to part a doctest of param.Time, moved
+        # This used to be a doctest of param.Time; moved
         # here not to have any doctest to run.
         time = param.Time(until=20, timestep=1)
         self.assertEqual(time(), 0)

@@ -31,7 +31,7 @@ test:
     - param
     - numbergen
   commands:
-    # https://github.com/ioam/param/issues/219  
+    # https://github.com/holoviz/param/issues/219  
     - pytest tests
 
 about:

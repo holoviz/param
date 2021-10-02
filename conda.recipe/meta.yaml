@@ -32,7 +32,7 @@ test:
     - numbergen
   commands:
     # https://github.com/ioam/param/issues/219  
-    - nosetests tests
+    - pytest tests
 
 about:
   home: {{ sdata['url'] }}

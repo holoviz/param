@@ -81,6 +81,26 @@ class TestTimeClass(API1TestCase):
         self.assertEqual(t(), 1)
         self.assertEqual(t.time_type, fractions.Fraction)
 
+    def test_time_integration(self):
+        # This used to be a doctest of param.Time; moved
+        # here not to have any doctest to run.
+        time = param.Time(until=20, timestep=1)
+        self.assertEqual(time(), 0)
+        self.assertEqual(time(5), 5)
+        time += 5
+        self.assertEqual(time(), 10)
+        with time as t:
+            self.assertEqual(t(), 10)
+            self.assertEqual(
+                [val for val in t],
+                [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+            )
+            self.assertEqual(t(), 20)
+            'Time after iteration: %s' % t()
+            t += 2
+            self.assertEqual(t(), 22)
+        self.assertEqual(time(), 10)
+
     @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
     def test_time_init_gmpy(self):
         t = param.Time(time_type=gmpy.mpq)

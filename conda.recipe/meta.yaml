@@ -31,8 +31,8 @@ test:
     - param
     - numbergen
   commands:
-    # https://github.com/ioam/param/issues/219  
-    - nosetests tests
+    # https://github.com/holoviz/param/issues/219  
+    - pytest tests
 
 about:
   home: {{ sdata['url'] }}

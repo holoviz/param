@@ -31,6 +31,7 @@ extras_require = {
         'nbconvert <6.0',
         'graphviz',
         'myst_nb ==0.12.2',
+        'sphinx-copybutton',
         'aiohttp',
         'panel',
         'pandas',

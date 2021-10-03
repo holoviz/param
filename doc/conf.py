@@ -47,3 +47,5 @@ html_context.update({
     'theme_google_analytics_id': 'UA-154795830-6',
     'theme_github_url': 'https://github.com/holoviz/param',
 })
+
+extensions += ['sphinx_copybutton']

@@ -33,6 +33,7 @@ extras_require = {
         'myst_nb ==0.12.2',
         'aiohttp',
         'panel',
+        'pandas',
     ]
 }
 

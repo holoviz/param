@@ -19,3 +19,6 @@ builtdocs/
 jupyter_execute/
 doc/user_guide/
 doc/Reference_Manual/
+
+# Unit test / Coverage report
+.coverage

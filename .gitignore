@@ -17,7 +17,7 @@ data.pickle
 # Docs
 builtdocs/
 jupyter_execute/
-doc/user_guide/
+doc/user_guide/*.ipynb
 doc/Reference_Manual/
 
 # Unit test / Coverage report

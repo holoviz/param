@@ -16,9 +16,9 @@ This user guide provides detailed information about how to use Param, assuming y
 ```{toctree}
 ---
 hidden: true
-:maxdepth: 2
+maxdepth: 2
 ---
-Overview <index>
+Overview <self>
 Simplifying Codebases <Simplifying_Codebases>
 Parameters <Parameters>
 Parameter Types <Parameter_Types>

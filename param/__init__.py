@@ -1349,8 +1349,8 @@ class ClassSelector(SelectorBase):
         """
         Return the possible types for this parameter's value.
 
-        (I.e. return {name: <class>} for all classes that are
-        concrete_descendents() of self.class_.)
+        (I.e. return `{name: <class>}` for all classes that are
+        concrete_descendents() of `self.class_`.)
 
         Only classes from modules that have been imported are added
         (see concrete_descendents()).
@@ -1709,7 +1709,7 @@ class Path(Parameter):
     The specified path can be absolute, or relative to either:
 
     * any of the paths specified in the search_paths attribute (if
-      search_paths is not None);
+       search_paths is not None);
 
     or
 
@@ -1768,6 +1768,7 @@ class Filename(Path):
 
     * any of the paths specified in the search_paths attribute (if
       search_paths is not None);
+
     or
 
     * any of the paths searched by resolve_path() (if search_paths
@@ -1789,6 +1790,7 @@ class Foldername(Path):
 
     * any of the paths specified in the search_paths attribute (if
       search_paths is not None);
+
     or
 
     * any of the paths searched by resolve_dir_path() (if search_paths

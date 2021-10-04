@@ -1605,7 +1605,7 @@ class Parameters(object):
                     subparams.append(p)
 
         mcaller = _m_caller(obj, name, subparams)
-        params = [d.name for _, d in group]
+        params = [g[1].name for g in group]
         return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued)
 
     # Classmethods

@@ -568,7 +568,6 @@ def _resolve_mcs_deps(obj, resolved, deferred):
     return dependencies
 
 
-
 def _skip_event(*events, changed=None):
     """
     Checks whether a subobject event should be skipped if all the
@@ -579,8 +578,8 @@ def _skip_event(*events, changed=None):
         return False
     for e in events:
         for p in changed:
-            old = Undefined_ if e.old is None getattr(e.old, p, None)
-            new = Undefined_ if e.new is None getattr(e.new, p, None)
+            old = Undefined_ if e.old is None else getattr(e.old, p, None)
+            new = Undefined_ if e.new is None else getattr(e.new, p, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True

@@ -630,11 +630,7 @@ MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
 DInfo = namedtuple("DInfo", "spec"); _add_doc(DInfo,
     """
     Object describing dynamic dependencies.
-    `inst`: Parameterized instance owning the method, or None
-    `cls`: Parameterized class owning the method
-    `obj`: Parameterized instance owning the watched Parameter, or None
-    `attr`: Parameter or method being watched.
-    `what`: What is being watched on the Parameter (either 'value' or a slot name)
+    `spec`: Dependency specification to resolve
     """)
 
 Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,

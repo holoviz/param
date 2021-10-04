@@ -77,6 +77,9 @@ docstring_describe_params = True  # Add parameter description to class
 object_count = 0
 warning_count = 0
 
+class _Undefined:
+    pass
+
 
 @contextmanager
 def logging_level(level):
@@ -565,29 +568,35 @@ def _resolve_mcs_deps(obj, resolved, deferred):
     return dependencies
 
 
-def _m_caller(self, n, changed=[]):
+
+def _skip_event(*events, changed=None):
+    """
+    Checks whether a subobject event should be skipped if all the
+    values on the subobject match the values on the previous
+    subobject.
+    """
+    if changed is None:
+        return False
+    for e in events:
+        for p in changed:
+            old = Undefined_ if e.old is None getattr(e.old, p, None)
+            new = Undefined_ if e.new is None getattr(e.new, p, None)
+            if not Comparator.is_equal(old, new):
+                return False
+    return True
+
+
+def _m_caller(self, n, changed=None):
     function = getattr(self, n)
-
-    def skip(*events):
-        if not changed:
-            return False
-        print(events, changed)
-        for e in events:
-            for p in changed:
-                old, new = getattr(e.old, p, None), getattr(e.new, p, None)
-                if not Comparator.is_equal(old, new):
-                    return False
-        return True
-
     if iscoroutinefunction(function):
         import asyncio
         @asyncio.coroutine
         def caller(*events):
-            if not skip(*events):
+            if not _skip_event(*events, changed):
                 yield function()
     else:
         def caller(*events):
-            if not skip(*events):
+            if not _skip_event(*events, changed):
                 return function()
     caller._watcher_name = n
     return caller
@@ -1590,11 +1599,12 @@ class Parameters(object):
         ddeps = [dd for dd, _ in group if dd is not None]
         _, gdep = group[0] # Need to grab representative dep from this group
         dep_obj = (gdep.inst or gdep.cls)
-        subparams = []
+        subparams = None
 
         # For dynamic dependencies changing the subobject should only
         # trigger events if the parameters being depended on have changed
         if obj is dep_obj:
+            subparams = []
             for d in ddeps:
                 p = d.spec.split('.')[-1].split(':')[0]
                 if p == 'param':

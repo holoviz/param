@@ -556,26 +556,26 @@ PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
     Object describing something being watched about a Parameter.
 
     `inst`: Parameterized instance owning the Parameter, or None
-    
+
     `cls`: Parameterized class owning the Parameter
-    
+
     `name`: Name of the Parameter being watched
-    
+
     `pobj`: Parameter object being watched
-    
+
     `what`: What is being watched on the Parameter (either 'value' or a slot name)
     """)
 
 MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
     """
     Object describing a Parameterized method being watched.
-    
+
     `inst`: Parameterized instance owning the method, or None
-    
+
     `cls`: Parameterized class owning the method
-    
+
     `name`: Name of the method being watched
-    
+
     `method`: bound method of the object being watched
     """)
 
@@ -584,41 +584,41 @@ Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
     Object representing an event that triggers a Watcher.
 
     `what`: What is being watched on the Parameter (either value or a slot name)
-    
+
     `name`: Name of the Parameter that was set or triggered
-    
+
     `obj`: Parameterized instance owning the watched Parameter, or None
-    
+
     `cls`: Parameterized class owning the watched Parameter
-    
+
     `old`: Previous value of the item being watched
-    
+
     `new`: New value of the item being watched
-    
+
     `type`: `triggered` if this event was triggered explicitly), `changed` if
-    the item was set and watching for `onlychanged`, `set` if the item was set, 
+    the item was set and watching for `onlychanged`, `set` if the item was set,
     or  None if type not yet known
     """)
 
 Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued"); _add_doc(Watcher,
     """
     Object declaring a callback function to invoke when an Event is triggered on a watched item.
-    
+
     `inst`: Parameterized instance owning the watched Parameter, or None
-    
+
     `cls`: Parameterized class owning the watched Parameter
-    
+
     `fn`: Callback function to invoke when triggered by a watched Parameter
-    
+
     `mode`: 'args' for param.watch (call `fn` with PInfo object positional args), or
     'kwargs' for param.watch_values (call `fn` with <param_name>:<new_value> keywords)
-    
+
     `onlychanged`: If True, only trigger for actual changes, not setting to the current value
-    
+
     `parameter_names`: List of Parameters to watch, by name
-    
+
     `what`: What to watch on the Parameters (either 'value' or a slot name)
-    
+
     `queued`: Immediately invoke callbacks triggered during processing of an Event (if False), or
     queue them up for processing later, after this event has been handled (if True)
     """)
@@ -689,7 +689,7 @@ class Parameter(object):
 
        class Bar(Parameterized):
            delta = Parameter(default=0.6, doc='The difference between steps.')
-           ...   
+           ...
        class Foo(Bar):
            alpha = Parameter(default=0.1, doc='The starting value.')
            sigma = Parameter(default=0.5, doc='The standard deviation.',

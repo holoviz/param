@@ -2350,7 +2350,8 @@ class ParameterizedMetaclass(type):
             if not hasattr(cls, '_param'):
                 continue
             for dep in cls.param._depends['watch']:
-                if not any(dep[0] == name for name, _, _, _ in _watch):
+                if (not any(dep[0] == name for name, _, _, _ in _watch) and
+                    getattr(getattr(mcs, dep[0], None), '_dinfo', {'watch': False}).get('watch')):
                     _watch.append(dep)
 
         mcs.param._depends = {'watch': _watch}

@@ -7,6 +7,87 @@ import param
 from . import API1TestCase
 
 
+
+class TestParamDependsSubclassing(API1TestCase):
+
+    def test_param_depends_override_depends_subset(self):
+
+        class A(param.Parameterized):
+            a = param.Parameter()
+            b = param.Parameter()
+
+            @param.depends('a', 'b', watch=True)
+            def test(self):
+                pass
+
+        a = A()
+
+        assert len(a.param.params_depended_on('test')) == 2
+
+        class B(A):
+
+            @param.depends('b')
+            def test(self):
+                pass
+
+        b = B()
+
+        assert len(b.param.params_depended_on('test')) == 1
+        assert len(B.param._depends['watch']) == 0
+
+    def test_param_depends_override_depends_subset_watched(self):
+
+        class A(param.Parameterized):
+            a = param.Parameter()
+            b = param.Parameter()
+
+            @param.depends('a', 'b', watch=True)
+            def test(self):
+                pass
+
+        a = A()
+
+        assert len(a.param.params_depended_on('test')) == 2
+
+        class B(A):
+
+            @param.depends('b', watch=True)
+            def test(self):
+                pass
+
+        b = B()
+
+        assert len(b.param.params_depended_on('test')) == 1
+        assert len(B.param._depends['watch']) == 1
+        m, _, deps, _ = B.param._depends['watch'][0]
+        assert m == 'test'
+        assert len(deps) == 1
+        assert deps[0].name == 'b'
+
+    def test_param_depends_override_all_depends(self):
+
+        class A(param.Parameterized):
+            a = param.Parameter()
+            b = param.Parameter()
+
+            @param.depends('a', 'b', watch=True)
+            def test(self):
+                pass
+
+        a = A()
+        assert len(a.param.params_depended_on('test')) == 2
+
+        class B(A):
+
+            def test(self):
+                pass
+
+        b = B()
+        assert len(b.param.params_depended_on('test')) == 3
+        assert len(B.param._depends['watch']) == 0
+
+
+
 class TestParamDepends(API1TestCase):
 
     def setUp(self):
@@ -45,6 +126,28 @@ class TestParamDepends(API1TestCase):
         self.P = P
         self.P2 = P2
 
+    def test_param_depends_class_default_dynamic(self):
+
+        class A(param.Parameterized):
+            c = param.Parameter()
+        
+        class B(param.Parameterized):
+            a = param.Parameter(A())
+
+            nested_count = param.Integer()
+
+            @param.depends('a.c', watch=True)
+            def nested(self):
+                self.nested_count += 1
+
+        b = B()
+
+        b.a.c = 1
+        assert b.nested_count == 1
+
+        b.a = A()
+        assert b.nested_count == 2
+
     def test_param_instance_depends_dynamic_single_nested(self):
         inst = self.P()
         pinfos = inst.param.params_depended_on('single_nested')
@@ -71,7 +174,8 @@ class TestParamDepends(API1TestCase):
         assert inst.single_nested_count == 2
 
     def test_param_instance_depends_dynamic_single_nested_initialized(self):
-        inst = self.P(b=self.P())
+        init_b = self.P()
+        inst = self.P(b=init_b)
         pinfos = inst.param.params_depended_on('single_nested')
         self.assertEqual(len(pinfos), 2)
 
@@ -93,6 +197,10 @@ class TestParamDepends(API1TestCase):
         assert inst.single_nested_count == 1
 
         inst.b.a = 1
+        assert inst.single_nested_count == 2
+
+        # Ensure watcher on initial value does not trigger event
+        init_b.a = 2
         assert inst.single_nested_count == 2
 
     def test_param_instance_depends_dynamic_nested(self):
@@ -122,7 +230,8 @@ class TestParamDepends(API1TestCase):
         assert inst.single_nested_count == 2
 
     def test_param_instance_depends_dynamic_nested_initialized(self):
-        inst = self.P(b=self.P())
+        init_b = self.P()
+        inst = self.P(b=init_b)
         pinfos = inst.param.params_depended_on('nested')
         self.assertEqual(len(pinfos), 8)
 
@@ -145,6 +254,10 @@ class TestParamDepends(API1TestCase):
         assert inst.single_nested_count == 1
 
         inst.b.a = 1
+        assert inst.single_nested_count == 2
+
+        # Ensure watcher on initial value does not trigger event
+        init_b.a = 2
         assert inst.single_nested_count == 2
 
     def test_param_instance_depends(self):

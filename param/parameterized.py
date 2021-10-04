@@ -328,7 +328,7 @@ def iscoroutinefunction(function):
     """
     if not hasattr(inspect, 'iscoroutinefunction'):
         return False
-    return inspect.iscoroutinefunction(function)
+    return inspect.isasyncgenfunction(function) or inspect.iscoroutinefunction(function)
 
 
 def instance_descriptor(f):
@@ -565,16 +565,30 @@ def _resolve_mcs_deps(obj, resolved, deferred):
     return dependencies
 
 
-def _m_caller(self, n):
+def _m_caller(self, n, changed=[]):
     function = getattr(self, n)
+
+    def skip(*events):
+        if not changed:
+            return False
+        print(events, changed)
+        for e in events:
+            for p in changed:
+                old, new = getattr(e.old, p, None), getattr(e.new, p, None)
+                if not Comparator.is_equal(old, new):
+                    return False
+        return True
+
     if iscoroutinefunction(function):
         import asyncio
         @asyncio.coroutine
         def caller(*events):
-            yield function()
+            if not skip(*events):
+                yield function()
     else:
         def caller(*events):
-            return function()
+            if not skip(*events):
+                return function()
     caller._watcher_name = n
     return caller
 
@@ -1547,37 +1561,52 @@ class Parameters(object):
     def _update_deps(self_, attribute=None):
         obj = self_.self
         for n, queued, constant, deferred in type(obj).param._depends['watch']:
-            grouped, attrs = defaultdict(list), defaultdict(list)
-
             # On initialization set up constant watchers otherwise
             # clean up previous dynamic watchers for the updated attribute
             if attribute is None:
+                constant_grouped = defaultdict(list)
                 for dep in _resolve_mcs_deps(obj, constant, []):
-                    grouped[(id(dep.inst), id(dep.cls), dep.what)].append(dep)
+                    constant_grouped[(id(dep.inst), id(dep.cls), dep.what)].append((None, dep))
+                for group in constant_grouped.values():
+                    self_._watch_group(obj, n, queued, group)
             else:
                 for w in obj._dynamic_watchers.get((n, attribute), []):
                     (w.inst or w.cls).param.unwatch(w)
 
             # Resolve dynamic dependencies one-by-one to be able to trace their watchers
+            grouped = defaultdict(list)
             for ddep in deferred:
                 dattr = ddep.spec.split('.')[0]
                 if attribute and dattr != attribute:
                     continue
                 for dep in _resolve_mcs_deps(obj, [], [ddep]):
-                    grouped[(id(dep.inst), id(dep.cls), dep.what)].append(dep)
-                    attrs[dattr].append(dep)
+                    grouped[(id(dep.inst), id(dep.cls), dep.what, dattr)].append((ddep, dep))
 
-            for group in grouped.values():
-                mcaller = _m_caller(obj, n)
-                params = [d.name for d in group]
-                gdep = group[0] # Need to grab representative dep from this group
-                watcher = (gdep.inst or gdep.cls).param.watch(mcaller, params, gdep.what, queued=queued)
-                if attribute is not None:
-                    obj._dynamic_watchers[(n, attribute)].append(watcher)
-                else:
-                    for attr, deps in attrs.items():
-                        if gdep in deps:
-                            obj._dynamic_watchers[(n, attr)].append(watcher)
+            for (_, _, _, dattr), group in grouped.items():
+                watcher = self_._watch_group(obj, n, queued, group)
+                obj._dynamic_watchers[(n, dattr)].append(watcher)
+
+    def _watch_group(self_, obj, name, queued, group):
+        ddeps = [dd for dd, _ in group if dd is not None]
+        _, gdep = group[0] # Need to grab representative dep from this group
+        dep_obj = (gdep.inst or gdep.cls)
+        subparams = []
+
+        # For dynamic dependencies changing the subobject should only
+        # trigger events if the parameters being depended on have changed
+        if obj is dep_obj:
+            for d in ddeps:
+                p = d.spec.split('.')[-1].split(':')[0]
+                if p == 'param':
+                    for sp in list(self_):
+                        if sp not in subparams:
+                            subparams.append(sp)
+                elif p not in subparams:
+                    subparams.append(p)
+
+        mcaller = _m_caller(obj, name, subparams)
+        params = [d.name for _, d in group]
+        return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued)
 
     # Classmethods
 
@@ -2350,8 +2379,10 @@ class ParameterizedMetaclass(type):
             if not hasattr(cls, '_param'):
                 continue
             for dep in cls.param._depends['watch']:
-                if (not any(dep[0] == name for name, _, _, _ in _watch) and
-                    getattr(getattr(mcs, dep[0], None), '_dinfo', {'watch': False}).get('watch')):
+                method = getattr(mcs, dep[0], None)
+                dinfo = getattr(method, '_dinfo', {'watch': False})
+                if (not any(dep[0] == name for name, _, _, _ in _watch)
+                    and dinfo.get('watch')):
                     _watch.append(dep)
 
         mcs.param._depends = {'watch': _watch}

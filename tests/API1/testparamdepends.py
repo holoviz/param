@@ -126,11 +126,32 @@ class TestParamDepends(API1TestCase):
         self.P = P
         self.P2 = P2
 
+    def test_param_depends(self):
+        class A(param.Parameterized):
+
+            c = param.Parameter()
+
+            d = param.Parameter()
+
+        class B(param.Parameterized):
+
+            a = param.Parameter()
+
+            test_count = param.Integer()
+
+            @param.depends('a.c', 'a.d', watch=True)
+            def test(self):
+                self.test_count += 1
+
+        b = B(a=A(c=1))
+        b.a = A(c=1)
+        assert b.test_count == 0
+
     def test_param_depends_class_default_dynamic(self):
 
         class A(param.Parameterized):
             c = param.Parameter()
-        
+
         class B(param.Parameterized):
             a = param.Parameter(A())
 
@@ -168,10 +189,10 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(pinfo2.name, 'a')
         self.assertEqual(pinfo2.what, 'value')
 
-        assert inst.single_nested_count == 1
+        assert inst.single_nested_count == 0
 
         inst.b.a = 1
-        assert inst.single_nested_count == 2
+        assert inst.single_nested_count == 1
 
     def test_param_instance_depends_dynamic_single_nested_initialized(self):
         init_b = self.P()
@@ -194,14 +215,14 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(pinfo2.name, 'a')
         self.assertEqual(pinfo2.what, 'value')
 
-        assert inst.single_nested_count == 1
+        assert inst.single_nested_count == 0
 
         inst.b.a = 1
-        assert inst.single_nested_count == 2
+        assert inst.single_nested_count == 1
 
         # Ensure watcher on initial value does not trigger event
         init_b.a = 2
-        assert inst.single_nested_count == 2
+        assert inst.single_nested_count == 1
 
     def test_param_instance_depends_dynamic_nested(self):
         inst = self.P()
@@ -224,10 +245,10 @@ class TestParamDepends(API1TestCase):
             self.assertEqual(pinfo2.name, p)
             self.assertEqual(pinfo2.what, 'value')
 
-        assert inst.single_nested_count == 1
+        assert inst.single_nested_count == 0
 
         inst.b.a = 1
-        assert inst.single_nested_count == 2
+        assert inst.single_nested_count == 1
 
     def test_param_instance_depends_dynamic_nested_initialized(self):
         init_b = self.P()
@@ -236,6 +257,37 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(len(pinfos), 8)
 
         inst.b = self.P()
+        pinfos = inst.param.params_depended_on('nested')
+        self.assertEqual(len(pinfos), 8)
+        pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
+        pinfo = pinfos[(inst, 'b')]
+        self.assertIs(pinfo.cls, self.P)
+        self.assertIs(pinfo.inst, inst)
+        self.assertEqual(pinfo.name, 'b')
+        self.assertEqual(pinfo.what, 'value')
+        for p in ['a', 'b', 'name', 'nested_count', 'single_count', 'attr_count']:
+            pinfo2 = pinfos[(inst.b, p)]
+            self.assertIs(pinfo2.cls, self.P)
+            self.assertIs(pinfo2.inst, inst.b)
+            self.assertEqual(pinfo2.name, p)
+            self.assertEqual(pinfo2.what, 'value')
+
+        assert inst.single_nested_count == 0
+
+        inst.b.a = 1
+        assert inst.single_nested_count == 1
+
+        # Ensure watcher on initial value does not trigger event
+        init_b.a = 2
+        assert inst.single_nested_count == 1
+
+    def test_param_instance_depends_dynamic_nested_changed_value(self):
+        init_b = self.P(a=1)
+        inst = self.P(b=init_b)
+        pinfos = inst.param.params_depended_on('nested')
+        self.assertEqual(len(pinfos), 8)
+
+        inst.b = self.P(a=2)
         pinfos = inst.param.params_depended_on('nested')
         self.assertEqual(len(pinfos), 8)
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}

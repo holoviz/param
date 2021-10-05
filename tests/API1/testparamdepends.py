@@ -328,19 +328,19 @@ class TestParamDepends(API1TestCase):
 
         old_subobj = inst.b.b
         inst.b.b = self.P(a=3)
-        assert inst.double_nested_count == 4
+        assert inst.double_nested_count == 3
 
         old_subobj.a = 4
-        assert inst.double_nested_count == 4
+        assert inst.double_nested_count == 3
 
         inst.b.b = self.P(a=3)
-        assert inst.double_nested_count == 4
+        assert inst.double_nested_count == 3
 
         inst.b.b.a = 4
-        assert inst.double_nested_count == 5
+        assert inst.double_nested_count == 4
 
         inst.b.b = self.P(a=3)
-        assert inst.double_nested_count == 7
+        assert inst.double_nested_count == 5
 
     def test_param_instance_depends_dynamic_double_nested_partially_initialized(self):
         inst = self.P(b=self.P())
@@ -360,10 +360,10 @@ class TestParamDepends(API1TestCase):
         self.assertEqual(pinfo.what, 'value')
 
         inst.b.b = self.P()
-        assert inst.double_nested_count == 2
+        assert inst.double_nested_count == 1
 
         inst.b.b.a = 1
-        assert inst.double_nested_count == 3
+        assert inst.double_nested_count == 2
 
     def test_param_instance_depends_dynamic_nested_attribute(self):
         inst = self.P()

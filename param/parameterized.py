@@ -1134,7 +1134,9 @@ class Parameter(object):
 
         event = Event(what='value', name=self.name, obj=obj, cls=self.owner,
                       old=_old, new=val, type=None)
-        for watcher in watchers:
+
+        # Copy watchers here since they may be modified inplace during iteration
+        for watcher in list(watchers):
             obj.param._call_watcher(watcher, event)
         if not obj.param._BATCH_WATCH:
             obj.param._batch_call_watchers()
@@ -1598,7 +1600,7 @@ class Parameters(object):
             grouped = defaultdict(list)
             for ddep in deferred:
                 for dep in _resolve_mcs_deps(obj, [], [ddep]):
-                    grouped[(ddep, id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
+                    grouped[(ddep.spec, id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
 
             for group in grouped.values():
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
@@ -2121,7 +2123,6 @@ class Parameters(object):
             return [info], []
 
         obj, attr, what = _parse_dependency_spec(spec)
-        print(obj, attr)
         if obj is None:
             src = self_.self_or_cls
         elif not dynamic:
@@ -2164,7 +2165,7 @@ class Parameters(object):
         if obj is None:
             return [info], []
         deps, deferred = self_._spec_to_obj(obj[1:])
-            deps.append(info)
+        deps.append(info)
         return deps, deferred
 
     def _watch(self_, action, watcher, what='value'):

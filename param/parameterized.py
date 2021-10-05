@@ -1639,10 +1639,10 @@ class Parameters(object):
             for d in ddeps:
                 p = '.'.join(d.spec.split(':')[0].split('.')[depth+1:])
                 if p == 'param':
-                    # THIS IS WRONG IT MUST BE LOOKED UP ON THE SUBOBJECT
-                    for sp in list(self_):
+                    for sp in list(subobjs[-1].param):
                         if sp not in subparams:
                             subparams.append(sp)
+                    print(subparams)
                 elif p not in subparams:
                     subparams.append(p)
             what = d.spec.split(':')[-1] if ':' in d.spec else gdep.what

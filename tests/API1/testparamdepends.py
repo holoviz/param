@@ -177,7 +177,7 @@ class TestParamDepends(API1TestCase):
         self.P = P
         self.P2 = P2
 
-    def test_param_depends(self):
+    def test_param_nested_depends_value_unchanged(self):
         class A(param.Parameterized):
 
             c = param.Parameter()
@@ -196,6 +196,27 @@ class TestParamDepends(API1TestCase):
 
         b = B(a=A(c=1))
         b.a = A(c=1)
+        assert b.test_count == 0
+
+    def test_param_nested_depends_expands(self):
+        class A(param.Parameterized):
+
+            c = param.Parameter()
+
+            d = param.Parameter()
+
+        class B(param.Parameterized):
+
+            a = param.Parameter()
+
+            test_count = param.Integer()
+
+            @param.depends('a.param', watch=True)
+            def test(self):
+                self.test_count += 1
+
+        b = B(a=A(c=1, name='A'))
+        b.a = A(c=1, name='A')
         assert b.test_count == 0
 
     def test_param_depends_class_default_dynamic(self):

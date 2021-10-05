@@ -571,7 +571,7 @@ def _resolve_mcs_deps(obj, resolved, deferred):
 def _skip_event(*events, what='value', changed=None):
     """
     Checks whether a subobject event should be skipped.
-    Returns True if all the values on the new subobject 
+    Returns True if all the values on the new subobject
     match the values on the previous subobject.
     """
     if changed is None:
@@ -2252,7 +2252,7 @@ class Parameters(object):
         """
         try:
             self_._watch('remove', watcher, what=watcher.what)
-        except Exception as e:
+        except Exception:
             self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):

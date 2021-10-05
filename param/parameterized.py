@@ -568,12 +568,14 @@ def _resolve_mcs_deps(obj, resolved, deferred):
     return dependencies
 
 
-def _skip_event(*events, what='value', changed=None):
+def _skip_event(*events, **kwargs):
     """
     Checks whether a subobject event should be skipped.
     Returns True if all the values on the new subobject
     match the values on the previous subobject.
     """
+    what = kwargs.get('what', 'value')
+    changed = kwargs.get('changed')
     if changed is None:
         return False
     for e in events:

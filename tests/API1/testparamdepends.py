@@ -4,8 +4,49 @@ Unit test for param.depends.
 
 
 import param
+
+from param.parameterized import _parse_dependency_spec
+
 from . import API1TestCase
 
+
+class TestDependencyParser(API1TestCase):
+
+    def test_parameter_value(self):
+        obj, attr, what = _parse_dependency_spec('parameter')
+        assert obj is None
+        assert attr == 'parameter'
+        assert what == 'value'
+
+    def test_parameter_attribute(self):
+        obj, attr, what = _parse_dependency_spec('parameter:constant')
+        assert obj is None
+        assert attr == 'parameter'
+        assert what == 'constant'
+
+    def test_subobject_parameter(self):
+        obj, attr, what = _parse_dependency_spec('subobject.parameter')
+        assert obj == '.subobject'
+        assert attr == 'parameter'
+        assert what == 'value'
+
+    def test_subobject_parameter_attribute(self):
+        obj, attr, what = _parse_dependency_spec('subobject.parameter:constant')
+        assert obj == '.subobject'
+        assert attr == 'parameter'
+        assert what == 'constant'
+
+    def test_sub_subobject_parameter(self):
+        obj, attr, what = _parse_dependency_spec('subobject.subsubobject.parameter')
+        assert obj == '.subobject.subsubobject'
+        assert attr == 'parameter'
+        assert what == 'value'
+
+    def test_sub_subobject_parameter_attribute(self):
+        obj, attr, what = _parse_dependency_spec('subobject.subsubobject.parameter:constant')
+        assert obj == '.subobject.subsubobject'
+        assert attr == 'parameter'
+        assert what == 'constant'
 
 
 class TestParamDependsSubclassing(API1TestCase):
@@ -106,7 +147,7 @@ class TestParamDepends(API1TestCase):
             def single_parameter(self):
                 self.single_count += 1
 
-            #@param.depends('a:constant', watch=True)
+            @param.depends('a:constant', watch=True)
             def constant(self):
                 self.attr_count += 1
 

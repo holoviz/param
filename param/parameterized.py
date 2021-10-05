@@ -530,7 +530,7 @@ def _parse_dependency_spec(spec):
     m = re.match(r"(?P<obj>.*)(\.)(?P<attr>.*)", path)
     obj = m.group('obj')
     attr = m.group("attr")
-    return obj, attr, what
+    return obj or None, attr, what or 'value'
 
 
 def _params_depended_on(minfo, dynamic=True):
@@ -1579,8 +1579,6 @@ class Parameters(object):
                     self_._watch_group(obj, n, queued, group)
             else:
                 for w in obj._dynamic_watchers.get((n, attribute), []):
-                    if w.what == 'constant':
-                        print(obj, w.inst, w.parameter_names, w.what)
                     (w.inst or w.cls).param.unwatch(w)
 
             # Resolve dynamic dependencies one-by-one to be able to trace their watchers
@@ -1618,9 +1616,6 @@ class Parameters(object):
             what = d.spec.split(':')[-1] if ':' in d.spec else gdep.what
         else:
             what = gdep.what
-
-            if what == 'constant':
-                print(obj, dep_obj, params)
 
         mcaller = _m_caller(obj, name, what, subparams)
         return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued)
@@ -2097,7 +2092,7 @@ class Parameters(object):
             return [info], []
 
         obj, attr, what = _parse_dependency_spec(spec)
-        if obj == '':
+        if obj is None:
             src = self_.self_or_cls
         else:
             src = _getattrr(self_.self_or_cls, obj[1::], None)
@@ -2113,18 +2108,17 @@ class Parameters(object):
                 deferred += ndeferred
             return deps, deferred
         elif attr in src.param:
-            what = what if what != '' else 'value'
             info = PInfo(inst=inst, cls=cls, name=attr,
                          pobj=src.param[attr], what=what)
         else:
             info = MInfo(inst=inst, cls=cls, name=attr,
                          method=getattr(src, attr))
 
-        if (obj != ''):
-            deps, deferred = self_._spec_to_obj(obj[1:])
-            deps.append(info)
-            return deps, deferred
-        return [info], []
+        if obj is None:
+            return [info], []
+        deps, deferred = self_._spec_to_obj(obj[1:])
+        deps.append(info)
+        return deps, deferred
 
     def _watch(self_, action, watcher, what='value'):
         parameter_names = watcher.parameter_names

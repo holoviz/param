@@ -570,9 +570,9 @@ def _resolve_mcs_deps(obj, resolved, deferred):
 
 def _skip_event(*events, what='value', changed=None):
     """
-    Checks whether a subobject event should be skipped if all the
-    values on the subobject match the values on the previous
-    subobject.
+    Checks whether a subobject event should be skipped.
+    Returns True if all the values on the new subobject 
+    match the values on the previous subobject.
     """
     if changed is None:
         return False

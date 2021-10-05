@@ -578,8 +578,8 @@ def _skip_event(*events, changed=None):
         return False
     for e in events:
         for p in changed:
-            old = Undefined_ if e.old is None else getattr(e.old, p, None)
-            new = Undefined_ if e.new is None else getattr(e.new, p, None)
+            old = _Undefined if e.old is None else getattr(e.old, p, None)
+            new = _Undefined if e.new is None else getattr(e.new, p, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True

@@ -1598,7 +1598,7 @@ class Parameters(object):
             grouped = defaultdict(list)
             for ddep in deferred:
                 for dep in _resolve_mcs_deps(obj, [], [ddep]):
-                    grouped[(id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
+                    grouped[(ddep, id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
 
             for group in grouped.values():
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
@@ -1616,18 +1616,16 @@ class Parameters(object):
         if ddeps:
             subobj = obj
             ddep = ddeps[0]
-            unwatchers = []
             for subpath in ddep.spec.split('.')[:-1]:
                 subobj = getattr(subobj, subpath.split(':')[0], None)
-                if subobj is not None:
-                    subobjs.append(subobj)
+                subobjs.append(subobj)
 
         # For dynamic dependencies changing the subobject should only
         # trigger events if the parameters being depended on have
         # changed. Therefore we need to accumulate the paths to the
         # subobjects.
         callbacks = []
-        if dep_obj in subobjs[:-1] and ddeps:
+        if dep_obj is not None and dep_obj in subobjs[:-1] and ddeps:
             depth = subobjs.index(dep_obj)
             if depth > 0:
                 # If a subobject changes we need to notify the main
@@ -1642,7 +1640,6 @@ class Parameters(object):
                     for sp in list(subobjs[-1].param):
                         if sp not in subparams:
                             subparams.append(sp)
-                    print(subparams)
                 elif p not in subparams:
                     subparams.append(p)
             what = d.spec.split(':')[-1] if ':' in d.spec else gdep.what
@@ -2091,7 +2088,7 @@ class Parameters(object):
         method = getattr(self_.self_or_cls, name)
         minfo = MInfo(cls=self_.cls, inst=self_.self, name=name,
                       method=method)
-        deps, deferred = _params_depended_on(minfo)
+        deps, deferred = _params_depended_on(minfo, dynamic=False)
         if self_.self is None:
             return deps
         return _resolve_mcs_deps(self_.self, deps, deferred)
@@ -2124,12 +2121,30 @@ class Parameters(object):
             return [info], []
 
         obj, attr, what = _parse_dependency_spec(spec)
+        print(obj, attr)
         if obj is None:
             src = self_.self_or_cls
+        elif not dynamic:
+            return [], [DInfo(spec=spec)]
         else:
             src = _getattrr(self_.self_or_cls, obj[1::], None)
-            if src is None or not dynamic:
-                return [], [DInfo(spec=spec)]
+            if src is None:
+                path = obj[1:].split('.')
+                deps = []
+                # Attempt to partially resolve subobject path to ensure
+                # that if a subobject is later updated making the full
+                # subobject path available we have to be notified and
+                # set up watchers
+                if len(path) >= 1:
+                    sub_src = None
+                    subpath = path
+                    while sub_src is None and subpath:
+                        subpath = subpath[:-1]
+                        sub_src = _getattrr(self_.self_or_cls, '.'.join(subpath), None)
+                    if subpath:
+                        subdeps, _ = self_._spec_to_obj('.'.join(path[:len(subpath)+1]))
+                        deps += subdeps
+                return deps, [DInfo(spec=spec)]
 
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
         if attr == 'param':
@@ -2149,7 +2164,7 @@ class Parameters(object):
         if obj is None:
             return [info], []
         deps, deferred = self_._spec_to_obj(obj[1:])
-        deps.append(info)
+            deps.append(info)
         return deps, deferred
 
     def _watch(self_, action, watcher, what='value'):

@@ -342,6 +342,29 @@ class TestParamDepends(API1TestCase):
         inst.b.b = self.P(a=3)
         assert inst.double_nested_count == 7
 
+    def test_param_instance_depends_dynamic_double_nested_partially_initialized(self):
+        inst = self.P(b=self.P())
+        pinfos = inst.param.params_depended_on('double_nested')
+        self.assertEqual(len(pinfos), 2)
+
+        pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
+        pinfo = pinfos[(inst, 'b')]
+        self.assertIs(pinfo.cls, self.P)
+        self.assertIs(pinfo.inst, inst)
+        self.assertEqual(pinfo.name, 'b')
+        self.assertEqual(pinfo.what, 'value')
+        pinfo = pinfos[(inst.b, 'b')]
+        self.assertIs(pinfo.cls, self.P)
+        self.assertIs(pinfo.inst, inst.b)
+        self.assertEqual(pinfo.name, 'b')
+        self.assertEqual(pinfo.what, 'value')
+
+        inst.b.b = self.P()
+        assert inst.double_nested_count == 2
+
+        inst.b.b.a = 1
+        assert inst.double_nested_count == 3
+
     def test_param_instance_depends_dynamic_nested_attribute(self):
         inst = self.P()
         pinfos = inst.param.params_depended_on('nested_attribute')
@@ -413,10 +436,10 @@ class TestParamDepends(API1TestCase):
             self.assertEqual(pinfo2.name, p)
             self.assertEqual(pinfo2.what, 'value')
 
-        assert inst.single_nested_count == 1
+        assert inst.nested_count == 1
 
         inst.b.a = 1
-        assert inst.single_nested_count == 2
+        assert inst.nested_count == 3
 
     def test_param_instance_depends_dynamic_nested_initialized(self):
         init_b = self.P()

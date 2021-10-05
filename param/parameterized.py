@@ -589,26 +589,20 @@ def _skip_event(*events, what='value', changed=None):
     return True
 
 
-def _m_caller(self, n, what='value', changed=None, callbacks=[]):
+def _m_caller(self, n, what='value', changed=None, callback=None):
     function = getattr(self, n)
     if iscoroutinefunction(function):
         import asyncio
         @asyncio.coroutine
         def caller(*events):
-            for cb in callbacks:
-                try:
-                    cb(*events)
-                except Exception:
-                    pass
+            if callback:
+                callback(*events)
             if not _skip_event(*events, what=what, changed=changed):
                 yield function()
     else:
         def caller(*events):
-            for cb in callbacks:
-                try:
-                    cb(*events)
-                except Exception:
-                    pass
+            if callback:
+                callback(*events)
             if not _skip_event(*events, what=what, changed=changed):
                 return function()
     caller._watcher_name = n
@@ -1608,50 +1602,73 @@ class Parameters(object):
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
                 obj._dynamic_watchers[method].append(watcher)
 
-    def _watch_group(self_, obj, name, queued, group, attribute=None):
-        _, gdep = group[0]
-        ddeps = [dd for dd, _ in group if dd is not None]
-        dep_obj = (gdep.inst or gdep.cls)
-        params = [g[1].name for g in group]
-        subparams = None
+    def _resolve_dynamic_deps(self, obj, dynamic_dep, param_dep, attribute):
+        """
+        If a subobject whose parameters are being depended on changes
+        we should only trigger events if the actual parameter values
+        of the new object differ from those on the old subobject,
+        therefore we accumulate parameters to compare on a subobject
+        change event.
 
-        # Resolve the chain of subobjects declared by the dependency
+        Additionally we need to make sure to notify the parent object
+        if a subobject changes so the dependencies can be
+        reinitialized so we return a callback which updates the
+        dependencies.
+        """
+        subobj = obj
         subobjs = [obj]
-        if ddeps:
-            subobj = obj
-            ddep = ddeps[0]
-            for subpath in ddep.spec.split('.')[:-1]:
-                subobj = getattr(subobj, subpath.split(':')[0], None)
-                subobjs.append(subobj)
+        for subpath in dynamic_dep.spec.split('.')[:-1]:
+            subobj = getattr(subobj, subpath.split(':')[0], None)
+            subobjs.append(subobj)
 
-        # For dynamic dependencies changing the subobject should only
-        # trigger events if the parameters being depended on have
-        # changed. Therefore we need to accumulate the paths to the
-        # subobjects.
-        callbacks = []
-        if dep_obj is not None and dep_obj in subobjs[:-1] and ddeps:
-            depth = subobjs.index(dep_obj)
-            if depth > 0:
-                # If a subobject changes we need to notify the main
-                # object to update the dependencies
-                def unwatch(*events):
-                    obj.param._update_deps(attribute)
-                callbacks.append(unwatch)
-            subparams = []
-            for d in ddeps:
-                p = '.'.join(d.spec.split(':')[0].split('.')[depth+1:])
-                if p == 'param':
-                    for sp in list(subobjs[-1].param):
-                        if sp not in subparams:
-                            subparams.append(sp)
-                elif p not in subparams:
-                    subparams.append(p)
-            what = d.spec.split(':')[-1] if ':' in d.spec else gdep.what
+        dep_obj = (param_dep.inst or param_dep.cls)
+        if dep_obj not in subobjs[:-1]:
+            return None, None, param_dep.what
+
+        depth = subobjs.index(dep_obj)
+        callback = None
+        if depth > 0:
+            def callback(*events):
+                """
+                If a subobject changes we need to notify the main
+                object to update the dependencies.
+                """
+                obj.param._update_deps(attribute)
+
+        p = '.'.join(dynamic_dep.spec.split(':')[0].split('.')[depth+1:])
+        if p == 'param':
+            subparams = [sp for sp in list(subobjs[-1].param)]
         else:
-            what = gdep.what
+            subparams = [p]
 
-        mcaller = _m_caller(obj, name, what, subparams, callbacks)
-        return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued, precedence=-1)
+        if ':' in dynamic_dep.spec:
+            what = dynamic_dep.spec.split(':')[-1]
+        else:
+            what = param_dep.what
+
+        return subparams, callback, what
+
+    def _watch_group(self_, obj, name, queued, group, attribute=None):
+        """
+        Sets up a watcher for a group of dependencies. Ensures that
+        if the dependency was dynamically generated we check whether
+        a subobject change event actually causes a value change and
+        that we update the existing watchers, i.e. clean up watchers
+        on the old subobject and create watchers on the new subobject.
+        """
+        dynamic_dep, param_dep = group[0]
+        dep_obj = (param_dep.inst or param_dep.cls)
+        params = [g[1].name for g in group]
+
+        if dynamic_dep is None:
+            subparams, callback, what = None, None, param_dep.what
+        else:
+            subparams, callback, what = self_._resolve_dynamic_deps(
+                obj, dynamic_dep, param_dep, attribute)
+
+        mcaller = _m_caller(obj, name, what, subparams, callback)
+        return dep_obj.param.watch(mcaller, params, param_dep.what,
+                                   queued=queued, precedence=-1)
 
     # Classmethods
 

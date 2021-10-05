@@ -568,7 +568,7 @@ def _resolve_mcs_deps(obj, resolved, deferred):
     return dependencies
 
 
-def _skip_event(*events, changed=None):
+def _skip_event(*events, what='value', changed=None):
     """
     Checks whether a subobject event should be skipped if all the
     values on the subobject match the values on the previous
@@ -578,24 +578,28 @@ def _skip_event(*events, changed=None):
         return False
     for e in events:
         for p in changed:
-            old = _Undefined if e.old is None else getattr(e.old, p, None)
-            new = _Undefined if e.new is None else getattr(e.new, p, None)
+            if what == 'value':
+                old = _Undefined if e.old is None else getattr(e.old, p, None)
+                new = _Undefined if e.new is None else getattr(e.new, p, None)
+            else:
+                old = _Undefined if e.old is None else getattr(e.old.param[p], what, None)
+                new = _Undefined if e.old is None else getattr(e.old.param[p], what, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True
 
 
-def _m_caller(self, n, changed=None):
+def _m_caller(self, n, what='value', changed=None):
     function = getattr(self, n)
     if iscoroutinefunction(function):
         import asyncio
         @asyncio.coroutine
         def caller(*events):
-            if not _skip_event(*events, changed):
+            if not _skip_event(*events, what=what, changed=changed):
                 yield function()
     else:
         def caller(*events):
-            if not _skip_event(*events, changed):
+            if not _skip_event(*events, what=what, changed=changed):
                 return function()
     caller._watcher_name = n
     return caller
@@ -1575,6 +1579,8 @@ class Parameters(object):
                     self_._watch_group(obj, n, queued, group)
             else:
                 for w in obj._dynamic_watchers.get((n, attribute), []):
+                    if w.what == 'constant':
+                        print(obj, w.inst, w.parameter_names, w.what)
                     (w.inst or w.cls).param.unwatch(w)
 
             # Resolve dynamic dependencies one-by-one to be able to trace their watchers
@@ -1594,11 +1600,12 @@ class Parameters(object):
         ddeps = [dd for dd, _ in group if dd is not None]
         _, gdep = group[0] # Need to grab representative dep from this group
         dep_obj = (gdep.inst or gdep.cls)
+        params = [g[1].name for g in group]
         subparams = None
 
         # For dynamic dependencies changing the subobject should only
         # trigger events if the parameters being depended on have changed
-        if obj is dep_obj:
+        if obj is dep_obj and ddeps:
             subparams = []
             for d in ddeps:
                 p = d.spec.split('.')[-1].split(':')[0]
@@ -1608,9 +1615,14 @@ class Parameters(object):
                             subparams.append(sp)
                 elif p not in subparams:
                     subparams.append(p)
+            what = d.spec.split(':')[-1] if ':' in d.spec else gdep.what
+        else:
+            what = gdep.what
 
-        mcaller = _m_caller(obj, name, subparams)
-        params = [g[1].name for g in group]
+            if what == 'constant':
+                print(obj, dep_obj, params)
+
+        mcaller = _m_caller(obj, name, what, subparams)
         return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued)
 
     # Classmethods
@@ -1960,7 +1972,6 @@ class Parameters(object):
         vals.sort(key=itemgetter(0))
         return vals
 
-
     def force_new_dynamic_value(self_, name): # pylint: disable-msg=E0213
         """
         Force a new value to be generated for the dynamic attribute
@@ -1985,7 +1996,6 @@ class Parameters(object):
             return param_obj.__get__(slf, cls)
         else:
             return param_obj._force(slf, cls)
-
 
     def get_value_generator(self_,name): # pylint: disable-msg=E0213
         """
@@ -2046,7 +2056,6 @@ class Parameters(object):
 
         return value
 
-
     def params_depended_on(self_, name):
         """
         Given the name of a method, returns a PInfo object for each dependency
@@ -2078,7 +2087,6 @@ class Parameters(object):
                         name = override
                     outputs[name] = (otype, method, idx)
         return outputs
-
 
     def _spec_to_obj(self_, spec, dynamic=True):
         if isinstance(spec, Parameter):
@@ -2117,7 +2125,6 @@ class Parameters(object):
             deps.append(info)
             return deps, deferred
         return [info], []
-
 
     def _watch(self_, action, watcher, what='value'):
         parameter_names = watcher.parameter_names
@@ -2183,10 +2190,9 @@ class Parameters(object):
         Remove the given Watcher object (from `watch` or `watch_values`) from this object's list.
         """
         try:
-            self_._watch('remove',watcher)
-        except:
+            self_._watch('remove', watcher, what=watcher.what)
+        except Exception as e:
             self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
-
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
         """
@@ -2195,15 +2201,17 @@ class Parameters(object):
         Only allows `what` to be 'value', and invokes the callback `fn` using keyword
         arguments <param_name>=<new_value> rather than with a list of Event objects.
         """
-        assert(what=='value')
-        parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
+        assert what == 'value'
+        if isinstance(parameter_names, list):
+            parameter_names = tuple(parameter_names)
+        else:
+            parameter_names = (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
                           parameter_names=parameter_names, what=what,
                           queued=queued)
         self_._watch('append', watcher, what)
         return watcher
-
 
     # Instance methods
 

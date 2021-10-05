@@ -579,26 +579,36 @@ def _skip_event(*events, what='value', changed=None):
     for e in events:
         for p in changed:
             if what == 'value':
-                old = _Undefined if e.old is None else getattr(e.old, p, None)
-                new = _Undefined if e.new is None else getattr(e.new, p, None)
+                old = _Undefined if e.old is None else _getattrr(e.old, p, None)
+                new = _Undefined if e.new is None else _getattrr(e.new, p, None)
             else:
-                old = _Undefined if e.old is None else getattr(e.old.param[p], what, None)
-                new = _Undefined if e.old is None else getattr(e.old.param[p], what, None)
+                old = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
+                new = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True
 
 
-def _m_caller(self, n, what='value', changed=None):
+def _m_caller(self, n, what='value', changed=None, callbacks=[]):
     function = getattr(self, n)
     if iscoroutinefunction(function):
         import asyncio
         @asyncio.coroutine
         def caller(*events):
+            for cb in callbacks:
+                try:
+                    cb(*events)
+                except Exception:
+                    pass
             if not _skip_event(*events, what=what, changed=changed):
                 yield function()
     else:
         def caller(*events):
+            for cb in callbacks:
+                try:
+                    cb(*events)
+                except Exception:
+                    pass
             if not _skip_event(*events, what=what, changed=changed):
                 return function()
     caller._watcher_name = n
@@ -1566,48 +1576,70 @@ class Parameters(object):
             # should it instead keep the same name?
             new_object.param._generate_name()
 
-    def _update_deps(self_, attribute=None):
+    def _update_deps(self_, attribute=None, init=False):
         obj = self_.self
-        for n, queued, constant, deferred in type(obj).param._depends['watch']:
+        for method, queued, constant, deferred in type(obj).param._depends['watch']:
             # On initialization set up constant watchers otherwise
             # clean up previous dynamic watchers for the updated attribute
-            if attribute is None:
+            deferred = [d for d in deferred if attribute is None or d.spec.startswith(attribute)]
+            if init:
                 constant_grouped = defaultdict(list)
                 for dep in _resolve_mcs_deps(obj, constant, []):
                     constant_grouped[(id(dep.inst), id(dep.cls), dep.what)].append((None, dep))
                 for group in constant_grouped.values():
-                    self_._watch_group(obj, n, queued, group)
-            else:
-                for w in obj._dynamic_watchers.get((n, attribute), []):
+                    self_._watch_group(obj, method, queued, group)
+            elif deferred:
+                for w in obj._dynamic_watchers.pop(method, []):
                     (w.inst or w.cls).param.unwatch(w)
+            else:
+                continue
 
             # Resolve dynamic dependencies one-by-one to be able to trace their watchers
             grouped = defaultdict(list)
             for ddep in deferred:
-                dattr = ddep.spec.split('.')[0]
-                if attribute and dattr != attribute:
-                    continue
                 for dep in _resolve_mcs_deps(obj, [], [ddep]):
-                    grouped[(id(dep.inst), id(dep.cls), dep.what, dattr)].append((ddep, dep))
+                    grouped[(id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
 
-            for (_, _, _, dattr), group in grouped.items():
-                watcher = self_._watch_group(obj, n, queued, group)
-                obj._dynamic_watchers[(n, dattr)].append(watcher)
+            for group in grouped.values():
+                watcher = self_._watch_group(obj, method, queued, group, attribute)
+                obj._dynamic_watchers[method].append(watcher)
 
-    def _watch_group(self_, obj, name, queued, group):
+    def _watch_group(self_, obj, name, queued, group, attribute=None):
+        _, gdep = group[0]
         ddeps = [dd for dd, _ in group if dd is not None]
-        _, gdep = group[0] # Need to grab representative dep from this group
         dep_obj = (gdep.inst or gdep.cls)
         params = [g[1].name for g in group]
         subparams = None
 
+        # Resolve the chain of subobjects declared by the dependency
+        subobjs = [obj]
+        if ddeps:
+            subobj = obj
+            ddep = ddeps[0]
+            unwatchers = []
+            for subpath in ddep.spec.split('.')[:-1]:
+                subobj = getattr(subobj, subpath.split(':')[0], None)
+                if subobj is not None:
+                    subobjs.append(subobj)
+
         # For dynamic dependencies changing the subobject should only
-        # trigger events if the parameters being depended on have changed
-        if obj is dep_obj and ddeps:
+        # trigger events if the parameters being depended on have
+        # changed. Therefore we need to accumulate the paths to the
+        # subobjects.
+        callbacks = []
+        if dep_obj in subobjs[:-1] and ddeps:
+            depth = subobjs.index(dep_obj)
+            if depth > 0:
+                # If a subobject changes we need to notify the main
+                # object to update the dependencies
+                def unwatch(*events):
+                    obj.param._update_deps(attribute)
+                callbacks.append(unwatch)
             subparams = []
             for d in ddeps:
-                p = d.spec.split('.')[-1].split(':')[0]
+                p = '.'.join(d.spec.split(':')[0].split('.')[depth+1:])
                 if p == 'param':
+                    # THIS IS WRONG IT MUST BE LOOKED UP ON THE SUBOBJECT
                     for sp in list(self_):
                         if sp not in subparams:
                             subparams.append(sp)
@@ -1617,7 +1649,7 @@ class Parameters(object):
         else:
             what = gdep.what
 
-        mcaller = _m_caller(obj, name, what, subparams)
+        mcaller = _m_caller(obj, name, what, subparams, callbacks)
         return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued)
 
     # Classmethods
@@ -2877,7 +2909,7 @@ class Parameterized(object):
         self.param._setup_params(**params)
         object_count += 1
 
-        self.param._update_deps()
+        self.param._update_deps(init=True)
 
         self.initialized = True
 

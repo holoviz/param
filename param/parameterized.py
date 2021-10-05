@@ -534,8 +534,7 @@ def _parse_dependency_spec(spec):
 
 
 def _params_depended_on(minfo, dynamic=True):
-    params = []
-    deferred_deps = []
+    params, deferred_deps = [], []
     dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
         resolved, deferred = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic)
@@ -544,7 +543,9 @@ def _params_depended_on(minfo, dynamic=True):
             if isinstance(dep, PInfo):
                 params.append(dep)
             else:
-                params += _params_depended_on(dep, dynamic)
+                ps, dps = _params_depended_on(dep, dynamic)
+                params += ps
+                deferred_deps += dps
     return params, deferred_deps
 
 

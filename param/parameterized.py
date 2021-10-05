@@ -661,7 +661,7 @@ Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
             None if type not yet known
     """)
 
-Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued"); _add_doc(Watcher,
+Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence"); _add_doc(Watcher,
     """
     Object declaring a callback function to invoke when an Event is triggered on a watched item
     `inst`: Parameterized instance owning the watched Parameter, or None
@@ -674,6 +674,8 @@ Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names wh
     `what`: What to watch on the Parameters (either 'value' or a slot name)
     `queued`: Immediately invoke callbacks triggered during processing of an Event (if False), or
             queue them up for processing later, after this event has been handled (if True)
+    `precedence`: A numeric value which determines the precedence of the watcher.
+                  Lower precedence values are executed with higher priority.
     """)
 
 class ParameterMetaclass(type):
@@ -1136,7 +1138,7 @@ class Parameter(object):
                       old=_old, new=val, type=None)
 
         # Copy watchers here since they may be modified inplace during iteration
-        for watcher in list(watchers):
+        for watcher in sorted(watchers, key=lambda w: w.precedence):
             obj.param._call_watcher(watcher, event)
         if not obj.param._BATCH_WATCH:
             obj.param._batch_call_watchers()
@@ -1649,7 +1651,7 @@ class Parameters(object):
             what = gdep.what
 
         mcaller = _m_caller(obj, name, what, subparams, callbacks)
-        return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued)
+        return dep_obj.param.watch(mcaller, params, gdep.what, queued=queued, precedence=-1)
 
     # Classmethods
 
@@ -1885,7 +1887,7 @@ class Parameters(object):
             self_.self_or_cls.param._events = []
             self_.self_or_cls.param._watchers = []
 
-            for watcher in watchers:
+            for watcher in sorted(watchers, key=lambda w: w.precedence):
                 events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],
                                                    self_.self_or_cls.param._TRIGGER)
                           for name in watcher.parameter_names
@@ -2189,7 +2191,7 @@ class Parameters(object):
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)
 
-    def watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
+    def watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """
         Register the given callback function `fn` to be invoked for
         events on the indicated parameters.
@@ -2223,7 +2225,7 @@ class Parameters(object):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
                           onlychanged=onlychanged, parameter_names=parameter_names,
-                          what=what, queued=queued)
+                          what=what, queued=queued, precedence=precedence)
         self_._watch('append', watcher, what)
         return watcher
 
@@ -2236,7 +2238,7 @@ class Parameters(object):
         except Exception as e:
             self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
-    def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False):
+    def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """
         Easier-to-use version of `watch` specific to watching for changes in parameter values.
 
@@ -2251,7 +2253,7 @@ class Parameters(object):
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
                           parameter_names=parameter_names, what=what,
-                          queued=queued)
+                          queued=queued, precedence=0)
         self_._watch('append', watcher, what)
         return watcher
 

@@ -1698,8 +1698,8 @@ class Parameters(object):
                 obj, dynamic_dep, param_dep, attribute)
 
         mcaller = _m_caller(obj, name, what, subparams, callback)
-        return dep_obj.param.watch(mcaller, params, param_dep.what,
-                                   queued=queued, precedence=-1)
+        return dep_obj.param._internal_watch(
+            mcaller, params, param_dep.what, queued=queued, precedence=-1)
 
     # Classmethods
 
@@ -2262,6 +2262,12 @@ class Parameters(object):
         invoked by that same event have finished executing),
         effectively doing breadth-first processing of Watcher events.
 
+        `precedence`: Declares a precedence level for the Watcher that
+        determines the priority with which the callback is executed.
+        Lower precedence levels are executed earlier. Negative
+        precedences are reserved for internal Watchers, i.e. those
+        set up by param.depends.
+
         When the `fn` is called, it will be provided the relevant
         Event objects as positional arguments, which allows it to
         determine which of the possible triggering events occurred.
@@ -2270,6 +2276,13 @@ class Parameters(object):
 
         See help(Watcher) and help(Event) for the contents of those objects.
         """
+        if precedence < 0:
+            raise ValueError("User-defined watch callbacks must declare "
+                             "a positive precedence. Negative precedences "
+                             "are reserved for internal Watchers.")
+        return self_._internal_watch(fn, parameter_names, what, onlychanged, queued, precedence)
+
+    def _internal_watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=-1):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
                           onlychanged=onlychanged, parameter_names=parameter_names,

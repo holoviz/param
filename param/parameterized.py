@@ -2168,12 +2168,12 @@ class Parameters(object):
         """
         Resolves dependency specifications into explicit parameter
         dependencies and dynamic dependencies to be resolved when the
-        sub-object whose parameters depends on is defined.
+        sub-object whose parameters are being depended on is defined.
 
         During class creation dynamic=False which means sub-object
         dependencies are not resolved. At instance creation and
-        whenever a sub-object this method will be invoked to determine
-        whether the dependency is available.
+        whenever a sub-object is set on an object this method will be
+        invoked to determine whether the dependency is available.
 
         For sub-object dependencies we also return dependencies for
         every part of the path, e.g. for a dependency specification

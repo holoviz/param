@@ -2165,6 +2165,27 @@ class Parameters(object):
         return outputs
 
     def _spec_to_obj(self_, spec, dynamic=True):
+        """
+        Resolves dependency specifications into explicit parameter
+        dependencies and dynamic dependencies to be resolved when the
+        sub-object whose parameters depends on is defined.
+
+        During class creation dynamic=False which means sub-object
+        dependencies are not resolved. At instance creation and
+        whenever a sub-object this method will be invoked to determine
+        whether the dependency is available.
+
+        For sub-object dependencies we also return dependencies for
+        every part of the path, e.g. for a dependency specification
+        like "a.b.c" we return dependencies for sub-object "a" and the
+        sub-sub-object "b" in addition to the dependency on the actual
+        parameter "c" on object "b". This is to ensure that if a
+        sub-object is swapped out we are notified and can update the
+        dynamic dependency to the new object. Even if a sub-object
+        dependency can only partially resolved, e.g. if object "a"
+        does not yet have a sub-object "b" we must watch for changes
+        to "b" on sub-object "a".
+        """
         if isinstance(spec, Parameter):
             inst = spec.owner if isinstance(spec.owner, Parameterized) else None
             cls = spec.owner if inst is None else type(inst)

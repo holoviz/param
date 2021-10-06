@@ -2306,6 +2306,10 @@ class Parameters(object):
         Only allows `what` to be 'value', and invokes the callback `fn` using keyword
         arguments <param_name>=<new_value> rather than with a list of Event objects.
         """
+        if precedence < 0:
+            raise ValueError("User-defined watch callbacks must declare "
+                             "a positive precedence. Negative precedences "
+                             "are reserved for internal Watchers.")
         assert what == 'value'
         if isinstance(parameter_names, list):
             parameter_names = tuple(parameter_names)

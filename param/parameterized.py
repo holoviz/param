@@ -2339,7 +2339,7 @@ class Parameters(object):
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn,
                           mode='kwargs', onlychanged=onlychanged,
                           parameter_names=parameter_names, what=what,
-                          queued=queued, precedence=0)
+                          queued=queued, precedence=precedence)
         self_._watch('append', watcher, what)
         return watcher
 

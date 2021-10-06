@@ -611,6 +611,7 @@ class TestWatchValues(API1TestCase):
     def setUp(self):
         super(TestWatchValues, self).setUp()
         self.accumulator = 0
+        self.list_accumulator = []
 
     def test_triggered_when_values_changed(self):
         def accumulator(a):
@@ -645,6 +646,32 @@ class TestWatchValues(API1TestCase):
         obj.param.unwatch(watcher)
         obj.a = 2
         self.assertEqual(self.accumulator, 1)
+
+    def test_priority_levels(self):
+        def accumulator1(**kwargs):
+            self.list_accumulator.append('A')
+        def accumulator2(**kwargs):
+            self.list_accumulator.append('B')
+
+        obj = SimpleWatchExample()
+        obj.param.watch_values(accumulator1, 'a', precedence=2)
+        obj.param.watch_values(accumulator2, 'a', precedence=1)
+
+        obj.a = 1
+        assert self.list_accumulator == ['B', 'A']
+
+    def test_priority_levels_batched(self):
+        def accumulator1(**kwargs):
+            self.list_accumulator.append('A')
+        def accumulator2(**kwargs):
+            self.list_accumulator.append('B')
+
+        obj = SimpleWatchExample()
+        obj.param.watch_values(accumulator1, 'a', precedence=2)
+        obj.param.watch_values(accumulator2, 'b', precedence=1)
+
+        obj.param.set_param(a=1, b=2)
+        assert self.list_accumulator == ['B', 'A']
 
     def test_simple_batched_watch_values_setattr(self):
 

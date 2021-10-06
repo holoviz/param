@@ -2166,9 +2166,12 @@ class Parameters(object):
 
     def _spec_to_obj(self_, spec, dynamic=True):
         """
-        Resolves dependency specifications into explicit parameter
-        dependencies and dynamic dependencies to be resolved when the
-        sub-object whose parameters are being depended on is defined.
+        Resolves a dependency specification into lists of explicit
+        parameter dependencies and dynamic dependencies.
+
+        Dynamic dependencies are specifications to be resolved when
+        the sub-object whose parameters are being depended on is
+        defined.
 
         During class creation dynamic=False which means sub-object
         dependencies are not resolved. At instance creation and

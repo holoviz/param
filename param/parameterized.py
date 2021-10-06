@@ -522,6 +522,13 @@ def output(func, *output, **kw):
 
 
 def _parse_dependency_spec(spec):
+    """
+    Parses param.depends specifications into three components:
+
+    1. The dotted path to the sub-object
+    2. The attribute being depended on, i.e. either a parameter or method
+    3. The parameter attribute being depended on
+    """
     assert spec.count(":")<=1
     spec = spec.strip()
     m = re.match("(?P<path>[^:]*):?(?P<what>.*)", spec)
@@ -534,22 +541,37 @@ def _parse_dependency_spec(spec):
 
 
 def _params_depended_on(minfo, dynamic=True):
-    params, deferred_deps = [], []
+    """
+    Resolves dependencies declared on a Parameterized method.
+    Dynamic dependencies, i.e. dependencies on sub-objects which may
+    or may not yet be available, are only resolved if dynamic=True.
+
+    Returns lists of concrete dependencies on available parameters
+    and dynamic dependencies specifications which have to resolved
+    if the referenced sub-objects are defined.
+    """
+    params, dynamic_deps = [], []
     dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
         resolved, deferred = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic)
-        deferred_deps += deferred
+        dynamic_deps += deferred
         for dep in resolved:
             if isinstance(dep, PInfo):
                 params.append(dep)
             else:
                 ps, dps = _params_depended_on(dep, dynamic)
                 params += ps
-                deferred_deps += dps
-    return params, deferred_deps
+                dynamic_deps += dps
+    return params, dynamic_deps
 
 
-def _resolve_mcs_deps(obj, resolved, deferred):
+def _resolve_mcs_deps(obj, resolved, dynamic):
+    """
+    Resolves constant and dynamic parameter dependencies previously
+    obtained using the _params_depended_on function. Existing resolved
+    dependencies are updated with a supplied parameter instance while
+    dynamic dependencies are resolved if possible.
+    """
     dependencies = []
     for dep in resolved:
         if not issubclass(type(obj), dep.cls):
@@ -559,7 +581,7 @@ def _resolve_mcs_deps(obj, resolved, deferred):
         dep = PInfo(inst=inst, cls=dep.cls, name=dep.name,
                     pobj=inst.param[dep.name], what=dep.what)
         dependencies.append(dep)
-    for dep in deferred:
+    for dep in dynamic:
         subresolved, _ = obj.param._spec_to_obj(dep.spec)
         for subdep in subresolved:
             if isinstance(subdep, PInfo):
@@ -592,23 +614,26 @@ def _skip_event(*events, **kwargs):
     return True
 
 
-def _m_caller(self, n, what='value', changed=None, callback=None):
-    function = getattr(self, n)
+def _m_caller(self, method_name, what='value', changed=None, callback=None):
+    """
+    Wraps a method call adding support for scheduling a callback
+    before it is executed and skipping events if a subobject has
+    changed but its values have not.
+    """
+    function = getattr(self, method_name)
     if iscoroutinefunction(function):
         import asyncio
         @asyncio.coroutine
         def caller(*events):
-            if callback:
-                callback(*events)
+            if callback: callback(*events)
             if not _skip_event(*events, what=what, changed=changed):
                 yield function()
     else:
         def caller(*events):
-            if callback:
-                callback(*events)
+            if callback: callback(*events)
             if not _skip_event(*events, what=what, changed=changed):
                 return function()
-    caller._watcher_name = n
+    caller._watcher_name = method_name
     return caller
 
 
@@ -1579,17 +1604,17 @@ class Parameters(object):
 
     def _update_deps(self_, attribute=None, init=False):
         obj = self_.self
-        for method, queued, constant, deferred in type(obj).param._depends['watch']:
+        for method, queued, constant, dynamic in type(obj).param._depends['watch']:
             # On initialization set up constant watchers otherwise
             # clean up previous dynamic watchers for the updated attribute
-            deferred = [d for d in deferred if attribute is None or d.spec.startswith(attribute)]
+            dynamic = [d for d in dynamic if attribute is None or d.spec.startswith(attribute)]
             if init:
                 constant_grouped = defaultdict(list)
                 for dep in _resolve_mcs_deps(obj, constant, []):
                     constant_grouped[(id(dep.inst), id(dep.cls), dep.what)].append((None, dep))
                 for group in constant_grouped.values():
                     self_._watch_group(obj, method, queued, group)
-            elif deferred:
+            elif dynamic:
                 for w in obj._dynamic_watchers.pop(method, []):
                     (w.inst or w.cls).param.unwatch(w)
             else:
@@ -1597,7 +1622,7 @@ class Parameters(object):
 
             # Resolve dynamic dependencies one-by-one to be able to trace their watchers
             grouped = defaultdict(list)
-            for ddep in deferred:
+            for ddep in dynamic:
                 for dep in _resolve_mcs_deps(obj, [], [ddep]):
                     grouped[(id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
 
@@ -2115,10 +2140,10 @@ class Parameters(object):
         method = getattr(self_.self_or_cls, name)
         minfo = MInfo(cls=self_.cls, inst=self_.self, name=name,
                       method=method)
-        deps, deferred = _params_depended_on(minfo, dynamic=False)
+        deps, dynamic = _params_depended_on(minfo, dynamic=False)
         if self_.self is None:
             return deps
-        return _resolve_mcs_deps(self_.self, deps, deferred)
+        return _resolve_mcs_deps(self_.self, deps, dynamic)
 
     def outputs(self_):
         """

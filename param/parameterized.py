@@ -1698,7 +1698,7 @@ class Parameters(object):
                 obj, dynamic_dep, param_dep, attribute)
 
         mcaller = _m_caller(obj, name, what, subparams, callback)
-        return dep_obj.param._internal_watch(
+        return dep_obj.param._watch(
             mcaller, params, param_dep.what, queued=queued, precedence=-1)
 
     # Classmethods
@@ -2239,7 +2239,7 @@ class Parameters(object):
         deps.append(info)
         return deps, dynamic_deps
 
-    def _watch(self_, action, watcher, what='value'):
+    def _register_watcher(self_, action, watcher, what='value'):
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:
@@ -2303,12 +2303,12 @@ class Parameters(object):
                              "are reserved for internal Watchers.")
         return self_._internal_watch(fn, parameter_names, what, onlychanged, queued, precedence)
 
-    def _internal_watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=-1):
+    def _watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=-1):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)
         watcher = Watcher(inst=self_.self, cls=self_.cls, fn=fn, mode='args',
                           onlychanged=onlychanged, parameter_names=parameter_names,
                           what=what, queued=queued, precedence=precedence)
-        self_._watch('append', watcher, what)
+        self_._register_watcher('append', watcher, what)
         return watcher
 
     def unwatch(self_, watcher):
@@ -2316,7 +2316,7 @@ class Parameters(object):
         Remove the given Watcher object (from `watch` or `watch_values`) from this object's list.
         """
         try:
-            self_._watch('remove', watcher, what=watcher.what)
+            self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
             self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
@@ -2340,7 +2340,7 @@ class Parameters(object):
                           mode='kwargs', onlychanged=onlychanged,
                           parameter_names=parameter_names, what=what,
                           queued=queued, precedence=precedence)
-        self_._watch('append', watcher, what)
+        self_._register_watcher('append', watcher, what)
         return watcher
 
     # Instance methods

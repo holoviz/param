@@ -198,6 +198,38 @@ class TestParamDepends(API1TestCase):
         b.a = A(c=1)
         assert b.test_count == 0
 
+    def test_param_nested_at_class_definition(self):
+
+        class A(param.Parameterized):
+
+            c = param.Parameter()
+
+            d = param.Parameter()
+
+        class B(param.Parameterized):
+
+            a = param.Parameter(A())
+
+            test_count = param.Integer()
+
+            @param.depends('a.c', 'a.d', watch=True)
+            def test(self):
+                self.test_count += 1
+
+        b = B()
+
+        b.a.c = 1
+        assert b.test_count == 1
+
+        b.a.param.set_param(c=2, d=1)
+        assert b.test_count == 2
+
+        b.a = A()
+        assert b.test_count == 3
+
+        B.a.c = 5
+        assert b.test_count == 3
+
     def test_param_nested_depends_expands(self):
         class A(param.Parameterized):
 

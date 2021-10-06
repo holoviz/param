@@ -1599,7 +1599,7 @@ class Parameters(object):
             grouped = defaultdict(list)
             for ddep in deferred:
                 for dep in _resolve_mcs_deps(obj, [], [ddep]):
-                    grouped[(ddep.spec, id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
+                    grouped[(id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
 
             for group in grouped.values():
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
@@ -1661,7 +1661,10 @@ class Parameters(object):
         """
         dynamic_dep, param_dep = group[0]
         dep_obj = (param_dep.inst or param_dep.cls)
-        params = [g[1].name for g in group]
+        params = []
+        for _, g in group:
+            if g.name not in params:
+                params.append(g.name)
 
         if dynamic_dep is None:
             subparams, callback, what = None, None, param_dep.what
@@ -2165,15 +2168,15 @@ class Parameters(object):
                         subpath = subpath[:-1]
                         sub_src = _getattrr(self_.self_or_cls, '.'.join(subpath), None)
                     if subpath:
-                        subdeps, _ = self_._spec_to_obj('.'.join(path[:len(subpath)+1]))
+                        subdeps, _ = self_._spec_to_obj('.'.join(path[:len(subpath)+1]), dynamic)
                         deps += subdeps
                 return deps, [DInfo(spec=spec)]
 
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
         if attr == 'param':
-            deps, deferred = self_._spec_to_obj(obj[1:])
+            deps, deferred = self_._spec_to_obj(obj[1:], dynamic)
             for p in src.param:
-                ndeps, ndeferred = src.param._spec_to_obj(p)
+                ndeps, ndeferred = src.param._spec_to_obj(p, dynamic)
                 deps += ndeps
                 deferred += ndeferred
             return deps, deferred
@@ -2186,7 +2189,7 @@ class Parameters(object):
 
         if obj is None:
             return [info], []
-        deps, deferred = self_._spec_to_obj(obj[1:])
+        deps, deferred = self_._spec_to_obj(obj[1:], dynamic)
         deps.append(info)
         return deps, deferred
 
@@ -2448,7 +2451,7 @@ class ParameterizedMetaclass(type):
                 continue
             minfo = MInfo(cls=mcs, inst=None, name=name,
                           method=method)
-            resolved, deferred = _params_depended_on(minfo)
+            resolved, deferred = _params_depended_on(minfo, dynamic=False)
             _watch.append((name, watch == 'queued', resolved, deferred))
 
         # Resolve other dependencies in remainder of class hierarchy

@@ -550,19 +550,19 @@ def _params_depended_on(minfo, dynamic=True):
     and dynamic dependencies specifications which have to resolved
     if the referenced sub-objects are defined.
     """
-    params, dynamic_deps = [], []
+    deps, dynamic_deps = [], []
     dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
-        resolved, deferred = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic)
-        dynamic_deps += deferred
-        for dep in resolved:
+        ddeps, ddynamic_deps = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic)
+        dynamic_deps += ddynamic_deps
+        for dep in ddeps:
             if isinstance(dep, PInfo):
-                params.append(dep)
+                deps.append(dep)
             else:
-                ps, dps = _params_depended_on(dep, dynamic)
-                params += ps
-                dynamic_deps += dps
-    return params, dynamic_deps
+                method_deps, method_dynamic_deps = _params_depended_on(dep, dynamic)
+                deps += method_deps
+                dynamic_deps += method_dynamic_deps
+    return deps, dynamic_deps
 
 
 def _resolve_mcs_deps(obj, resolved, dynamic):
@@ -2220,12 +2220,12 @@ class Parameters(object):
 
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
         if attr == 'param':
-            deps, deferred = self_._spec_to_obj(obj[1:], dynamic)
+            deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic)
             for p in src.param:
-                ndeps, ndeferred = src.param._spec_to_obj(p, dynamic)
-                deps += ndeps
-                deferred += ndeferred
-            return deps, deferred
+                param_deps, param_dynamic_deps = src.param._spec_to_obj(p, dynamic)
+                deps += param_deps
+                dynamic_deps += param_dynamic_deps
+            return deps, dynamic_deps
         elif attr in src.param:
             info = PInfo(inst=inst, cls=cls, name=attr,
                          pobj=src.param[attr], what=what)
@@ -2235,9 +2235,9 @@ class Parameters(object):
 
         if obj is None:
             return [info], []
-        deps, deferred = self_._spec_to_obj(obj[1:], dynamic)
+        deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic)
         deps.append(info)
-        return deps, deferred
+        return deps, dynamic_deps
 
     def _watch(self_, action, watcher, what='value'):
         parameter_names = watcher.parameter_names
@@ -2524,7 +2524,7 @@ class ParameterizedMetaclass(type):
             for dep in cls.param._depends['watch']:
                 method = getattr(mcs, dep[0], None)
                 dinfo = getattr(method, '_dinfo', {'watch': False})
-                if (not any(dep[0] == name for name, _, _, _ in _watch)
+                if (not any(dep[0] == w[0] for w in _watch)
                     and dinfo.get('watch')):
                     _watch.append(dep)
 

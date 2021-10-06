@@ -2304,7 +2304,7 @@ class Parameters(object):
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
-        return self_._internal_watch(fn, parameter_names, what, onlychanged, queued, precedence)
+        return self_._watch(fn, parameter_names, what, onlychanged, queued, precedence)
 
     def _watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=-1):
         parameter_names = tuple(parameter_names) if isinstance(parameter_names, list) else (parameter_names,)

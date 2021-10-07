@@ -100,7 +100,7 @@ class TestParamDependsSubclassing(API1TestCase):
 
         assert len(b.param.params_depended_on('test')) == 1
         assert len(B.param._depends['watch']) == 1
-        m, _, deps, _ = B.param._depends['watch'][0]
+        m, _, _, deps, _ = B.param._depends['watch'][0]
         assert m == 'test'
         assert len(deps) == 1
         assert deps[0].name == 'b'
@@ -176,6 +176,23 @@ class TestParamDepends(API1TestCase):
 
         self.P = P
         self.P2 = P2
+
+    def test_param_depends_on_init(self):
+        class A(param.Parameterized):
+
+            a = param.Parameter()
+
+            value = param.Integer()
+
+            @param.depends('a', watch=True, on_init=True)
+            def callback(self):
+                self.value += 1
+
+        a = A()
+        assert a.value == 1
+
+        a.a = True
+        assert a.value == 2
 
     def test_param_nested_depends_value_unchanged(self):
         class A(param.Parameterized):
@@ -617,7 +634,8 @@ class TestParamDependsFunction(API1TestCase):
         dependencies = {
             'dependencies': (p.param.a,),
             'kw': {'c': p.param.b},
-            'watch': False
+            'watch': False,
+            'on_init': False
         }
         self.assertEqual(function._dinfo, dependencies)
 
@@ -631,7 +649,8 @@ class TestParamDependsFunction(API1TestCase):
         dependencies = {
             'dependencies': (p.param.a,),
             'kw': {'c': p.param.b},
-            'watch': False
+            'watch': False,
+            'on_init': False
         }
         self.assertEqual(function._dinfo, dependencies)
 

@@ -371,12 +371,13 @@ def depends(func, *dependencies, **kw):
     """
 
     # python3 would allow kw-only args
-    # (i.e. "func,*dependencies,watch=False" rather than **kw and the check below)
-    watch = kw.pop("watch",False)
+    # (i.e. "func, *dependencies, watch=False" rather than **kw and the check below)
+    watch = kw.pop("watch", False)
+    on_init = kw.pop("on_init", False)
 
     @wraps(func)
-    def _depends(*args,**kw):
-        return func(*args,**kw)
+    def _depends(*args, **kw):
+        return func(*args, **kw)
 
     deps = list(dependencies)+list(kw.values())
     string_specs = False
@@ -421,7 +422,7 @@ def depends(func, *dependencies, **kw):
 
     _dinfo = getattr(func, '_dinfo', {})
     _dinfo.update({'dependencies': dependencies,
-                   'kw': kw, 'watch': watch})
+                   'kw': kw, 'watch': watch, 'on_init': on_init})
 
     _depends._dinfo = _dinfo
 
@@ -1606,7 +1607,8 @@ class Parameters(object):
 
     def _update_deps(self_, attribute=None, init=False):
         obj = self_.self
-        for method, queued, constant, dynamic in type(obj).param._depends['watch']:
+        init_methods = []
+        for method, queued, on_init, constant, dynamic in type(obj).param._depends['watch']:
             # On initialization set up constant watchers otherwise
             # clean up previous dynamic watchers for the updated attribute
             dynamic = [d for d in dynamic if attribute is None or d.spec.startswith(attribute)]
@@ -1616,6 +1618,9 @@ class Parameters(object):
                     constant_grouped[(id(dep.inst), id(dep.cls), dep.what)].append((None, dep))
                 for group in constant_grouped.values():
                     self_._watch_group(obj, method, queued, group)
+                m = getattr(self_.self, method)
+                if on_init and m not in init_methods:
+                    init_methods.append(m)
             elif dynamic:
                 for w in obj._dynamic_watchers.pop(method, []):
                     (w.inst or w.cls).param.unwatch(w)
@@ -1631,6 +1636,8 @@ class Parameters(object):
             for group in grouped.values():
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
                 obj._dynamic_watchers[method].append(watcher)
+        for m in init_methods:
+            m()
 
     def _resolve_dynamic_deps(self, obj, dynamic_dep, param_dep, attribute):
         """
@@ -2515,12 +2522,13 @@ class ParameterizedMetaclass(type):
         _watch = []
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
+            on_init = dinfo.get('on_init', False)
             if not watch or mcs.abstract:
                 continue
             minfo = MInfo(cls=mcs, inst=None, name=name,
                           method=method)
-            resolved, deferred = _params_depended_on(minfo, dynamic=False)
-            _watch.append((name, watch == 'queued', resolved, deferred))
+            deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
+            _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
 
         # Resolve other dependencies in remainder of class hierarchy
         for cls in classlist(mcs)[:-1][::-1]:

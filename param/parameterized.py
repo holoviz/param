@@ -78,8 +78,10 @@ object_count = 0
 warning_count = 0
 
 class _Undefined:
-    pass
-
+    """
+    Dummy value to signal completely undefined values rather than
+    simple None values.
+    """
 
 @contextmanager
 def logging_level(level):

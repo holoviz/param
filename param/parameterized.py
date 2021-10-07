@@ -608,7 +608,7 @@ def _skip_event(*events, **kwargs):
                 new = _Undefined if e.new is None else _getattrr(e.new, p, None)
             else:
                 old = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
-                new = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
+                new = _Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True

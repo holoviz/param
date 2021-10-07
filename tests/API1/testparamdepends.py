@@ -422,6 +422,11 @@ class TestParamDepends(API1TestCase):
         inst.b.param.a.constant = True
         assert inst.nested_attr_count == 2
 
+        new_b = self.P()
+        new_b.param.a.constant = True
+        inst.b = new_b
+        assert inst.nested_attr_count == 2
+
     def test_param_instance_depends_dynamic_nested_attribute_initialized(self):
         inst = self.P(b=self.P())
         pinfos = inst.param.params_depended_on('nested_attribute')

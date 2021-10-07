@@ -189,7 +189,7 @@ def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
 
-    Same as inspect.getmro(class_)[::-1]
+    Same as `inspect.getmro(class_)[::-1]`
     """
     return inspect.getmro(class_)[::-1]
 
@@ -215,7 +215,7 @@ def descendents(class_):
 
 def get_all_slots(class_):
     """
-    Return a list of slot names for slots defined in class_ and its
+    Return a list of slot names for slots defined in `class_` and its
     superclasses.
     """
     # A subclass's __slots__ attribute does not contain slots defined
@@ -649,19 +649,28 @@ def _add_doc(obj, docstring):
 PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
     """
     Object describing something being watched about a Parameter.
+
     `inst`: Parameterized instance owning the Parameter, or None
+
     `cls`: Parameterized class owning the Parameter
+
     `name`: Name of the Parameter being watched
+
     `pobj`: Parameter object being watched
+
     `what`: What is being watched on the Parameter (either 'value' or a slot name)
     """)
 
 MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
     """
     Object describing a Parameterized method being watched.
+
     `inst`: Parameterized instance owning the method, or None
+
     `cls`: Parameterized class owning the method
+
     `name`: Name of the method being watched
+
     `method`: bound method of the object being watched
     """)
 
@@ -673,32 +682,47 @@ DInfo = namedtuple("DInfo", "spec"); _add_doc(DInfo,
 
 Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
     """
-    Object representing an event that triggers a Watcher
+    Object representing an event that triggers a Watcher.
+
     `what`: What is being watched on the Parameter (either value or a slot name)
+
     `name`: Name of the Parameter that was set or triggered
+
     `obj`: Parameterized instance owning the watched Parameter, or None
+
     `cls`: Parameterized class owning the watched Parameter
+
     `old`: Previous value of the item being watched
+
     `new`: New value of the item being watched
-    `type`: `triggered` if this event was triggered explicitly),
-            `changed` if the item was set and watching for `onlychanged`,
-            `set` if the item was set, or
-            None if type not yet known
+
+    `type`: `triggered` if this event was triggered explicitly), `changed` if
+    the item was set and watching for `onlychanged`, `set` if the item was set,
+    or  None if type not yet known
     """)
 
 Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence"); _add_doc(Watcher,
     """
-    Object declaring a callback function to invoke when an Event is triggered on a watched item
+    Object declaring a callback function to invoke when an Event is triggered on a watched item.
+
     `inst`: Parameterized instance owning the watched Parameter, or None
+
     `cls`: Parameterized class owning the watched Parameter
+
     `fn`: Callback function to invoke when triggered by a watched Parameter
+
     `mode`: 'args' for param.watch (call `fn` with PInfo object positional args), or
-            'kwargs' for param.watch_values (call `fn` with <param_name>:<new_value> keywords)
+    'kwargs' for param.watch_values (call `fn` with <param_name>:<new_value> keywords)
+
     `onlychanged`: If True, only trigger for actual changes, not setting to the current value
+
     `parameter_names`: List of Parameters to watch, by name
+
     `what`: What to watch on the Parameters (either 'value' or a slot name)
+
     `queued`: Immediately invoke callbacks triggered during processing of an Event (if False), or
             queue them up for processing later, after this event has been handled (if True)
+
     `precedence`: A numeric value which determines the precedence of the watcher.
                   Lower precedence values are executed with higher priority.
     """)
@@ -764,18 +788,17 @@ class Parameter(object):
     objects Foo and Bar, such that Bar has a parameter delta, Foo is a
     subclass of Bar, and Foo has parameters alpha, sigma, and gamma
     (and delta inherited from Bar).  She would begin her class
-    definitions with something like this:
+    definitions with something like this::
 
-    class Bar(Parameterized):
-        delta = Parameter(default=0.6, doc='The difference between steps.')
-        ...
-
-    class Foo(Bar):
-        alpha = Parameter(default=0.1, doc='The starting value.')
-        sigma = Parameter(default=0.5, doc='The standard deviation.',
-                          constant=True)
-        gamma = Parameter(default=1.0, doc='The ending value.')
-        ...
+       class Bar(Parameterized):
+           delta = Parameter(default=0.6, doc='The difference between steps.')
+           ...
+       class Foo(Bar):
+           alpha = Parameter(default=0.1, doc='The starting value.')
+           sigma = Parameter(default=0.5, doc='The standard deviation.',
+                           constant=True)
+           gamma = Parameter(default=1.0, doc='The ending value.')
+           ...
 
     Class Foo would then have four parameters, with delta defaulting
     to 0.6.
@@ -786,7 +809,7 @@ class Parameter(object):
        constructed: The default constructor for Foo (and Bar) will
        accept arbitrary keyword arguments, each of which can be used
        to specify the value of a Parameter of Foo (or any of Foo's
-       superclasses).  E.g., if a script does this:
+       superclasses).  E.g., if a script does this::
 
            myfoo = Foo(alpha=0.5)
 
@@ -803,7 +826,7 @@ class Parameter(object):
     2. A Parameterized class need specify only the attributes of a
        Parameter whose values differ from those declared in
        superclasses; the other values will be inherited.  E.g. if Foo
-       declares
+       declares::
 
         delta = Parameter(default=0.2)
 
@@ -3392,7 +3415,7 @@ class ParamOverrides(dict):
     def extra_keywords(self):
         """
         Return a dictionary containing items from the originally
-        supplied dict_ whose names are not parameters of the
+        supplied `dict_` whose names are not parameters of the
         overridden object.
         """
         return self._extra_keywords
@@ -3400,7 +3423,7 @@ class ParamOverrides(dict):
     def param_keywords(self):
         """
         Return a dictionary containing items from the originally
-        supplied dict_ whose names are parameters of the
+        supplied `dict_` whose names are parameters of the
         overridden object (i.e. not extra keywords/parameters).
         """
         return dict((key, self[key]) for key in self if key not in self.extra_keywords())

@@ -22,8 +22,8 @@ this material duplicates what is available from `help(obj)` for each object.
 parameterized Module
 ====================
 
-.. inheritance-diagram:: parameterized.param
-:mod:`parameterized` Module
+.. inheritance-diagram:: param.parameterized
+
 ---------------------------
 
 .. automodule:: param.parameterized
@@ -35,8 +35,8 @@ parameterized Module
 param Module
 ===============
 
-.. inheritance-diagram:: __init__.param
-:mod:`__init__` Module
+.. inheritance-diagram:: param.__init__
+
 ----------------------
 
 .. automodule:: param.__init__
@@ -48,8 +48,8 @@ param Module
 ipython Module
 ==============
 
-.. inheritance-diagram:: ipython.param
-:mod:`ipython` Module
+.. inheritance-diagram:: param.ipython
+
 ---------------------
 
 .. automodule:: param.ipython
@@ -61,8 +61,8 @@ ipython Module
 serializer Module
 =================
 
-.. inheritance-diagram:: serializer.param
-:mod:`serializer` Module
+.. inheritance-diagram:: param.serializer
+
 ------------------------
 
 .. automodule:: param.serializer
@@ -74,8 +74,8 @@ serializer Module
 version Module
 ==============
 
-.. inheritance-diagram:: version.param
-:mod:`version` Module
+.. inheritance-diagram:: param.version
+
 ---------------------
 
 .. automodule:: param.version

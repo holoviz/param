@@ -22,7 +22,11 @@ html_theme = "pydata_sphinx_theme"
 
 html_logo = "_static/logo_horizontal.png"
 
+html_favicon = "_static/favicon.ico"
+
 html_css_files = ['site.css']
+
+exclude_patterns += ['historical_release_notes.rst']
 
 html_theme_options = {
     "github_url": "https://github.com/holoviz/param",
@@ -43,3 +47,5 @@ html_context.update({
     'theme_google_analytics_id': 'UA-154795830-6',
     'theme_github_url': 'https://github.com/holoviz/param',
 })
+
+extensions += ['sphinx_copybutton']

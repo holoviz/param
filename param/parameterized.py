@@ -2187,7 +2187,7 @@ class Parameters(object):
         dynamic dependency to the new object. Even if a sub-object
         dependency can only partially resolved, e.g. if object "a"
         does not yet have a sub-object "b" we must watch for changes
-        to "b" on sub-object "a".
+        to "b" on sub-object "a" in case such a subobject is put in "b".
         """
         if isinstance(spec, Parameter):
             inst = spec.owner if isinstance(spec.owner, Parameterized) else None

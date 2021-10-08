@@ -38,10 +38,10 @@ jobs:
       - name: env setup
         run: |
           set -xe
-          python -VV
-          python -m site
-          python -m pip install --upgrade pip
-          python -m pip install tox flake8
+          python3 -VV
+          python3 -m site
+          python3 -m pip install --upgrade pip
+          python3 -m pip install tox flake8
       - name: lint
         run: |
           flake8

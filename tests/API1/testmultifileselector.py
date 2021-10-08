@@ -93,3 +93,19 @@ class TestFileSelectorParameters(API1TestCase):
         r = p.param.a.get_range()
         assert r['c.txt'] == self.fc
         assert r['d.txt'] == self.fd
+
+    def test_update_file_removed(self):
+        p = self.P()
+        assert p.param.b.objects == [self.fa, self.fb]
+        assert p.param.b.default == [self.fa]
+        os.remove(self.fa)
+        p.param.b.update()
+        assert p.param.b.objects == [self.fb]
+        assert p.param.b.default is None
+
+    def test_update_path(self):
+        p = self.P()
+        assert p.param.b.objects == [self.fa, self.fb]
+        p.param.b.update(self.glob2)
+        assert p.param.b.objects == [self.fc, self.fd]
+        assert p.param.b.default is None

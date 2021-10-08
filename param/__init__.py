@@ -1828,7 +1828,7 @@ class FileSelector(Selector):
                                            empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
-        super(FileSelector, self)._on_set(attribute, new, old)
+        super(FileSelector, self)._on_set(attribute, old, new)
         if attribute == 'path':
             self.update()
 

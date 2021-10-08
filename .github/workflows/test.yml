@@ -63,7 +63,7 @@ jobs:
         if: (!startsWith(matrix.python-version, 'py'))
         run: tox -e with_numpy
       - name: unit with_pandas
-        if: (!startsWith(matrix.python-version, 'py'))
+        if: (!startsWith(matrix.python-version, 'py') || (!contains(matrix.os, 'windows') && matrix.python-version != '3.10'))
         run: tox -e with_pandas
       - name: unit with_jsonschema
         run: tox -e with_jsonschema

@@ -10,6 +10,7 @@ from .utils import MockLoggingHandler
 
 # CEBALERT: not anything like a complete test of Parameterized!
 
+import pytest
 
 import random
 
@@ -69,6 +70,11 @@ class TestParameterized(API1TestCase):
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
 
+    def test_parameter_name_fixed(self):
+        testpo = TestPO()
+
+        with pytest.raises(AttributeError):
+            testpo.param.const.name = 'notconst'
 
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""

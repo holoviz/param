@@ -1876,19 +1876,19 @@ class MultiFileSelector(ListSelector):
     def __init__(self, default=None, path="", **kwargs):
         self.default = default
         self.path = path
-        self.update()
+        self.update(path)
         super(MultiFileSelector, self).__init__(default=default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
-        super(MultiFileSelector, self)._on_set(attribute, new, old)
+        super(MultiFileSelector, self)._on_set(attribute, old, new)
         if attribute == 'path':
-            self.update()
+            self.update(new)
 
-    def update(self):
-        self.objects = sorted(glob.glob(self.path))
+    def update(self, path):
+        self.objects = sorted(glob.glob(path))
         if self.default and all([o in self.objects for o in self.default]):
             return
-        self.default = self.objects
+        self.default = None
 
     def get_range(self):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())

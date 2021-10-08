@@ -1275,7 +1275,7 @@ class Selector(SelectorBase):
                     limiter = ', ...]'
                     break
             items = '[' + ', '.join(items) + limiter
-            raise ValueError("%s not in parameter%s's list of possible objects, "
+            raise ValueError("%r not in parameter%s's list of possible objects, "
                              "valid options include %s" % (val, attrib_name, items))
 
     def _ensure_value_is_in_objects(self,val):

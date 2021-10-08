@@ -74,3 +74,5 @@ jobs:
         if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all
       - uses: codecov/codecov-action@v2
+        with:
+          fail_ci_if_error: true

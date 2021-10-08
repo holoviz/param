@@ -1832,7 +1832,8 @@ class FileSelector(Selector):
         if attribute == 'path':
             self.update(new)
 
-    def update(self, path):
+    def update(self, path=None):
+        path = path if path is not None else self.path
         self.objects = sorted(glob.glob(path))
         if self.default in self.objects:
             return
@@ -1884,7 +1885,8 @@ class MultiFileSelector(ListSelector):
         if attribute == 'path':
             self.update(new)
 
-    def update(self, path):
+    def update(self, path=None):
+        path = path if path is not None else self.path
         self.objects = sorted(glob.glob(path))
         if self.default and all([o in self.objects for o in self.default]):
             return

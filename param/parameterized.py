@@ -1164,7 +1164,7 @@ class Parameter(object):
         self._post_setter(obj, val)
 
         if obj is not None:
-            if not obj.initialized:
+            if not getattr(obj, 'initialized', False):
                 return
             obj.param._update_deps(self.name)
 

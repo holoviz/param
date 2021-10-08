@@ -1050,8 +1050,6 @@ class Parameter(object):
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
 
     def __setattr__(self, attribute, value):
-        if attribute == 'name':
-            print(id(self), getattr(self, 'name', None), value)
         if attribute == 'name' and getattr(self, 'name', None) and value != self.name:
             raise AttributeError("Parameter name cannot be modified after "
                                  "it has been bound to a Parameterized.")

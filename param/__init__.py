@@ -1823,20 +1823,20 @@ class FileSelector(Selector):
     def __init__(self, default=None, path="", **kwargs):
         self.default = default
         self.path = path
-        self.update()
+        self.update(path)
         super(FileSelector, self).__init__(default=default, objects=self.objects,
                                            empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super(FileSelector, self)._on_set(attribute, old, new)
         if attribute == 'path':
-            self.update()
+            self.update(new)
 
-    def update(self):
-        self.objects = sorted(glob.glob(self.path))
+    def update(self, path):
+        self.objects = sorted(glob.glob(path))
         if self.default in self.objects:
             return
-        self.default = self.objects[0] if self.objects else None
+        self.default = None
 
     def get_range(self):
         return abbreviate_paths(self.path,super(FileSelector, self).get_range())

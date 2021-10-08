@@ -73,8 +73,4 @@ jobs:
       - name: unit all_deps
         if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all
-      - name: run coveralls
-        if: matrix.python-version != '2.7'
-        env:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        run: tox -e coveralls
+      - uses: codecov/codecov-action@v2

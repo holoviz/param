@@ -2268,9 +2268,14 @@ class Parameters(object):
         elif attr in src.param:
             info = PInfo(inst=inst, cls=cls, name=attr,
                          pobj=src.param[attr], what=what)
-        else:
+        elif hasattr(src, attr):
             info = MInfo(inst=inst, cls=cls, name=attr,
                          method=getattr(src, attr))
+        elif src.abstract:
+            return [], [DInfo(spec=spec)]
+        else:
+            raise AttributeError("Attribute %r could not be resolved on %s."
+                                 % (attr, src))
 
         if obj is None:
             return [info], []
@@ -2550,7 +2555,7 @@ class ParameterizedMetaclass(type):
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            if not watch or mcs.abstract:
+            if not watch:
                 continue
             minfo = MInfo(cls=mcs, inst=None, name=name,
                           method=method)

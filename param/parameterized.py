@@ -590,7 +590,7 @@ def _resolve_mcs_deps(obj, resolved, dynamic):
             if isinstance(subdep, PInfo):
                 dependencies.append(subdep)
             else:
-                dependencies += _params_depended_on(subdep)
+                dependencies += _params_depended_on(subdep)[0]
     return dependencies
 
 

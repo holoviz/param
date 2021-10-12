@@ -1823,21 +1823,15 @@ class FileSelector(Selector):
     def __init__(self, default=None, path="", **kwargs):
         self.default = default
         self.path = path
-        self.update(path)
+        self.update()
         super(FileSelector, self).__init__(default=default, objects=self.objects,
                                            empty_default=True, **kwargs)
 
-    def _on_set(self, attribute, old, new):
-        super(FileSelector, self)._on_set(attribute, old, new)
-        if attribute == 'path':
-            self.update(new)
-
-    def update(self, path=None):
-        path = path if path is not None else self.path
-        self.objects = sorted(glob.glob(path))
+    def update(self):
+        self.objects = sorted(glob.glob(self.path))
         if self.default in self.objects:
             return
-        self.default = None
+        self.default = self.objects[0] if self.objects else None
 
     def get_range(self):
         return abbreviate_paths(self.path,super(FileSelector, self).get_range())
@@ -1877,20 +1871,14 @@ class MultiFileSelector(ListSelector):
     def __init__(self, default=None, path="", **kwargs):
         self.default = default
         self.path = path
-        self.update(path)
+        self.update()
         super(MultiFileSelector, self).__init__(default=default, objects=self.objects, **kwargs)
 
-    def _on_set(self, attribute, old, new):
-        super(MultiFileSelector, self)._on_set(attribute, old, new)
-        if attribute == 'path':
-            self.update(new)
-
-    def update(self, path=None):
-        path = path if path is not None else self.path
-        self.objects = sorted(glob.glob(path))
+    def update(self):
+        self.objects = sorted(glob.glob(self.path))
         if self.default and all([o in self.objects for o in self.default]):
             return
-        self.default = None
+        self.default = self.objects
 
     def get_range(self):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())

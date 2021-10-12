@@ -832,7 +832,7 @@ class Number(Dynamic):
 
         As documented in https://github.com/holoviz/param/issues/80,
         currently does not respect exclusive bounds, which would
-        strictly require setting to one less for integer values or 
+        strictly require setting to one less for integer values or
         an epsilon less for floats.
         """
         # Values outside the bounds are silently cropped to

@@ -1,10 +1,10 @@
 """
 Generic support for objects with full-featured Parameters and
-messaging. 
+messaging.
 
 This file comes from the Param library (https://github.com/holoviz/param)
 but can be taken out of the param module and used on its own if desired,
-either alone (providing basic Parameter support) or with param's 
+either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
@@ -1548,7 +1548,7 @@ class Parameters(object):
         """
         self = self_.param.self
         ## Deepcopy all 'instantiate=True' parameters
-        # (building a set of names first to avoid redundantly 
+        # (building a set of names first to avoid redundantly
         # instantiating a later-overridden parent class's parameter)
         params_to_instantiate = {}
         for class_ in classlist(type(self)):
@@ -3139,7 +3139,7 @@ class Parameterized(object):
         if imports is None:
             imports = [] # would have been simpler to use a set from the start
         imports[:] = list(set(imports))
-        
+
         # Generate import statement
         mod = self.__module__
         bits = mod.split('.')
@@ -3210,7 +3210,7 @@ class Parameterized(object):
     # dynamic parameters set on a class can't have state saved. This
     # is because, to do this, state_push() would need to be a
     # @bothmethod, but that complicates inheritance in cases where we
-    # already have a state_push() method. 
+    # already have a state_push() method.
     # (isinstance(g,Parameterized) below is used to exclude classes.)
 
     def state_push(self):

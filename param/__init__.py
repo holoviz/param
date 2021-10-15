@@ -31,8 +31,9 @@ from .parameterized import (
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
-from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
+from .parameterized import logging_level     # noqa: api import
+from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 
 from collections import OrderedDict
 from numbers import Real
@@ -65,7 +66,7 @@ if sys.version_info[0] >= 3:
     unicode = str
 
 #: Top-level object to allow messaging not tied to a particular
-#: Parameterized object, as in 'param.main.warning("Invalid option")'.
+#: Parameterized object, as in 'param.main.log(param.WARNING, "Invalid option")'.
 main=Parameterized(name="main")
 
 
@@ -1196,7 +1197,7 @@ class Selector(SelectorBase):
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
-                main.param.warning("Parameter default value is arbitrary due to "
+                main.param.log(WARNING, "Parameter default value is arbitrary due to "
                                    "dictionaries prior to Python 3.6 not being "
                                    "ordered; should use an ordered dict or "
                                    "supply an explicit default value.")
@@ -1731,12 +1732,12 @@ class Path(Parameter):
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('None is not allowed')
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.log(WARNING, 'None is not allowed')
         else:
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('%s',e.args[0])
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.log(WARNING, '%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """

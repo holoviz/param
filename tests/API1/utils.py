@@ -24,8 +24,6 @@ class MockLoggingHandler(logging.Handler):
     def __init__(self, *args, **kwargs):
         self.messages = {'DEBUG': [], 'INFO': [], 'WARNING': [],
                          'ERROR': [], 'CRITICAL': [], 'VERBOSE':[]}
-        self.param_methods = {'WARNING':'param.warning()', 'INFO':'param.message()',
-                              'VERBOSE':'param.verbose()', 'DEBUG':'param.debug()'}
         super(MockLoggingHandler, self).__init__(*args, **kwargs)
 
     def emit(self, record):
@@ -51,13 +49,13 @@ class MockLoggingHandler(logging.Handler):
         Assert that the last line captured at the given level ends with
         a particular substring.
         """
-        msg='\n\n{method}: {last_line}\ndoes not end with:\n{substring}'
+        msg='\n\nparam.log({level},...): {last_line}\ndoes not end with:\n{substring}'
         last_line = self.tail(level, n=1)
         if len(last_line) == 0:
-            raise AssertionError('Missing {method} output: {substring}'.format(
-                method=self.param_methods[level], substring=repr(substring)))
+            raise AssertionError('Missing param.log({level},...) output: {substring}'.format(
+                level=level, substring=repr(substring)))
         if not last_line[0].endswith(substring):
-            raise AssertionError(msg.format(method=self.param_methods[level],
+            raise AssertionError(msg.format(level=level,
                                             last_line=repr(last_line[0]),
                                             substring=repr(substring)))
 
@@ -66,12 +64,12 @@ class MockLoggingHandler(logging.Handler):
         Assert that the last line captured at the given level contains a
         particular substring.
         """
-        msg='\n\n{method}: {last_line}\ndoes not contain:\n{substring}'
+        msg='\n\nparam.log({level},...): {last_line}\ndoes not contain:\n{substring}'
         last_line = self.tail(level, n=1)
         if len(last_line) == 0:
             raise AssertionError('Missing {method} output: {substring}'.format(
-                method=self.param_methods[level], substring=repr(substring)))
+                level=level, substring=repr(substring)))
         if substring not in last_line[0]:
-            raise AssertionError(msg.format(method=self.param_methods[level],
+            raise AssertionError(msg.format(level=level,
                                             last_line=repr(last_line[0]),
                                             substring=repr(substring)))

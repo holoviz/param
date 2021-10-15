@@ -1,6 +1,11 @@
 """
 Generic support for objects with full-featured Parameters and
 messaging.
+
+This file comes from the Param library (https://github.com/holoviz/param)
+but can be taken out of the param module and used on its own if desired,
+either alone (providing basic Parameter support) or with param's
+__init__.py (providing specialized Parameter types).
 """
 
 import copy
@@ -259,8 +264,7 @@ def all_equal(arg1,arg2):
         return arg1==arg2
 
 
-
-# For Python 2 compatibility.
+# PARAM2_DEPRECATION: For Python 2 compatibility only; can be removed in param2.
 #
 # The syntax to use a metaclass changed incompatibly between 2 and
 # 3. The add_metaclass() class decorator below creates a class using a
@@ -279,6 +283,7 @@ def add_metaclass(metaclass):
             orig_vars.pop(slots_var)
         return metaclass(cls.__name__, cls.__bases__, orig_vars)
     return wrapper
+
 
 
 class bothmethod(object): # pylint: disable-msg=R0903
@@ -311,8 +316,10 @@ def _getattrr(obj, attr, *args):
     return reduce(_getattr, [obj] + attr.split('.'))
 
 
-# (thought I was going to have a few decorators following this pattern)
 def accept_arguments(f):
+    """
+    Decorator for decorators that accept arguments
+    """
     @wraps(f)
     def _f(*args, **kwargs):
         return lambda actual_f: f(actual_f, *args, **kwargs)
@@ -337,7 +344,7 @@ def iscoroutinefunction(function):
 
 
 def instance_descriptor(f):
-    # If parameter has an instance Parameter delegate setting
+    # If parameter has an instance Parameter, delegate setting
     def _f(self, obj, val):
         instance_param = getattr(obj, '_instance__params', {}).get(self.name)
         if instance_param is not None and self is not instance_param:
@@ -370,7 +377,7 @@ def depends(func, *dependencies, **kw):
     on Parameter values, or on other metadata about the Parameter.
     """
 
-    # python3 would allow kw-only args
+    # PARAM2_DEPRECATION: python2 workaround; python3 allows kw-only args
     # (i.e. "func, *dependencies, watch=False" rather than **kw and the check below)
     watch = kw.pop("watch", False)
     on_init = kw.pop("on_init", False)
@@ -727,16 +734,18 @@ Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names wh
                   Lower precedence values are executed with higher priority.
     """)
 
+
 class ParameterMetaclass(type):
     """
     Metaclass allowing control over creation of Parameter classes.
     """
     def __new__(mcs,classname,bases,classdict):
+
         # store the class's docstring in __classdoc
         if '__doc__' in classdict:
             classdict['__classdoc']=classdict['__doc__']
-        # when asking for help on Parameter *object*, return the doc
-        # slot
+
+        # when asking for help on Parameter *object*, return the doc slot
         classdict['__doc__']=property(attrgetter('doc'))
 
         # To get the benefit of slots, subclasses must themselves define
@@ -745,6 +754,8 @@ class ParameterMetaclass(type):
         # a __dict__ unless it also defines __slots__.
         if '__slots__' not in classdict:
             classdict['__slots__']=[]
+
+        # No special handling for a __dict__ slot; should there be?
 
         return type.__new__(mcs,classname,bases,classdict)
 
@@ -758,19 +769,6 @@ class ParameterMetaclass(type):
 
 
 
-# CEBALERT: we break some aspects of slot handling for Parameter and
-# Parameterized. The __new__ methods in the metaclasses for those two
-# classes omit to handle the case where __dict__ is passed in
-# __slots__ (and they possibly omit other things too). Additionally,
-# various bits of code in the Parameterized class assumes that all
-# Parameterized instances have a __dict__, but I'm not sure that's
-# guaranteed to be true (although it's true at the moment).
-
-
-# CB: we could maybe reduce the complexity by doing something to allow
-# a parameter to discover things about itself when created (would also
-# allow things like checking a Parameter is owned by a
-# Parameterized). I have some vague ideas about what to do.
 @add_metaclass(ParameterMetaclass)
 class Parameter(object):
     """
@@ -1041,9 +1039,9 @@ class Parameter(object):
 
     def _set_instantiate(self,instantiate):
         """Constant parameters must be instantiated."""
-        # CB: instantiate doesn't actually matter for read-only
+        # instantiate doesn't actually matter for read-only
         # parameters, since they can't be set even on a class.  But
-        # this avoids needless instantiation.
+        # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
         else:
@@ -1098,10 +1096,7 @@ class Parameter(object):
         instance's value, if one has been set - otherwise produce the
         class's value (default).
         """
-        # NB: obj can be None (when __get__ called for a
-        # Parameterized class); objtype is never None
-
-        if obj is None:
+        if obj is None: # e.g. when __get__ called for a Parameterized class
             result = self.default
         else:
             result = obj.__dict__.get(self._internal_name,self.default)
@@ -1130,20 +1125,19 @@ class Parameter(object):
 
         Note that until we support some form of read-only
         object, it is still possible to change the attributes of the
-        object stored in a constant or read-only Parameter (e.g. the
-        left bound of a BoundingBox).
+        object stored in a constant or read-only Parameter (e.g. one
+        item in a list).
         """
 
-        # ALERT: Deprecated Number set_hook called here to avoid duplicating
-        #        setter, should be removed in 2.0
+        # PARAM2_DEPRECATION: For Python 2 compatibility only;
+        # Deprecated Number set_hook called here to avoid duplicating setter
         if hasattr(self, 'set_hook'):
             val = self.set_hook(obj,val)
 
         self._validate(val)
 
         _old = NotImplemented
-        # NB: obj can be None (when __set__ called for a
-        # Parameterized class)
+        # obj can be None if __set__ is called for a Parameterized class
         if self.constant or self.readonly:
             if self.readonly:
                 raise TypeError("Read-only parameter '%s' cannot be modified" % self.name)
@@ -1554,8 +1548,8 @@ class Parameters(object):
         """
         self = self_.param.self
         ## Deepcopy all 'instantiate=True' parameters
-        # (build a set of names first to avoid redundantly instantiating
-        #  a later-overridden parent class's parameter)
+        # (building a set of names first to avoid redundantly
+        # instantiating a later-overridden parent class's parameter)
         params_to_instantiate = {}
         for class_ in classlist(type(self)):
             if not issubclass(class_, Parameterized):
@@ -1606,7 +1600,6 @@ class Parameters(object):
         return not Comparator.is_equal(event.old, event.new)
 
 
-    # CEBALERT: this is a bit ugly
     def _instantiate_param(self_, param_obj, dict_=None, key=None):
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
         # under the parameter's _internal_name (or key if supplied)
@@ -1628,15 +1621,15 @@ class Parameters(object):
         if isinstance(new_object, Parameterized):
             global object_count
             object_count += 1
-            # CB: writes over name given to the original object;
-            # should it instead keep the same name?
+            # Writes over name given to the original object;
+            # could instead have kept the same name
             new_object.param._generate_name()
 
     def _update_deps(self_, attribute=None, init=False):
         obj = self_.self
         init_methods = []
         for method, queued, on_init, constant, dynamic in type(obj).param._depends['watch']:
-            # On initialization set up constant watchers otherwise
+            # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
             dynamic = [d for d in dynamic if attribute is None or d.spec.startswith(attribute)]
             if init:
@@ -1694,7 +1687,7 @@ class Parameters(object):
         if depth > 0:
             def callback(*events):
                 """
-                If a subobject changes we need to notify the main
+                If a subobject changes, we need to notify the main
                 object to update the dependencies.
                 """
                 obj.param._update_deps(attribute)
@@ -1764,14 +1757,10 @@ class Parameters(object):
         Supposed to result in a Parameter equivalent to one declared
         in the class's source code.
         """
-        # CEBALERT: can't we just do
-        # setattr(cls,param_name,param_obj)?  The metaclass's
-        # __setattr__ is actually written to handle that.  (Would also
-        # need to do something about the params() cache.  That cache
-        # is a pain, but it definitely improved the startup time; it
-        # would be worthwhile making sure no method except for one
-        # "add_param()" method has to deal with it (plus any future
-        # remove_param() method.)
+        # Could have just done setattr(cls,param_name,param_obj),
+        # which is supported by the metaclass's __setattr__ , but
+        # would need to handle the params() cache as well
+        # (which is tricky but important for startup speed).
         cls = self_.cls
         type.__setattr__(cls,param_name,param_obj)
         ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
@@ -1859,7 +1848,7 @@ class Parameters(object):
         instance='existing'.
         """
         cls = self_.cls
-        # CB: we cache the parameters because this method is called often,
+        # We cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
         try:
             pdict = getattr(cls, '_%s__params' % cls.__name__)
@@ -2070,10 +2059,10 @@ class Parameters(object):
         (onlychanged has no effect when called on a class).
         """
         self_or_cls = self_.self_or_cls
-        # CEB: we'd actually like to know whether a value has been
-        # explicitly set on the instance, but I'm not sure that's easy
-        # (would need to distinguish instantiation of default from
-        # user setting of value).
+        # We'd actually like to know whether a value has been
+        # explicitly set on the instance, but that's tricky since
+        # it would need to distinguish instantiation of default from
+        # user setting of value.
         vals = []
         for name, val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
@@ -2407,10 +2396,9 @@ class Parameters(object):
             d[param_name] = param.default
         return d
 
-    # CEBALERT: designed to avoid any processing unless the print
-    # level is high enough, but not all callers of message(),
-    # verbose(), debug(), etc are taking advantage of this. Need to
-    # document, and also check other ioam projects.
+    # Designed to avoid any processing unless the print
+    # level is high enough, though not all callers of message(),
+    # verbose(), debug(), etc are taking advantage of this.
     def __db_print(self_,level,msg,*args,**kw):
         """
         Calls the logger returned by the get_logger() function,
@@ -2478,16 +2466,6 @@ class Parameters(object):
         self = self_.self
         return self.pprint(imports, prefix, unknown_value, qualify, separator)
 
-    # CEBALERT: I think I've noted elsewhere the fact that we
-    # sometimes have a method on Parameter that requires passing the
-    # owning Parameterized instance or class, and other times we have
-    # the method on Parameterized itself.  In case I haven't written
-    # that down elsewhere, here it is again.  We should clean that up
-    # (at least we should be consistent).
-
-    # cebalert: it's really time to stop and clean up this bothmethod
-    # stuff and repeated code in methods using it.
-
 
 
 class ParameterizedMetaclass(type):
@@ -2525,8 +2503,6 @@ class ParameterizedMetaclass(type):
         type.__init__(mcs, name, bases, dict_)
 
         # Give Parameterized classes a useful 'name' attribute.
-        # (Could instead consider changing the instance Parameter
-        # 'name' to '__name__'?)
         mcs.name = name
 
         mcs._parameters_state = {
@@ -2605,14 +2581,14 @@ class ParameterizedMetaclass(type):
 
 
     def _initialize_parameter(mcs,param_name,param):
-        # parameter has no way to find out the name a
+        # A Parameter has no way to find out the name a
         # Parameterized class has for it
         param._set_names(param_name)
         mcs.__param_inheritance(param_name,param)
 
 
-    # Python 2.6 added abstract base classes; see
-    # https://github.com/ioam/param/issues/84
+    # Should use the official Python 2.6+ abstract base classes; see
+    # https://github.com/holoviz/param/issues/84
     def __is_abstract(mcs):
         """
         Return True if the class has an attribute __abstract set to True.
@@ -2627,7 +2603,8 @@ class ParameterizedMetaclass(type):
         # _ParameterizedMetaclass__abstract before running, but
         # the actual class object will have an attribute
         # _ClassName__abstract.  So, we have to mangle it ourselves at
-        # runtime. Mangling follows description in https://docs.python.org/2/tutorial/classes.html#private-variables-and-class-local-references
+        # runtime. Mangling follows description in
+        # https://docs.python.org/2/tutorial/classes.html#private-variables-and-class-local-references
         try:
             return getattr(mcs,'_%s__abstract'%mcs.__name__.lstrip("_"))
         except AttributeError:
@@ -2682,9 +2659,9 @@ class ParameterizedMetaclass(type):
                 # (For instance, python's own pickling mechanism
                 # caches __slotnames__ on the class:
                 # http://mail.python.org/pipermail/python-checkins/2003-February/033517.html.)
-                # CEBALERT: this warning bypasses the usual
-                # mechanisms, which has have consequences for warning
-                # counts, warnings as exceptions, etc.
+                # This warning bypasses the usual mechanisms, which
+                # has have consequences for warning counts, warnings
+                # as exceptions, etc.
                 if not attribute_name.startswith('_'):
                     get_logger().log(WARNING,
                                      "Setting non-Parameter class attribute %s.%s = %s ",
@@ -2834,7 +2811,7 @@ def script_repr(val, imports=None, prefix="\n    ", settings=[],
     return imports_str + rep
 
 
-
+# PARAM2_DEPRECATION: Remove entirely unused settings argument
 def pprint(val,imports=None, prefix="\n    ", settings=[],
            unknown_value='<?>', qualify=False, separator=''):
     """
@@ -2883,8 +2860,6 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     if imports is None:
         imports = []
 
-    # JLS: The settings argument is not used anywhere. To be removed
-    # in a separate PR.
     if isinstance(val,type):
         rep = type_script_repr(val,imports,prefix,settings)
 
@@ -3074,7 +3049,7 @@ class Parameterized(object):
         copy of the object's __dict__ and that also includes the
         object's __slots__ (if it has any).
         """
-        # remind me, why is it a copy? why not just state.update(self.__dict__)?
+        # Unclear why this is a copy and not simply state.update(self.__dict__)
         state = self.__dict__.copy()
         for slot in get_occupied_slots(self):
             state[slot] = getattr(self,slot)
@@ -3162,11 +3137,9 @@ class Parameterized(object):
         evaluated with eval. See pprint() function for more details.
         """
         if imports is None:
-            imports = []
-
-        # CEBALERT: imports should just be a set rather than a list;
-        # change in next release?
+            imports = [] # would have been simpler to use a set from the start
         imports[:] = list(set(imports))
+
         # Generate import statement
         mod = self.__module__
         bits = mod.split('.')
@@ -3233,12 +3206,12 @@ class Parameterized(object):
         return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
 
-    # CEBALERT: note there's no state_push method on the class, so
+    # Note that there's no state_push method on the class, so
     # dynamic parameters set on a class can't have state saved. This
     # is because, to do this, state_push() would need to be a
     # @bothmethod, but that complicates inheritance in cases where we
-    # already have a state_push() method. I need to decide what to do
-    # about that. (isinstance(g,Parameterized) below is used to exclude classes.)
+    # already have a state_push() method.
+    # (isinstance(g,Parameterized) below is used to exclude classes.)
 
     def state_push(self):
         """
@@ -3379,7 +3352,7 @@ def print_all_param_defaults():
 
 
 
-# Note that with Python 2.6, a fn's **args no longer has to be a
+# As of Python 2.6+, a fn's **args no longer has to be a
 # dictionary. This might allow us to use a decorator to simplify using
 # ParamOverrides (if that does indeed make them simpler to use).
 # http://docs.python.org/whatsnew/2.6.html
@@ -3406,13 +3379,11 @@ class ParamOverrides(dict):
         supplied dict_ that are not also parameters of the overridden
         object will be available via the extra_keywords() method.
         """
-        # we'd like __init__ to be fast because it's going to be
-        # called a lot. What's the fastest way to move the existing
-        # params dictionary into this one? Would
+        # This method should be fast because it's going to be
+        # called a lot. This _might_ be faster (not tested):
         #  def __init__(self,overridden,**kw):
         #      ...
         #      dict.__init__(self,**kw)
-        # be faster/easier to use?
         self._overridden = overridden
         dict.__init__(self,dict_)
 
@@ -3489,9 +3460,8 @@ class ParamOverrides(dict):
         for name, val in params.items():
             if name not in overridden_object_params:
                 extra_keywords[name]=val
-                # CEBALERT: should we remove name from params
-                # (i.e. del params[name]) so that it's only available
-                # via extra_keywords()?
+                # Could remove name from params (i.e. del params[name])
+                # so that it's only available via extra_keywords()
         return extra_keywords
 
 
@@ -3512,8 +3482,6 @@ class ParameterizedFunction(Parameterized):
     """
     __abstract = True
 
-    # CEBALERT: shouldn't this have come from a parent class
-    # somewhere?
     def __str__(self):
         return self.__class__.__name__+"()"
 
@@ -3552,10 +3520,10 @@ class ParameterizedFunction(Parameterized):
         # Control reconstruction (during unpickling and copying):
         # ensure that ParameterizedFunction.__new__ is skipped
         state = ParameterizedFunction.__getstate__(self)
-        # CB: here it's necessary to use a function defined at the
+        # Here it's necessary to use a function defined at the
         # module level rather than Parameterized.__new__ directly
         # because otherwise pickle will find .__new__'s module to be
-        # __main__. Pretty obscure aspect of pickle.py, or a bug?
+        # __main__. Pretty obscure aspect of pickle.py...
         return (_new_parameterized,(self.__class__,),state)
 
     def script_repr(self,imports=[],prefix="    "):
@@ -3608,15 +3576,11 @@ class default_label_formatter(ParameterizedFunction):
 label_formatter = default_label_formatter
 
 
-# CBENHANCEMENT: should be able to remove overridable_property when we
-# switch to Python 2.6:
-# "Properties now have three attributes, getter, setter and deleter,
-# that are decorators providing useful shortcuts for adding a getter,
-# setter or deleter function to an existing property."
-# http://docs.python.org/whatsnew/2.6.html
-
-# Renamed & documented version of OProperty from
+# PARAM2_DEPRECATION: Should be able to remove this; was originally
+# adapted from OProperty from
 # infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
+# but since python 2.6 the getter, setter, and deleter attributes of
+# a property should provide similar functionality already.
 class overridable_property(object):
     """
     The same as Python's "property" attribute, but allows the accessor

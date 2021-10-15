@@ -70,7 +70,7 @@ main=Parameterized(name="main")
 
 
 # A global random seed (integer or rational) available for controlling
-# the behaviour of parameterized objects with random state.
+# the behaviour of Parameterized objects with random state.
 random_seed = 42
 
 
@@ -469,7 +469,7 @@ class Time(Parameterized):
             raise StopIteration
         return self._time
 
-    # For Python 2 compatibility; can be removed for Python 3.
+    # PARAM2_DEPRECATION: For Python 2 compatibility; can be removed for Python 3.
     next = __next__
 
     def __call__(self, val=None, time_type=None):
@@ -565,10 +565,6 @@ class Dynamic(Parameter):
     time_fn = Time()
     time_dependent = False
 
-    # CBENHANCEMENT: Add an 'epsilon' slot.
-    # See email 'Re: simulation-time-controlled Dynamic parameters'
-    # Dec 22, 2007 CB->JAB
-
     def __init__(self,**params):
         """
         Call the superclass's __init__ and set instantiate=True if the
@@ -585,12 +581,12 @@ class Dynamic(Parameter):
         """
         Add 'last time' and 'last value' attributes to the generator.
         """
-        # CEBALERT: use a dictionary to hold these things.
+        # Could use a dictionary to hold these things.
         if hasattr(obj,"_Dynamic_time_fn"):
             gen._Dynamic_time_fn = obj._Dynamic_time_fn
 
         gen._Dynamic_last = None
-        # CEB: I'd use None for this, except can't compare a fixedpoint
+        # Would have usede None for this, but can't compare a fixedpoint
         # number with None (e.g. 1>None but FixedPoint(1)>None can't be done)
         gen._Dynamic_time = -1
 
@@ -803,9 +799,9 @@ class Number(Dynamic):
         dynamically generated, check the bounds.
         """
         result = super(Number, self).__get__(obj, objtype)
-        # CEBALERT: results in extra lookups (_value_is_dynamic() is
-        # also looking up 'result' - should just pass it in). Note
-        # that this method is called often.
+        # Should be able to optimize this commonly used method by
+        # avoiding extra lookups (e.g. _value_is_dynamic() is also
+        # looking up 'result' - should just pass it in).
         if self._value_is_dynamic(obj, objtype):
             self._validate(result)
         return result
@@ -822,8 +818,6 @@ class Number(Dynamic):
             bounded_val = val
         super(Number, self).__set__(obj, bounded_val)
 
-    # CEBERRORALERT: doesn't take account of exclusive bounds; see
-    # https://github.com/ioam/param/issues/80.
     def crop_to_bounds(self, val):
         """
         Return the given value cropped to be within the hard bounds
@@ -835,10 +829,14 @@ class Number(Dynamic):
         returned value could be None.  If a non-numeric value is passed
         in, set to be the default value (which could be None).  In no
         case is an exception raised; all values are accepted.
+
+        As documented in https://github.com/holoviz/param/issues/80,
+        currently does not respect exclusive bounds, which would
+        strictly require setting to one less for integer values or
+        an epsilon less for floats.
         """
-        # Currently, values outside the bounds are silently cropped to
-        # be inside the bounds; it may be appropriate to add a warning
-        # in such cases.
+        # Values outside the bounds are silently cropped to
+        # be inside the bounds.
         if _is_number(val):
             if self.bounds is None:
                 return val
@@ -955,7 +953,8 @@ class Boolean(Parameter):
 
     __slots__ = ['bounds']
 
-    # CB: bounds have no effect; see https://github.com/holoviz/param/issues/82
+    # Bounds are set for consistency and are arguably accurate, but have
+    # no effect since values are either False, True, or None (if allowed).
     def __init__(self, default=False, bounds=(0,1), **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
@@ -1078,7 +1077,7 @@ def _is_abstract(class_):
         return False
 
 
-# CEBALERT: this should be a method of ClassSelector.
+# Could be a method of ClassSelector.
 def concrete_descendents(parentclass):
     """
     Return a dictionary containing all subclasses of the specified
@@ -1231,8 +1230,8 @@ class Selector(SelectorBase):
         if default is not None and self.check_on_set is True:
             self._validate(default)
 
-    # CBNOTE: if the list of objects is changed, the current value for
-    # this parameter in existing POs could be out of the new range.
+    # Note that if the list of objects is changed, the current value for
+    # this parameter in existing POs could be outside of the new range.
 
     def compute_default(self):
         """
@@ -1609,8 +1608,8 @@ class Series(ClassSelector):
 
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
-#   - use resolve_file_path() for paths to existing files to be read,
-#   - use resolve_folder_path() for paths to existing folders to be read,
+#   - use resolve_path(path_to_file=True) for paths to existing files to be read,
+#   - use resolve_path(path_to_file=False) for paths to existing folders to be read,
 #     and normalize_path() for paths to new files to be written.
 
 class resolve_path(ParameterizedFunction):

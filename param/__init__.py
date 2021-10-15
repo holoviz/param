@@ -1198,9 +1198,9 @@ class Selector(SelectorBase):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
                 main.param.log(WARNING, "Parameter default value is arbitrary due to "
-                                   "dictionaries prior to Python 3.6 not being "
-                                   "ordered; should use an ordered dict or "
-                                   "supply an explicit default value.")
+                               "dictionaries prior to Python 3.6 not being "
+                               "ordered; should use an ordered dict or "
+                               "supply an explicit default value.")
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, list):
                 autodefault = objects[0]

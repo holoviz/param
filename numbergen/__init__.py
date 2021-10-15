@@ -368,8 +368,8 @@ class TimeAwareRandomState(TimeAware):
         """
         changed_params = dict(self.param.get_param_values(onlychanged=True))
         if self.time_dependent and ('name' not in changed_params):
-            self.param.log(WARNING, "Default object name used to set the seed: "
-                               "random values conditional on object instantiation order.")
+            self.param.log(param.WARNING, "Default object name used to set the seed: "
+                           "random values conditional on object instantiation order.")
 
     def _hash_and_seed(self):
         """

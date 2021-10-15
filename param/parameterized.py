@@ -2468,7 +2468,7 @@ class Parameters(object):
         Print msg merged with args as a message at the indicated logging level.
 
         Logging levels include those provided by the Python logging module
-        plus VERBOSE, either obtained directly from the logging module like 
+        plus VERBOSE, either obtained directly from the logging module like
         `logging.INFO`, or from parameterized like `param.parameterized.INFO`.
 
         Supported logging levels include (in order of severity)

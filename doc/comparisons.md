@@ -36,7 +36,7 @@ Python 3 type annotations allow users to specify types for attributes and functi
 
 ## Generality and ease of integration with your project
 
-The various Python features listed above are part of the standard library with the versions indicated above, and so do not add any dependencies at all to your build process, as long as you restrict yourself to the Python versions where that support was added. 
+The various Python features listed above are part of the standard library with the versions indicated above, and so do not add any dependencies at all to your build process, as long as you restrict yourself to the Python versions where that support was added.
 
 Param, Traitlets, Pydantic, and attrs are all pure Python projects, with minimal dependencies, and so adding them to any project is generally straightforward. They also support a wide range of Python versions, making them usable in cases where the more recent Python-language features are not available.
 
@@ -58,32 +58,40 @@ Several of these packages support automatically mapping parameters/traits/attrib
 Param, Traits, Traitlets, Pydantic, and attrs all allow any Python expression to be supplied for initializing parameters, allowing parameter default values to be computed at the time a module is first loaded. Pydantic, Traits, and Traitlets also allow a class author to add code for a given parameter to compute a default value on first access.
 
   ```python
-  >>> from time import time
+  >>> from time import time, sleep
   >>> import traitlets as tr
   >>> class A(tr.HasTraits):
-  ...     instantiation_time = tr.Float()
-  ...     @tr.default('instantiation_time')
-  ...     def _look_up_time(self):
-  ...         return time()
-  ... 
+  ...        instantiation_time = tr.Float()
+  ...        @tr.default('instantiation_time')
+  ...        def _look_up_time(self):
+  ...            return time()
+  ...
   >>> a=A()
+  >>> time()
+  1634594159.2040331
+  >>> sleep(1)
+  >>> time()
+  1634594165.3485172
   >>> a.instantiation_time
-  1475587151.967874
+  1634594167.812151
   >>> a.instantiation_time
-  1475587151.967874
+  1634594167.812151
+  >>> sleep(1)
   >>> b=A()
   >>> b.instantiation_time
-  1475587164.750875
+  1634594178.427819
   ```
 
-Param's equivalent `compute_default_fn` is only supported for some Parameters; for others any computed default values need to be calculated explicitly in the Parameterized object's constructor. On the other hand, Param does allow fully dynamic values for *any* access to a numeric Parameter instance, not just the original instantiation:
+
+Param's equivalent decorator `@param.depends(on_init=True)` will run a method when the Parameterized class is instantiated, not on first access.
+On the other hand, Param does allow fully dynamic values for *any* access to a numeric Parameter instance, not just the original instantiation:
 
   ```python
   >>> from time import time
   >>> import param
   >>> class A(param.Parameterized):
   ...     val=param.Number(0)
-  ... 
+  ...
   >>> a=A()
   >>> a.val
   0

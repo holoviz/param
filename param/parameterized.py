@@ -1566,7 +1566,7 @@ class Parameters(object):
         for name, val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.param.log(WARNING, "Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
+                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 
@@ -2351,7 +2351,7 @@ class Parameters(object):
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
-            self_.log(WARNING, 'No such watcher {watcher} to remove.'.format(watcher=watcher))
+            self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """
@@ -2420,7 +2420,6 @@ class Parameters(object):
         for name,val in self.param.get_param_values():
             print('%s.%s = %s' % (self.name,name,val))
 
-    # PARAM2_DEPRECATION: Could be removed post param 2.0
     def warning(self_, msg,*args,**kw):
         """
         Print msg merged with args as a warning, unless module variable
@@ -2429,12 +2428,7 @@ class Parameters(object):
 
         See Python's logging module for details of message formatting.
         """
-        if not warnings_as_exceptions:
-            global warning_count
-            warning_count+=1
-            self_.__db_print(WARNING,msg,*args,**kw)
-        else:
-            raise Exception("Warning: " + msg % args)
+        self_.log(WARNING, msg, *args, **kw)
 
     # PARAM2_DEPRECATION: Could be removed post param 2.0
     def message(self_,msg,*args,**kw):
@@ -3473,7 +3467,7 @@ class ParamOverrides(dict):
         overridden_object_params = list(self._overridden.param)
         for item in params:
             if item not in overridden_object_params:
-                self.param.log(WARNING, "'%s' will be ignored (not a Parameter).",item)
+                self.param.warning("'%s' will be ignored (not a Parameter).",item)
 
     def _extract_extra_keywords(self,params):
         """

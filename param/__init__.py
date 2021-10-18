@@ -1197,10 +1197,10 @@ class Selector(SelectorBase):
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
-                main.param.log(WARNING, "Parameter default value is arbitrary due to "
-                               "dictionaries prior to Python 3.6 not being "
-                               "ordered; should use an ordered dict or "
-                               "supply an explicit default value.")
+                main.param.warning("Parameter default value is arbitrary due to "
+                                   "dictionaries prior to Python 3.6 not being "
+                                   "ordered; should use an ordered dict or "
+                                   "supply an explicit default value.")
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, list):
                 autodefault = objects[0]
@@ -1732,12 +1732,12 @@ class Path(Parameter):
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.log(WARNING, 'None is not allowed')
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('None is not allowed')
         else:
             try:
                 self._resolve(val)
             except IOError as e:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.log(WARNING, '%s',e.args[0])
+                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """

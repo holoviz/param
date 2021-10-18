@@ -66,7 +66,7 @@ if sys.version_info[0] >= 3:
     unicode = str
 
 #: Top-level object to allow messaging not tied to a particular
-#: Parameterized object, as in 'param.main.log(param.WARNING, "Invalid option")'.
+#: Parameterized object, as in 'param.main.warning("Invalid option")'.
 main=Parameterized(name="main")
 
 

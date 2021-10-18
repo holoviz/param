@@ -701,31 +701,53 @@ Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
     or  None if type not yet known
     """)
 
-Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence"); _add_doc(Watcher,
-    """
-    Object declaring a callback function to invoke when an Event is triggered on a watched item.
+_Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence")
 
-    `inst`: Parameterized instance owning the watched Parameter, or None
+class Watcher(_Watcher):
+    """
+    Object declaring a callback function to invoke when an Event is
+    triggered on a watched item.
+
+    `inst`: Parameterized instance owning the watched Parameter, or
+    None
 
     `cls`: Parameterized class owning the watched Parameter
 
-    `fn`: Callback function to invoke when triggered by a watched Parameter
+    `fn`: Callback function to invoke when triggered by a watched
+    Parameter
 
-    `mode`: 'args' for param.watch (call `fn` with PInfo object positional args), or
-    'kwargs' for param.watch_values (call `fn` with <param_name>:<new_value> keywords)
+    `mode`: 'args' for param.watch (call `fn` with PInfo object
+    positional args), or 'kwargs' for param.watch_values (call `fn`
+    with <param_name>:<new_value> keywords)
 
-    `onlychanged`: If True, only trigger for actual changes, not setting to the current value
+    `onlychanged`: If True, only trigger for actual changes, not
+    setting to the current value
 
     `parameter_names`: List of Parameters to watch, by name
 
-    `what`: What to watch on the Parameters (either 'value' or a slot name)
+    `what`: What to watch on the Parameters (either 'value' or a slot
+    name)
 
-    `queued`: Immediately invoke callbacks triggered during processing of an Event (if False), or
-            queue them up for processing later, after this event has been handled (if True)
+    `queued`: Immediately invoke callbacks triggered during processing
+            of an Event (if False), or queue them up for processing
+            later, after this event has been handled (if True)
 
-    `precedence`: A numeric value which determines the precedence of the watcher.
-                  Lower precedence values are executed with higher priority.
-    """)
+    `precedence`: A numeric value which determines the precedence of
+                  the watcher.  Lower precedence values are executed
+                  with higher priority.
+    """
+    
+    def __new__(cls, *args, **kwargs):
+        values = dict(zip(cls._fields, args))
+        values.update(kwargs)
+        if 'precedence' not in values:
+            values['precedence'] = 0
+        return super(Watcher, cls).__new__(cls, **values)
+
+    def __iter__(self):
+        return iter(self[:-1])
+
+
 
 class ParameterMetaclass(type):
     """

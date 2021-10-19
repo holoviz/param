@@ -745,6 +745,11 @@ class Watcher(_Watcher):
         return super(Watcher, cls).__new__(cls, **values)
 
     def __iter__(self):
+        """
+        Backward compatibility layer to allow tuple unpacking without
+        the precedence. Important for Panel which creates custom
+        Watcher and uses tuple unpacking.
+        """
         return iter(self[:-1])
 
 

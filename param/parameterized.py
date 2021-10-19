@@ -736,7 +736,7 @@ class Watcher(_Watcher):
                   the watcher.  Lower precedence values are executed
                   with higher priority.
     """
-    
+
     def __new__(cls_, *args, **kwargs):
         values = dict(zip(cls_._fields, args))
         values.update(kwargs)

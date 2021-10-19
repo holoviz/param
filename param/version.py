@@ -190,8 +190,9 @@ class Version(object):
                             self._update_from_vcs(output)
                     except: pass
             if output is None:
+                # glob pattern (not regexp) matching vX.Y.Z* tags
                 output = run_cmd([cmd, 'describe', '--long', '--match',
-                                  "v[0-9]*[.][0-9]*[.][0-9]*", '--dirty'],
+                                  "v[0-9]*.[0-9]*.[0-9]*", '--dirty'],
                                  cwd=os.path.dirname(self.fpath))
             if as_string: return output
         except Exception as e1:

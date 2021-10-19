@@ -2428,13 +2428,9 @@ class Parameters(object):
 
         See Python's logging module for details of message formatting.
         """
-        if not warnings_as_exceptions:
-            global warning_count
-            warning_count+=1
-            self_.__db_print(WARNING,msg,*args,**kw)
-        else:
-            raise Exception("Warning: " + msg % args)
+        self_.log(WARNING, msg, *args, **kw)
 
+    # PARAM2_DEPRECATION: Could be removed post param 2.0
     def message(self_,msg,*args,**kw):
         """
         Print msg merged with args as a message.
@@ -2443,6 +2439,7 @@ class Parameters(object):
         """
         self_.__db_print(INFO,msg,*args,**kw)
 
+    # PARAM2_DEPRECATION: Could be removed post param 2.0
     def verbose(self_,msg,*args,**kw):
         """
         Print msg merged with args as a verbose message.
@@ -2451,6 +2448,7 @@ class Parameters(object):
         """
         self_.__db_print(VERBOSE,msg,*args,**kw)
 
+    # PARAM2_DEPRECATION: Could be removed post param 2.0
     def debug(self_,msg,*args,**kw):
         """
         Print msg merged with args as a debugging statement.
@@ -2458,6 +2456,27 @@ class Parameters(object):
         See Python's logging module for details of message formatting.
         """
         self_.__db_print(DEBUG,msg,*args,**kw)
+
+    def log(self_, level, msg, *args, **kw):
+        """
+        Print msg merged with args as a message at the indicated logging level.
+
+        Logging levels include those provided by the Python logging module
+        plus VERBOSE, either obtained directly from the logging module like
+        `logging.INFO`, or from parameterized like `param.parameterized.INFO`.
+
+        Supported logging levels include (in order of severity)
+        DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
+
+        See Python's logging module for details of message formatting.
+        """
+        if level is WARNING:
+            if warnings_as_exceptions:
+                raise Exception("Warning: " + msg % args)
+            else:
+                global warning_count
+                warning_count+=1
+        self_.__db_print(level, msg, *args, **kw)
 
 
     def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',

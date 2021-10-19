@@ -31,8 +31,9 @@ from .parameterized import (
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
-from .parameterized import logging_level     # noqa: api import
 from .parameterized import shared_parameters # noqa: api import
+from .parameterized import logging_level     # noqa: api import
+from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 
 from collections import OrderedDict
 from numbers import Real

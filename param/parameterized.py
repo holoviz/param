@@ -737,12 +737,12 @@ class Watcher(_Watcher):
                   with higher priority.
     """
     
-    def __new__(cls, *args, **kwargs):
-        values = dict(zip(cls._fields, args))
+    def __new__(cls_, *args, **kwargs):
+        values = dict(zip(cls_._fields, args))
         values.update(kwargs)
         if 'precedence' not in values:
             values['precedence'] = 0
-        return super(Watcher, cls).__new__(cls, **values)
+        return super(Watcher, cls_).__new__(cls_, **values)
 
     def __iter__(self):
         """

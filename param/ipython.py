@@ -67,8 +67,8 @@ class ParamPager(object):
             val_dict = dict((k,p.default) for (k,p) in params.items())
             self_class = obj
         else:
-            changed = list(obj.param.values_dict(onlychanged=True).keys())
-            val_dict = obj.param.values_dict()
+            changed = list(obj.param.values(onlychanged=True).keys())
+            val_dict = obj.param.values()
             self_class = obj.__class__
 
         if not include_super:

@@ -1958,7 +1958,7 @@ class Parameters(object):
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
         self_.self_or_cls.param._watchers = []
-        param_values = self_.values_dict()
+        param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**dict(params, **triggers))
@@ -2114,10 +2114,10 @@ class Parameters(object):
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    # PARAM2_DEPRECATION: Could be removed post param 2.0; same as values_dict() but returns list, not dict
+    # PARAM2_DEPRECATION: Could be removed post param 2.0; same as values() but returns list, not dict
     def get_param_values(self_, onlychanged=False):
         """
-        (Deprecated; use values_dict instead.)
+        (Deprecated; use .values() instead.)
 
         Return a list of name,value pairs for all Parameters of this
         object.
@@ -2136,7 +2136,7 @@ class Parameters(object):
         vals.sort(key=itemgetter(0))
         return vals
 
-    def values_dict(self_, onlychanged=False):
+    def values(self_, onlychanged=False):
         """
         Return a dictionary of name,value pairs for the Parameters of this
         object.
@@ -2499,7 +2499,7 @@ class Parameters(object):
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""
         self = self_.self
-        for name, val in self.param.values_dict().items():
+        for name, val in self.param.values().items():
             print('%s.%s = %s' % (self.name,name,val))
 
     def warning(self_, msg,*args,**kw):
@@ -3212,7 +3212,7 @@ class Parameterized(object):
         """
         try:
             settings = ['%s=%s' % (name, repr(val))
-                        # PARAM2_DEPRECATION: Update to self.param.values_dict.items()
+                        # PARAM2_DEPRECATION: Update to self.param.values.items()
                         # (once python2 support is dropped)
                         for name, val in self.param.get_param_values()]
         except RuntimeError: # Handle recursion in parameter depth
@@ -3249,8 +3249,8 @@ class Parameterized(object):
         imports.append("import %s"%mod)
         imports.append("import %s"%bits[0])
 
-        changed_params = self.param.values_dict(onlychanged=script_repr_suppress_defaults)
-        values = self.param.values_dict()
+        changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
+        values = self.param.values()
         spec = getfullargspec(self.__init__)
         args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
@@ -3601,7 +3601,7 @@ class ParameterizedFunction(Parameterized):
             cls = self_or_cls
         else:
             p = params
-            params = self_or_cls.param.values_dict()
+            params = self_or_cls.param.values()
             params.update(p)
             params.pop('name')
             cls = self_or_cls.__class__

@@ -366,7 +366,7 @@ class TimeAwareRandomState(TimeAware):
         """
         Warn if the object name is not explicitly set.
         """
-        changed_params = dict(self.param.get_param_values(onlychanged=True))
+        changed_params = self.param.values(onlychanged=True)
         if self.time_dependent and ('name' not in changed_params):
             self.param.log(param.WARNING, "Default object name used to set the seed: "
                            "random values conditional on object instantiation order.")

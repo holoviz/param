@@ -238,7 +238,7 @@ class TestParamDepends(API1TestCase):
         b.a.c = 1
         assert b.test_count == 1
 
-        b.a.param.set_param(c=2, d=1)
+        b.a.param.update(c=2, d=1)
         assert b.test_count == 2
 
         b.a = A()

@@ -1835,25 +1835,20 @@ class Parameters(object):
 
     # Bothmethods
 
-    def set_param(self_, *args,**kwargs):
+    def update(self_, *args, **kwargs):
         """
-        For each param=value keyword argument, sets the corresponding
-        parameter of this object or class to the given value.
-
-        For backwards compatibility, also accepts
-        set_param("param",value) for a single parameter value using
-        positional arguments, but the keyword interface is preferred
-        because it is more compact and can set multiple values.
+        For the given dictionary or iterable or set of param=value keyword arguments,
+        sets the corresponding parameter of this object or class to the given value.
         """
         BATCH_WATCH = self_.self_or_cls.param._BATCH_WATCH
         self_.self_or_cls.param._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
-            if len(args) == 2 and not args[0] in kwargs and not kwargs:
-                kwargs[args[0]] = args[1]
+            if len(args) == 1 and not kwargs:
+                kwargs = args[0]
             else:
                 self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("Invalid positional arguments for %s.set_param" %
+                raise ValueError("%s.update accepts *either* an iterable or key=value pairs, not both" %
                                  (self_or_cls.name))
 
         trigger_params = [k for k in kwargs
@@ -1882,6 +1877,28 @@ class Parameters(object):
             p._mode = 'reset'
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
+
+
+    # PARAM2_DEPRECATION: Could be removed post param 2.0; use update() instead.
+    def set_param(self_, *args,**kwargs):
+        """
+        For each param=value keyword argument, sets the corresponding
+        parameter of this object or class to the given value.
+
+        For backwards compatibility, also accepts
+        set_param("param",value) for a single parameter value using
+        positional arguments, but the keyword interface is preferred
+        because it is more compact and can set multiple values.
+        """
+        self_or_cls = self_.self_or_cls
+        if args:
+            if len(args) == 2 and not args[0] in kwargs and not kwargs:
+                kwargs[args[0]] = args[1]
+            else:
+                raise ValueError("Invalid positional arguments for %s.set_param" %
+                                 (self_or_cls.name))
+        return self_.update(kwargs)
+
 
     def objects(self_, instance=True):
         """
@@ -1941,7 +1958,7 @@ class Parameters(object):
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
         self_.self_or_cls.param._watchers = []
-        param_values = dict(self_.get_param_values())
+        param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
         self_.set_param(**dict(params, **triggers))
@@ -2097,9 +2114,11 @@ class Parameters(object):
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    # PARAM2_DEPRECATION: Could be removed post param 2.0; same as values() but returns list, not dict
     def get_param_values(self_, onlychanged=False):
         """
+        (Deprecated; use .values() instead.)
+
         Return a list of name,value pairs for all Parameters of this
         object.
 
@@ -2108,19 +2127,28 @@ class Parameters(object):
         (onlychanged has no effect when called on a class).
         """
         self_or_cls = self_.self_or_cls
-        # We'd actually like to know whether a value has been
-        # explicitly set on the instance, but that's tricky since
-        # it would need to distinguish instantiation of default from
-        # user setting of value.
         vals = []
         for name, val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
-            # (this is pointless for cls)
             if not onlychanged or not all_equal(value, val.default):
                 vals.append((name, value))
 
         vals.sort(key=itemgetter(0))
         return vals
+
+    def values(self_, onlychanged=False):
+        """
+        Return a dictionary of name,value pairs for the Parameters of this
+        object.
+
+        When called on an instance with onlychanged set to True, will
+        only return values that are not equal to the default value
+        (onlychanged has no effect when called on a class).
+        """
+        # Defined in terms of get_param_values() to avoid ordering
+        # issues in python2, but can be inverted if get_param_values
+        # is removed when python2 support is dropped
+        return dict(self_.get_param_values(onlychanged))
 
     def force_new_dynamic_value(self_, name): # pylint: disable-msg=E0213
         """
@@ -2471,7 +2499,7 @@ class Parameters(object):
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""
         self = self_.self
-        for name,val in self.param.get_param_values():
+        for name, val in self.param.values().items():
             print('%s.%s = %s' % (self.name,name,val))
 
     def warning(self_, msg,*args,**kw):
@@ -3184,7 +3212,9 @@ class Parameterized(object):
         """
         try:
             settings = ['%s=%s' % (name, repr(val))
-                        for name,val in self.param.get_param_values()]
+                        # PARAM2_DEPRECATION: Update to self.param.values.items()
+                        # (once python2 support is dropped)
+                        for name, val in self.param.get_param_values()]
         except RuntimeError: # Handle recursion in parameter depth
             settings = []
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
@@ -3219,8 +3249,8 @@ class Parameterized(object):
         imports.append("import %s"%mod)
         imports.append("import %s"%bits[0])
 
-        changed_params = dict(self.param.get_param_values(onlychanged=script_repr_suppress_defaults))
-        values = dict(self.param.get_param_values())
+        changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
+        values = self.param.values()
         spec = getfullargspec(self.__init__)
         args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
@@ -3571,7 +3601,7 @@ class ParameterizedFunction(Parameterized):
             cls = self_or_cls
         else:
             p = params
-            params = dict(self_or_cls.param.get_param_values())
+            params = self_or_cls.param.values()
             params.update(p)
             params.pop('name')
             cls = self_or_cls.__class__

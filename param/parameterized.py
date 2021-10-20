@@ -1837,7 +1837,7 @@ class Parameters(object):
 
     def update(self_, *args, **kwargs):
         """
-        For the given dictionary or iterable or set of param=value keyword arguments, 
+        For the given dictionary or iterable or set of param=value keyword arguments,
         sets the corresponding parameter of this object or class to the given value.
         """
         BATCH_WATCH = self_.self_or_cls.param._BATCH_WATCH

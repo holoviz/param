@@ -756,6 +756,11 @@ class Watcher(_Watcher):
         """
         return iter(self[:-1])
 
+    def __str__(self):
+        cls = type(self)
+        attrs = ', '.join(['%s=%r' % (f, getattr(self, f)) for f in cls._fields])
+        return "{cls}({attrs})".format(cls=cls.__name__, attrs=attrs)
+
 
 
 class ParameterMetaclass(type):
@@ -2393,7 +2398,7 @@ class Parameters(object):
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
-            self_.warning('No such watcher {watcher} to remove.'.format(watcher=watcher))
+            self_.warning('No such watcher {watcher} to remove.'.format(watcher=str(watcher)))
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """

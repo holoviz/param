@@ -2172,7 +2172,7 @@ class Parameters(object):
 
         return vals
 
-    def keys(self_,):
+    def keys(self_):
         """
         Return a view of the names of all Parameters of this object.
         """

@@ -2114,11 +2114,7 @@ class Parameters(object):
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-<<<<<<< HEAD
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
-=======
-    # PARAM2_DEPRECATION: Could be removed post param 2.0; same as values() but returns list, not dict
->>>>>>> Added dictionary methods for Parameters object
+    # PARAM2_DEPRECATION: Could be removed post param 2.0; same as values_dict() but returns list, not dict
     def get_param_values(self_, onlychanged=False):
         """
         (Deprecated; use values_dict instead.)

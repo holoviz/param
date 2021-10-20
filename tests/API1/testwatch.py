@@ -143,7 +143,7 @@ class TestWatch(API1TestCase):
         obj.param.watch(accumulator1, 'a', precedence=2)
         obj.param.watch(accumulator2, 'b', precedence=1)
 
-        obj.param.set_param(a=1, b=2)
+        obj.param.update(a=1, b=2)
         assert self.list_accumulator == ['B', 'A']
 
     def test_triggered_when_changed_iterator_type(self):
@@ -301,7 +301,7 @@ class TestWatch(API1TestCase):
 
         obj.param.watch(set_c, ['a', 'b'])
 
-        obj.param.set_param(a=2)
+        obj.param.update(a=2)
         self.assertEqual(obj.c, 3)
 
         # Change inside watch callback should have triggered
@@ -314,7 +314,7 @@ class TestWatch(API1TestCase):
 
         obj = SimpleWatchExample()
         obj.param.watch(accumulator, ['a','b'])
-        obj.param.set_param(a=23, b=42)
+        obj.param.update(a=23, b=42)
 
         self.assertEqual(accumulator.call_count(), 1)
         args = accumulator.args_for_call(0)
@@ -336,7 +336,7 @@ class TestWatch(API1TestCase):
 
         obj = SimpleWatchSubclass
         watcher = obj.param.watch(accumulator, ['a','b'])
-        obj.param.set_param(a=23, b=42)
+        obj.param.update(a=23, b=42)
 
         self.assertEqual(accumulator.call_count(), 1)
         args = accumulator.args_for_call(0)
@@ -353,7 +353,7 @@ class TestWatch(API1TestCase):
         self.assertEqual(args[1].type, 'changed')
 
         SimpleWatchExample.param.unwatch(watcher)
-        obj.param.set_param(a=0, b=0)
+        obj.param.update(a=0, b=0)
 
     def test_simple_batched_watch_callback_reuse(self):
 
@@ -363,7 +363,7 @@ class TestWatch(API1TestCase):
         obj.param.watch(accumulator, ['a','b'])
         obj.param.watch(accumulator, ['c'])
 
-        obj.param.set_param(a=23, b=42, c=99)
+        obj.param.update(a=23, b=42, c=99)
 
         self.assertEqual(accumulator.call_count(), 2)
         # Order may be undefined for Python <3.6
@@ -429,7 +429,7 @@ class TestWatch(API1TestCase):
         obj = SimpleWatchSubclass()
 
         obj.param.watch(accumulator, ['b','c'])
-        obj.param.set_param(b=23, c=42)
+        obj.param.update(b=23, c=42)
 
         self.assertEqual(accumulator.call_count(), 1)
         args = accumulator.args_for_call(0)
@@ -451,12 +451,12 @@ class TestWatch(API1TestCase):
 
         obj = SimpleWatchExample()
 
-        def set_param(*changes):
-            obj.param.set_param(a=10, d=12)
+        def update(*changes):
+            obj.param.update(a=10, d=12)
 
         obj.param.watch(accumulator, ['a', 'b', 'c', 'd'])
-        obj.param.watch(set_param, ['b', 'c'])
-        obj.param.set_param(b=23, c=42)
+        obj.param.watch(update, ['b', 'c'])
+        obj.param.update(b=23, c=42)
 
         self.assertEqual(accumulator.call_count(), 2)
         args = accumulator.args_for_call(0)
@@ -491,7 +491,7 @@ class TestWatch(API1TestCase):
         obj = SimpleWatchSubclass()
 
         obj.param.watch(accumulator, ['b','c'], onlychanged=False)
-        obj.param.set_param(b=0, c=0)
+        obj.param.update(b=0, c=0)
 
         self.assertEqual(accumulator.call_count(), 1)
 
@@ -670,7 +670,7 @@ class TestWatchValues(API1TestCase):
         obj.param.watch_values(accumulator1, 'a', precedence=2)
         obj.param.watch_values(accumulator2, 'b', precedence=1)
 
-        obj.param.set_param(a=1, b=2)
+        obj.param.update(a=1, b=2)
         assert self.list_accumulator == ['B', 'A']
 
     def test_simple_batched_watch_values_setattr(self):
@@ -698,7 +698,7 @@ class TestWatchValues(API1TestCase):
 
         obj = SimpleWatchExample()
         obj.param.watch_values(accumulator, ['a','b'])
-        obj.param.set_param(a=23, b=42)
+        obj.param.update(a=23, b=42)
 
         self.assertEqual(accumulator.call_count(), 1)
         kwargs = accumulator.kwargs_for_call(0)
@@ -712,7 +712,7 @@ class TestWatchValues(API1TestCase):
         obj.param.watch_values(accumulator, ['a','b'])
         obj.param.watch_values(accumulator, ['c'])
 
-        obj.param.set_param(a=23, b=42, c=99)
+        obj.param.update(a=23, b=42, c=99)
 
         self.assertEqual(accumulator.call_count(), 2)
         # Order may be undefined for Python <3.6

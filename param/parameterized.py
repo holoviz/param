@@ -2150,34 +2150,6 @@ class Parameters(object):
         # is removed when python2 support is dropped
         return dict(self_.get_param_values(onlychanged))
 
-    def values(self_, onlychanged=False):
-        """
-        Return a list of values for the Parameters of this object.
-
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
-        """
-        self_or_cls = self_.self_or_cls
-        # We'd actually like to know whether a value has been
-        # explicitly set on the instance, but that's tricky since
-        # it would need to distinguish instantiation of default from
-        # user setting of value.
-        vals = []
-        for name, val in self_or_cls.param.objects('existing').items():
-            value = self_or_cls.param.get_value_generator(name)
-            # (this is pointless for cls)
-            if not onlychanged or not all_equal(value, val.default):
-                vals.append(value)
-
-        return vals
-
-    def keys(self_):
-        """
-        Return a view of the names of all Parameters of this object.
-        """
-        return self_.self_or_cls.param.objects('existing').keys()
-
     def force_new_dynamic_value(self_, name): # pylint: disable-msg=E0213
         """
         Force a new value to be generated for the dynamic attribute

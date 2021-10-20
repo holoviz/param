@@ -1438,6 +1438,11 @@ class Parameters(object):
         self_.self_or_cls._parameters_state['watchers'] = value
 
     @property
+    def watchers(self):
+        """Read-only list of watchers on this Parameterized"""
+        return self._watchers
+
+    @property
     def self_or_cls(self_):
         return self_.cls if self_.self is None else self_.self
 
@@ -1570,6 +1575,7 @@ class Parameters(object):
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     @classmethod
     def deprecate(cls, fn):
         """
@@ -1732,6 +1738,7 @@ class Parameters(object):
 
     # Classmethods
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     def print_param_defaults(self_):
         """Print the default values of all cls's Parameters."""
         cls = self_.cls
@@ -1740,6 +1747,7 @@ class Parameters(object):
                 print(cls.__name__+'.'+key+ '='+ repr(val.default))
 
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     def set_default(self_,param_name,value):
         """
         Set the default value of param_name.
@@ -1750,11 +1758,11 @@ class Parameters(object):
         setattr(cls,param_name,value)
 
 
-    def _add_parameter(self_, param_name,param_obj):
+    def add_parameter(self_, param_name, param_obj):
         """
         Add a new Parameter object into this object's class.
 
-        Supposed to result in a Parameter equivalent to one declared
+        Should result in a Parameter equivalent to one declared
         in the class's source code.
         """
         # Could have just done setattr(cls,param_name,param_obj),
@@ -1770,7 +1778,11 @@ class Parameters(object):
         except AttributeError:
             pass
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    _add_parameter = add_parameter
 
+
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     def params(self_, parameter_name=None):
         """
         Return the Parameters of this class as the
@@ -2049,6 +2061,7 @@ class Parameters(object):
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     def get_param_values(self_, onlychanged=False):
         """
         Return a list of name,value pairs for all Parameters of this
@@ -2157,7 +2170,7 @@ class Parameters(object):
 
         return value
 
-    def params_depended_on(self_, name):
+    def method_dependencies(self_, name):
         """
         Given the name of a method, returns a PInfo object for each dependency
         of this method. See help(PInfo) for the contents of these objects.
@@ -2169,6 +2182,9 @@ class Parameters(object):
         if self_.self is None:
             return deps
         return _resolve_mcs_deps(self_.self, deps, dynamic)
+
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    params_depended_on = method_dependencies
 
     def outputs(self_):
         """
@@ -2378,6 +2394,7 @@ class Parameters(object):
 
     # Instance methods
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     def defaults(self_):
         """
         Return {parameter_name:parameter.default} for all non-constant
@@ -2414,6 +2431,7 @@ class Parameters(object):
 
             get_logger(name=self_or_cls.name).log(level, msg, *args, **kw)
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     def print_param_values(self_):
         """Print the values of all this object's Parameters."""
         self = self_.self
@@ -2483,7 +2501,7 @@ class Parameters(object):
                qualify=False, separator=""):
         """See Parameterized.pprint"""
         self = self_.self
-        return self.pprint(imports, prefix, unknown_value, qualify, separator)
+        return self._pprint(imports, prefix, unknown_value, qualify, separator)
 
 
 
@@ -2885,10 +2903,10 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
-    elif hasattr(val,'pprint'):
-        rep=val.pprint(imports=imports, prefix=prefix+"    ",
-                       qualify=qualify, unknown_value=unknown_value,
-                       separator=separator)
+    elif hasattr(val,'_pprint'):
+        rep=val._pprint(imports=imports, prefix=prefix+"    ",
+                        qualify=qualify, unknown_value=unknown_value,
+                        separator=separator)
     else:
         rep=repr(val)
 
@@ -3140,7 +3158,7 @@ class Parameterized(object):
         return "<%s %s>" % (self.__class__.__name__,self.name)
 
 
-    # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.pprint instead
+    # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
     def script_repr(self,imports=[],prefix="    "):
         """
         Deprecated variant of __repr__ designed for generating a runnable script.
@@ -3149,7 +3167,7 @@ class Parameterized(object):
                            separator="\n")
 
     @recursive_repr()
-    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
+    def _pprint(self, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
         """
         (Experimental) Pretty printed representation that may be
@@ -3224,6 +3242,8 @@ class Parameterized(object):
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
         return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
+    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    pprint = _pprint
 
     # Note that there's no state_push method on the class, so
     # dynamic parameters set on a class can't have state saved. This
@@ -3545,6 +3565,7 @@ class ParameterizedFunction(Parameterized):
         # __main__. Pretty obscure aspect of pickle.py...
         return (_new_parameterized,(self.__class__,),state)
 
+    # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
     def script_repr(self,imports=[],prefix="    "):
         """
         Same as Parameterized.script_repr, except that X.classname(Y
@@ -3554,15 +3575,15 @@ class ParameterizedFunction(Parameterized):
                            separator="\n")
 
 
-    def pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
-               qualify=False, separator=""):
+    def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
+                 qualify=False, separator=""):
         """
-        Same as Parameterized.pprint, except that X.classname(Y
+        Same as Parameterized._pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        r = Parameterized.pprint(self,imports,prefix,
-                                 unknown_value=unknown_value,
-                                 qualify=qualify,separator=separator)
+        r = Parameterized._pprint(self,imports,prefix,
+                                  unknown_value=unknown_value,
+                                  qualify=qualify,separator=separator)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
 

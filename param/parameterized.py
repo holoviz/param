@@ -3244,7 +3244,9 @@ class Parameterized(object):
         """
         try:
             settings = ['%s=%s' % (name, repr(val))
-                        for name, val in self.param.values_dict().items()]
+                        # PARAM2_DEPRECATION: Update to self.param.values_dict.items()
+                        # (once python2 support is dropped)
+                        for name, val in self.param.get_param_values()]
         except RuntimeError: # Handle recursion in parameter depth
             settings = []
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"

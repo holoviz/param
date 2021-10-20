@@ -3576,7 +3576,7 @@ class ParameterizedFunction(Parameterized):
 
 
     def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
-                 qualify=False, separator=""):
+                qualify=False, separator=""):
         """
         Same as Parameterized._pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y

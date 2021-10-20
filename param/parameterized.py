@@ -738,6 +738,9 @@ class Watcher(_Watcher):
     """
 
     def __new__(cls_, *args, **kwargs):
+        """
+        Allows creating Watcher without explicit precedence value.
+        """
         values = dict(zip(cls_._fields, args))
         values.update(kwargs)
         if 'precedence' not in values:
@@ -747,8 +750,9 @@ class Watcher(_Watcher):
     def __iter__(self):
         """
         Backward compatibility layer to allow tuple unpacking without
-        the precedence. Important for Panel which creates custom
-        Watcher and uses tuple unpacking.
+        the precedence value. Important for Panel which creates a
+        custom Watcher and uses tuple unpacking. Will be dropped in
+        Param 3.x.
         """
         return iter(self[:-1])
 

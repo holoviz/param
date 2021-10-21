@@ -43,7 +43,7 @@ jobs:
       - name: build docs
         run: |
           cp examples/user_guide/*.ipynb doc/user_guide/
-          python -m nbsite build --examples-assets='' --org holoviz --project-name param
+          python -m nbsite build --org holoviz --project-name param
       - name: Deploy dev
         uses: peaceiris/actions-gh-pages@v3
         if: (github.event.inputs.target == 'dev' || contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc'))

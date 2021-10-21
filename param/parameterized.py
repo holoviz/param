@@ -550,11 +550,15 @@ def _parse_dependency_spec(spec):
     return obj or None, attr, what or 'value'
 
 
-def _params_depended_on(minfo, dynamic=True):
+def _params_depended_on(minfo, dynamic=True, intermediate=True):
     """
     Resolves dependencies declared on a Parameterized method.
     Dynamic dependencies, i.e. dependencies on sub-objects which may
     or may not yet be available, are only resolved if dynamic=True.
+    By default intermediate dependencies, i.e. dependencies on the
+    path to a sub-object are returned. For example for a dependency
+    on 'a.b.c' dependencies on 'a' and 'b' are returned as long as
+    intermediate=True.
 
     Returns lists of concrete dependencies on available parameters
     and dynamic dependencies specifications which have to resolved
@@ -563,19 +567,19 @@ def _params_depended_on(minfo, dynamic=True):
     deps, dynamic_deps = [], []
     dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
-        ddeps, ddynamic_deps = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic)
+        ddeps, ddynamic_deps = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic, intermediate)
         dynamic_deps += ddynamic_deps
         for dep in ddeps:
             if isinstance(dep, PInfo):
                 deps.append(dep)
             else:
-                method_deps, method_dynamic_deps = _params_depended_on(dep, dynamic)
+                method_deps, method_dynamic_deps = _params_depended_on(dep, dynamic, intermediate)
                 deps += method_deps
                 dynamic_deps += method_dynamic_deps
     return deps, dynamic_deps
 
 
-def _resolve_mcs_deps(obj, resolved, dynamic):
+def _resolve_mcs_deps(obj, resolved, dynamic, intermediate=True):
     """
     Resolves constant and dynamic parameter dependencies previously
     obtained using the _params_depended_on function. Existing resolved
@@ -592,12 +596,12 @@ def _resolve_mcs_deps(obj, resolved, dynamic):
                     pobj=inst.param[dep.name], what=dep.what)
         dependencies.append(dep)
     for dep in dynamic:
-        subresolved, _ = obj.param._spec_to_obj(dep.spec)
+        subresolved, _ = obj.param._spec_to_obj(dep.spec, intermediate=intermediate)
         for subdep in subresolved:
             if isinstance(subdep, PInfo):
                 dependencies.append(subdep)
             else:
-                dependencies += _params_depended_on(subdep)[0]
+                dependencies += _params_depended_on(subdep, intermediate=intermediate)[0]
     return dependencies
 
 
@@ -2234,18 +2238,24 @@ class Parameters(object):
 
         return value
 
-    def method_dependencies(self_, name):
+    def method_dependencies(self_, name, intermediate=False):
         """
         Given the name of a method, returns a PInfo object for each dependency
         of this method. See help(PInfo) for the contents of these objects.
+
+        By default intermediate dependencies on sub-objects are not
+        returned as these are primarily useful for internal use to
+        determine when a sub-object dependency has to be updated.
         """
         method = getattr(self_.self_or_cls, name)
         minfo = MInfo(cls=self_.cls, inst=self_.self, name=name,
                       method=method)
-        deps, dynamic = _params_depended_on(minfo, dynamic=False)
+        deps, dynamic = _params_depended_on(
+            minfo, dynamic=False, intermediate=intermediate)
         if self_.self is None:
             return deps
-        return _resolve_mcs_deps(self_.self, deps, dynamic)
+        return _resolve_mcs_deps(
+            self_.self, deps, dynamic, intermediate=intermediate)
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     params_depended_on = method_dependencies
@@ -2269,7 +2279,7 @@ class Parameters(object):
                     outputs[name] = (otype, method, idx)
         return outputs
 
-    def _spec_to_obj(self_, spec, dynamic=True):
+    def _spec_to_obj(self_, spec, dynamic=True, intermediate=True):
         """
         Resolves a dependency specification into lists of explicit
         parameter dependencies and dynamic dependencies.
@@ -2315,22 +2325,24 @@ class Parameters(object):
                 # that if a subobject is later updated making the full
                 # subobject path available we have to be notified and
                 # set up watchers
-                if len(path) >= 1:
+                if len(path) >= 1 and intermediate:
                     sub_src = None
                     subpath = path
                     while sub_src is None and subpath:
                         subpath = subpath[:-1]
                         sub_src = _getattrr(self_.self_or_cls, '.'.join(subpath), None)
                     if subpath:
-                        subdeps, _ = self_._spec_to_obj('.'.join(path[:len(subpath)+1]), dynamic)
+                        subdeps, _ = self_._spec_to_obj(
+                            '.'.join(path[:len(subpath)+1]), dynamic, intermediate)
                         deps += subdeps
                 return deps, [DInfo(spec=spec)]
 
+        print(spec, src, attr)
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
         if attr == 'param':
             deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic)
             for p in src.param:
-                param_deps, param_dynamic_deps = src.param._spec_to_obj(p, dynamic)
+                param_deps, param_dynamic_deps = src.param._spec_to_obj(p, dynamic, intermediate)
                 deps += param_deps
                 dynamic_deps += param_dynamic_deps
             return deps, dynamic_deps
@@ -2346,9 +2358,9 @@ class Parameters(object):
             raise AttributeError("Attribute %r could not be resolved on %s."
                                  % (attr, src))
 
-        if obj is None:
+        if obj is None or not intermediate:
             return [info], []
-        deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic)
+        deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic, intermediate)
         deps.append(info)
         return deps, dynamic_deps
 

@@ -2309,7 +2309,7 @@ class Parameters(object):
             cls = spec.owner if inst is None else type(inst)
             info = PInfo(inst=inst, cls=cls, name=spec.name,
                          pobj=spec, what='value')
-            return [info], []
+            return [] if intermediate == 'only' else [info], []
 
         obj, attr, what = _parse_dependency_spec(spec)
         if obj is None:
@@ -2335,12 +2335,11 @@ class Parameters(object):
                         subdeps, _ = self_._spec_to_obj(
                             '.'.join(path[:len(subpath)+1]), dynamic, intermediate)
                         deps += subdeps
-                return deps, [DInfo(spec=spec)]
+                return deps, [] if intermediate == 'only' else [DInfo(spec=spec)]
 
-        print(spec, src, attr)
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
         if attr == 'param':
-            deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic)
+            deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic, intermediate)
             for p in src.param:
                 param_deps, param_dynamic_deps = src.param._spec_to_obj(p, dynamic, intermediate)
                 deps += param_deps
@@ -2353,7 +2352,7 @@ class Parameters(object):
             info = MInfo(inst=inst, cls=cls, name=attr,
                          method=getattr(src, attr))
         elif src.abstract:
-            return [], [DInfo(spec=spec)]
+            return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:
             raise AttributeError("Attribute %r could not be resolved on %s."
                                  % (attr, src))
@@ -2361,7 +2360,8 @@ class Parameters(object):
         if obj is None or not intermediate:
             return [info], []
         deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic, intermediate)
-        deps.append(info)
+        if intermediate != 'only':
+            deps.append(info)
         return deps, dynamic_deps
 
     def _register_watcher(self_, action, watcher, what='value'):

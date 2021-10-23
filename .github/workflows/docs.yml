@@ -34,7 +34,7 @@ jobs:
         id: vars
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
       - name: graphviz
-        run: sudo apt install libgraphviz-dev
+        run: sudo apt install graphviz graphviz-dev
       - name: env setup
         run: |
           python -m pip install pip==21.0.0

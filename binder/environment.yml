@@ -1,5 +1,6 @@
 name: param
 channels:
+  - pyviz
   - defaults
 dependencies:
   - python=3.9.7

@@ -1,1 +1,2 @@
+pip uninstall param
 pip install .

@@ -5,3 +5,4 @@ dependencies:
   - python=3.9.7
   - aiohttp=3.7.4
   - panel=0.12.2
+  - pip

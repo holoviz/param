@@ -340,7 +340,10 @@ def iscoroutinefunction(function):
     """
     if not hasattr(inspect, 'iscoroutinefunction'):
         return False
-    return inspect.isasyncgenfunction(function) or inspect.iscoroutinefunction(function)
+    try:
+        return inspect.isasyncgenfunction(function) or inspect.iscoroutinefunction(function)
+    except AttributeError:
+        return False
 
 
 def instance_descriptor(f):

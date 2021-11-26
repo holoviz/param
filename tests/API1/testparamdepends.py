@@ -2,6 +2,7 @@
 Unit test for param.depends.
 """
 
+import pytest
 
 import param
 
@@ -709,3 +710,27 @@ class TestParamDependsFunction(API1TestCase):
         self.assertEqual(d, [4])
         p.b = 3
         self.assertEqual(d, [4, 5])
+
+
+def test_misspelled_parameter_in_depends():
+    class Example(param.Parameterized):
+        xlim = param.Range((0, 10), bounds=(0, 100))
+
+        @param.depends("tlim")  # <- Misspelled xlim
+        def test(self):
+            return True
+
+    example = Example()
+    with pytest.raises(AttributeError, match="Attribute 'tlim' could not be resolved on"):
+        # Simulating: pn.panel(example.test)
+        example.param.method_dependencies(example.test.__name__)
+
+
+def test_misspelled_parameter_in_depends_watch():
+    with pytest.raises(AttributeError, match="Attribute 'tlim' could not be resolved on"):
+        class Example(param.Parameterized):
+            xlim = param.Range((0, 10), bounds=(0, 100))
+
+            @param.depends("tlim", watch=True)  # <- Misspelled xlim
+            def test(self):
+                return True

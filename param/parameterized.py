@@ -2354,7 +2354,7 @@ class Parameters(object):
         elif hasattr(src, attr):
             info = MInfo(inst=inst, cls=cls, name=attr,
                          method=getattr(src, attr))
-        elif src.abstract:
+        elif getattr(src, "abstract", None):
             return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:
             raise AttributeError("Attribute %r could not be resolved on %s."

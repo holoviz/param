@@ -1911,11 +1911,17 @@ class Date(Number):
             return
 
         if not isinstance(val, dt_types) and not (allow_None and val is None):
-            raise ValueError("Date parameter %r only takes datetime and date types." % self.name)
+            raise ValueError(
+                "Date parameter %r only takes datetime and date types, "
+                "not type %r." % (self.name, type(val))
+            )
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt_types):
-            raise ValueError("Step parameter can only be None, a datetime or datetime type")
+            raise ValueError(
+                "Step parameter can only be None, a datetime "
+                "or datetime type, not type %r." % type(val)
+            )
 
     @classmethod
     def serialize(cls, value):
@@ -2093,13 +2099,13 @@ class DateRange(Range):
             if isinstance(n, dt_types):
                 continue
             raise ValueError("DateRange parameter %r only takes datetime "
-                             "types, not %s." % (self.name, val))
+                             "types, not %r." % (self.name, type(val)))
 
         start, end = val
         if not end >= start:
             raise ValueError("DateRange parameter %r's end datetime %s "
                              "is before start datetime %s." %
-                             (self.name,val[1],val[0]))
+                             (self.name, val[1], val[0]))
 
 
 

@@ -1925,13 +1925,18 @@ class Date(Number):
 
     @classmethod
     def serialize(cls, value):
+        if value is None:
+            return 'null'
         if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
             value = value.astype(dt.datetime)
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod
     def deserialize(cls, value):
-        return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+        if value == 'null':
+            return None
+        else:
+            return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
 class CalendarDate(Number):
@@ -1959,11 +1964,17 @@ class CalendarDate(Number):
 
     @classmethod
     def serialize(cls, value):
-        return value.strftime("%Y-%m-%d")
+        if value is None:
+            return 'null'
+        else:
+            return value.strftime("%Y-%m-%d")
 
     @classmethod
     def deserialize(cls, value):
-        return dt.datetime.strptime(value, "%Y-%m-%d").date()
+        if value == 'null':
+            return None
+        else:
+            return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
 
 class Color(Parameter):

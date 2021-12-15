@@ -41,8 +41,8 @@ class TestSet(param.Parameterized):
 
     __test__ = False
 
-    numpy_params = ['r']
-    pandas_params = ['s','t','u']
+    numpy_params = ['r','y']
+    pandas_params = ['s','t','u','z']
     conditionally_unsafe = ['f', 'o']
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
@@ -68,6 +68,11 @@ class TestSet(param.Parameterized):
         {'A':[1,2,3], 'B':[1.1,2.2,3.3]}), columns=(1,4), rows=(2,5))
     u = None if pd is None else param.DataFrame(default=df2, columns=['A', 'B'])
     v = param.Dict({'1':2})
+    w = param.Date(default=None, allow_None=True)
+    x = param.CalendarDate(default=None, allow_None=True)
+    y = None if np is None else param.Array(default=None)
+    z = None if pd is None else param.DataFrame(default=None, allow_None=True)
+    aa = param.Tuple(default=None, allow_None=True, length=1)
 
 
 test = TestSet(a=29)
@@ -184,7 +189,10 @@ class TestSerialization(API1TestCase):
         serialized = test.param.serialize_parameters(subset=test.pandas_params, mode=self.mode)
         deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
         for pname in test.pandas_params:
-            self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
+            if getattr(test, pname) is None:
+                self.assertTrue(deserialized[pname] is None)
+            else:
+                self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
 
 
 

@@ -4,7 +4,7 @@ from nbsite.shared_conf import *
 
 project = u'param'
 authors = u'HoloViz developers'
-copyright = u'2003-2021 ' + authors
+copyright = u'2003-2022 ' + authors
 description = 'Declarative Python programming using Parameters'
 
 import param
@@ -32,21 +32,22 @@ html_theme_options = {
     "github_url": "https://github.com/holoviz/param",
     "icon_links": [
         {
+            'name': 'Twitter',
+            'url': 'https://twitter.com/holoviz_org',
+            'icon': 'fab fa-twitter-square',
+        },
+        {
             "name": "Discourse",
             "url": "https://discourse.holoviz.org/",
             "icon": "fab fa-discourse",
         },
-    ]
+    ],
+    "footer_items": [
+        "copyright",
+        "last-updated",
+    ],
+    'google_analytics_id': 'UA-154795830-6',
 }
-
-html_context.update({
-    'PROJECT': project,
-    'DESCRIPTION': description,
-    'AUTHOR': authors,
-    'VERSION': version,
-    'theme_google_analytics_id': 'UA-154795830-6',
-    'theme_github_url': 'https://github.com/holoviz/param',
-})
 
 extensions += ['sphinx_copybutton']
 

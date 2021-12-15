@@ -179,11 +179,11 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def date_schema(cls, p, safe=False):
-        return JSONNullable({'type': 'string', 'format': 'date-time'})
+        return {'type': 'string', 'format': 'date-time'}
 
     @classmethod
     def calendardate_schema(cls, p, safe=False):
-        return JSONNullable({'type': 'string', 'format': 'date'})
+        return {'type': 'string', 'format': 'date'}
 
     @classmethod
     def tuple_schema(cls, p, safe=False):

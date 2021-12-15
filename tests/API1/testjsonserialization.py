@@ -68,6 +68,8 @@ class TestSet(param.Parameterized):
         {'A':[1,2,3], 'B':[1.1,2.2,3.3]}), columns=(1,4), rows=(2,5))
     u = None if pd is None else param.DataFrame(default=df2, columns=['A', 'B'])
     v = param.Dict({'1':2})
+    w = param.Date(default=None, allow_None=True)
+    x = param.CalendarDate(default=None, allow_None=True)
 
 
 test = TestSet(a=29)

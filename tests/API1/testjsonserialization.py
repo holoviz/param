@@ -41,8 +41,8 @@ class TestSet(param.Parameterized):
 
     __test__ = False
 
-    numpy_params = ['r']
-    pandas_params = ['s','t','u']
+    numpy_params = ['r','y']
+    pandas_params = ['s','t','u','z']
     conditionally_unsafe = ['f', 'o']
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
@@ -70,6 +70,9 @@ class TestSet(param.Parameterized):
     v = param.Dict({'1':2})
     w = param.Date(default=None, allow_None=True)
     x = param.CalendarDate(default=None, allow_None=True)
+    y = None if np is None else param.Array(default=None)
+    z = None if pd is None else param.DataFrame(default=None, allow_None=True)
+    aa = param.Tuple(default=None, allow_None=True, length=1)
 
 
 test = TestSet(a=29)

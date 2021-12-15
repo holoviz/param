@@ -1017,10 +1017,15 @@ class Tuple(Parameter):
 
     @classmethod
     def serialize(cls, value):
-        return list(value) # As JSON has no tuple representation
+        if value is None:
+            return 'null'
+        else:
+            return list(value) # As JSON has no tuple representation
 
     @classmethod
     def deserialize(cls, value):
+        if value == 'null':
+            return None
         return tuple(value) # As JSON has no tuple representation
 
 
@@ -1474,10 +1479,15 @@ class Array(ClassSelector):
 
     @classmethod
     def serialize(cls, value):
-        return value.tolist()
+        if value is None:
+            return 'null'
+        else:
+            return value.tolist()
 
     @classmethod
     def deserialize(cls, value):
+        if value == 'null':
+            return None
         from numpy import asarray
         return asarray(value)
 
@@ -1557,10 +1567,15 @@ class DataFrame(ClassSelector):
 
     @classmethod
     def serialize(cls, value):
-        return value.to_dict('records')
+        if value is None:
+            return 'null'
+        else:
+            return value.to_dict('records')
 
     @classmethod
     def deserialize(cls, value):
+        if value == 'null':
+            return None
         from pandas import DataFrame as pdDFrame
         return pdDFrame(value)
 

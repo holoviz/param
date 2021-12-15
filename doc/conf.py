@@ -12,7 +12,7 @@ import param
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
-version = release = str(param.__version__)
+version = release = base_version(param.__version__)
 
 nbbuild_cell_timeout = 600
 
@@ -49,3 +49,8 @@ html_context.update({
 })
 
 extensions += ['sphinx_copybutton']
+
+# Override the Sphinx default title that appends `documentation`
+html_title = f'{project} v{version}'
+# Format of the last updated section in the footer
+html_last_updated_fmt = '%Y-%m-%d'

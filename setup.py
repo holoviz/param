@@ -25,10 +25,10 @@ extras_require = {
     ],
     'doc': [
         'pygraphviz',
-        'nbsite >=0.6.1',
+        'nbsite >=0.7.1',
         'pydata-sphinx-theme',
         'myst-parser',
-        'nbconvert <6.0',
+        'nbconvert',
         'graphviz',
         'myst_nb ==0.12.2',
         'sphinx-copybutton',

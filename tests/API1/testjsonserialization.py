@@ -189,7 +189,10 @@ class TestSerialization(API1TestCase):
         serialized = test.param.serialize_parameters(subset=test.pandas_params, mode=self.mode)
         deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
         for pname in test.pandas_params:
-            self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
+            if getattr(test, pname) is None:
+                self.assertTrue(deserialized[pname] is None)
+            else:
+                self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
 
 
 

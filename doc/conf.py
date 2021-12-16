@@ -4,7 +4,7 @@ from nbsite.shared_conf import *
 
 project = u'param'
 authors = u'HoloViz developers'
-copyright = u'2003-2021 ' + authors
+copyright = u'2003-2022 ' + authors
 description = 'Declarative Python programming using Parameters'
 
 import param
@@ -12,7 +12,7 @@ import param
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
-version = release = str(param.__version__)
+version = release = base_version(param.__version__)
 
 nbbuild_cell_timeout = 600
 
@@ -32,20 +32,26 @@ html_theme_options = {
     "github_url": "https://github.com/holoviz/param",
     "icon_links": [
         {
+            'name': 'Twitter',
+            'url': 'https://twitter.com/holoviz_org',
+            'icon': 'fab fa-twitter-square',
+        },
+        {
             "name": "Discourse",
             "url": "https://discourse.holoviz.org/",
             "icon": "fab fa-discourse",
         },
-    ]
+    ],
+    "footer_items": [
+        "copyright",
+        "last-updated",
+    ],
+    'google_analytics_id': 'UA-154795830-6',
 }
 
-html_context.update({
-    'PROJECT': project,
-    'DESCRIPTION': description,
-    'AUTHOR': authors,
-    'VERSION': version,
-    'theme_google_analytics_id': 'UA-154795830-6',
-    'theme_github_url': 'https://github.com/holoviz/param',
-})
-
 extensions += ['sphinx_copybutton']
+
+# Override the Sphinx default title that appends `documentation`
+html_title = f'{project} v{version}'
+# Format of the last updated section in the footer
+html_last_updated_fmt = '%Y-%m-%d'

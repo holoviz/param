@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, '3.10', pypy3]
+        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, '3.10', "pypy-3.7"]
     timeout-minutes: 30
     defaults:
       run:
@@ -46,20 +46,9 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install tox flake8
       - name: lint
-        run: |
-          flake8
-      - name: unit python
-        if: (!startsWith(matrix.python-version, 'py'))
-        run: |
-          pyver="${{ matrix.python-version }}"
-          tox_env="py${pyver//.}"
-          tox -e $tox_env
-      - name: unit pypy
-        if: startsWith(matrix.python-version, 'py')
-        run: |
-          pyver="${{ matrix.python-version }}"
-          tox_env="${pyver//.}"
-          tox -e $tox_env
+        run: flake8
+      - name: unit
+        run: tox -e py
       - name: unit with_ipython
         run: tox -e with_ipython
       - name: unit with_numpy

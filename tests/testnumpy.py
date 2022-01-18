@@ -1,11 +1,10 @@
 """
 If numpy's present, is numpy stuff ok?
 """
-import unittest
 import os
+import unittest
 
 import param
-from . import API1TestCase
 
 try:
     import numpy
@@ -17,13 +16,14 @@ except ImportError:
         raise unittest.SkipTest("numpy not available")
 
 
-def _is_array_and_equal(test,ref):
+def _is_array_and_equal(test, ref):
     if not type(test) == numpy.ndarray:
         raise AssertionError
     numpy.testing.assert_array_equal(test,ref)
 
+
 # TODO: incomplete
-class TestNumpy(API1TestCase):
+class TestNumpy(unittest.TestCase):
     def test_array_param(self):
         class Z(param.Parameterized):
             z = param.Array(default=numpy.array([1]))

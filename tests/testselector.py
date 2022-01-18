@@ -4,16 +4,16 @@ Unit test for object selector parameters.
 Originally implemented as doctests in Topographica in the file
 testEnumerationParameter.txt
 """
+import unittest
 
-import param
-from . import API1TestCase
 from collections import OrderedDict
 
+import param
 
 opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 
 
-class TestSelectorParameters(API1TestCase):
+class TestSelectorParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestSelectorParameters, self).setUp()

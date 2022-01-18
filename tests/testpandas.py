@@ -1,11 +1,10 @@
 """
 Test Parameters based on pandas
 """
-import unittest
 import os
+import unittest
 
 import param
-from . import API1TestCase
 
 try:
     import pandas
@@ -16,7 +15,7 @@ except ImportError:
         raise unittest.SkipTest("pandas not available")
 
 
-class TestDataFrame(API1TestCase):
+class TestDataFrame(unittest.TestCase):
 
     def test_dataframe_positional_argument(self):
         valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]},
@@ -161,7 +160,7 @@ class TestDataFrame(API1TestCase):
                 df = param.DataFrame(default=invalid_df, rows=(5,7))
 
 
-class TestSeries(API1TestCase):
+class TestSeries(unittest.TestCase):
 
     def test_series_positional_argument(self):
         valid_series = pandas.Series([1,2])

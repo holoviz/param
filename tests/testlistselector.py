@@ -1,5 +1,7 @@
+import unittest
+
 import param
-from . import API1TestCase
+
 # TODO: I copied the tests from testobjectselector, although I
 # struggled to understand some of them. Both files should be reviewed
 # and cleaned up together.
@@ -7,7 +9,7 @@ from . import API1TestCase
 # TODO: tests copied from testobjectselector could use assertRaises
 # context manager (and could be updated in testobjectselector too).
 
-class TestListSelectorParameters(API1TestCase):
+class TestListSelectorParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestListSelectorParameters, self).setUp()

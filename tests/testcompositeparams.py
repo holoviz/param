@@ -4,11 +4,12 @@ Unit test for composite parameters.
 Originally implemented as doctests in Topographica in the file
 testCompositeParameter.txt
 """
+import unittest
 
 import param
-from . import API1TestCase
 
-class TestCompositeParameters(API1TestCase):
+
+class TestCompositeParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestCompositeParameters, self).setUp()

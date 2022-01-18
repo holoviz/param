@@ -67,7 +67,7 @@ class MockLoggingHandler(logging.Handler):
         msg='\n\nparam.log({level},...): {last_line}\ndoes not contain:\n{substring}'
         last_line = self.tail(level, n=1)
         if len(last_line) == 0:
-            raise AssertionError('Missing {method} output: {substring}'.format(
+            raise AssertionError('Missing output: {substring}'.format(
                 level=level, substring=repr(substring)))
         if substring not in last_line[0]:
             raise AssertionError(msg.format(level=level,

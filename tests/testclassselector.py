@@ -1,14 +1,14 @@
 """
 Unit test for ClassSelector parameters.
 """
-
+import unittest
 
 from numbers import Number
 
 import param
-from . import API1TestCase
 
-class TestClassSelectorParameters(API1TestCase):
+
+class TestClassSelectorParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestClassSelectorParameters, self).setUp()
@@ -71,7 +71,7 @@ class TestClassSelectorParameters(API1TestCase):
             self.P(h=float)
 
 
-class TestDictParameters(API1TestCase):
+class TestDictParameters(unittest.TestCase):
 
     def test_valid_dict_parameter(self):
         valid_dict = {1:2, 3:3}

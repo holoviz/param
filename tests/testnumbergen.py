@@ -1,14 +1,15 @@
 """
 Test cases for the numbergen module.
 """
+import unittest
+
 import numbergen
-from . import API1TestCase
 
 _seed = 0  # keep tests deterministic
 _iterations = 1000
 
 
-class TestUniformRandom(API1TestCase):
+class TestUniformRandom(unittest.TestCase):
     def test_range(self):
         lbound = 2.0
         ubound = 5.0
@@ -20,7 +21,8 @@ class TestUniformRandom(API1TestCase):
             value = gen()
             self.assertTrue(lbound <= value < ubound)
 
-class TestUniformRandomOffset(API1TestCase):
+
+class TestUniformRandomOffset(unittest.TestCase):
     def test_range(self):
         lbound = 2.0
         ubound = 5.0

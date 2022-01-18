@@ -2,15 +2,14 @@
 Unit test for String parameters
 """
 import sys
-
-from . import API1TestCase
+import unittest
 
 import param
 
 
 ip_regex = r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
-class TestStringParameters(API1TestCase):
+class TestStringParameters(unittest.TestCase):
 
     def test_regex_ok(self):
         class A(param.Parameterized):

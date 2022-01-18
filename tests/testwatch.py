@@ -2,12 +2,12 @@
 Unit test for watch mechanism
 """
 import copy
+import unittest
 
 import param
 
 from param.parameterized import discard_events
 
-from . import API1TestCase
 from .utils import MockLoggingHandler
 
 
@@ -83,7 +83,7 @@ class WatchSubclassExample(WatchMethodExample):
     pass
 
 
-class TestWatch(API1TestCase):
+class TestWatch(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -540,7 +540,7 @@ class TestWatch(API1TestCase):
         self.assertEqual(obj.e, False)
         self.assertEqual(obj.f, False)
 
-class TestWatchMethod(API1TestCase):
+class TestWatchMethod(unittest.TestCase):
 
     def test_dependent_params(self):
         obj = WatchMethodExample()
@@ -606,7 +606,7 @@ class TestWatchMethod(API1TestCase):
         self.assertEqual(obj.b, 5)
 
 
-class TestWatchValues(API1TestCase):
+class TestWatchValues(unittest.TestCase):
 
     def setUp(self):
         super(TestWatchValues, self).setUp()
@@ -725,7 +725,7 @@ class TestWatchValues(API1TestCase):
                 raise Exception('Invalid number of arguments')
 
 
-class TestWatchAttributes(API1TestCase):
+class TestWatchAttributes(unittest.TestCase):
 
     def setUp(self):
         super(TestWatchAttributes, self).setUp()
@@ -757,7 +757,7 @@ class TestWatchAttributes(API1TestCase):
         assert self.accumulator == [(0, 3)]
 
 
-class TestTrigger(API1TestCase):
+class TestTrigger(unittest.TestCase):
 
     def setUp(self):
         super(TestTrigger, self).setUp()

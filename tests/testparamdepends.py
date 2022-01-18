@@ -3,15 +3,14 @@ Unit test for param.depends.
 """
 
 import pytest
+import unittest
 
 import param
 
 from param.parameterized import _parse_dependency_spec
 
-from . import API1TestCase
 
-
-class TestDependencyParser(API1TestCase):
+class TestDependencyParser(unittest.TestCase):
 
     def test_parameter_value(self):
         obj, attr, what = _parse_dependency_spec('parameter')
@@ -50,7 +49,7 @@ class TestDependencyParser(API1TestCase):
         assert what == 'constant'
 
 
-class TestParamDependsSubclassing(API1TestCase):
+class TestParamDependsSubclassing(unittest.TestCase):
 
     def test_param_depends_override_depends_subset(self):
 
@@ -130,7 +129,7 @@ class TestParamDependsSubclassing(API1TestCase):
 
 
 
-class TestParamDepends(API1TestCase):
+class TestParamDepends(unittest.TestCase):
 
     def setUp(self):
 
@@ -641,7 +640,7 @@ class TestParamDepends(API1TestCase):
 
 
 
-class TestParamDependsFunction(API1TestCase):
+class TestParamDependsFunction(unittest.TestCase):
 
     def setUp(self):
         class P(param.Parameterized):

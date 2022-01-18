@@ -2,15 +2,14 @@
 Unit test for param.output.
 """
 import sys
+import unittest
 
 from unittest import SkipTest
 
 import param
 
-from . import API1TestCase
 
-
-class TestParamDepends(API1TestCase):
+class TestParamDepends(unittest.TestCase):
 
     def test_simple_output(self):
         class P(param.Parameterized):

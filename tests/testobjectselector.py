@@ -5,15 +5,17 @@ Originally implemented as doctests in Topographica in the file
 testEnumerationParameter.txt
 """
 
-import param
-from . import API1TestCase
+import unittest
+
 from collections import OrderedDict
+
+import param
 
 
 opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 
 
-class TestObjectSelectorParameters(API1TestCase):
+class TestObjectSelectorParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestObjectSelectorParameters, self).setUp()

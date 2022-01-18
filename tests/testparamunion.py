@@ -1,10 +1,11 @@
 """
 UnitTest for param_union helper
 """
-
 import logging
+import unittest
+
 import param
-from . import API1TestCase
+
 
 class MyHandler(logging.StreamHandler):
 
@@ -15,7 +16,8 @@ class MyHandler(logging.StreamHandler):
     def emit(self, record):
         self.records.append(record)
 
-class TestParamUnion(API1TestCase):
+
+class TestParamUnion(unittest.TestCase):
 
     def setUp(self):
         self.logger = param.get_logger()

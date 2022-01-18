@@ -7,14 +7,14 @@ get_value_generator() work.
 Originally implemented as doctests in Topographica in the file
 testDynamicParameter.txt
 """
-
 import copy
+import unittest
+
 import param
 import numbergen
-from . import API1TestCase
 
 
-class TestDynamicParameters(API1TestCase):
+class TestDynamicParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestDynamicParameters, self).setUp()

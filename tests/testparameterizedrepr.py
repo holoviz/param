@@ -1,12 +1,12 @@
 """
 Unit test for the repr and pprint of parameterized objects.
 """
+import unittest
 
 import param
-from . import API1TestCase
 
 
-class TestParameterizedRepr(API1TestCase):
+class TestParameterizedRepr(unittest.TestCase):
 
     def setUp(self):
         super(TestParameterizedRepr, self).setUp()
@@ -158,4 +158,4 @@ class TestParameterizedRepr(API1TestCase):
                          r)
 
         self.assertEqual(obj.pprint(qualify=True),
-                         "tests.API1.testparameterizedrepr."+r)
+                         "tests.testparameterizedrepr."+r)

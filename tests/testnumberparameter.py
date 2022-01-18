@@ -1,12 +1,13 @@
 """
 Unit test for Number parameters and their subclasses.
 """
-import param
 import datetime as dt
-from . import API1TestCase
+import unittest
+
+import param
 
 
-class TestNumberParameters(API1TestCase):
+class TestNumberParameters(unittest.TestCase):
 
     def test_initialization_without_step_class(self):
         class Q(param.Parameterized):

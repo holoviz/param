@@ -1,15 +1,15 @@
 """
 Unit test for CalendarDate parameters.
 """
-
-
 import datetime as dt
+import unittest
+
 import pytest
+
 import param
-from . import API1TestCase
 
 
-class TestDateTimeParameters(API1TestCase):
+class TestDateTimeParameters(unittest.TestCase):
 
     def test_initialization_out_of_bounds(self):
         try:

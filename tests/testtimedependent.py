@@ -2,13 +2,14 @@
 Unit tests for the param.Time class, time dependent parameters and
 time-dependent numbergenerators.
 """
+import copy
+import fractions
+import unittest
+
+import pytest
+
 import param
 import numbergen
-import copy
-
-from . import API1TestCase
-import pytest
-import fractions
 
 try:
     import gmpy
@@ -20,7 +21,7 @@ except ImportError:
         gmpy = None
 
 
-class TestTimeClass(API1TestCase):
+class TestTimeClass(unittest.TestCase):
 
     def test_time_init(self):
         param.Time()
@@ -128,7 +129,7 @@ class TestTimeClass(API1TestCase):
                                  gmpy.mpq(3,2)])
 
 
-class TestTimeDependentDynamic(API1TestCase):
+class TestTimeDependentDynamic(unittest.TestCase):
 
     def setUp(self):
         super(TestTimeDependentDynamic, self).setUp()

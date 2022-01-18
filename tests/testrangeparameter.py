@@ -1,11 +1,12 @@
 """
 Unit test for Range parameters.
 """
+import unittest
+
 import param
-from . import API1TestCase
 
 
-class TestRangeParameters(API1TestCase):
+class TestRangeParameters(unittest.TestCase):
 
     def test_initialization_out_of_bounds(self):
         try:

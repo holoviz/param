@@ -1,14 +1,13 @@
 """
 Testing JSON serialization of parameters and the corresponding schemas.
 """
-
 import datetime
 import json
-
-import param
+import unittest
 
 from unittest import SkipTest, skipIf
-from . import API1TestCase
+
+import param
 
 try:
     from jsonschema import validate, ValidationError
@@ -78,7 +77,7 @@ class TestSet(param.Parameterized):
 test = TestSet(a=29)
 
 
-class TestSerialization(API1TestCase):
+class TestSerialization(unittest.TestCase):
     """
     Base class for testing serialization of Parameter values
     """
@@ -203,7 +202,7 @@ class TestJSONSerialization(TestSerialization):
     __test__ = True
 
 
-class TestJSONSchema(API1TestCase):
+class TestJSONSchema(unittest.TestCase):
 
     def test_serialize_integer_schema_class(self):
         if validate is None:

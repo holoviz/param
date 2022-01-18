@@ -341,10 +341,13 @@ def iscoroutinefunction(function):
     if not hasattr(inspect, 'iscoroutinefunction'):
         return False
     import asyncio
-    return (
-        inspect.isasyncgenfunction(function) or
-        asyncio.iscoroutinefunction(function)
-    )
+    try:
+        return (
+            inspect.isasyncgenfunction(function) or
+            asyncio.iscoroutinefunction(function)
+        )
+    except AttributeError:
+        return False
 
 
 def instance_descriptor(f):

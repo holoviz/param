@@ -340,10 +340,11 @@ def iscoroutinefunction(function):
     """
     if not hasattr(inspect, 'iscoroutinefunction'):
         return False
-    try:
-        return inspect.isasyncgenfunction(function) or inspect.iscoroutinefunction(function)
-    except AttributeError:
-        return False
+    import asyncio
+    return (
+        inspect.isasyncgenfunction(function) or
+        asyncio.iscoroutinefunction(function)
+    )
 
 
 def instance_descriptor(f):
@@ -385,9 +386,15 @@ def depends(func, *dependencies, **kw):
     watch = kw.pop("watch", False)
     on_init = kw.pop("on_init", False)
 
-    @wraps(func)
-    def _depends(*args, **kw):
-        return func(*args, **kw)
+    if iscoroutinefunction(func):
+        import asyncio
+        @asyncio.coroutine
+        def _depends(*args, **kw):
+            yield from func(*args, **kw)
+    else:
+        @wraps(func)
+        def _depends(*args, **kw):
+            return func(*args, **kw)
 
     deps = list(dependencies)+list(kw.values())
     string_specs = False

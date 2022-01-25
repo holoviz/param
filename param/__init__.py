@@ -1289,7 +1289,7 @@ class Selector(SelectorBase):
         to check each item instead.
         """
         if not (val in self.objects):
-            self.objects.append(val)
+            self.objects = self.objects + [val]
 
     def get_range(self):
         """

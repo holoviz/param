@@ -1134,9 +1134,11 @@ class Parameter(object):
 
         if old is NotImplemented:
             return
+        self._trigger_event(attribute, old, value)
 
+    def _trigger_event(self, attribute, old, new):
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner,
-                      old=old, new=value, type=None)
+                      old=old, new=new, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:

@@ -25,6 +25,10 @@ import re
 import datetime as dt
 import collections
 
+from collections import OrderedDict
+from contextlib import contextmanager
+from numbers import Real
+
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, basestring, dt_types)
@@ -35,8 +39,6 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 
-from collections import OrderedDict
-from numbers import Real
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -1201,6 +1203,117 @@ class SelectorBase(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
+
+class SelectObjects(list):
+
+    def __init__(self, iterable, parameter=None):
+        super(SelectObjects, self).__init__(iterable)
+        self._parameter = parameter
+
+    def _warn(self, method):
+        clsname = type(self._parameter).__name__
+        get_logger().warning(
+            '{clsname}.objects{method} is deprecated if objects attribute '
+            'was declared as a dictionary. Use `{clsname}.objects[label] '
+            '= value` instead.'.format(clsname=clsname, method=method)
+        )
+
+    @contextmanager
+    def _trigger(self, trigger=True):
+        old = dict(self._parameter.names) or list(self._parameter._objects)
+        yield
+        if trigger:
+            value = self._parameter.names or self._parameter._objects
+            self._parameter._trigger_event('objects', old, value)
+
+    def append(self, object):
+        if self._parameter.names:
+            self._warn('.append')
+        with self._trigger():
+            super(SelectObjects, self).append(object)
+            self._parameter._objects.append(object)
+
+    def clear(self):
+        with self._trigger():
+            super(SelectObjects, self).clear()
+            self._parameter._objects.clear()
+            self._parameter.names.clear()
+
+    def extend(self, objects):
+        if self._parameter.names:
+            self._warn('.append')
+        with self._trigger():
+            super(SelectObjects, self).extend(objects)
+            self._parameter._objects.extend(objects)
+
+    def insert(self, index, object):
+        if self._parameter.names:
+            self._warn('.insert')
+        with self._trigger():
+            super(SelectObjects, self).insert(index, object)
+            self._parameter._objects.insert(index, object)
+
+    def pop(self, *args):
+        index = args[0] if args else -1
+        if isinstance(index, int):
+            with self._trigger():
+                super(SelectObjects, self).pop(index)
+                object = self._parameter._objects.pop(index)
+                if self._parameter.names:
+                    self._parameter.names = {
+                        k: v for k, v in self._parameter.names.items()
+                        if v is object
+                    }
+            return
+        if self and not self._parameter.names:
+            raise ValueError(
+                'Cannot pop an object from {clsname}.objects if '
+                'objects was not declared as a dictionary.'
+            )
+        with self._trigger():
+            object = self._parameter.names.pop(*args)
+            super(SelectObjects, self).remove(object)
+            self._parameter._objects.remove(object)
+        return object
+
+    def remove(self, object):
+        with self._trigger():
+            super(SelectObjects, self).pop(object)
+            self._parameter._objects.remove(object)
+            if self._parameter.names:
+                self._parameter.names = {
+                    k: v for k, v in self._parameter.names.items()
+                    if v is object
+                }
+
+    def __setitem__(self, index, object, trigger=True):
+        if isinstance(index, int):
+            if self._parameter.names:
+                self._warn('[index] = object')
+            with self._trigger():
+                super(SelectObjects, self).__setitem__(index, object)
+                self._parameter.objects[index] = object
+            return
+        clsname = type(self._parameter).__name__
+        if self and not self._parameter.names:
+            raise ValueError(
+                'Cannot assign new objects to {clsname}.objects by name if '
+                'objects was not declared as a dictionary.'.format(clsname=clsname)
+            )
+        with self._trigger(trigger):
+            super(SelectObjects, self).append(object)
+            self._parameter._objects.append(object)
+            self._parameter.names[index] = object
+
+    def update(self, objects, **items):
+        objects = objects.items() if isinstance(objects, dict) else objects
+        with self._trigger():
+            for k, v in objects:
+                self.__setitem__(k, v, trigger=False)
+            for k, v in items.items():
+                self.__setitem__(k, v, trigger=False)
+
+
 class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
@@ -1228,7 +1341,7 @@ class Selector(SelectorBase):
     up from the object value.
     """
 
-    __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
+    __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -1253,12 +1366,7 @@ class Selector(SelectorBase):
 
         if objects is None:
             objects = []
-        if isinstance(objects, collections_abc.Mapping):
-            self.names = objects
-            self.objects = list(objects.values())
-        else:
-            self.names = None
-            self.objects = objects
+        self.objects = objects
         self.compute_default_fn = compute_default_fn
 
         if check_on_set is not None:
@@ -1274,6 +1382,19 @@ class Selector(SelectorBase):
         self.allow_None = allow_None
         if default is not None and self.check_on_set is True:
             self._validate(default)
+
+    @property
+    def objects(self):
+        return SelectObjects(self._objects, self)
+
+    @objects.setter
+    def objects(self, objects):
+        if isinstance(objects, collections_abc.Mapping):
+            self.names = objects
+            self._objects = list(objects.values())
+        else:
+            self.names = {}
+            self._objects = objects
 
     # Note that if the list of objects is changed, the current value for
     # this parameter in existing POs could be outside of the new range.
@@ -1322,22 +1443,22 @@ class Selector(SelectorBase):
             raise ValueError("%s not in parameter%s's list of possible objects, "
                              "valid options include %s" % (val, attrib_name, items))
 
-    def _ensure_value_is_in_objects(self,val):
+    def _ensure_value_is_in_objects(self, val):
         """
         Make sure that the provided value is present on the objects list.
         Subclasses can override if they support multiple items on a list,
         to check each item instead.
         """
         if not (val in self.objects):
-            self.objects.append(val)
+            self._objects.append(val)
 
     def get_range(self):
         """
         Return the possible objects to which this parameter could be set.
 
-        (Returns the dictionary {object.name:object}.)
+        (Returns the dictionary {object.name: object}.)
         """
-        return named_objs(self.objects, self.names)
+        return named_objs(self._objects, self.names)
 
 
 class ObjectSelector(Selector):
@@ -2297,7 +2418,6 @@ class Event(Boolean):
             self._reset_event(obj, val)
 
 
-from contextlib import contextmanager
 @contextmanager
 def exceptions_summarized():
     """Useful utility for writing docs that need to show expected errors.

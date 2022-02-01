@@ -1205,6 +1205,11 @@ class SelectorBase(Parameter):
 
 
 class SelectObjects(list):
+    """
+    Wrapper around Selector.objects which allows both list-like and
+    dictionary like updates to the set of objects, ensuring backward
+    compatibility for setting objects as lists and dictionaries.
+    """
 
     def __init__(self, iterable, parameter=None):
         super(SelectObjects, self).__init__(iterable)
@@ -1220,6 +1225,7 @@ class SelectObjects(list):
 
     @contextmanager
     def _trigger(self, trigger=True):
+        trigger = 'objects' in self._parameter.watchers and trigger
         old = dict(self._parameter.names) or list(self._parameter._objects)
         yield
         if trigger:

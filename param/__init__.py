@@ -1567,14 +1567,16 @@ class DataFrame(ClassSelector):
     def serialize(cls, value):
         if value is None:
             return 'null'
-        return value.to_dict('records')
+        import json
+        return json.loads(value.to_json(orient='table'))
 
     @classmethod
     def deserialize(cls, value):
         if value == 'null':
             return None
-        from pandas import DataFrame as pdDFrame
-        return pdDFrame(value)
+        import json
+        import pandas as pd
+        return pd.read_json(json.dumps(value), orient='table')
 
 
 class Series(ClassSelector):

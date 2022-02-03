@@ -42,7 +42,7 @@ class TestSet(param.Parameterized):
     __test__ = False
 
     numpy_params = ['r','y']
-    pandas_params = ['s','t','u','z','ab']
+    pandas_params = ['s','t','u','z','ab','ac']
     conditionally_unsafe = ['f', 'o']
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
@@ -75,6 +75,9 @@ class TestSet(param.Parameterized):
     aa = param.Tuple(default=None, allow_None=True, length=1)
     ab = None if pd is None else param.DataFrame(default=pd.DataFrame(
          {'A':[datetime.datetime(year,1,1) for year in range(2020,2023)], 'B':[1.1,2.2,3.3]}),
+         columns=(1,4), rows=(2,5))
+    ac = None if pd is None else param.DataFrame(default=pd.DataFrame(
+         [[1,2,3],[4,5,6],[7,8,9]]),
          columns=(1,4), rows=(2,5))
 
 

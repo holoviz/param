@@ -1568,7 +1568,7 @@ class DataFrame(ClassSelector):
         if value is None:
             return 'null'
         import json
-        return json.loads(value.to_json(orient='table'))
+        return json.loads(value.to_json(date_format='iso'))
 
     @classmethod
     def deserialize(cls, value):
@@ -1576,7 +1576,7 @@ class DataFrame(ClassSelector):
             return None
         import json
         import pandas as pd
-        return pd.read_json(json.dumps(value), orient='table')
+        return pd.read_json(json.dumps(value))
 
 
 class Series(ClassSelector):

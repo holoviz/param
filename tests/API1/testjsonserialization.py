@@ -192,13 +192,16 @@ class TestSerialization(API1TestCase):
 
     @pd_skip
     def test_pandas_instance_serialization(self):
+        from pandas.api.types import is_datetime64_any_dtype as is_datetime
         serialized = test.param.serialize_parameters(subset=test.pandas_params, mode=self.mode)
         deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
         for pname in test.pandas_params:
             if getattr(test, pname) is None:
                 self.assertTrue(deserialized[pname] is None)
             else:
-                self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
+                test_df = getattr(test, pname)
+                non_date_cols = [c for c in test_df.columns if not is_datetime(test_df[c])]
+                self.assertTrue(test_df[non_date_cols].equals(deserialized[pname][non_date_cols]))
 
 
 

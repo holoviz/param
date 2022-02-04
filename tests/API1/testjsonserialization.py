@@ -203,10 +203,9 @@ class TestSerialization(API1TestCase):
                 deser_df = deserialized[pname].copy()
 
                 date_cols = [c for c in test_df.columns if is_datetime(test_df[c])]
-                if date_cols:
-                    for c in date_cols:
-                        src_tz = test_df.loc[0, c].tz
-                        deser_df[c] = pd.to_datetime(deser_df[c]).dt.tz_convert(src_tz)
+                for c in date_cols:
+                    src_tz = test_df.loc[0, c].tz
+                    deser_df[c] = pd.to_datetime(deser_df[c]).dt.tz_convert(src_tz)
 
                 self.assertTrue(test_df.equals(deser_df))
 

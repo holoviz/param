@@ -1,7 +1,3 @@
-# things not included
-# language
-# notifications - no email notifications set up
-
 name: pytest
 on:
   push:
@@ -26,8 +22,6 @@ jobs:
         shell: bash -l {0} 
     env:
       PYTHON_VERSION: ${{ matrix.python-version }}
-      CHANS_DEV: "-c pyviz/label/dev"
-      CHANS: "-c pyviz"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
@@ -55,7 +49,7 @@ jobs:
         if: (!startsWith(matrix.python-version, 'py'))
         run: tox -e with_numpy
       - name: unit with_pandas
-        if: (!startsWith(matrix.python-version, 'py') && !(contains(matrix.os, 'windows') && matrix.python-version == '3.10'))
+        if: (!startsWith(matrix.python-version, 'py'))
         run: tox -e with_pandas
       - name: unit with_jsonschema
         run: tox -e with_jsonschema

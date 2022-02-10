@@ -22,8 +22,6 @@ or
 pip install param
 ```
 
-The very latest changes can be obtained via `conda install -c pyviz/label/dev param` or `pip install https://github.com/ioam/param/archive/master.zip`.
-
 ## Using Param to get simple, robust code
 
 The `param` library gives you Parameters, which are used in Parameterized classes. 

@@ -969,7 +969,8 @@ class Parameter(object):
 
     _serializers = {'json': serializer.JSONSerialization}
 
-    def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
+    def __init__(self, default=_Undefined, doc=_Undefined, # pylint: disable-msg=R0913
+                 label=_Undefined, precedence=_Undefined,
                  instantiate=False, constant=False, readonly=False,
                  pickle_default_value=True, allow_None=False,
                  per_instance=True):
@@ -1056,7 +1057,7 @@ class Parameter(object):
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (default is None or allow_None)
+        self.allow_None = (self.default is None or allow_None)
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1317,7 +1318,7 @@ class String(Parameter):
     def __init__(self, default="", regex=None, allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or allow_None)
+        self.allow_None = (self.default is None or allow_None)
         self._validate(default)
 
     def _validate_regex(self, val, regex):
@@ -1830,6 +1831,10 @@ class Parameters(object):
             delattr(cls,'_%s__params'%cls.__name__)
         except AttributeError:
             pass
+
+        if hasattr(param_obj, '_validate'):
+            param_obj._validate(param_obj.default)
+
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     _add_parameter = add_parameter
@@ -2680,6 +2685,13 @@ class ParameterizedMetaclass(type):
         if docstring_signature:
             mcs.__class_docstring_signature()
 
+        # Validation is done here rather than in the Parameter itself so that slot
+        # values can be inherited along superclasses
+        for p in mcs.param.objects().values():
+            if hasattr(p, '_validate'):
+                p._validate(p.default)
+
+
     def __class_docstring_signature(mcs, max_repr_len=15):
         """
         Autogenerate a keyword signature in the class docstring for
@@ -2847,14 +2859,14 @@ class ParameterizedMetaclass(type):
                 param.instantiate=True
         del slots['instantiate']
 
-
+        supers = classlist(mcs)[::-1]
         for slot in slots.keys():
-            superclasses = iter(classlist(mcs)[::-1])
+            superclasses = iter(supers)
 
             # Search up the hierarchy until param.slot (which has to
             # be obtained using getattr(param,slot)) is not None, or
             # we run out of classes to search.
-            while getattr(param,slot) is None:
+            while getattr(param,slot) is _Undefined:
                 try:
                     param_super_class = next(superclasses)
                 except StopIteration:
@@ -2865,7 +2877,10 @@ class ParameterizedMetaclass(type):
                     # (slot might not be there because could be a more
                     # general type of Parameter)
                     new_value = getattr(new_param,slot)
-                    setattr(param,slot,new_value)
+                    if new_value is not _Undefined:
+                        setattr(param, slot, new_value)
+            if getattr(param, slot) is _Undefined:
+                setattr(param, slot, None)
 
 
     def get_param_descriptor(mcs,param_name):
@@ -3162,6 +3177,7 @@ class Parameterized(object):
         self.param._update_deps(init=True)
 
         self.initialized = True
+
 
     @property
     def param(self):

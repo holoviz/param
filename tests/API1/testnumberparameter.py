@@ -35,21 +35,21 @@ class TestNumberParameters(API1TestCase):
         self.assertEqual(qobj.param['q'].step, 0.5)
 
     def test_step_invalid_type_number_parameter(self):
-        exception = "Step parameter can only be None or a numeric value"
+        exception = "Step can only be None or a numeric value"
         with self.assertRaisesRegex(ValueError, exception):
             param.Number(step='invalid value')
 
     def test_step_invalid_type_integer_parameter(self):
-        exception = "Step parameter can only be None or an integer value"
+        exception = "Step can only be None or an integer value"
         with self.assertRaisesRegex(ValueError, exception):
             param.Integer(step=3.4)
 
     def test_step_invalid_type_datetime_parameter(self):
-        exception = "Step parameter can only be None, a datetime or datetime type"
+        exception = "Step can only be None, a datetime or datetime type"
         with self.assertRaisesRegex(ValueError, exception):
             param.Date(dt.datetime(2017,2,27), step=3.2)
 
     def test_step_invalid_type_date_parameter(self):
-        exception = "Step parameter can only be None or a date type"
+        exception = "Step can only be None or a date type"
         with self.assertRaisesRegex(ValueError, exception):
             param.CalendarDate(dt.date(2017,2,27), step=3.2)

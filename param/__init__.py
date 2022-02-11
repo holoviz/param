@@ -894,7 +894,7 @@ class Number(Dynamic):
 
     def _validate_step(self, val, step):
         if step is not None and not _is_number(step):
-            raise ValueError("Step parameter can only be None or a "
+            raise ValueError("Step can only be None or a "
                              "numeric value, not type %r." % type(step))
 
     def _validate(self, val):
@@ -936,7 +936,7 @@ class Integer(Number):
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, int):
-            raise ValueError("Step parameter can only be None or an "
+            raise ValueError("Step can only be None or an "
                              "integer value, not type %r" % type(step))
 
 
@@ -1931,7 +1931,7 @@ class Date(Number):
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt_types):
             raise ValueError(
-                "Step parameter can only be None, a datetime "
+                "Step can only be None, a datetime "
                 "or datetime type, not type %r." % type(val)
             )
 
@@ -1952,7 +1952,7 @@ class Date(Number):
 
 class CalendarDate(Number):
     """
-    CalendarDate parameter of date type.
+    Parameter specifically allowing dates (not datetimes).
     """
 
     def __init__(self, default=None, **kwargs):
@@ -1971,7 +1971,7 @@ class CalendarDate(Number):
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt.date):
-            raise ValueError("Step parameter can only be None or a date type.")
+            raise ValueError("Step can only be None or a date type.")
 
     @classmethod
     def serialize(cls, value):

@@ -1931,7 +1931,7 @@ class Date(Number):
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt_types):
             raise ValueError(
-                "Step parameter can only be None, a datetime "
+                "Step can only be None, a datetime "
                 "or datetime type, not type %r." % type(val)
             )
 

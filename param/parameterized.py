@@ -1057,7 +1057,8 @@ class Parameter(object):
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (self.default is None or allow_None)
+        self.allow_None = (self.default is _Undefined or
+                           self.default is None or allow_None)
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1248,7 +1249,7 @@ class Parameter(object):
 
     def _validate(self, val):
         """Implements validation for the parameter value and attributes"""
-        self._validate_value(val, self.allow_None)
+        self._validate_value(None if val is _Undefined else val, self.allow_None)
 
     def _post_setter(self, obj, val):
         """Called after the parameter value has been validated and set"""
@@ -1337,7 +1338,7 @@ class String(Parameter):
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
-        self._validate_regex(val, self.regex)
+        self._validate_regex(val, None if self.regex is _Undefined else self.regex)
 
 
 class shared_parameters(object):
@@ -1831,9 +1832,6 @@ class Parameters(object):
             delattr(cls,'_%s__params'%cls.__name__)
         except AttributeError:
             pass
-
-        if hasattr(param_obj, '_validate'):
-            param_obj._validate(param_obj.default)
 
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
@@ -2684,12 +2682,6 @@ class ParameterizedMetaclass(type):
 
         if docstring_signature:
             mcs.__class_docstring_signature()
-
-        # Validation is done here rather than in the Parameter itself so that slot
-        # values can be inherited along superclasses
-        for p in mcs.param.objects().values():
-            if hasattr(p, '_validate'):
-                p._validate(p.default)
 
 
     def __class_docstring_signature(mcs, max_repr_len=15):

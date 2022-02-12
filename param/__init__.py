@@ -989,9 +989,9 @@ class Tuple(Parameter):
         length is not allowed to change after instantiation.
         """
         super(Tuple,self).__init__(default=default, **params)
-        if length is _Undefined and self.default is not None:
-            self.length = len(self.default)
-        elif length is _Undefined and self.default is None:
+        if length is _Undefined and un(default) is not None:
+            self.length = len(default)
+        elif length is _Undefined and un(default) is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
         else:
@@ -1201,7 +1201,7 @@ class Selector(SelectorBase):
                  allow_None=_Undefined, empty_default=False, **params):
 
         autodefault = None
-        if objects is not _Undefined:
+        if un(objects):
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
@@ -1210,7 +1210,7 @@ class Selector(SelectorBase):
                                    "ordered; should use an ordered dict or "
                                    "supply an explicit default value.")
                 autodefault = list(objects.values())[0]
-            elif isinstance(objects, list) and len(objects):
+            elif isinstance(objects, list):
                 autodefault = objects[0]
 
         default = autodefault if (not empty_default and default is _Undefined) else default
@@ -1265,7 +1265,7 @@ class Selector(SelectorBase):
             self._ensure_value_is_in_objects(val)
             return
 
-        if not (un(val) in self.objects or (self.allow_None and un(val) is None)):
+        if not (val in self.objects or (self.allow_None and val is None)):
             # This method can be called before __init__ has called
             # super's __init__, so there may not be any name set yet.
             if (hasattr(self, "name") and self.name):

@@ -1319,7 +1319,7 @@ class String(Parameter):
     def __init__(self, default="", regex=None, allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
-        self.allow_None = (self.default is None or allow_None)
+        self.allow_None = (default is None or default is _Undefined or allow_None)
         self._validate(default)
 
     def _validate_regex(self, val, regex):
@@ -1832,7 +1832,6 @@ class Parameters(object):
             delattr(cls,'_%s__params'%cls.__name__)
         except AttributeError:
             pass
-
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     _add_parameter = add_parameter
@@ -2683,7 +2682,6 @@ class ParameterizedMetaclass(type):
         if docstring_signature:
             mcs.__class_docstring_signature()
 
-
     def __class_docstring_signature(mcs, max_repr_len=15):
         """
         Autogenerate a keyword signature in the class docstring for
@@ -3169,7 +3167,6 @@ class Parameterized(object):
         self.param._update_deps(init=True)
 
         self.initialized = True
-
 
     @property
     def param(self):

@@ -25,7 +25,7 @@ import re
 import datetime as dt
 import collections
 
-from .parameterized import ( _Undefined,
+from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, basestring)
 
@@ -731,8 +731,8 @@ def get_soft_bounds(bounds, softbounds):
     return (l, u)
 
 def un(val):
-    """Replace _Undefined with None, if present, to allow validation"""
-    return None if val is _Undefined else val
+    """Replace Undefined with None, if present, to allow validation"""
+    return None if val is Undefined else val
 
 
 class Number(Dynamic):
@@ -782,8 +782,8 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    def __init__(self, default=0.0, bounds=_Undefined, softbounds=_Undefined,
-                 inclusive_bounds=(True,True), step=_Undefined, **params):
+    def __init__(self, default=0.0, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=(True,True), step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
@@ -948,7 +948,7 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    def __init__(self, default=1.0, softbounds=_Undefined, **params):
+    def __init__(self, default=1.0, softbounds=Undefined, **params):
         Number.__init__(self, default=default, bounds=(0.0,1.0), softbounds=softbounds, **params)
 
 
@@ -981,7 +981,7 @@ class Tuple(Parameter):
 
     __slots__ = ['length']
 
-    def __init__(self, default=(0,0), length=_Undefined, **params):
+    def __init__(self, default=(0,0), length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -989,9 +989,9 @@ class Tuple(Parameter):
         length is not allowed to change after instantiation.
         """
         super(Tuple,self).__init__(default=default, **params)
-        if length is _Undefined and un(default) is not None:
+        if length is Undefined and un(default) is not None:
             self.length = len(default)
-        elif length is _Undefined and un(default) is None:
+        elif length is Undefined and un(default) is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
         else:
@@ -1118,10 +1118,10 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    def __init__(self, attribs=_Undefined, **kw):
-        if attribs is _Undefined:
+    def __init__(self, attribs=Undefined, **kw):
+        if attribs is Undefined:
             attribs = []
-        super(Composite, self).__init__(default=_Undefined, **kw)
+        super(Composite, self).__init__(default=Undefined, **kw)
         self.attribs = attribs
 
     def __get__(self, obj, objtype):
@@ -1196,9 +1196,9 @@ class Selector(SelectorBase):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, objects=_Undefined, default=_Undefined, instantiate=False,
-                 compute_default_fn=_Undefined, check_on_set=_Undefined,
-                 allow_None=_Undefined, empty_default=False, **params):
+    def __init__(self, objects=Undefined, default=Undefined, instantiate=False,
+                 compute_default_fn=Undefined, check_on_set=Undefined,
+                 allow_None=Undefined, empty_default=False, **params):
 
         autodefault = None
         if un(objects):
@@ -1213,9 +1213,9 @@ class Selector(SelectorBase):
             elif isinstance(objects, list):
                 autodefault = objects[0]
 
-        default = autodefault if (not empty_default and default is _Undefined) else default
+        default = autodefault if (not empty_default and default is Undefined) else default
 
-        if objects is _Undefined:
+        if objects is Undefined:
             objects = []
         if isinstance(objects, collections_abc.Mapping):
             self.names = objects
@@ -1225,7 +1225,7 @@ class Selector(SelectorBase):
             self.objects = objects
         self.compute_default_fn = compute_default_fn
 
-        if check_on_set is not _Undefined:
+        if check_on_set is not Undefined:
             self.check_on_set = check_on_set
         elif len(objects) == 0:
             self.check_on_set = False
@@ -1311,7 +1311,7 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
-    def __init__(self, default=_Undefined, objects=_Undefined, **kwargs):
+    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super(ObjectSelector,self).__init__(objects=objects, default=default,
                                             empty_default=True, **kwargs)
 
@@ -1326,7 +1326,7 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    def __init__(self, class_, default=_Undefined, instantiate=True, is_instance=True, **params):
+    def __init__(self, class_, default=Undefined, instantiate=True, is_instance=True, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
@@ -1390,7 +1390,7 @@ class List(Parameter):
 
     __slots__ = ['bounds', 'item_type', 'class_']
 
-    def __init__(self, default=[], class_=_Undefined, item_type=_Undefined,
+    def __init__(self, default=[], class_=Undefined, item_type=Undefined,
                  instantiate=True, bounds=(0, None), **params):
         self.item_type = item_type or class_
         self.class_ = self.item_type
@@ -1469,7 +1469,7 @@ class Dict(ClassSelector):
     Parameter whose value is a dictionary.
     """
 
-    def __init__(self, default=_Undefined, **params):
+    def __init__(self, default=Undefined, **params):
         super(Dict, self).__init__(dict, default=default, **params)
 
 
@@ -1478,7 +1478,7 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
 
-    def __init__(self, default=_Undefined, **params):
+    def __init__(self, default=Undefined, **params):
         from numpy import ndarray
         super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
 
@@ -1517,7 +1517,7 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered']
 
-    def __init__(self, default=_Undefined, rows=_Undefined, columns=_Undefined, ordered=_Undefined, **params):
+    def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
@@ -1593,7 +1593,7 @@ class Series(ClassSelector):
 
     __slots__ = ['rows']
 
-    def __init__(self, default=_Undefined, rows=_Undefined, allow_None=False, **params):
+    def __init__(self, default=Undefined, rows=Undefined, allow_None=False, **params):
         from pandas import Series as pdSeries
         self.rows = rows
         super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
@@ -1735,8 +1735,8 @@ class Path(Parameter):
 
     __slots__ = ['search_paths']
 
-    def __init__(self, default=_Undefined, search_paths=_Undefined, **params):
-        if search_paths is _Undefined:
+    def __init__(self, default=Undefined, search_paths=Undefined, **params):
+        if search_paths is Undefined:
             search_paths = []
 
         self.search_paths = search_paths
@@ -1836,7 +1836,7 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=_Undefined, path="", **kwargs):
+    def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -1864,7 +1864,7 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    def __init__(self, default=_Undefined, objects=_Undefined, **kwargs):
+    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super(ListSelector,self).__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
@@ -1889,7 +1889,7 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=_Undefined, path="", **kwargs):
+    def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -1915,7 +1915,7 @@ class Date(Number):
     Date parameter of datetime or date type.
     """
 
-    def __init__(self, default=_Undefined, **kwargs):
+    def __init__(self, default=Undefined, **kwargs):
         super(Date, self).__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
@@ -1959,7 +1959,7 @@ class CalendarDate(Number):
     Parameter specifically allowing dates (not datetimes).
     """
 
-    def __init__(self, default=_Undefined, **kwargs):
+    def __init__(self, default=Undefined, **kwargs):
         super(CalendarDate, self).__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
@@ -2035,7 +2035,7 @@ class Color(Parameter):
 
     __slots__ = ['allow_named']
 
-    def __init__(self, default=_Undefined, allow_named=True, **kwargs):
+    def __init__(self, default=Undefined, allow_named=True, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
         self.allow_named = allow_named
         self._validate(default)
@@ -2071,8 +2071,8 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    def __init__(self, default=_Undefined, bounds=_Undefined, softbounds=_Undefined,
-                 inclusive_bounds=(True,True), step=_Undefined, **params):
+    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=(True,True), step=Undefined, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds

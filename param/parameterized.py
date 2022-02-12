@@ -82,7 +82,7 @@ docstring_describe_params = True  # Add parameter description to class
 object_count = 0
 warning_count = 0
 
-class _Undefined:
+class Undefined:
     """
     Dummy value to signal completely undefined values rather than
     simple None values.
@@ -631,11 +631,11 @@ def _skip_event(*events, **kwargs):
     for e in events:
         for p in changed:
             if what == 'value':
-                old = _Undefined if e.old is None else _getattrr(e.old, p, None)
-                new = _Undefined if e.new is None else _getattrr(e.new, p, None)
+                old = Undefined if e.old is None else _getattrr(e.old, p, None)
+                new = Undefined if e.new is None else _getattrr(e.new, p, None)
             else:
-                old = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
-                new = _Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
+                old = Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
+                new = Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True
@@ -969,8 +969,8 @@ class Parameter(object):
 
     _serializers = {'json': serializer.JSONSerialization}
 
-    def __init__(self, default=_Undefined, doc=_Undefined, # pylint: disable-msg=R0913
-                 label=_Undefined, precedence=_Undefined,
+    def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
+                 label=Undefined, precedence=Undefined,
                  instantiate=False, constant=False, readonly=False,
                  pickle_default_value=True, allow_None=False,
                  per_instance=True):
@@ -1057,7 +1057,7 @@ class Parameter(object):
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (self.default is _Undefined or
+        self.allow_None = (self.default is Undefined or
                            self.default is None or allow_None)
         self.watchers = {}
         self.per_instance = per_instance
@@ -1249,7 +1249,7 @@ class Parameter(object):
 
     def _validate(self, val):
         """Implements validation for the parameter value and attributes"""
-        self._validate_value(None if val is _Undefined else val, self.allow_None)
+        self._validate_value(None if val is Undefined else val, self.allow_None)
 
     def _post_setter(self, obj, val):
         """Called after the parameter value has been validated and set"""
@@ -1319,7 +1319,7 @@ class String(Parameter):
     def __init__(self, default="", regex=None, allow_None=False, **kwargs):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or default is _Undefined or allow_None)
+        self.allow_None = (default is None or default is Undefined or allow_None)
         self._validate(default)
 
     def _validate_regex(self, val, regex):
@@ -1338,7 +1338,7 @@ class String(Parameter):
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
-        self._validate_regex(val, None if self.regex is _Undefined else self.regex)
+        self._validate_regex(val, None if self.regex is Undefined else self.regex)
 
 
 class shared_parameters(object):
@@ -2856,7 +2856,7 @@ class ParameterizedMetaclass(type):
             # Search up the hierarchy until param.slot (which has to
             # be obtained using getattr(param,slot)) is not None, or
             # we run out of classes to search.
-            while getattr(param,slot) is _Undefined:
+            while getattr(param,slot) is Undefined:
                 try:
                     param_super_class = next(superclasses)
                 except StopIteration:
@@ -2867,9 +2867,9 @@ class ParameterizedMetaclass(type):
                     # (slot might not be there because could be a more
                     # general type of Parameter)
                     new_value = getattr(new_param,slot)
-                    if new_value is not _Undefined:
+                    if new_value is not Undefined:
                         setattr(param, slot, new_value)
-            if getattr(param, slot) is _Undefined:
+            if getattr(param, slot) is Undefined:
                 setattr(param, slot, None)
 
 

@@ -699,7 +699,7 @@ class TimeSampledFn(NumberGenerator, TimeDependent):
         The offset from time 0.0 at which the first sample will be drawn.
         Must be less than the value of period.""")
 
-    fn = param.Callable(None, allow_None=True, doc="""
+    fn = param.Callable(doc="""
         The time-dependent function used to generate the sampled values.""")
 
 

@@ -730,9 +730,11 @@ def get_soft_bounds(bounds, softbounds):
 
     return (l, u)
 
-def un(val):
-    """Replace Undefined with None, if present, to allow validation"""
-    return None if val is Undefined else val
+
+def dict_update(dictionary, **kw):
+    d = dictionary.copy()
+    d.update(kw)
+    return d
 
 
 class Number(Dynamic):
@@ -782,21 +784,22 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    def __init__(self, default=0.0, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=(True,True), step=Undefined, **params):
+    _slot_defaults = dict_update(Parameter._slot_defaults, default=0.0, inclusive_bounds=(True,True))
+
+    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
         super(Number,self).__init__(default=default, **params)
-
         self.set_hook = identity_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
         self.step = step
-        self._validate(default)
+        self._validate(self.default)
 
     def __get__(self, obj, objtype):
         """
@@ -804,6 +807,9 @@ class Number(Dynamic):
         dynamically generated, check the bounds.
         """
         result = super(Number, self).__get__(obj, objtype)
+        if result is Undefined:
+            result = self._slot_defaults.default
+
         # Should be able to optimize this commonly used method by
         # avoiding extra lookups (e.g. _value_is_dynamic() is also
         # looking up 'result' - should just pass it in).
@@ -906,9 +912,9 @@ class Number(Dynamic):
         Checks that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
-        self._validate_value(un(val), self.allow_None)
-        self._validate_step(un(val), un(self.step))
-        self._validate_bounds(un(val), un(self.bounds), un(self.inclusive_bounds))
+        self._validate_value(val, self.allow_None)
+        self._validate_step(val, self.step)
+        self._validate_bounds(val, self.bounds, self.inclusive_bounds)
 
     def get_soft_bounds(self):
         return get_soft_bounds(self.bounds, self.softbounds)
@@ -924,8 +930,7 @@ class Number(Dynamic):
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
-    def __init__(self, default=0, **params):
-        Number.__init__(self, default=default, **params)
+    _slot_defaults = dict_update(Number._slot_defaults, default=0)
 
     def _validate_value(self, val, allow_None):
         if callable(val):
@@ -948,8 +953,7 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    def __init__(self, default=1.0, softbounds=Undefined, **params):
-        Number.__init__(self, default=default, bounds=(0.0,1.0), softbounds=softbounds, **params)
+    _slot_defaults = dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
 
 
@@ -960,7 +964,9 @@ class Boolean(Parameter):
 
     # Bounds are set for consistency and are arguably accurate, but have
     # no effect since values are either False, True, or None (if allowed).
-    def __init__(self, default=False, bounds=(0,1), **params):
+    _slot_defaults = dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
+
+    def __init__(self, default=Undefined, bounds=Undefined, **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
 
@@ -981,6 +987,8 @@ class Tuple(Parameter):
 
     __slots__ = ['length']
 
+    _slot_defaults = dict_update(Parameter._slot_defaults, default=(0,0))
+
     def __init__(self, default=(0,0), length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
@@ -989,14 +997,14 @@ class Tuple(Parameter):
         length is not allowed to change after instantiation.
         """
         super(Tuple,self).__init__(default=default, **params)
-        if length is Undefined and un(default) is not None:
+        if length is Undefined and default is not None:
             self.length = len(default)
-        elif length is Undefined and un(default) is None:
+        elif length is Undefined and default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
         else:
             self.length = length
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_value(self, val, allow_None):
         if val is None and allow_None:
@@ -1016,8 +1024,8 @@ class Tuple(Parameter):
                              (self.name, len(val), length))
 
     def _validate(self, val):
-        self._validate_value(un(val), self.allow_None)
-        self._validate_length(un(val), un(self.length))
+        self._validate_value(val, self.allow_None)
+        self._validate_length(val, self.length)
 
     @classmethod
     def serialize(cls, value):
@@ -1049,7 +1057,9 @@ class NumericTuple(Tuple):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    def __init__(self, default=(0.0, 0.0), **params):
+    _slot_defaults = dict_update(Parameter._slot_defaults, default=(0.0, 0.0))
+
+    def __init__(self, default=Undefined, **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
 
 
@@ -1141,7 +1151,7 @@ class Composite(Parameter):
                          (self.name, len(attribs), len(val)))
 
     def _validate(self, val):
-        self._validate_attribs(un(val), un(self.attribs))
+        self._validate_attribs(val, self.attribs)
 
     def _post_setter(self, obj, val):
         if obj is None:
@@ -1201,7 +1211,7 @@ class Selector(SelectorBase):
                  allow_None=Undefined, empty_default=False, **params):
 
         autodefault = None
-        if un(objects):
+        if objects:
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
@@ -1236,8 +1246,8 @@ class Selector(SelectorBase):
             default=default, instantiate=instantiate, **params)
         # Required as Parameter sets allow_None=True if default is None
         self.allow_None = allow_None
-        if un(default) is not None and self.check_on_set is True:
-            self._validate(default)
+        if self.default is not None and self.check_on_set is True:
+            self._validate(self.default)
 
     # Note that if the list of objects is changed, the current value for
     # this parameter in existing POs could be outside of the new range.
@@ -1259,8 +1269,6 @@ class Selector(SelectorBase):
         """
         val must be None or one of the objects in self.objects.
         """
-        val = un(val)
-
         if not self.check_on_set:
             self._ensure_value_is_in_objects(val)
             return
@@ -1326,15 +1334,17 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    def __init__(self, class_, default=Undefined, instantiate=True, is_instance=True, **params):
+    _slot_defaults = dict_update(Parameter._slot_defaults, is_instance=True)
+
+    def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate(self, val):
         super(ClassSelector, self)._validate(val)
-        self._validate_class_(un(val), self.class_, un(self.is_instance))
+        self._validate_class_(val, self.class_, self.is_instance)
 
     def _validate_class_(self, val, class_, is_instance):
         if (val is None and self.allow_None):
@@ -1397,16 +1407,16 @@ class List(Parameter):
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
                            **params)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
-        self._validate_value(un(val), self.allow_None)
-        self._validate_bounds(un(val), un(self.bounds))
-        self._validate_item_type(un(val), un(self.item_type))
+        self._validate_value(val, self.allow_None)
+        self._validate_bounds(val, self.bounds)
+        self._validate_item_type(val, self.item_type)
 
     def _validate_bounds(self, val, bounds):
         "Checks that the list is of the right length and has the right contents."
@@ -1523,6 +1533,7 @@ class DataFrame(ClassSelector):
         self.columns = columns
         self.ordered = ordered
         super(DataFrame,self).__init__(pdDFrame, default=default, **params)
+        self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -1543,29 +1554,29 @@ class DataFrame(ClassSelector):
         if isinstance(self.columns, set) and self.ordered is True:
             raise ValueError('Columns cannot be ordered when specified as a set')
 
-        if self.allow_None and un(val) is None:
+        if self.allow_None and val is None:
             return
 
-        if un(self.columns) is None:
+        if self.columns is None:
             pass
         elif (isinstance(self.columns, tuple) and len(self.columns)==2
               and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
             self._length_bounds_check(self.columns, len(val.columns), 'Columns')
         elif isinstance(self.columns, (list, set)):
-            self.ordered = isinstance(self.columns, list) if un(self.ordered) is None else self.ordered
+            self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
             difference = set(self.columns) - set([str(el) for el in val.columns])
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
         else:
-            self._length_bounds_check(un(self.columns), len(val.columns), 'Column')
+            self._length_bounds_check(self.columns, len(val.columns), 'Column')
 
-        if un(self.ordered):
+        if self.ordered:
             if list(val.columns) != list(self.columns):
                 msg = 'Provided DataFrame columns {found} must exactly match {expected}'
                 raise ValueError(msg.format(found=list(val.columns), expected=self.columns))
 
-        if un(self.rows) is not None:
+        if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'Row')
 
     @classmethod
@@ -1593,11 +1604,12 @@ class Series(ClassSelector):
 
     __slots__ = ['rows']
 
-    def __init__(self, default=Undefined, rows=Undefined, allow_None=False, **params):
+    def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
         super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
                                     **params)
+        self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -1615,11 +1627,11 @@ class Series(ClassSelector):
     def _validate(self, val):
         super(Series, self)._validate(val)
 
-        if self.allow_None and un(val) is None:
+        if self.allow_None and val is None:
             return
 
-        if un(self.rows) is not None:
-            self._length_bounds_check(un(self.rows), len(val), 'Row')
+        if self.rows is not None:
+            self._length_bounds_check(self.rows, len(val), 'Row')
 
 
 
@@ -1746,7 +1758,7 @@ class Path(Parameter):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
 
     def _validate(self, val):
-        if un(val) is None:
+        if val is None:
             if not self.allow_None:
                 Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('None is not allowed')
         else:
@@ -1876,7 +1888,7 @@ class ListSelector(Selector):
                     self.objects.append(o)
 
     def _validate(self, val):
-        if (un(val) is None and self.allow_None):
+        if (val is None and self.allow_None):
             return
         for o in val:
             super(ListSelector, self)._validate(o)
@@ -1902,7 +1914,7 @@ class MultiFileSelector(ListSelector):
 
     def update(self):
         self.objects = sorted(glob.glob(self.path))
-        if un(self.default) and all([o in self.objects for o in self.default]):
+        if self.default and all([o in self.objects for o in self.default]):
             return
         self.default = self.objects
 
@@ -1915,18 +1927,17 @@ class Date(Number):
     Date parameter of datetime or date type.
     """
 
-    def __init__(self, default=Undefined, **kwargs):
-        super(Date, self).__init__(default=default, **kwargs)
+    _slot_defaults = dict_update(Number._slot_defaults, default=None)
 
     def _validate_value(self, val, allow_None):
         """
         Checks that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
-        if self.allow_None and un(val) is None:
+        if self.allow_None and val is None:
             return
 
-        if not isinstance(un(val), dt_types) and not (allow_None and un(val) is None):
+        if not isinstance(val, dt_types) and not (allow_None and val is None):
             raise ValueError(
                 "Date parameter %r only takes datetime and date types, "
                 "not type %r." % (self.name, type(val))
@@ -1959,8 +1970,7 @@ class CalendarDate(Number):
     Parameter specifically allowing dates (not datetimes).
     """
 
-    def __init__(self, default=Undefined, **kwargs):
-        super(CalendarDate, self).__init__(default=default, **kwargs)
+    _slot_defaults = dict_update(Number._slot_defaults, default=None)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2035,14 +2045,16 @@ class Color(Parameter):
 
     __slots__ = ['allow_named']
 
-    def __init__(self, default=Undefined, allow_named=True, **kwargs):
+    _slot_defaults = dict_update(Parameter._slot_defaults, allow_named=True)
+
+    def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
         self.allow_named = allow_named
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate(self, val):
-        self._validate_value(un(val), self.allow_None)
-        self._validate_allow_named(un(val), un(self.allow_named))
+        self._validate_value(val, self.allow_None)
+        self._validate_allow_named(val, self.allow_named)
 
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None):
@@ -2071,8 +2083,11 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
+    _slot_defaults = dict_update(Tuple._slot_defaults,
+                                 default=None, inclusive_bounds=(True,True))
+
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=(True,True), step=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -2081,7 +2096,7 @@ class Range(NumericTuple):
 
     def _validate(self, val):
         super(Range, self)._validate(val)
-        self._validate_bounds(un(val), un(self.bounds), un(self.inclusive_bounds))
+        self._validate_bounds(val, self.bounds, self.inclusive_bounds)
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
         if bounds is None or (val is None and self.allow_None):

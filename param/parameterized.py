@@ -969,11 +969,15 @@ class Parameter(object):
 
     _serializers = {'json': serializer.JSONSerialization}
 
+    _slot_defaults = dict(instantiate=False, constant=False, readonly=False,
+                          pickle_default_value=True, allow_None=False,
+                          per_instance=True)
+
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
-                 instantiate=False, constant=False, readonly=False,
-                 pickle_default_value=True, allow_None=False,
-                 per_instance=True):
+                 instantiate=False, constant=Undefined, readonly=Undefined,
+                 pickle_default_value=Undefined, allow_None=False,
+                 per_instance=Undefined):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1051,14 +1055,14 @@ class Parameter(object):
         self.precedence = precedence
         self.default = default
         self.doc = doc
-        self.constant = constant or readonly # readonly => constant
+        self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (self.default is Undefined or
-                           self.default is None or allow_None)
+        self.allow_None = (default is Undefined or
+                           default is None or allow_None)
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1132,6 +1136,18 @@ class Parameter(object):
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
             self.owner.param._batch_call_watchers()
+
+    def __getattribute__(self, key):
+        """
+        Allow slot values to be Undefined in an "unbound" parameter, i.e. one
+        that is not (yet) owned by a Parameterized object, in which case their
+        value will be retrieved from the _slot_defaults dictionary.
+        """
+        v = object.__getattribute__(self, key)
+        # Safely checks for name (avoiding recursion) to decide if this object is unbound
+        if v is Undefined and key != "name" and getattr(self, "name", None) is None:
+            v = self._slot_defaults.get(key, None)
+        return v
 
     def _on_set(self, attribute, old, value):
         """
@@ -1249,7 +1265,7 @@ class Parameter(object):
 
     def _validate(self, val):
         """Implements validation for the parameter value and attributes"""
-        self._validate_value(None if val is Undefined else val, self.allow_None)
+        self._validate_value(val, self.allow_None)
 
     def _post_setter(self, obj, val):
         """Called after the parameter value has been validated and set"""
@@ -1320,7 +1336,7 @@ class String(Parameter):
         super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
         self.allow_None = (default is None or default is Undefined or allow_None)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
@@ -1338,7 +1354,7 @@ class String(Parameter):
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
-        self._validate_regex(val, None if self.regex is Undefined else self.regex)
+        self._validate_regex(val, self.regex)
 
 
 class shared_parameters(object):
@@ -2870,7 +2886,8 @@ class ParameterizedMetaclass(type):
                     if new_value is not Undefined:
                         setattr(param, slot, new_value)
             if getattr(param, slot) is Undefined:
-                setattr(param, slot, None)
+                default_val = param._slot_defaults.get(slot, None)
+                setattr(param, slot, default_val)
 
 
     def get_param_descriptor(mcs,param_name):

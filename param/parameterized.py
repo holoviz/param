@@ -820,6 +820,17 @@ class ParameterMetaclass(type):
         else:
             return type.__getattribute__(mcs,name)
 
+def allow_None_default(self):
+    """Forces allow_None=True if the param default is None"""
+    return self.default is None
+
+
+def instantiate_default(self):
+    """Constant parameters must be instantiated."""
+    # instantiate doesn't actually matter for read-only
+    # parameters, since they can't be set even on a class.  But
+    # having this code avoids needless instantiation.
+    return False if self.readonly else self.constant
 
 
 @add_metaclass(ParameterMetaclass)
@@ -970,13 +981,13 @@ class Parameter(object):
     _serializers = {'json': serializer.JSONSerialization}
 
     _slot_defaults = dict(instantiate=False, constant=False, readonly=False,
-                          pickle_default_value=True, allow_None=False,
+                          pickle_default_value=True, allow_None=allow_None_default,
                           per_instance=True)
 
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
                  instantiate=False, constant=Undefined, readonly=Undefined,
-                 pickle_default_value=Undefined, allow_None=False,
+                 pickle_default_value=Undefined, allow_None=Undefined,
                  per_instance=Undefined):
 
         """Initialize a new Parameter object and store the supplied attributes:
@@ -1061,8 +1072,7 @@ class Parameter(object):
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (default is Undefined or
-                           default is None or allow_None)
+        self.allow_None = allow_None
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1147,6 +1157,8 @@ class Parameter(object):
         # Safely checks for name (avoiding recursion) to decide if this object is unbound
         if v is Undefined and key != "name" and getattr(self, "name", None) is None:
             v = self._slot_defaults.get(key, None)
+            if callable(v):
+                v = v(self)
         return v
 
     def _on_set(self, attribute, old, value):
@@ -1332,10 +1344,9 @@ class String(Parameter):
 
     __slots__ = ['regex']
 
-    def __init__(self, default="", regex=None, allow_None=False, **kwargs):
-        super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
+    def __init__(self, default="", regex=None, **kwargs):
+        super(String, self).__init__(default=default, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or default is Undefined or allow_None)
         self._validate(self.default)
 
     def _validate_regex(self, val, regex):
@@ -2866,6 +2877,7 @@ class ParameterizedMetaclass(type):
         del slots['instantiate']
 
         supers = classlist(mcs)[::-1]
+        callables = {}
         for slot in slots.keys():
             superclasses = iter(supers)
 
@@ -2887,8 +2899,15 @@ class ParameterizedMetaclass(type):
                         setattr(param, slot, new_value)
             if getattr(param, slot) is Undefined:
                 default_val = param._slot_defaults.get(slot, None)
-                setattr(param, slot, default_val)
+                if callable(default_val):
+                    callables[slot] = default_val
+                else:
+                    setattr(param, slot, default_val)
 
+        # Once all the static slots have been filled in, fill in the dynamic ones
+        # (which are only allowed to use static values or results are undefined)
+        for slot, fn in callables.items():
+            setattr(param, slot, fn(param))
 
     def get_param_descriptor(mcs,param_name):
         """

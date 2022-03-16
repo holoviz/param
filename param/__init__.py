@@ -1204,6 +1204,8 @@ class Selector(SelectorBase):
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
+    _slot_defaults = dict_update(Parameter._slot_defaults, allow_None=False)
+
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self, objects=Undefined, default=Undefined, instantiate=False,
@@ -1244,8 +1246,6 @@ class Selector(SelectorBase):
 
         super(Selector,self).__init__(
             default=default, instantiate=instantiate, **params)
-        # Required as Parameter sets allow_None=True if default is None
-        self.allow_None = allow_None
         if self.default is not None and self.check_on_set is True:
             self._validate(self.default)
 

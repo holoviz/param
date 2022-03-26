@@ -429,10 +429,18 @@ def depends(func, *dependencies, **kw):
                              'parameters by name.')
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
-        def cb(*events):
-            args = (getattr(dep.owner, dep.name) for dep in dependencies)
-            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-            return func(*args, **dep_kwargs)
+        if iscoroutinefunction(func):
+            import asyncio
+            @asyncio.coroutine
+            def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                yield from func(*args, **dep_kwargs)
+        else:
+            def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                return func(*args, **dep_kwargs)
 
         grouped = defaultdict(list)
         for dep in deps:

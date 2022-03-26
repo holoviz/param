@@ -662,7 +662,7 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
         def caller(*events):
             if callback: callback(*events)
             if not _skip_event(*events, what=what, changed=changed):
-                yield function()
+                yield from function()
     else:
         def caller(*events):
             if callback: callback(*events)

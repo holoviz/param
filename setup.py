@@ -27,6 +27,7 @@ extras_require = {
         'pygraphviz',
         'nbsite >=0.7.1',
         'pydata-sphinx-theme',
+        'jinja2 <3.1', # API breakage
         'myst-parser',
         'nbconvert',
         'graphviz',

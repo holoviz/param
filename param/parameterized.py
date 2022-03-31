@@ -2031,7 +2031,7 @@ class Parameters(object):
 
         if self_.self_or_cls.param._BATCH_WATCH:
             self_._events.append(event)
-            if watcher not in self_._watchers:
+            if not any(watcher is w for w in self_._watchers):
                 self_._watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)

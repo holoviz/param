@@ -830,3 +830,35 @@ class TestTrigger(API1TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'triggered')
+
+    def test_sensitivity_of_widget_name(self):
+        # From: https://github.com/holoviz/param/issues/614
+
+        class ExampleWidget(param.Parameterized):
+            value = param.Number(default=1)
+
+
+        class Example(param.Parameterized):
+            da = param.Number(default=1)
+            date_picker = param.Parameter(ExampleWidget())
+            picker = param.Parameter(ExampleWidget())
+
+            @param.depends(
+                "date_picker.value",
+                "picker.value",
+                watch=True,
+            )
+            def load_data(self):
+                self.da += 1  # To trigger plot_time
+
+            @param.depends("da")
+            def plot_time(self):
+                return self.da
+
+
+        example = Example()
+        example.picker.value += 1
+        assert example.da == 2
+
+        example.picker.value += 1
+        assert example.da == 3

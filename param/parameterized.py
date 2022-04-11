@@ -1698,7 +1698,7 @@ class Parameters(object):
         for method, queued, on_init, constant, dynamic in type(obj).param._depends['watch']:
             # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
-            dynamic = [d for d in dynamic if attribute is None or d.spec.startswith(attribute)]
+            dynamic = [d for d in dynamic if attribute is None or d.spec.split(".")[0] == attribute]
             if init:
                 constant_grouped = defaultdict(list)
                 for dep in _resolve_mcs_deps(obj, constant, []):

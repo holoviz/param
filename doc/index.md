@@ -29,6 +29,5 @@ User Guide <user_guide/index>
 Comparisons <comparisons>
 Roadmap <roadmap>
 API <reference>
-Github Source <https://github.com/holoviz/param>
 About <about>
 ```

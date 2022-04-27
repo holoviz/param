@@ -449,8 +449,12 @@ def depends(func, *dependencies, **kw):
             group[0].owner.param.watch(cb, [dep.name for dep in group])
 
     _dinfo = getattr(func, '_dinfo', {})
-    _dinfo.update({'dependencies': dependencies,
-                   'kw': kw, 'watch': watch, 'on_init': on_init})
+    _dinfo.update({
+        'dependencies': dependencies,
+        'kw': kw,
+        'watch': watch,
+        'on_init': on_init
+    })
 
     _depends._dinfo = _dinfo
 
@@ -1966,7 +1970,7 @@ class Parameters(object):
         return pdict
 
 
-    def trigger(self_, *param_names):
+    def trigger(self_, *param_names, **kw):
         """
         Trigger watchers for the given set of parameter names. Watchers
         will be triggered whether or not the parameter values have
@@ -1979,13 +1983,14 @@ class Parameters(object):
         triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
                     for p in trigger_params if p in param_names}
 
+        
         events = self_.self_or_cls.param._events
         watchers = self_.self_or_cls.param._watchers
         self_.self_or_cls.param._events  = []
         self_.self_or_cls.param._watchers = []
         param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
-        self_.self_or_cls.param._TRIGGER = True
+        self_.self_or_cls.param._TRIGGER = kw.get('_trigger_sentinel', True)
         self_.set_param(**dict(params, **triggers))
         self_.self_or_cls.param._TRIGGER = False
         self_.self_or_cls.param._events += events
@@ -1997,7 +2002,7 @@ class Parameters(object):
         Returns an updated Event object with the type field set appropriately.
         """
         if triggered:
-            event_type = 'triggered'
+            event_type = 'triggered' if triggered == True else triggered
         else:
             event_type = 'changed' if watcher.onlychanged else 'set'
         return Event(what=event.what, name=event.name, obj=event.obj, cls=event.cls,
@@ -2024,7 +2029,7 @@ class Parameters(object):
         """
         Invoke the given watcher appropriately given an Event object.
         """
-        if self_.self_or_cls.param._TRIGGER:
+        if self_.self_or_cls.param._TRIGGER == True:
             pass
         elif watcher.onlychanged and (not self_._changed(event)):
             return
@@ -3168,6 +3173,7 @@ class Parameterized(object):
         object_count += 1
 
         self.param._update_deps(init=True)
+        self.param.trigger(list(params), _trigger_sentinel='changed')
 
         self.initialized = True
 

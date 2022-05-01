@@ -36,7 +36,7 @@ jobs:
           set -xe
           python -VV
           python -m site
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade setuptools pip wheel
           python -m pip install "tox<4" tox-gh-actions flake8
       # - name: lint
       #   run: python -m flake8

@@ -38,7 +38,7 @@ jobs:
           python3 -VV
           python3 -m site
           python3 -m pip install --upgrade pip
-          python3 -m pip install tox flake8
+          python3 -m pip install "tox<4" flake8
       - name: lint
         run: flake8
       - name: unit

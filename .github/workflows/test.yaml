@@ -9,7 +9,7 @@ on:
 
 jobs:
   test_suite:
-    name: Tox on ${{ matrix.python-version }}, ${{ matrix.os }}
+    name: Tox on ${{ matrix.python-version }}, ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
@@ -17,25 +17,18 @@ jobs:
         platform: ['ubuntu-latest', 'windows-latest', 'macos-latest']
         python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', '3.10', 'pypy-3.7']
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -l {0} 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: "100"
-      - uses: actions/setup-python@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Fetch
-        run: git fetch --prune --tags
       - name: env setup
         run: |
-          set -xe
-          python -VV
-          python -m site
           python -m pip install --upgrade setuptools pip wheel
           python -m pip install "tox<4" tox-gh-actions flake8
       # - name: lint

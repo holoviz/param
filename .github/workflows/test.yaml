@@ -9,40 +9,32 @@ on:
 
 jobs:
   test_suite:
-    name: Tox on ${{ matrix.python-version }}, ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Tox on ${{ matrix.python-version }}, ${{ matrix.platform }}
+    runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, '3.10', "pypy-3.7"]
+        platform: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', '3.10', 'pypy-3.7']
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -l {0} 
     env:
-      PYTHON_VERSION: ${{ matrix.python-version }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: "100"
-      - uses: actions/setup-python@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Fetch
-        run: git fetch --prune --tags
       - name: env setup
         run: |
-          set -xe
-          python3 -VV
-          python3 -m site
-          python3 -m pip install --upgrade pip
-          python3 -m pip install tox flake8
+          python -m pip install --upgrade setuptools pip wheel
+          python -m pip install "tox<4" tox-gh-actions
       - name: lint
-        run: flake8
+        run: tox -e flakes
       - name: unit
-        run: tox -e py
+        run: tox
       - name: unit with_ipython
         run: tox -e with_ipython
       - name: unit with_numpy
@@ -54,10 +46,10 @@ jobs:
       - name: unit with_jsonschema
         run: tox -e with_jsonschema
       - name: unit with_gmpy
-        if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
+        if: (contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_gmpy
       - name: unit all_deps
-        if: (contains(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
+        if: (contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all
       - uses: codecov/codecov-action@v2
         with:

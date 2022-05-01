@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, '3.10', "pypy-3.7"]
+        python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', '3.10', 'pypy-3.7']
     timeout-minutes: 30
     defaults:
       run:
@@ -38,7 +38,7 @@ jobs:
           python3 -VV
           python3 -m site
           python3 -m pip install --upgrade pip
-          python3 -m pip install "tox<4" flake8
+          python3 -m pip install "tox<4" tox-gh-actions flake8
       - name: lint
         run: flake8
       - name: unit

@@ -21,7 +21,6 @@ jobs:
       run:
         shell: bash -l {0} 
     env:
-      PYTHON_VERSION: ${{ matrix.python-version }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
@@ -35,10 +34,10 @@ jobs:
       - name: env setup
         run: |
           set -xe
-          python3 -VV
-          python3 -m site
-          python3 -m pip install --upgrade pip
-          python3 -m pip install "tox<4" tox-gh-actions flake8
+          python -VV
+          python -m site
+          python -m pip install --upgrade pip
+          python -m pip install "tox<4" tox-gh-actions flake8
       - name: lint
         run: flake8
       - name: unit

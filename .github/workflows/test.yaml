@@ -42,7 +42,7 @@ jobs:
       - name: lint
         run: flake8
       - name: unit
-        run: tox -e py
+        run: tox
       - name: unit with_ipython
         run: tox -e with_ipython
       - name: unit with_numpy

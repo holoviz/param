@@ -38,8 +38,8 @@ jobs:
           python -m site
           python -m pip install --upgrade pip
           python -m pip install "tox<4" tox-gh-actions flake8
-      - name: lint
-        run: python -m flake8
+      # - name: lint
+      #   run: python -m flake8
       - name: unit
         run: python -m tox
       - name: unit with_ipython

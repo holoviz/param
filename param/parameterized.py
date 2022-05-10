@@ -652,7 +652,7 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
         from ._async import generate_caller
-        caller = generate_caller(function, skip_event=_skip_event, callback=callback)
+        caller = generate_caller(function, what=what, changed=changed, callback=callback, skip_event=_skip_event)
     else:
         def caller(*events):
             if callback: callback(*events)

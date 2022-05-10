@@ -12,11 +12,11 @@ def generate_depends(func):
         yield from func(*args, **kw) # noqa: E999
     return _depends
 
-def generate_caller(function, skip_event, callback=None):
+def generate_caller(function, what='value', changed=None, callback=None, skip_event=None):
     @asyncio.coroutine
     def caller(*events):
         if callback: callback(*events)
-        if not skip_event(*events, what=what, changed=changed):
+        if not skip_event or not skip_event(*events, what=what, changed=changed):
             yield from function() # noqa: E999
     return caller
 

@@ -390,10 +390,8 @@ def depends(func, *dependencies, **kw):
     on_init = kw.pop("on_init", False)
 
     if iscoroutinefunction(func):
-        import asyncio
-        @asyncio.coroutine
-        def _depends(*args, **kw):
-            yield from func(*args, **kw)
+        from ._async import generate_depends
+        _depends = generate_depends(func) 
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -430,12 +428,8 @@ def depends(func, *dependencies, **kw):
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         if iscoroutinefunction(func):
-            import asyncio
-            @asyncio.coroutine
-            def cb(*events):
-                args = (getattr(dep.owner, dep.name) for dep in dependencies)
-                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-                yield from func(*args, **dep_kwargs)
+            import ._async import generate_cb
+            cb = generate_cb(func, dependencies, kw)
         else:
             def cb(*events):
                 args = (getattr(dep.owner, dep.name) for dep in dependencies)
@@ -657,12 +651,8 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
-        import asyncio
-        @asyncio.coroutine
-        def caller(*events):
-            if callback: callback(*events)
-            if not _skip_event(*events, what=what, changed=changed):
-                yield from function()
+        from ._async import generate_caller
+        caller = generate_caller(function, skip_event=_skip_event, callback=callback)
     else:
         def caller(*events):
             if callback: callback(*events)

@@ -391,7 +391,7 @@ def depends(func, *dependencies, **kw):
 
     if iscoroutinefunction(func):
         from ._async import generate_depends
-        _depends = generate_depends(func) 
+        _depends = generate_depends(func)
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -428,7 +428,7 @@ def depends(func, *dependencies, **kw):
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         if iscoroutinefunction(func):
-            import ._async import generate_cb
+            from ._async import generate_cb
             cb = generate_cb(func, dependencies, kw)
         else:
             def cb(*events):

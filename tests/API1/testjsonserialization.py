@@ -252,15 +252,19 @@ class TestSerialization(API1TestCase):
     def test_serialize_datetime_range_instance(self):
         self._test_serialize(test, 'ad')
 
+    @np_skip
     def test_serialize_datetime_range_numpy_class(self):
         self._test_serialize(TestSet, 'ae')
 
+    @np_skip
     def test_serialize_datetime_range_numpy_instance(self):
         self._test_serialize(test, 'ae')
 
+    @pd_skip
     def test_serialize_datetime_range_pandas_class(self):
         self._test_serialize(TestSet, 'af')
 
+    @pd_skip
     def test_serialize_datetime_range_pandas_instance(self):
         self._test_serialize(test, 'af')
 

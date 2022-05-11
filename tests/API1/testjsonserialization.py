@@ -73,6 +73,18 @@ class TestSet(param.Parameterized):
     y = None if np is None else param.Array(default=None)
     z = None if pd is None else param.DataFrame(default=None, allow_None=True)
     aa = param.Tuple(default=None, allow_None=True, length=1)
+    ab = param.CalendarDateRange(default=(
+        datetime.date(2020, 1, 1),
+        datetime.date(2021, 1, 1)
+    ))
+    ac = param.DateRange(default=(
+        datetime.date(2020, 1, 1),
+        datetime.date(2021, 1, 1)
+    ))
+    ad = param.DateRange(default=(
+        datetime.datetime(2020, 1, 1, 1, 1, 1, 1),
+        datetime.datetime(2021, 1, 1, 1, 1, 1, 1)
+    ))
 
 
 test = TestSet(a=29)
@@ -194,6 +206,23 @@ class TestSerialization(API1TestCase):
             else:
                 self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
 
+    def test_serialize_calendar_date_range_class(self):
+        self._test_serialize(TestSet, 'ab')
+
+    def test_serialize_calendar_date_range_instance(self):
+        self._test_serialize(test, 'ab')
+
+    def test_serialize_date_range_class(self):
+        self._test_serialize(TestSet, 'ac')
+
+    def test_serialize_date_range_instance(self):
+        self._test_serialize(test, 'ac')
+
+    def test_serialize_datetime_range_class(self):
+        self._test_serialize(TestSet, 'ad')
+
+    def test_serialize_datetime_range_instance(self):
+        self._test_serialize(test, 'ad')
 
 
 class TestJSONSerialization(TestSerialization):

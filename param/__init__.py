@@ -2112,9 +2112,15 @@ class DateRange(Range):
     """
 
     def _validate_value(self, val, allow_None):
+        # Cannot use super()._validate_value as DateRange inherits from
+        # NumericTuple which check that the tuple values are numbers and
+        # datetime objects aren't numbers.
         if allow_None and val is None:
             return
 
+        if not isinstance(val, tuple):
+            raise ValueError("DateRange parameter %r only takes a tuple value, "
+                             "not %s." % (self.name, type(val).__name__))
         for n in val:
             if isinstance(n, dt_types):
                 continue

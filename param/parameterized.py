@@ -428,8 +428,8 @@ def depends(func, *dependencies, **kw):
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         if iscoroutinefunction(func):
-            from ._async import generate_cb
-            cb = generate_cb(func, dependencies, kw)
+            from ._async import generate_callback
+            cb = generate_callback(func, dependencies, kw)
         else:
             def cb(*events):
                 args = (getattr(dep.owner, dep.name) for dep in dependencies)

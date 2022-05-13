@@ -16,6 +16,15 @@ except ImportError:
     asyncio = None
 
 
+def async_executor(func):
+    # Could be entirely replaced by asyncio.run(func()) in Python >=3.7
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    loop.run_until_complete(func())
+
 
 class TestDependencyParser(API1TestCase):
 
@@ -648,7 +657,7 @@ class TestParamDepends(API1TestCase):
     @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
     def test_async(self):
         try:
-            param.parameterized.async_executor = lambda func: asyncio.run(func())
+            param.parameterized.async_executor = async_executor
             class P(param.Parameterized):
                 a = param.Parameter()
                 single_count = param.Integer()
@@ -738,7 +747,7 @@ class TestParamDependsFunction(API1TestCase):
     @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
     def test_async(self):
         try:
-            param.parameterized.async_executor = lambda func: asyncio.run(func())
+            param.parameterized.async_executor = async_executor
             p = self.P(a=1)
 
             d = []

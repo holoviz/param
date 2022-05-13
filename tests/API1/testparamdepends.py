@@ -655,7 +655,7 @@ class TestParamDepends(API1TestCase):
 
                 @param.depends('a', watch=True)
                 @asyncio.coroutine
-                async def single_parameter(self):
+                def single_parameter(self):
                     self.single_count += 1
 
             inst = P()

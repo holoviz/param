@@ -2124,15 +2124,14 @@ class DateRange(Range):
         for n in val:
             if isinstance(n, dt_types):
                 continue
-            raise ValueError("DateRange parameter %r only takes datetime "
-                             "types, not %r." % (self.name, type(val)))
+            raise ValueError("DateRange parameter %r only takes date/datetime "
+                             "values, not type %s." % (self.name, type(n).__name__))
 
         start, end = val
         if not end >= start:
             raise ValueError("DateRange parameter %r's end datetime %s "
                              "is before start datetime %s." %
                              (self.name, val[1], val[0]))
-
 
 
 class CalendarDateRange(Range):

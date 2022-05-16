@@ -63,7 +63,7 @@ class TestSet(param.Parameterized):
     e = param.List([1,2,3], class_=int)
     f = param.List([1,2,3])
     g = param.Date(default=datetime.datetime.now())
-    g2 = None if np is None else param.Date(default=npdt1)
+    g2 = None if (np is None or on_py2) else param.Date(default=npdt1)
     g3 = None if pd is None else param.Date(default=pdts1)
     h = param.Tuple(default=(1,2,3), length=3)
     i = param.NumericTuple(default=(1,2,3,4))

@@ -1,14 +1,29 @@
 """
 Unit test for param.depends.
 """
-
-import pytest
+import sys
 
 import param
+import pytest
 
 from param.parameterized import _parse_dependency_spec
 
 from . import API1TestCase
+
+try:
+    import asyncio
+except ImportError:
+    asyncio = None
+
+
+def async_executor(func):
+    # Could be entirely replaced by asyncio.run(func()) in Python >=3.7
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    loop.run_until_complete(func())
 
 
 class TestDependencyParser(API1TestCase):
@@ -638,7 +653,25 @@ class TestParamDepends(API1TestCase):
         self.assertIs(pinfo.inst, None)
         self.assertEqual(pinfo.name, 'a')
         self.assertEqual(pinfo.what, 'value')
+    
+    @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
+    def test_async(self):
+        try:
+            param.parameterized.async_executor = async_executor
+            class P(param.Parameterized):
+                a = param.Parameter()
+                single_count = param.Integer()
 
+                @param.depends('a', watch=True)
+                @asyncio.coroutine
+                def single_parameter(self):
+                    self.single_count += 1
+
+            inst = P()
+            inst.a = 'test'
+            assert inst.single_count == 1
+        finally:
+            param.parameterized.async_executor = None
 
 
 class TestParamDependsFunction(API1TestCase):
@@ -710,6 +743,25 @@ class TestParamDependsFunction(API1TestCase):
         self.assertEqual(d, [4])
         p.b = 3
         self.assertEqual(d, [4, 5])
+
+    @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
+    def test_async(self):
+        try:
+            param.parameterized.async_executor = async_executor
+            p = self.P(a=1)
+
+            d = []
+
+            @param.depends(p.param.a, watch=True)
+            @asyncio.coroutine
+            def function(value):
+                d.append(value)
+
+            p.a = 2
+
+            assert d == [2]
+        finally:
+            param.parameterized.async_executor = None
 
 
 def test_misspelled_parameter_in_depends():

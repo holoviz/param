@@ -4,6 +4,7 @@ Testing JSON serialization of parameters and the corresponding schemas.
 
 import datetime
 import json
+import sys
 
 import param
 
@@ -30,6 +31,9 @@ except:
     np, ndarray, npdt1, npdt2 = None, None, None, None
 
 np_skip = skipIf(np is None, "NumPy is not available")
+
+on_py2 = sys.version_info[0] == 2
+py2_skip = skipIf(on_py2, "Ignore Python 2")
 
 try:
     import pandas as pd
@@ -94,7 +98,8 @@ class TestSet(param.Parameterized):
         datetime.datetime(2020, 1, 1, 1, 1, 1, 1),
         datetime.datetime(2021, 1, 1, 1, 1, 1, 1)
     ))
-    ae = None if np is None else param.DateRange(default=(npdt1, npdt2))
+    # datetime.datetime comparison with numpy.datetime64 fails on Python 2
+    ae = None if (np is None or on_py2) else param.DateRange(default=(npdt1, npdt2))
     af = None if pd is None else param.DateRange(default=(pdts1, pdts2))
 
 
@@ -151,14 +156,15 @@ class TestSerialization(API1TestCase):
     def test_serialize_date_instance(self):
         self._test_serialize(test, 'g')
 
+    @py2_skip
     @np_skip
     def test_serialize_date_numpy_class(self):
         self._test_serialize(TestSet, 'g2')
 
+    @py2_skip
     @np_skip
     def test_serialize_date_numpy_instance(self):
         self._test_serialize(test, 'g2')
-        self._test_serialize(test, 'g')
 
     @pd_skip
     def test_serialize_date_pandas_class(self):
@@ -252,10 +258,12 @@ class TestSerialization(API1TestCase):
     def test_serialize_datetime_range_instance(self):
         self._test_serialize(test, 'ad')
 
+    @py2_skip
     @np_skip
     def test_serialize_datetime_range_numpy_class(self):
         self._test_serialize(TestSet, 'ae')
 
+    @py2_skip
     @np_skip
     def test_serialize_datetime_range_numpy_instance(self):
         self._test_serialize(test, 'ae')

@@ -2651,6 +2651,7 @@ class ParameterizedMetaclass(type):
         dependers = [(n, m, m._dinfo) for (n, m) in dict_.items()
                      if hasattr(m, '_dinfo')]
 
+        # Resolve dependencies of current class
         _watch = []
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
@@ -2662,18 +2663,19 @@ class ParameterizedMetaclass(type):
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
 
-        # Resolve other dependencies in remainder of class hierarchy
+        # Resolve dependencies in class hierarchy
+        _inherited = []
         for cls in classlist(mcs)[:-1][::-1]:
             if not hasattr(cls, '_param'):
                 continue
             for dep in cls.param._depends['watch']:
                 method = getattr(mcs, dep[0], None)
                 dinfo = getattr(method, '_dinfo', {'watch': False})
-                if (not any(dep[0] == w[0] for w in _watch)
+                if (not any(dep[0] == w[0] for w in _watch+_inherited)
                     and dinfo.get('watch')):
-                    _watch.append(dep)
+                    _inherited.append(dep)
 
-        mcs.param._depends = {'watch': _watch}
+        mcs.param._depends = {'watch': _inherited+_watch}
 
         if docstring_signature:
             mcs.__class_docstring_signature()

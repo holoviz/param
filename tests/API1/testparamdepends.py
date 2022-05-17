@@ -143,7 +143,30 @@ class TestParamDependsSubclassing(API1TestCase):
         assert len(b.param.params_depended_on('test')) == 3
         assert len(B.param._depends['watch']) == 0
 
+    def test_param_depends_subclass_ordering(self):
 
+        values = []
+        
+        class A(param.Parameterized):
+            a = param.String()
+
+            @param.depends('a', watch=True)
+            def test(self):
+                values.append(self.a)
+
+        class B(A):
+
+            @param.depends('a', watch=True)
+            def more_test(self):
+                values.append(self.a.upper())
+
+        b = B()
+
+        b.a = 'a'
+
+        assert values == ['a', 'A']
+
+        
 
 class TestParamDepends(API1TestCase):
 

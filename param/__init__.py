@@ -27,7 +27,7 @@ import collections
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, basestring)
+    descendents, get_logger, instance_descriptor, basestring, dt_types)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
@@ -46,16 +46,6 @@ try:
     __version__ = str(Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param"))
 except:
     __version__ = "0.0.0+unknown"
-
-
-dt_types = (dt.datetime, dt.date)
-
-try:
-    import numpy as np
-    dt_types = dt_types + (np.datetime64,)
-except:
-    pass
-
 
 try:
     import collections.abc as collections_abc
@@ -201,12 +191,13 @@ def guess_param_types(**kwargs):
                 params[k] = Tuple(**kws)
         elif isinstance(v, list):
             params[k] = List(**kws)
-        elif isinstance(v, np.ndarray):
-            params[k] = Array(**kws)
         else:
+            from numpy import ndarray
             from pandas import DataFrame as pdDFrame
             from pandas import Series as pdSeries
 
+            if isinstance(v, ndarray):
+                params[k] = Array(**kws)
             if isinstance(v, pdDFrame):
                 params[k] = DataFrame(**kws)
             elif isinstance(v, pdSeries):

@@ -216,6 +216,29 @@ class TestParamDepends(API1TestCase):
         self.P = P
         self.P2 = P2
 
+    def test_param_depends_no_arguments_raise(self):
+        with pytest.raises(
+            ValueError,
+            match="The depends decorator on the callable 'callback' cannot be used without arguments."
+        ):
+            class A(param.Parameterized):
+
+                @param.depends
+                def callback(self):
+                    pass
+
+
+    def test_param_depends_no_dependencies_raise(self):
+        with pytest.raises(
+            ValueError,
+            match="The depends decorator on the callable 'callback' require dependencies to be defined."
+        ):
+            class A(param.Parameterized):
+
+                @param.depends()
+                def callback(self):
+                    pass
+
     def test_param_depends_on_init(self):
         class A(param.Parameterized):
 
@@ -706,6 +729,26 @@ class TestParamDependsFunction(API1TestCase):
 
 
         self.P = P
+
+    def test_param_depends_no_arguments_raise(self):
+        with pytest.raises(
+            ValueError,
+            match="The depends decorator on the callable 'function' cannot be used without arguments."
+        ):
+
+            @param.depends
+            def function():
+                pass
+
+    def test_param_depends_no_dependencies_raise(self):
+        with pytest.raises(
+            ValueError,
+            match="The depends decorator on the callable 'function' require dependencies to be defined."
+        ):
+
+            @param.depends()
+            def function():
+                pass
 
     def test_param_depends_function_instance_params(self):
         p = self.P()

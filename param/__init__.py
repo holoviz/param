@@ -133,7 +133,10 @@ def named_objs(objlist, namesdict=None):
     objs = OrderedDict()
 
     if namesdict is not None:
-        objtoname = {hashable(v): k for k, v in namesdict.items()}
+        try:
+            objtoname = {hashable(v): k for k, v in namesdict.items()}
+        except Exception:
+            return namesdict
 
     for obj in objlist:
         if namesdict is not None and hashable(obj) in objtoname:

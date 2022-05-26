@@ -144,7 +144,7 @@ def named_objs(objlist, namesdict=None):
 
     for obj in objlist:
         if reverse_lookup and hashable(obj) in reverse_lookup:
-            k = objtoname[hashable(obj)]
+            k = reverse_lookup[hashable(obj)]
         elif any(obj is v for (_, v) in unhashables):
             k = [k for (k, v) in unhashables if v is obj][0]
         elif hasattr(obj, "name"):

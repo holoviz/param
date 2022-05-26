@@ -9,6 +9,7 @@ __init__.py (providing specialized Parameter types).
 """
 
 import copy
+import datetime as dt
 import re
 import sys
 import inspect
@@ -43,6 +44,14 @@ try:
     from inspect import getfullargspec
 except:
     from inspect import getargspec as getfullargspec # python2
+
+dt_types = (dt.datetime, dt.date)
+
+try:
+    import numpy as np
+    dt_types = dt_types + (np.datetime64,)
+except:
+    pass
 
 basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
@@ -1398,8 +1407,9 @@ class Comparator(object):
         numbers.Number: operator.eq,
         basestring: operator.eq,
         bytes: operator.eq,
-        type(None): operator.eq
+        type(None): operator.eq,
     }
+    equalities.update({dtt: operator.eq for dtt in dt_types})
 
     @classmethod
     def is_equal(cls, obj1, obj2):

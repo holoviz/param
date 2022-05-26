@@ -123,6 +123,7 @@ def hashable(x):
     else:
         return x
 
+
 def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
@@ -132,15 +133,20 @@ def named_objs(objlist, namesdict=None):
     """
     objs = OrderedDict()
 
+    reverse_lookup = {}
+    unhashables = []
     if namesdict is not None:
-        try:
-            objtoname = {hashable(v): k for k, v in namesdict.items()}
-        except Exception:
-            return namesdict
+        for k, v in namesdict.items():
+            try:
+                reverse_lookup[hashable(v)] = k
+            except TypeError:
+                unhashables.append((k, v))
 
     for obj in objlist:
-        if namesdict is not None and hashable(obj) in objtoname:
+        if reverse_lookup and hashable(obj) in reverse_lookup:
             k = objtoname[hashable(obj)]
+        elif any(obj is v for (_, v) in unhashables):
+            k = [k for (k, v) in unhashables if v is obj][0]
         elif hasattr(obj, "name"):
             k = obj.name
         elif hasattr(obj, '__name__'):

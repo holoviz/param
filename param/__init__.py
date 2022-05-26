@@ -133,18 +133,18 @@ def named_objs(objlist, namesdict=None):
     """
     objs = OrderedDict()
 
-    reverse_lookup = {}
+    objtoname = {}
     unhashables = []
     if namesdict is not None:
         for k, v in namesdict.items():
             try:
-                reverse_lookup[hashable(v)] = k
+                objtoname[hashable(v)] = k
             except TypeError:
                 unhashables.append((k, v))
 
     for obj in objlist:
-        if reverse_lookup and hashable(obj) in reverse_lookup:
-            k = reverse_lookup[hashable(obj)]
+        if objtoname and hashable(obj) in objtoname:
+            k = objtoname[hashable(obj)]
         elif any(obj is v for (_, v) in unhashables):
             k = [k for (k, v) in unhashables if v is obj][0]
         elif hasattr(obj, "name"):

@@ -194,25 +194,29 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif all(isinstance(el. dt_types) for el in v) and len(v)==2:
+            elif all(isinstance(el, dt_types) for el in v) and len(v)==2:
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)
         elif isinstance(v, list):
             params[k] = List(**kws)
         else:
-            from numpy import ndarray
-            from pandas import DataFrame as pdDFrame
-            from pandas import Series as pdSeries
-
-            if isinstance(v, ndarray):
-                params[k] = Array(**kws)
-            if isinstance(v, pdDFrame):
-                params[k] = DataFrame(**kws)
-            elif isinstance(v, pdSeries):
-                params[k] = Series(**kws)
-            else:
-                params[k] = Parameter(**kws)
+            if 'numpy' in sys.modules:
+                from numpy import ndarray
+                if isinstance(v, ndarray):
+                    params[k] = Array(**kws)
+                    continue
+            if 'pandas' in sys.modules:
+                from pandas import (
+                    DataFrame as pdDFrame, Series as pdSeries
+                )
+                if isinstance(v, pdDFrame):
+                    params[k] = DataFrame(**kws)
+                    continue
+                elif isinstance(v, pdSeries):
+                    params[k] = Series(**kws)
+                    continue
+            params[k] = Parameter(**kws)
 
     return params
 

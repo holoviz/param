@@ -1413,8 +1413,6 @@ class Comparator(object):
 
     @classmethod
     def is_equal(cls, obj1, obj2):
-        if obj1 is obj2:
-            return True
         for eq_type, eq in cls.equalities.items():
             if ((isinstance(eq_type, FunctionType)
                  and eq_type(obj1) and eq_type(obj2))

@@ -24,6 +24,8 @@ import glob
 import re
 import datetime as dt
 import collections
+import numbers
+import typing
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
@@ -688,7 +690,6 @@ class Dynamic(Parameter):
             return gen
 
 
-import numbers
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
@@ -793,6 +794,10 @@ class Number(Dynamic):
         self.softbounds = softbounds
         self.step = step
         self._validate(default)
+
+    @property
+    def pytype(self):
+        return typing.Union[numbers.Number, None] if self.allow_None else numbers.Number
 
     def __get__(self, obj, objtype):
         """
@@ -960,6 +965,10 @@ class Boolean(Parameter):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
 
+    @property
+    def pytype(self):
+        return typing.Union[bool, None] if self.allow_None else bool
+
     def _validate_value(self, val, allow_None):
         if allow_None:
             if not isinstance(val, bool) and val is not None:
@@ -993,6 +1002,14 @@ class Tuple(Parameter):
         else:
             self.length = length
         self._validate(default)
+
+    @property
+    def pytype(self):
+        if self.length:
+            pytype = typing.Tuple[(typing.Any,)*self.length]
+        else:
+            ptype = typing.Tuple[typing.Any, ...]
+        return typing.Union[pytype, None] if self.allow_None else pytype
 
     def _validate_value(self, val, allow_None):
         if val is None and allow_None:
@@ -1031,6 +1048,14 @@ class Tuple(Parameter):
 class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
+    @property
+    def pytype(self):
+        if self.length:
+            pytype = typing.Tuple[(numbers.Number,)*self.length]
+        else:
+            ptype = typing.Tuple[numbers.Number, ...]
+        return typing.Union[pytype, None] if self.allow_None else pytype
+
     def _validate_value(self, val, allow_None):
         super(NumericTuple, self)._validate_value(val, allow_None)
         if allow_None and val is None:
@@ -1047,6 +1072,11 @@ class XYCoordinates(NumericTuple):
 
     def __init__(self, default=(0.0, 0.0), **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
+
+    @property
+    def pytype(self):
+        pytype = typing.Tuple[numbers.Number, numbers.Number]
+        return typing.Union[pytype, None] if self.allow_None else pytype
 
 
 class Callable(Parameter):
@@ -2165,6 +2195,7 @@ class DateRange(Range):
         # As JSON has no tuple representation
         return tuple(deserialized)
 
+
 class CalendarDateRange(Range):
     """
     A date range specified as (start_date, end_date).
@@ -2240,6 +2271,10 @@ class Event(Boolean):
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
         super(Event, self).__init__(default=default,**params)
+
+    @property
+    def pytype(self):
+        return bool
 
     def _reset_event(self, obj, val):
         val = False

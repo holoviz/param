@@ -1332,6 +1332,10 @@ class String(Parameter):
         self.allow_None = (default is None or allow_None)
         self._validate(default)
 
+    @property
+    def pytype(self):
+        return str
+
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
             return

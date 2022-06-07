@@ -928,6 +928,10 @@ class Integer(Number):
     def __init__(self, default=0, **params):
         Number.__init__(self, default=default, **params)
 
+    @property
+    def pytype(self):
+        return typing.Union[int, None] if self.allow_None else int
+
     def _validate_value(self, val, allow_None):
         if callable(val):
             return
@@ -1423,6 +1427,17 @@ class List(Parameter):
                            **params)
         self._validate(default)
 
+    @property
+    def pytype(self):
+        if isinstance(self.item_type, tuple):
+            item_type = typing.Union[self.item_type]
+        elif self.item_type is not None:
+            item_type = self.item_type
+        else:
+            item_type = typing.Any
+        list_type = typing.List[item_type]
+        return typing.Union[list_type, None] if self.allow_None else list_type
+
     def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
@@ -1496,6 +1511,12 @@ class Dict(ClassSelector):
     def __init__(self, default=None, **params):
         super(Dict, self).__init__(dict, default=default, **params)
 
+    @property
+    def pytype(self):
+        dict_type = typing.Dict[typing.Hashable, typing.Any]
+        return typing.Union[dict_type, None] if self.allow_None else dict_type
+
+
 
 class Array(ClassSelector):
     """
@@ -1503,8 +1524,13 @@ class Array(ClassSelector):
     """
 
     def __init__(self, default=None, **params):
-        from numpy import ndarray
+        
         super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
+
+    @property
+    def pytype(self):
+        from numpy import ndarray
+        return ndarray
 
     @classmethod
     def serialize(cls, value):
@@ -1548,6 +1574,11 @@ class DataFrame(ClassSelector):
         self.ordered = ordered
         super(DataFrame,self).__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
+
+    @property
+    def pytype(self):
+        from pandas import DataFrame
+        return DataFrame
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -1624,6 +1655,11 @@ class Series(ClassSelector):
         super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
                                     **params)
         self._validate(self.default)
+
+    @property
+    def pytype(self):
+        from pandas import Series
+        return Series
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'

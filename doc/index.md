@@ -28,6 +28,7 @@ Getting Started <getting_started>
 User Guide <user_guide/index>
 Comparisons <comparisons>
 Roadmap <roadmap>
+Releases <releases>
 API <reference>
 About <about>
 ```

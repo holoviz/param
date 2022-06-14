@@ -8,6 +8,7 @@ import hashlib
 import struct
 import fractions
 
+from ctypes import c_size_t
 from math import e,pi
 
 import param
@@ -306,8 +307,18 @@ class TimeAwareRandomState(TimeAware):
     explicitly when you construct the RandomDistribution object.
     """
 
+    # Historically, the default random state was seeded with the tuple
+    # (500, 500). The CPython implementation implicitly formed an unsigned
+    # integer seed using the hash of the tuple as in the expression below. Note
+    # that the resulting integer, and therefore the default initial random
+    # state, varies across CPython versions (as the hash algorithm has changed)
+    # and also between 32-bit and 64-bit interpreters.
+    #
+    # Seeding based on hashing is deprecated since Python 3.9 and removed in
+    # Python 3.11; we explicitly continue the historical behavior for the time
+    # being.
     random_generator = param.Parameter(
-        default=random.Random((500,500)), doc=
+        default=random.Random(c_size_t(hash((500,500))).value), doc=
         """
         Random state used by the object. This may may be an instance
         of random.Random from the Python standard library or an

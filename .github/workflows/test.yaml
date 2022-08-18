@@ -54,6 +54,5 @@ jobs:
       - name: unit all_deps
         if: (contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py'))
         run: tox -e with_all
-      - uses: codecov/codecov-action@v2
-        with:
-          fail_ci_if_error: true
+      - uses: codecov/codecov-action@v3
+        if: github.event_name == 'push'

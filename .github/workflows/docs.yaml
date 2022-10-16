@@ -39,7 +39,7 @@ jobs:
           python-version: 3.7
       - name: Set output
         id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: graphviz
         run: sudo apt install graphviz graphviz-dev
       - name: env setup

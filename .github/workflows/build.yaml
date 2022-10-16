@@ -36,7 +36,7 @@ jobs:
           miniconda-version: "latest"
       - name: Set output
         id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: conda setup
         run: |
           eval "$(conda shell.bash hook)"

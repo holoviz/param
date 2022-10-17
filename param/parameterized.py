@@ -1054,6 +1054,7 @@ class Parameter(object):
 
         self.name = None
         self.owner = None
+        self.validate = self._validate
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -1224,6 +1225,10 @@ class Parameter(object):
         if obj is not None:
             if not getattr(obj, 'initialized', False):
                 return
+            if not isinstance(obj, Parameterized):
+                # dont deal with events, watchers etc when object
+                # is not a Parameterized class child
+                return           
             obj.param._update_deps(self.name)
 
         if obj is None:
@@ -1252,9 +1257,26 @@ class Parameter(object):
     def _validate_value(self, value, allow_None):
         """Implements validation for parameter value"""
 
+    def _modify_prevalidate(val):
+        """
+        This function is used for modify the given values,
+        say a proper logical conversion of type. Useful mainly for 
+        custom types and not for param package specific types.
+        returns modified value. 
+        """
+        return val
+
     def _validate(self, val):
         """Implements validation for the parameter value and attributes"""
+        val = self._modify_prevalidate(val)
         self._validate_value(val, self.allow_None)
+    
+    def validate(self, val):
+        """
+        validate the value without setting in object dict
+        In constructor this will be set to _validate
+        """
+        pass
 
     def _post_setter(self, obj, val):
         """Called after the parameter value has been validated and set"""

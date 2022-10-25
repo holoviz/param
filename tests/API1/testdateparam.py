@@ -2,7 +2,7 @@
 Unit test for Date parameters.
 """
 
-
+import json
 import datetime as dt
 import param
 from . import API1TestCase
@@ -52,3 +52,16 @@ class TestDateParameters(API1TestCase):
         self.assertEqual(q.get_soft_bounds(), (dt.datetime(2017,2,1),
                                                dt.datetime(2017,2,25)))
 
+def test_date_serialization():
+    class User(param.Parameterized):
+        A = param.Date(default=None)
+
+    # Validate round is possible
+    User.param.deserialize_parameters(User.param.serialize_parameters())
+
+    serialized_data = '{"name": "User", "A": null}'
+    deserialized_data = {"name": "User", "A": None}
+
+    assert serialized_data == json.dumps(deserialized_data)
+    assert serialized_data == User.param.serialize_parameters()
+    assert deserialized_data == User.param.deserialize_parameters(serialized_data)

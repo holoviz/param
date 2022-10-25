@@ -1,7 +1,7 @@
 """
 Unit test for Date parameters.
 """
-
+import sys
 import json
 import datetime as dt
 import param
@@ -59,7 +59,11 @@ def test_date_serialization():
     # Validate round is possible
     User.param.deserialize_parameters(User.param.serialize_parameters())
 
-    serialized_data = '{"name": "User", "A": null}'
+    if sys.version_info.major == 2:
+        serialized_data = '{"A": null, "name": "User"}'
+    else:
+        serialized_data = '{"name": "User", "A": null}'
+
     deserialized_data = {"name": "User", "A": None}
 
     assert serialized_data == json.dumps(deserialized_data)

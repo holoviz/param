@@ -60,10 +60,9 @@ def test_date_serialization():
     User.param.deserialize_parameters(User.param.serialize_parameters())
 
     if sys.version_info.major == 2:
-        serialized_data = '{"A": null, "name": "User"}'
-    else:
-        serialized_data = '{"name": "User", "A": null}'
+        return
 
+    serialized_data = '{"name": "User", "A": null}'
     deserialized_data = {"name": "User", "A": None}
 
     assert serialized_data == json.dumps(deserialized_data)

@@ -1054,7 +1054,7 @@ class Parameter(object):
 
         self.name = None
         self.owner = None
-        self.validate = self._validate
+        # self.validate = self._validate
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -1276,7 +1276,7 @@ class Parameter(object):
         validate the value without setting in object dict
         In constructor this will be set to _validate
         """
-        pass
+        self._validate_value(self, val)
 
     def _post_setter(self, obj, val):
         """Called after the parameter value has been validated and set"""
@@ -1352,10 +1352,15 @@ class String(Parameter):
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
             return
-        if regex is not None and re.match(regex, val) is None:
-            raise ValueError("String parameter %r value %r does not match regex %r."
+        if regex is not None:
+            match = re.match(regex, val) 
+            if match is None:
+                raise ValueError("String parameter %r value %r does not match regex %r."
                              % (self.name, val, regex))
-
+            elif len(match.group(0)) != len(val):
+                raise ValueError("String parameter %r value %r does not match regex %r."
+                             % (self.name, val, regex))
+            
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return

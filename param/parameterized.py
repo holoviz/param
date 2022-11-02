@@ -1257,7 +1257,7 @@ class Parameter(object):
     def _validate_value(self, value, allow_None):
         """Implements validation for parameter value"""
 
-    def _modify_prevalidate(val):
+    def _modify_prevalidate(self, val):
         """
         This function is used for modify the given values,
         say a proper logical conversion of type. Useful mainly for 
@@ -1357,7 +1357,7 @@ class String(Parameter):
             if match is None:
                 raise ValueError("String parameter %r value %r does not match regex %r."
                              % (self.name, val, regex))
-            elif len(match.group(0)) != len(val):
+            elif match.group(0) != val:
                 raise ValueError("String parameter %r value %r does not match regex %r."
                              % (self.name, val, regex))
             

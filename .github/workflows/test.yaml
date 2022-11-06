@@ -37,22 +37,22 @@ jobs:
       - name: lint
         run: tox -e flakes
       - name: unit
-        run: tox
+        run: tox -e ${{ matrix.python-version }}
       - name: unit with_ipython
-        run: tox -e with_ipython
+        run: tox -e ${{ matrix.python-version }}-with_ipython
       - name: unit with_numpy
         if: (!startsWith(matrix.python-version, 'py'))
-        run: tox -e with_numpy
+        run: tox -e ${{ matrix.python-version }}-with_numpy
       - name: unit with_pandas
         if: (!startsWith(matrix.python-version, 'py'))
-        run: tox -e with_pandas
+        run: tox -e ${{ matrix.python-version }}-with_pandas
       - name: unit with_jsonschema
-        run: tox -e with_jsonschema
+        run: tox -e ${{ matrix.python-version }}-with_jsonschema
       - name: unit with_gmpy
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
-        run: tox -e with_gmpy
+        run: tox -e ${{ matrix.python-version }}-with_gmpy
       - name: unit all_deps
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
-        run: tox -e with_all
+        run: tox -e ${{ matrix.python-version }}-with_all
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

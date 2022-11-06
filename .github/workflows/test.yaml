@@ -90,7 +90,7 @@ jobs:
         run: tox -c tox27.ini -e with_numpy
       - name: unit with_pandas
         if: (!startsWith(matrix.python-version, 'py'))
-        run: tox  -c tox27.ini-e with_pandas
+        run: tox  -c tox27.ini -e with_pandas
       - name: unit with_jsonschema
         run: tox -c tox27.ini -e with_jsonschema
       - name: unit with_gmpy

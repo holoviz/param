@@ -11,7 +11,7 @@ import pytest
 import fractions
 
 try:
-    import gmpy2
+    import gmpy
 except ImportError:
     import os
     if os.getenv('PARAM_TEST_GMPY','0') == '1':

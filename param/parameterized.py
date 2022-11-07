@@ -979,7 +979,7 @@ class Parameter(object):
     def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False, constant=False, readonly=False,
                  pickle_default_value=True, allow_None=False,
-                 per_instance=True):
+                 per_instance=True, name=None):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1047,6 +1047,10 @@ class Parameter(object):
         allowed. If the default value is defined as None, allow_None
         is set to True automatically.
 
+        name: the name of the parameter to be used when stored inside 
+        the dictionary of the object to which the parameter is bound.
+        mandatory, if object is not of Parameterized class. 
+
         default, doc, and precedence all default to None, which allows
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
@@ -1061,7 +1065,7 @@ class Parameter(object):
         self.constant = constant or readonly # readonly => constant
         self.readonly = readonly
         self._label = label
-        self._internal_name = None
+        self._internal_name = name
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self.allow_None = (default is None or allow_None)
@@ -1195,6 +1199,14 @@ class Parameter(object):
         if hasattr(self, 'set_hook'):
             val = self.set_hook(obj,val)
 
+        if obj is not None:
+            if not isinstance(obj, Parameterized):
+                if self._internal_name is None or not isinstance(self._internal_name, str):
+                    raise ValueError(
+                    """unnamed parameter or name not of type string in class {}, 
+                    please set name in __init__ through name parameter (accepts string)
+                    """.format(obj))
+
         self._validate(val)
 
         _old = NotImplemented
@@ -1205,6 +1217,12 @@ class Parameter(object):
             elif obj is None:
                 _old = self.default
                 self.default = val
+            elif not isinstance(obj, Parameterized):               
+                if obj.__dict__.get(self._internal_name, None) is None:
+                    obj.__dict__[self._internal_name] = val
+                    _old = self.default
+                else:
+                    raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
             elif not obj.initialized:
                 _old = obj.__dict__.get(self._internal_name, self.default)
                 obj.__dict__[self._internal_name] = val
@@ -1223,12 +1241,16 @@ class Parameter(object):
         self._post_setter(obj, val)
 
         if obj is not None:
+            if not isinstance(obj, Parameterized):
+                """
+                dont deal with events, watchers etc when object
+                is not a Parameterized class child
+                Many other variables like obj.param below 
+                will also raise AttributeError
+                """
+                return           
             if not getattr(obj, 'initialized', False):
                 return
-            if not isinstance(obj, Parameterized):
-                # dont deal with events, watchers etc when object
-                # is not a Parameterized class child
-                return           
             obj.param._update_deps(self.name)
 
         if obj is None:

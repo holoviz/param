@@ -2,38 +2,40 @@ from collections.abc import MutableSequence
 from typing import List, Any 
 from copy import deepcopy
 
-from .parameterized import Parameter
-
+from .utils import wrap_error_text
 
 
 class AbstractConstrainedList(MutableSequence):
 
     # Need to check mul
-    # validate bounds is also problematic
-
-    def __init__(self, constant : bool = False, bounds : tuple = (0, None), allow_None : bool = True, 
-                        set_direct : bool = False) -> None:
+    
+    def __init__(self, default : List[Any] = [], constant : bool = False, bounds : tuple = (0, None), 
+                        allow_None : bool = True, set_direct : bool = False, skip_validate : bool = False) -> None:
         super().__init__()
-        self._inner     = [] 
         self.allow_None = allow_None
         self.constant   = constant
         self.bounds     = bounds
+        self._validate(default, False, skip_validate)    
+        self._initialize_set(default, set_direct)
+        
     
-    def _initialize_set(self, value : List[Any], setDirect : bool = False) -> None:
+    def _initialize_set(self, value : List[Any], set_direct : bool = False) -> None:
         """
         uses deepcopy if setDirect = True
         """
-        if setDirect:
+        if set_direct:
             self._inner = value
         else:
             self._inner = deepcopy(value) 
   
-    def _validate(self, value : Any, skipValidate : bool = False) -> None:
+    def _validate(self, value : Any, for_extending : bool = False, skip_validate : bool = False) -> None:
+        if skip_validate:
+            return
         if value is None and self.allow_None: 
             return
         if self.constant:
             raise ValueError("List {} is a constant, cannot be modified.".format(self.__repr__()))
-        self._validate_bounds(value)
+        self._validate_bounds(value, for_extending)
         self._validate_value(value)
         self._validate_item(value)
 
@@ -44,13 +46,17 @@ class AbstractConstrainedList(MutableSequence):
     def _validate_item(self, value : Any) -> None:
         raise NotImplementedError("Please implement this function in the child of AbstractContrainedList.")
 
-    def _validate_bounds(self, value : Any) -> None:
-        if self._inner.__len__() + value.__len__() >= self._bounds[0]:
-            if self._bounds[1] is not None: 
-                if self._inner.__len__() + value.__len__() <= self._bounds[1]:
-                    return 
+    def _validate_bounds(self, value : Any, for_extending : bool = False) -> None:
+        if for_extending:
+            if self._inner.__len__() + value.__len__() >= self.bounds[0]:
+                if self.bounds[1] is not None: 
+                    if self._inner.__len__() + value.__len__() <= self.bounds[1]:
+                        return 
         else:
-            raise TypeError("Given value makes list out of bounds.")
+            if value.__len__() >= self.bounds[0]:
+                if self.bounds[1] is not None: 
+                    if value.__len__() <= self.bounds[1]:
+                        return 
 
     def __json__(self) -> List[Any]:        
         return self._inner 
@@ -115,19 +121,22 @@ class AbstractConstrainedList(MutableSequence):
     def __reversed__(self) -> List[Any]:
         return self._inner.__reversed__()
 
+    def __add__(self, __x : List[Any]) -> List[Any]: 
+        return self._inner.__add__(__x)
+
     def __iadd__(self, values : List[Any] ) -> List[Any]:
         raise NotImplementedError("Please implement this function in the child of ContrainedList.")
 
     def insert(self, __index : int, __object : Any) -> None:
-        self._validate([__object])
+        self._validate([__object], for_extending=True)
         self._inner.insert(__index, __object)
 
     def append(self, __object : Any) -> None:
-        self._validate([__object])
+        self._validate([__object], for_extending=True)
         self._inner.append(__object)
         
     def extend(self, __iterable) -> None:
-        self._validate(__iterable)
+        self._validate(__iterable, for_extending=True)
         self._inner.extend(__iterable)
 
     def reverse(self) -> None:
@@ -154,76 +163,39 @@ class AbstractConstrainedList(MutableSequence):
     def sort(self, key : Any, reverse : bool):
         self._inner.sort(key, reverse)
 
-    def copy(self, returnAsConstrainedList : bool = False):
+    def copy(self, return_as_same_type : bool = False):
         raise NotImplementedError("Please implement this function in the child of ContrainedList.")
 
 
        
-class TypedList(AbstractConstrainedList):
+class TypeConstrainedList(AbstractConstrainedList):
 
     def __init__(self, default : List[Any] = [], item_type : Any = None, bounds : tuple = (0,None), 
-                       constant : bool = False, setDirect : bool = False, allow_None : bool = True) -> None:
-        super().__init__(constant, bounds, allow_None)
-        self._exclude   = exclude
-        self._item_type = itemType
-        self._validate(default, skipValidate)    
-        self._set(default, setDirect)
+                       constant : bool = False, allow_None : bool = True, set_direct : bool = False, 
+                       skip_validate : bool = False) -> None:
+        self.item_type = item_type
+        super().__init__(default, constant, bounds, allow_None)
         
     def _validate_item(self, value : Any):
-        if self._item_type is not None
+        if self.item_type is not None:
             for val in value:  
-            if itemTypeNotNone:  
-                if not isinstance(val, self._item_type):
-                    raise TypeError("Not all elements in given value is of allowed item type(s), which are : {}. Given type {}.".format(self._item_type, type(val)))
-            if excludeNotNone:
-                if isinstance(val, self._exclude):
-                    TypeError("Some elements in given value is of the \'exclude type\'. excluded type(s) : {}.".format(self._exclude)) 
-    
-    @dealWithNone(TypeError, "List is uninitialised or None")
+                if not isinstance(val, self.item_type):
+                    raise TypeError(
+                        wrap_error_text(
+                            """
+                            Not all elements givenare of allowed item type(s), which are : {}. 
+                            Given type {}.""".format(self.item_type, type(val))
+                    ))
+      
     def __iadd__(self, value : List[Any]):
         self._validate(value)
-        return TypeConstrainedList(self._inner.__iadd__(value), self._item_type, self._exclude, self._bounds,
-                                    self._constant, True, True, self.allow_None)
-
-    @dealWithNone(TypeError, "List is uninitialised or None")
-    def __add__(self, __x : List[Any] , ConstrainType : bool = True) -> List[Any]:
-        self._validate(__x, (not ConstrainType))
-        return self._inner.__add__(__x)
-
-    @dealWithNone(TypeError, "List is uninitialised or None")
-    def copy(self, returnAsSameType : bool = False) -> List[Any]: 
-        if returnAsSameType:
-            TypeConstrainedList(self._inner.copy(), self._item_type, self._exclude, self._bounds, self._constant, True, True, self.allow_None)
+        return TypeConstrainedList(self._inner.__iadd__(value), self.item_type, self.bounds,
+                                    self.constant, self.allow_None, True, True)
+    
+    def copy(self, return_as_same_type : bool = False) -> List[Any]: 
+        if return_as_same_type:
+            return TypeConstrainedList(self._inner.copy(), self.item_type, self.bounds, self.constant, 
+                                                    self.allow_None, True, True)
         else:
             return self._inner.copy()
       
-
-class ValueConstrainedList(ConstrainedList):
-
-    def __init__(self, default: List[Any] = [], objects : Union[List, Tuple] = [], no_duplicates : bool = True, bounds: tuple = (0, None), constant: bool = False, skipValidate: bool = False, setDirect: bool = False, allow_None : bool = True) -> None:
-        super().__init__(constant, bounds, allow_None)
-        self._inner   = []
-        self._objects = objects 
-        self._no_duplicates = no_duplicates
-        self._validate(default, skipValidate)
-        self._set(default, setDirect)
-         
-    def _validate_item(self, values: Any):
-        for value in values:
-            if value not in self._objects:
-                raise ValueError('value {} not present in allowed value : {}'.format(value, self._objects))
-        if self._no_duplicates:
-            checkListDuplicate(self._inner)
-
-    @dealWithNone(TypeError, "List is uninitialised or None")
-    def copy(self, returnAsValueConstrainedList: bool = False) -> List[Any]:
-        if returnAsValueConstrainedList:
-            ValueConstrainedList(self._inner.copy(), self._objects, self._no_duplicates, self._bounds, self._constant, True, True, self.allow_None)
-        else:
-            return self._inner.copy()
-
-    @dealWithNone(TypeError, "List is uninitialised or None")
-    def __iadd__(self, value) -> List:
-        self._validate(value)
-        return ValueConstrainedList(self._inner.__iadd__(value), self._objects, self._no_duplicates, self._bounds,
-                                    self._constant, True, True, self.allow_None)

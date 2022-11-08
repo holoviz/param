@@ -24,6 +24,7 @@ import glob
 import re
 import datetime as dt
 import collections
+import typing
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
@@ -34,6 +35,7 @@ from .parameterized import (batch_watch, depends, output, script_repr, # noqa: a
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
+from .extensions import TypeConstrainedList
 
 from collections import OrderedDict
 from numbers import Real
@@ -2273,3 +2275,12 @@ def exceptions_summarized():
         import sys
         etype, value, tb = sys.exc_info()
         print("{}: {}".format(etype.__name__,value), file=sys.stderr)
+
+
+class TypedList(ClassSelector):
+    
+    def __init__(self, default : typing.List[typing.Any] = [], item_type : typing.Any = None, 
+                            bounds : tuple = (0,None), **params):
+        default = TypeConstrainedList(default, item_type, bounds, params.get('constant', False), 
+                                    params.get("allow_None", False), False, False)        
+        super().__init__(class_=TypeConstrainedList, default=default, **params)

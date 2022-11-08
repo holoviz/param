@@ -33,6 +33,8 @@ import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+from .utils import wrap_error_text
+
 try:
     # In case the optional ipython module is unavailable
     from .ipython import ParamPager
@@ -1202,10 +1204,13 @@ class Parameter(object):
         if obj is not None:
             if not isinstance(obj, Parameterized):
                 if self._internal_name is None or not isinstance(self._internal_name, str):
-                    raise ValueError(
-                    """unnamed parameter or name not of type string in class {}, 
-                    please set name in __init__ through name parameter (accepts string)
-                    """.format(obj))
+                    raise NameError(
+                    wrap_error_text("""either unnamed descriptor parameter found or name not of type string in class {},\
+                    please set name in descriptor __init__ through name argument (accepts string).\
+                    Descriptor type : {}.
+                    """.format(obj, type(self))))
+                if self.name is None:
+                    self.name = self._internal_name
 
         self._validate(val)
 

@@ -1,5 +1,5 @@
-from collections.abc import MutableSequence
-from typing import List, Any 
+from collections.abc import MutableSequence, MutableMapping
+from typing import List, Any, Dict
 from copy import deepcopy
 
 from .utils import wrap_error_text
@@ -201,18 +201,18 @@ class TypeConstrainedList(AbstractConstrainedList):
       
 
 
-
 class TypeConstrainedDict(MutableMapping):
     """ A dictionary which contains only ``NewDict`` values. """
 
-    def __init__(self, default : dict = {}, key_type : tuple = None, item_type : tuple = None, allow_None : bool = True, setDirect : bool = False, validateSerialization : bool = True):
+    def __init__(self, default : Dict[Any, Any] = {}, key_type : tuple = None, item_type : tuple = None, 
+                        allow_None : bool = True, set_direct : bool = False):
         super().__init__()
         # _inner value set in update()
         self._inner = None # or collections.OrderedDict, etc.
-        self._key_type   = key_type
-        self._item_type  = item_type
-        self._allow_None = allow_None
-        self.update(default, setDirect)
+        self.key_type   = key_type
+        self.item_type  = item_type
+        self.allow_None = allow_None
+        self._set(default, set_direct)
 
     def __sizeof__(self):
         return self._inner.__sizeof__()
@@ -221,12 +221,12 @@ class TypeConstrainedDict(MutableMapping):
         return self._inner.__iter__()
 
     def __setitem__(self, __key : Any, __value : Any) -> None:
-        if self._key_type is not None:
-            if not isinstance(__key, self._key_type):
-                raise TypeError("given key {} is not of {}.".format(__key, self._key_type))
-        if self._item_type is not None: 
-            if not isinstance(__value, self._item_type):
-                raise TypeError("given item {} is not of {}.".format(__value, self._item_type))
+        if self.key_type is not None:
+            if not isinstance(__key, self.key_type):
+                raise TypeError("given key {} is not of {}.".format(__key, self.key_type))
+        if self.item_type is not None: 
+            if not isinstance(__value, self.item_type):
+                raise TypeError("given item {} is not of {}.".format(__value, self.item_type))
         self._inner.__setitem__(__key, __value)
 
     def __delitem__(self, __v : Any) -> None:
@@ -252,10 +252,7 @@ class TypeConstrainedDict(MutableMapping):
 
     def __ne__(self, __o: object) -> bool:
         return self._inner.__ne__(__o)
-
-    def __str__(self) -> str:
-        return self._inner.__str__()
-        
+    
     def __format__(self, __format_spec: str) -> str:
         return self._inner.__format__(__format_spec)        
     
@@ -295,23 +292,31 @@ class TypeConstrainedDict(MutableMapping):
     def pop(self, __key : Any) -> Any:
         return self._inner.pop(__key)
     
-    def update(self, __o : Any, updateDirect : bool = False) -> None:
+    def _set(self, __o : Any, update_direct) -> None:
+        if self._inner is None:
+            self._inner = dict()
+        if update_direct:
+            self._inner.update(__o)
+        else:
+            self.update(__o)
+
+    def update(self, __o : Any) -> None:
         if isinstance(__o, dict):
             if self._inner is None: 
                 self._inner = dict()
-            if not updateDirect:
-                keys = list(__o.keys())
-                values = list(__o.values())
-                if self._key_type is not None and keys != []:                    
-                    if not any(isinstance(key, self._key_type) for key in keys):
-                        raise TypeError("keys contain incompatible types. Allowed types : {}.".format(self._key_type))
-                if self._item_type is not None and values != []: 
-                    if not any(isinstance(value, self._item_type) for value in values):
-                        raise TypeError("values contain incompatible types. Allowed types : {}.".format(self._item_type))
+            keys = __o.keys()
+            values = __o.values()
+            if self.key_type is not None and len(keys) != 0:                    
+                for key in keys:
+                    if not isinstance(key, self.key_type):
+                        raise TypeError("keys contain incompatible types. Allowed types : {}.".format(self.key_type))
+            if self._item_type is not None and values != []: 
+                for value in values:
+                    if not isinstance(value, self.item_type):
+                        raise TypeError("values contain incompatible types. Allowed types : {}.".format(self.item_type))
             self._inner.update(__o)
-        elif self._allow_None and __o is None:
-            self._inner = None
-            return 
+        elif self.allow_None and __o is None:
+            pass
         else:    
             raise TypeError("given item for update is not a dict.")
     

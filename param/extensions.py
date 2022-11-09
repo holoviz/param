@@ -216,7 +216,7 @@ class TypeConstrainedDict(MutableMapping):
         self.bounds     = bounds 
         self.constant   = constant 
         self._validate(default)
-        self._set(default, set_direct)
+        self._initialize_set(default, set_direct)
 
     def _validate(self, value : Dict[Any, Any]) -> None:
         if self.allow_None and value is None:
@@ -337,13 +337,11 @@ class TypeConstrainedDict(MutableMapping):
     def pop(self, __key : Any) -> Any:
         return self._inner.pop(__key)
     
-    def _set(self, __o : Any, update_direct) -> None:
-        if self._inner is None:
-            self._inner = dict()
-        if update_direct:
-            self._inner.update(__o)
+    def _initialize_set(self, __o : Any, set_direct) -> None:
+        if set_direct:
+            self._inner = __o
         else:
-            self.update(__o)
+            self._inner = deepcopy(__o)
 
     def update(self, __o : Any) -> None:
         if self._inner is None: 

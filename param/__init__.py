@@ -2282,15 +2282,32 @@ class TypedList(ClassSelector):
     def __init__(self, default : typing.List[typing.Any] = [], item_type : typing.Any = None, 
                             bounds : tuple = (0,None), **params):
         default = TypeConstrainedList(default, item_type, bounds, params.get('constant', False), 
-                                    params.get("allow_None", False), False, False)        
+                                    params.get("allow_None", default is None), False, False)        
         super().__init__(class_=TypeConstrainedList, default=default, **params)
+
+
+    def __set__(self, obj, val):
+        if isinstance(val, list):
+            container : TypeConstrainedList = self.__get__(obj, None)
+            container._validate(val)
+            container._initialize_set(val)
+        else:
+            raise TypeError("Given value is not of type list. Given type {}".format(type(val)))
 
 
 class TypedDict(ClassSelector):
     
     def __init__(self, default : typing.Dict[typing.Any, typing.Any] = {}, key_type : tuple = None, 
-                        item_type : tuple = None, bounds : tuple = (0, None), constant : bool = False, 
-                        allow_None : bool = True, **params):
+                        item_type : tuple = None, bounds : tuple = (0, None), **params):
         default = TypeConstrainedDict(default, key_type, item_type, 
-                        bounds, constant, allow_None, False)
+                        bounds, params.get('constant', False), params.get("allow_None", default is None), False)
         super().__init__(class_=TypeConstrainedDict, default=default, **params)
+
+
+    def __set__(self, obj, val):
+        if isinstance(val, list):
+            container : TypeConstrainedDict = self.__get__(obj, None)
+            container._validate(val)
+            container._initialize_set(val)
+        else:
+            raise TypeError("Given value is not of type dict. Given type {}".format(type(val)))

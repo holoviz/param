@@ -199,3 +199,119 @@ class TypeConstrainedList(AbstractConstrainedList):
         else:
             return self._inner.copy()
       
+
+
+
+class TypeConstrainedDict(MutableMapping):
+    """ A dictionary which contains only ``NewDict`` values. """
+
+    def __init__(self, default : dict = {}, key_type : tuple = None, item_type : tuple = None, allow_None : bool = True, setDirect : bool = False, validateSerialization : bool = True):
+        super().__init__()
+        # _inner value set in update()
+        self._inner = None # or collections.OrderedDict, etc.
+        self._key_type   = key_type
+        self._item_type  = item_type
+        self._allow_None = allow_None
+        self.update(default, setDirect)
+
+    def __sizeof__(self):
+        return self._inner.__sizeof__()
+
+    def __iter__(self):
+        return self._inner.__iter__()
+
+    def __setitem__(self, __key : Any, __value : Any) -> None:
+        if self._key_type is not None:
+            if not isinstance(__key, self._key_type):
+                raise TypeError("given key {} is not of {}.".format(__key, self._key_type))
+        if self._item_type is not None: 
+            if not isinstance(__value, self._item_type):
+                raise TypeError("given item {} is not of {}.".format(__value, self._item_type))
+        self._inner.__setitem__(__key, __value)
+
+    def __delitem__(self, __v : Any) -> None:
+        self._inner.__delitem__(__v)
+
+    def __getitem__(self, __k : Any):
+        return self._inner.__getitem__(__k)
+
+    def __json__(self):
+        return self._inner
+    
+    def __str__(self) -> str:
+        return self._inner.__str__()
+
+    def __len__(self) -> int:
+        return self._inner.__len__()
+
+    def __contains__(self, __o : object) -> bool:
+        return self._inner.__contains__(__o)
+
+    def __eq__(self, __o: object) -> bool:
+        return self._inner.__eq__(__o) 
+
+    def __ne__(self, __o: object) -> bool:
+        return self._inner.__ne__(__o)
+
+    def __str__(self) -> str:
+        return self._inner.__str__()
+        
+    def __format__(self, __format_spec: str) -> str:
+        return self._inner.__format__(__format_spec)        
+    
+    def __sizeof__(self) -> int:
+        return self._inner.__sizeof__()
+        
+    def __repr__(self) -> str:
+        return self._inner.__repr__()
+        
+    def fromkeys(self, __iterable, __value : Any):
+        return self._inner.fromkeys(__iterable, __value)
+
+    def keys(self):
+        return self._inner.keys()
+
+    def items(self):
+        return self._inner.items()
+
+    def values(self):
+        return self._inner.values()
+
+    def get(self, __key : Any, __default : Any):
+        return self._inner.get(__key, __default)
+
+    def setdefault(self, __key : Any) -> None:
+        self._inner.setdefault(__key)       
+
+    def clear(self) -> None:
+        self._inner.clear()
+
+    def copy(self) -> Dict[Any, Any]:
+        return self._inner.copy()
+
+    def popitem(self) -> tuple:
+        return self._inner.popitem()
+    
+    def pop(self, __key : Any) -> Any:
+        return self._inner.pop(__key)
+    
+    def update(self, __o : Any, updateDirect : bool = False) -> None:
+        if isinstance(__o, dict):
+            if self._inner is None: 
+                self._inner = dict()
+            if not updateDirect:
+                keys = list(__o.keys())
+                values = list(__o.values())
+                if self._key_type is not None and keys != []:                    
+                    if not any(isinstance(key, self._key_type) for key in keys):
+                        raise TypeError("keys contain incompatible types. Allowed types : {}.".format(self._key_type))
+                if self._item_type is not None and values != []: 
+                    if not any(isinstance(value, self._item_type) for value in values):
+                        raise TypeError("values contain incompatible types. Allowed types : {}.".format(self._item_type))
+            self._inner.update(__o)
+        elif self._allow_None and __o is None:
+            self._inner = None
+            return 
+        else:    
+            raise TypeError("given item for update is not a dict.")
+    

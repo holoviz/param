@@ -3819,4 +3819,3 @@ class overridable_property(object):
             getattr(obj, self.fdel.__name__)()
 
 
-from .extensions import *

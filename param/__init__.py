@@ -35,7 +35,7 @@ from .parameterized import (batch_watch, depends, output, script_repr, # noqa: a
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
-from .extensions import TypeConstrainedList
+from .extensions import *
 
 from collections import OrderedDict
 from numbers import Real
@@ -2284,3 +2284,13 @@ class TypedList(ClassSelector):
         default = TypeConstrainedList(default, item_type, bounds, params.get('constant', False), 
                                     params.get("allow_None", False), False, False)        
         super().__init__(class_=TypeConstrainedList, default=default, **params)
+
+
+class TypedDict(ClassSelector):
+    
+    def __init__(self, default : typing.Dict[typing.Any, typing.Any] = {}, key_type : tuple = None, 
+                        item_type : tuple = None, bounds : tuple = (0, None), constant : bool = False, 
+                        allow_None : bool = True, **params):
+        default = TypeConstrainedDict(default, key_type, item_type, 
+                        bounds, constant, allow_None, False)
+        super().__init__(class_=TypeConstrainedDict, default=default, **params)

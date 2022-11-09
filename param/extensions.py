@@ -77,7 +77,7 @@ class AbstractConstrainedList(MutableSequence):
         return self._inner[index]
 
     def __setitem__(self, index : int, value : Any) -> None:
-        if self._constant:
+        if self.constant:
             raise ValueError("List is a constant, cannot be modified.")
         self._validate_item(value)
         self._inner[index] = value
@@ -163,7 +163,7 @@ class AbstractConstrainedList(MutableSequence):
     def sort(self, key : Any, reverse : bool):
         self._inner.sort(key, reverse)
 
-    def copy(self, return_as_same_type : bool = False):
+    def copy(self, return_as_typed_dict : bool = False):
         raise NotImplementedError("Please implement this function in the child of ContrainedList.")
 
 
@@ -192,8 +192,8 @@ class TypeConstrainedList(AbstractConstrainedList):
         return TypeConstrainedList(self._inner.__iadd__(value), self.item_type, self.bounds,
                                     self.constant, self.allow_None, True, True)
     
-    def copy(self, return_as_same_type : bool = False) -> List[Any]: 
-        if return_as_same_type:
+    def copy(self, return_as_typed_dict : bool = False) -> List[Any]: 
+        if return_as_typed_dict:
             return TypeConstrainedList(self._inner.copy(), self.item_type, self.bounds, self.constant, 
                                                     self.allow_None, True, True)
         else:
@@ -215,36 +215,49 @@ class TypeConstrainedDict(MutableMapping):
         self.allow_None = allow_None
         self.bounds     = bounds 
         self.constant   = constant 
+        self._validate(default)
         self._set(default, set_direct)
 
-    def _validate(self, value):
+    def _validate(self, value : Dict[Any, Any]) -> None:
         if self.allow_None and value is None:
             return 
         if self.constant:
-            raise ValueError()
-        self._validate_value()
-        self._validate_bounds()
-        self._validate_item()
+            raise ValueError("")
+        self._validate_value(value)
+        self._validate_bounds(value)
+        self._validate_item(value)
 
-    def _validate_value(self, value):
-        pass 
+    def _validate_value(self, value) -> None:
+        if not isinstance(value, dict):
+            raise TypeError("")
 
-    def _validate_bounds(self, value):
-        pass 
-
-    def _validate_item(self, value):
-        keys = __o.keys()
-        values = __o.values()
+    def _validate_bounds(self, value : Dict[Any, Any], for_updating : bool = False) -> None:
+        if for_updating:
+            if not (self.bounds[0] < self._inner.__len__() + value.__len__() < self.bounds[1]):
+                raise ValueError("")
+        else:
+            if not (self.bounds[0] < value.__len__() < self.bounds[1]):
+                raise ValueError("")
+            
+    def _validate_item(self, value : Dict[Any, Any]) -> None:
+        keys = value.keys()
+        values = value.values()
         if self.key_type is not None and len(keys) != 0:                    
             for key in keys:
                 if not isinstance(key, self.key_type):
                     raise TypeError("keys contain incompatible types. Allowed types : {}.".format(self.key_type))
-        if self._item_type is not None and values != []: 
+        if self.item_type is not None and values != []: 
             for value in values:
                 if not isinstance(value, self.item_type):
                     raise TypeError("values contain incompatible types. Allowed types : {}.".format(self.item_type))
        
-               
+    def _validate_key_value_pair(self, __key : Any, __value : Any) -> None:
+        if self.key_type is not None:
+            if not isinstance(__key, self.key_type):
+                raise TypeError("given key {} is not of {}.".format(__key, self.key_type))
+        if self.item_type is not None: 
+            if not isinstance(__value, self.item_type):
+                raise TypeError("given item {} is not of {}.".format(__value, self.item_type))
 
     def __sizeof__(self):
         return self._inner.__sizeof__()
@@ -253,12 +266,9 @@ class TypeConstrainedDict(MutableMapping):
         return self._inner.__iter__()
 
     def __setitem__(self, __key : Any, __value : Any) -> None:
-        if self.key_type is not None:
-            if not isinstance(__key, self.key_type):
-                raise TypeError("given key {} is not of {}.".format(__key, self.key_type))
-        if self.item_type is not None: 
-            if not isinstance(__value, self.item_type):
-                raise TypeError("given item {} is not of {}.".format(__value, self.item_type))
+        self._validate_key_value_pair(__key, __value)
+        if not (self.bounds[0] < self._inner.__len__() + 1 < self.bounds[1]):
+            raise ValueError("")
         self._inner.__setitem__(__key, __value)
 
     def __delitem__(self, __v : Any) -> None:
@@ -315,8 +325,11 @@ class TypeConstrainedDict(MutableMapping):
     def clear(self) -> None:
         self._inner.clear()
 
-    def copy(self) -> Dict[Any, Any]:
-        return self._inner.copy()
+    def copy(self, return_as_typed_dict : bool = False) -> Dict[Any, Any]:
+        if return_as_typed_dict:
+            pass 
+        else:
+            return self._inner.copy()
 
     def popitem(self) -> tuple:
         return self._inner.popitem()
@@ -333,12 +346,11 @@ class TypeConstrainedDict(MutableMapping):
             self.update(__o)
 
     def update(self, __o : Any) -> None:
-        if isinstance(__o, dict):
-            if self._inner is None: 
-                self._inner = dict()
-            self._inner.update(__o)
-        elif self.allow_None and __o is None:
-            pass
-        else:    
-            raise TypeError("given item for update is not a dict.")
-    
+        if self._inner is None: 
+            self._inner = dict()
+        self._validate(__o)
+        self._inner.update(__o)
+        
+
+
+__all__ = ['TypeConstrainedList', 'TypeConstrainedDict']

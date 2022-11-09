@@ -205,14 +205,46 @@ class TypeConstrainedDict(MutableMapping):
     """ A dictionary which contains only ``NewDict`` values. """
 
     def __init__(self, default : Dict[Any, Any] = {}, key_type : tuple = None, item_type : tuple = None, 
-                        allow_None : bool = True, set_direct : bool = False):
+                        bounds : tuple = (0, None), constant : bool = False, allow_None : bool = True, 
+                        set_direct : bool = False):
         super().__init__()
         # _inner value set in update()
         self._inner = None # or collections.OrderedDict, etc.
         self.key_type   = key_type
         self.item_type  = item_type
         self.allow_None = allow_None
+        self.bounds     = bounds 
+        self.constant   = constant 
         self._set(default, set_direct)
+
+    def _validate(self, value):
+        if self.allow_None and value is None:
+            return 
+        if self.constant:
+            raise ValueError()
+        self._validate_value()
+        self._validate_bounds()
+        self._validate_item()
+
+    def _validate_value(self, value):
+        pass 
+
+    def _validate_bounds(self, value):
+        pass 
+
+    def _validate_item(self, value):
+        keys = __o.keys()
+        values = __o.values()
+        if self.key_type is not None and len(keys) != 0:                    
+            for key in keys:
+                if not isinstance(key, self.key_type):
+                    raise TypeError("keys contain incompatible types. Allowed types : {}.".format(self.key_type))
+        if self._item_type is not None and values != []: 
+            for value in values:
+                if not isinstance(value, self.item_type):
+                    raise TypeError("values contain incompatible types. Allowed types : {}.".format(self.item_type))
+       
+               
 
     def __sizeof__(self):
         return self._inner.__sizeof__()
@@ -304,16 +336,6 @@ class TypeConstrainedDict(MutableMapping):
         if isinstance(__o, dict):
             if self._inner is None: 
                 self._inner = dict()
-            keys = __o.keys()
-            values = __o.values()
-            if self.key_type is not None and len(keys) != 0:                    
-                for key in keys:
-                    if not isinstance(key, self.key_type):
-                        raise TypeError("keys contain incompatible types. Allowed types : {}.".format(self.key_type))
-            if self._item_type is not None and values != []: 
-                for value in values:
-                    if not isinstance(value, self.item_type):
-                        raise TypeError("values contain incompatible types. Allowed types : {}.".format(self.item_type))
             self._inner.update(__o)
         elif self.allow_None and __o is None:
             pass

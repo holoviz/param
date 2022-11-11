@@ -52,7 +52,7 @@ jobs:
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.11'
         run: tox -e with_gmpy
       - name: unit all_deps
-        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
+        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.11'
         run: tox -e with_all
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

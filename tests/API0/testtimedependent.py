@@ -11,13 +11,13 @@ import pytest
 import fractions
 
 try:
-    import gmpy
+    import gmpy2
 except ImportError:
     import os
-    if os.getenv('PARAM_TEST_GMPY','0') == '1':
-        raise ImportError("PARAM_TEST_GMPY=1 but gmpy not available.")
+    if os.getenv('PARAM_TEST_GMPY2','0') == '1':
+        raise ImportError("PARAM_TEST_GMPY2=1 but gmpy2 not available.")
     else:
-        gmpy = None
+        gmpy2 = None
 
 
 class TestTimeClass(unittest.TestCase):
@@ -81,31 +81,31 @@ class TestTimeClass(unittest.TestCase):
         self.assertEqual(t(), 1)
         self.assertEqual(t.time_type, fractions.Fraction)
 
-    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
-    def test_time_init_gmpy(self):
-        t = param.Time(time_type=gmpy.mpq)
-        self.assertEqual(t(), gmpy.mpq(0))
-        t.advance(gmpy.mpq(0.25))
-        self.assertEqual(t(), gmpy.mpq(1,4))
+    @pytest.mark.skipif(gmpy2 is None, reason="gmpy2 is not installed")
+    def test_time_init_gmpy2(self):
+        t = param.Time(time_type=gmpy2.mpq)
+        self.assertEqual(t(), gmpy2.mpq(0))
+        t.advance(gmpy2.mpq(0.25))
+        self.assertEqual(t(), gmpy2.mpq(1,4))
 
-    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
-    def test_time_init_gmpy_advanced(self):
-        t = param.Time(time_type=gmpy.mpq,
-                       timestep=gmpy.mpq(0.25),
+    @pytest.mark.skipif(gmpy2 is None, reason="gmpy2 is not installed")
+    def test_time_init_gmpy2_advanced(self):
+        t = param.Time(time_type=gmpy2.mpq,
+                       timestep=gmpy2.mpq(0.25),
                        until=1.5)
-        self.assertEqual(t(), gmpy.mpq(0,1))
+        self.assertEqual(t(), gmpy2.mpq(0,1))
         t(0.5)
-        self.assertEqual(t(), gmpy.mpq(1,2))
+        self.assertEqual(t(), gmpy2.mpq(1,2))
         with t:
             t.advance(0.25)
-            self.assertEqual(t(), gmpy.mpq(3,4))
-        self.assertEqual(t(), gmpy.mpq(1,2))
+            self.assertEqual(t(), gmpy2.mpq(3,4))
+        self.assertEqual(t(), gmpy2.mpq(1,2))
         tvals = [tval for tval in t]
-        self.assertEqual(tvals, [gmpy.mpq(1,2),
-                                 gmpy.mpq(3,4),
-                                 gmpy.mpq(1,1),
-                                 gmpy.mpq(5,4),
-                                 gmpy.mpq(3,2)])
+        self.assertEqual(tvals, [gmpy2.mpq(1,2),
+                                 gmpy2.mpq(3,4),
+                                 gmpy2.mpq(1,1),
+                                 gmpy2.mpq(5,4),
+                                 gmpy2.mpq(3,2)])
 
 
 class TestTimeDependentDynamic(unittest.TestCase):
@@ -269,29 +269,29 @@ class TestTimeDependentDynamic(unittest.TestCase):
         self.assertEqual(hashfn(pi), hashfn(fractions.Fraction(pi)))
 
 
-    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
-    def test_time_hashing_integers_gmpy(self):
+    @pytest.mark.skipif(gmpy2 is None, reason="gmpy2 is not installed")
+    def test_time_hashing_integers_gmpy2(self):
         """
-        Check that hashes for gmpy values at the integers also matches
+        Check that hashes for gmpy2 values at the integers also matches
         those of ints, fractions and strings.
         """
         hashfn = numbergen.Hash("test", input_count=1)
         hash_1 = hashfn(1)
         hash_42 = hashfn(42)
 
-        self.assertEqual(hash_1, hashfn(gmpy.mpq(1)))
+        self.assertEqual(hash_1, hashfn(gmpy2.mpq(1)))
         self.assertEqual(hash_1, hashfn(1))
 
-        self.assertEqual(hash_42, hashfn(gmpy.mpq(42)))
+        self.assertEqual(hash_42, hashfn(gmpy2.mpq(42)))
         self.assertEqual(hash_42, hashfn(42))
 
-    @pytest.mark.skipif(gmpy is None, reason="gmpy is not installed")
-    def test_time_hashing_rationals_gmpy(self):
+    @pytest.mark.skipif(gmpy2 is None, reason="gmpy2 is not installed")
+    def test_time_hashing_rationals_gmpy2(self):
         """
-        Check that hashes of fractions and gmpy mpqs match for some
+        Check that hashes of fractions and gmpy2 mpqs match for some
         reasonable rational numbers.
         """
         pi = "3.141592"
         hashfn = numbergen.Hash("test", input_count=1)
-        self.assertEqual(hashfn(0.5), hashfn(gmpy.mpq(0.5)))
-        self.assertEqual(hashfn(pi), hashfn(gmpy.mpq(3.141592)))
+        self.assertEqual(hashfn(0.5), hashfn(gmpy2.mpq(0.5)))
+        self.assertEqual(hashfn(pi), hashfn(gmpy2.mpq(3.141592)))

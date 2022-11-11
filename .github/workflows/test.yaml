@@ -48,9 +48,9 @@ jobs:
         run: tox -e with_pandas
       - name: unit with_jsonschema
         run: tox -e with_jsonschema
-      - name: unit with_gmpy2
+      - name: unit with_gmpy
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
-        run: tox -e with_gmpy2
+        run: tox -e with_gmpy
       - name: unit all_deps
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
         run: tox -e with_all
@@ -93,9 +93,9 @@ jobs:
         run: tox  -c tox27.ini -e with_pandas
       - name: unit with_jsonschema
         run: tox -c tox27.ini -e with_jsonschema
-      - name: unit with_gmpy2
+      - name: unit with_gmpy
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
-        run: tox -c tox27.ini -e with_gmpy2
+        run: tox -c tox27.ini -e with_gmpy
       - name: unit all_deps
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
         run: tox -c tox27.ini -e with_all

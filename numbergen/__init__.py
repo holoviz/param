@@ -264,7 +264,7 @@ class Hash(object):
         architecture-independent 32-bit integer hash.
         """
         # Convert inputs to (numer, denom) pairs with integers
-        # becoming (int, 1) pairs to match gmpy2.mpqs for int values.
+        # becoming (int, 1) pairs to match gmpy.mpqs for int values.
         pairs = [self._rational(val) for val in vals]
         # Unpack pairs and fill struct with ints to update md5 hash
         ints = [el for pair in pairs for el in pair]

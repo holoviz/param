@@ -677,7 +677,8 @@ def _add_doc(obj, docstring):
         obj.__doc__ = docstring
 
 
-PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
+PInfo = namedtuple("PInfo", "inst cls name pobj what")
+_add_doc(PInfo,
     """
     Object describing something being watched about a Parameter.
 
@@ -692,7 +693,8 @@ PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
     `what`: What is being watched on the Parameter (either 'value' or a slot name)
     """)
 
-MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
+MInfo = namedtuple("MInfo", "inst cls name method")
+_add_doc(MInfo,
     """
     Object describing a Parameterized method being watched.
 
@@ -705,13 +707,15 @@ MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
     `method`: bound method of the object being watched
     """)
 
-DInfo = namedtuple("DInfo", "spec"); _add_doc(DInfo,
+DInfo = namedtuple("DInfo", "spec")
+_add_doc(DInfo,
     """
     Object describing dynamic dependencies.
     `spec`: Dependency specification to resolve
     """)
 
-Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
+Event = namedtuple("Event", "what name obj cls old new type")
+_add_doc(Event,
     """
     Object representing an event that triggers a Watcher.
 

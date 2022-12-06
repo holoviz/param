@@ -1,5 +1,16 @@
 # Releases
 
+## Version 1.12.3
+
+Date: 2022-12-06
+
+The `1.12.3` release adds support for Python 3.11. Many thanks to @musicinmybrain (first contribution!) and @maximlt for contributing to this release.
+
+Enhancements:
+
+* Preserve existing Random seed behavior in Python 3.11 ([#638](https://github.com/holoviz/param/pull/638))
+* Add support for Python 3.11 ([#658](https://github.com/holoviz/param/pull/658))
+
 ## Version 1.12.2
 
 Date: 2022-06-14

@@ -25,9 +25,8 @@ extras_require = {
     ],
     'doc': [
         'pygraphviz',
-        'nbsite >=0.7.1',
+        'nbsite ==0.8.0rc2',
         'pydata-sphinx-theme <0.9.0',
-        'jinja2 <3.1', # API breakage
         'myst-parser',
         'nbconvert',
         'graphviz',
@@ -36,6 +35,8 @@ extras_require = {
         'aiohttp',
         'panel',
         'pandas',
+        # Temporar pin due to https://github.com/ipython/ipython/issues/13845
+        'ipython !=8.7.0',
     ]
 }
 

@@ -21,7 +21,7 @@ jobs:
         python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11', 'pypy-3.7']
         exclude:
           # Started failing with `Error: The version '3.6' with architecture 'x64' was not found for Ubuntu 22.04.``
-          - os: ubuntu-latest
+          - platform: ubuntu-latest
             python-version: '3.6'
     timeout-minutes: 30
     env:

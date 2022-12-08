@@ -35,6 +35,8 @@ extras_require = {
         'aiohttp',
         'panel',
         'pandas',
+        # Temporar pin due to https://github.com/ipython/ipython/issues/13845
+        'ipython !=8.7.0',
     ]
 }
 

@@ -36,7 +36,7 @@ jobs:
         run: git fetch --prune --tags --unshallow -f
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.7
+          python-version: '3.9'
       - name: Set output
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
@@ -44,9 +44,9 @@ jobs:
         run: sudo apt install graphviz graphviz-dev
       - name: env setup
         run: |
-          python -m pip install pip==21.0.0
-          python -m pip install nbsite --pre
-          python -m pip install -e .[doc] --use-feature=fast-deps --use-deprecated=legacy-resolver
+          python -m pip install --upgrade pip
+          python -m pip install nbsite==0.8.0rc2
+          python -m pip install -e .[doc]
       - name: build docs
         run: |
           cp examples/user_guide/*.ipynb doc/user_guide/

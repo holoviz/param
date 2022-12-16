@@ -17,7 +17,9 @@ parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
 
+import typing
 import os.path
+import pathlib
 import sys
 import copy
 import glob
@@ -37,6 +39,8 @@ from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa
 
 from collections import OrderedDict
 from numbers import Real
+
+FlexPath = typing.Union[str, pathlib.Path, typing.List[str, pathlib.Path]]
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -1816,6 +1820,34 @@ class Foldername(Path):
     def _resolve(self, path):
         return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
 
+
+class Foldernames(Foldername):
+    r"""
+    Parameter that can be set to a string specifying the path of a folder,
+    a pathlib.Path object, or a list of such strings and/or pathlib.Path objects.
+
+    The string(s) should be specified in UNIX style, but they will be
+    returned in the format of the user's operating system.
+
+    The specified path(s) can be absolute, or relative to either:
+
+    * any of the paths specified in the search_paths attribute (if
+      search_paths is not None);
+
+    or
+
+    * any of the paths searched by resolve_dir_path() (if search_paths
+      is None).
+    """
+
+    def _resolve(self, paths: FlexPath):
+        if isinstance(paths, (str, pathlib.Path)):
+            return super()._resolve(paths)
+        elif isinstance(paths, (list, tuple)):
+            return [self._resolve(path) for path in paths]
+        else:
+            name = next(x for x in [self.name, self.label, "Foldernames parameter"] if x)
+            raise ValueError(f"{name} must be a string or a list of strings to one or more local folders")
 
 
 def abbreviate_paths(pathspec,named_paths):

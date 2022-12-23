@@ -40,7 +40,8 @@ from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa
 from collections import OrderedDict
 from numbers import Real
 
-FlexPath = typing.Union[str, pathlib.Path, typing.List[str, pathlib.Path]]
+FlexPath = typing.Union[str, pathlib.Path]  # a string or a Path object
+FlexPaths = typing.Union[FlexPath, typing.List[FlexPath]]  # one or a list of FLexPath
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -1826,6 +1827,9 @@ class Foldernames(Foldername):
     Parameter that can be set to a string specifying the path of a folder,
     a pathlib.Path object, or a list of such strings and/or pathlib.Path objects.
 
+    On accessing, the parameter always returns a list of paths, even for a single
+    folder.
+
     The string(s) should be specified in UNIX style, but they will be
     returned in the format of the user's operating system.
 
@@ -1840,14 +1844,28 @@ class Foldernames(Foldername):
       is None).
     """
 
-    def _resolve(self, paths: FlexPath):
-        if isinstance(paths, (str, pathlib.Path)):
-            return super()._resolve(paths)
-        elif isinstance(paths, (list, tuple)):
-            return [self._resolve(path) for path in paths]
+    @staticmethod
+    def _cast_to_list(obj):
+        r"""Cast an iterable onto a list, or insert the non-iterable into a one-item list.
+
+        Validation is deferred to _resolve().
+        """
+        if obj is None:
+            return obj
+        elif hasattr(obj, "__iter__") and not isinstance(obj, str):  # store items in  list
+            return list(obj)
         else:
-            name = next(x for x in [self.name, self.label, "Foldernames parameter"] if x)
-            raise ValueError(f"{name} must be a string or a list of strings to one or more local folders")
+            return [obj]  # "my_input_dir" becomes ["my_input_dir"]
+
+    def __init__(self, default=None, search_paths=None, **params):
+        super(Foldernames, self).__init__(self._cast_to_list(default), search_paths, **params)
+
+    def __set__(self, param_owner, obj):
+        super(Foldernames, self).__set__(param_owner, self._cast_to_list(obj))
+
+    def _resolve(self, paths: FlexPaths):
+        r"""Resolve and validate each folder item"""
+        return [super(Foldernames, self)._resolve(p) for p in paths]
 
 
 def abbreviate_paths(pathspec,named_paths):

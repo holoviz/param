@@ -1,6 +1,6 @@
 # About
 
-Param is completely open source, available under a [BSD license](https://github.com/holoviz/param/blob/master/LICENSE.txt), freely for both commercial and non-commercial use. Param was originally developed at the University of Texas at Austin and the University of Edinburgh with funding from the US National Institutes of Health grant 1R01-MH66991. Param is now maintained by [Anaconda Inc.](https://anaconda.com) and by community contributors.
+Param is completely open source, available under a [BSD license](https://github.com/holoviz/param/blob/main/LICENSE.txt), freely for both commercial and non-commercial use. Param was originally developed at the University of Texas at Austin and the University of Edinburgh with funding from the US National Institutes of Health grant 1R01-MH66991. Param is now maintained by [Anaconda Inc.](https://anaconda.com) and by community contributors.
 
 Param is maintained as part of the [HoloViz](https://holoviz.org) family of tools. The [holoviz.org](https://holoviz.org) website shows how to use Param together with other libraries to solve complex problems, with detailed tutorials and examples. Each of the HoloViz tools builds on Param, as do many of the example projects at [examples.pyviz.org](https://examples.pyviz.org).
 

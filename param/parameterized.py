@@ -1117,7 +1117,7 @@ class Parameter(object):
                                  "it has been bound to a Parameterized.")
 
         implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
-        slot_attribute = attribute in self.__slots__
+        slot_attribute = attribute in get_all_slots(type(self))
         try:
             old = getattr(self, attribute) if implemented else NotImplemented
             if slot_attribute:

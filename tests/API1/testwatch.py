@@ -512,6 +512,7 @@ class TestWatch(API1TestCase):
         obj = SimpleWatchExample()
 
         obj.param.watch(obj.method, ['a'])
+        obj.param.watch(lambda x: None, 'd', what='bounds')
 
         copied = copy.deepcopy(obj)
 

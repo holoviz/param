@@ -54,6 +54,7 @@ except ImportError:
 
 if sys.version_info[0] >= 3:
     unicode = str
+else:
     bytes = str
 
 #: Top-level object to allow messaging not tied to a particular
@@ -741,9 +742,8 @@ class Bytes(Parameter):
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
 
-    A class similar to the String class, but instead of type
-    basestring (Python2) or str (recent Python3) (e.g. 'string') the
-    type bytes (e.g. b'bytes') is used.
+    Similar to the String parameter, but instead of type basestring
+    this parameter only allows objects of type bytes (e.g. b'bytes').
     """
 
     __slots__ = ['regex']

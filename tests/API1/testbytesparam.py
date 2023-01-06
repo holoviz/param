@@ -65,13 +65,15 @@ class TestBytesParameters(API1TestCase):
 
         a = A()
 
-        exception = "Bytes parameter 's' value b'123.123.0.256' does not match regex %r."  % ip_regex
+        b = 'b' if sys.version_info.major > 2 else ''
+        exception = "Bytes parameter 's' value %s'123.123.0.256' does not match regex %r."  % (b, ip_regex)
         with self.assertRaises(ValueError) as e:
             a.s = b'123.123.0.256'
         self.assertEqual(str(e.exception), exception)
 
     def test_regex_incorrect_default(self):
-        exception = "Bytes parameter None value b'' does not match regex %r." % ip_regex
+        b = 'b' if sys.version_info.major > 2 else ''
+        exception = "Bytes parameter None value %s'' does not match regex %r." % (b, ip_regex)
         with self.assertRaises(ValueError) as e:
             class A(param.Parameterized):
                 s = param.Bytes(regex=ip_regex)  # default value '' does not match regular expression

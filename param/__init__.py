@@ -54,6 +54,7 @@ except ImportError:
 
 if sys.version_info[0] >= 3:
     unicode = str
+    bytes = str
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.

@@ -735,6 +735,42 @@ def get_soft_bounds(bounds, softbounds):
     return (l, u)
 
 
+class Bytes(Parameter):
+    """
+    A Bytes Parameter, with a default value and optional regular
+    expression (regex) matching.
+
+    Similar to the String parameter, but instead of type basestring
+    this parameter only allows objects of type bytes (e.g. b'bytes').
+    """
+
+    __slots__ = ['regex']
+
+    def __init__(self, default=b"", regex=None, allow_None=False, **kwargs):
+        super(Bytes, self).__init__(default=default, allow_None=allow_None, **kwargs)
+        self.regex = regex
+        self.allow_None = (default is None or allow_None)
+        self._validate(default)
+
+    def _validate_regex(self, val, regex):
+        if (val is None and self.allow_None):
+            return
+        if regex is not None and re.match(regex, val) is None:
+            raise ValueError("Bytes parameter %r value %r does not match regex %r."
+                             % (self.name, val, regex))
+
+    def _validate_value(self, val, allow_None):
+        if allow_None and val is None:
+            return
+        if not isinstance(val, bytes):
+            raise ValueError("Bytes parameter %r only takes a byte string value, "
+                             "not value of type %s." % (self.name, type(val)))
+
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
+        self._validate_regex(val, self.regex)
+
+
 class Number(Dynamic):
     """
     A numeric Dynamic Parameter, with a default value and optional bounds.

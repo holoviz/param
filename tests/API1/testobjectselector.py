@@ -26,6 +26,16 @@ class TestObjectSelectorParameters(API1TestCase):
             s = param.Selector(default=3,objects=OrderedDict(one=1,two=2,three=3))
             d = param.Selector(default=opts['B'],objects=opts)
 
+            changes = []
+
+            @param.depends('e:objects', watch=True)
+            def track_e_objects(self):
+                self.changes.append(('e', list(self.param.e.objects)))
+
+            @param.depends('s:objects', watch=True)
+            def track_s_objects(self):
+                self.changes.append(('s', list(self.param.s.objects)))
+
         self.P = P
 
     def test_set_object_constructor(self):
@@ -95,6 +105,204 @@ class TestObjectSelectorParameters(API1TestCase):
         p.i = 12
         self.assertEqual(p.i, 12)
 
+    def test_change_objects_list(self):
+        p = self.P()
+        p.param.e.objects = [8, 9]
+
+        with self.assertRaises(ValueError):
+            p.e = 7
+
+        self.assertEqual(p.param.e.objects, [8, 9])
+        self.assertEqual(p.changes, [('e', [8, 9])])
+
+    def test_append_objects_list(self):
+        p = self.P()
+        p.param.e.objects.append(8)
+
+        p.e = 8
+
+        self.assertEqual(p.param.e.objects, [5, 6, 7, 8])
+        self.assertEqual(p.changes, [('e', [5, 6, 7, 8])])
+
+    def test_extend_objects_list(self):
+        p = self.P()
+        p.param.e.objects.extend([8, 9])
+
+        p.e = 8
+
+        self.assertEqual(p.param.e.objects, [5, 6, 7, 8, 9])
+        self.assertEqual(p.changes, [('e', [5, 6, 7, 8, 9])])
+
+    def test_insert_objects_list(self):
+        p = self.P()
+        p.param.e.objects.insert(0, 8)
+
+        p.e = 8
+
+        self.assertEqual(p.param.e.objects, [8, 5, 6, 7])
+        self.assertEqual(p.changes, [('e', [8, 5, 6, 7])])
+
+    def test_pop_objects_list(self):
+        p = self.P()
+        p.param.e.objects.pop(-1)
+
+        with self.assertRaises(ValueError):
+            p.e = 7
+
+        self.assertEqual(p.param.e.objects, [5, 6])
+        self.assertEqual(p.changes, [('e', [5, 6])])
+
+    def test_remove_objects_list(self):
+        p = self.P()
+        p.param.e.objects.remove(7)
+
+        with self.assertRaises(ValueError):
+            p.e = 7
+
+        self.assertEqual(p.param.e.objects, [5, 6])
+        self.assertEqual(p.changes, [('e', [5, 6])])
+
+    def test_clear_objects_list(self):
+        p = self.P()
+        p.param.e.objects.clear()
+
+        with self.assertRaises(ValueError):
+            p.e = 5
+
+        self.assertEqual(p.param.e.objects, [])
+        self.assertEqual(p.changes, [('e', [])])
+
+    def test_clear_setitem_objects_list(self):
+        p = self.P()
+        p.param.e.objects[:] = []
+
+        with self.assertRaises(ValueError):
+            p.e = 5
+
+        self.assertEqual(p.param.e.objects, [])
+        self.assertEqual(p.changes, [('e', [])])
+
+    def test_override_setitem_objects_list(self):
+        p = self.P()
+        p.param.e.objects[0] = 8
+
+        with self.assertRaises(ValueError):
+            p.e = 5
+
+        p.e = 8
+
+        self.assertEqual(p.param.e.objects, [8, 6, 7])
+        self.assertEqual(p.changes, [('e', [8, 6, 7])])
+
+    def test_setitem_name_objects_list(self):
+        p = self.P()
+
+        with self.assertRaises(TypeError):
+            p.param.e.objects['A'] = 8
+
+    def test_int_getitem_objects_list(self):
+        p = self.P()
+
+        self.assertEqual(p.param.e.objects[0], 5) 
+
+    def test_slice_getitem_objects_list(self):
+        p = self.P()
+
+        self.assertEqual(p.param.e.objects[1:3], [6, 7])
+    
+    def test_change_objects_dict(self):
+        p = self.P()
+        p.param.s.objects = {'seven': 7, 'eight': 8}
+
+        with self.assertRaises(ValueError):
+            p.s = 1
+
+        self.assertEqual(p.param.s.objects, [7, 8])
+        self.assertEqual(p.changes, [('s', [7, 8])])
+
+    def test_setitem_int_objects_dict(self):
+        p = self.P()
+        with self.assertRaises(TypeError):
+            p.param.s.objects[2] = 7
+
+    def test_setitem_key_objects_dict(self):
+        p = self.P()
+        p.param.s.objects['seven'] = 7
+
+        p.s = 7
+
+        self.assertEqual(p.param.s.objects, [1, 2, 3, 7])
+        self.assertEqual(p.changes, [('s', [1, 2, 3, 7])])
+
+    def test_objects_dict_equality(self):
+        p = self.P()
+        p.param.s.objects = {'seven': 7, 'eight': 8}
+
+        self.assertEqual(p.param.s.objects, {'seven': 7, 'eight': 8})
+        self.assertNotEqual(p.param.s.objects, {'seven': 7, 'eight': 8, 'nine': 9})
+
+    def test_clear_objects_dict(self):
+        p = self.P()
+        p.param.s.objects.clear()
+
+        with self.assertRaises(ValueError):
+            p.s = 1
+
+        self.assertEqual(p.param.s.objects, [])
+        self.assertEqual(p.changes, [('s', [])])
+
+    def test_pop_objects_dict(self):
+        p = self.P()
+        p.param.s.objects.pop('one')
+
+        with self.assertRaises(ValueError):
+            p.s = 1
+
+        self.assertEqual(p.param.s.objects, [2, 3])
+        self.assertEqual(p.changes, [('s', [2, 3])])
+
+    def test_remove_objects_dict(self):
+        p = self.P()
+        p.param.s.objects.remove(1)
+
+        with self.assertRaises(ValueError):
+            p.s = 1
+
+        self.assertEqual(p.param.s.objects, [2, 3])
+        self.assertEqual(p.param.s.names, {'two': 2, 'three': 3})
+        self.assertEqual(p.changes, [('s', [2, 3])])
+
+    def test_update_objects_dict(self):
+        p = self.P()
+        p.param.s.objects.update({'one': '1', 'three': '3'})
+
+        with self.assertRaises(ValueError):
+            p.s = 1
+
+        p.s = '3'
+
+        self.assertEqual(p.param.s.objects, ['1', 2, '3'])
+        self.assertEqual(p.changes, [('s', ['1', 2, '3'])])
+
+    def test_update_with_list_objects_dict(self):
+        p = self.P()
+        p.param.s.objects.update([('one', '1'), ('three', '3')])
+
+        with self.assertRaises(ValueError):
+            p.s = 1
+
+        p.s = '3'
+
+        self.assertEqual(p.param.s.objects, ['1', 2, '3'])
+        self.assertEqual(p.changes, [('s', ['1', 2, '3'])])
+
+    def test_update_with_invalid_list_objects_dict(self):
+        p = self.P()
+        with self.assertRaises(TypeError):
+            p.param.s.objects.update([1, 3])
+        with self.assertRaises(ValueError):
+            p.param.s.objects.update(['a', 'b'])
+
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
@@ -103,7 +311,6 @@ class TestObjectSelectorParameters(API1TestCase):
             pass
         else:
             raise AssertionError("ObjectSelector created outside range.")
-
 
     def test_initialization_no_bounds(self):
         try:

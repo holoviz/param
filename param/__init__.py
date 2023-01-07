@@ -1284,37 +1284,70 @@ class SelectObjects(list):
 
     def remove(self, object):
         with self._trigger():
-            super(SelectObjects, self).pop(object)
+            super(SelectObjects, self).remove(object)
             self._parameter._objects.remove(object)
             if self._parameter.names:
-                self._parameter.names = {
-                    k: v for k, v in self._parameter.names.items()
-                    if v is object
-                }
+                copy = self._parameter.names.copy()
+                self._parameter.names.clear()
+                self._parameter.names.update({
+                    k: v for k, v in copy.items() if v is not object
+                })
 
     def __setitem__(self, index, object, trigger=True):
-        if isinstance(index, int):
+        if isinstance(index, (int, slice)):
             if self._parameter.names:
                 self._warn('[index] = object')
             with self._trigger():
                 super(SelectObjects, self).__setitem__(index, object)
-                self._parameter.objects[index] = object
+                self._parameter._objects[index] = object
             return
         clsname = type(self._parameter).__name__
         if self and not self._parameter.names:
-            raise ValueError(
+            raise TypeError(
                 'Cannot assign new objects to {clsname}.objects by name if '
-                'objects was not declared as a dictionary.'.format(clsname=clsname)
+                'it was not declared as a dictionary.'.format(clsname=clsname)
             )
         with self._trigger(trigger):
-            super(SelectObjects, self).append(object)
-            self._parameter._objects.append(object)
+            if index in self._parameter.names:
+                old = self._parameter.names[index]
+                idx = self.index(old)
+                super(SelectObjects, self).__setitem__(idx, object)
+                self._parameter._objects[idx] = object
+            else:
+                super(SelectObjects, self).append(object)
+                self._parameter._objects.append(object)
             self._parameter.names[index] = object
 
+    def __eq__(self, other):
+        eq = super().__eq__(other)
+        if self._parameter.names and eq is NotImplemented:
+            return dict(zip(self._parameter.names, self)) == other
+        return eq
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def update(self, objects, **items):
+        clsname = type(self._parameter).__name__
+        if not self._parameter.names:
+            raise ValueError(
+                'Cannot update {clsname}.objects if it was not declared '
+                'as a dictionary.'.format(clsname=clsname)
+            )
         objects = objects.items() if isinstance(objects, dict) else objects
         with self._trigger():
-            for k, v in objects:
+            for i, o in enumerate(objects):
+                if not isinstance(o, collections_abc.Sequence):
+                    raise TypeError(
+                        'cannot convert dictionary update sequence element #{i} to a sequence'.format(i=i)
+                    )
+                o = tuple(o)
+                n = len(o)
+                if n != 2:
+                    raise ValueError(
+                        'dictionary update sequence element #{i} has length {n}; 2 is required'.format(i=i, n=n)
+                    )
+                k, v = o
                 self.__setitem__(k, v, trigger=False)
             for k, v in items.items():
                 self.__setitem__(k, v, trigger=False)

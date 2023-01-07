@@ -3123,9 +3123,9 @@ def type_script_repr(type_,imports,prefix,settings):
         imports.append('import %s'%module)
     return module+'.'+type_.__name__
 
-script_repr_reg[list]=container_script_repr
-script_repr_reg[tuple]=container_script_repr
-script_repr_reg[FunctionType]=function_script_repr
+script_repr_reg[list] = container_script_repr
+script_repr_reg[tuple] = container_script_repr
+script_repr_reg[FunctionType] = function_script_repr
 
 
 #: If not None, the value of this Parameter will be called (using '()')
@@ -3184,19 +3184,31 @@ def _get_param_repr(key, val, p, truncate=40):
     readonly   = 'RO' if p.readonly else 'RW'
     allow_None = ' AN' if hasattr(p, 'allow_None') and p.allow_None else ''
     mode       = '%s %s%s' % (constant, readonly, allow_None)
-
-    return f'   <tr>' \
-        f'<td><tt>{key}</tt></td>' \
-        f'<td>{p.__class__.__name__}</td>' \
-        f'<td>{getattr(p,"bounds","")}</td>' \
-        f'<td>{mode}</td>' \
-        f'<td>{value}</td>' \
+    if hasattr(p, 'bounds'):
+        bounds = p.bounds
+    elif hasattr(p, 'objects') and p.objects:
+        bounds = ', '.join(list(map(repr, p.objects)))
+    else:
+        bounds = ''
+    return (
+        f'<tr>'
+        f'  <td><tt>{key}</tt></td>'
+        f'  <td>{p.__class__.__name__}</td>'
+        f'  <td style="max-width: 300px;">{bounds}</td>'
+        f'  <td>{mode}</td>'
+        f'  <td>{value}</td>'
         f'</tr>\n'
+    )
 
 
 def _parameterized_repr_html(p, open):
     """HTML representation for a Parameterized object"""
-    title = p.__class__.name + " " + name_if_set(p)
+    if isinstance(p, Parameterized):
+        cls = p.__class__
+        title = cls.name + "() " + name_if_set(p)
+    else:
+        cls = p
+        title = cls.name
     openstr = " open" if open else ""
     contents = "".join(_get_param_repr(key, val, p.param.params(key))
                        for key, val in p.param.get_param_values())
@@ -3205,9 +3217,9 @@ def _parameterized_repr_html(p, open):
         ' <summary style="display:list-item; outline:none;">\n'
         f'  <tt>{title}</tt>\n'
         ' </summary>\n'
-        ' <div style="padding-left:10px;padding-bottom:5px;">\n'
+        ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        '   <tr><th>Name</th><th>Type</th><th>Bounds</th><th>Mode</th><th>Value</th></tr>\n'
+        '   <tr><th>Name</th><th>Type</th><th>Bounds/Objects</th><th>Mode</th><th>Value</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )
@@ -3504,7 +3516,6 @@ class Parameterized(object):
 
     def _repr_html_(self, open=True):
         return _parameterized_repr_html(self, open)
-
 
 
 def print_all_param_defaults():

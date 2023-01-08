@@ -17,6 +17,7 @@ parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
 
+import pathlib
 import os.path
 import sys
 import copy
@@ -1839,16 +1840,13 @@ class Foldernames(Foldername):
 
     @staticmethod
     def _cast_to_list(obj):
-        r"""Cast an iterable onto a list, or insert the non-iterable into a one-item list.
-
-        Validation is deferred to _resolve().
-        """
+        r"""Insert a single folder name (str or pathlib.Path) into a one-item list."""
         if obj is None:
             return obj
-        elif hasattr(obj, "__iter__") and not isinstance(obj, str):  # store items in  list
-            return list(obj)
+        elif isinstance(obj, (str, pathlib.Path)):
+            return [obj]
         else:
-            return [obj]  # "my_input_dir" becomes ["my_input_dir"]
+            return obj  # validation is deferred to _resolve()
 
     def __init__(self, default=None, search_paths=None, **params):
         super(Foldernames, self).__init__(self._cast_to_list(default), search_paths, **params)
@@ -1856,8 +1854,19 @@ class Foldernames(Foldername):
     def __set__(self, param_owner, obj):
         super(Foldernames, self).__set__(param_owner, self._cast_to_list(obj))
 
-    def _resolve(self):
-        r"""Resolve and validate each folder item"""
+    def _resolve(self, paths):
+        r"""Resolve and validate each folder item.
+
+        Parameters
+        ----------
+        paths: list
+            list of folder paths, either as `str` or `pathlib.Path` objects
+
+        Returns
+        -------
+        list
+            If the object is valid, return the folder names a list of `str` objects
+        """
         return [super(Foldernames, self)._resolve(p) for p in paths]
 
 

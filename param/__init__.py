@@ -17,9 +17,7 @@ parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
 
-import typing
 import os.path
-import pathlib
 import sys
 import copy
 import glob
@@ -39,9 +37,6 @@ from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa
 
 from collections import OrderedDict
 from numbers import Real
-
-FlexPath = typing.Union[str, pathlib.Path]  # a string or a Path object
-FlexPaths = typing.Union[FlexPath, typing.List[FlexPath]]  # one or a list of FLexPath
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -1861,7 +1856,7 @@ class Foldernames(Foldername):
     def __set__(self, param_owner, obj):
         super(Foldernames, self).__set__(param_owner, self._cast_to_list(obj))
 
-    def _resolve(self, paths: FlexPaths):
+    def _resolve(self):
         r"""Resolve and validate each folder item"""
         return [super(Foldernames, self)._resolve(p) for p in paths]
 

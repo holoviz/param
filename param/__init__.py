@@ -1824,11 +1824,9 @@ class Foldername(Path):
 
 class Foldernames(Foldername):
     r"""
-    Parameter that can be set to a string specifying the path of a folder,
-    a pathlib.Path object, or a list of such strings and/or pathlib.Path objects.
-
-    On accessing, the parameter always returns a list of paths, even for a single
-    folder.
+    Parameter that can be set to a list of paths, where each path can be a pathlib.Path object
+    or a string specifying the path of a folder. For convenience, if a single string or
+    path is provided, it is first inserted into a single-item list.
 
     The string(s) should be specified in UNIX style, but they will be
     returned in the format of the user's operating system.

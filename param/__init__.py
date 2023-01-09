@@ -1840,10 +1840,8 @@ class Foldernames(Foldername):
 
     @staticmethod
     def _cast_to_list(obj):
-        r"""Insert a single folder name (str or pathlib.Path) into a one-item list."""
-        if obj is None:
-            return obj
-        elif isinstance(obj, (str, pathlib.Path)):
+        """Insert a single folder name (str or pathlib.Path) into a one-item list."""
+        if isinstance(obj, (str, pathlib.Path)):
             return [obj]
         else:
             return obj  # validation is deferred to _resolve()
@@ -1855,7 +1853,7 @@ class Foldernames(Foldername):
         super(Foldernames, self).__set__(param_owner, self._cast_to_list(obj))
 
     def _resolve(self, paths):
-        r"""Resolve and validate each folder item.
+        """Resolve and validate each folder item.
 
         Parameters
         ----------

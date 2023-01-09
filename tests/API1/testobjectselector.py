@@ -115,6 +115,14 @@ class TestObjectSelectorParameters(API1TestCase):
         self.assertEqual(p.param.e.objects, [8, 9])
         self.assertEqual(p.changes, [('e', [8, 9])])
 
+    def test_copy_objects_list(self):
+        p = self.P()
+        eobjs = p.param.e.objects.copy()
+
+        self.assertIsInstance(eobjs, list)
+        self.assertFalse(eobjs is p.param.e.objects)
+        self.assertEqual(eobjs, [5, 6, 7])
+
     def test_append_objects_list(self):
         p = self.P()
         p.param.e.objects.append(8)
@@ -132,6 +140,10 @@ class TestObjectSelectorParameters(API1TestCase):
 
         self.assertEqual(p.param.e.objects, [5, 6, 7, 8, 9])
         self.assertEqual(p.changes, [('e', [5, 6, 7, 8, 9])])
+
+    def test_get_objects_list(self):
+        p = self.P()
+        self.assertEqual(p.param.e.objects.get(5, 'five'), 'five')
 
     def test_insert_objects_list(self):
         p = self.P()
@@ -209,6 +221,11 @@ class TestObjectSelectorParameters(API1TestCase):
         p = self.P()
 
         self.assertEqual(p.param.e.objects[1:3], [6, 7])
+
+    def test_values_objects_list(self):
+        p = self.P()
+
+        self.assertEqual(p.param.e.objects.values(), list(p.param.e.objects))
     
     def test_change_objects_dict(self):
         p = self.P()
@@ -220,10 +237,31 @@ class TestObjectSelectorParameters(API1TestCase):
         self.assertEqual(p.param.s.objects, [7, 8])
         self.assertEqual(p.changes, [('s', [7, 8])])
 
-    def test_setitem_int_objects_dict(self):
+    def test_getitem_int_objects_dict(self):
         p = self.P()
-        with self.assertRaises(TypeError):
-            p.param.s.objects[2] = 7
+        with self.assertRaises(KeyError):
+            p.param.s.objects[2]
+
+    def test_getitem_objects_dict(self):
+        p = self.P()
+        self.assertEqual(p.param.s.objects['two'], 2)
+
+    def test_keys_objects_dict(self):
+        p = self.P()
+        self.assertEqual(list(p.param.s.objects.keys()), ['one', 'two', 'three'])
+
+    def test_items_objects_dict(self):
+        p = self.P()
+
+        self.assertEqual(list(p.param.s.objects.items()), [('one', 1), ('two', 2), ('three', 3)])
+
+    def test_cast_to_dict_objects_dict(self):
+        p = self.P()
+        self.assertEqual(dict(p.param.s.objects), {'one': 1, 'two': 2, 'three': 3})
+
+    def test_cast_to_list_objects_dict(self):
+        p = self.P()
+        self.assertEqual(list(p.param.s.objects), [1, 2, 3])
 
     def test_setitem_key_objects_dict(self):
         p = self.P()
@@ -250,6 +288,21 @@ class TestObjectSelectorParameters(API1TestCase):
 
         self.assertEqual(p.param.s.objects, [])
         self.assertEqual(p.changes, [('s', [])])
+
+    def test_copy_objects_dict(self):
+        p = self.P()
+        sobjs = p.param.s.objects.copy()
+
+        self.assertIsInstance(sobjs, dict)
+        self.assertEqual(sobjs, {'one': 1, 'two': 2, 'three': 3})
+
+    def test_get_objects_dict(self):
+        p = self.P()
+        self.assertEqual(p.param.s.objects.get('two'), 2)
+
+    def test_get_default_objects_dict(self):
+        p = self.P()
+        self.assertEqual(p.param.s.objects.get('four', 'four'), 'four')
 
     def test_pop_objects_dict(self):
         p = self.P()
@@ -302,6 +355,11 @@ class TestObjectSelectorParameters(API1TestCase):
             p.param.s.objects.update([1, 3])
         with self.assertRaises(ValueError):
             p.param.s.objects.update(['a', 'b'])
+
+    def test_values_objects_dict(self):
+        p = self.P()
+
+        self.assertEqual(list(p.param.s.objects.values()), [1, 2, 3])
 
     def test_initialization_out_of_bounds(self):
         try:

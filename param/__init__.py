@@ -1231,67 +1231,10 @@ class SelectObjects(list):
         if trigger:
             value = self._parameter.names or self._parameter._objects
             self._parameter._trigger_event('objects', old, value)
-
-    def append(self, object):
+    def __getitem__(self, index):
         if self._parameter.names:
-            self._warn('.append')
-        with self._trigger():
-            super(SelectObjects, self).append(object)
-            self._parameter._objects.append(object)
-
-    def clear(self):
-        with self._trigger():
-            super(SelectObjects, self).clear()
-            self._parameter._objects.clear()
-            self._parameter.names.clear()
-
-    def extend(self, objects):
-        if self._parameter.names:
-            self._warn('.append')
-        with self._trigger():
-            super(SelectObjects, self).extend(objects)
-            self._parameter._objects.extend(objects)
-
-    def insert(self, index, object):
-        if self._parameter.names:
-            self._warn('.insert')
-        with self._trigger():
-            super(SelectObjects, self).insert(index, object)
-            self._parameter._objects.insert(index, object)
-
-    def pop(self, *args):
-        index = args[0] if args else -1
-        if isinstance(index, int):
-            with self._trigger():
-                super(SelectObjects, self).pop(index)
-                object = self._parameter._objects.pop(index)
-                if self._parameter.names:
-                    self._parameter.names = {
-                        k: v for k, v in self._parameter.names.items()
-                        if v is object
-                    }
-            return
-        if self and not self._parameter.names:
-            raise ValueError(
-                'Cannot pop an object from {clsname}.objects if '
-                'objects was not declared as a dictionary.'
-            )
-        with self._trigger():
-            object = self._parameter.names.pop(*args)
-            super(SelectObjects, self).remove(object)
-            self._parameter._objects.remove(object)
-        return object
-
-    def remove(self, object):
-        with self._trigger():
-            super(SelectObjects, self).remove(object)
-            self._parameter._objects.remove(object)
-            if self._parameter.names:
-                copy = self._parameter.names.copy()
-                self._parameter.names.clear()
-                self._parameter.names.update({
-                    k: v for k, v in copy.items() if v is not object
-                })
+            return self._parameter.names[index]
+        return super(SelectObjects, self).__getitem__(index)
 
     def __setitem__(self, index, object, trigger=True):
         if isinstance(index, (int, slice)):
@@ -1327,6 +1270,85 @@ class SelectObjects(list):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def append(self, object):
+        if self._parameter.names:
+            self._warn('.append')
+        with self._trigger():
+            super(SelectObjects, self).append(object)
+            self._parameter._objects.append(object)
+
+    def copy(self):
+        if self._parameter.names:
+            return self._parameter.names.copy()
+        return list(self)
+
+    def clear(self):
+        with self._trigger():
+            super(SelectObjects, self).clear()
+            self._parameter._objects.clear()
+            self._parameter.names.clear()
+
+    def extend(self, objects):
+        if self._parameter.names:
+            self._warn('.append')
+        with self._trigger():
+            super(SelectObjects, self).extend(objects)
+            self._parameter._objects.extend(objects)
+
+    def get(self, key, default=None):
+        if self._parameter.names:
+            return self._parameter.names.get(key, default)
+        return default
+
+    def insert(self, index, object):
+        if self._parameter.names:
+            self._warn('.insert')
+        with self._trigger():
+            super(SelectObjects, self).insert(index, object)
+            self._parameter._objects.insert(index, object)
+
+    def items(self):
+        if self._parameter.names:
+            return self._parameter.names.items()
+
+    def keys(self):
+        if self._parameter.names:
+            return self._parameter.names.keys()
+
+    def pop(self, *args):
+        index = args[0] if args else -1
+        if isinstance(index, int):
+            with self._trigger():
+                super(SelectObjects, self).pop(index)
+                object = self._parameter._objects.pop(index)
+                if self._parameter.names:
+                    self._parameter.names = {
+                        k: v for k, v in self._parameter.names.items()
+                        if v is object
+                    }
+            return
+        if self and not self._parameter.names:
+            raise ValueError(
+                'Cannot pop an object from {clsname}.objects if '
+                'objects was not declared as a dictionary.'
+            )
+        with self._trigger():
+            object = self._parameter.names.pop(*args)
+            super(SelectObjects, self).remove(object)
+            self._parameter._objects.remove(object)
+        return object
+
+    def remove(self, object):
+        with self._trigger():
+            super(SelectObjects, self).remove(object)
+            self._parameter._objects.remove(object)
+            if self._parameter.names:
+                copy = self._parameter.names.copy()
+                self._parameter.names.clear()
+                self._parameter.names.update({
+                    k: v for k, v in copy.items() if v is not object
+                })
+
     def update(self, objects, **items):
         clsname = type(self._parameter).__name__
         if not self._parameter.names:
@@ -1351,6 +1373,11 @@ class SelectObjects(list):
                 self.__setitem__(k, v, trigger=False)
             for k, v in items.items():
                 self.__setitem__(k, v, trigger=False)
+
+    def values(self):
+        if self._parameter.names:
+            return self._parameter.names.values()
+        return list(self)
 
 
 class Selector(SelectorBase):

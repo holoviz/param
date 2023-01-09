@@ -1231,6 +1231,7 @@ class SelectObjects(list):
         if trigger:
             value = self._parameter.names or self._parameter._objects
             self._parameter._trigger_event('objects', old, value)
+
     def __getitem__(self, index):
         if self._parameter.names:
             return self._parameter.names[index]
@@ -1246,10 +1247,7 @@ class SelectObjects(list):
             return
         clsname = type(self._parameter).__name__
         if self and not self._parameter.names:
-            raise TypeError(
-                'Cannot assign new objects to {clsname}.objects by name if '
-                'it was not declared as a dictionary.'.format(clsname=clsname)
-            )
+            self._parameter.names = named_objs(self)
         with self._trigger(trigger):
             if index in self._parameter.names:
                 old = self._parameter.names[index]
@@ -1298,7 +1296,7 @@ class SelectObjects(list):
     def get(self, key, default=None):
         if self._parameter.names:
             return self._parameter.names.get(key, default)
-        return default
+        return named_objs(self).get(key, default)
 
     def insert(self, index, object):
         if self._parameter.names:
@@ -1310,10 +1308,12 @@ class SelectObjects(list):
     def items(self):
         if self._parameter.names:
             return self._parameter.names.items()
+        return named_objs(self).items()
 
     def keys(self):
         if self._parameter.names:
             return self._parameter.names.keys()
+        return named_objs(self).keys()
 
     def pop(self, *args):
         index = args[0] if args else -1
@@ -1352,10 +1352,7 @@ class SelectObjects(list):
     def update(self, objects, **items):
         clsname = type(self._parameter).__name__
         if not self._parameter.names:
-            raise ValueError(
-                'Cannot update {clsname}.objects if it was not declared '
-                'as a dictionary.'.format(clsname=clsname)
-            )
+            self._parameter.names = named_objs(self)
         objects = objects.items() if isinstance(objects, dict) else objects
         with self._trigger():
             for i, o in enumerate(objects):
@@ -1377,7 +1374,7 @@ class SelectObjects(list):
     def values(self):
         if self._parameter.names:
             return self._parameter.names.values()
-        return list(self)
+        return named_objs(self).values()
 
 
 class Selector(SelectorBase):

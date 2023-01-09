@@ -1259,7 +1259,7 @@ class SelectObjects(list):
             self._parameter.names[index] = object
 
     def __eq__(self, other):
-        eq = super().__eq__(other)
+        eq = super(SelectObjects, self).__eq__(other)
         if self._parameter.names and eq is NotImplemented:
             return dict(zip(self._parameter.names, self)) == other
         return eq

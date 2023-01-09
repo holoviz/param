@@ -1058,12 +1058,12 @@ class Tuple(Parameter):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return list(value) # As JSON has no tuple representation
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return tuple(value) # As JSON has no tuple representation
 
@@ -1519,12 +1519,12 @@ class Array(ClassSelector):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.tolist()
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         from numpy import asarray
         return asarray(value)
@@ -1606,12 +1606,12 @@ class DataFrame(ClassSelector):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.to_dict('records')
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         from pandas import DataFrame as pdDFrame
         return pdDFrame(value)
@@ -1978,14 +1978,14 @@ class Date(Number):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
             value = value.astype(dt.datetime)
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -2016,12 +2016,12 @@ class CalendarDate(Number):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.strftime("%Y-%m-%d")
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -2176,7 +2176,7 @@ class DateRange(Range):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         # List as JSON has no tuple representation
         serialized = []
         for v in value:
@@ -2191,7 +2191,7 @@ class DateRange(Range):
         return serialized
 
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         deserialized = []
         for v in value:
@@ -2227,13 +2227,13 @@ class CalendarDateRange(Range):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         # As JSON has no tuple representation
         return [v.strftime("%Y-%m-%d") for v in value]
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         # As JSON has no tuple representation
         return tuple([dt.datetime.strptime(v, "%Y-%m-%d").date() for v in value])

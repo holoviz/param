@@ -1245,7 +1245,6 @@ class SelectObjects(list):
                 super(SelectObjects, self).__setitem__(index, object)
                 self._parameter._objects[index] = object
             return
-        clsname = type(self._parameter).__name__
         if self and not self._parameter.names:
             self._parameter.names = named_objs(self)
         with self._trigger(trigger):
@@ -1350,7 +1349,6 @@ class SelectObjects(list):
                 })
 
     def update(self, objects, **items):
-        clsname = type(self._parameter).__name__
         if not self._parameter.names:
             self._parameter.names = named_objs(self)
         objects = objects.items() if isinstance(objects, dict) else objects

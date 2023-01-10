@@ -1,6 +1,6 @@
 # Maintainers
 
-For member policy, see [HoloViz/HoloViz - MEMBERS.md](https://github.com/holoviz/holoviz/blob/8257fe24af9d18598cee9f55055b78301307bd65/doc/governance/project-docs/MEMBERS.md)
+For member policy, see the description at the top of [HoloViz/HoloViz - MEMBERS.md](https://github.com/holoviz/holoviz/blob/param-gov/doc/governance/project-docs/MEMBERS.md)
 
 The Param Project’s equivalently named documents take precedence over any external materials referenced within this linked document above.
 

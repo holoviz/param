@@ -1914,6 +1914,9 @@ class ListSelector(Selector):
     def _validate(self, val):
         if (val is None and self.allow_None):
             return
+        if not isinstance(val, list):
+            raise ValueError("ListSelector parameter %r only takes list "
+                             "types, not %r." % (self.name, val))
         for o in val:
             super(ListSelector, self)._validate(o)
 

@@ -1670,7 +1670,7 @@ class _XrBase:
 
         if self.coords is not None:
             self._validate_property(self.coords, list(val.coords),
-                                           'coordinates')
+                                    'coordinates')
             if isinstance(self.coords, dict):
                 self._coord_check(self.coords, val.coords)
 
@@ -1768,14 +1768,14 @@ class Dataset(ClassSelector, _XrBase):
     def _validate(self, val):
         if self.allow_None and val is None:
             return
-            
+
         super(Dataset, self)._validate(val)
 
         self._validate_dims_coords(val)
 
         if self.data_vars is not None:
             self._validate_property(self.data_vars, val.data_vars,
-                                           'data variables')
+                                    'data variables')
 
 
 # For portable code:

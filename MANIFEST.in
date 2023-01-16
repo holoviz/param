@@ -4,3 +4,4 @@ include setup.py
 include param/.version
 recursive-include param *.py
 recursive-include numbergen *.py
+recursive-include tests *.md *.py

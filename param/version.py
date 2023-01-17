@@ -194,6 +194,7 @@ class Version(object):
                 output = run_cmd([cmd, 'describe', '--long', '--match',
                                   "v[0-9]*.[0-9]*.[0-9]*", '--dirty'],
                                  cwd=os.path.dirname(self.fpath))
+                print(output)
             if as_string: return output
         except Exception as e1:
             try:

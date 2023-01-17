@@ -39,10 +39,12 @@ jobs:
         run: |
           python -m pip install --upgrade setuptools pip wheel
           python -m pip install "tox<4" tox-gh-actions
-          python -m pip install -e .
+          # python -m pip install -e .
       - name: test available
         run: |
           which git
+          git status
+          git tag --list
           python -c "import param; print(repr(param.__version__))"
       - name: lint
         run: tox -e flakes

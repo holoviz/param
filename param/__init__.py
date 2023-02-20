@@ -27,7 +27,7 @@ import collections
 
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, basestring)
+    descendents, get_logger, instance_descriptor, basestring, dt_types)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
@@ -46,16 +46,6 @@ try:
     __version__ = str(Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param"))
 except:
     __version__ = "0.0.0+unknown"
-
-
-dt_types = (dt.datetime, dt.date)
-
-try:
-    import numpy as np
-    dt_types = dt_types + (np.datetime64,)
-except:
-    pass
-
 
 try:
     import collections.abc as collections_abc
@@ -123,6 +113,7 @@ def hashable(x):
     else:
         return x
 
+
 def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
@@ -132,12 +123,20 @@ def named_objs(objlist, namesdict=None):
     """
     objs = OrderedDict()
 
+    objtoname = {}
+    unhashables = []
     if namesdict is not None:
-        objtoname = {hashable(v): k for k, v in namesdict.items()}
+        for k, v in namesdict.items():
+            try:
+                objtoname[hashable(v)] = k
+            except TypeError:
+                unhashables.append((k, v))
 
     for obj in objlist:
-        if namesdict is not None and hashable(obj) in objtoname:
+        if objtoname and hashable(obj) in objtoname:
             k = objtoname[hashable(obj)]
+        elif any(obj is v for (_, v) in unhashables):
+            k = [k for (k, v) in unhashables if v is obj][0]
         elif hasattr(obj, "name"):
             k = obj.name
         elif hasattr(obj, '__name__'):
@@ -195,24 +194,29 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif all(isinstance(el. dt_types) for el in v) and len(v)==2:
+            elif all(isinstance(el, dt_types) for el in v) and len(v)==2:
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)
         elif isinstance(v, list):
             params[k] = List(**kws)
-        elif isinstance(v, np.ndarray):
-            params[k] = Array(**kws)
         else:
-            from pandas import DataFrame as pdDFrame
-            from pandas import Series as pdSeries
-
-            if isinstance(v, pdDFrame):
-                params[k] = DataFrame(**kws)
-            elif isinstance(v, pdSeries):
-                params[k] = Series(**kws)
-            else:
-                params[k] = Parameter(**kws)
+            if 'numpy' in sys.modules:
+                from numpy import ndarray
+                if isinstance(v, ndarray):
+                    params[k] = Array(**kws)
+                    continue
+            if 'pandas' in sys.modules:
+                from pandas import (
+                    DataFrame as pdDFrame, Series as pdSeries
+                )
+                if isinstance(v, pdDFrame):
+                    params[k] = DataFrame(**kws)
+                    continue
+                elif isinstance(v, pdSeries):
+                    params[k] = Series(**kws)
+                    continue
+            params[k] = Parameter(**kws)
 
     return params
 
@@ -737,6 +741,42 @@ def dict_update(dictionary, **kw):
     return d
 
 
+class Bytes(Parameter):
+    """
+    A Bytes Parameter, with a default value and optional regular
+    expression (regex) matching.
+
+    Similar to the String parameter, but instead of type basestring
+    this parameter only allows objects of type bytes (e.g. b'bytes').
+    """
+
+    __slots__ = ['regex']
+
+    def __init__(self, default=b"", regex=None, allow_None=False, **kwargs):
+        super(Bytes, self).__init__(default=default, allow_None=allow_None, **kwargs)
+        self.regex = regex
+        self.allow_None = (default is None or allow_None)
+        self._validate(default)
+
+    def _validate_regex(self, val, regex):
+        if (val is None and self.allow_None):
+            return
+        if regex is not None and re.match(regex, val) is None:
+            raise ValueError("Bytes parameter %r value %r does not match regex %r."
+                             % (self.name, val, regex))
+
+    def _validate_value(self, val, allow_None):
+        if allow_None and val is None:
+            return
+        if not isinstance(val, bytes):
+            raise ValueError("Bytes parameter %r only takes a byte string value, "
+                             "not value of type %s." % (self.name, type(val)))
+
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
+        self._validate_regex(val, self.regex)
+
+
 class Number(Dynamic):
     """
     A numeric Dynamic Parameter, with a default value and optional bounds.
@@ -1030,12 +1070,12 @@ class Tuple(Parameter):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return list(value) # As JSON has no tuple representation
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return tuple(value) # As JSON has no tuple representation
 
@@ -1495,12 +1535,12 @@ class Array(ClassSelector):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.tolist()
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         from numpy import asarray
         return asarray(value)
@@ -1582,12 +1622,12 @@ class DataFrame(ClassSelector):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.to_dict('records')
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         from pandas import DataFrame as pdDFrame
         return pdDFrame(value)
@@ -1890,6 +1930,9 @@ class ListSelector(Selector):
     def _validate(self, val):
         if (val is None and self.allow_None):
             return
+        if not isinstance(val, list):
+            raise ValueError("ListSelector parameter %r only takes list "
+                             "types, not %r." % (self.name, val))
         for o in val:
             super(ListSelector, self)._validate(o)
 
@@ -1953,14 +1996,14 @@ class Date(Number):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
             value = value.astype(dt.datetime)
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -1990,12 +2033,12 @@ class CalendarDate(Number):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.strftime("%Y-%m-%d")
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -2131,14 +2174,20 @@ class DateRange(Range):
     """
 
     def _validate_value(self, val, allow_None):
+        # Cannot use super()._validate_value as DateRange inherits from
+        # NumericTuple which check that the tuple values are numbers and
+        # datetime objects aren't numbers.
         if allow_None and val is None:
             return
 
+        if not isinstance(val, tuple):
+            raise ValueError("DateRange parameter %r only takes a tuple value, "
+                             "not %s." % (self.name, type(val).__name__))
         for n in val:
             if isinstance(n, dt_types):
                 continue
-            raise ValueError("DateRange parameter %r only takes datetime "
-                             "types, not %r." % (self.name, type(val)))
+            raise ValueError("DateRange parameter %r only takes date/datetime "
+                             "values, not type %s." % (self.name, type(n).__name__))
 
         start, end = val
         if not end >= start:
@@ -2146,7 +2195,37 @@ class DateRange(Range):
                              "is before start datetime %s." %
                              (self.name, val[1], val[0]))
 
+    @classmethod
+    def serialize(cls, value):
+        if value is None:
+            return None
+        # List as JSON has no tuple representation
+        serialized = []
+        for v in value:
+            if not isinstance(v, (dt.datetime, dt.date)): # i.e np.datetime64
+                v = v.astype(dt.datetime)
+            # Separate date and datetime to deserialize to the right type.
+            if type(v) == dt.date:
+                v = v.strftime("%Y-%m-%d")
+            else:
+                v = v.strftime("%Y-%m-%dT%H:%M:%S.%f")
+            serialized.append(v)
+        return serialized
 
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        deserialized = []
+        for v in value:
+            # Date
+            if len(v) == 10:
+                v = dt.datetime.strptime(v, "%Y-%m-%d").date()
+            # Datetime
+            else:
+                v = dt.datetime.strptime(v, "%Y-%m-%dT%H:%M:%S.%f")
+            deserialized.append(v)
+        # As JSON has no tuple representation
+        return tuple(deserialized)
 
 class CalendarDateRange(Range):
     """
@@ -2166,6 +2245,20 @@ class CalendarDateRange(Range):
             raise ValueError("CalendarDateRange parameter %r's end date "
                              "%s is before start date %s." %
                              (self.name, val[1], val[0]))
+
+    @classmethod
+    def serialize(cls, value):
+        if value is None:
+            return None
+        # As JSON has no tuple representation
+        return [v.strftime("%Y-%m-%d") for v in value]
+
+    @classmethod
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        # As JSON has no tuple representation
+        return tuple([dt.datetime.strptime(v, "%Y-%m-%d").date() for v in value])
 
 
 class Event(Boolean):

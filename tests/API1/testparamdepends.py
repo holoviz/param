@@ -1,14 +1,29 @@
 """
 Unit test for param.depends.
 """
-
-import pytest
+import sys
 
 import param
+import pytest
 
 from param.parameterized import _parse_dependency_spec
 
 from . import API1TestCase
+
+try:
+    import asyncio
+except ImportError:
+    asyncio = None
+
+
+def async_executor(func):
+    # Could be entirely replaced by asyncio.run(func()) in Python >=3.7
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    loop.run_until_complete(func())
 
 
 class TestDependencyParser(API1TestCase):
@@ -128,7 +143,30 @@ class TestParamDependsSubclassing(API1TestCase):
         assert len(b.param.params_depended_on('test')) == 3
         assert len(B.param._depends['watch']) == 0
 
+    def test_param_depends_subclass_ordering(self):
 
+        values = []
+        
+        class A(param.Parameterized):
+            a = param.String()
+
+            @param.depends('a', watch=True)
+            def test(self):
+                values.append(self.a)
+
+        class B(A):
+
+            @param.depends('a', watch=True)
+            def more_test(self):
+                values.append(self.a.upper())
+
+        b = B()
+
+        b.a = 'a'
+
+        assert values == ['a', 'A']
+
+        
 
 class TestParamDepends(API1TestCase):
 
@@ -638,7 +676,24 @@ class TestParamDepends(API1TestCase):
         self.assertIs(pinfo.inst, None)
         self.assertEqual(pinfo.name, 'a')
         self.assertEqual(pinfo.what, 'value')
+    
+    # @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
+    # def test_async(self):
+    #     try:
+    #         param.parameterized.async_executor = async_executor
+    #         class P(param.Parameterized):
+    #             a = param.Parameter()
+    #             single_count = param.Integer()
 
+    #             @param.depends('a', watch=True)
+    #             async def single_parameter(self):
+    #                 self.single_count += 1
+
+    #         inst = P()
+    #         inst.a = 'test'
+    #         assert inst.single_count == 1
+    #     finally:
+    #         param.parameterized.async_executor = None
 
 
 class TestParamDependsFunction(API1TestCase):
@@ -710,6 +765,24 @@ class TestParamDependsFunction(API1TestCase):
         self.assertEqual(d, [4])
         p.b = 3
         self.assertEqual(d, [4, 5])
+
+    # @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
+    # def test_async(self):
+    #     try:
+    #         param.parameterized.async_executor = async_executor
+    #         p = self.P(a=1)
+
+    #         d = []
+
+    #         @param.depends(p.param.a, watch=True)
+    #         async def function(value):
+    #             d.append(value)
+
+    #         p.a = 2
+
+    #         assert d == [2]
+    #     finally:
+    #         param.parameterized.async_executor = None
 
 
 def test_misspelled_parameter_in_depends():

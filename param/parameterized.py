@@ -9,6 +9,7 @@ __init__.py (providing specialized Parameter types).
 """
 
 import copy
+import datetime as dt
 import re
 import sys
 import inspect
@@ -43,6 +44,14 @@ try:
     from inspect import getfullargspec
 except:
     from inspect import getargspec as getfullargspec # python2
+
+dt_types = (dt.datetime, dt.date)
+
+try:
+    import numpy as np
+    dt_types = dt_types + (np.datetime64,)
+except:
+    pass
 
 basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
@@ -390,10 +399,8 @@ def depends(func, *dependencies, **kw):
     on_init = kw.pop("on_init", False)
 
     if iscoroutinefunction(func):
-        import asyncio
-        @asyncio.coroutine
-        def _depends(*args, **kw):
-            yield from func(*args, **kw)
+        from ._async import generate_depends
+        _depends = generate_depends(func)
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -429,10 +436,14 @@ def depends(func, *dependencies, **kw):
                              'parameters by name.')
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
-        def cb(*events):
-            args = (getattr(dep.owner, dep.name) for dep in dependencies)
-            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-            return func(*args, **dep_kwargs)
+        if iscoroutinefunction(func):
+            from ._async import generate_callback
+            cb = generate_callback(func, dependencies, kw)
+        else:
+            def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                return func(*args, **dep_kwargs)
 
         grouped = defaultdict(list)
         for dep in deps:
@@ -649,12 +660,8 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
-        import asyncio
-        @asyncio.coroutine
-        def caller(*events):
-            if callback: callback(*events)
-            if not _skip_event(*events, what=what, changed=changed):
-                yield function()
+        from ._async import generate_caller
+        caller = generate_caller(function, what=what, changed=changed, callback=callback, skip_event=_skip_event)
     else:
         def caller(*events):
             if callback: callback(*events)
@@ -670,7 +677,8 @@ def _add_doc(obj, docstring):
         obj.__doc__ = docstring
 
 
-PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
+PInfo = namedtuple("PInfo", "inst cls name pobj what")
+_add_doc(PInfo,
     """
     Object describing something being watched about a Parameter.
 
@@ -685,7 +693,8 @@ PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
     `what`: What is being watched on the Parameter (either 'value' or a slot name)
     """)
 
-MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
+MInfo = namedtuple("MInfo", "inst cls name method")
+_add_doc(MInfo,
     """
     Object describing a Parameterized method being watched.
 
@@ -698,13 +707,15 @@ MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
     `method`: bound method of the object being watched
     """)
 
-DInfo = namedtuple("DInfo", "spec"); _add_doc(DInfo,
+DInfo = namedtuple("DInfo", "spec")
+_add_doc(DInfo,
     """
     Object describing dynamic dependencies.
     `spec`: Dependency specification to resolve
     """)
 
-Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
+Event = namedtuple("Event", "what name obj cls old new type")
+_add_doc(Event,
     """
     Object representing an event that triggers a Watcher.
 
@@ -1122,7 +1133,7 @@ class Parameter(object):
                                  "it has been bound to a Parameterized.")
 
         implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
-        slot_attribute = attribute in self.__slots__
+        slot_attribute = attribute in get_all_slots(type(self))
         try:
             old = getattr(self, attribute) if implemented else NotImplemented
             if slot_attribute:
@@ -1429,8 +1440,9 @@ class Comparator(object):
         numbers.Number: operator.eq,
         basestring: operator.eq,
         bytes: operator.eq,
-        type(None): operator.eq
+        type(None): operator.eq,
     }
+    equalities.update({dtt: operator.eq for dtt in dt_types})
 
     @classmethod
     def is_equal(cls, obj1, obj2):
@@ -1719,7 +1731,7 @@ class Parameters(object):
         for method, queued, on_init, constant, dynamic in type(obj).param._depends['watch']:
             # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
-            dynamic = [d for d in dynamic if attribute is None or d.spec.startswith(attribute)]
+            dynamic = [d for d in dynamic if attribute is None or d.spec.split(".")[0] == attribute]
             if init:
                 constant_grouped = defaultdict(list)
                 for dep in _resolve_mcs_deps(obj, constant, []):
@@ -2052,7 +2064,7 @@ class Parameters(object):
 
         if self_.self_or_cls.param._BATCH_WATCH:
             self_._events.append(event)
-            if watcher not in self_._watchers:
+            if not any(watcher is w for w in self_._watchers):
                 self_._watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
@@ -2682,6 +2694,7 @@ class ParameterizedMetaclass(type):
         dependers = [(n, m, m._dinfo) for (n, m) in dict_.items()
                      if hasattr(m, '_dinfo')]
 
+        # Resolve dependencies of current class
         _watch = []
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
@@ -2693,18 +2706,19 @@ class ParameterizedMetaclass(type):
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
 
-        # Resolve other dependencies in remainder of class hierarchy
+        # Resolve dependencies in class hierarchy
+        _inherited = []
         for cls in classlist(mcs)[:-1][::-1]:
             if not hasattr(cls, '_param'):
                 continue
             for dep in cls.param._depends['watch']:
                 method = getattr(mcs, dep[0], None)
                 dinfo = getattr(method, '_dinfo', {'watch': False})
-                if (not any(dep[0] == w[0] for w in _watch)
+                if (not any(dep[0] == w[0] for w in _watch+_inherited)
                     and dinfo.get('watch')):
-                    _watch.append(dep)
+                    _inherited.append(dep)
 
-        mcs.param._depends = {'watch': _watch}
+        mcs.param._depends = {'watch': _inherited+_watch}
 
         if docstring_signature:
             mcs.__class_docstring_signature()

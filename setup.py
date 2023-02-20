@@ -25,8 +25,8 @@ extras_require = {
     ],
     'doc': [
         'pygraphviz',
-        'nbsite >=0.7.1',
-        'pydata-sphinx-theme',
+        'nbsite ==0.8.0rc2',
+        'pydata-sphinx-theme <0.9.0',
         'myst-parser',
         'nbconvert',
         'graphviz',
@@ -35,6 +35,8 @@ extras_require = {
         'aiohttp',
         'panel',
         'pandas',
+        # Temporar pin due to https://github.com/ipython/ipython/issues/13845
+        'ipython !=8.7.0',
     ]
 }
 
@@ -81,6 +83,7 @@ setup_args = dict(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",

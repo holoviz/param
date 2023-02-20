@@ -735,7 +735,7 @@ def get_soft_bounds(bounds, softbounds):
     return (l, u)
 
 
-def dict_update(dictionary, **kw):
+def _dict_update(dictionary, **kw):
     d = dictionary.copy()
     d.update(kw)
     return d
@@ -824,7 +824,7 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    _slot_defaults = dict_update(Parameter._slot_defaults, default=0.0, inclusive_bounds=(True,True))
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=0.0, inclusive_bounds=(True,True))
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
@@ -970,7 +970,7 @@ class Number(Dynamic):
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
-    _slot_defaults = dict_update(Number._slot_defaults, default=0)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=0)
 
     def _validate_value(self, val, allow_None):
         if callable(val):
@@ -993,7 +993,7 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    _slot_defaults = dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
+    _slot_defaults = _dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
 
 
@@ -1004,7 +1004,7 @@ class Boolean(Parameter):
 
     # Bounds are set for consistency and are arguably accurate, but have
     # no effect since values are either False, True, or None (if allowed).
-    _slot_defaults = dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
 
     def __init__(self, default=Undefined, bounds=Undefined, **params):
         self.bounds = bounds
@@ -1027,7 +1027,7 @@ class Tuple(Parameter):
 
     __slots__ = ['length']
 
-    _slot_defaults = dict_update(Parameter._slot_defaults, default=(0,0))
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0))
 
     def __init__(self, default=(0,0), length=Undefined, **params):
         """
@@ -1097,7 +1097,7 @@ class NumericTuple(Tuple):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    _slot_defaults = dict_update(Parameter._slot_defaults, default=(0.0, 0.0))
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0.0, 0.0))
 
     def __init__(self, default=Undefined, **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
@@ -1244,7 +1244,7 @@ class Selector(SelectorBase):
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    _slot_defaults = dict_update(Parameter._slot_defaults, allow_None=False)
+    _slot_defaults = _dict_update(Parameter._slot_defaults, allow_None=False)
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -1374,7 +1374,7 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = dict_update(Parameter._slot_defaults, is_instance=True)
+    _slot_defaults = _dict_update(Parameter._slot_defaults, is_instance=True)
 
     def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
@@ -1970,7 +1970,7 @@ class Date(Number):
     Date parameter of datetime or date type.
     """
 
-    _slot_defaults = dict_update(Number._slot_defaults, default=None)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2013,7 +2013,7 @@ class CalendarDate(Number):
     Parameter specifically allowing dates (not datetimes).
     """
 
-    _slot_defaults = dict_update(Number._slot_defaults, default=None)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2088,7 +2088,7 @@ class Color(Parameter):
 
     __slots__ = ['allow_named']
 
-    _slot_defaults = dict_update(Parameter._slot_defaults, allow_named=True)
+    _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
 
     def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
@@ -2126,7 +2126,7 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    _slot_defaults = dict_update(Tuple._slot_defaults,
+    _slot_defaults = _dict_update(Tuple._slot_defaults,
                                  default=None, inclusive_bounds=(True,True))
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,

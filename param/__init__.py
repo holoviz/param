@@ -847,8 +847,6 @@ class Number(Dynamic):
         dynamically generated, check the bounds.
         """
         result = super(Number, self).__get__(obj, objtype)
-        if result is Undefined:
-            result = self._slot_defaults.default
 
         # Should be able to optimize this commonly used method by
         # avoiding extra lookups (e.g. _value_is_dynamic() is also

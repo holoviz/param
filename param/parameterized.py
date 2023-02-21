@@ -2858,9 +2858,9 @@ class ParameterizedMetaclass(type):
         given in the object's class, or in its superclasses.  For
         Parameters owned by Parameterized classes, we have implemented
         an additional level of default lookup, should this ordinary
-        lookup return only None.
+        lookup return only `Undefined`.
 
-        In such a case, i.e. when no non-None value was found for a
+        In such a case, i.e. when no non-`Undefined` value was found for a
         Parameter by the usual inheritance mechanisms, we explicitly
         look for Parameters with the same name in superclasses of this
         Parameterized class, and use the first such value that we
@@ -2907,7 +2907,7 @@ class ParameterizedMetaclass(type):
             superclasses = iter(supers)
 
             # Search up the hierarchy until param.slot (which has to
-            # be obtained using getattr(param,slot)) is not None, or
+            # be obtained using getattr(param,slot)) is not Undefined, or
             # we run out of classes to search.
             while getattr(param,slot) is Undefined:
                 try:

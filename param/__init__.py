@@ -747,6 +747,10 @@ class Bytes(Parameter):
 
     __slots__ = ['regex']
 
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, default=b"", regex=None, 
+    )
+
     def __init__(self, default=b"", regex=None, allow_None=False, **kwargs):
         super(Bytes, self).__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex

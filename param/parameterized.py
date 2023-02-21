@@ -840,7 +840,7 @@ class ParameterMetaclass(type):
         else:
             return type.__getattribute__(mcs,name)
 
-def allow_None_default(self):
+def _allow_None_default(self):
     """Forces allow_None=True if the param default is None"""
     return self.default is None
 
@@ -1001,7 +1001,7 @@ class Parameter(object):
     _serializers = {'json': serializer.JSONSerialization}
 
     _slot_defaults = dict(instantiate=False, constant=False, readonly=False,
-                          pickle_default_value=True, allow_None=allow_None_default,
+                          pickle_default_value=True, allow_None=_allow_None_default,
                           per_instance=True)
 
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913

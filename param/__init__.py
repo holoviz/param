@@ -823,7 +823,7 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=0.0, inclusive_bounds=(True,True))
+    _slot_defaults = _dict_update(Dynamic._slot_defaults, default=0.0, inclusive_bounds=(True,True))
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
@@ -1094,7 +1094,7 @@ class NumericTuple(Tuple):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0.0, 0.0))
+    _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
     def __init__(self, default=Undefined, **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
@@ -1241,7 +1241,7 @@ class Selector(SelectorBase):
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, allow_None=False)
+    _slot_defaults = _dict_update(SelectorBase._slot_defaults, allow_None=False)
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -1371,7 +1371,7 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, is_instance=True)
+    _slot_defaults = _dict_update(SelectorBase._slot_defaults, is_instance=True)
 
     def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
@@ -2123,7 +2123,7 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    _slot_defaults = _dict_update(Tuple._slot_defaults,
+    _slot_defaults = _dict_update(NumericTuple._slot_defaults,
                                  default=None, inclusive_bounds=(True,True))
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,

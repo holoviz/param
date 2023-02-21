@@ -751,11 +751,10 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, 
     )
 
-    def __init__(self, default=b"", regex=None, allow_None=False, **kwargs):
-        super(Bytes, self).__init__(default=default, allow_None=allow_None, **kwargs)
+    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+        super(Bytes, self).__init__(default=default, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or allow_None)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):

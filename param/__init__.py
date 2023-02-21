@@ -27,7 +27,8 @@ import collections
 
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, basestring, dt_types)
+    descendents, get_logger, instance_descriptor, basestring, dt_types,
+    _dict_update)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
@@ -733,12 +734,6 @@ def get_soft_bounds(bounds, softbounds):
         u = su
 
     return (l, u)
-
-
-def _dict_update(dictionary, **kw):
-    d = dictionary.copy()
-    d.update(kw)
-    return d
 
 
 class Bytes(Parameter):

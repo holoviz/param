@@ -671,6 +671,15 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     return caller
 
 
+def _dict_update(dictionary, **kwargs):
+    """
+    Small utility to update a copy of a dict with the provided keyword args.
+    """
+    d = dictionary.copy()
+    d.update(kwargs)
+    return d
+
+
 def _add_doc(obj, docstring):
     """Add a docstring to a namedtuple, if on python3 where that's allowed"""
     if sys.version_info[0]>2:

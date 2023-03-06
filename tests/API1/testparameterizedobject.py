@@ -392,6 +392,30 @@ class TestPO1(param.Parameterized):
     x = param.Number(default=numbergen.UniformRandom(lbound=-1,ubound=1,seed=1),bounds=(-1,1))
     y = param.Number(default=1,bounds=(-1,1))
 
+
+class TestParameter(API1TestCase):
+
+    def setUp(self):
+        super().setUp()
+
+        class TestParameter(param.Parameterized):
+            a = param.Parameter(default='')
+            b = param.Parameter(default='',allow_None=True)
+            c = param.Parameter(default=None)
+
+        self._TestParameter = TestParameter
+
+    def test_handling_of_None(self):
+        t = self._TestParameter()
+
+        with self.assertRaises(ValueError):
+            t.a = None
+
+        t.b = None
+
+        assert t.c is None
+
+
 class TestNumberParameter(API1TestCase):
 
     def test_outside_bounds(self):

@@ -396,7 +396,7 @@ class TestPO1(param.Parameterized):
 class TestParameter(API1TestCase):
 
     def setUp(self):
-        super().setUp()
+        super(TestParameter, self).setUp()
 
         class TestParameter(param.Parameterized):
             a = param.Parameter(default='')

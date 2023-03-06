@@ -398,12 +398,12 @@ class TestParameter(API1TestCase):
     def setUp(self):
         super(TestParameter, self).setUp()
 
-        class TestParameter(param.Parameterized):
+        class _TestParameter(param.Parameterized):
             a = param.Parameter(default='')
             b = param.Parameter(default='',allow_None=True)
             c = param.Parameter(default=None)
 
-        self._TestParameter = TestParameter
+        self._TestParameter = _TestParameter
 
     def test_handling_of_None(self):
         t = self._TestParameter()

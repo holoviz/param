@@ -73,3 +73,23 @@ class MockLoggingHandler(logging.Handler):
             raise AssertionError(msg.format(level=level,
                                             last_line=repr(last_line[0]),
                                             substring=repr(substring)))
+
+
+def check_defaults(parameter, label, skip=[]):
+    # ! Not testing default and allow_None
+    if 'doc' not in skip:
+        assert parameter.doc is None
+    if 'precedence' not in skip:
+        assert parameter.precedence is None
+    if 'instantiate' not in skip:
+        assert parameter.instantiate is False
+    if 'constant' not in skip:
+        assert parameter.constant is False
+    if 'readonly' not in skip:
+        assert parameter.readonly is False
+    if 'pickle_default_value' not in skip:
+        assert parameter.pickle_default_value is True
+    if 'per_instance' not in skip:
+        assert parameter.per_instance is True
+    if 'label' not in skip:
+        assert parameter.label == label

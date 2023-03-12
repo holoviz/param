@@ -6,6 +6,7 @@ import os
 
 import param
 from . import API1TestCase
+from .utils import check_defaults
 
 try:
     import numpy
@@ -24,6 +25,36 @@ def _is_array_and_equal(test,ref):
 
 # TODO: incomplete
 class TestNumpy(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.instantiate is True
+        assert p.is_instance is True
+        assert p.class_ == numpy.ndarray
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.Array()
+
+        check_defaults(P.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(P.param.s)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.Array()
+
+        p = P()
+
+        check_defaults(p.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(p.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.Array()
+
+        check_defaults(s, label=None, skip=['instantiate'])
+        self._check_defaults(s)
+
     def test_array_param(self):
         class Z(param.Parameterized):
             z = param.Array(default=numpy.array([1]))

@@ -6,6 +6,7 @@ import sys
 import pytest
 
 from . import API1TestCase
+from .utils import check_defaults
 
 import param
 
@@ -13,6 +14,33 @@ import param
 ip_regex = br'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
 class TestBytesParameters(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default == b''
+        assert p.allow_None is False
+        assert p.regex is None
+
+    def test_defaults_class(self):
+        class A(param.Parameterized):
+            b = param.Bytes()
+
+        check_defaults(A.param.b, label='B')
+        self._check_defaults(A.param.b)
+
+    def test_defaults_inst(self):
+        class A(param.Parameterized):
+            b = param.Bytes()
+
+        a = A()
+
+        check_defaults(a.param.b, label='B')
+        self._check_defaults(a.param.b)
+
+    def test_defaults_unbound(self):
+        b = param.Bytes()
+
+        check_defaults(b, label=None)
+        self._check_defaults(b)
 
     def test_bytes_default_type(self):
         if sys.version_info.major < 3:

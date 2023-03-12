@@ -7,6 +7,7 @@ testCompositeParameter.txt
 
 import param
 from . import API1TestCase
+from .utils import check_defaults
 
 class TestCompositeParameters(API1TestCase):
 
@@ -33,12 +34,41 @@ class TestCompositeParameters(API1TestCase):
 
         self.SomeSequence = SomeSequence
 
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.attribs == []
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            c = param.Composite()
+
+        check_defaults(P.param.c, label='C')
+        self._check_defaults(P.param.c)
+        assert P.param.c.objtype is P
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            c = param.Composite()
+
+        p = P()
+
+        check_defaults(p.param.c, label='C')
+        self._check_defaults(p.param.c)
+        assert p.param.c.objtype is P
+
+    def test_defaults_unbound(self):
+        c = param.Composite()
+
+        check_defaults(c, label=None)
+        self._check_defaults(c)
+        assert not hasattr(c, 'objtype')
+
     def test_initialization(self):
         "Make an instance and do default checks"
         self.assertEqual(self.a.x, 0)
         self.assertEqual(self.a.y, 0)
         self.assertEqual(self.a.xy, [0,0])
-
 
     def test_set_component(self):
         self.a.x = 1

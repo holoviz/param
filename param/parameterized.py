@@ -1255,6 +1255,8 @@ class Parameter(object):
 
     def _validate_value(self, value, allow_None):
         """Implements validation for parameter value"""
+        if value is None and allow_None is False:
+            raise ValueError("Parameter %r does not accept `None`." % (self.name))
 
     def _validate(self, val):
         """Implements validation for the parameter value and attributes"""

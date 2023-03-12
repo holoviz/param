@@ -77,7 +77,7 @@ def test_resolve_path_file_default():
 
 
 def test_resolve_path_file_not_found():
-    with pytest.raises(OSError, match='File surelyyoudontexist was not found in the following'):
+    with pytest.raises(IOError, match='File surelyyoudontexist was not found in the following'):
         resolve_path('surelyyoudontexist')
 
 
@@ -86,7 +86,7 @@ def test_resolve_path_file_not_found(tmpdir):
     cdir = os.getcwd()
     os.chdir(str(tmpdir))
     try:
-        with pytest.raises(OSError, match='File notthere was not found in the following'):
+        with pytest.raises(IOError, match='File notthere was not found in the following'):
             resolve_path('notthere')
     finally:
         os.chdir(cdir)
@@ -97,7 +97,7 @@ def test_resolve_path_folder_not_found(tmpdir):
     cdir = os.getcwd()
     os.chdir(str(tmpdir))
     try:
-        with pytest.raises(OSError, match='Folder notthere was not found in the following'):
+        with pytest.raises(IOError, match='Folder notthere was not found in the following'):
             resolve_path('notthere', path_to_file=False)
     finally:
         os.chdir(cdir)
@@ -108,7 +108,7 @@ def test_resolve_path_either_not_found(tmpdir):
     cdir = os.getcwd()
     os.chdir(str(tmpdir))
     try:
-        with pytest.raises(OSError, match='Path notthere was not found in the following'):
+        with pytest.raises(IOError, match='Path notthere was not found in the following'):
             resolve_path('notthere', path_to_file=None)
     finally:
         os.chdir(cdir)
@@ -121,7 +121,7 @@ def test_resolve_path_abs_not_found(tmpdir, path_to_file):
     fp = os.path.join(str(tmpdir), 'foo')
     os.chdir(str(tmpdir))
     try:
-        with pytest.raises(OSError, match='not found'):
+        with pytest.raises(IOError, match='not found'):
             resolve_path(fp, path_to_file=path_to_file)
     finally:
         os.chdir(cdir)

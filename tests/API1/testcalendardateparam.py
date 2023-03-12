@@ -7,9 +7,40 @@ import datetime as dt
 import pytest
 import param
 from . import API1TestCase
+from .utils import check_defaults
 
 
 class TestDateTimeParameters(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.bounds is None
+        assert p.softbounds is None
+        assert p.inclusive_bounds == (True, True)
+        assert p.step is None
+
+    def test_defaults_class(self):
+        class A(param.Parameterized):
+            d = param.CalendarDate()
+
+        check_defaults(A.param.d, label='D')
+        self._check_defaults(A.param.d)
+
+    def test_defaults_inst(self):
+        class A(param.Parameterized):
+            d = param.CalendarDate()
+
+        a = A()
+
+        check_defaults(a.param.d, label='D')
+        self._check_defaults(a.param.d)
+
+    def test_defaults_unbound(self):
+        d = param.CalendarDate()
+
+        check_defaults(d, label=None)
+        self._check_defaults(d)
 
     def test_initialization_out_of_bounds(self):
         try:
@@ -57,3 +88,8 @@ class TestDateTimeParameters(API1TestCase):
     def test_datetime_not_accepted(self):
         with pytest.raises(ValueError):
             param.CalendarDate(dt.datetime(2021, 8, 16, 10))
+
+    def test_step_invalid_type_parameter(self):
+        exception = "Step can only be None or a date type"
+        with self.assertRaisesRegex(ValueError, exception):
+            param.CalendarDate(dt.date(2017,2,27), step=3.2)

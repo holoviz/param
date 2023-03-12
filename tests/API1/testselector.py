@@ -7,6 +7,7 @@ testEnumerationParameter.txt
 
 import param
 from . import API1TestCase
+from.utils import check_defaults
 from collections import OrderedDict
 
 
@@ -28,9 +29,49 @@ class TestSelectorParameters(API1TestCase):
 
         self.P = P
 
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is None
+        assert p.objects == []
+        assert p.compute_default_fn is None
+        assert p.check_on_set is False
+        assert p.names is None
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.Selector()
+
+        check_defaults(P.param.s, label='S')
+        self._check_defaults(P.param.s)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.Selector()
+
+        p = P()
+
+        check_defaults(p.param.s, label='S')
+        self._check_defaults(p.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.Selector()
+
+        check_defaults(s, label=None)
+        self._check_defaults(s)
+
     def test_set_object_constructor(self):
         p = self.P(e=6)
         self.assertEqual(p.e, 6)
+
+    def test_allow_None_is_None(self):
+        p = self.P()
+        assert p.param.e.allow_None is None
+        assert p.param.f.allow_None is None
+        assert p.param.g.allow_None is None
+        assert p.param.h.allow_None is None
+        assert p.param.i.allow_None is None
+        assert p.param.s.allow_None is None
+        assert p.param.d.allow_None is None
 
     def test_get_range_list(self):
         r = self.P.param.params("g").get_range()

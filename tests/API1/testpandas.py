@@ -6,6 +6,7 @@ import os
 
 import param
 from . import API1TestCase
+from .utils import check_defaults
 
 try:
     import pandas
@@ -17,6 +18,38 @@ except ImportError:
 
 
 class TestDataFrame(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.instantiate is True
+        assert p.is_instance is True
+        assert p.rows is None
+        assert p.columns is None
+        assert p.ordered is None
+        assert p.class_ == pandas.DataFrame
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.DataFrame()
+
+        check_defaults(P.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(P.param.s)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.DataFrame()
+
+        p = P()
+
+        check_defaults(p.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(p.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.DataFrame()
+
+        check_defaults(s, label=None, skip=['instantiate'])
+        self._check_defaults(s)
 
     def test_dataframe_positional_argument(self):
         valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]},
@@ -162,6 +195,36 @@ class TestDataFrame(API1TestCase):
 
 
 class TestSeries(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.instantiate is True
+        assert p.is_instance is True
+        assert p.rows is None
+        assert p.class_ == pandas.Series
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.Series()
+
+        check_defaults(P.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(P.param.s)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.Series()
+
+        p = P()
+
+        check_defaults(p.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(p.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.Series()
+
+        check_defaults(s, label=None, skip=['instantiate'])
+        self._check_defaults(s)
 
     def test_series_positional_argument(self):
         valid_series = pandas.Series([1,2])

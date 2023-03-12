@@ -8,6 +8,7 @@ import param
 import pytest
 
 from . import API1TestCase
+from .utils import check_defaults
 
 try:
     import numpy as np
@@ -18,6 +19,34 @@ except:
 # test date range.
 
 class TestDateRange(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.length == 2
+        assert p.bounds is None
+        assert p.softbounds is None
+        assert p.inclusive_bounds == (True, True)
+        assert p.step is None
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            r = param.DateRange()
+        
+        self._check_defaults(P.param.r)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            r = param.DateRange()
+
+        p = P()
+
+        self._check_defaults(p.param.r)
+
+    def test_defaults_unbound(self):
+        r = param.DateRange()
+
+        self._check_defaults(r)
 
     bad_range = (dt.datetime(2017,2,27),dt.datetime(2017,2,26))
 

@@ -89,7 +89,7 @@ class TestHookListParameters(API1TestCase):
     def setUp(self):
         super(TestHookListParameters, self).setUp()
         class P(param.Parameterized):
-            e = param.HookList([print])
+            e = param.HookList([abs])
             l = param.HookList(bounds=(0,10))
 
         self.P = P

@@ -84,7 +84,7 @@ def test_resolve_path_file_not_found():
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_file_not_found(tmpdir):
     cdir = os.getcwd()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         with pytest.raises(OSError, match='File notthere was not found in the following'):
             resolve_path('notthere')
@@ -95,7 +95,7 @@ def test_resolve_path_file_not_found(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_folder_not_found(tmpdir):
     cdir = os.getcwd()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         with pytest.raises(OSError, match='Folder notthere was not found in the following'):
             resolve_path('notthere', path_to_file=False)
@@ -106,7 +106,7 @@ def test_resolve_path_folder_not_found(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_either_not_found(tmpdir):
     cdir = os.getcwd()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         with pytest.raises(OSError, match='Path notthere was not found in the following'):
             resolve_path('notthere', path_to_file=None)
@@ -119,7 +119,7 @@ def test_resolve_path_either_not_found(tmpdir):
 def test_resolve_path_abs_not_found(tmpdir, path_to_file):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         with pytest.raises(OSError, match='not found'):
             resolve_path(fp, path_to_file=path_to_file)
@@ -132,7 +132,7 @@ def test_resolve_path_cwd_file(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     open(fp, 'w').close()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path('foo')
         assert os.path.isfile(p)
@@ -148,7 +148,7 @@ def test_resolve_path_cwd_folder(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     os.mkdir(fp)
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path('foo', path_to_file=False)
         assert os.path.isdir(p)
@@ -164,7 +164,7 @@ def test_resolve_path_cwd_either_file(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     open(fp, 'w').close()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path('foo', path_to_file=None)
         assert os.path.isfile(p)
@@ -180,7 +180,7 @@ def test_resolve_path_cwd_either_folder(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     os.mkdir(fp)
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path('foo', path_to_file=None)
         assert os.path.isdir(p)
@@ -196,7 +196,7 @@ def test_resolve_path_abs_file(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     open(fp, 'w').close()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path(fp)
         assert os.path.isfile(p)
@@ -212,7 +212,7 @@ def test_resolve_path_abs_folder(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     os.mkdir(fp)
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path(fp, path_to_file=False)
         assert os.path.isdir(p)
@@ -228,7 +228,7 @@ def test_resolve_path_abs_either_file(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     open(fp, 'w').close()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path(fp, path_to_file=None)
         assert os.path.isfile(p)
@@ -244,7 +244,7 @@ def test_resolve_path_abs_either_folder(tmpdir):
     cdir = os.getcwd()
     fp = os.path.join(tmpdir, 'foo')
     os.mkdir(fp)
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     try:
         p = resolve_path(fp, path_to_file=None)
         assert os.path.isdir(p)

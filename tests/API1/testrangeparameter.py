@@ -72,7 +72,7 @@ class TestRangeParameters(API1TestCase):
                 t = param.NumericTuple(default=None)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -85,7 +85,7 @@ class TestRangeParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
         
-        msg = r"Tuple parameter None only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default='test')        
@@ -104,11 +104,11 @@ class TestRangeParameters(API1TestCase):
 
     def test_support_allow_None_False(self):
         p = self.P()
-        msg = "Tuple parameter 'g' only takes a tuple value, not <class 'NoneType'>."
+        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             p.g = None
 
-        msg = "Tuple parameter 'g' only takes a tuple value, not <class 'NoneType'>."
+        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             self.P.g = None
 

@@ -63,7 +63,7 @@ class TestNumberParameters(API1TestCase):
         self.P.d = None
         assert self.P.d is None
 
-        exception = "Parameter 'b' only takes numeric values, not type <class 'NoneType'>."
+        exception = "Parameter 'b' only takes numeric values, not type <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.b = None
 
@@ -74,7 +74,7 @@ class TestNumberParameters(API1TestCase):
         p.d = None
         assert p.d is None
 
-        exception = "Parameter 'b' only takes numeric values, not type <class 'NoneType'>."
+        exception = "Parameter 'b' only takes numeric values, not type <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             p.b = None
 
@@ -225,7 +225,7 @@ class TestNumberParameters(API1TestCase):
         class Q(param.Parameterized):
             q = param.Number(default=lambda: 'test')
 
-        exception = "Parameter 'q' only takes numeric values, not type <class 'str'>."
+        exception = "Parameter 'q' only takes numeric values, not type <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 
@@ -326,7 +326,7 @@ class TestIntegerParameters(API1TestCase):
         self.P.d = None
         assert self.P.d is None
 
-        exception = "Integer parameter 'b' must be an integer, not type <class 'NoneType'>."
+        exception = "Integer parameter 'b' must be an integer, not type <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.b = None
 
@@ -337,7 +337,7 @@ class TestIntegerParameters(API1TestCase):
         p.d = None
         assert p.d is None
 
-        exception = "Integer parameter 'b' must be an integer, not type <class 'NoneType'>."
+        exception = "Integer parameter 'b' must be an integer, not type <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             p.b = None
 
@@ -500,7 +500,7 @@ class TestIntegerParameters(API1TestCase):
         class Q(param.Parameterized):
             q = param.Integer(default=lambda: 'test')
 
-        exception = "Integer parameter 'q' must be an integer, not type <class 'str'>."
+        exception = "Integer parameter 'q' must be an integer, not type <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 

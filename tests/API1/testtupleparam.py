@@ -90,7 +90,7 @@ class TestTupleParameters(API1TestCase):
             p.g = (0, 0)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -103,7 +103,7 @@ class TestTupleParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.Tuple(default='test')
@@ -203,7 +203,7 @@ class TestNumericTupleParameters(API1TestCase):
             p.g = (0, 0)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -216,7 +216,7 @@ class TestNumericTupleParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default='test')
@@ -236,7 +236,7 @@ class TestNumericTupleParameters(API1TestCase):
         assert P.h == (1, 1)
 
     def test_raise_on_non_numeric_values(self):
-        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <class 'str'>."
+        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = ('bad', 1)
@@ -249,7 +249,7 @@ class TestNumericTupleParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = ('bad', 1)
 
-        msg = r"NumericTuple parameter None only takes numeric values, not type <class 'str'>."
+        msg = r"NumericTuple parameter None only takes numeric values, not type <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default=('bad', 1))
@@ -310,7 +310,7 @@ class TestXYCoordinatesParameters(API1TestCase):
             p.e = (1, 1, 1)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -323,7 +323,7 @@ class TestXYCoordinatesParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <class 'str'>."
+        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default='test')
@@ -342,16 +342,16 @@ class TestXYCoordinatesParameters(API1TestCase):
 
     def test_support_allow_None_False(self):
         p = self.P()
-        msg = "Tuple parameter 'g' only takes a tuple value, not <class 'NoneType'>."
+        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             p.g = None
 
-        msg = "Tuple parameter 'g' only takes a tuple value, not <class 'NoneType'>."
+        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             self.P.g = None
 
     def test_raise_on_non_numeric_values(self):
-        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <class 'str'>."
+        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = ('bad', 1)
@@ -364,7 +364,7 @@ class TestXYCoordinatesParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = ('bad', 1)
 
-        msg = r"NumericTuple parameter None only takes numeric values, not type <class 'str'>."
+        msg = r"NumericTuple parameter None only takes numeric values, not type <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default=('bad', 1))

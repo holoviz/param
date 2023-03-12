@@ -118,7 +118,7 @@ def test_resolve_path_either_not_found(tmpdir):
 @pytest.mark.parametrize('path_to_file', [True, False, None])
 def test_resolve_path_abs_not_found(tmpdir, path_to_file):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.chdir(str(tmpdir))
     try:
         with pytest.raises(OSError, match='not found'):
@@ -130,7 +130,7 @@ def test_resolve_path_abs_not_found(tmpdir, path_to_file):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_cwd_file(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
     os.chdir(str(tmpdir))
     try:
@@ -146,7 +146,7 @@ def test_resolve_path_cwd_file(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_cwd_folder(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
     os.chdir(str(tmpdir))
     try:
@@ -162,7 +162,7 @@ def test_resolve_path_cwd_folder(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_cwd_either_file(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
     os.chdir(str(tmpdir))
     try:
@@ -178,7 +178,7 @@ def test_resolve_path_cwd_either_file(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_cwd_either_folder(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
     os.chdir(str(tmpdir))
     try:
@@ -194,7 +194,7 @@ def test_resolve_path_cwd_either_folder(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_abs_file(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
     os.chdir(str(tmpdir))
     try:
@@ -210,7 +210,7 @@ def test_resolve_path_abs_file(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_abs_folder(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
     os.chdir(str(tmpdir))
     try:
@@ -226,7 +226,7 @@ def test_resolve_path_abs_folder(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_abs_either_file(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
     os.chdir(str(tmpdir))
     try:
@@ -242,7 +242,7 @@ def test_resolve_path_abs_either_file(tmpdir):
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_abs_either_folder(tmpdir):
     cdir = os.getcwd()
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
     os.chdir(str(tmpdir))
     try:
@@ -256,7 +256,7 @@ def test_resolve_path_abs_either_folder(tmpdir):
 
 
 def test_resolve_path_search_paths_file(tmpdir):
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
     p = resolve_path('foo', search_paths=[tmpdir])
     assert os.path.isfile(p)
@@ -267,7 +267,7 @@ def test_resolve_path_search_paths_file(tmpdir):
 
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_search_paths_folder(tmpdir):
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
     p = resolve_path('foo', search_paths=[tmpdir], path_to_file=False)
     assert os.path.isdir(p)
@@ -278,7 +278,7 @@ def test_resolve_path_search_paths_folder(tmpdir):
 
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_search_paths_either_file(tmpdir):
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
     p = resolve_path('foo', search_paths=[tmpdir], path_to_file=None)
     assert os.path.isfile(p)
@@ -289,7 +289,7 @@ def test_resolve_path_search_paths_either_file(tmpdir):
 
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_search_paths_either_folder(tmpdir):
-    fp = os.path.join(tmpdir, 'foo')
+    fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
     p = resolve_path('foo', search_paths=[tmpdir], path_to_file=None)
     assert os.path.isdir(p)
@@ -300,8 +300,8 @@ def test_resolve_path_search_paths_either_folder(tmpdir):
 
 @pytest.mark.usefixtures('reset_search_paths')
 def test_resolve_path_search_paths_multiple_file(tmpdir):
-    d1 = os.path.join(tmpdir, 'd1')
-    d2 = os.path.join(tmpdir, 'd2')
+    d1 = os.path.join(str(tmpdir), 'd1')
+    d2 = os.path.join(str(tmpdir), 'd2')
     os.mkdir(d1)
     os.mkdir(d2)
     fp1 = os.path.join(d1, 'foo1')

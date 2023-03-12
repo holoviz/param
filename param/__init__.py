@@ -1206,9 +1206,7 @@ class SelectorBase(Parameter):
 
 class SelectObjects(list):
     """
-    Wrapper around Selector.objects which allows both list-like and
-    dictionary like updates to the set of objects, ensuring backward
-    compatibility for setting objects as lists and dictionaries.
+    Container that supports both list-style and dictionary-style updates. Useful for replacing code that originally accepted lists but needs to support dictionary access (typically for naming items).
     """
 
     def __init__(self, iterable, parameter=None):

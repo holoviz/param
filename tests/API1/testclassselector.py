@@ -7,6 +7,7 @@ from numbers import Number
 
 import param
 from . import API1TestCase
+from .utils import check_defaults
 
 class TestClassSelectorParameters(API1TestCase):
 
@@ -19,6 +20,37 @@ class TestClassSelectorParameters(API1TestCase):
             h = param.ClassSelector(default=int,class_=(int,str), is_instance=False)
 
         self.P = P
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.instantiate is True
+        assert p.is_instance is True
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.ClassSelector(int)
+
+        check_defaults(P.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(P.param.s)
+        assert P.param.s.class_ is int
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.ClassSelector(int)
+
+        p = P()
+
+        check_defaults(p.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(p.param.s)
+        assert p.param.s.class_ is int
+
+    def test_defaults_unbound(self):
+        s = param.ClassSelector(int)
+
+        check_defaults(s, label=None, skip=['instantiate'])
+        self._check_defaults(s)
+        assert s.class_ is int
 
     def test_single_class_instance_constructor(self):
         p = self.P(e=6)
@@ -72,6 +104,35 @@ class TestClassSelectorParameters(API1TestCase):
 
 
 class TestDictParameters(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.instantiate is True
+        assert p.is_instance is True
+        assert p.class_ == dict
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.Dict()
+
+        check_defaults(P.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(P.param.s)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.Dict()
+
+        p = P()
+
+        check_defaults(p.param.s, label='S', skip=['instantiate'])
+        self._check_defaults(p.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.Dict()
+
+        check_defaults(s, label=None, skip=['instantiate'])
+        self._check_defaults(s)
 
     def test_valid_dict_parameter(self):
         valid_dict = {1:2, 3:3}

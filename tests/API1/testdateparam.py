@@ -6,8 +6,39 @@ import json
 import datetime as dt
 import param
 from . import API1TestCase
+from .utils import check_defaults
 
 class TestDateParameters(API1TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is True
+        assert p.bounds is None
+        assert p.softbounds is None
+        assert p.inclusive_bounds == (True, True)
+        assert p.step is None
+
+    def test_defaults_class(self):
+        class A(param.Parameterized):
+            d = param.Date()
+
+        check_defaults(A.param.d, label='D')
+        self._check_defaults(A.param.d)
+
+    def test_defaults_inst(self):
+        class A(param.Parameterized):
+            d = param.Date()
+
+        a = A()
+
+        check_defaults(a.param.d, label='D')
+        self._check_defaults(a.param.d)
+
+    def test_defaults_unbound(self):
+        d = param.Date()
+
+        check_defaults(d, label=None)
+        self._check_defaults(d)
 
     def test_initialization_out_of_bounds(self):
         try:
@@ -51,6 +82,12 @@ class TestDateParameters(API1TestCase):
                                    dt.datetime(2017,2,25)))
         self.assertEqual(q.get_soft_bounds(), (dt.datetime(2017,2,1),
                                                dt.datetime(2017,2,25)))
+
+    def test_step_invalid_type_datetime_parameter(self):
+        exception = "Step can only be None, a datetime or datetime type"
+        with self.assertRaisesRegex(ValueError, exception):
+            param.Date(dt.datetime(2017,2,27), step=3.2)
+
 
 def test_date_serialization():
     class User(param.Parameterized):

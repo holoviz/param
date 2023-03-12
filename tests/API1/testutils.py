@@ -258,7 +258,7 @@ def test_resolve_path_abs_either_folder(tmpdir):
 def test_resolve_path_search_paths_file(tmpdir):
     fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
-    p = resolve_path('foo', search_paths=[tmpdir])
+    p = resolve_path('foo', search_paths=[str(tmpdir)])
     assert os.path.isfile(p)
     assert os.path.basename(p) == 'foo'
     assert os.path.isabs(p)
@@ -269,7 +269,7 @@ def test_resolve_path_search_paths_file(tmpdir):
 def test_resolve_path_search_paths_folder(tmpdir):
     fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
-    p = resolve_path('foo', search_paths=[tmpdir], path_to_file=False)
+    p = resolve_path('foo', search_paths=[str(tmpdir)], path_to_file=False)
     assert os.path.isdir(p)
     assert os.path.basename(p) == 'foo'
     assert os.path.isabs(p)
@@ -280,7 +280,7 @@ def test_resolve_path_search_paths_folder(tmpdir):
 def test_resolve_path_search_paths_either_file(tmpdir):
     fp = os.path.join(str(tmpdir), 'foo')
     open(fp, 'w').close()
-    p = resolve_path('foo', search_paths=[tmpdir], path_to_file=None)
+    p = resolve_path('foo', search_paths=[str(tmpdir)], path_to_file=None)
     assert os.path.isfile(p)
     assert os.path.basename(p) == 'foo'
     assert os.path.isabs(p)
@@ -291,7 +291,7 @@ def test_resolve_path_search_paths_either_file(tmpdir):
 def test_resolve_path_search_paths_either_folder(tmpdir):
     fp = os.path.join(str(tmpdir), 'foo')
     os.mkdir(fp)
-    p = resolve_path('foo', search_paths=[tmpdir], path_to_file=None)
+    p = resolve_path('foo', search_paths=[str(tmpdir)], path_to_file=None)
     assert os.path.isdir(p)
     assert os.path.basename(p) == 'foo'
     assert os.path.isabs(p)

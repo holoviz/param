@@ -2095,7 +2095,7 @@ class Color(Parameter):
             return
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
-            if not is_hex and val not in self._named_colors:
+            if not is_hex and val.lower() not in self._named_colors:
                 raise ValueError("Color '%s' only takes RGB hex codes "
                                  "or named colors, received '%s'." % (self.name, val))
         elif not is_hex:

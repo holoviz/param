@@ -90,3 +90,9 @@ class TestColorParameters(API1TestCase):
             q = param.Color(allow_named=True)
         Q.q = 'indianred'
         self.assertEqual(Q.q, 'indianred')
+
+    def test_valid_named_color_mixed_case(self):
+        class Q(param.Parameterized):
+            q = param.Color(allow_named=True)
+        Q.q = 'WhiteSmoke'
+        self.assertEqual(Q.q, 'WhiteSmoke')

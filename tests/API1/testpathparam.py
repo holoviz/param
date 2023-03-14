@@ -3,6 +3,7 @@ import shutil
 import tempfile
 
 import param
+import pytest
 
 from . import API1TestCase
 from .utils import check_defaults
@@ -88,6 +89,33 @@ class TestPathParameters(API1TestCase):
         assert os.path.isfile(p.c)
         assert os.path.isabs(p.c)
         assert p.c == self.fa
+
+    def test_inheritance_behavior(self):
+
+            # a = param.Path()
+            # b = param.Path(self.fb)
+            # c = param.Path('a.txt', search_paths=[tmpdir1])
+
+        class B(self.P):
+            a = param.Path()
+            b = param.Path()
+            c = param.Path()
+
+        assert B.a is None
+        assert B.b == self.fb
+        # search_paths is empty instead of [tmpdir1] and getting c raises an error
+        assert B.param.c.search_paths == []
+        with pytest.raises(OSError, match='Path a.txt was not found'):
+            assert B.c is None
+
+        b = B()
+
+        assert b.a is None
+        assert b.b == self.fb
+
+        assert b.param.c.search_paths == []
+        with pytest.raises(OSError, match='Path a.txt was not found'):
+            assert b.c is None
 
 
 class TestFilenameParameters(API1TestCase):

@@ -25,6 +25,7 @@ class TestSelectorParameters(API1TestCase):
             g = param.Selector([7,8])
             i = param.Selector([9],default=7, check_on_set=False)
             s = param.Selector(OrderedDict(one=1,two=2,three=3), default=3)
+            p = param.Selector(dict(one=1,two=2,three=3), default=3)
             d = param.Selector(opts, default=opts['B'])
 
         self.P = P
@@ -73,13 +74,31 @@ class TestSelectorParameters(API1TestCase):
         assert p.param.s.allow_None is None
         assert p.param.d.allow_None is None
 
+    def test_autodefault(self):
+        class P(param.Parameterized):
+            o1 = param.Selector([6, 7])
+            o2 = param.Selector({'a': 1, 'b': 2})
+
+        assert P.o1 == 6
+        assert P.o2 == 1
+
+        p = P()
+
+        assert p.o1 == 6
+        assert p.o2 == 1
+
     def test_get_range_list(self):
         r = self.P.param.params("g").get_range()
         self.assertEqual(r['7'],7)
         self.assertEqual(r['8'],8)
 
-    def test_get_range_dict(self):
+    def test_get_range_ordereddict(self):
         r = self.P.param.params("s").get_range()
+        self.assertEqual(r['one'],1)
+        self.assertEqual(r['two'],2)
+
+    def test_get_range_dict(self):
+        r = self.P.param.params("p").get_range()
         self.assertEqual(r['one'],1)
         self.assertEqual(r['two'],2)
 
@@ -154,3 +173,125 @@ class TestSelectorParameters(API1TestCase):
             pass
         else:
             raise AssertionError("Selector created without range.")
+
+    def test_check_on_set_defined(self):
+        class P(param.Parameterized):
+            o1 = param.Selector(check_on_set=True)
+            o2 = param.Selector(check_on_set=False)
+
+        assert P.param.o1.check_on_set is True
+        assert P.param.o2.check_on_set is False
+
+        p = P()
+
+        assert p.param.o1.check_on_set is True
+        assert p.param.o2.check_on_set is False
+
+    def test_check_on_set_empty_objects(self):
+        class P(param.Parameterized):
+            o = param.Selector()
+
+        assert P.param.o.check_on_set is False
+
+        p = P()
+
+        assert p.param.o.check_on_set is False
+
+    def test_check_on_set_else(self):
+        class P(param.Parameterized):
+            o = param.Selector(objects=[0, 1])
+
+        assert P.param.o.check_on_set is True
+
+        p = P()
+
+        assert p.param.o.check_on_set is True
+
+    def test_inheritance_behavior1(self):
+        class A(param.Parameterized):
+            p = param.Selector()
+
+        class B(A):
+            p = param.Selector()
+
+        assert B.param.p.default is None
+        assert B.param.p.objects == []
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.default is None
+        assert b.param.p.objects == []
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior2(self):
+        class A(param.Parameterized):
+            p = param.Selector([0, 1])
+
+        class B(A):
+            p = param.Selector()
+
+        # B does not inherit objects from A but the default gets anyway auto-set
+        # to 0 and check_on_set is False
+        assert B.param.p.objects == []
+        assert B.param.p.default == 0
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 0
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior3(self):
+        class A(param.Parameterized):
+            p = param.Selector(default=1, objects=[0, 1])
+
+        class B(A):
+            p = param.Selector()
+
+        # B does not inherit objects from A but the default gets anyway set to 1
+        # and check_on_set is False
+        assert B.param.p.objects == []
+        assert B.param.p.default == 1
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 1
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior4(self):
+        class A(param.Parameterized):
+            p = param.Selector([0, 1], check_on_set=False)
+
+        class B(A):
+            p = param.Selector()
+
+        assert B.param.p.objects == []
+        assert B.param.p.default == 0
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 0
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior5(self):
+        class A(param.Parameterized):
+            p = param.Selector([0, 1], check_on_set=True)
+
+        class B(A):
+            p = param.Selector()
+
+        assert B.param.p.objects == []
+        assert B.param.p.default == 0
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 0
+        assert b.param.p.check_on_set is False

@@ -1,5 +1,39 @@
 # Releases
 
+## Version 1.13.0
+
+Date: 2023-03-14
+
+The `1.13.0` is the last release of Param before the 2.0 release. However, Param 1.13 is meant to receive long-term support; security patches and fixes to critical bugs are planned to be backported to the 1.13.x series.
+
+This release includes a new `Bytes` *Parameter* and a few important bug fixes. This release is also marked by the adoption of a formal project governance, ensuring Param's future as a healthy open-source project. Many thanks to @ovidner and @droumis for their first contributions! And to @maximlt, @Hoxbro, @jlstevens, @philippjfr and @jbednar for their continuing support to fixing and improving Param.
+
+Bug fixes:
+
+* Fix copying when having watchers on e.g. bounds on inherited Parameter types ([#675](https://github.com/holoviz/param/pull/675))
+* Allow JSON serialization to work with `json.dumps` ([#655](https://github.com/holoviz/param/pull/655))
+* `ListSelector` restricted to `list` type objects ([#531](https://github.com/holoviz/param/pull/531))
+* Fix `depends` async wrapper ([#684](https://github.com/holoviz/param/pull/684))
+* Allow named colors to be any case ([#711](https://github.com/holoviz/param/pull/711))
+
+New features:
+
+* Add Bytes parameter ([#542](https://github.com/holoviz/param/pull/542))
+
+Documentation:
+
+* Fix param module link ([#682](https://github.com/holoviz/param/pull/682))
+
+Project governance:
+
+* Create initial project governance docs ([#674](https://github.com/holoviz/param/pull/674))
+
+Maintenance:
+
+* Rename `master` branch to `main` ([#672](https://github.com/holoviz/param/pull/672))
+* Add more tests ([#710](https://github.com/holoviz/param/pull/710))
+* Various CI related fixes ([#680](https://github.com/holoviz/param/pull/680), [#683](https://github.com/holoviz/param/pull/683) and [#709](https://github.com/holoviz/param/pull/709))
+
 ## Version 1.12.3
 
 Date: 2022-12-06

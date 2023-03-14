@@ -267,6 +267,60 @@ class TestNumberParameters(API1TestCase):
         assert p.param.m.crop_to_bounds(10) == 10
         assert p.param.n.crop_to_bounds(-10) == -10
 
+    def test_inheritance_allow_None_behavior(self):
+        class A(param.Parameterized):
+            p = param.Number(allow_None=True)
+
+        class B(A):
+            p = param.Number()
+
+        # A says None is not allowed, B disagrees.
+        assert B.param.p.allow_None is False
+
+        b = B()
+
+        assert b.param.p.allow_None is False
+
+    def test_inheritance_allow_None_behavior2(self):
+        class A(param.Parameterized):
+            p = param.Number(allow_None=False)
+            
+        class B(A):
+            p = param.Number(default=None)
+
+
+        # A says None is not allowed, B sets the default to None and recomputes
+        # allow_None.
+        assert B.param.p.allow_None is True
+
+        b = B()
+
+        assert b.param.p.allow_None is True
+
+    def test_inheritance_callable_default_behavior(self):
+
+        f = lambda: 2
+        class A(param.Parameterized):
+            p = param.Number(default=f)
+            
+        class B(A):
+            p = param.Number()
+
+        assert A.p == 2
+        assert A.param.p.default == f
+        assert A.param.p.instantiate is True
+
+        # Default is not inherited but instantiate is still set to True
+        assert B.p == 0.0
+        assert B.param.p.default == 0.0
+        assert B.param.p.instantiate is True
+
+        b = B()
+
+        assert b.p == 0.0
+        assert b.param.p.default == 0.0
+        assert b.param.p.instantiate is True
+
 
 class TestIntegerParameters(API1TestCase):
 

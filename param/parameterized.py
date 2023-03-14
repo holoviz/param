@@ -1001,8 +1001,7 @@ class Parameter(object):
     _serializers = {'json': serializer.JSONSerialization}
 
     _slot_defaults = dict(instantiate=False, constant=False, readonly=False,
-                          pickle_default_value=True, allow_None=_allow_None_default,
-                          per_instance=True)
+                          pickle_default_value=True, allow_None=False, per_instance=True)
 
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
@@ -1092,7 +1091,7 @@ class Parameter(object):
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = allow_None
+        self._set_allow_None(allow_None)
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1125,6 +1124,18 @@ class Parameter(object):
     @label.setter
     def label(self, val):
         self._label = val
+
+    def _set_allow_None(self, allow_None):
+        # allow_None is set following these rules (last takes precedence):
+        # 1. to False by default
+        # 2. to the value provided in the constructor, if any
+        # 3. to True if default is None
+        if self.default is None:
+            self.allow_None = True
+        elif allow_None is not Undefined:
+            self.allow_None = allow_None
+        else:
+            self.allow_None = self._slot_defaults['allow_None']
 
     def _set_instantiate(self,instantiate):
         """Constant parameters must be instantiated."""

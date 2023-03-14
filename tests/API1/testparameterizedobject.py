@@ -731,3 +731,72 @@ def test_inheritance_from_multiple_params_intermediate_setting():
 
     assert b.param.p.default == 2
     assert b.param.p.doc == 'bar'
+
+
+def test_inheritance_instantiate_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(instantiate=True)
+
+    class B(A):
+        p = param.Parameter(readonly=True)
+
+
+    # Normally, param.Parameter(readonly=True, instantiate=True) ends up with
+    # instantiate being False.
+    assert B.param.p.instantiate is True
+
+    b = B()
+
+    assert b.param.p.instantiate is True
+
+
+def test_inheritance_constant_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(readonly=True)
+
+    class B(A):
+        p = param.Parameter()
+
+
+    # Normally, param.Parameter(readonly=True) ends up with constant being
+    # True.
+    assert B.param.p.constant is False
+
+    b = B()
+
+    assert b.param.p.constant is False
+
+
+def test_inheritance_allow_None_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(default=1)
+
+    class B(A):
+        p = param.Parameter()
+
+    # A computes allow_None to False, B sets it to True.
+    assert A.param.p.allow_None !=  B.param.p.allow_None
+    assert B.param.p.allow_None is True
+
+    a = A()
+    b = B()
+
+    assert a.param.p.allow_None !=  b.param.p.allow_None
+    assert b.param.p.allow_None is True
+
+
+def test_inheritance_allow_None_behavior2():
+    class A(param.Parameterized):
+        p = param.Parameter(allow_None=False)
+        
+    class B(A):
+        p = param.Parameter(default=None)
+
+
+    # A says None is not allowed, B sets the default to None and recomputes
+    # allow_None.
+    assert B.param.p.allow_None is True
+
+    b = B()
+
+    assert b.param.p.allow_None is True

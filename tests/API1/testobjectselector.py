@@ -19,13 +19,13 @@ class TestObjectSelectorParameters(API1TestCase):
     def setUp(self):
         super(TestObjectSelectorParameters, self).setUp()
         class P(param.Parameterized):
-            e = param.Selector(default=5,objects=[5,6,7])
-            f = param.Selector(default=10)
-            h = param.Selector(default=None)
-            g = param.Selector(default=None,objects=[7,8])
-            i = param.Selector(default=7,objects=[9],check_on_set=False)
-            s = param.Selector(default=3,objects=OrderedDict(one=1,two=2,three=3))
-            d = param.Selector(default=opts['B'],objects=opts)
+            e = param.ObjectSelector(default=5,objects=[5,6,7])
+            f = param.ObjectSelector(default=10)
+            h = param.ObjectSelector(default=None)
+            g = param.ObjectSelector(default=None,objects=[7,8])
+            i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
+            s = param.ObjectSelector(default=3,objects=OrderedDict(one=1,two=2,three=3))
+            d = param.ObjectSelector(default=opts['B'],objects=opts)
 
         self.P = P
 
@@ -174,3 +174,32 @@ class TestObjectSelectorParameters(API1TestCase):
             pass
         else:
             raise AssertionError("ObjectSelector created without range.")
+
+    def test_compute_default_fn_in_objects(self):
+        class P(param.Parameterized):
+            o = param.ObjectSelector(objects=[0, 1], compute_default_fn=lambda: 1)
+
+        assert P.param.o.default is None
+
+        P.param.o.compute_default()
+
+        assert P.param.o.default == 1
+
+        p = P()
+
+        assert p.o == 1
+
+
+    def test_compute_default_fn_not_in_objects(self):
+        class P(param.Parameterized):
+            o = param.ObjectSelector(objects=[0, 1], compute_default_fn=lambda: 2)
+
+        assert P.param.o.default is None
+
+        P.param.o.compute_default()
+
+        assert P.param.o.default == 2
+
+        p = P()
+
+        assert p.o == 2

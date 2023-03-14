@@ -1005,7 +1005,7 @@ class Parameter(object):
 
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
-                 instantiate=False, constant=Undefined, readonly=Undefined,
+                 instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
                  per_instance=Undefined):
 
@@ -1144,8 +1144,11 @@ class Parameter(object):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
-        else:
+        elif instantiate is not Undefined:
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
+        else:
+            # Default value
+            self.instantiate = self._slot_defaults['instantiate']
 
     def __setattr__(self, attribute, value):
         if attribute == 'name' and getattr(self, 'name', None) and value != self.name:

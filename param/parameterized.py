@@ -988,8 +988,11 @@ class Parameter(object):
 
     _serializers = {'json': serializer.JSONSerialization}
 
-    _slot_defaults = dict(instantiate=False, constant=False, readonly=False,
-                          pickle_default_value=True, allow_None=False, per_instance=True)
+    _slot_defaults = dict(
+        default=None, precedence=None, doc=None, _label=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, allow_None=False,
+        per_instance=True
+    )
 
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
@@ -1178,7 +1181,7 @@ class Parameter(object):
         v = object.__getattribute__(self, key)
         # Safely checks for name (avoiding recursion) to decide if this object is unbound
         if v is Undefined and key != "name" and getattr(self, "name", None) is None:
-            v = self._slot_defaults.get(key, None)
+            v = self._slot_defaults[key]
             if callable(v):
                 v = v(self)
         return v
@@ -2925,7 +2928,7 @@ class ParameterizedMetaclass(type):
                     if new_value is not Undefined:
                         setattr(param, slot, new_value)
             if getattr(param, slot) is Undefined:
-                default_val = param._slot_defaults.get(slot, None)
+                default_val = param._slot_defaults[slot]
                 if callable(default_val):
                     callables[slot] = default_val
                 else:

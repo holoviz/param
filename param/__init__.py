@@ -822,7 +822,10 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    _slot_defaults = _dict_update(Dynamic._slot_defaults, default=0.0, inclusive_bounds=(True,True))
+    _slot_defaults = _dict_update(
+        Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
+        inclusive_bounds=(True,True), step=None
+    )
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
@@ -1240,7 +1243,10 @@ class Selector(SelectorBase):
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    _slot_defaults = _dict_update(SelectorBase._slot_defaults, allow_None=None)
+    _slot_defaults = _dict_update(
+        SelectorBase._slot_defaults, objects=None, compute_default_fn=None,
+        check_on_set=None, allow_None=None
+    )
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -1573,6 +1579,10 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered']
 
+    _slot_defaults = _dict_update(
+        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
+    )
+
     def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
@@ -1649,6 +1659,10 @@ class Series(ClassSelector):
     """
 
     __slots__ = ['rows']
+
+    _slot_defaults = _dict_update(
+        ClassSelector._slot_defaults, rows=None, allow_None=False
+    )
 
     def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
@@ -2134,8 +2148,10 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    _slot_defaults = _dict_update(NumericTuple._slot_defaults,
-                                 default=None, inclusive_bounds=(True,True))
+    _slot_defaults = _dict_update(
+        NumericTuple._slot_defaults, default=None, bounds=None,
+        inclusive_bounds=(True,True), softbounds=None, step=None
+    )
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):

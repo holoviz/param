@@ -1240,16 +1240,16 @@ class Selector(SelectorBase):
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    _slot_defaults = _dict_update(SelectorBase._slot_defaults, allow_None=False)
+    _slot_defaults = _dict_update(SelectorBase._slot_defaults, allow_None=None)
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, objects=Undefined, default=Undefined, instantiate=False,
+    def __init__(self, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
         autodefault = None
-        if objects:
+        if objects is not Undefined and objects:
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
@@ -1282,6 +1282,9 @@ class Selector(SelectorBase):
 
         super(Selector,self).__init__(
             default=default, instantiate=instantiate, **params)
+        # Required as Parameter sets allow_None=True if default is None
+        if allow_None is Undefined:
+            self.allow_None = self._slot_defaults['allow_None']
         if self.default is not None and self.check_on_set is True:
             self._validate(self.default)
 
@@ -1370,7 +1373,7 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = _dict_update(SelectorBase._slot_defaults, is_instance=True)
+    _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
     def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
@@ -1436,9 +1439,16 @@ class List(Parameter):
 
     __slots__ = ['bounds', 'item_type', 'class_']
 
+    _slot_defaults = _dict_update(Parameter._slot_defaults, class_=None, item_type=None)
+
     def __init__(self, default=[], class_=Undefined, item_type=Undefined,
                  instantiate=True, bounds=(0, None), **params):
-        self.item_type = item_type or class_
+        if item_type is not Undefined:
+            self.item_type = item_type
+        elif class_ is not Undefined:
+            self.item_type = class_
+        else:
+            self.item_type = self._slot_defaults['item_type']
         self.class_ = self.item_type
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
@@ -1884,7 +1894,9 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    _slot_defaults = _dict_update(Selector._slot_defaults, path="")
+
+    def __init__(self, default=Undefined, path=Undefined, **kwargs):
         self.default = default
         self.path = path
         self.update()

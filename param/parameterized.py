@@ -840,18 +840,6 @@ class ParameterMetaclass(type):
         else:
             return type.__getattribute__(mcs,name)
 
-def _allow_None_default(self):
-    """Forces allow_None=True if the param default is None"""
-    return self.default is None
-
-
-def instantiate_default(self):
-    """Constant parameters must be instantiated."""
-    # instantiate doesn't actually matter for read-only
-    # parameters, since they can't be set even on a class.  But
-    # having this code avoids needless instantiation.
-    return False if self.readonly else self.constant
-
 
 @add_metaclass(ParameterMetaclass)
 class Parameter(object):

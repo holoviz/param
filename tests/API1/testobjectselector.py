@@ -59,6 +59,39 @@ class TestObjectSelectorParameters(API1TestCase):
         check_defaults(s, label=None)
         self._check_defaults(s)
 
+    def test_unbound_default_inferred(self):
+        s = param.ObjectSelector(objects=[0, 1, 2])
+
+        assert s.default is None
+
+    def test_unbound_default_explicit(self):
+        s = param.ObjectSelector(default=1, objects=[0, 1, 2])
+
+        assert s.default == 1
+
+    def test_unbound_default_check_on_set_inferred(self):
+        s1 = param.ObjectSelector(objects=[0, 1, 2])
+        s2 = param.ObjectSelector(objects=[])
+        s3 = param.ObjectSelector(objects={})
+        s4 = param.ObjectSelector()
+
+        assert s1.check_on_set is True
+        assert s2.check_on_set is False
+        assert s3.check_on_set is False
+        assert s4.check_on_set is False
+
+    def test_unbound_default_check_on_set_explicit(self):
+        s1 = param.ObjectSelector(check_on_set=True)
+        s2 = param.ObjectSelector(check_on_set=False)
+
+        assert s1.check_on_set is True
+        assert s2.check_on_set is False
+
+    def test_unbound_allow_None_not_dynamic(self):
+        s = param.ObjectSelector(objects=[0, 1, 2])
+
+        assert s.allow_None is None
+
     def test_set_object_constructor(self):
         p = self.P(e=6)
         self.assertEqual(p.e, 6)
@@ -203,3 +236,108 @@ class TestObjectSelectorParameters(API1TestCase):
         p = P()
 
         assert p.o == 2
+
+    def test_inheritance_behavior1(self):
+        class A(param.Parameterized):
+            p = param.ObjectSelector()
+
+        class B(A):
+            p = param.ObjectSelector()
+
+        assert B.param.p.default is None
+        assert B.param.p.objects == []
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.default is None
+        assert b.param.p.objects == []
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior2(self):
+        class A(param.Parameterized):
+            p = param.ObjectSelector(objects=[0, 1])
+
+        class B(A):
+            p = param.ObjectSelector()
+
+        # B does not inherit objects from A
+        assert B.param.p.objects == []
+        assert B.param.p.default is None
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default is None
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior3(self):
+        class A(param.Parameterized):
+            p = param.ObjectSelector(default=1, objects=[0, 1])
+
+        class B(A):
+            p = param.ObjectSelector()
+
+        # B does not inherit objects from A but the default gets anyway set to 1
+        # and check_on_set is False
+        assert B.param.p.objects == []
+        assert B.param.p.default == 1
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 1
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior4(self):
+        class A(param.Parameterized):
+            p = param.ObjectSelector(objects=[0, 1], check_on_set=False)
+
+        class B(A):
+            p = param.ObjectSelector()
+
+        assert B.param.p.objects == []
+        assert B.param.p.default is None
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default is None
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior5(self):
+        class A(param.Parameterized):
+            p = param.ObjectSelector(objects=[0, 1], check_on_set=True)
+
+        class B(A):
+            p = param.ObjectSelector()
+
+        assert B.param.p.objects == []
+        assert B.param.p.default is None
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default is None
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior6(self):
+        class A(param.Parameterized):
+            p = param.ObjectSelector(default=0, objects=[0, 1])
+
+        class B(A):
+            p = param.ObjectSelector(default=1)
+
+        assert B.param.p.objects == []
+        assert B.param.p.default == 1
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 1
+        assert b.param.p.check_on_set is False

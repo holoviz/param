@@ -1894,9 +1894,9 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    _slot_defaults = _dict_update(Selector._slot_defaults, path="")
+    _slot_defaults = _dict_update(Selector._slot_defaults)
 
-    def __init__(self, default=Undefined, path=Undefined, **kwargs):
+    def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()

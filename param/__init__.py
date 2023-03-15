@@ -748,10 +748,10 @@ class Bytes(Parameter):
     __slots__ = ['regex']
 
     _slot_defaults = _dict_update(
-        Parameter._slot_defaults, default=b"", regex=None, 
+        Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
-    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+    def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
         super(Bytes, self).__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)

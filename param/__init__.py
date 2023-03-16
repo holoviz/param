@@ -1020,15 +1020,18 @@ class Boolean(Parameter):
                              "not %s." % (self.name, val))
 
 
+def _update_length(p):
+    return len(p.default)
+
 
 class Tuple(Parameter):
     """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
 
     __slots__ = ['length']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0))
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_update_length)
 
-    def __init__(self, default=(0,0), length=Undefined, **params):
+    def __init__(self, default=Undefined, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -1036,9 +1039,7 @@ class Tuple(Parameter):
         length is not allowed to change after instantiation.
         """
         super(Tuple,self).__init__(default=default, **params)
-        if length is Undefined and default is not None:
-            self.length = len(default)
-        elif length is Undefined and default is None:
+        if length is Undefined and self.default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
         else:

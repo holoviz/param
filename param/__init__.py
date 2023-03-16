@@ -1446,10 +1446,13 @@ class List(Parameter):
 
     __slots__ = ['bounds', 'item_type', 'class_']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, class_=None, item_type=None)
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
+        instantiate=True,
+    )
 
     def __init__(self, default=[], class_=Undefined, item_type=Undefined,
-                 instantiate=True, bounds=(0, None), **params):
+                 instantiate=Undefined, bounds=Undefined, **params):
         if item_type is not Undefined:
             self.item_type = item_type
         elif class_ is not Undefined:

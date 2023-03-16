@@ -511,7 +511,7 @@ def test_inheritance_None_is_not_special_cased_default():
 
     b = B()
 
-    assert b.p == 'test'
+    assert b.p is None
 
 
 @pytest.mark.parametrize('attribute', [
@@ -543,7 +543,7 @@ def test_inheritance_None_is_not_special_cased(attribute):
 
     b = B()
 
-    assert getattr(b.param.p, attribute) == 'test'
+    assert getattr(b.param.p, attribute) is None
 
 
 def test_inheritance_no_default_declared_in_subclass():
@@ -555,7 +555,7 @@ def test_inheritance_no_default_declared_in_subclass():
         p = param.Number()
 
     b = B()
-    assert b.p == 0.0
+    assert b.p == 5.0
 
 
 def test_inheritance_attribute_from_non_subclass_not_inherited():
@@ -591,7 +591,8 @@ def test_inheritance_default_is_not_None_in_sub():
 
     b = B()
 
-    assert b.p == 0.0
+    # Could argue this should not be allowed.
+    assert b.p == '1'
 
 
 def test_inheritance_default_is_None_in_sub():

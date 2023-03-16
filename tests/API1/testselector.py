@@ -60,6 +60,34 @@ class TestSelectorParameters(API1TestCase):
         check_defaults(s, label=None)
         self._check_defaults(s)
 
+    def test_unbound_default_inferred(self):
+        s = param.Selector(objects=[0, 1, 2])
+
+        assert s.default == 0
+
+    def test_unbound_default_explicit(self):
+        s = param.Selector(default=1, objects=[0, 1, 2])
+
+        assert s.default == 1
+
+    def test_unbound_default_check_on_set_inferred(self):
+        s1 = param.Selector(objects=[0, 1, 2])
+        s2 = param.Selector(objects=[])
+        s3 = param.Selector(objects={})
+        s4 = param.Selector()
+
+        assert s1.check_on_set is True
+        assert s2.check_on_set is False
+        assert s3.check_on_set is False
+        assert s4.check_on_set is False
+
+    def test_unbound_default_check_on_set_explicit(self):
+        s1 = param.Selector(check_on_set=True)
+        s2 = param.Selector(check_on_set=False)
+
+        assert s1.check_on_set is True
+        assert s2.check_on_set is False
+
     def test_set_object_constructor(self):
         p = self.P(e=6)
         self.assertEqual(p.e, 6)
@@ -294,4 +322,21 @@ class TestSelectorParameters(API1TestCase):
 
         assert b.param.p.objects == []
         assert b.param.p.default == 0
+        assert b.param.p.check_on_set is False
+
+    def test_inheritance_behavior6(self):
+        class A(param.Parameterized):
+            p = param.Selector(default=0, objects=[0, 1])
+
+        class B(A):
+            p = param.Selector(default=1)
+
+        assert B.param.p.objects == []
+        assert B.param.p.default == 1
+        assert B.param.p.check_on_set is False
+
+        b = B()
+
+        assert b.param.p.objects == []
+        assert b.param.p.default == 1
         assert b.param.p.check_on_set is False

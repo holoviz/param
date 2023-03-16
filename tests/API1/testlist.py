@@ -158,3 +158,113 @@ class TestHookListParameters(API1TestCase):
             pass
         else:
             raise AssertionError("Object set outside range.")
+
+    def test_inheritance_behavior1(self):
+        class A(param.Parameterized):
+            p = param.List()
+
+        class B(A):
+            p = param.List()
+
+        assert B.param.p.default == []
+        assert B.param.p.instantiate is True
+        assert B.param.p.bounds == (0, None)
+
+        b = B()
+
+        assert b.param.p.default == []
+        assert b.param.p.instantiate is True
+        assert b.param.p.bounds == (0, None)
+
+    def test_inheritance_behavior2(self):
+        class A(param.Parameterized):
+            p = param.List(default=[0, 1])
+
+        class B(A):
+            p = param.List()
+
+        # B does not inherit default from A
+        assert B.param.p.default == []
+        assert B.param.p.instantiate is True
+        assert B.param.p.bounds == (0, None)
+
+        b = B()
+
+        assert b.param.p.default == []
+        assert b.param.p.instantiate is True
+        assert b.param.p.bounds == (0, None)
+
+    def test_inheritance_behavior3(self):
+        class A(param.Parameterized):
+            p = param.List(default=[0, 1], bounds=(1, 10))
+
+        class B(A):
+            p = param.List()
+
+        # B does not inherit default and bounds from A
+        assert B.param.p.default == []
+        assert B.param.p.instantiate is True
+        assert B.param.p.bounds == (0, None)
+
+        b = B()
+
+        assert b.param.p.default == []
+        assert b.param.p.instantiate is True
+        assert b.param.p.bounds == (0, None)
+
+    def test_inheritance_behavior4(self):
+        class A(param.Parameterized):
+            p = param.List(default=[0], item_type=int)
+
+        class B(A):
+            p = param.List()
+
+        # B inherit item_type
+        assert B.param.p.default == []
+        assert B.param.p.instantiate is True
+        assert B.param.p.bounds == (0, None)
+        assert B.param.p.item_type == int
+
+        b = B()
+
+        assert b.param.p.default == []
+        assert b.param.p.instantiate is True
+        assert b.param.p.bounds == (0, None)
+        assert b.param.p.item_type == int
+
+    def test_inheritance_behavior5(self):
+        class A(param.Parameterized):
+            p = param.List(default=[0, 1], allow_None=True)
+
+        class B(A):
+            p = param.List()
+
+        # B does not inherit allow_None
+        assert B.param.p.default == []
+        assert B.param.p.allow_None is False
+        assert B.param.p.instantiate is True
+        assert B.param.p.bounds == (0, None)
+
+        b = B()
+
+        assert b.param.p.default == []
+        assert b.param.p.allow_None is False
+        assert b.param.p.instantiate is True
+        assert b.param.p.bounds == (0, None)
+
+    def test_inheritance_behavior6(self):
+        class A(param.Parameterized):
+            p = param.List(default=[0, 1], bounds=(1, 10))
+
+        class B(A):
+            p = param.List(default=[0, 1, 2, 3])
+
+        assert B.param.p.default == [0, 1, 2, 3]
+        assert B.param.p.instantiate is True
+        assert B.param.p.bounds == (0, None)
+
+        b = B()
+
+        assert b.param.p.default == [0, 1, 2, 3]
+        assert b.param.p.instantiate is True
+        assert b.param.p.bounds == (0, None)

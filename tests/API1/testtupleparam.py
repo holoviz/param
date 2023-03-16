@@ -164,6 +164,22 @@ class TestTupleParameters(API1TestCase):
 
     def test_inheritance_length_behavior3(self):
         class A(param.Parameterized):
+            p = param.Tuple()
+
+        class B(A):
+            p = param.Tuple(default=(0, 1, 2, 3))
+
+        assert B.p == (0, 1, 2, 3)
+        assert B.param.p.length == 4
+
+        b = B()
+
+        assert b.p == (0, 1, 2, 3)
+        assert b.param.p.default == (0, 1, 2, 3)
+        assert b.param.p.length == 4
+
+    def test_inheritance_length_behavior4(self):
+        class A(param.Parameterized):
             p = param.Tuple(default=(0, 1, 2))
 
         class B(A):

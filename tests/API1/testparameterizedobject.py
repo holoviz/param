@@ -797,3 +797,19 @@ def test_inheritance_allow_None_behavior2():
     b = B()
 
     assert b.param.p.allow_None is True
+
+
+def test_inheritance_class_attribute_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(1)
+        
+    class B(A):
+        p = param.Parameter()
+
+    assert B.p == 1
+
+    A.p = 2
+
+    # Should be 2?
+    # https://github.com/holoviz/param/issues/718
+    assert B.p == 1

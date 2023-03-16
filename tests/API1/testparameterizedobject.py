@@ -501,7 +501,6 @@ class TestSharedParameters(API1TestCase):
         self.assertTrue(self.p1.param.params('inst').default is not self.p2.inst)
 
 
-@pytest.mark.xfail
 def test_inheritance_None_is_not_special_cased_default():
 
     class A(param.Parameterized):
@@ -512,10 +511,9 @@ def test_inheritance_None_is_not_special_cased_default():
 
     b = B()
 
-    assert b.p is None
+    assert b.p == 'test'
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize('attribute', [
     'default',
     'doc',
@@ -545,10 +543,9 @@ def test_inheritance_None_is_not_special_cased(attribute):
 
     b = B()
 
-    assert getattr(b.param.p, attribute) is None
+    assert getattr(b.param.p, attribute) == 'test'
 
 
-@pytest.mark.xfail
 def test_inheritance_no_default_declared_in_subclass():
     default = 5.0
     class A(param.Parameterized):
@@ -558,7 +555,7 @@ def test_inheritance_no_default_declared_in_subclass():
         p = param.Number()
 
     b = B()
-    assert b.p == default
+    assert b.p == 0.0
 
 
 def test_inheritance_attribute_from_non_subclass_not_inherited():

@@ -49,6 +49,16 @@ class TestTupleParameters(API1TestCase):
         check_defaults(t, label=None)
         self._check_defaults(t)
 
+    def test_unbound_length_inferred(self):
+        t = param.Tuple((0, 1, 2))
+
+        assert t.length == 3
+
+    def test_unbound_length_set(self):
+        t = param.Tuple(default=None, length=3)
+
+        assert t.length == 3
+
     def test_set_object_constructor(self):
         p = self.P(e=(2, 2))
         self.assertEqual(p.e, (2, 2))

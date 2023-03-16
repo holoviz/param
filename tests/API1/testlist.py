@@ -183,7 +183,7 @@ class TestHookListParameters(API1TestCase):
         class B(A):
             p = param.List()
 
-        # B does not inherit default from A
+        # B inherits default from A
         assert B.param.p.default == [0 ,1]
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (0, None)
@@ -201,7 +201,7 @@ class TestHookListParameters(API1TestCase):
         class B(A):
             p = param.List()
 
-        # B does not inherit default and bounds from A
+        # B inherits default and bounds from A
         assert B.param.p.default == [0, 1]
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (1, 10)

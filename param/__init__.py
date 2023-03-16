@@ -1246,7 +1246,7 @@ class Selector(SelectorBase):
 
     _slot_defaults = _dict_update(
         SelectorBase._slot_defaults, objects=None, compute_default_fn=None,
-        check_on_set=None, allow_None=None
+        check_on_set=None, allow_None=None, instantiate=False, default=None,
     )
 
     # Selector is usually used to allow selection from a list of

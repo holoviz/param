@@ -259,17 +259,15 @@ class TestSelectorParameters(API1TestCase):
         class B(A):
             p = param.Selector()
 
-        # B does not inherit objects from A but the default gets anyway auto-set
-        # to 0 and check_on_set is False
-        assert B.param.p.objects == []
+        assert B.param.p.objects == [0, 1]
         assert B.param.p.default == 0
-        assert B.param.p.check_on_set is False
+        assert B.param.p.check_on_set is True
 
         b = B()
 
-        assert b.param.p.objects == []
+        assert b.param.p.objects == [0, 1]
         assert b.param.p.default == 0
-        assert b.param.p.check_on_set is False
+        assert b.param.p.check_on_set is True
 
     def test_inheritance_behavior3(self):
         class A(param.Parameterized):
@@ -278,17 +276,15 @@ class TestSelectorParameters(API1TestCase):
         class B(A):
             p = param.Selector()
 
-        # B does not inherit objects from A but the default gets anyway set to 1
-        # and check_on_set is False
-        assert B.param.p.objects == []
+        assert B.param.p.objects == [0, 1]
         assert B.param.p.default == 1
-        assert B.param.p.check_on_set is False
+        assert B.param.p.check_on_set is True
 
         b = B()
 
-        assert b.param.p.objects == []
+        assert b.param.p.objects == [0, 1]
         assert b.param.p.default == 1
-        assert b.param.p.check_on_set is False
+        assert b.param.p.check_on_set is True
 
     def test_inheritance_behavior4(self):
         class A(param.Parameterized):
@@ -297,13 +293,13 @@ class TestSelectorParameters(API1TestCase):
         class B(A):
             p = param.Selector()
 
-        assert B.param.p.objects == []
+        assert B.param.p.objects == [0, 1]
         assert B.param.p.default == 0
         assert B.param.p.check_on_set is False
 
         b = B()
 
-        assert b.param.p.objects == []
+        assert b.param.p.objects == [0, 1]
         assert b.param.p.default == 0
         assert b.param.p.check_on_set is False
 
@@ -314,15 +310,15 @@ class TestSelectorParameters(API1TestCase):
         class B(A):
             p = param.Selector()
 
-        assert B.param.p.objects == []
+        assert B.param.p.objects == [0, 1]
         assert B.param.p.default == 0
-        assert B.param.p.check_on_set is False
+        assert B.param.p.check_on_set is True
 
         b = B()
 
-        assert b.param.p.objects == []
+        assert b.param.p.objects == [0, 1]
         assert b.param.p.default == 0
-        assert b.param.p.check_on_set is False
+        assert b.param.p.check_on_set is True
 
     def test_inheritance_behavior6(self):
         class A(param.Parameterized):
@@ -331,12 +327,12 @@ class TestSelectorParameters(API1TestCase):
         class B(A):
             p = param.Selector(default=1)
 
-        assert B.param.p.objects == []
+        assert B.param.p.objects == [0, 1]
         assert B.param.p.default == 1
-        assert B.param.p.check_on_set is False
+        assert B.param.p.check_on_set is True
 
         b = B()
 
-        assert b.param.p.objects == []
+        assert b.param.p.objects == [0, 1]
         assert b.param.p.default == 1
-        assert b.param.p.check_on_set is False
+        assert b.param.p.check_on_set is True

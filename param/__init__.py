@@ -1215,6 +1215,17 @@ class SelectorBase(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
+def _update_selector_default(p):
+    return []
+
+
+def _update_selector_check_on_set(p):
+    if len(p.objects) == 0:
+        return False
+    else:
+        return True
+
+
 class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
@@ -1245,8 +1256,9 @@ class Selector(SelectorBase):
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
     _slot_defaults = _dict_update(
-        SelectorBase._slot_defaults, objects=None, compute_default_fn=None,
-        check_on_set=None, allow_None=None, instantiate=False, default=None,
+        SelectorBase._slot_defaults, objects=_update_selector_default,
+        compute_default_fn=None, check_on_set=_update_selector_check_on_set,
+        allow_None=None, instantiate=False, default=None,
     )
 
     # Selector is usually used to allow selection from a list of
@@ -1255,7 +1267,7 @@ class Selector(SelectorBase):
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
-        autodefault = None
+        autodefault = Undefined
         if objects is not Undefined and objects:
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
@@ -1270,8 +1282,6 @@ class Selector(SelectorBase):
 
         default = autodefault if (not empty_default and default is Undefined) else default
 
-        if objects is Undefined:
-            objects = []
         if isinstance(objects, collections_abc.Mapping):
             self.names = objects
             self.objects = list(objects.values())
@@ -1279,13 +1289,7 @@ class Selector(SelectorBase):
             self.names = None
             self.objects = objects
         self.compute_default_fn = compute_default_fn
-
-        if check_on_set is not Undefined:
-            self.check_on_set = check_on_set
-        elif len(objects) == 0:
-            self.check_on_set = False
-        else:
-            self.check_on_set = True
+        self.check_on_set = check_on_set
 
         super(Selector,self).__init__(
             default=default, instantiate=instantiate, **params)

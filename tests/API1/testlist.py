@@ -184,13 +184,13 @@ class TestHookListParameters(API1TestCase):
             p = param.List()
 
         # B does not inherit default from A
-        assert B.param.p.default == []
+        assert B.param.p.default == [0 ,1]
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (0, None)
 
         b = B()
 
-        assert b.param.p.default == []
+        assert b.param.p.default == [0, 1]
         assert b.param.p.instantiate is True
         assert b.param.p.bounds == (0, None)
 
@@ -202,15 +202,15 @@ class TestHookListParameters(API1TestCase):
             p = param.List()
 
         # B does not inherit default and bounds from A
-        assert B.param.p.default == []
+        assert B.param.p.default == [0, 1]
         assert B.param.p.instantiate is True
-        assert B.param.p.bounds == (0, None)
+        assert B.param.p.bounds == (1, 10)
 
         b = B()
 
-        assert b.param.p.default == []
+        assert b.param.p.default == [0, 1]
         assert b.param.p.instantiate is True
-        assert b.param.p.bounds == (0, None)
+        assert b.param.p.bounds == (1, 10)
 
     def test_inheritance_behavior4(self):
         class A(param.Parameterized):
@@ -220,14 +220,14 @@ class TestHookListParameters(API1TestCase):
             p = param.List()
 
         # B inherit item_type
-        assert B.param.p.default == []
+        assert B.param.p.default == [0]
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (0, None)
         assert B.param.p.item_type == int
 
         b = B()
 
-        assert b.param.p.default == []
+        assert b.param.p.default == [0]
         assert b.param.p.instantiate is True
         assert b.param.p.bounds == (0, None)
         assert b.param.p.item_type == int
@@ -240,14 +240,14 @@ class TestHookListParameters(API1TestCase):
             p = param.List()
 
         # B does not inherit allow_None
-        assert B.param.p.default == []
+        assert B.param.p.default == [0, 1]
         assert B.param.p.allow_None is False
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (0, None)
 
         b = B()
 
-        assert b.param.p.default == []
+        assert b.param.p.default == [0, 1]
         assert b.param.p.allow_None is False
         assert b.param.p.instantiate is True
         assert b.param.p.bounds == (0, None)
@@ -261,10 +261,10 @@ class TestHookListParameters(API1TestCase):
 
         assert B.param.p.default == [0, 1, 2, 3]
         assert B.param.p.instantiate is True
-        assert B.param.p.bounds == (0, None)
+        assert B.param.p.bounds == (1, 10)
 
         b = B()
 
         assert b.param.p.default == [0, 1, 2, 3]
         assert b.param.p.instantiate is True
-        assert b.param.p.bounds == (0, None)
+        assert b.param.p.bounds == (1, 10)

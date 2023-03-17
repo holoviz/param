@@ -91,11 +91,20 @@ docstring_describe_params = True  # Add parameter description to class
 object_count = 0
 warning_count = 0
 
-class Undefined:
+class _Undefined:
     """
     Dummy value to signal completely undefined values rather than
     simple None values.
     """
+
+    def __bool__(self):
+        # Haven't defined whether Undefined is falsy or truthy,
+        # so to avoid subtle bugs raise an error when it
+        # is used in a comparison without `is`.
+        raise RuntimeError('Use `is` to compare Undefined')
+
+Undefined = _Undefined()
+
 
 @contextmanager
 def logging_level(level):

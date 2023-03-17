@@ -83,82 +83,6 @@ class TestListParameters(API1TestCase):
         else:
             raise AssertionError("Object set outside range.")
 
-
-class TestHookListParameters(API1TestCase):
-
-    def setUp(self):
-        super(TestHookListParameters, self).setUp()
-        class P(param.Parameterized):
-            e = param.HookList([abs])
-            l = param.HookList(bounds=(0,10))
-
-        self.P = P
-
-    def _check_defaults(self, p):
-        assert p.default == []
-        assert p.allow_None is False
-        assert p.class_ is None
-        assert p.item_type is None
-        assert p.bounds == (0, None)
-        assert p.instantiate is True
-
-    def test_defaults_class(self):
-        class P(param.Parameterized):
-            l = param.HookList()
-
-        check_defaults(P.param.l, label='L', skip=['instantiate'])
-        self._check_defaults(P.param.l)
-
-    def test_defaults_inst(self):
-        class P(param.Parameterized):
-            l = param.HookList()
-
-        p = P()
-
-        check_defaults(p.param.l, label='L', skip=['instantiate'])
-        self._check_defaults(p.param.l)
-
-    def test_defaults_unbound(self):
-        l = param.HookList()
-
-        check_defaults(l, label=None, skip=['instantiate'])
-        self._check_defaults(l)
-
-    def test_default_None(self):
-        class Q(param.Parameterized):
-            r = param.HookList(default=[])  #  Also check None)
-
-    def test_set_object_constructor(self):
-        p = self.P(e=[abs])
-        self.assertEqual(p.e, [abs])
-
-    def test_set_object_outside_bounds(self):
-        p = self.P()
-        try:
-            p.l = [abs]*11
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object set outside range.")
-
-    def test_set_object_wrong_type_foo(self):
-        p = self.P()
-        try:
-            p.e = ['s']
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object allowed of wrong type.")
-
-    def test_set_object_not_None(self):
-        p = self.P()
-        try:
-            p.e = None
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object set outside range.")
-
     def test_inheritance_behavior1(self):
         class A(param.Parameterized):
             p = param.List()
@@ -268,3 +192,79 @@ class TestHookListParameters(API1TestCase):
         assert b.param.p.default == [0, 1, 2, 3]
         assert b.param.p.instantiate is True
         assert b.param.p.bounds == (0, None)
+
+
+class TestHookListParameters(API1TestCase):
+
+    def setUp(self):
+        super(TestHookListParameters, self).setUp()
+        class P(param.Parameterized):
+            e = param.HookList([abs])
+            l = param.HookList(bounds=(0,10))
+
+        self.P = P
+
+    def _check_defaults(self, p):
+        assert p.default == []
+        assert p.allow_None is False
+        assert p.class_ is None
+        assert p.item_type is None
+        assert p.bounds == (0, None)
+        assert p.instantiate is True
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            l = param.HookList()
+
+        check_defaults(P.param.l, label='L', skip=['instantiate'])
+        self._check_defaults(P.param.l)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            l = param.HookList()
+
+        p = P()
+
+        check_defaults(p.param.l, label='L', skip=['instantiate'])
+        self._check_defaults(p.param.l)
+
+    def test_defaults_unbound(self):
+        l = param.HookList()
+
+        check_defaults(l, label=None, skip=['instantiate'])
+        self._check_defaults(l)
+
+    def test_default_None(self):
+        class Q(param.Parameterized):
+            r = param.HookList(default=[])  #  Also check None)
+
+    def test_set_object_constructor(self):
+        p = self.P(e=[abs])
+        self.assertEqual(p.e, [abs])
+
+    def test_set_object_outside_bounds(self):
+        p = self.P()
+        try:
+            p.l = [abs]*11
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Object set outside range.")
+
+    def test_set_object_wrong_type_foo(self):
+        p = self.P()
+        try:
+            p.e = ['s']
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Object allowed of wrong type.")
+
+    def test_set_object_not_None(self):
+        p = self.P()
+        try:
+            p.e = None
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Object set outside range.")

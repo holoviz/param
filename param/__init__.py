@@ -1042,6 +1042,8 @@ class Tuple(Parameter):
         if length is Undefined and self.default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
+        elif default is not Undefined and default:
+            self.length = len(default)
         else:
             self.length = length
         self._validate(self.default)

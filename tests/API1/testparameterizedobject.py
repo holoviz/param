@@ -814,3 +814,36 @@ def test_inheritance_class_attribute_behavior():
     # Should be 2?
     # https://github.com/holoviz/param/issues/718
     assert B.p == 1
+
+
+@pytest.fixture
+def custom_parameter1():
+    class CustomParameter(param.Parameter):
+
+        __slots__ = ['foo', 'bar']
+
+        # foo has no default value defined in _slot_defaults
+
+        def __init__(self, foo=param.Undefined, **params):
+            super().__init__(**params)
+            self.foo = foo
+
+    return CustomParameter
+
+
+def test_inheritance_parameter_attribute_without_default():
+
+    class CustomParameter(param.Parameter):
+
+        __slots__ = ['foo']
+
+        # foo has no default value defined in _slot_defaults
+
+        def __init__(self, foo=param.Undefined, **params):
+            super().__init__(**params)
+            self.foo = foo
+
+    with pytest.raises(KeyError, match="Slot 'foo' of parameter 'c' has no default value defined in `_slot_defaults`"):
+        class A(param.Parameterized):
+            c = CustomParameter()
+    

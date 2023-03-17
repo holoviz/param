@@ -1190,7 +1190,13 @@ class Parameter(object):
         v = object.__getattribute__(self, key)
         # Safely checks for name (avoiding recursion) to decide if this object is unbound
         if v is Undefined and key != "name" and getattr(self, "name", None) is None:
-            v = self._slot_defaults[key]
+            try:
+                v = self._slot_defaults[key]
+            except KeyError as e:
+                raise KeyError(
+                    f'Slot {key!r} on unbound parameter {self.__class__.__name__!r} '
+                    'has no default value defined in `_slot_defaults`'
+                ) from e
             if callable(v):
                 v = v(self)
         return v
@@ -2937,7 +2943,13 @@ class ParameterizedMetaclass(type):
                     if new_value is not Undefined:
                         setattr(param, slot, new_value)
             if getattr(param, slot) is Undefined:
-                default_val = param._slot_defaults[slot]
+                try:
+                    default_val = param._slot_defaults[slot]
+                except KeyError as e:
+                    raise KeyError(
+                        f'Slot {slot!r} of parameter {param_name!r} has no '
+                        'default value defined in `_slot_defaults`'
+                    ) from e
                 if callable(default_val):
                     callables[slot] = default_val
                 else:

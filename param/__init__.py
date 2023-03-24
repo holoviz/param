@@ -1008,12 +1008,8 @@ class Boolean(Parameter):
                                  "Boolean value or None, not %s."
                                  % (self.name, val))
         elif not isinstance(val, bool):
-            if self.name is not None:
-                raise ValueError("Boolean parameter %r must be True or False, "
-                                 "not %s." % (self.name, val))
-            else:
-                raise ValueError("Boolean parameter must be True or False, "
-                                 "not %s." % val)
+            name = "" if self.name is None else " %r" % self.name
+            raise ValueError("Boolean parameter%s must be True or False, not %s." % (name, val))
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)

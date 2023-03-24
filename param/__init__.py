@@ -998,14 +998,8 @@ class Boolean(Parameter):
     # no effect since values are either False, True, or None (if allowed).
     def __init__(self, default=False, bounds=(0,1), **params):
         self.bounds = bounds
-        self._validate_default(default)
         super(Boolean, self).__init__(default=default, **params)
-
-    def _validate_default(self, default):
-        if not isinstance(default, bool) and default is not None:
-            raise ValueError("Boolean parameter only takes a "
-                             "Boolean default or None, not %s."
-                             % default)
+        self._validate(default)
 
     def _validate_value(self, val, allow_None):
         if allow_None:
@@ -1014,8 +1008,15 @@ class Boolean(Parameter):
                                  "Boolean value or None, not %s."
                                  % (self.name, val))
         elif not isinstance(val, bool):
-            raise ValueError("Boolean parameter %r must be True or False, "
-                             "not %s." % (self.name, val))
+            if self.name is not None:
+                raise ValueError("Boolean parameter %r must be True or False, "
+                                 "not %s." % (self.name, val))
+            else:
+                raise ValueError("Boolean parameter must be True or False, "
+                                 "not %s." % val)
+
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
 
 
 

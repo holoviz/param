@@ -135,4 +135,4 @@ def test_inheritance_parameter_attribute_without_default():
         match="Slot 'foo' on unbound parameter 'CustomParameter' has no default value defined in `_slot_defaults`"
     ):
         c = CustomParameter()
-    
+

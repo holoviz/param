@@ -970,7 +970,7 @@ class Parameter(object):
     __slots__ = ['name', '_internal_name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
-                 'watchers', 'owner', '_label']
+                 'watchers', 'owner', '_label', "required"]
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -983,7 +983,7 @@ class Parameter(object):
     def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
                  instantiate=False, constant=False, readonly=False,
                  pickle_default_value=True, allow_None=False,
-                 per_instance=True):
+                 per_instance=True, required=False):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1051,6 +1051,8 @@ class Parameter(object):
         allowed. If the default value is defined as None, allow_None
         is set to True automatically.
 
+        required: If True a value must be provided on instantiation.
+
         default, doc, and precedence all default to None, which allows
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
@@ -1070,6 +1072,7 @@ class Parameter(object):
         self.allow_None = (default is None or allow_None)
         self.watchers = {}
         self.per_instance = per_instance
+        self.required = required
 
     @classmethod
     def serialize(cls, value):
@@ -1601,6 +1604,16 @@ class Parameters(object):
         self = self_.param.self
         self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
 
+    @as_uninitialized
+    def _validate_params(self_, **params):
+        self = self_.param.self
+        params_to_instantiate = self.__class__.param._parameters
+                
+        for p,v in params_to_instantiate.items():
+            if v.required and not v.name in params:
+                message = f"__init__() missing 1 required positional argument: '{v.name}'"
+                raise TypeError(message)
+                
 
     @as_uninitialized
     def _setup_params(self_,**params):
@@ -3170,6 +3183,7 @@ class Parameterized(object):
         self._dynamic_watchers = defaultdict(list)
 
         self.param._generate_name()
+        self.param._validate_params(**params)
         self.param._setup_params(**params)
         object_count += 1
 

@@ -813,3 +813,31 @@ def test_inheritance_class_attribute_behavior():
     # Should be 2?
     # https://github.com/holoviz/param/issues/718
     assert B.p == 1
+
+@pytest.mark.parametrize(["default", "value"], [
+    (None,"v"), ("d", "v")
+])
+def test_constant_parameter_not_raises(default, value):
+    """Test that you can make a parameter required and it will not raise
+    an error if provided."""
+    class TestConstant(param.Parameterized):
+        value = param.Parameter(default=default, required=True)
+
+    po = TestConstant(value=value)
+    assert po.value==value
+
+import re
+
+@pytest.mark.parametrize("default", [None, "d"])
+def test_constant_parameter_raises(default):
+    """Test that you can make a parameter required and it will raise
+    an error if not provided."""
+    class TestConstant(param.Parameterized):
+        value = param.Parameter(default=default, required=True)
+
+    # 
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"__init__() missing 1 required positional argument: 'value'"),
+    ) as ex:
+        TestConstant()

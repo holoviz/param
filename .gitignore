@@ -26,3 +26,5 @@ coverage.xml
 
 # autover
 param/.version
+.venv/
+script.*

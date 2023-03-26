@@ -1608,12 +1608,12 @@ class Parameters(object):
     def _validate_params(self_, **params):
         self = self_.param.self
         params_to_instantiate = self.__class__.param._parameters
-                
+
         for p,v in params_to_instantiate.items():
-            if v.required and not v.name in params:
+            if v.required and v.name not in params:
                 message = f"__init__() missing 1 required positional argument: '{v.name}'"
                 raise TypeError(message)
-                
+
 
     @as_uninitialized
     def _setup_params(self_,**params):

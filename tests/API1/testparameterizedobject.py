@@ -4,6 +4,7 @@ Unit test for Parameterized.
 
 import param
 import numbergen
+import re
 
 from . import API1TestCase
 from .utils import MockLoggingHandler
@@ -825,8 +826,6 @@ def test_constant_parameter_not_raises(default, value):
 
     po = TestConstant(value=value)
     assert po.value==value
-
-import re
 
 @pytest.mark.parametrize("default", [None, "d"])
 def test_constant_parameter_raises(default):

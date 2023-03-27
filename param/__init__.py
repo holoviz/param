@@ -999,6 +999,7 @@ class Boolean(Parameter):
     def __init__(self, default=False, bounds=(0,1), **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
+        self._validate(default)
 
     def _validate_value(self, val, allow_None):
         if allow_None:
@@ -1007,8 +1008,11 @@ class Boolean(Parameter):
                                  "Boolean value or None, not %s."
                                  % (self.name, val))
         elif not isinstance(val, bool):
-            raise ValueError("Boolean parameter %r must be True or False, "
-                             "not %s." % (self.name, val))
+            name = "" if self.name is None else " %r" % self.name
+            raise ValueError("Boolean parameter%s must be True or False, not %s." % (name, val))
+
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
 
 
 

@@ -79,6 +79,13 @@ class TestBooleanParameters(API1TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
+    def test_bad_default_type(self):
+        msg = r"Boolean parameter must be True or False, not test."
+
+        with self.assertRaisesRegex(ValueError, msg):
+            class A(param.Parameterized):
+                b = param.Boolean(default='test')
+
 
 class TestEventParameters(API1TestCase):
 

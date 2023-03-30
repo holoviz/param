@@ -2125,6 +2125,12 @@ class Range(NumericTuple):
     def _validate(self, val):
         super(Range, self)._validate(val)
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
+        self._validate_step(val, self.step)
+
+    def _validate_step(self, val, step):
+        if step is not None and not _is_number(step):
+            raise ValueError("Step can only be None or a "
+                             "numeric value, not type %r." % type(step))
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
         if bounds is None or (val is None and self.allow_None):

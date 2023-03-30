@@ -51,3 +51,9 @@ class TestRangeParameters(unittest.TestCase):
         q = param.Range((1,3), bounds=(0, 10), softbounds=(1, 9))
         self.assertEqual(q.get_soft_bounds(), (1, 9))
 
+    def test_validate_step(self):
+        msg = r"Step can only be None or a numeric value, not type <class 'str'>."
+
+        p = param.Range((1, 2), bounds=(0, 10), step=1)
+        with self.assertRaisesRegex(ValueError, msg):
+            q = param.Range((1, 2), bounds=(0, 10), step="1")

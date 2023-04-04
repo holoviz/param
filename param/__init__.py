@@ -1221,12 +1221,8 @@ def _update_selector_default(p):
     return []
 
 
-def _update_selector_check_on_set(p):
-    if len(p.objects) == 0:
-        return False
-    else:
-        return True
-
+def _compute_selector_checking_default(p):
+    return len(p.objects) != 0
 
 class Selector(SelectorBase):
     """
@@ -1259,7 +1255,7 @@ class Selector(SelectorBase):
 
     _slot_defaults = _dict_update(
         SelectorBase._slot_defaults, objects=_update_selector_default,
-        compute_default_fn=None, check_on_set=_update_selector_check_on_set,
+        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
         allow_None=None, instantiate=False, default=None,
     )
 

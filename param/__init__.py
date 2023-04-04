@@ -1008,7 +1008,7 @@ class Boolean(Parameter):
     def __init__(self, default=Undefined, bounds=Undefined, **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_value(self, val, allow_None):
         if allow_None:

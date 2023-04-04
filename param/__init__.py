@@ -1020,7 +1020,7 @@ class Boolean(Parameter):
                              "not %s." % (self.name, val))
 
 
-def _update_length(p):
+def _compute_length_of_default(p):
     return len(p.default)
 
 
@@ -1029,7 +1029,7 @@ class Tuple(Parameter):
 
     __slots__ = ['length']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_update_length)
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
     def __init__(self, default=Undefined, length=Undefined, **params):
         """

@@ -1217,7 +1217,7 @@ class SelectorBase(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
-def _update_selector_default(p):
+def _compute_selector_default(p):
     return []
 
 
@@ -1254,7 +1254,7 @@ class Selector(SelectorBase):
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
 
     _slot_defaults = _dict_update(
-        SelectorBase._slot_defaults, objects=_update_selector_default,
+        SelectorBase._slot_defaults, objects=_compute_selector_default,
         compute_default_fn=None, check_on_set=_compute_selector_checking_default,
         allow_None=None, instantiate=False, default=None,
     )

@@ -24,6 +24,8 @@ import glob
 import re
 import datetime as dt
 import collections
+import numbers
+import typing
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
@@ -692,7 +694,6 @@ class Dynamic(Parameter):
             return gen
 
 
-import numbers
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
@@ -751,6 +752,10 @@ class Bytes(Parameter):
         self.regex = regex
         self.allow_None = (default is None or allow_None)
         self._validate(default)
+
+    @property
+    def pytype(self):
+        return typing.Union[bytes, None] if self.allow_None else bytes
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
@@ -833,6 +838,10 @@ class Number(Dynamic):
         self.softbounds = softbounds
         self.step = step
         self._validate(default)
+
+    @property
+    def pytype(self):
+        return typing.Union[numbers.Number, None] if self.allow_None else numbers.Number
 
     def __get__(self, obj, objtype):
         """
@@ -963,6 +972,10 @@ class Integer(Number):
     def __init__(self, default=0, **params):
         Number.__init__(self, default=default, **params)
 
+    @property
+    def pytype(self):
+        return typing.Union[int, None] if self.allow_None else int
+
     def _validate_value(self, val, allow_None):
         if callable(val):
             return
@@ -1001,6 +1014,10 @@ class Boolean(Parameter):
         super(Boolean, self).__init__(default=default, **params)
         self._validate(default)
 
+    @property
+    def pytype(self):
+        return typing.Union[bool, None] if self.allow_None else bool
+
     def _validate_value(self, val, allow_None):
         if allow_None:
             if not isinstance(val, bool) and val is not None:
@@ -1037,6 +1054,14 @@ class Tuple(Parameter):
         else:
             self.length = length
         self._validate(default)
+
+    @property
+    def pytype(self):
+        if self.length:
+            pytype = typing.Tuple[(typing.Any,)*self.length]
+        else:
+            ptype = typing.Tuple[typing.Any, ...]
+        return typing.Union[pytype, None] if self.allow_None else pytype
 
     def _validate_value(self, val, allow_None):
         if val is None and allow_None:
@@ -1075,6 +1100,14 @@ class Tuple(Parameter):
 class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
+    @property
+    def pytype(self):
+        if self.length:
+            pytype = typing.Tuple[(numbers.Number,)*self.length]
+        else:
+            ptype = typing.Tuple[numbers.Number, ...]
+        return typing.Union[pytype, None] if self.allow_None else pytype
+
     def _validate_value(self, val, allow_None):
         super(NumericTuple, self)._validate_value(val, allow_None)
         if allow_None and val is None:
@@ -1092,6 +1125,11 @@ class XYCoordinates(NumericTuple):
     def __init__(self, default=(0.0, 0.0), **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
 
+    @property
+    def pytype(self):
+        pytype = typing.Tuple[numbers.Number, numbers.Number]
+        return typing.Union[pytype, None] if self.allow_None else pytype
+
 
 class Callable(Parameter):
     """
@@ -1102,6 +1140,11 @@ class Callable(Parameter):
     regular standalone functions cannot be deepcopied as of Python
     2.4, so instantiate must be False for those values.
     """
+
+    @property
+    def pytype(self):
+        ctype = typing.Callable[..., typing.Any]
+        return typing.Union[ctype, None] if self.allow_None else ctype 
 
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None) or callable(val):
@@ -1200,6 +1243,11 @@ class SelectorBase(Parameter):
     """
 
     __abstract = True
+
+    @property
+    def pytype(self):
+        literal = typing.Literal[tuple(self.get_range().values())]
+        return typing.Union[literal, None] if self.allow_None else literal 
 
     def get_range(self):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
@@ -1437,6 +1485,17 @@ class List(Parameter):
                            **params)
         self._validate(default)
 
+    @property
+    def pytype(self):
+        if isinstance(self.item_type, tuple):
+            item_type = typing.Union[self.item_type]
+        elif self.item_type is not None:
+            item_type = self.item_type
+        else:
+            item_type = typing.Any
+        list_type = typing.List[item_type]
+        return typing.Union[list_type, None] if self.allow_None else list_type
+
     def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
@@ -1491,6 +1550,11 @@ class HookList(List):
     """
     __slots__ = ['class_', 'bounds']
 
+    @property
+    def pytype(self):
+        list_type = typing.List[typing.Callable[[], None]]
+        return typing.Union[list_type, None] if self.allow_None else list_type
+
     def _validate_value(self, val, allow_None):
         super(HookList, self)._validate_value(val, allow_None)
         if allow_None and val is None:
@@ -1510,6 +1574,12 @@ class Dict(ClassSelector):
     def __init__(self, default=None, **params):
         super(Dict, self).__init__(dict, default=default, **params)
 
+    @property
+    def pytype(self):
+        dict_type = typing.Dict[typing.Hashable, typing.Any]
+        return typing.Union[dict_type, None] if self.allow_None else dict_type
+
+
 
 class Array(ClassSelector):
     """
@@ -1517,8 +1587,13 @@ class Array(ClassSelector):
     """
 
     def __init__(self, default=None, **params):
-        from numpy import ndarray
+        from numpy import ndarray        
         super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
+
+    @property
+    def pytype(self):
+        from numpy import ndarray
+        return ndarray
 
     @classmethod
     def serialize(cls, value):
@@ -1562,6 +1637,11 @@ class DataFrame(ClassSelector):
         self.ordered = ordered
         super(DataFrame,self).__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
+
+    @property
+    def pytype(self):
+        from pandas import DataFrame
+        return DataFrame
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -1638,6 +1718,11 @@ class Series(ClassSelector):
         super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
                                     **params)
         self._validate(self.default)
+
+    @property
+    def pytype(self):
+        from pandas import Series
+        return Series
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -1782,6 +1867,13 @@ class Path(Parameter):
         self.search_paths = search_paths
         super(Path,self).__init__(default,**params)
 
+    @property
+    def pytype(self):
+        path_types  =(str, pathlib.Path)
+        if self.allow_None:
+            path_types += (None,)
+        return typing.Union[path_types]
+
     def _resolve(self, path):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
 
@@ -1908,6 +2000,12 @@ class ListSelector(Selector):
         super(ListSelector,self).__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
+    @property
+    def pytype(self):
+        literal = typing.Literal[tuple(self.get_range().values())]
+        ltype = typing.List[literal]
+        return typing.Union[ltype, None] if self.allow_None else ltype
+
     def compute_default(self):
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
@@ -1961,6 +2059,14 @@ class Date(Number):
     def __init__(self, default=None, **kwargs):
         super(Date, self).__init__(default=default, **kwargs)
 
+    @property
+    def pytype(self):
+        if self.allow_None:
+            date_types = dt_types + (None,)
+        else:
+            date_types = dt_types
+        return typing.Union[date_types]
+
     def _validate_value(self, val, allow_None):
         """
         Checks that the value is numeric and that it is within the hard
@@ -2004,6 +2110,10 @@ class CalendarDate(Number):
 
     def __init__(self, default=None, **kwargs):
         super(CalendarDate, self).__init__(default=default, **kwargs)
+
+    @property
+    def pytype(self):
+        return typing.Union[dt.datetime, None] if self.allow_None else dt.datetime
 
     def _validate_value(self, val, allow_None):
         """
@@ -2083,6 +2193,10 @@ class Color(Parameter):
         self.allow_named = allow_named
         self._validate(default)
 
+    @property
+    def pytype(self):
+        return typing.Union[str, None] if self.allow_None else str
+
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
         self._validate_allow_named(val, self.allow_named)
@@ -2158,6 +2272,12 @@ class DateRange(Range):
     Bounds must be specified as datetime or date types (see param.dt_types).
     """
 
+    @property
+    def pytype(self):
+        date_type = typing.Union[dt_types]
+        range_type = typing.Tuple[date_type, date_type]
+        return typing.Union[range_type, None] if self.allow_None else range_type
+
     def _validate_value(self, val, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from
         # NumericTuple which check that the tuple values are numbers and
@@ -2211,6 +2331,7 @@ class DateRange(Range):
             deserialized.append(v)
         # As JSON has no tuple representation
         return tuple(deserialized)
+
 
 class CalendarDateRange(Range):
     """
@@ -2287,6 +2408,10 @@ class Event(Boolean):
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
         super(Event, self).__init__(default=default,**params)
+
+    @property
+    def pytype(self):
+        return bool
 
     def _reset_event(self, obj, val):
         val = False

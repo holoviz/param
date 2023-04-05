@@ -2787,26 +2787,6 @@ class ParameterizedMetaclass(type):
 
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
-            elif isinstance(value,Parameters):
-                pass
-            else:
-                # the purpose of the warning below is to catch
-                # mistakes ("thinking you are setting a parameter, but
-                # you're not"). There are legitimate times when
-                # something needs be set on the class, and we don't
-                # want to see a warning then. Such attributes should
-                # presumably be prefixed by at least one underscore.
-                # (For instance, python's own pickling mechanism
-                # caches __slotnames__ on the class:
-                # http://mail.python.org/pipermail/python-checkins/2003-February/033517.html.)
-                # This warning bypasses the usual mechanisms, which
-                # has have consequences for warning counts, warnings
-                # as exceptions, etc.
-                if not attribute_name.startswith('_'):
-                    get_logger().log(WARNING,
-                                     "Setting non-Parameter class attribute %s.%s = %s ",
-                                     mcs.__name__,attribute_name,repr(value))
-
 
     def __param_inheritance(mcs,param_name,param):
         """

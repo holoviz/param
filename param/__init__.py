@@ -1204,13 +1204,16 @@ class SelectorBase(Parameter):
 
 
 
-class SelectObjects(list):
+class ListProxy(list):
     """
-    Container that supports both list-style and dictionary-style updates. Useful for replacing code that originally accepted lists but needs to support dictionary access (typically for naming items).
+    Container that supports both list-style and dictionary-style
+    updates. Useful for replacing code that originally accepted lists
+    but needs to support dictionary access (typically for naming
+    items).
     """
 
     def __init__(self, iterable, parameter=None):
-        super(SelectObjects, self).__init__(iterable)
+        super(ListProxy, self).__init__(iterable)
         self._parameter = parameter
 
     def _warn(self, method):
@@ -1233,14 +1236,14 @@ class SelectObjects(list):
     def __getitem__(self, index):
         if self._parameter.names:
             return self._parameter.names[index]
-        return super(SelectObjects, self).__getitem__(index)
+        return super(ListProxy, self).__getitem__(index)
 
     def __setitem__(self, index, object, trigger=True):
         if isinstance(index, (int, slice)):
             if self._parameter.names:
                 self._warn('[index] = object')
             with self._trigger():
-                super(SelectObjects, self).__setitem__(index, object)
+                super(ListProxy, self).__setitem__(index, object)
                 self._parameter._objects[index] = object
             return
         if self and not self._parameter.names:
@@ -1249,15 +1252,15 @@ class SelectObjects(list):
             if index in self._parameter.names:
                 old = self._parameter.names[index]
                 idx = self.index(old)
-                super(SelectObjects, self).__setitem__(idx, object)
+                super(ListProxy, self).__setitem__(idx, object)
                 self._parameter._objects[idx] = object
             else:
-                super(SelectObjects, self).append(object)
+                super(ListProxy, self).append(object)
                 self._parameter._objects.append(object)
             self._parameter.names[index] = object
 
     def __eq__(self, other):
-        eq = super(SelectObjects, self).__eq__(other)
+        eq = super(ListProxy, self).__eq__(other)
         if self._parameter.names and eq is NotImplemented:
             return dict(zip(self._parameter.names, self)) == other
         return eq
@@ -1269,7 +1272,7 @@ class SelectObjects(list):
         if self._parameter.names:
             self._warn('.append')
         with self._trigger():
-            super(SelectObjects, self).append(object)
+            super(ListProxy, self).append(object)
             self._parameter._objects.append(object)
 
     def copy(self):
@@ -1279,7 +1282,7 @@ class SelectObjects(list):
 
     def clear(self):
         with self._trigger():
-            super(SelectObjects, self).clear()
+            super(ListProxy, self).clear()
             self._parameter._objects.clear()
             self._parameter.names.clear()
 
@@ -1287,7 +1290,7 @@ class SelectObjects(list):
         if self._parameter.names:
             self._warn('.append')
         with self._trigger():
-            super(SelectObjects, self).extend(objects)
+            super(ListProxy, self).extend(objects)
             self._parameter._objects.extend(objects)
 
     def get(self, key, default=None):
@@ -1299,7 +1302,7 @@ class SelectObjects(list):
         if self._parameter.names:
             self._warn('.insert')
         with self._trigger():
-            super(SelectObjects, self).insert(index, object)
+            super(ListProxy, self).insert(index, object)
             self._parameter._objects.insert(index, object)
 
     def items(self):
@@ -1316,7 +1319,7 @@ class SelectObjects(list):
         index = args[0] if args else -1
         if isinstance(index, int):
             with self._trigger():
-                super(SelectObjects, self).pop(index)
+                super(ListProxy, self).pop(index)
                 object = self._parameter._objects.pop(index)
                 if self._parameter.names:
                     self._parameter.names = {
@@ -1331,13 +1334,13 @@ class SelectObjects(list):
             )
         with self._trigger():
             object = self._parameter.names.pop(*args)
-            super(SelectObjects, self).remove(object)
+            super(ListProxy, self).remove(object)
             self._parameter._objects.remove(object)
         return object
 
     def remove(self, object):
         with self._trigger():
-            super(SelectObjects, self).remove(object)
+            super(ListProxy, self).remove(object)
             self._parameter._objects.remove(object)
             if self._parameter.names:
                 copy = self._parameter.names.copy()
@@ -1444,7 +1447,7 @@ class Selector(SelectorBase):
 
     @property
     def objects(self):
-        return SelectObjects(self._objects, self)
+        return ListProxy(self._objects, self)
 
     @objects.setter
     def objects(self, objects):

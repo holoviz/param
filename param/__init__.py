@@ -1001,6 +1001,7 @@ class Boolean(Parameter):
     def __init__(self, default=False, bounds=(0,1), **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
+        self._validate(default)
 
     def _validate_value(self, val, allow_None):
         if allow_None:
@@ -1009,8 +1010,11 @@ class Boolean(Parameter):
                                  "Boolean value or None, not %s."
                                  % (self.name, val))
         elif not isinstance(val, bool):
-            raise ValueError("Boolean parameter %r must be True or False, "
-                             "not %s." % (self.name, val))
+            name = "" if self.name is None else " %r" % self.name
+            raise ValueError("Boolean parameter%s must be True or False, not %s." % (name, val))
+
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
 
 
 
@@ -1060,12 +1064,12 @@ class Tuple(Parameter):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return list(value) # As JSON has no tuple representation
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return tuple(value) # As JSON has no tuple representation
 
@@ -1702,12 +1706,12 @@ class Array(ClassSelector):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.tolist()
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         from numpy import asarray
         return asarray(value)
@@ -1789,12 +1793,12 @@ class DataFrame(ClassSelector):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.to_dict('records')
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         from pandas import DataFrame as pdDFrame
         return pdDFrame(value)
@@ -2097,6 +2101,9 @@ class ListSelector(Selector):
     def _validate(self, val):
         if (val is None and self.allow_None):
             return
+        if not isinstance(val, list):
+            raise ValueError("ListSelector parameter %r only takes list "
+                             "types, not %r." % (self.name, val))
         for o in val:
             super(ListSelector, self)._validate(o)
 
@@ -2161,14 +2168,14 @@ class Date(Number):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
             value = value.astype(dt.datetime)
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -2199,12 +2206,12 @@ class CalendarDate(Number):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         return value.strftime("%Y-%m-%d")
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -2275,7 +2282,7 @@ class Color(Parameter):
             return
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
-            if not is_hex and val not in self._named_colors:
+            if not is_hex and val.lower() not in self._named_colors:
                 raise ValueError("Color '%s' only takes RGB hex codes "
                                  "or named colors, received '%s'." % (self.name, val))
         elif not is_hex:
@@ -2359,7 +2366,7 @@ class DateRange(Range):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         # List as JSON has no tuple representation
         serialized = []
         for v in value:
@@ -2374,7 +2381,7 @@ class DateRange(Range):
         return serialized
 
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         deserialized = []
         for v in value:
@@ -2410,13 +2417,13 @@ class CalendarDateRange(Range):
     @classmethod
     def serialize(cls, value):
         if value is None:
-            return 'null'
+            return None
         # As JSON has no tuple representation
         return [v.strftime("%Y-%m-%d") for v in value]
 
     @classmethod
     def deserialize(cls, value):
-        if value == 'null':
+        if value == 'null' or value is None:
             return None
         # As JSON has no tuple representation
         return tuple([dt.datetime.strptime(v, "%Y-%m-%d").date() for v in value])

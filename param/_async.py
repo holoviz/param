@@ -3,10 +3,12 @@ Module that implements async/def function wrappers to be used
 by param internal callbacks. These are defined in a separate file due
 to py2 incompatibility with both `async/await` and `yield from` syntax.
 """
+from functools import wraps
 
 def generate_depends(func):
+    @wraps(func)
     async def _depends(*args, **kw):  # noqa: E999
-        await func(*args, **kw)  # noqa: E999
+        return await func(*args, **kw)  # noqa: E999
     return _depends
 
 def generate_caller(function, what='value', changed=None, callback=None, skip_event=None):

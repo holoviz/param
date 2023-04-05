@@ -499,3 +499,317 @@ class TestSharedParameters(API1TestCase):
     def test_shared_list(self):
         self.assertTrue(self.p1.inst is self.p2.inst)
         self.assertTrue(self.p1.param.params('inst').default is not self.p2.inst)
+
+
+def test_inheritance_None_is_not_special_cased_default():
+
+    class A(param.Parameterized):
+        p = param.String(default='test')
+
+    class B(A):
+        p = param.String(default=None)
+
+    b = B()
+
+    assert b.p == 'test'
+
+
+@pytest.mark.parametrize('attribute', [
+    'default',
+    'doc',
+    'precedence',
+    'readonly',
+    'pickle_default_value',
+    'per_instance',
+    # These 3 parameters of Parameter are handled dynamically, instantiating
+    # Parameter with their value to None doesn't lead to the attribute value
+    # on Parameter being None.
+    # 'instantiate',
+    # 'constant',
+    # 'allow_None',
+])
+def test_inheritance_None_is_not_special_cased(attribute):
+    """
+    Somewhat strange test as it's setting attributes of Parameter to None
+    while it's not necessarily an allowed value. It's to test that it's no
+    longer considered as a sentinel allowing inheritance.
+    """
+
+    class A(param.Parameterized):
+        p = param.Parameter(**{attribute: 'test'})
+
+    class B(A):
+        p = param.Parameter(**{attribute: None})
+
+    b = B()
+
+    assert getattr(b.param.p, attribute) == 'test'
+
+
+def test_inheritance_no_default_declared_in_subclass():
+    default = 5.0
+    class A(param.Parameterized):
+        p = param.Number(default=default)
+
+    class B(A):
+        p = param.Number()
+
+    b = B()
+    assert b.p == 0.0
+
+
+def test_inheritance_attribute_from_non_subclass_not_inherited():
+    class A(param.Parameterized):
+        p = param.String(doc='1')
+
+    class B(A):
+        p = param.Number()
+
+    b = B()
+
+    assert b.param.p.doc == '1'
+
+
+def test_inheritance_sub_attribute_is_used():
+    class A(param.Parameterized):
+        p = param.String(doc='1')
+
+    class B(A):
+        p = param.String(doc='2')
+
+    b = B()
+
+    assert b.param.p.doc == '2'
+
+
+def test_inheritance_default_is_not_None_in_sub():
+    class A(param.Parameterized):
+        p = param.String(default='1')
+
+    class B(A):
+        p = param.Number()
+
+    b = B()
+
+    assert b.p == 0.0
+
+
+def test_inheritance_default_is_None_in_sub():
+    class A(param.Parameterized):
+        p = param.String(default='1')
+
+    class B(A):
+        p = param.Action()
+
+    b = B()
+
+    assert b.p == '1'
+
+
+def test_inheritance_diamond_not_supported():
+    """
+    In regular Python, the value of the class attribute p on D is resolved
+    to 2:
+
+        class A:
+            p = 1
+
+        class B(A):
+            pass
+
+        class C(A):
+            p = 2
+
+        class D(B, C):
+            pass
+
+        assert D.p == 2
+
+    This is not supported by Param (https://github.com/holoviz/param/issues/715).
+    """
+
+    class A(param.Parameterized):
+        p = param.Parameter(default=1, doc='11')
+
+    class B(A):
+        p = param.Parameter()
+
+    class C(A):
+        p = param.Parameter(default=2, doc='22')
+
+    class D(B, C):
+        p = param.Parameter()
+
+    assert D.p != 2
+    assert D.param.p.doc != '22'
+    assert D.p == 1
+    assert D.param.p.doc == '11'
+
+    d = D()
+
+    assert d.p != 2
+    assert d.param.p.doc != '22'
+    assert d.p == 1
+    assert d.param.p.doc == '11'
+
+
+def test_inheritance_from_multiple_params_class():
+    class A(param.Parameterized):
+        p = param.Parameter(doc='foo')
+
+    class B(A):
+        p = param.Parameter(default=2)
+
+    class C(B):
+        p = param.Parameter(instantiate=True)
+
+    assert A.param.p.instantiate is False
+    assert A.param.p.default is None
+    assert A.param.p.doc == 'foo'
+
+    assert B.param.p.instantiate is False
+    assert B.param.p.default == 2
+    assert B.param.p.doc == 'foo'
+
+    assert C.param.p.instantiate is True
+    assert C.param.p.default == 2
+    assert C.param.p.doc == 'foo'
+
+
+def test_inheritance_from_multiple_params_inst():
+    # Picked Parameters whose default value is None
+    class A(param.Parameterized):
+        p = param.Parameter(doc='foo')
+
+    class B(A):
+        p = param.Action(default=2)
+
+    class C(B):
+        p = param.Date(instantiate=True)
+
+    a = A()
+    b = B()
+    c = C()
+
+    assert a.param.p.instantiate is False
+    assert a.param.p.default is None
+    assert a.param.p.doc == 'foo'
+
+    assert b.param.p.instantiate is False
+    assert b.param.p.default == 2
+    assert b.param.p.doc == 'foo'
+
+    assert c.param.p.instantiate is True
+    assert c.param.p.default == 2
+    assert c.param.p.doc == 'foo'
+
+
+def test_inheritance_from_multiple_params_intermediate_setting():
+    class A(param.Parameterized):
+        p = param.Parameter(doc='foo')
+
+    A.param.p.default = 1
+    A.param.p.doc = 'bar'
+
+    class B(A):
+        p = param.Action(default=2)
+
+    assert A.param.p.default == 1
+    assert A.param.p.doc == 'bar'
+
+    assert B.param.p.default == 2
+    assert B.param.p.doc == 'bar'
+
+    a = A()
+    b = B()
+
+    assert a.param.p.default == 1
+    assert a.param.p.doc == 'bar'
+
+    assert b.param.p.default == 2
+    assert b.param.p.doc == 'bar'
+
+
+def test_inheritance_instantiate_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(instantiate=True)
+
+    class B(A):
+        p = param.Parameter(readonly=True)
+
+
+    # Normally, param.Parameter(readonly=True, instantiate=True) ends up with
+    # instantiate being False.
+    assert B.param.p.instantiate is True
+
+    b = B()
+
+    assert b.param.p.instantiate is True
+
+
+def test_inheritance_constant_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(readonly=True)
+
+    class B(A):
+        p = param.Parameter()
+
+
+    # Normally, param.Parameter(readonly=True) ends up with constant being
+    # True.
+    assert B.param.p.constant is False
+
+    b = B()
+
+    assert b.param.p.constant is False
+
+
+def test_inheritance_allow_None_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(default=1)
+
+    class B(A):
+        p = param.Parameter()
+
+    # A computes allow_None to False, B sets it to True.
+    assert A.param.p.allow_None !=  B.param.p.allow_None
+    assert B.param.p.allow_None is True
+
+    a = A()
+    b = B()
+
+    assert a.param.p.allow_None !=  b.param.p.allow_None
+    assert b.param.p.allow_None is True
+
+
+def test_inheritance_allow_None_behavior2():
+    class A(param.Parameterized):
+        p = param.Parameter(allow_None=False)
+        
+    class B(A):
+        p = param.Parameter(default=None)
+
+
+    # A says None is not allowed, B sets the default to None and recomputes
+    # allow_None.
+    assert B.param.p.allow_None is True
+
+    b = B()
+
+    assert b.param.p.allow_None is True
+
+
+def test_inheritance_class_attribute_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(1)
+        
+    class B(A):
+        p = param.Parameter()
+
+    assert B.p == 1
+
+    A.p = 2
+
+    # Should be 2?
+    # https://github.com/holoviz/param/issues/718
+    assert B.p == 1

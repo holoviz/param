@@ -1518,7 +1518,7 @@ class Array(ClassSelector):
 
     def __init__(self, default=None, **params):
         from numpy import ndarray
-        super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
+        super(Array, self).__init__(ndarray, default=default, **params)
 
     @classmethod
     def serialize(cls, value):

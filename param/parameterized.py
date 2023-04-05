@@ -1636,7 +1636,10 @@ class Parameters(object):
         for name, val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
+                raise TypeError(
+                    f"{self.__class__.__name__} has no Parameter '{name}'; "
+                    f"cannot set '{name}' in the constructor"
+                )
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 

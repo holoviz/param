@@ -16,6 +16,7 @@ import inspect
 import random
 import numbers
 import operator
+import typing
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -1071,6 +1072,10 @@ class Parameter(object):
         self.watchers = {}
         self.per_instance = per_instance
 
+    @property
+    def pytype(self):
+        return typing.Any
+        
     @classmethod
     def serialize(cls, value):
         "Given the parameter value, return a Python value suitable for serialization"
@@ -1330,6 +1335,10 @@ class String(Parameter):
         self.regex = regex
         self.allow_None = (default is None or allow_None)
         self._validate(default)
+
+    @property
+    def pytype(self):
+        return str
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):

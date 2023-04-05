@@ -24,6 +24,8 @@ import glob
 import re
 import datetime as dt
 import collections
+import numbers
+import typing
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
@@ -692,7 +694,6 @@ class Dynamic(Parameter):
             return gen
 
 
-import numbers
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
@@ -834,6 +835,10 @@ class Number(Dynamic):
         self.step = step
         self._validate(default)
 
+    @property
+    def pytype(self):
+        return typing.Union[numbers.Number, None] if self.allow_None else numbers.Number
+
     def __get__(self, obj, objtype):
         """
         Same as the superclass's __get__, but if the value was
@@ -963,6 +968,10 @@ class Integer(Number):
     def __init__(self, default=0, **params):
         Number.__init__(self, default=default, **params)
 
+    @property
+    def pytype(self):
+        return typing.Union[int, None] if self.allow_None else int
+
     def _validate_value(self, val, allow_None):
         if callable(val):
             return
@@ -1001,6 +1010,10 @@ class Boolean(Parameter):
         super(Boolean, self).__init__(default=default, **params)
         self._validate(default)
 
+    @property
+    def pytype(self):
+        return typing.Union[bool, None] if self.allow_None else bool
+
     def _validate_value(self, val, allow_None):
         if allow_None:
             if not isinstance(val, bool) and val is not None:
@@ -1037,6 +1050,14 @@ class Tuple(Parameter):
         else:
             self.length = length
         self._validate(default)
+
+    @property
+    def pytype(self):
+        if self.length:
+            pytype = typing.Tuple[(typing.Any,)*self.length]
+        else:
+            ptype = typing.Tuple[typing.Any, ...]
+        return typing.Union[pytype, None] if self.allow_None else pytype
 
     def _validate_value(self, val, allow_None):
         if val is None and allow_None:
@@ -1075,6 +1096,14 @@ class Tuple(Parameter):
 class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
+    @property
+    def pytype(self):
+        if self.length:
+            pytype = typing.Tuple[(numbers.Number,)*self.length]
+        else:
+            ptype = typing.Tuple[numbers.Number, ...]
+        return typing.Union[pytype, None] if self.allow_None else pytype
+
     def _validate_value(self, val, allow_None):
         super(NumericTuple, self)._validate_value(val, allow_None)
         if allow_None and val is None:
@@ -1091,6 +1120,11 @@ class XYCoordinates(NumericTuple):
 
     def __init__(self, default=(0.0, 0.0), **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
+
+    @property
+    def pytype(self):
+        pytype = typing.Tuple[numbers.Number, numbers.Number]
+        return typing.Union[pytype, None] if self.allow_None else pytype
 
 
 class Callable(Parameter):
@@ -1437,6 +1471,17 @@ class List(Parameter):
                            **params)
         self._validate(default)
 
+    @property
+    def pytype(self):
+        if isinstance(self.item_type, tuple):
+            item_type = typing.Union[self.item_type]
+        elif self.item_type is not None:
+            item_type = self.item_type
+        else:
+            item_type = typing.Any
+        list_type = typing.List[item_type]
+        return typing.Union[list_type, None] if self.allow_None else list_type
+
     def _validate(self, val):
         """
         Checks that the value is numeric and that it is within the hard
@@ -1510,6 +1555,12 @@ class Dict(ClassSelector):
     def __init__(self, default=None, **params):
         super(Dict, self).__init__(dict, default=default, **params)
 
+    @property
+    def pytype(self):
+        dict_type = typing.Dict[typing.Hashable, typing.Any]
+        return typing.Union[dict_type, None] if self.allow_None else dict_type
+
+
 
 class Array(ClassSelector):
     """
@@ -1517,8 +1568,13 @@ class Array(ClassSelector):
     """
 
     def __init__(self, default=None, **params):
-        from numpy import ndarray
+        
         super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
+
+    @property
+    def pytype(self):
+        from numpy import ndarray
+        return ndarray
 
     @classmethod
     def serialize(cls, value):
@@ -1562,6 +1618,11 @@ class DataFrame(ClassSelector):
         self.ordered = ordered
         super(DataFrame,self).__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
+
+    @property
+    def pytype(self):
+        from pandas import DataFrame
+        return DataFrame
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -1638,6 +1699,11 @@ class Series(ClassSelector):
         super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
                                     **params)
         self._validate(self.default)
+
+    @property
+    def pytype(self):
+        from pandas import Series
+        return Series
 
     def _length_bounds_check(self, bounds, length, name):
         message = '{name} length {length} does not match declared bounds of {bounds}'
@@ -2212,6 +2278,7 @@ class DateRange(Range):
         # As JSON has no tuple representation
         return tuple(deserialized)
 
+
 class CalendarDateRange(Range):
     """
     A date range specified as (start_date, end_date).
@@ -2287,6 +2354,10 @@ class Event(Boolean):
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
         super(Event, self).__init__(default=default,**params)
+
+    @property
+    def pytype(self):
+        return bool
 
     def _reset_event(self, obj, val):
         val = False

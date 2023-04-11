@@ -1259,6 +1259,8 @@ class Selector(SelectorBase):
     names to objects.  If a dictionary is supplied, the objects
     will need to be hashable so that their names can be looked
     up from the object value.
+
+    empty_default is an internal argument that does not have a slot.
     """
 
     __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']

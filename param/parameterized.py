@@ -103,6 +103,10 @@ class _Undefined:
         # is used in a comparison without `is`.
         raise RuntimeError('Use `is` to compare Undefined')
 
+    def __repr__(self):
+        return '<Undefined>'
+
+
 Undefined = _Undefined()
 
 

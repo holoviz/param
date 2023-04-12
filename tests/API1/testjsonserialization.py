@@ -249,10 +249,10 @@ class TestSerialization(API1TestCase):
 
                 date_cols = [c for c in test_df.columns if is_datetime(test_df[c])]
                 for c in date_cols:
-                    src_tz = test_df.loc[0, c].tz
-                    deser_df[c] = pd.to_datetime(deser_df[c]).dt.tz_convert(src_tz)
+                    deser_df[c] = pd.to_datetime(deser_df[c])
+                
+                pd.testing.assert_frame_equal(test_df, deser_df)
 
-                self.assertTrue(test_df.equals(deser_df))
 
     def test_serialize_calendar_date_range_class(self):
         self._test_serialize(TestSet, 'ab')

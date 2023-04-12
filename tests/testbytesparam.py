@@ -1,11 +1,11 @@
 """
 Unit test for Bytes parameters
 """
+import unittest
 import sys
 
 import pytest
 
-from . import API1TestCase
 from .utils import check_defaults
 
 import param
@@ -13,7 +13,7 @@ import param
 
 ip_regex = br'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
-class TestBytesParameters(API1TestCase):
+class TestBytesParameters(unittest.TestCase):
 
     def _check_defaults(self, p):
         assert p.default == b''

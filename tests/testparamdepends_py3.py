@@ -2,11 +2,10 @@
 Unit test for param.depends.
 """
 import sys
+import unittest
 
 import param
 import pytest
-
-from . import API1TestCase
 
 try:
     import asyncio
@@ -24,7 +23,7 @@ def async_executor(func):
     loop.run_until_complete(func())
 
 
-class TestParamDepends(API1TestCase):
+class TestParamDepends(unittest.TestCase):
 
     def setUp(self):
 
@@ -90,7 +89,7 @@ class TestParamDepends(API1TestCase):
             param.parameterized.async_executor = None
 
 
-class TestParamDependsFunction(API1TestCase):
+class TestParamDependsFunction(unittest.TestCase):
 
     def setUp(self):
         class P(param.Parameterized):

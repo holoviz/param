@@ -1,15 +1,14 @@
 """
 Unit test for Boolean parameters.
 """
-import datetime as dt
+import unittest
 
 import param
 
-from . import API1TestCase
 from .utils import check_defaults
 
 
-class TestBooleanParameters(API1TestCase):
+class TestBooleanParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestBooleanParameters, self).setUp()
@@ -87,7 +86,7 @@ class TestBooleanParameters(API1TestCase):
                 b = param.Boolean(default='test')
 
 
-class TestEventParameters(API1TestCase):
+class TestEventParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestEventParameters, self).setUp()

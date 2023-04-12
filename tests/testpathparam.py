@@ -1,15 +1,15 @@
 import os
 import shutil
 import tempfile
+import unittest
 
 import param
 import pytest
 
-from . import API1TestCase
 from .utils import check_defaults
 
 
-class TestPathParameters(API1TestCase):
+class TestPathParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestPathParameters, self).setUp()
@@ -118,7 +118,7 @@ class TestPathParameters(API1TestCase):
             assert b.c is None
 
 
-class TestFilenameParameters(API1TestCase):
+class TestFilenameParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestFilenameParameters, self).setUp()
@@ -200,7 +200,7 @@ class TestFilenameParameters(API1TestCase):
         assert p.c == self.fa
 
 
-class TestFoldernameParameters(API1TestCase):
+class TestFoldernameParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestFoldernameParameters, self).setUp()

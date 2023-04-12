@@ -1,8 +1,10 @@
-from . import API1TestCase
-from .utils import check_defaults
+import unittest
+
 
 import param
 import pytest
+
+from .utils import check_defaults
 
 try:
     import numpy as np
@@ -10,7 +12,7 @@ except:
     np = None
 
 
-class TestTupleParameters(API1TestCase):
+class TestTupleParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestTupleParameters, self).setUp()
@@ -212,7 +214,7 @@ class TestTupleParameters(API1TestCase):
         assert b.param.p.default == (0, 1, 2)
         assert b.param.p.length == 3
 
-class TestNumericTupleParameters(API1TestCase):
+class TestNumericTupleParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestNumericTupleParameters, self).setUp()
@@ -348,7 +350,7 @@ class TestNumericTupleParameters(API1TestCase):
         self.P(e=(np.int64(1), np.float32(2)))
 
 
-class TestXYCoordinatesParameters(API1TestCase):
+class TestXYCoordinatesParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestXYCoordinatesParameters, self).setUp()

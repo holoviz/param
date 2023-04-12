@@ -272,7 +272,7 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         obj.param.watch(accumulator, ['a','b'])
 
-        with param.batch_watch(obj):
+        with param.parameterized.batch_call_watchers(obj):
             obj.a = 2
             obj.b = 3
 
@@ -395,7 +395,7 @@ class TestWatch(unittest.TestCase):
         obj.param.watch(accumulator, ['a','b'])
         obj.param.watch(accumulator, ['c'])
 
-        with param.batch_watch(obj):
+        with param.parameterized.batch_call_watchers(obj):
             obj.a = 23
             obj.b = 42
             obj.c = 99
@@ -781,7 +781,7 @@ class TestTrigger(unittest.TestCase):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
         obj.param.watch(accumulator, ['a'])
-        with param.batch_watch(obj):
+        with param.parameterized.batch_call_watchers(obj):
             obj.param.trigger('a')
         self.assertEqual(accumulator.call_count(), 1)
 

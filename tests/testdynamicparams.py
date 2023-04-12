@@ -46,11 +46,11 @@ class TestDynamicParameterBasics(TestDynamicParameters):
     def test_set_dynamic_time_fn_x(self):
         self.t1.param.set_dynamic_time_fn(None)
         self.assertEqual(
-            self.t1.param.params()['x']._value_is_dynamic(self.t1), True)
+            self.t1.param['x']._value_is_dynamic(self.t1), True)
 
     def test_set_dynamic_time_fn_y(self):
         self.assertEqual(
-            self.t1.param.params()['y']._value_is_dynamic(self.t1), False)
+            self.t1.param['y']._value_is_dynamic(self.t1), False)
 
     def test_inspect_x(self):
         "no value generated yet"
@@ -118,13 +118,13 @@ class TestDynamicParameterBasics(TestDynamicParameters):
         parameter share one UniformRandom object
         """
         self.TestPO2.y=numbergen.UniformRandom()  # now the Parameter instantiate should be true
-        self.assertEqual(self.t7.param.get_value_generator('y') is self.TestPO2().param.params()['y'].default, True)
-        self.assertEqual(self.TestPO2().param.params()['y'].default.__class__.__name__, 'UniformRandom')
+        self.assertEqual(self.t7.param.get_value_generator('y') is self.TestPO2().param['y'].default, True)
+        self.assertEqual(self.TestPO2().param['y'].default.__class__.__name__, 'UniformRandom')
 
     def test_copy_match(self):
         "check a copy is the same"
         t9 = copy.deepcopy(self.t7)
-        self.assertEqual(t9.param.get_value_generator('y') is self.TestPO2().param.params()['y'].default, True)
+        self.assertEqual(t9.param.get_value_generator('y') is self.TestPO2().param['y'].default, True)
 
 
 

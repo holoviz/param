@@ -29,9 +29,10 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from numbers import Real
 
-from .parameterized import (
+from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, basestring, dt_types)
+    descendents, get_logger, instance_descriptor, basestring, dt_types,
+    _dict_update)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
@@ -748,11 +749,14 @@ class Bytes(Parameter):
 
     __slots__ = ['regex']
 
-    def __init__(self, default=b"", regex=None, allow_None=False, **kwargs):
-        super(Bytes, self).__init__(default=default, allow_None=allow_None, **kwargs)
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
+    )
+
+    def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
+        super(Bytes, self).__init__(default=default, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or allow_None)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
@@ -820,21 +824,25 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    def __init__(self, default=0.0, bounds=None, softbounds=None,
-                 inclusive_bounds=(True,True), step=None, **params):
+    _slot_defaults = _dict_update(
+        Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
+        inclusive_bounds=(True,True), step=None
+    )
+
+    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
         super(Number,self).__init__(default=default, **params)
-
         self.set_hook = identity_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
         self.step = step
-        self._validate(default)
+        self._validate(self.default)
 
     def __get__(self, obj, objtype):
         """
@@ -842,6 +850,7 @@ class Number(Dynamic):
         dynamically generated, check the bounds.
         """
         result = super(Number, self).__get__(obj, objtype)
+
         # Should be able to optimize this commonly used method by
         # avoiding extra lookups (e.g. _value_is_dynamic() is also
         # looking up 'result' - should just pass it in).
@@ -962,8 +971,7 @@ class Number(Dynamic):
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
-    def __init__(self, default=0, **params):
-        Number.__init__(self, default=default, **params)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=0)
 
     def _validate_value(self, val, allow_None):
         if callable(val):
@@ -986,8 +994,7 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    def __init__(self, default=1.0, softbounds=None, **params):
-        Number.__init__(self, default=default, bounds=(0.0,1.0), softbounds=softbounds, **params)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
 
 
@@ -998,10 +1005,12 @@ class Boolean(Parameter):
 
     # Bounds are set for consistency and are arguably accurate, but have
     # no effect since values are either False, True, or None (if allowed).
-    def __init__(self, default=False, bounds=(0,1), **params):
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
+
+    def __init__(self, default=Undefined, bounds=Undefined, **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_value(self, val, allow_None):
         if allow_None:
@@ -1017,13 +1026,18 @@ class Boolean(Parameter):
         self._validate_value(val, self.allow_None)
 
 
+def _compute_length_of_default(p):
+    return len(p.default)
+
 
 class Tuple(Parameter):
     """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
 
     __slots__ = ['length']
 
-    def __init__(self, default=(0,0), length=None, **params):
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
+
+    def __init__(self, default=Undefined, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -1031,14 +1045,14 @@ class Tuple(Parameter):
         length is not allowed to change after instantiation.
         """
         super(Tuple,self).__init__(default=default, **params)
-        if length is None and default is not None:
-            self.length = len(default)
-        elif length is None and default is None:
+        if length is Undefined and self.default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
+        elif default is not Undefined and default:
+            self.length = len(default)
         else:
             self.length = length
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_value(self, val, allow_None):
         if val is None and allow_None:
@@ -1091,7 +1105,9 @@ class NumericTuple(Tuple):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    def __init__(self, default=(0.0, 0.0), **params):
+    _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
+
+    def __init__(self, default=Undefined, **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
 
 
@@ -1160,10 +1176,10 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    def __init__(self, attribs=None, **kw):
-        if attribs is None:
+    def __init__(self, attribs=Undefined, **kw):
+        if attribs is Undefined:
             attribs = []
-        super(Composite, self).__init__(default=None, **kw)
+        super(Composite, self).__init__(default=Undefined, **kw)
         self.attribs = attribs
 
     def __get__(self, obj, objtype):
@@ -1205,7 +1221,6 @@ class SelectorBase(Parameter):
 
     def get_range(self):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
-
 
 
 class ListProxy(list):
@@ -1380,6 +1395,20 @@ class ListProxy(list):
         return named_objs(self).values()
 
 
+def _compute_selector_default(p):
+    """
+    Using a function instead of setting default to [] in _slot_defaults, as
+    if it were modified in place later, which would happen with check_on_set set to False,
+    then the object in _slot_defaults would itself be updated and the next Selector
+    instance created wouldn't have [] as the default but a populated list.
+    """
+    return []
+
+
+def _compute_selector_checking_default(p):
+    return len(p.objects) != 0
+
+
 class Selector(SelectorBase):
     """
     Parameter whose value must be one object from a list of possible objects.
@@ -1405,18 +1434,26 @@ class Selector(SelectorBase):
     names to objects.  If a dictionary is supplied, the objects
     will need to be hashable so that their names can be looked
     up from the object value.
+
+    empty_default is an internal argument that does not have a slot.
     """
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
+    _slot_defaults = _dict_update(
+        SelectorBase._slot_defaults, _objects=_compute_selector_default,
+        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
+        allow_None=None, instantiate=False, default=None,
+    )
+
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, objects=None, default=None, instantiate=False,
-                 compute_default_fn=None, check_on_set=None,
-                 allow_None=None, empty_default=False, **params):
+    def __init__(self, objects=Undefined, default=Undefined, instantiate=Undefined,
+                 compute_default_fn=Undefined, check_on_set=Undefined,
+                 allow_None=Undefined, empty_default=False, **params):
 
-        autodefault = None
-        if objects:
+        autodefault = Undefined
+        if objects is not Undefined and objects:
             if is_ordered_dict(objects):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, dict):
@@ -1428,26 +1465,19 @@ class Selector(SelectorBase):
             elif isinstance(objects, list):
                 autodefault = objects[0]
 
-        default = autodefault if (not empty_default and default is None) else default
+        default = autodefault if (not empty_default and default is Undefined) else default
 
-        if objects is None:
-            objects = []
         self.objects = objects
         self.compute_default_fn = compute_default_fn
-
-        if check_on_set is not None:
-            self.check_on_set = check_on_set
-        elif len(objects) == 0:
-            self.check_on_set = False
-        else:
-            self.check_on_set = True
+        self.check_on_set = check_on_set
 
         super(Selector,self).__init__(
             default=default, instantiate=instantiate, **params)
         # Required as Parameter sets allow_None=True if default is None
-        self.allow_None = allow_None
-        if default is not None and self.check_on_set is True:
-            self._validate(default)
+        if allow_None is Undefined:
+            self.allow_None = self._slot_defaults['allow_None']
+        if self.default is not None and self.check_on_set is True:
+            self._validate(self.default)
 
     @property
     def objects(self):
@@ -1532,7 +1562,7 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
-    def __init__(self, default=None, objects=None, **kwargs):
+    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super(ObjectSelector,self).__init__(objects=objects, default=default,
                                             empty_default=True, **kwargs)
 
@@ -1547,11 +1577,13 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    def __init__(self,class_,default=None,instantiate=True,is_instance=True,**params):
+    _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
+
+    def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate(self, val):
         super(ClassSelector, self)._validate(val)
@@ -1611,14 +1643,24 @@ class List(Parameter):
 
     __slots__ = ['bounds', 'item_type', 'class_']
 
-    def __init__(self, default=[], class_=None, item_type=None,
-                 instantiate=True, bounds=(0, None), **params):
-        self.item_type = item_type or class_
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
+        instantiate=True, default=[],
+    )
+
+    def __init__(self, default=Undefined, class_=Undefined, item_type=Undefined,
+                 instantiate=Undefined, bounds=Undefined, **params):
+        if item_type is not Undefined and class_ is not Undefined:
+            self.item_type = item_type
+        elif item_type is Undefined or item_type is None:
+            self.item_type = class_
+        else:
+            self.item_type = item_type
         self.class_ = self.item_type
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
                            **params)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate(self, val):
         """
@@ -1690,7 +1732,7 @@ class Dict(ClassSelector):
     Parameter whose value is a dictionary.
     """
 
-    def __init__(self, default=None, **params):
+    def __init__(self, default=Undefined, **params):
         super(Dict, self).__init__(dict, default=default, **params)
 
 
@@ -1699,7 +1741,7 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
 
-    def __init__(self, default=None, **params):
+    def __init__(self, default=Undefined, **params):
         from numpy import ndarray
         super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
 
@@ -1738,7 +1780,11 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered']
 
-    def __init__(self, default=None, rows=None, columns=None, ordered=None, **params):
+    _slot_defaults = _dict_update(
+        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
+    )
+
+    def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
@@ -1815,7 +1861,11 @@ class Series(ClassSelector):
 
     __slots__ = ['rows']
 
-    def __init__(self, default=None, rows=None, allow_None=False, **params):
+    _slot_defaults = _dict_update(
+        ClassSelector._slot_defaults, rows=None, allow_None=False
+    )
+
+    def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
         super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
@@ -1958,8 +2008,8 @@ class Path(Parameter):
 
     __slots__ = ['search_paths']
 
-    def __init__(self, default=None, search_paths=None, **params):
-        if search_paths is None:
+    def __init__(self, default=Undefined, search_paths=Undefined, **params):
+        if search_paths is Undefined:
             search_paths = []
 
         self.search_paths = search_paths
@@ -2059,7 +2109,7 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=None, path="", **kwargs):
+    def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -2087,7 +2137,7 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    def __init__(self, default=None, objects=None, **kwargs):
+    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super(ListSelector,self).__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
@@ -2115,7 +2165,7 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=None, path="", **kwargs):
+    def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -2141,8 +2191,7 @@ class Date(Number):
     Date parameter of datetime or date type.
     """
 
-    def __init__(self, default=None, **kwargs):
-        super(Date, self).__init__(default=default, **kwargs)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2185,8 +2234,7 @@ class CalendarDate(Number):
     Parameter specifically allowing dates (not datetimes).
     """
 
-    def __init__(self, default=None, **kwargs):
-        super(CalendarDate, self).__init__(default=default, **kwargs)
+    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2261,10 +2309,12 @@ class Color(Parameter):
 
     __slots__ = ['allow_named']
 
-    def __init__(self, default=None, allow_named=True, **kwargs):
+    _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
+
+    def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
         self.allow_named = allow_named
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
@@ -2297,8 +2347,13 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    def __init__(self,default=None, bounds=None, softbounds=None,
-                 inclusive_bounds=(True,True), step=None, **params):
+    _slot_defaults = _dict_update(
+        NumericTuple._slot_defaults, default=None, bounds=None,
+        inclusive_bounds=(True,True), softbounds=None, step=None
+    )
+
+    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds

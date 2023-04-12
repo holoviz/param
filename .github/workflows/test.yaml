@@ -10,6 +10,10 @@ on:
   schedule:
     - cron: '0 13 * * SUN'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test_suite:
     name: Tox on ${{ matrix.python-version }}, ${{ matrix.platform }}

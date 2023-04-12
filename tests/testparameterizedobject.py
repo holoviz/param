@@ -313,9 +313,9 @@ from param import parameterized
 class some_fn(param.ParameterizedFunction):
     __test__ = False
 
-    num_phase = param.Number(18)
-    frequencies = param.List([99])
-    scale = param.Number(0.3)
+    num_phase = param.Number(default=18)
+    frequencies = param.List(default=[99])
+    scale = param.Number(default=0.3)
 
     def __call__(self,**params_to_override):
         params = parameterized.ParamOverrides(self,params_to_override)
@@ -767,7 +767,7 @@ def test_inheritance_allow_None_behavior2():
 
 def test_inheritance_class_attribute_behavior():
     class A(param.Parameterized):
-        p = param.Parameter(1)
+        p = param.Parameter(default=1)
         
     class B(A):
         p = param.Parameter()

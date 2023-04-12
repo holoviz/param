@@ -48,7 +48,7 @@ class TestBytesParameters(unittest.TestCase):
 
         with pytest.raises(ValueError):
             class A(param.Parameterized):
-                s = param.Bytes('abc')
+                s = param.Bytes(default='abc')
 
     def test_bytes_value_type(self):
         if sys.version_info.major < 3:
@@ -63,14 +63,14 @@ class TestBytesParameters(unittest.TestCase):
             
     def test_regex_ok(self):
         class A(param.Parameterized):
-            s = param.Bytes(b'0.0.0.0', ip_regex)
+            s = param.Bytes(default=b'0.0.0.0', regex=ip_regex)
 
         a = A()
         a.s = b'123.123.0.1'
 
     def test_reject_none(self):
         class A(param.Parameterized):
-            s = param.Bytes(b'0.0.0.0', ip_regex)
+            s = param.Bytes(default=b'0.0.0.0', regex=ip_regex)
 
         a = A()
 
@@ -81,7 +81,7 @@ class TestBytesParameters(unittest.TestCase):
 
     def test_default_none(self):
         class A(param.Parameterized):
-            s = param.Bytes(None, ip_regex)
+            s = param.Bytes(default=None, regex=ip_regex)
 
         a = A()
         a.s = b'123.123.0.1'
@@ -89,7 +89,7 @@ class TestBytesParameters(unittest.TestCase):
 
     def test_regex_incorrect(self):
         class A(param.Parameterized):
-            s = param.Bytes(b'0.0.0.0', regex=ip_regex)
+            s = param.Bytes(default=b'0.0.0.0', regex=ip_regex)
 
         a = A()
 

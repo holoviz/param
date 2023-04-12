@@ -264,7 +264,7 @@ class TestParamDepends(unittest.TestCase):
 
         class B(param.Parameterized):
 
-            a = param.Parameter(A())
+            a = param.Parameter(default=A())
 
             test_count = param.Integer()
 
@@ -313,7 +313,7 @@ class TestParamDepends(unittest.TestCase):
             c = param.Parameter()
 
         class B(param.Parameterized):
-            a = param.Parameter(A())
+            a = param.Parameter(default=A())
 
             nested_count = param.Integer()
 
@@ -787,7 +787,7 @@ class TestParamDependsFunction(unittest.TestCase):
 
 def test_misspelled_parameter_in_depends():
     class Example(param.Parameterized):
-        xlim = param.Range((0, 10), bounds=(0, 100))
+        xlim = param.Range(default=(0, 10), bounds=(0, 100))
 
         @param.depends("tlim")  # <- Misspelled xlim
         def test(self):
@@ -802,7 +802,7 @@ def test_misspelled_parameter_in_depends():
 def test_misspelled_parameter_in_depends_watch():
     with pytest.raises(AttributeError, match="Attribute 'tlim' could not be resolved on"):
         class Example(param.Parameterized):
-            xlim = param.Range((0, 10), bounds=(0, 100))
+            xlim = param.Range(default=(0, 10), bounds=(0, 100))
 
             @param.depends("tlim", watch=True)  # <- Misspelled xlim
             def test(self):

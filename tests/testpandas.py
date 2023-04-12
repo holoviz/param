@@ -55,7 +55,7 @@ class TestDataFrame(unittest.TestCase):
         valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]},
                                     columns=['b', 'a', 'c'])
         class Test(param.Parameterized):
-            df = param.DataFrame(valid_df)
+            df = param.DataFrame(default=valid_df)
 
     def test_dataframe_allow_none(self):
         class Test(param.Parameterized):
@@ -229,7 +229,7 @@ class TestSeries(unittest.TestCase):
     def test_series_positional_argument(self):
         valid_series = pandas.Series([1,2])
         class Test(param.Parameterized):
-            series = param.Series(valid_series, rows=2)
+            series = param.Series(default=valid_series, rows=2)
 
     def test_series_row_number_valid(self):
         valid_series = pandas.Series([1,2])

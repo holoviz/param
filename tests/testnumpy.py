@@ -67,7 +67,7 @@ class TestNumpy(unittest.TestCase):
 
     def test_array_param_positional(self):
         class Z(param.Parameterized):
-            z = param.Array(numpy.array([1]))
+            z = param.Array(default=numpy.array([1]))
 
         _is_array_and_equal(Z.z,[1])
 

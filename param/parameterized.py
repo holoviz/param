@@ -10,12 +10,14 @@ __init__.py (providing specialized Parameter types).
 
 import copy
 import datetime as dt
+import functools
 import re
 import sys
 import inspect
 import random
 import numbers
 import operator
+import warnings
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -57,6 +59,51 @@ basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
+
+
+def _deprecate_positional_args(func):
+    """Internal decorator for methods that issues warnings for positional arguments
+
+    Using the keyword-only argument syntax in pep 3102, arguments after the
+    ``*`` will issue a warning when passed as a positional argument.
+
+    Adapted from scikit-learn
+    """
+    signature = inspect.signature(func)
+
+    pos_or_kw_args = []
+    kwonly_args = []
+    for name, param in signature.parameters.items():
+        if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
+            pos_or_kw_args.append(name)
+        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+            kwonly_args.append(name)
+            if param.default is inspect.Parameter.empty:
+                raise TypeError("Keyword-only param without default disallowed.")
+
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        name = func.__qualname__.split('.')[0]
+        n_extra_args = len(args) - len(pos_or_kw_args)
+        if n_extra_args > 0:
+            extra_args = ", ".join(kwonly_args[:n_extra_args])
+
+            warnings.warn(
+                f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
+                "was deprecated, please pass them as keyword arguments.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
+            kwargs.update({name: arg for name, arg in zip_args})
+
+            return func(*args[:-n_extra_args], **kwargs)
+
+        return func(*args, **kwargs)
+
+    return inner
+
 
 # Get the appropriate logging.Logger instance. If `logger` is None, a
 # logger named `"param"` will be instantiated. If `name` is set, a descendant
@@ -1007,7 +1054,7 @@ class Parameter(object):
         per_instance=True
     )
 
-    def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
+    def __init__(self, *, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,

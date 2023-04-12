@@ -40,7 +40,7 @@ class TestColorParameters(unittest.TestCase):
     def test_initialization_invalid_string(self):
         try:
             class Q(param.Parameterized):
-                q = param.Color('red', allow_named=False)
+                q = param.Color(default='red', allow_named=False)
         except ValueError:
             pass
         else:

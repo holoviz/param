@@ -841,8 +841,8 @@ class TestTrigger(unittest.TestCase):
 
         class Example(param.Parameterized):
             da = param.Number(default=1)
-            date_picker = param.Parameter(ExampleWidget())
-            picker = param.Parameter(ExampleWidget())
+            date_picker = param.Parameter(default=ExampleWidget())
+            picker = param.Parameter(default=ExampleWidget())
 
             @param.depends(
                 "date_picker.value",

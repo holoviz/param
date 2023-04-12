@@ -26,8 +26,8 @@ class TestPathParameters(unittest.TestCase):
 
         class P(param.Parameterized):
             a = param.Path()
-            b = param.Path(self.fb)
-            c = param.Path('a.txt', search_paths=[tmpdir1])
+            b = param.Path(default=self.fb)
+            c = param.Path(default='a.txt', search_paths=[tmpdir1])
 
         self.P = P
 
@@ -135,8 +135,8 @@ class TestFilenameParameters(unittest.TestCase):
 
         class P(param.Parameterized):
             a = param.Filename()
-            b = param.Filename(self.fb)
-            c = param.Filename('a.txt', search_paths=[tmpdir1])
+            b = param.Filename(default=self.fb)
+            c = param.Filename(default='a.txt', search_paths=[tmpdir1])
 
         self.P = P
 
@@ -214,8 +214,8 @@ class TestFoldernameParameters(unittest.TestCase):
 
         class P(param.Parameterized):
             a = param.Foldername()
-            b = param.Foldername(tmpdir1)
-            c = param.Path('da', search_paths=[tmpdir1])
+            b = param.Foldername(default=tmpdir1)
+            c = param.Path(default='da', search_paths=[tmpdir1])
 
         self.P = P
 

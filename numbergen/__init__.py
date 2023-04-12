@@ -600,9 +600,9 @@ class BoxCar(NumberGenerator, TimeDependent):
     See http://en.wikipedia.org/wiki/Boxcar_function
     """
 
-    onset = param.Number(0.0, doc="Time of onset.")
+    onset = param.Number(default=0.0, doc="Time of onset.")
 
-    duration = param.Number(None, allow_None=True, bounds=(0.0,None), doc="""
+    duration = param.Number(default=None, allow_None=True, bounds=(0.0,None), doc="""
         Duration of step value.""")
 
 
@@ -629,11 +629,11 @@ class SquareWave(NumberGenerator, TimeDependent):
     duration.
     """
 
-    onset = param.Number(0.0, doc="""Time of onset of the first 'on'
+    onset = param.Number(default=0.0, doc="""Time of onset of the first 'on'
         state relative to time 0. Must be set to a value less than the
         'off_duration' parameter.""")
 
-    duration = param.Number(1.0, allow_None=False, bounds=(0.0,None), doc="""
+    duration = param.Number(default=1.0, allow_None=False, bounds=(0.0,None), doc="""
          Duration of the 'on' state during which a value of 1.0 is
          returned.""")
 
@@ -673,14 +673,14 @@ class ExponentialDecay(NumberGenerator, TimeDependent):
     See http://en.wikipedia.org/wiki/Exponential_decay.
     """
 
-    starting_value = param.Number(1.0, doc="Value used for time zero.")
+    starting_value = param.Number(default=1.0, doc="Value used for time zero.")
 
-    ending_value = param.Number(0.0, doc="Value used for time infinity.")
+    ending_value = param.Number(default=0.0, doc="Value used for time infinity.")
 
-    time_constant = param.Number(10000,doc="""
+    time_constant = param.Number(default=10000,doc="""
         Time scale for the exponential; large values give slow decay.""")
 
-    base = param.Number(e, doc="""
+    base = param.Number(default=e, doc="""
         Base of the exponent; the default yields starting_value*exp(-t/time_constant).
         Another popular choice of base is 2, which allows the
         time_constant to be interpreted as a half-life.""")
@@ -744,9 +744,9 @@ class BoundedNumber(NumberGenerator):
     returned by a callable object.
     """
 
-    generator = param.Callable(None, doc="Object to call to generate values.")
+    generator = param.Callable(default=None, doc="Object to call to generate values.")
 
-    bounds = param.Parameter((None,None), doc="""
+    bounds = param.Parameter(default=(None,None), doc="""
         Legal range for the value returned, as a pair.
 
         The default bounds are (None,None), meaning there are actually

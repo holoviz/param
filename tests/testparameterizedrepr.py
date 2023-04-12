@@ -12,40 +12,40 @@ class TestParameterizedRepr(unittest.TestCase):
         super(TestParameterizedRepr, self).setUp()
         # initialize a parameterized class
         class A(param.Parameterized):
-            a = param.Number(4, precedence=-5)
-            b = param.String('B', precedence=-4)
-            c = param.Number(4, precedence=0)
-            d = param.Integer(-22, precedence=1)
+            a = param.Number(default=4, precedence=-5)
+            b = param.String(default='B', precedence=-4)
+            c = param.Number(default=4, precedence=0)
+            d = param.Integer(default=-22, precedence=1)
 
-            x = param.Number(1, precedence=2)
-            y = param.Number(2, precedence=-1)
-            z = param.Number(3, precedence=-2)
+            x = param.Number(default=1, precedence=2)
+            y = param.Number(default=2, precedence=-1)
+            z = param.Number(default=3, precedence=-2)
             def __init__(self, a, b, c=4, d=-22, **kwargs):
                 super(A, self).__init__(a=a, b=b, c=c, **kwargs)
 
         self.A = A
 
         class B(param.Parameterized):  # Similar to A but no **kwargs
-            a = param.Number(4, precedence=-5)
-            b = param.String('B', precedence=-4)
-            c = param.Number(4, precedence=0)
-            d = param.Integer(-22, precedence=1)
+            a = param.Number(default=4, precedence=-5)
+            b = param.String(default='B', precedence=-4)
+            c = param.Number(default=4, precedence=0)
+            d = param.Integer(default=-22, precedence=1)
 
-            x = param.Number(1, precedence=2)
+            x = param.Number(default=1, precedence=2)
             def __init__(self, a, b, c=4, d=-22):
                 super(B, self).__init__(a=a, b=b, c=c, name='ClassB')
 
         self.B = B
 
         class C(param.Parameterized):  # Similar to A but with *varargs
-            a = param.Number(4, precedence=-5)
-            b = param.String('B', precedence=-4)
-            c = param.Number(4, precedence=0)
-            d = param.Integer(-22, precedence=1)
+            a = param.Number(default=4, precedence=-5)
+            b = param.String(default='B', precedence=-4)
+            c = param.Number(default=4, precedence=0)
+            d = param.Integer(default=-22, precedence=1)
 
-            x = param.Number(1, precedence=2)
-            y = param.Number(2, precedence=-1)
-            z = param.Number(3, precedence=-2)
+            x = param.Number(default=1, precedence=2)
+            y = param.Number(default=2, precedence=-1)
+            z = param.Number(default=3, precedence=-2)
 
             def __init__(self, a, b, c=4, d=-22, *varargs, **kwargs):
                 super(C, self).__init__(a=a, b=b, c=c, **kwargs)
@@ -54,8 +54,8 @@ class TestParameterizedRepr(unittest.TestCase):
 
 
         class D(param.Parameterized):  # Similar to A but with missing parameters
-            a = param.Number(4, precedence=-5)
-            b = param.String('B', precedence=-4)
+            a = param.Number(default=4, precedence=-5)
+            b = param.String(default='B', precedence=-4)
 
             def __init__(self, a, b, c=4, d=-22, **kwargs):
                 super(D, self).__init__(a=a, b=b, **kwargs)
@@ -65,7 +65,7 @@ class TestParameterizedRepr(unittest.TestCase):
 
         # More realistically, positional args are not params
         class E(param.Parameterized):
-            a = param.Number(4, precedence=-5)
+            a = param.Number(default=4, precedence=-5)
 
             def __init__(self, p, q=4, **params): # (plus non-param kw too)
                 super(E, self).__init__(**params)

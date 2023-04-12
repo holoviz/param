@@ -39,6 +39,7 @@ from .parameterized import (batch_watch, depends, output, script_repr, # noqa: a
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
+from .parameterized import _deprecate_positional_args
 
 
 # Determine up-to-date version information, if possible, but with a
@@ -753,7 +754,7 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
-    def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
+    def __init__(self, *, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
         super(Bytes, self).__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
@@ -829,7 +830,7 @@ class Number(Dynamic):
         inclusive_bounds=(True,True), step=None
     )
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+    def __init__(self, *, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
@@ -1007,7 +1008,7 @@ class Boolean(Parameter):
     # no effect since values are either False, True, or None (if allowed).
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
 
-    def __init__(self, default=Undefined, bounds=Undefined, **params):
+    def __init__(self, *, default=Undefined, bounds=Undefined, **params):
         self.bounds = bounds
         super(Boolean, self).__init__(default=default, **params)
         self._validate(self.default)
@@ -1037,7 +1038,7 @@ class Tuple(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
-    def __init__(self, default=Undefined, length=Undefined, **params):
+    def __init__(self, *, default=Undefined, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -1107,7 +1108,7 @@ class XYCoordinates(NumericTuple):
 
     _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
-    def __init__(self, default=Undefined, **params):
+    def __init__(self, *, default=Undefined, **params):
         super(XYCoordinates,self).__init__(default=default, length=2, **params)
 
 
@@ -1176,7 +1177,7 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    def __init__(self, attribs=Undefined, **kw):
+    def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
         super(Composite, self).__init__(default=Undefined, **kw)
@@ -1448,7 +1449,7 @@ class Selector(SelectorBase):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, objects=Undefined, default=Undefined, instantiate=Undefined,
+    def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
@@ -1562,7 +1563,7 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
-    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
+    def __init__(self, *, default=Undefined, objects=Undefined, **kwargs):
         super(ObjectSelector,self).__init__(objects=objects, default=default,
                                             empty_default=True, **kwargs)
 
@@ -1577,9 +1578,9 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
+    _slot_defaults = _dict_update(SelectorBase._slot_defaults, class_=None, instantiate=True, is_instance=True)
 
-    def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+    def __init__(self, *, class_=Undefined, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
@@ -1648,7 +1649,7 @@ class List(Parameter):
         instantiate=True, default=[],
     )
 
-    def __init__(self, default=Undefined, class_=Undefined, item_type=Undefined,
+    def __init__(self, *, default=Undefined, class_=Undefined, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, **params):
         if item_type is not Undefined and class_ is not Undefined:
             self.item_type = item_type
@@ -1732,8 +1733,8 @@ class Dict(ClassSelector):
     Parameter whose value is a dictionary.
     """
 
-    def __init__(self, default=Undefined, **params):
-        super(Dict, self).__init__(dict, default=default, **params)
+    def __init__(self, *, default=Undefined, **params):
+        super(Dict, self).__init__(class_=dict, default=default, **params)
 
 
 class Array(ClassSelector):
@@ -1741,9 +1742,9 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
 
-    def __init__(self, default=Undefined, **params):
+    def __init__(self, *, default=Undefined, **params):
         from numpy import ndarray
-        super(Array, self).__init__(ndarray, default=default, **params)
+        super(Array, self).__init__(class_=ndarray, default=default, **params)
 
     @classmethod
     def serialize(cls, value):
@@ -1784,12 +1785,12 @@ class DataFrame(ClassSelector):
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
-    def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
+    def __init__(self, *, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super(DataFrame,self).__init__(pdDFrame, default=default, **params)
+        super(DataFrame,self).__init__(class_=pdDFrame, default=default, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -1865,10 +1866,10 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
+    def __init__(self, *, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
+        super(Series,self).__init__(class_=pdSeries, default=default, allow_None=allow_None,
                                     **params)
         self._validate(self.default)
 
@@ -2008,12 +2009,12 @@ class Path(Parameter):
 
     __slots__ = ['search_paths']
 
-    def __init__(self, default=Undefined, search_paths=Undefined, **params):
+    def __init__(self, *, default=Undefined, search_paths=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
 
         self.search_paths = search_paths
-        super(Path,self).__init__(default,**params)
+        super(Path,self).__init__(default=default, **params)
 
     def _resolve(self, path):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
@@ -2109,7 +2110,7 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    def __init__(self, *, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -2137,7 +2138,7 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
+    def __init__(self, *, default=Undefined, objects=Undefined, **kwargs):
         super(ListSelector,self).__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
@@ -2165,7 +2166,7 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    def __init__(self, *, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -2311,7 +2312,7 @@ class Color(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
 
-    def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
+    def __init__(self, *, default=Undefined, allow_named=Undefined, **kwargs):
         super(Color, self).__init__(default=default, **kwargs)
         self.allow_named = allow_named
         self._validate(self.default)
@@ -2352,7 +2353,7 @@ class Range(NumericTuple):
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+    def __init__(self, *, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
@@ -2505,7 +2506,7 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
-    def __init__(self,default=False,bounds=(0,1),**params):
+    def __init__(self, *, default=False, bounds=(0,1), **params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'
@@ -2553,3 +2554,8 @@ def exceptions_summarized():
         import sys
         etype, value, tb = sys.exc_info()
         print("{}: {}".format(etype.__name__,value), file=sys.stderr)
+
+
+# Patch the __init__ of all the Parameters to deprecate passing arguments by position.
+for p_type in concrete_descendents(Parameter).values():
+    p_type.__init__ = _deprecate_positional_args(p_type.__init__)

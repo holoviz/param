@@ -12,13 +12,8 @@ from param import concrete_descendents, Parameter
 
 # import all parameter types
 from param import * # noqa
-from param import ClassSelector
 
 from .utils import check_defaults
-
-positional_args = {
-   ClassSelector: (object,)
-}
 
 skip = []
 
@@ -41,9 +36,7 @@ class DefaultsMetaclassTest(type):
 
         def add_test_unbound(parameter):
             def test(self):
-                # instantiate parameter with no default (but supply
-                # any required args)
-                p = parameter(*positional_args.get(parameter,tuple()))
+                p = parameter()
                 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
@@ -55,10 +48,8 @@ class DefaultsMetaclassTest(type):
 
         def add_test_class(parameter):
             def test(self):
-                # instantiate parameter with no default (but supply
-                # any required args)
                 class P(param.Parameterized):
-                    p = parameter(*positional_args.get(parameter,tuple()))
+                    p = parameter()
                 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
@@ -74,10 +65,8 @@ class DefaultsMetaclassTest(type):
 
         def add_test_inst(parameter):
             def test(self):
-                # instantiate parameter with no default (but supply
-                # any required args)
                 class P(param.Parameterized):
-                    p = parameter(*positional_args.get(parameter,tuple()))
+                    p = parameter()
                 
                 inst = P()
                 

@@ -31,12 +31,12 @@ class TestParamPager(unittest.TestCase):
         self.maxDiff = None
 
         class TestClass(param.Parameterized):
-            u = param.Number(4, precedence=0)
-            w = param.Number(4, readonly=True, precedence=1)
-            v = param.Number(4, constant=True, precedence=2)
-            x = param.String(None, allow_None=True, precedence=3)
-            y = param.Number(4, bounds=(-1, None), precedence=4)
-            z = param.Number(4, bounds=(-1, 100), softbounds=(-100, -200), precedence=5)
+            u = param.Number(default=4, precedence=0)
+            w = param.Number(default=4, readonly=True, precedence=1)
+            v = param.Number(default=4, constant=True, precedence=2)
+            x = param.String(default=None, allow_None=True, precedence=3)
+            y = param.Number(default=4, bounds=(-1, None), precedence=4)
+            z = param.Number(default=4, bounds=(-1, 100), softbounds=(-100, -200), precedence=5)
 
         self.TestClass = TestClass
         self.pager = ParamPager()

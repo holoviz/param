@@ -480,7 +480,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
     def test_initialization_out_of_bounds_objsel(self):
         try:
             class Q(param.Parameterized):
-                q = param.ObjectSelector(5,objects=[4])
+                q = param.ObjectSelector(default=5,objects=[4])
         except ValueError:
             pass
         else:
@@ -490,7 +490,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
     def test_initialization_no_bounds_objsel(self):
         try:
             class Q(param.Parameterized):
-                q = param.ObjectSelector(5,objects=10)
+                q = param.ObjectSelector(default=5,objects=10)
         except TypeError:
             pass
         else:

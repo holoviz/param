@@ -46,7 +46,7 @@ class TestDateParameters(unittest.TestCase):
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.Date(dt.datetime(2017,2,27),
+                q = param.Date(default=dt.datetime(2017,2,27),
                                bounds=(dt.datetime(2017,2,1),
                                        dt.datetime(2017,2,26)))
         except ValueError:
@@ -78,7 +78,7 @@ class TestDateParameters(unittest.TestCase):
             raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_get_soft_bounds(self):
-        q = param.Date(dt.datetime(2017,2,25),
+        q = param.Date(default=dt.datetime(2017,2,25),
                        bounds=(dt.datetime(2017,2,1),
                                dt.datetime(2017,2,26)),
                        softbounds=(dt.datetime(2017,2,1),
@@ -89,7 +89,7 @@ class TestDateParameters(unittest.TestCase):
     def test_step_invalid_type_datetime_parameter(self):
         exception = "Step can only be None, a datetime or datetime type"
         with self.assertRaisesRegex(ValueError, exception):
-            param.Date(dt.datetime(2017,2,27), step=3.2)
+            param.Date(default=dt.datetime(2017,2,27), step=3.2)
 
 
 def test_date_serialization():

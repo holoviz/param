@@ -45,7 +45,7 @@ class TestDateTimeParameters(unittest.TestCase):
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.CalendarDate(dt.date(2017,2,27),
+                q = param.CalendarDate(default=dt.date(2017,2,27),
                                        bounds=(dt.date(2017,2,1),
                                                dt.date(2017,2,26)))
         except ValueError:
@@ -77,7 +77,7 @@ class TestDateTimeParameters(unittest.TestCase):
             raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_get_soft_bounds(self):
-        q = param.CalendarDate(dt.date(2017,2,25),
+        q = param.CalendarDate(default=dt.date(2017,2,25),
                                bounds=(dt.date(2017,2,1),
                                        dt.date(2017,2,26)),
                                softbounds=(dt.date(2017,2,1),
@@ -87,9 +87,9 @@ class TestDateTimeParameters(unittest.TestCase):
 
     def test_datetime_not_accepted(self):
         with pytest.raises(ValueError):
-            param.CalendarDate(dt.datetime(2021, 8, 16, 10))
+            param.CalendarDate(default=dt.datetime(2021, 8, 16, 10))
 
     def test_step_invalid_type_parameter(self):
         exception = "Step can only be None or a date type"
         with self.assertRaisesRegex(ValueError, exception):
-            param.CalendarDate(dt.date(2017,2,27), step=3.2)
+            param.CalendarDate(default=dt.date(2017,2,27), step=3.2)

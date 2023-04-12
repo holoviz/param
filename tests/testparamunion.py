@@ -29,9 +29,9 @@ class TestParamUnion(unittest.TestCase):
 
     def test_param_union_values(self):
         class A(param.Parameterized):
-            a = param.Number(1)
+            a = param.Number(default=1)
         class B(param.Parameterized):
-            b = param.Number(2)
+            b = param.Number(default=2)
         class C(A, B):
             pass
         a = A()
@@ -49,7 +49,7 @@ class TestParamUnion(unittest.TestCase):
 
     def test_param_union_warnings(self):
         class A(param.Parameterized):
-            a = param.Number(1)
+            a = param.Number(default=1)
         a = A()
         A(**param.param_union(a))
         self.assertFalse(self.handler.records)

@@ -52,7 +52,7 @@ class TestTupleParameters(unittest.TestCase):
         self._check_defaults(t)
 
     def test_unbound_length_inferred(self):
-        t = param.Tuple((0, 1, 2))
+        t = param.Tuple(default=(0, 1, 2))
 
         assert t.length == 3
 

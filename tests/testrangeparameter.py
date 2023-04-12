@@ -116,7 +116,7 @@ class TestRangeParameters(unittest.TestCase):
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.Range((0, 2), bounds=(0, 1))
+                q = param.Range(default=(0, 2), bounds=(0, 1))
         except ValueError:
             pass
         else:
@@ -153,6 +153,6 @@ class TestRangeParameters(unittest.TestCase):
             raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_get_soft_bounds(self):
-        q = param.Range((1,3), bounds=(0, 10), softbounds=(1, 9))
+        q = param.Range(default=(1,3), bounds=(0, 10), softbounds=(1, 9))
         self.assertEqual(q.get_soft_bounds(), (1, 9))
 

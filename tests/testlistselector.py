@@ -129,7 +129,7 @@ class TestListSelectorParameters(unittest.TestCase):
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.ListSelector([5],objects=[4])
+                q = param.ListSelector(default=[5],objects=[4])
         except ValueError:
             pass
         else:
@@ -139,7 +139,7 @@ class TestListSelectorParameters(unittest.TestCase):
     def test_initialization_no_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.ListSelector([5],objects=10)
+                q = param.ListSelector(default=[5], objects=10)
         except TypeError:
             pass
         else:
@@ -200,7 +200,7 @@ class TestListSelectorParameters(unittest.TestCase):
     def test_initialization_bad_iterable(self):
         with self.assertRaises(ValueError):
             class Q(param.Parameterized):
-                j = param.ListSelector('ab', ['a', 'b', 'c', 'd'])
+                j = param.ListSelector(default='ab', objects=['a', 'b', 'c', 'd'])
 
     def test_set_bad_iterable(self):
         class Q(param.Parameterized):

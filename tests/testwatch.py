@@ -8,7 +8,7 @@ import param
 
 from param.parameterized import discard_events
 
-from .utils import MockLoggingHandler
+from .utils import MockLoggingHandler, accept_warnings
 
 
 class Accumulator(object):
@@ -234,7 +234,8 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         watcher = obj.param.watch(accumulator, 'a')
         obj.param.unwatch(watcher)
-        obj.param.unwatch(watcher)
+        with accept_warnings():
+            obj.param.unwatch(watcher)
         self.log_handler.assertEndsWith('WARNING',
                             ' to remove.')
 

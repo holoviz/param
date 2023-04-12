@@ -511,7 +511,7 @@ def test_inheritance_None_is_not_special_cased_default():
 
     b = B()
 
-    assert b.p == 'test'
+    assert b.p is None
 
 
 @pytest.mark.parametrize('attribute', [
@@ -543,7 +543,7 @@ def test_inheritance_None_is_not_special_cased(attribute):
 
     b = B()
 
-    assert getattr(b.param.p, attribute) == 'test'
+    assert getattr(b.param.p, attribute) is None
 
 
 def test_inheritance_no_default_declared_in_subclass():
@@ -555,7 +555,7 @@ def test_inheritance_no_default_declared_in_subclass():
         p = param.Number()
 
     b = B()
-    assert b.p == 0.0
+    assert b.p == 5.0
 
 
 def test_inheritance_attribute_from_non_subclass_not_inherited():
@@ -591,7 +591,8 @@ def test_inheritance_default_is_not_None_in_sub():
 
     b = B()
 
-    assert b.p == 0.0
+    # Could argue this should not be allowed.
+    assert b.p == '1'
 
 
 def test_inheritance_default_is_None_in_sub():
@@ -813,3 +814,36 @@ def test_inheritance_class_attribute_behavior():
     # Should be 2?
     # https://github.com/holoviz/param/issues/718
     assert B.p == 1
+
+
+@pytest.fixture
+def custom_parameter1():
+    class CustomParameter(param.Parameter):
+
+        __slots__ = ['foo', 'bar']
+
+        # foo has no default value defined in _slot_defaults
+
+        def __init__(self, foo=param.Undefined, **params):
+            super().__init__(**params)
+            self.foo = foo
+
+    return CustomParameter
+
+
+def test_inheritance_parameter_attribute_without_default():
+
+    class CustomParameter(param.Parameter):
+
+        __slots__ = ['foo']
+
+        # foo has no default value defined in _slot_defaults
+
+        def __init__(self, foo=param.Undefined, **params):
+            super().__init__(**params)
+            self.foo = foo
+
+    with pytest.raises(KeyError, match="Slot 'foo' of parameter 'c' has no default value defined in `_slot_defaults`"):
+        class A(param.Parameterized):
+            c = CustomParameter()
+

@@ -29,7 +29,7 @@ class TestListSelectorParameters(unittest.TestCase):
         assert p.objects == []
         assert p.compute_default_fn is None
         assert p.check_on_set is False
-        assert p.names is None
+        assert p.names == {}
 
     def test_defaults_class(self):
         class P(param.Parameterized):

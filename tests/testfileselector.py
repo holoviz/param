@@ -51,7 +51,7 @@ class TestFileSelectorParameters(unittest.TestCase):
         assert p.objects == []
         assert p.compute_default_fn is None
         assert p.check_on_set is False
-        assert p.names is None
+        assert p.names == {}
         assert p.path == ""
 
     def test_defaults_class(self):

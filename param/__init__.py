@@ -32,7 +32,7 @@ from numbers import Real
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, basestring, dt_types,
-    _dict_update)
+    _dict_update, _int_types)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
@@ -980,7 +980,7 @@ class Integer(Number):
         if allow_None and val is None:
             return
 
-        if not isinstance(val, int):
+        if not isinstance(val, _int_types):
             raise ValueError("Integer parameter %r must be an integer, "
                              "not type %r." % (self.name, type(val)))
 

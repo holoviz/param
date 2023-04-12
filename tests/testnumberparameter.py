@@ -2,11 +2,16 @@
 Unit test for Number parameters and their subclasses.
 """
 import unittest
+import pytest
 
 import param
 
 from .utils import check_defaults
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 class TestNumberParameters(unittest.TestCase):
 
@@ -323,6 +328,24 @@ class TestNumberParameters(unittest.TestCase):
         assert b.param.p.default == f
         assert b.param.p.instantiate is True
 
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_default(self):
+        class Q(param.Parameterized):
+            a = param.Number(default=np.float32(2.3))
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_set(self):
+        class Q(param.Parameterized):
+            a = param.Number()
+        q = Q()
+        q.a = np.float32(2.3)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_init(self):
+        class Q(param.Parameterized):
+            a = param.Number()
+        Q(a=np.float32(2.3))
+
 
 class TestIntegerParameters(unittest.TestCase):
 
@@ -597,6 +620,28 @@ class TestIntegerParameters(unittest.TestCase):
         # Unbound
         assert p.param.m.crop_to_bounds(10) == 10
         assert p.param.n.crop_to_bounds(-10) == -10
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_default(self):
+        class Q(param.Parameterized):
+            a = param.Integer(default=np.int64(2))
+        
+        assert isinstance(Q.a, np.integer)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_set(self):
+        class Q(param.Parameterized):
+            a = param.Integer()
+        q = Q()
+        q.a = np.int64(2)
+        assert isinstance(q.a, np.integer)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_init(self):
+        class Q(param.Parameterized):
+            a = param.Integer()
+        q = Q(a=np.int64(2))
+        assert isinstance(q.a, np.integer)
 
 
 class TestMagnitudeParameters(unittest.TestCase):

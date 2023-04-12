@@ -326,7 +326,7 @@ def all_equal(arg1,arg2):
 @_deprecated()
 def add_metaclass(metaclass):
     """Class decorator for creating a class with a metaclass.
-    
+
     .. deprecated:: 2.0.0
     """
     def wrapper(cls):
@@ -1883,7 +1883,7 @@ class Parameters(object):
     @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""")
     def print_param_defaults(self_):
         """Print the default values of all cls's Parameters.
-        
+
         ..deprecated:: 1.12.0
             Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
         """
@@ -2260,7 +2260,7 @@ class Parameters(object):
         """
         vals = self_.values(onlychanged)
         return [(k, v) for k, v in vals.items()]
-    
+
     def values(self_, onlychanged=False):
         """
         Return a dictionary of name,value pairs for the Parameters of this
@@ -2654,7 +2654,7 @@ class Parameters(object):
     @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""")
     def print_param_values(self_):
         """Print the values of all this object's Parameters.
-        
+
         ..deprecated:: 1.12.0
             Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
         """

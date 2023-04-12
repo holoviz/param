@@ -133,6 +133,18 @@ class TestDateRange(unittest.TestCase):
         ):
             q.a = self.bad_range
 
+    def test_change_value_type(self):
+        class DateSlider(param.Parameterized):
+            date = param.DateRange(
+                default=(dt.date(2021, 1, 1), dt.date(2024, 1, 1)),
+                bounds=(dt.date(2020, 1, 1), dt.date(2025, 1, 1)),
+            )
+
+        ds = DateSlider()
+
+        # Change the value from date to datetime without erroring
+        ds.date = (dt.datetime(2022, 1, 1), dt.datetime(2023, 1, 1))
+
     @pytest.mark.skipif(np is None, reason='NumPy is not available')
     def test_numpy_default(self):
         class Q(param.Parameterized):

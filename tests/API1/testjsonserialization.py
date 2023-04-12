@@ -4,6 +4,7 @@ Testing JSON serialization of parameters and the corresponding schemas.
 
 import datetime
 import json
+import sys
 
 import param
 
@@ -18,20 +19,30 @@ except ImportError:
         raise ImportError("PARAM_TEST_JSONSCHEMA=1 but jsonschema not available.")
     validate = None
 
+now = datetime.datetime.now()
+after_now = now + datetime.timedelta(days=1)
+
 try:
     import numpy as np
     ndarray = np.array([[1,2,3],[4,5,6]])
+    npdt1 = np.datetime64(now)
+    npdt2 = np.datetime64(after_now)
 except:
-    np, ndarray = None, None
+    np, ndarray, npdt1, npdt2 = None, None, None, None
 
 np_skip = skipIf(np is None, "NumPy is not available")
+
+on_py2 = sys.version_info[0] == 2
+py2_skip = skipIf(on_py2, "Ignore Python 2")
 
 try:
     import pandas as pd
     df1 = pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
     df2 = pd.DataFrame({'A':[1.1,2.2,3.3], 'B':[1.1,2.2,3.3]})
+    pdts1 = pd.Timestamp(now)
+    pdts2 = pd.Timestamp(after_now)
 except:
-    pd, df1, df2 = None, None, None
+    pd, df1, df2, pdts1, pdts2 = None, None, None, None, None
 
 pd_skip = skipIf(pd is None, "pandas is not available")
 
@@ -42,7 +53,7 @@ class TestSet(param.Parameterized):
     __test__ = False
 
     numpy_params = ['r','y']
-    pandas_params = ['s','t','u','z','ab','ac']
+    pandas_params = ['s','t','u','z','ag','ah']
     conditionally_unsafe = ['f', 'o']
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
@@ -52,6 +63,8 @@ class TestSet(param.Parameterized):
     e = param.List([1,2,3], class_=int)
     f = param.List([1,2,3])
     g = param.Date(default=datetime.datetime.now())
+    g2 = None if (np is None or on_py2) else param.Date(default=npdt1)
+    g3 = None if pd is None else param.Date(default=pdts1)
     h = param.Tuple(default=(1,2,3), length=3)
     i = param.NumericTuple(default=(1,2,3,4))
     j = param.XYCoordinates(default=(32.1, 51.5))
@@ -73,13 +86,27 @@ class TestSet(param.Parameterized):
     y = None if np is None else param.Array(default=None)
     z = None if pd is None else param.DataFrame(default=None, allow_None=True)
     aa = param.Tuple(default=None, allow_None=True, length=1)
-    ab = None if pd is None else param.DataFrame(default=pd.DataFrame(
+    ab = param.CalendarDateRange(default=(
+        datetime.date(2020, 1, 1),
+        datetime.date(2021, 1, 1)
+    ))
+    ac = param.DateRange(default=(
+        datetime.date(2020, 1, 1),
+        datetime.date(2021, 1, 1)
+    ))
+    ad = param.DateRange(default=(
+        datetime.datetime(2020, 1, 1, 1, 1, 1, 1),
+        datetime.datetime(2021, 1, 1, 1, 1, 1, 1)
+    ))
+    # datetime.datetime comparison with numpy.datetime64 fails on Python 2
+    ae = None if (np is None or on_py2) else param.DateRange(default=(npdt1, npdt2))
+    af = None if pd is None else param.DateRange(default=(pdts1, pdts2))
+    ag = None if pd is None else param.DataFrame(default=pd.DataFrame(
          {'A':[datetime.datetime(year,1,1) for year in range(2020,2023)], 'B':[1.1,2.2,3.3]}),
          columns=(1,4), rows=(2,5))
-    ac = None if pd is None else param.DataFrame(default=pd.DataFrame(
+    ah = None if pd is None else param.DataFrame(default=pd.DataFrame(
          [[1,2,3],[4,5,6],[7,8,9]]),
          columns=(1,4), rows=(2,5))
-
 
 test = TestSet(a=29)
 
@@ -133,6 +160,24 @@ class TestSerialization(API1TestCase):
 
     def test_serialize_date_instance(self):
         self._test_serialize(test, 'g')
+
+    @py2_skip
+    @np_skip
+    def test_serialize_date_numpy_class(self):
+        self._test_serialize(TestSet, 'g2')
+
+    @py2_skip
+    @np_skip
+    def test_serialize_date_numpy_instance(self):
+        self._test_serialize(test, 'g2')
+
+    @pd_skip
+    def test_serialize_date_pandas_class(self):
+        self._test_serialize(TestSet, 'g3')
+
+    @pd_skip
+    def test_serialize_date_pandas_instance(self):
+        self._test_serialize(test, 'g3')
 
     def test_serialize_tuple_class(self):
         self._test_serialize(TestSet, 'h')
@@ -209,6 +254,41 @@ class TestSerialization(API1TestCase):
 
                 self.assertTrue(test_df.equals(deser_df))
 
+    def test_serialize_calendar_date_range_class(self):
+        self._test_serialize(TestSet, 'ab')
+
+    def test_serialize_calendar_date_range_instance(self):
+        self._test_serialize(test, 'ab')
+
+    def test_serialize_date_range_class(self):
+        self._test_serialize(TestSet, 'ac')
+
+    def test_serialize_date_range_instance(self):
+        self._test_serialize(test, 'ac')
+
+    def test_serialize_datetime_range_class(self):
+        self._test_serialize(TestSet, 'ad')
+
+    def test_serialize_datetime_range_instance(self):
+        self._test_serialize(test, 'ad')
+
+    @py2_skip
+    @np_skip
+    def test_serialize_datetime_range_numpy_class(self):
+        self._test_serialize(TestSet, 'ae')
+
+    @py2_skip
+    @np_skip
+    def test_serialize_datetime_range_numpy_instance(self):
+        self._test_serialize(test, 'ae')
+
+    @pd_skip
+    def test_serialize_datetime_range_pandas_class(self):
+        self._test_serialize(TestSet, 'af')
+
+    @pd_skip
+    def test_serialize_datetime_range_pandas_instance(self):
+        self._test_serialize(test, 'af')
 
 
 class TestJSONSerialization(TestSerialization):

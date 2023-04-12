@@ -9,6 +9,7 @@ __init__.py (providing specialized Parameter types).
 """
 
 import copy
+import datetime as dt
 import re
 import sys
 import inspect
@@ -43,6 +44,14 @@ try:
     from inspect import getfullargspec
 except:
     from inspect import getargspec as getfullargspec # python2
+
+dt_types = (dt.datetime, dt.date)
+
+try:
+    import numpy as np
+    dt_types = dt_types + (np.datetime64,)
+except:
+    pass
 
 basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
@@ -87,6 +96,19 @@ class _Undefined:
     Dummy value to signal completely undefined values rather than
     simple None values.
     """
+
+    def __bool__(self):
+        # Haven't defined whether Undefined is falsy or truthy,
+        # so to avoid subtle bugs raise an error when it
+        # is used in a comparison without `is`.
+        raise RuntimeError('Use `is` to compare Undefined')
+
+    def __repr__(self):
+        return '<Undefined>'
+
+
+Undefined = _Undefined()
+
 
 @contextmanager
 def logging_level(level):
@@ -390,10 +412,8 @@ def depends(func, *dependencies, **kw):
     on_init = kw.pop("on_init", False)
 
     if iscoroutinefunction(func):
-        import asyncio
-        @asyncio.coroutine
-        def _depends(*args, **kw):
-            yield from func(*args, **kw)
+        from ._async import generate_depends
+        _depends = generate_depends(func)
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -429,10 +449,14 @@ def depends(func, *dependencies, **kw):
                              'parameters by name.')
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
-        def cb(*events):
-            args = (getattr(dep.owner, dep.name) for dep in dependencies)
-            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-            return func(*args, **dep_kwargs)
+        if iscoroutinefunction(func):
+            from ._async import generate_callback
+            cb = generate_callback(func, dependencies, kw)
+        else:
+            def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                return func(*args, **dep_kwargs)
 
         grouped = defaultdict(list)
         for dep in deps:
@@ -631,11 +655,11 @@ def _skip_event(*events, **kwargs):
     for e in events:
         for p in changed:
             if what == 'value':
-                old = _Undefined if e.old is None else _getattrr(e.old, p, None)
-                new = _Undefined if e.new is None else _getattrr(e.new, p, None)
+                old = Undefined if e.old is None else _getattrr(e.old, p, None)
+                new = Undefined if e.new is None else _getattrr(e.new, p, None)
             else:
-                old = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
-                new = _Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
+                old = Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
+                new = Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True
@@ -649,12 +673,8 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
-        import asyncio
-        @asyncio.coroutine
-        def caller(*events):
-            if callback: callback(*events)
-            if not _skip_event(*events, what=what, changed=changed):
-                yield function()
+        from ._async import generate_caller
+        caller = generate_caller(function, what=what, changed=changed, callback=callback, skip_event=_skip_event)
     else:
         def caller(*events):
             if callback: callback(*events)
@@ -664,13 +684,23 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     return caller
 
 
+def _dict_update(dictionary, **kwargs):
+    """
+    Small utility to update a copy of a dict with the provided keyword args.
+    """
+    d = dictionary.copy()
+    d.update(kwargs)
+    return d
+
+
 def _add_doc(obj, docstring):
     """Add a docstring to a namedtuple, if on python3 where that's allowed"""
     if sys.version_info[0]>2:
         obj.__doc__ = docstring
 
 
-PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
+PInfo = namedtuple("PInfo", "inst cls name pobj what")
+_add_doc(PInfo,
     """
     Object describing something being watched about a Parameter.
 
@@ -685,7 +715,8 @@ PInfo = namedtuple("PInfo", "inst cls name pobj what"); _add_doc(PInfo,
     `what`: What is being watched on the Parameter (either 'value' or a slot name)
     """)
 
-MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
+MInfo = namedtuple("MInfo", "inst cls name method")
+_add_doc(MInfo,
     """
     Object describing a Parameterized method being watched.
 
@@ -698,13 +729,15 @@ MInfo = namedtuple("MInfo", "inst cls name method"); _add_doc(MInfo,
     `method`: bound method of the object being watched
     """)
 
-DInfo = namedtuple("DInfo", "spec"); _add_doc(DInfo,
+DInfo = namedtuple("DInfo", "spec")
+_add_doc(DInfo,
     """
     Object describing dynamic dependencies.
     `spec`: Dependency specification to resolve
     """)
 
-Event = namedtuple("Event", "what name obj cls old new type"); _add_doc(Event,
+Event = namedtuple("Event", "what name obj cls old new type")
+_add_doc(Event,
     """
     Object representing an event that triggers a Watcher.
 
@@ -819,7 +852,6 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,'__classdoc')
         else:
             return type.__getattribute__(mcs,name)
-
 
 
 @add_metaclass(ParameterMetaclass)
@@ -969,10 +1001,17 @@ class Parameter(object):
 
     _serializers = {'json': serializer.JSONSerialization}
 
-    def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
-                 instantiate=False, constant=False, readonly=False,
-                 pickle_default_value=True, allow_None=False,
-                 per_instance=True):
+    _slot_defaults = dict(
+        default=None, precedence=None, doc=None, _label=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, allow_None=False,
+        per_instance=True
+    )
+
+    def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
+                 label=Undefined, precedence=Undefined,
+                 instantiate=Undefined, constant=Undefined, readonly=Undefined,
+                 pickle_default_value=Undefined, allow_None=Undefined,
+                 per_instance=Undefined):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1050,13 +1089,13 @@ class Parameter(object):
         self.precedence = precedence
         self.default = default
         self.doc = doc
-        self.constant = constant or readonly # readonly => constant
+        self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (default is None or allow_None)
+        self._set_allow_None(allow_None)
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1090,6 +1129,18 @@ class Parameter(object):
     def label(self, val):
         self._label = val
 
+    def _set_allow_None(self, allow_None):
+        # allow_None is set following these rules (last takes precedence):
+        # 1. to False by default
+        # 2. to the value provided in the constructor, if any
+        # 3. to True if default is None
+        if self.default is None:
+            self.allow_None = True
+        elif allow_None is not Undefined:
+            self.allow_None = allow_None
+        else:
+            self.allow_None = self._slot_defaults['allow_None']
+
     def _set_instantiate(self,instantiate):
         """Constant parameters must be instantiated."""
         # instantiate doesn't actually matter for read-only
@@ -1097,8 +1148,11 @@ class Parameter(object):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
-        else:
+        elif instantiate is not Undefined:
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
+        else:
+            # Default value
+            self.instantiate = self._slot_defaults['instantiate']
 
     def __setattr__(self, attribute, value):
         if attribute == 'name' and getattr(self, 'name', None) and value != self.name:
@@ -1106,7 +1160,7 @@ class Parameter(object):
                                  "it has been bound to a Parameterized.")
 
         implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
-        slot_attribute = attribute in self.__slots__
+        slot_attribute = attribute in get_all_slots(type(self))
         try:
             old = getattr(self, attribute) if implemented else NotImplemented
             if slot_attribute:
@@ -1130,6 +1184,26 @@ class Parameter(object):
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
             self.owner.param._batch_call_watchers()
+
+    def __getattribute__(self, key):
+        """
+        Allow slot values to be Undefined in an "unbound" parameter, i.e. one
+        that is not (yet) owned by a Parameterized object, in which case their
+        value will be retrieved from the _slot_defaults dictionary.
+        """
+        v = object.__getattribute__(self, key)
+        # Safely checks for name (avoiding recursion) to decide if this object is unbound
+        if v is Undefined and key != "name" and getattr(self, "name", None) is None:
+            try:
+                v = self._slot_defaults[key]
+            except KeyError as e:
+                raise KeyError(
+                    f'Slot {key!r} on unbound parameter {self.__class__.__name__!r} '
+                    'has no default value defined in `_slot_defaults`'
+                ) from e
+            if callable(v):
+                v = v(self)
+        return v
 
     def _on_set(self, attribute, old, value):
         """
@@ -1314,11 +1388,12 @@ class String(Parameter):
 
     __slots__ = ['regex']
 
-    def __init__(self, default="", regex=None, allow_None=False, **kwargs):
-        super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
+
+    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+        super(String, self).__init__(default=default, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or allow_None)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
@@ -1400,8 +1475,9 @@ class Comparator(object):
         numbers.Number: operator.eq,
         basestring: operator.eq,
         bytes: operator.eq,
-        type(None): operator.eq
+        type(None): operator.eq,
     }
+    equalities.update({dtt: operator.eq for dtt in dt_types})
 
     @classmethod
     def is_equal(cls, obj1, obj2):
@@ -1690,7 +1766,7 @@ class Parameters(object):
         for method, queued, on_init, constant, dynamic in type(obj).param._depends['watch']:
             # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
-            dynamic = [d for d in dynamic if attribute is None or d.spec.startswith(attribute)]
+            dynamic = [d for d in dynamic if attribute is None or d.spec.split(".")[0] == attribute]
             if init:
                 constant_grouped = defaultdict(list)
                 for dep in _resolve_mcs_deps(obj, constant, []):
@@ -2023,7 +2099,7 @@ class Parameters(object):
 
         if self_.self_or_cls.param._BATCH_WATCH:
             self_._events.append(event)
-            if watcher not in self_._watchers:
+            if not any(watcher is w for w in self_._watchers):
                 self_._watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
@@ -2653,6 +2729,7 @@ class ParameterizedMetaclass(type):
         dependers = [(n, m, m._dinfo) for (n, m) in dict_.items()
                      if hasattr(m, '_dinfo')]
 
+        # Resolve dependencies of current class
         _watch = []
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
@@ -2664,18 +2741,19 @@ class ParameterizedMetaclass(type):
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
 
-        # Resolve other dependencies in remainder of class hierarchy
+        # Resolve dependencies in class hierarchy
+        _inherited = []
         for cls in classlist(mcs)[:-1][::-1]:
             if not hasattr(cls, '_param'):
                 continue
             for dep in cls.param._depends['watch']:
                 method = getattr(mcs, dep[0], None)
                 dinfo = getattr(method, '_dinfo', {'watch': False})
-                if (not any(dep[0] == w[0] for w in _watch)
+                if (not any(dep[0] == w[0] for w in _watch+_inherited)
                     and dinfo.get('watch')):
-                    _watch.append(dep)
+                    _inherited.append(dep)
 
-        mcs.param._depends = {'watch': _watch}
+        mcs.param._depends = {'watch': _inherited+_watch}
 
         if docstring_signature:
             mcs.__class_docstring_signature()
@@ -2804,9 +2882,9 @@ class ParameterizedMetaclass(type):
         given in the object's class, or in its superclasses.  For
         Parameters owned by Parameterized classes, we have implemented
         an additional level of default lookup, should this ordinary
-        lookup return only None.
+        lookup return only `Undefined`.
 
-        In such a case, i.e. when no non-None value was found for a
+        In such a case, i.e. when no non-`Undefined` value was found for a
         Parameter by the usual inheritance mechanisms, we explicitly
         look for Parameters with the same name in superclasses of this
         Parameterized class, and use the first such value that we
@@ -2847,14 +2925,15 @@ class ParameterizedMetaclass(type):
                 param.instantiate=True
         del slots['instantiate']
 
-
+        supers = classlist(mcs)[::-1]
+        callables = {}
         for slot in slots.keys():
-            superclasses = iter(classlist(mcs)[::-1])
+            superclasses = iter(supers)
 
             # Search up the hierarchy until param.slot (which has to
-            # be obtained using getattr(param,slot)) is not None, or
+            # be obtained using getattr(param,slot)) is not Undefined, or
             # we run out of classes to search.
-            while getattr(param,slot) is None:
+            while getattr(param,slot) is Undefined:
                 try:
                     param_super_class = next(superclasses)
                 except StopIteration:
@@ -2865,8 +2944,25 @@ class ParameterizedMetaclass(type):
                     # (slot might not be there because could be a more
                     # general type of Parameter)
                     new_value = getattr(new_param,slot)
-                    setattr(param,slot,new_value)
+                    if new_value is not Undefined:
+                        setattr(param, slot, new_value)
+            if getattr(param, slot) is Undefined:
+                try:
+                    default_val = param._slot_defaults[slot]
+                except KeyError as e:
+                    raise KeyError(
+                        f'Slot {slot!r} of parameter {param_name!r} has no '
+                        'default value defined in `_slot_defaults`'
+                    ) from e
+                if callable(default_val):
+                    callables[slot] = default_val
+                else:
+                    setattr(param, slot, default_val)
 
+        # Once all the static slots have been filled in, fill in the dynamic ones
+        # (which are only allowed to use static values or results are undefined)
+        for slot, fn in callables.items():
+            setattr(param, slot, fn(param))
 
     def get_param_descriptor(mcs,param_name):
         """

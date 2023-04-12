@@ -53,7 +53,7 @@ class TestSet(param.Parameterized):
     __test__ = False
 
     numpy_params = ['r','y']
-    pandas_params = ['s','t','u','z']
+    pandas_params = ['s','t','u','z','ag','ah']
     conditionally_unsafe = ['f', 'o']
 
     a = param.Integer(default=5, doc='Example doc', bounds=(2,30), inclusive_bounds=(True, False))
@@ -101,7 +101,12 @@ class TestSet(param.Parameterized):
     # datetime.datetime comparison with numpy.datetime64 fails on Python 2
     ae = None if (np is None or on_py2) else param.DateRange(default=(npdt1, npdt2))
     af = None if pd is None else param.DateRange(default=(pdts1, pdts2))
-
+    ag = None if pd is None else param.DataFrame(default=pd.DataFrame(
+         {'A':[datetime.datetime(year,1,1) for year in range(2020,2023)], 'B':[1.1,2.2,3.3]}),
+         columns=(1,4), rows=(2,5))
+    ah = None if pd is None else param.DataFrame(default=pd.DataFrame(
+         [[1,2,3],[4,5,6],[7,8,9]]),
+         columns=(1,4), rows=(2,5))
 
 test = TestSet(a=29)
 
@@ -232,13 +237,22 @@ class TestSerialization(API1TestCase):
 
     @pd_skip
     def test_pandas_instance_serialization(self):
+        from pandas.api.types import is_datetime64_any_dtype as is_datetime
         serialized = test.param.serialize_parameters(subset=test.pandas_params, mode=self.mode)
         deserialized = TestSet.param.deserialize_parameters(serialized, mode=self.mode)
         for pname in test.pandas_params:
             if getattr(test, pname) is None:
                 self.assertTrue(deserialized[pname] is None)
             else:
-                self.assertTrue(getattr(test, pname).equals(deserialized[pname]))
+                test_df = getattr(test, pname)
+                deser_df = deserialized[pname].copy()
+
+                date_cols = [c for c in test_df.columns if is_datetime(test_df[c])]
+                for c in date_cols:
+                    deser_df[c] = pd.to_datetime(deser_df[c])
+                
+                pd.testing.assert_frame_equal(test_df, deser_df)
+
 
     def test_serialize_calendar_date_range_class(self):
         self._test_serialize(TestSet, 'ab')

@@ -24,6 +24,7 @@ import glob
 import re
 import datetime as dt
 import collections
+import json
 
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
@@ -1657,14 +1658,14 @@ class DataFrame(ClassSelector):
     def serialize(cls, value):
         if value is None:
             return None
-        return value.to_dict('records')
+        return json.loads(value.to_json(date_format='iso'))
 
     @classmethod
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        from pandas import DataFrame as pdDFrame
-        return pdDFrame(value)
+        import pandas as pd
+        return pd.read_json(json.dumps(value))
 
 
 class Series(ClassSelector):

@@ -310,15 +310,15 @@ class TestNumberParameters(API1TestCase):
         assert A.param.p.default == f
         assert A.param.p.instantiate is True
 
-        # Default is not inherited but instantiate is still set to True
-        assert B.p == 0.0
-        assert B.param.p.default == 0.0
+        # Default is inherited
+        assert B.p == 2
+        assert B.param.p.default == f
         assert B.param.p.instantiate is True
 
         b = B()
 
-        assert b.p == 0.0
-        assert b.param.p.default == 0.0
+        assert b.p == 2
+        assert b.param.p.default == f
         assert b.param.p.instantiate is True
 
 

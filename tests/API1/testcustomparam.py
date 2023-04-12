@@ -114,3 +114,25 @@ def test_customparam_inheritance_override(custom_parameter_with_slot):
     
     assert B.param.c.doc == 'bar'
     assert B().param.c.doc == 'bar'
+
+def test_inheritance_parameter_attribute_without_default():
+
+    class CustomParameter(param.Parameter):
+
+        __slots__ = ['foo']
+
+        # foo has no default value defined in _slot_defaults
+
+        def __init__(self, foo=param.Undefined, **params):
+            super().__init__(**params)
+            # To trigger Parameter.__getattribute__
+            self.foo = foo
+            if self.foo == 'bar':
+                pass
+
+    with pytest.raises(
+        KeyError,
+        match="Slot 'foo' on unbound parameter 'CustomParameter' has no default value defined in `_slot_defaults`"
+    ):
+        c = CustomParameter()
+

@@ -2,6 +2,7 @@ import unittest
 
 import param
 
+from .utils import check_defaults
 # TODO: I copied the tests from testobjectselector, although I
 # struggled to understand some of them. Both files should be reviewed
 # and cleaned up together.
@@ -22,6 +23,36 @@ class TestListSelectorParameters(unittest.TestCase):
 
         self.P = P
 
+    def _check_defaults(self, p):
+        assert p.default is None
+        assert p.allow_None is None
+        assert p.objects == []
+        assert p.compute_default_fn is None
+        assert p.check_on_set is False
+        assert p.names is None
+
+    def test_defaults_class(self):
+        class P(param.Parameterized):
+            s = param.ListSelector()
+
+        check_defaults(P.param.s, label='S')
+        self._check_defaults(P.param.s)
+
+    def test_defaults_inst(self):
+        class P(param.Parameterized):
+            s = param.ListSelector()
+
+        p = P()
+
+        check_defaults(p.param.s, label='S')
+        self._check_defaults(p.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.ListSelector()
+
+        check_defaults(s, label=None)
+        self._check_defaults(s)
+
     def test_default_None(self):
         class Q(param.Parameterized):
             r = param.ListSelector(default=None)
@@ -29,6 +60,15 @@ class TestListSelectorParameters(unittest.TestCase):
     def test_set_object_constructor(self):
         p = self.P(e=[6])
         self.assertEqual(p.e, [6])
+
+    def test_allow_None_is_None(self):
+        p = self.P()
+        assert p.param.e.allow_None is None
+        assert p.param.f.allow_None is None
+        assert p.param.g.allow_None is None
+        assert p.param.h.allow_None is None
+        assert p.param.i.allow_None is None
+
 
     def test_set_object_outside_bounds(self):
         p = self.P(e=[6])
@@ -54,7 +94,7 @@ class TestListSelectorParameters(unittest.TestCase):
         p.g = [7]
         try:
             p.g = None
-        except TypeError:
+        except ValueError:
             pass
         else:
             raise AssertionError("Object set outside range.")
@@ -111,12 +151,12 @@ class TestListSelectorParameters(unittest.TestCase):
     ### new tests (not copied from testobjectselector)
 
     def test_bad_default(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=6,check_on_set=True)
 
     def test_implied_check_on_set(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=7,objects=[7,8])
 
@@ -136,7 +176,7 @@ class TestListSelectorParameters(unittest.TestCase):
         class Q(param.Parameterized):
             r = param.ListSelector(default=6,check_on_set=False)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             Q.r = 6
     ##########################
 
@@ -156,3 +196,16 @@ class TestListSelectorParameters(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             Q.param.params('r').compute_default()
+
+    def test_initialization_bad_iterable(self):
+        with self.assertRaises(ValueError):
+            class Q(param.Parameterized):
+                j = param.ListSelector('ab', ['a', 'b', 'c', 'd'])
+
+    def test_set_bad_iterable(self):
+        class Q(param.Parameterized):
+            r = param.ListSelector(objects=['a', 'b', 'c', 'd'])
+
+        q = Q()
+        with self.assertRaises(ValueError):
+            q.r = 'ab'

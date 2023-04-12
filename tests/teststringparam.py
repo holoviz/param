@@ -6,10 +6,39 @@ import unittest
 
 import param
 
+from .utils import check_defaults
+
 
 ip_regex = r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
 class TestStringParameters(unittest.TestCase):
+
+    def _check_defaults(self, p):
+        assert p.default == ''
+        assert p.allow_None is False
+        assert p.regex is None
+
+    def test_defaults_class(self):
+        class A(param.Parameterized):
+            s = param.String()
+
+        check_defaults(A.param.s, label='S')
+        self._check_defaults(A.param.s)
+
+    def test_defaults_inst(self):
+        class A(param.Parameterized):
+            s = param.String()
+
+        a = A()
+
+        check_defaults(a.param.s, label='S')
+        self._check_defaults(a.param.s)
+
+    def test_defaults_unbound(self):
+        s = param.String()
+
+        check_defaults(s, label=None)
+        self._check_defaults(s)
 
     def test_regex_ok(self):
         class A(param.Parameterized):

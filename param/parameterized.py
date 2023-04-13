@@ -2737,7 +2737,7 @@ class ParameterizedMetaclass(type):
         """
         # Give Parameterized classes a useful 'name' attribute that is by
         default the class name, unless a class in the hierarchy has defined
-        a `name` Parameter with a defined `default` value, in which case
+        a `name` String Parameter with a defined `default` value, in which case
         that value is used to set the class name.
         """
         mcs.__renamed = False

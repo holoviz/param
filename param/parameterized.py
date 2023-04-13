@@ -2735,7 +2735,7 @@ class ParameterizedMetaclass(type):
 
     def __set_name(mcs, name, dict_):
         """
-        # Give Parameterized classes a useful 'name' attribute that is by
+        Give Parameterized classes a useful 'name' attribute that is by
         default the class name, unless a class in the hierarchy has defined
         a `name` String Parameter with a defined `default` value, in which case
         that value is used to set the class name.

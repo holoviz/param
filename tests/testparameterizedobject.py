@@ -110,8 +110,7 @@ class TestParameterized(unittest.TestCase):
 
         p = P()
 
-        match = re.fullmatch(r'P\w{5}', p.name)
-        assert match is not None
+        assert p.name == 'Other'
 
     def test_parameter_name_fixed(self):
         testpo = TestPO()

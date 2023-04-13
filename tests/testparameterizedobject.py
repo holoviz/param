@@ -1,6 +1,7 @@
 """
 Unit test for Parameterized.
 """
+import re
 import unittest
 
 import param
@@ -69,6 +70,48 @@ class TestParameterized(unittest.TestCase):
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
+
+    def test_name_default_to_class_name(self):
+        assert TestPO.name == 'TestPO'
+
+    def test_name_default_to_subclass_name(self):
+        class Foo(TestPO):
+            pass
+
+        assert Foo.name == 'Foo'
+
+    def test_name_as_argument(self):
+        testpo = TestPO(name='custom')
+
+        assert testpo.name == 'custom'
+
+    def test_name_instance_generated(self):
+        testpo = TestPO()
+
+        match = re.fullmatch(r'TestPO\w{5}', testpo.name)
+        assert match is not None
+
+    def test_name_instance_generated_subclass(self):
+        class Foo(TestPO):
+            pass
+
+        foo = Foo()
+
+        match = re.fullmatch(r'Foo\w{5}', foo.name)
+        assert match is not None
+
+    def test_name_instance_generated_class_name_reset(self):
+        class P(param.Parameterized):
+            pass
+
+        P.name = 'Other'
+
+        assert P.name == 'Other'
+
+        p = P()
+
+        match = re.fullmatch(r'P\w{5}', p.name)
+        assert match is not None
 
     def test_parameter_name_fixed(self):
         testpo = TestPO()
@@ -811,4 +854,3 @@ def test_inheritance_parameter_attribute_without_default():
     with pytest.raises(KeyError, match="Slot 'foo' of parameter 'c' has no default value defined in `_slot_defaults`"):
         class A(param.Parameterized):
             c = CustomParameter()
-

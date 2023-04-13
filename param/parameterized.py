@@ -2678,7 +2678,6 @@ class ParameterizedMetaclass(type):
         default values (see __param_inheritance()) and setting
         attrib_names (see _set_names()).
         """
-        # print('DEBUG', mcs, name, bases, dict_)
         type.__init__(mcs, name, bases, dict_)
 
         mcs.__set_name(name, dict_)

@@ -1443,7 +1443,7 @@ class String(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
 
-    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+    def __init__(self, *, default=Undefined, regex=Undefined, **kwargs):
         super(String, self).__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)

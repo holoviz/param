@@ -61,6 +61,10 @@ VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
 
 
+class ParamDeprecationWarning(DeprecationWarning):
+    """Param Deprecation Warning"""
+
+
 def _deprecate_positional_args(func):
     """Internal decorator for methods that issues warnings for positional arguments
 
@@ -91,7 +95,7 @@ def _deprecate_positional_args(func):
             warnings.warn(
                 f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
                 "was deprecated, please pass them as keyword arguments.",
-                DeprecationWarning,
+                ParamDeprecationWarning,
                 stacklevel=2,
             )
 

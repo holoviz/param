@@ -15,30 +15,40 @@ def get_setup_version(reponame):
 
 ########## dependencies ##########
 
-extras_require = {
-    # pip doesn't support tests_require
-    # (https://github.com/pypa/pip/issues/1197)
-    'tests': [
-        'pytest',
-        'coverage',
-        'flake8',
-    ],
-    'doc': [
-        'pygraphviz',
-        'nbsite ==0.8.0rc2',
-        'pydata-sphinx-theme <0.9.0',
-        'myst-parser',
-        'nbconvert',
-        'graphviz',
-        'myst_nb ==0.12.2',
-        'sphinx-copybutton',
-        'aiohttp',
-        'panel',
-        'pandas',
-        # Temporar pin due to https://github.com/ipython/ipython/issues/13845
-        'ipython !=8.7.0',
-    ]
-}
+extras_require = {}
+
+extras_require['tests'] = [
+    'pytest',
+    'coverage',
+    'flake8',
+]
+
+extras_require['tests_nb'] = [
+    'pytest',
+    'pytest-xdist',
+    'nbval',
+]
+
+extras_require['examples'] = [
+    'aiohttp',
+    'panel',
+    'pandas',
+]
+
+extras_require["examples_tests"] = extras_require["examples"] + extras_require['tests_nb']
+
+extras_require['doc'] = extras_require['examples'] + [
+    'pygraphviz',
+    'nbsite ==0.8.0rc2',
+    'pydata-sphinx-theme <0.9.0',
+    'myst-parser',
+    'nbconvert',
+    'graphviz',
+    'myst_nb ==0.12.2',
+    'sphinx-copybutton',
+    # Temporar pin due to https://github.com/ipython/ipython/issues/13845
+    'ipython !=8.7.0',
+]
 
 extras_require['all'] = sorted(set(sum(extras_require.values(), [])))
 

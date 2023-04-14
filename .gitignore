@@ -13,6 +13,7 @@
 .vscode
 .tox
 data.pickle
+/build
 
 # Docs
 builtdocs/

@@ -2186,6 +2186,16 @@ class MultiFileSelector(ListSelector):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
 
 
+def _to_datetime(x):
+    """
+    Internal function that will convert date objs to datetime objs, used
+    for comparing date and datetime objects without error.
+    """
+    if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
+        return dt.datetime(*x.timetuple()[:6])
+    return x
+
+
 class Date(Number):
     """
     Date parameter of datetime or date type.
@@ -2213,6 +2223,11 @@ class Date(Number):
                 "Step can only be None, a datetime "
                 "or datetime type, not type %r." % type(val)
             )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds):
+        val = None if val is None else _to_datetime(val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
+        return super()._validate_bounds(val, bounds, inclusive_bounds)
 
     @classmethod
     def serialize(cls, value):
@@ -2396,18 +2411,10 @@ class DateRange(Range):
     Bounds must be specified as datetime or date types (see param.dt_types).
     """
 
-    @staticmethod
-    def _to_datetime(x):
-        # Can't compare datetime.datetime to datetime.date
-        if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
-            return dt.datetime(*x.timetuple()[:6])
-        return x
-
     def _validate_bounds(self, val, bounds, inclusive_bounds):
-        val = None if val is None else map(self._to_datetime, val)
-        bounds = None if bounds is None else map(self._to_datetime, bounds)
+        val = None if val is None else map(_to_datetime, val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
         super()._validate_bounds(val, bounds, inclusive_bounds)
-
 
     def _validate_value(self, val, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from

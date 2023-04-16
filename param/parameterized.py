@@ -390,22 +390,24 @@ def get_method_owner(method):
 
 
 @accept_arguments
-def depends(func, *dependencies, **kw):
-    """
-    Annotates a function or Parameterized method to express its
-    dependencies.  The specified dependencies can be either be
-    Parameter instances or if a method is supplied they can be
-    defined as strings referring to Parameters of the class,
-    or Parameters of subobjects (Parameterized objects that are
-    values of this object's parameters).  Dependencies can either be
-    on Parameter values, or on other metadata about the Parameter.
-    """
+def depends(func, *dependencies, watch=False, on_init=False, **kw):
+    """Annotates a function or Parameterized method to express its dependencies.
+    
+    The specified dependencies can be either be Parameter instances or if a
+    method is supplied they can be defined as strings referring to Parameters
+    of the class, or Parameters of subobjects (Parameterized objects that are
+    values of this object's parameters). Dependencies can either be on
+    Parameter values, or on other metadata about the Parameter.
 
-    # PARAM2_DEPRECATION: python2 workaround; python3 allows kw-only args
-    # (i.e. "func, *dependencies, watch=False" rather than **kw and the check below)
-    watch = kw.pop("watch", False)
-    on_init = kw.pop("on_init", False)
-
+    Parameters
+    ----------
+    watch : bool, optional
+        Wether to invoke the function/method when the dependency is updated,
+        by default False
+    on_init : bool, optional
+        Whether to invoke the function/method when the instance is created,
+        by default False
+    """
     if iscoroutinefunction(func):
         @wraps(func)
         async def _depends(*args, **kw):

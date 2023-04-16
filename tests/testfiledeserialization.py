@@ -1,11 +1,10 @@
 """
 Test deserialization routines that read from file
 """
-
+import unittest
 import param
 import sys
 
-from . import API1TestCase
 from unittest import skipIf
 from tempfile import mkdtemp
 from shutil import rmtree
@@ -77,12 +76,12 @@ parquet_skip = skipIf(parquet is None, "fastparquet and pyarrow are not availabl
 hdf5_skip = skipIf(hdf5 is None, "pytables is not available")
 
 
-class TestSet(param.Parameterized):
+class P(param.Parameterized):
     array = None if np is None else param.Array(default=ndarray)
     data_frame = None if pd is None else param.DataFrame(default=df)
 
 
-class TestFileDeserialization(API1TestCase):
+class TestFileDeserialization(unittest.TestCase):
 
     def run(self, result):
         self.temp_dir = mkdtemp().replace('\\', '/')
@@ -102,59 +101,59 @@ class TestFileDeserialization(API1TestCase):
     @np_skip
     def test_fail_to_deserialize(self):
         path = '{}/val.foo'.format(self.temp_dir)
-        with self.assertRaisesRegexp(IOError, "does not exist or is not a file"):
-            self._test_deserialize_array(TestSet, path, 'array')
+        with self.assertRaisesRegex(IOError, "does not exist or is not a file"):
+            self._test_deserialize_array(P, path, 'array')
         with open(path, 'w'):
             pass
-        with self.assertRaisesRegexp(ValueError, "no deserialization method for files"):
-            self._test_deserialize_array(TestSet, path, 'array')
+        with self.assertRaisesRegex(ValueError, "no deserialization method for files"):
+            self._test_deserialize_array(P, path, 'array')
         path = '{}/val.npy'.format(self.temp_dir)
         with open(path, 'w'):
             pass
         with self.assertRaises(Exception):
-            self._test_deserialize_array(TestSet, path, 'array')
+            self._test_deserialize_array(P, path, 'array')
 
     @np_skip
     def test_array_npy(self):
         path = '{}/val.npy'.format(self.temp_dir)
-        np.save(path, TestSet.array)
-        self._test_deserialize_array(TestSet, path, 'array')
+        np.save(path, P.array)
+        self._test_deserialize_array(P, path, 'array')
 
     @np_skip
     def test_array_txt(self):
         path = '{}/val.txt'.format(self.temp_dir)
-        np.savetxt(path, TestSet.array)
-        self._test_deserialize_array(TestSet, path, 'array')
+        np.savetxt(path, P.array)
+        self._test_deserialize_array(P, path, 'array')
 
     @np_skip
     def test_array_txt_gz(self):
         path = '{}/val.txt.gz'.format(self.temp_dir)
-        np.savetxt(path, TestSet.array)
-        self._test_deserialize_array(TestSet, path, 'array')
+        np.savetxt(path, P.array)
+        self._test_deserialize_array(P, path, 'array')
 
     @pd_skip
     def test_data_frame_pkl(self):
         path = '{}/val.pkl.zip'.format(self.temp_dir)
-        TestSet.data_frame.to_pickle(path)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_pickle(path)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     def test_data_frame_csv(self):
         path = '{}/val.csv.bz2'.format(self.temp_dir)
-        TestSet.data_frame.to_csv(path, index=False)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_csv(path, index=False)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     def test_data_frame_tsv(self):
         path = '{}/val.tsv'.format(self.temp_dir)
-        TestSet.data_frame.to_csv(path, index=False, sep='\t')
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_csv(path, index=False, sep='\t')
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     def test_data_frame_json(self):
         path = '{}/val.json'.format(self.temp_dir)
-        TestSet.data_frame.to_json(path)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_json(path)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     # FIXME(sdrobert): xls are old-style excel files. There are two distinct engines for
     # reading and writing these, and the writer engine is deprecated by pandas. We could
@@ -165,50 +164,50 @@ class TestFileDeserialization(API1TestCase):
     @xlsxm_skip
     def test_data_frame_xlsm(self):
         path = '{}/val.xlsm'.format(self.temp_dir)
-        TestSet.data_frame.to_excel(path, index=False)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_excel(path, index=False)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     @xlsxm_skip
     def test_data_frame_xlsx(self):
         path = '{}/val.xlsx'.format(self.temp_dir)
-        TestSet.data_frame.to_excel(path, index=False)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_excel(path, index=False)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     @ods_skip
     @skipIf(sys.version_info[0] < 3, "py2k pandas does not support 'ods'")
     def test_data_frame_ods(self):
         path = '{}/val.ods'.format(self.temp_dir)
-        TestSet.data_frame.to_excel(path, index=False)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_excel(path, index=False)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     @feather_skip
     def test_data_frame_feather(self):
         path = '{}/val.feather'.format(self.temp_dir)
-        TestSet.data_frame.to_feather(path)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_feather(path)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     @parquet_skip
     def test_data_frame_parquet(self):
         path = '{}/val.parquet'.format(self.temp_dir)
-        TestSet.data_frame.to_parquet(path)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_parquet(path)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     def test_data_frame_stata(self):
         path = '{}/val.dta'.format(self.temp_dir)
-        TestSet.data_frame.to_stata(path, write_index=False)
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_stata(path, write_index=False)
+        self._test_deserialize_array(P, path, 'data_frame')
 
     @pd_skip
     @hdf5_skip
     def test_data_frame_hdf5(self):
         path = '{}/val.h5'.format(self.temp_dir)
-        TestSet.data_frame.to_hdf(path, 'df')
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_hdf(path, 'df')
+        self._test_deserialize_array(P, path, 'data_frame')
         path = '{}/val.hdf5'.format(self.temp_dir)
-        TestSet.data_frame.to_hdf(path, 'df')
-        self._test_deserialize_array(TestSet, path, 'data_frame')
+        P.data_frame.to_hdf(path, 'df')
+        self._test_deserialize_array(P, path, 'data_frame')

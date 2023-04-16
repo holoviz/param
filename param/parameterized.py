@@ -120,7 +120,7 @@ def logging_level(level):
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
 
     if level not in level_names:
-        raise Exception("Level %r not in %r" % (level, levels))
+        raise Exception("Level {!r} not in {!r}".format(level, levels))
 
     param_logger = get_logger()
     logging_level = param_logger.getEffectiveLevel()
@@ -308,7 +308,7 @@ def add_metaclass(metaclass):
 
 
 
-class bothmethod(object): # pylint: disable-msg=R0903
+class bothmethod: # pylint: disable-msg=R0903
     """
     'optional @classmethod'
 
@@ -802,7 +802,7 @@ class Watcher(_Watcher):
         values.update(kwargs)
         if 'precedence' not in values:
             values['precedence'] = 0
-        return super(Watcher, cls_).__new__(cls_, **values)
+        return super().__new__(cls_, **values)
 
     def __iter__(self):
         """
@@ -815,8 +815,8 @@ class Watcher(_Watcher):
 
     def __str__(self):
         cls = type(self)
-        attrs = ', '.join(['%s=%r' % (f, getattr(self, f)) for f in cls._fields])
-        return "{cls}({attrs})".format(cls=cls.__name__, attrs=attrs)
+        attrs = ', '.join(['{}={!r}'.format(f, getattr(self, f)) for f in cls._fields])
+        return f"{cls.__name__}({attrs})"
 
 
 
@@ -855,7 +855,7 @@ class ParameterMetaclass(type):
 
 
 @add_metaclass(ParameterMetaclass)
-class Parameter(object):
+class Parameter:
     """
     An attribute descriptor for declaring parameters.
 
@@ -1393,7 +1393,7 @@ class String(Parameter):
     _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
 
     def __init__(self, default=Undefined, regex=Undefined, **kwargs):
-        super(String, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
 
@@ -1416,7 +1416,7 @@ class String(Parameter):
         self._validate_regex(val, self.regex)
 
 
-class shared_parameters(object):
+class shared_parameters:
     """
     Context manager to share parameter instances when creating
     multiple Parameterized objects of the same type. Parameter default
@@ -1455,7 +1455,7 @@ def as_uninitialized(fn):
     return override_initialization
 
 
-class Comparator(object):
+class Comparator:
     """
     Comparator defines methods for determining whether two objects
     should be considered equal. It works by registering custom
@@ -1515,7 +1515,7 @@ class Comparator(object):
         return True
 
 
-class Parameters(object):
+class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
     Parameters themselves.
@@ -1614,15 +1614,14 @@ class Parameters(object):
         """
         Adds parameters to dir
         """
-        return super(Parameters, self_).__dir__() + list(self_)
+        return super().__dir__() + list(self_)
 
 
     def __iter__(self_):
         """
         Iterates over the parameters on this object.
         """
-        for p in self_.objects(instance=False):
-            yield p
+        yield from self_.objects(instance=False)
 
 
     def __contains__(self_, param):
@@ -1930,7 +1929,7 @@ class Parameters(object):
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
                 self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("'%s' is not a parameter of %s" % (k, self_or_cls.name))
+                raise ValueError("'{}' is not a parameter of {}".format(k, self_or_cls.name))
             try:
                 setattr(self_or_cls, k, v)
             except:
@@ -2508,7 +2507,7 @@ class Parameters(object):
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
-            self_.warning('No such watcher {watcher} to remove.'.format(watcher=str(watcher)))
+            self_.warning(f'No such watcher {str(watcher)} to remove.')
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """
@@ -2577,7 +2576,7 @@ class Parameters(object):
         """Print the values of all this object's Parameters."""
         self = self_.self
         for name, val in self.param.values().items():
-            print('%s.%s = %s' % (self.name,name,val))
+            print('{}.{} = {}'.format(self.name,name,val))
 
     def warning(self_, msg,*args,**kw):
         """
@@ -2749,7 +2748,7 @@ class ParameterizedMetaclass(type):
             for (k,v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
                     param_type = v.__class__.__name__
-                    keyword_group.append("%s=%s" % (k, param_type))
+                    keyword_group.append("{}={}".format(k, param_type))
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
@@ -3165,7 +3164,7 @@ else:
 
 
 @add_metaclass(ParameterizedMetaclass)
-class Parameterized(object):
+class Parameterized:
     """
     Base class for named objects that support Parameters and message
     formatting.
@@ -3308,7 +3307,7 @@ class Parameterized(object):
         all the parameters of this object.
         """
         try:
-            settings = ['%s=%s' % (name, repr(val))
+            settings = ['{}={}'.format(name, repr(val))
                         # PARAM2_DEPRECATION: Update to self.param.values.items()
                         # (once python2 support is dropped)
                         for name, val in self.param.get_param_values()]
@@ -3318,7 +3317,7 @@ class Parameterized(object):
 
     def __str__(self):
         """Return a short representation of the name and class of this object."""
-        return "<%s %s>" % (self.__class__.__name__,self.name)
+        return "<{} {}>".format(self.__class__.__name__,self.name)
 
 
     # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
@@ -3379,7 +3378,7 @@ class Parameterized(object):
 
             if value is None:
                 if unknown_value is False:
-                    raise Exception("%s: unknown value of %r" % (self.name,k))
+                    raise Exception("{}: unknown value of {!r}".format(self.name,k))
                 elif unknown_value is None:
                     # i.e. suppress repr
                     continue
@@ -3397,13 +3396,13 @@ class Parameterized(object):
                   (hasattr(spec, 'keywords') and (spec.keywords is not None))):
                 # Explicit modified keywords or parameters in
                 # precendence order (if **kwargs present)
-                keywords.append('%s=%s' % (k, value))
+                keywords.append('{}={}'.format(k, value))
 
             processed.append(k)
 
         qualifier = mod + '.'  if qualify else ''
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
+        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     pprint = _pprint
@@ -3523,7 +3522,7 @@ class ParamOverrides(dict):
         supplied `dict_` whose names are parameters of the
         overridden object (i.e. not extra keywords/parameters).
         """
-        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
+        return {key: self[key] for key in self if key not in self.extra_keywords()}
 
     def __missing__(self,name):
         # Return 'name' from the overridden object
@@ -3699,7 +3698,7 @@ label_formatter = default_label_formatter
 # infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
 # but since python 2.6 the getter, setter, and deleter attributes of
 # a property should provide similar functionality already.
-class overridable_property(object):
+class overridable_property:
     """
     The same as Python's "property" attribute, but allows the accessor
     methods to be overridden in subclasses.

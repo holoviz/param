@@ -11,7 +11,7 @@ from param.parameterized import discard_events
 from .utils import MockLoggingHandler
 
 
-class Accumulator(object):
+class Accumulator:
 
     def __init__(self):
         self.args = []
@@ -87,13 +87,13 @@ class TestWatch(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestWatch, cls).setUpClass()
+        super().setUpClass()
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
 
     def setUp(self):
-        super(TestWatch, self).setUp()
+        super().setUp()
         self.accumulator = 0
         self.list_accumulator = []
 
@@ -610,7 +610,7 @@ class TestWatchMethod(unittest.TestCase):
 class TestWatchValues(unittest.TestCase):
 
     def setUp(self):
-        super(TestWatchValues, self).setUp()
+        super().setUp()
         self.accumulator = 0
         self.list_accumulator = []
 
@@ -729,7 +729,7 @@ class TestWatchValues(unittest.TestCase):
 class TestWatchAttributes(unittest.TestCase):
 
     def setUp(self):
-        super(TestWatchAttributes, self).setUp()
+        super().setUp()
         self.accumulator = []
 
     def tearDown(self):
@@ -761,7 +761,7 @@ class TestWatchAttributes(unittest.TestCase):
 class TestTrigger(unittest.TestCase):
 
     def setUp(self):
-        super(TestTrigger, self).setUp()
+        super().setUp()
         self.accumulator = 0
 
     def test_simple_trigger_one_param(self):

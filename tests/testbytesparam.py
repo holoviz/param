@@ -101,7 +101,7 @@ class TestBytesParameters(unittest.TestCase):
 
     def test_regex_incorrect_default(self):
         b = 'b' if sys.version_info.major > 2 else ''
-        exception = "Bytes parameter None value %s'' does not match regex %r." % (b, ip_regex)
+        exception = "Bytes parameter None value {}'' does not match regex {!r}.".format(b, ip_regex)
         with self.assertRaises(ValueError) as e:
             class A(param.Parameterized):
                 s = param.Bytes(regex=ip_regex)  # default value '' does not match regular expression

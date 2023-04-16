@@ -17,7 +17,7 @@ import numbergen
 class TestDynamicParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestDynamicParameters, self).setUp()
+        super().setUp()
         param.Dynamic.time_dependent = False
 
         class TestPO1(param.Parameterized):
@@ -131,7 +131,7 @@ class TestDynamicParameterBasics(TestDynamicParameters):
 class TestDynamicTimeDependent(TestDynamicParameters):
 
     def setUp(self):
-        super(TestDynamicTimeDependent, self).setUp()
+        super().setUp()
         param.Dynamic.time_dependent = True
 
         class TestPO3(param.Parameterized):
@@ -232,7 +232,7 @@ class TestDynamicTimeDependent(TestDynamicParameters):
 class TestDynamicSharedNumbergen(TestDynamicParameters):
     "Check shared generator"
     def setUp(self):
-        super(TestDynamicSharedNumbergen, self).setUp()
+        super().setUp()
         self.shared = numbergen.UniformRandom(lbound=-1,ubound=1,seed=20)
 
     def test_dynamic_shared_numbergen(self):

@@ -11,7 +11,7 @@ from .utils import check_defaults
 class TestMultiFileSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestMultiFileSelectorParameters, self).setUp()
+        super().setUp()
 
         tmpdir1 = tempfile.mkdtemp()
         fa = os.path.join(tmpdir1, 'a.txt')

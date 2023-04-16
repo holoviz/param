@@ -12,7 +12,7 @@ from .utils import check_defaults
 class TestPathParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestPathParameters, self).setUp()
+        super().setUp()
 
         tmpdir1 = tempfile.mkdtemp()
         fa = os.path.join(tmpdir1, 'a.txt')
@@ -121,7 +121,7 @@ class TestPathParameters(unittest.TestCase):
 class TestFilenameParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestFilenameParameters, self).setUp()
+        super().setUp()
 
         tmpdir1 = tempfile.mkdtemp()
         fa = os.path.join(tmpdir1, 'a.txt')
@@ -203,7 +203,7 @@ class TestFilenameParameters(unittest.TestCase):
 class TestFoldernameParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestFoldernameParameters, self).setUp()
+        super().setUp()
 
         tmpdir1 = tempfile.mkdtemp()
         da = os.path.join(tmpdir1, 'da')

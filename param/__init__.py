@@ -1,4 +1,3 @@
-from __future__ import print_function
 """
 Parameters are a kind of class attribute allowing special behavior,
 including dynamically generated parameter values, documentation
@@ -167,7 +166,7 @@ def param_union(*parameterizeds, **kwargs):
         for k in o.param:
             if k != 'name':
                 if k in d and warn:
-                    get_logger().warning("overwriting parameter {}".format(k))
+                    get_logger().warning(f"overwriting parameter {k}")
                 d[k] = getattr(o, k)
     return d
 
@@ -261,7 +260,7 @@ def _get_min_max_value(min, max, value=None, step=None):
     if value is None:
         if min is None or max is None:
             raise ValueError('unable to infer range, value '
-                             'from: ({0}, {1}, {2})'.format(min, max, value))
+                             'from: ({}, {}, {})'.format(min, max, value))
         diff = max - min
         value = min + (diff / 2)
         # Ensure that value has the same type as diff
@@ -287,11 +286,11 @@ def _get_min_max_value(min, max, value=None, step=None):
         tick = int((value - min) / step)
         value = min + tick * step
     if not min <= value <= max:
-        raise ValueError('value must be between min and max (min={0}, value={1}, max={2})'.format(min, value, max))
+        raise ValueError(f'value must be between min and max (min={min}, value={value}, max={max})')
     return min, max, value
 
 
-class Infinity(object):
+class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
     Python's float('inf') value, this object can be safely compared
@@ -442,7 +441,7 @@ class Time(Parameterized):
 
 
     def __init__(self, **params):
-        super(Time, self).__init__(**params)
+        super().__init__(**params)
         self._time = self.time_type(0)
         self._exhausted = None
         self._pushed_state = []
@@ -578,7 +577,7 @@ class Dynamic(Parameter):
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
         """
-        super(Dynamic,self).__init__(**params)
+        super().__init__(**params)
 
         if callable(self.default):
             self._set_instantiate(True)
@@ -608,7 +607,7 @@ class Dynamic(Parameter):
         return that result, otherwise ask that result to produce a
         value and return it.
         """
-        gen = super(Dynamic,self).__get__(obj,objtype)
+        gen = super().__get__(obj,objtype)
 
         if not hasattr(gen,'_Dynamic_last'):
             return gen
@@ -625,7 +624,7 @@ class Dynamic(Parameter):
 
         If val is dynamic, initialize it as a generator.
         """
-        super(Dynamic,self).__set__(obj,val)
+        super().__set__(obj,val)
 
         dynamic = callable(val)
         if dynamic: self._initialize_generator(val,obj)
@@ -672,12 +671,12 @@ class Dynamic(Parameter):
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
-        return hasattr(super(Dynamic,self).__get__(obj,objtype),'_Dynamic_last')
+        return hasattr(super().__get__(obj,objtype),'_Dynamic_last')
 
 
     def _inspect(self,obj,objtype=None):
         """Return the last generated value for this parameter."""
-        gen=super(Dynamic,self).__get__(obj,objtype)
+        gen=super().__get__(obj,objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return gen._Dynamic_last
@@ -687,7 +686,7 @@ class Dynamic(Parameter):
 
     def _force(self,obj,objtype=None):
         """Force a new value to be generated, and return it."""
-        gen=super(Dynamic,self).__get__(obj,objtype)
+        gen=super().__get__(obj,objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return self._produce_value(gen,force=True)
@@ -754,7 +753,7 @@ class Bytes(Parameter):
     )
 
     def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
-        super(Bytes, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
 
@@ -836,7 +835,7 @@ class Number(Dynamic):
 
         Non-dynamic default values are checked against the bounds.
         """
-        super(Number,self).__init__(default=default, **params)
+        super().__init__(default=default, **params)
         self.set_hook = identity_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
@@ -849,7 +848,7 @@ class Number(Dynamic):
         Same as the superclass's __get__, but if the value was
         dynamically generated, check the bounds.
         """
-        result = super(Number, self).__get__(obj, objtype)
+        result = super().__get__(obj, objtype)
 
         # Should be able to optimize this commonly used method by
         # avoiding extra lookups (e.g. _value_is_dynamic() is also
@@ -868,7 +867,7 @@ class Number(Dynamic):
             bounded_val = self.crop_to_bounds(val)
         else:
             bounded_val = val
-        super(Number, self).__set__(obj, bounded_val)
+        super().__set__(obj, bounded_val)
 
     def crop_to_bounds(self, val):
         """
@@ -964,7 +963,7 @@ class Number(Dynamic):
         if 'step' not in state:
             state['step'] = None
 
-        super(Number, self).__setstate__(state)
+        super().__setstate__(state)
 
 
 
@@ -1009,7 +1008,7 @@ class Boolean(Parameter):
 
     def __init__(self, default=Undefined, bounds=Undefined, **params):
         self.bounds = bounds
-        super(Boolean, self).__init__(default=default, **params)
+        super().__init__(default=default, **params)
         self._validate(self.default)
 
     def _validate_value(self, val, allow_None):
@@ -1020,7 +1019,7 @@ class Boolean(Parameter):
                                  % (self.name, val))
         elif not isinstance(val, bool):
             name = "" if self.name is None else " %r" % self.name
-            raise ValueError("Boolean parameter%s must be True or False, not %s." % (name, val))
+            raise ValueError("Boolean parameter{} must be True or False, not {}.".format(name, val))
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
@@ -1044,7 +1043,7 @@ class Tuple(Parameter):
         value, if any, and must be supplied explicitly otherwise.  The
         length is not allowed to change after instantiation.
         """
-        super(Tuple,self).__init__(default=default, **params)
+        super().__init__(default=default, **params)
         if length is Undefined and self.default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
@@ -1092,7 +1091,7 @@ class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
     def _validate_value(self, val, allow_None):
-        super(NumericTuple, self)._validate_value(val, allow_None)
+        super()._validate_value(val, allow_None)
         if allow_None and val is None:
             return
         for n in val:
@@ -1108,7 +1107,7 @@ class XYCoordinates(NumericTuple):
     _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
     def __init__(self, default=Undefined, **params):
-        super(XYCoordinates,self).__init__(default=default, length=2, **params)
+        super().__init__(default=default, length=2, **params)
 
 
 class Callable(Parameter):
@@ -1155,8 +1154,8 @@ def concrete_descendents(parentclass):
 
     Only non-abstract classes will be included.
     """
-    return dict((c.__name__,c) for c in descendents(parentclass)
-                if not _is_abstract(c))
+    return {c.__name__:c for c in descendents(parentclass)
+                if not _is_abstract(c)}
 
 
 class Composite(Parameter):
@@ -1179,7 +1178,7 @@ class Composite(Parameter):
     def __init__(self, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
-        super(Composite, self).__init__(default=Undefined, **kw)
+        super().__init__(default=Undefined, **kw)
         self.attribs = attribs
 
     def __get__(self, obj, objtype):
@@ -1232,7 +1231,7 @@ class ListProxy(list):
     """
 
     def __init__(self, iterable, parameter=None):
-        super(ListProxy, self).__init__(iterable)
+        super().__init__(iterable)
         self._parameter = parameter
 
     def _warn(self, method):
@@ -1255,14 +1254,14 @@ class ListProxy(list):
     def __getitem__(self, index):
         if self._parameter.names:
             return self._parameter.names[index]
-        return super(ListProxy, self).__getitem__(index)
+        return super().__getitem__(index)
 
     def __setitem__(self, index, object, trigger=True):
         if isinstance(index, (int, slice)):
             if self._parameter.names:
                 self._warn('[index] = object')
             with self._trigger():
-                super(ListProxy, self).__setitem__(index, object)
+                super().__setitem__(index, object)
                 self._parameter._objects[index] = object
             return
         if self and not self._parameter.names:
@@ -1271,15 +1270,15 @@ class ListProxy(list):
             if index in self._parameter.names:
                 old = self._parameter.names[index]
                 idx = self.index(old)
-                super(ListProxy, self).__setitem__(idx, object)
+                super().__setitem__(idx, object)
                 self._parameter._objects[idx] = object
             else:
-                super(ListProxy, self).append(object)
+                super().append(object)
                 self._parameter._objects.append(object)
             self._parameter.names[index] = object
 
     def __eq__(self, other):
-        eq = super(ListProxy, self).__eq__(other)
+        eq = super().__eq__(other)
         if self._parameter.names and eq is NotImplemented:
             return dict(zip(self._parameter.names, self)) == other
         return eq
@@ -1291,7 +1290,7 @@ class ListProxy(list):
         if self._parameter.names:
             self._warn('.append')
         with self._trigger():
-            super(ListProxy, self).append(object)
+            super().append(object)
             self._parameter._objects.append(object)
 
     def copy(self):
@@ -1301,7 +1300,7 @@ class ListProxy(list):
 
     def clear(self):
         with self._trigger():
-            super(ListProxy, self).clear()
+            super().clear()
             self._parameter._objects.clear()
             self._parameter.names.clear()
 
@@ -1309,7 +1308,7 @@ class ListProxy(list):
         if self._parameter.names:
             self._warn('.append')
         with self._trigger():
-            super(ListProxy, self).extend(objects)
+            super().extend(objects)
             self._parameter._objects.extend(objects)
 
     def get(self, key, default=None):
@@ -1321,7 +1320,7 @@ class ListProxy(list):
         if self._parameter.names:
             self._warn('.insert')
         with self._trigger():
-            super(ListProxy, self).insert(index, object)
+            super().insert(index, object)
             self._parameter._objects.insert(index, object)
 
     def items(self):
@@ -1338,7 +1337,7 @@ class ListProxy(list):
         index = args[0] if args else -1
         if isinstance(index, int):
             with self._trigger():
-                super(ListProxy, self).pop(index)
+                super().pop(index)
                 object = self._parameter._objects.pop(index)
                 if self._parameter.names:
                     self._parameter.names = {
@@ -1353,13 +1352,13 @@ class ListProxy(list):
             )
         with self._trigger():
             object = self._parameter.names.pop(*args)
-            super(ListProxy, self).remove(object)
+            super().remove(object)
             self._parameter._objects.remove(object)
         return object
 
     def remove(self, object):
         with self._trigger():
-            super(ListProxy, self).remove(object)
+            super().remove(object)
             self._parameter._objects.remove(object)
             if self._parameter.names:
                 copy = self._parameter.names.copy()
@@ -1376,13 +1375,13 @@ class ListProxy(list):
             for i, o in enumerate(objects):
                 if not isinstance(o, collections_abc.Sequence):
                     raise TypeError(
-                        'cannot convert dictionary update sequence element #{i} to a sequence'.format(i=i)
+                        f'cannot convert dictionary update sequence element #{i} to a sequence'
                     )
                 o = tuple(o)
                 n = len(o)
                 if n != 2:
                     raise ValueError(
-                        'dictionary update sequence element #{i} has length {n}; 2 is required'.format(i=i, n=n)
+                        f'dictionary update sequence element #{i} has length {n}; 2 is required'
                     )
                 k, v = o
                 self.__setitem__(k, v, trigger=False)
@@ -1471,7 +1470,7 @@ class Selector(SelectorBase):
         self.compute_default_fn = compute_default_fn
         self.check_on_set = check_on_set
 
-        super(Selector,self).__init__(
+        super().__init__(
             default=default, instantiate=instantiate, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:
@@ -1563,7 +1562,7 @@ class ObjectSelector(Selector):
     historical reasons.
     """
     def __init__(self, default=Undefined, objects=Undefined, **kwargs):
-        super(ObjectSelector,self).__init__(objects=objects, default=default,
+        super().__init__(objects=objects, default=default,
                                             empty_default=True, **kwargs)
 
 
@@ -1582,11 +1581,11 @@ class ClassSelector(SelectorBase):
     def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
-        super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
+        super().__init__(default=default,instantiate=instantiate,**params)
         self._validate(self.default)
 
     def _validate(self, val):
-        super(ClassSelector, self)._validate(val)
+        super()._validate(val)
         self._validate_class_(val, self.class_, self.is_instance)
 
     def _validate_class_(self, val, class_, is_instance):
@@ -1717,7 +1716,7 @@ class HookList(List):
     __slots__ = ['class_', 'bounds']
 
     def _validate_value(self, val, allow_None):
-        super(HookList, self)._validate_value(val, allow_None)
+        super()._validate_value(val, allow_None)
         if allow_None and val is None:
             return
         for v in val:
@@ -1733,7 +1732,7 @@ class Dict(ClassSelector):
     """
 
     def __init__(self, default=Undefined, **params):
-        super(Dict, self).__init__(dict, default=default, **params)
+        super().__init__(dict, default=default, **params)
 
 
 class Array(ClassSelector):
@@ -1743,7 +1742,7 @@ class Array(ClassSelector):
 
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
-        super(Array, self).__init__(ndarray, default=default, **params)
+        super().__init__(ndarray, default=default, **params)
 
     @classmethod
     def serialize(cls, value):
@@ -1789,7 +1788,7 @@ class DataFrame(ClassSelector):
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super(DataFrame,self).__init__(pdDFrame, default=default, **params)
+        super().__init__(pdDFrame, default=default, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -1806,7 +1805,7 @@ class DataFrame(ClassSelector):
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def _validate(self, val):
-        super(DataFrame, self)._validate(val)
+        super()._validate(val)
 
         if isinstance(self.columns, set) and self.ordered is True:
             raise ValueError('Columns cannot be ordered when specified as a set')
@@ -1821,7 +1820,7 @@ class DataFrame(ClassSelector):
             self._length_bounds_check(self.columns, len(val.columns), 'Columns')
         elif isinstance(self.columns, (list, set)):
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
-            difference = set(self.columns) - set([str(el) for el in val.columns])
+            difference = set(self.columns) - {str(el) for el in val.columns}
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
@@ -1868,7 +1867,7 @@ class Series(ClassSelector):
     def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
+        super().__init__(pdSeries, default=default, allow_None=allow_None,
                                     **params)
         self._validate(self.default)
 
@@ -1886,7 +1885,7 @@ class Series(ClassSelector):
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def _validate(self, val):
-        super(Series, self)._validate(val)
+        super()._validate(val)
 
         if self.allow_None and val is None:
             return
@@ -1943,7 +1942,7 @@ class resolve_path(ParameterizedFunction):
                 (p.path_to_file is True  and os.path.isfile(path)) or
                 (p.path_to_file is False and os.path.isdir( path))):
                 return path
-            raise IOError("%s '%s' not found." % (ftype,path))
+            raise OSError("{} '{}' not found.".format(ftype,path))
 
         else:
             paths_tried = []
@@ -1957,7 +1956,7 @@ class resolve_path(ParameterizedFunction):
 
                 paths_tried.append(try_path)
 
-            raise IOError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
+            raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
 class normalize_path(ParameterizedFunction):
@@ -2013,7 +2012,7 @@ class Path(Parameter):
             search_paths = []
 
         self.search_paths = search_paths
-        super(Path,self).__init__(default,**params)
+        super().__init__(default,**params)
 
     def _resolve(self, path):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
@@ -2025,19 +2024,19 @@ class Path(Parameter):
         else:
             try:
                 self._resolve(val)
-            except IOError as e:
+            except OSError as e:
                 Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """
         Return an absolute, normalized path (see resolve_path).
         """
-        raw_path = super(Path,self).__get__(obj,objtype)
+        raw_path = super().__get__(obj,objtype)
         return None if raw_path is None else self._resolve(raw_path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths
-        state = super(Path,self).__getstate__()
+        state = super().__getstate__()
 
         if 'search_paths' in state:
             state['search_paths'] = []
@@ -2113,11 +2112,11 @@ class FileSelector(Selector):
         self.default = default
         self.path = path
         self.update()
-        super(FileSelector, self).__init__(default=default, objects=self.objects,
+        super().__init__(default=default, objects=self.objects,
                                            empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
-        super(FileSelector, self)._on_set(attribute, new, old)
+        super()._on_set(attribute, new, old)
         if attribute == 'path':
             self.update()
 
@@ -2128,7 +2127,7 @@ class FileSelector(Selector):
         self.default = self.objects[0] if self.objects else None
 
     def get_range(self):
-        return abbreviate_paths(self.path,super(FileSelector, self).get_range())
+        return abbreviate_paths(self.path,super().get_range())
 
 
 class ListSelector(Selector):
@@ -2138,7 +2137,7 @@ class ListSelector(Selector):
     """
 
     def __init__(self, default=Undefined, objects=Undefined, **kwargs):
-        super(ListSelector,self).__init__(
+        super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
     def compute_default(self):
@@ -2155,7 +2154,7 @@ class ListSelector(Selector):
             raise ValueError("ListSelector parameter %r only takes list "
                              "types, not %r." % (self.name, val))
         for o in val:
-            super(ListSelector, self)._validate(o)
+            super()._validate(o)
 
 
 
@@ -2169,10 +2168,10 @@ class MultiFileSelector(ListSelector):
         self.default = default
         self.path = path
         self.update()
-        super(MultiFileSelector, self).__init__(default=default, objects=self.objects, **kwargs)
+        super().__init__(default=default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
-        super(MultiFileSelector, self)._on_set(attribute, new, old)
+        super()._on_set(attribute, new, old)
         if attribute == 'path':
             self.update()
 
@@ -2183,7 +2182,7 @@ class MultiFileSelector(ListSelector):
         self.default = self.objects
 
     def get_range(self):
-        return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
+        return abbreviate_paths(self.path,super().get_range())
 
 
 class Date(Number):
@@ -2312,7 +2311,7 @@ class Color(Parameter):
     _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
 
     def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
-        super(Color, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
         self._validate(self.default)
 
@@ -2358,10 +2357,10 @@ class Range(NumericTuple):
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
         self.step = step
-        super(Range,self).__init__(default=default,length=2,**params)
+        super().__init__(default=default,length=2,**params)
 
     def _validate(self, val):
-        super(Range, self)._validate(val)
+        super()._validate(val)
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
@@ -2386,7 +2385,7 @@ class Range(NumericTuple):
         incmin, incmax = self.inclusive_bounds
         incmin = '[' if incmin else '('
         incmax = ']' if incmax else ')'
-        return '%s%s, %s%s' % (incmin, vmin, vmax, incmax)
+        return '{}{}, {}{}'.format(incmin, vmin, vmax, incmax)
 
 
 class DateRange(Range):
@@ -2524,7 +2523,7 @@ class Event(Boolean):
         # parameterized.py. Specifically, the set_param method
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
-        super(Event, self).__init__(default=default,**params)
+        super().__init__(default=default,**params)
 
     def _reset_event(self, obj, val):
         val = False
@@ -2537,7 +2536,7 @@ class Event(Boolean):
     @instance_descriptor
     def __set__(self, obj, val):
         if self._mode in ['set-reset', 'set']:
-            super(Event, self).__set__(obj, val)
+            super().__set__(obj, val)
         if self._mode in ['set-reset', 'reset']:
             self._reset_event(obj, val)
 
@@ -2552,4 +2551,4 @@ def exceptions_summarized():
     except Exception:
         import sys
         etype, value, tb = sys.exc_info()
-        print("{}: {}".format(etype.__name__,value), file=sys.stderr)
+        print(f"{etype.__name__}: {value}", file=sys.stderr)

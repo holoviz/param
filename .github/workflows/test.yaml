@@ -57,6 +57,9 @@ jobs:
       - name: unit with_gmpy
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.11'
         run: tox -e with_gmpy
+      - name: unit file deser
+        if: (!startsWith(matrix.python-version, 'py'))
+        run: tox -e filedeser
       - name: unit all_deps
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.11'
         run: tox -e with_all

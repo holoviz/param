@@ -9,3 +9,20 @@
 *.o
 *.out
 *.lock
+.ipynb_checkpoints
+.vscode
+.tox
+data.pickle
+
+# Docs
+builtdocs/
+jupyter_execute/
+doc/user_guide/*.ipynb
+doc/Reference_Manual/
+
+# Unit test / Coverage report
+.coverage
+coverage.xml
+
+# autover
+param/.version

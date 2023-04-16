@@ -4,6 +4,7 @@ Parameterized objects.
 """
 
 import json
+import textwrap
 
 class UnserializableException(Exception):
     pass
@@ -13,7 +14,7 @@ class UnsafeserializableException(Exception):
 
 def JSONNullable(json_type):
     "Express a JSON schema type as nullable to easily support Parameters that allow_None"
-    return { "anyOf": [ json_type, { "type": "null"}] }
+    return {'anyOf': [ json_type, {'type': 'null'}] }
 
 
 
@@ -66,8 +67,10 @@ class JSONSerialization(Serialization):
 
     unserializable_parameter_types = ['Callable']
 
-    json_schema_literal_types = {int:'integer', float:'number', str:'string',
-                                 type(None):'null'}
+    json_schema_literal_types = {
+        int:'integer', float:'number', str:'string',
+        type(None): 'null'
+    }
 
     @classmethod
     def loads(cls, serialized):
@@ -85,9 +88,9 @@ class JSONSerialization(Serialization):
                 continue
             schema[name] = p.schema(safe=safe)
             if p.doc:
-                schema[name]["description"] = p.doc.strip()
+                schema[name]['description'] = textwrap.dedent(p.doc).replace('\n', ' ').strip()
             if p.label:
-                schema[name]["title"] = p.label
+                schema[name]['title'] = p.label
         return schema
 
     @classmethod
@@ -120,15 +123,14 @@ class JSONSerialization(Serialization):
         return getattr(cls, method_name, None)
 
     @classmethod
-    def parameter_schema(cls, ptype, p, safe=False, subset=None):
+    def param_schema(cls, ptype, p, safe=False, subset=None):
         if ptype in cls.unserializable_parameter_types:
             raise UnserializableException
         dispatch_method = cls._get_method(ptype, 'schema')
         if dispatch_method:
             schema = dispatch_method(p, safe=safe)
         else:
-            schema = { "type": ptype.lower()}
-
+            schema = {'type': ptype.lower()}
         return JSONNullable(schema) if p.allow_None else schema
 
     @classmethod
@@ -144,12 +146,28 @@ class JSONSerialization(Serialization):
     # Custom Schemas
 
     @classmethod
+    def class__schema(cls, class_, safe=False):
+        from .parameterized import Parameterized
+        if isinstance(class_, tuple):
+            return {'anyOf': [cls.class__schema(cls_) for cls_ in class_]}
+        elif class_ in cls.json_schema_literal_types:
+            return {'type': cls.json_schema_literal_types[class_]}
+        elif issubclass(class_, Parameterized):
+            return {'type': 'object', 'properties': class_.param.schema(safe)}
+        else:
+            return {'type': 'object'}
+
+    @classmethod
     def array_schema(cls, p, safe=False):
         if safe is True:
             msg = ('Array is not guaranteed to be safe for '
                    'serialization as the dtype is unknown')
             raise UnsafeserializableException(msg)
-        return { "type": "array"}
+        return {'type': 'array'}
+
+    @classmethod
+    def classselector_schema(cls, p, safe=False):
+        return cls.class__schema(p.class_, safe=safe)
 
     @classmethod
     def dict_schema(cls, p, safe=False):
@@ -157,19 +175,19 @@ class JSONSerialization(Serialization):
             msg = ('Dict is not guaranteed to be safe for '
                    'serialization as the key and value types are unknown')
             raise UnsafeserializableException(msg)
-        return { "type": "object"}
+        return {'type': 'object'}
 
     @classmethod
     def date_schema(cls, p, safe=False):
-        return { "type": "string", "format": "date-time"}
+        return {'type': 'string', 'format': 'date-time'}
 
     @classmethod
     def calendardate_schema(cls, p, safe=False):
-        return { "type": "string", "format": "date"}
+        return {'type': 'string', 'format': 'date'}
 
     @classmethod
     def tuple_schema(cls, p, safe=False):
-        schema = { "type": "array"}
+        schema = {'type': 'array'}
         if p.length is not None:
             schema['minItems'] =  p.length
             schema['maxItems'] =  p.length
@@ -177,7 +195,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def number_schema(cls, p, safe=False):
-        schema = { "type": p.__class__.__name__.lower() }
+        schema = {'type': p.__class__.__name__.lower() }
         return cls.declare_numeric_bounds(schema, p.bounds, p.inclusive_bounds)
 
     @classmethod
@@ -200,7 +218,7 @@ class JSONSerialization(Serialization):
     @classmethod
     def numerictuple_schema(cls, p, safe=False):
         schema = cls.tuple_schema(p, safe=safe)
-        schema["additionalItems"] = { "type": "number" }
+        schema['additionalItems'] = {'type': 'number'}
         return schema
 
     @classmethod
@@ -209,21 +227,21 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def range_schema(cls, p, safe=False):
-        schema =  cls.tuple_schema(p, safe=safe)
-        bounded_number = cls.declare_numeric_bounds({ "type": "number" },
-                                                    p.bounds, p.inclusive_bounds)
-        schema["additionalItems"] = bounded_number
+        schema = cls.tuple_schema(p, safe=safe)
+        bounded_number = cls.declare_numeric_bounds(
+            {'type': 'number'}, p.bounds, p.inclusive_bounds)
+        schema['additionalItems'] = bounded_number
         return schema
 
     @classmethod
     def list_schema(cls, p, safe=False):
-        schema =  { "type": "array"}
+        schema = {'type': 'array'}
         if safe is True and p.item_type is None:
             msg = ('List without a class specified cannot be guaranteed '
                    'to be safe for serialization')
             raise UnsafeserializableException(msg)
-        if p.item_type is not None and p.item_type in cls.json_schema_literal_types:
-            schema['items'] = {"type": cls.json_schema_literal_types[p.item_type]}
+        if p.class_ is not None:
+            schema['items'] = cls.class__schema(p.item_type, safe=safe)
         return schema
 
     @classmethod
@@ -231,12 +249,27 @@ class JSONSerialization(Serialization):
         try:
             allowed_types = [{'type': cls.json_schema_literal_types[type(obj)]}
                              for obj in p.objects]
-            schema =  { "anyOf": allowed_types}
+            schema = {'anyOf': allowed_types}
             schema['enum'] = p.objects
             return schema
         except:
             if safe is True:
                 msg = ('ObjectSelector cannot be guaranteed to be safe for '
+                       'serialization due to unserializable type in objects')
+                raise UnsafeserializableException(msg)
+            return {}
+
+    @classmethod
+    def selector_schema(cls, p, safe=False):
+        try:
+            allowed_types = [{'type': cls.json_schema_literal_types[type(obj)]}
+                             for obj in p.objects.values()]
+            schema = {'anyOf': allowed_types}
+            schema['enum'] = p.objects
+            return schema
+        except:
+            if safe is True:
+                msg = ('Selector cannot be guaranteed to be safe for '
                        'serialization due to unserializable type in objects')
                 raise UnsafeserializableException(msg)
             return {}
@@ -250,10 +283,9 @@ class JSONSerialization(Serialization):
             return {'type': 'array'}
         for obj in p.objects:
             if type(obj) not in cls.json_schema_literal_types:
-                msg = "ListSelector cannot serialize type %s" % type(obj)
+                msg = 'ListSelector cannot serialize type %s' % type(obj)
                 raise UnserializableException(msg)
-        return {'type': 'array', 'items':{'enum':p.objects}}
-
+        return {'type': 'array', 'items': {'enum': p.objects}}
 
     @classmethod
     def dataframe_schema(cls, p, safe=False):
@@ -273,17 +305,14 @@ class JSONSerialization(Serialization):
             mincols, maxcols = p.columns
 
         if isinstance(p.columns, int) or isinstance(p.columns, tuple):
-            schema['items'] =  {'type': 'object',
-                                'minItems': mincols,
+            schema['items'] =  {'type': 'object', 'minItems': mincols,
                                 'maxItems': maxcols}
 
         if isinstance(p.columns, list) or isinstance(p.columns, set):
             literal_types = [{'type':el} for el in cls.json_schema_literal_types.values()]
-            allowable_types = {"anyOf": literal_types}
+            allowable_types = {'anyOf': literal_types}
             properties = {name: allowable_types for name in p.columns}
-            schema['items'] =  {'type': 'object',
-                                'properties' : properties }
-
+            schema['items'] =  {'type': 'object', 'properties': properties}
 
         minrows, maxrows = None, None
         if isinstance(p.rows, int):

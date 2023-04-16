@@ -8,6 +8,7 @@ import hashlib
 import struct
 import fractions
 
+from ctypes import c_size_t
 from math import e,pi
 
 import param
@@ -120,6 +121,23 @@ class NumberGenerator(param.Parameterized):
     def __abs__ (self): return UnaryOperator(self,operator.abs)
 
 
+operator_symbols = {
+    operator.add:'+',
+    operator.sub:'-',
+    operator.mul:'*',
+    operator.mod:'%',
+    operator.pow:'**',
+    operator.truediv:'/',
+    operator.floordiv:'//',
+    operator.neg:'-',
+    operator.pos:'+',
+    operator.abs:'abs',
+}
+
+def pprint(x, *args, **kwargs):
+    "Pretty-print the provided item, translating operators to their symbols"
+    return x.pprint(*args, **kwargs) if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
+
 
 class BinaryOperator(NumberGenerator):
     """Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator."""
@@ -148,6 +166,10 @@ class BinaryOperator(NumberGenerator):
         return self.operator(self.lhs() if callable(self.lhs) else self.lhs,
                              self.rhs() if callable(self.rhs) else self.rhs, **self.args)
 
+    def pprint(self, *args, **kwargs):
+        return (pprint(self.lhs,      *args, **kwargs) +
+                pprint(self.operator, *args, **kwargs) +
+                pprint(self.rhs,      *args, **kwargs))
 
 
 class UnaryOperator(NumberGenerator):
@@ -171,6 +193,9 @@ class UnaryOperator(NumberGenerator):
     def __call__(self):
         return self.operator(self.operand(),**self.args)
 
+    def pprint(self, *args, **kwargs):
+        return (pprint(self.operator, *args, **kwargs) + '(' +
+                pprint(self.operand,  *args, **kwargs) + ')')
 
 
 class Hash(object):
@@ -208,7 +233,7 @@ class Hash(object):
         elif hasattr(val, 'numer'):
             (numer, denom) = (int(val.numer()), int(val.denom()))
         else:
-            param.main.param.warning("Casting type '%s' to Fraction.fraction"
+            param.main.param.log(param.WARNING, "Casting type '%s' to Fraction.fraction"
                                % type(val).__name__)
             frac = fractions.Fraction(str(val))
             numer, denom = frac.numerator, frac.denominator
@@ -282,8 +307,18 @@ class TimeAwareRandomState(TimeAware):
     explicitly when you construct the RandomDistribution object.
     """
 
+    # Historically, the default random state was seeded with the tuple
+    # (500, 500). The CPython implementation implicitly formed an unsigned
+    # integer seed using the hash of the tuple as in the expression below. Note
+    # that the resulting integer, and therefore the default initial random
+    # state, varies across CPython versions (as the hash algorithm has changed)
+    # and also between 32-bit and 64-bit interpreters.
+    #
+    # Seeding based on hashing is deprecated since Python 3.9 and removed in
+    # Python 3.11; we explicitly continue the historical behavior for the time
+    # being.
     random_generator = param.Parameter(
-        default=random.Random((500,500)), doc=
+        default=random.Random(c_size_t(hash((500,500))).value), doc=
         """
         Random state used by the object. This may may be an instance
         of random.Random from the Python standard library or an
@@ -342,10 +377,10 @@ class TimeAwareRandomState(TimeAware):
         """
         Warn if the object name is not explicitly set.
         """
-        changed_params = dict(self.param.get_param_values(onlychanged=True))
+        changed_params = self.param.values(onlychanged=True)
         if self.time_dependent and ('name' not in changed_params):
-            self.param.warning("Default object name used to set the seed: "
-                               "random values conditional on object instantiation order.")
+            self.param.log(param.WARNING, "Default object name used to set the seed: "
+                           "random values conditional on object instantiation order.")
 
     def _hash_and_seed(self):
         """
@@ -413,7 +448,6 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
     def __call__(self):
         if self.time_dependent:
             self._hash_and_seed()
-
 
 
 class UniformRandom(RandomDistribution):

@@ -1,0 +1,73 @@
+name: docs
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+a[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+b[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Site to build and deploy'
+        type: choice
+        options:
+        - dev
+        - main
+        - dryrun
+        required: true
+        default: dryrun
+  schedule:
+    - cron: '0 13 * * SUN'
+
+jobs:
+  build_docs:
+    name: Documentation
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      DESC: "Documentation build"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Fetch unshallow
+        run: git fetch --prune --tags --unshallow -f
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Set output
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+      - name: graphviz
+        run: sudo apt install graphviz graphviz-dev
+      - name: env setup
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install nbsite==0.8.0rc2
+          python -m pip install -e .[doc]
+      - name: build docs
+        run: |
+          cp examples/user_guide/*.ipynb doc/user_guide/
+          python -m nbsite build --org holoviz --project-name param
+      - name: Deploy dev
+        uses: peaceiris/actions-gh-pages@v3
+        if: |
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dev') ||
+          (github.event_name == 'push' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+        with:
+          personal_token: ${{ secrets.ACCESS_TOKEN }}
+          external_repository: pyviz-dev/param
+          publish_dir: ./builtdocs
+          force_orphan: true
+      - name: Deploy main
+        if: |
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'main') ||
+          (github.event_name == 'push' && !(contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./builtdocs
+          cname: param.holoviz.org
+          force_orphan: true

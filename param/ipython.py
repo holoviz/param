@@ -57,7 +57,7 @@ class ParamPager(object):
     def get_param_info(self, obj, include_super=True):
         """
         Get the parameter dictionary, the list of modifed parameters
-        and the dictionary or parameter values. If include_super is
+        and the dictionary of parameter values. If include_super is
         True, parameters are also collected from the super classes.
         """
 
@@ -67,8 +67,8 @@ class ParamPager(object):
             val_dict = dict((k,p.default) for (k,p) in params.items())
             self_class = obj
         else:
-            changed = [name for (name,_) in obj.param.get_param_values(onlychanged=True)]
-            val_dict = dict(obj.param.get_param_values())
+            changed = list(obj.param.values(onlychanged=True).keys())
+            val_dict = obj.param.values()
             self_class = obj.__class__
 
         if not include_super:

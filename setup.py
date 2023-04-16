@@ -19,16 +19,24 @@ extras_require = {
     # pip doesn't support tests_require
     # (https://github.com/pypa/pip/issues/1197)
     'tests': [
-        'nose',
+        'pytest',
+        'coverage',
         'flake8',
     ],
     'doc': [
         'pygraphviz',
-        'nbsite >=0.6.1',
-        'pydata-sphinx-theme',
+        'nbsite ==0.8.0rc2',
+        'pydata-sphinx-theme <0.9.0',
         'myst-parser',
-        'nbconvert <6.0',
-        'myst_nb'
+        'nbconvert',
+        'graphviz',
+        'myst_nb ==0.12.2',
+        'sphinx-copybutton',
+        'aiohttp',
+        'panel',
+        'pandas',
+        # Temporar pin due to https://github.com/ipython/ipython/issues/13845
+        'ipython !=8.7.0',
     ]
 }
 
@@ -67,14 +75,12 @@ setup_args = dict(
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Development Status :: 5 - Production/Stable",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",

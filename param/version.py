@@ -190,6 +190,7 @@ class Version(object):
                             self._update_from_vcs(output)
                     except: pass
             if output is None:
+                # glob pattern (not regexp) matching vX.Y.Z* tags
                 output = run_cmd([cmd, 'describe', '--long', '--match',
                                   "v[0-9]*.[0-9]*.[0-9]*", '--dirty'],
                                  cwd=os.path.dirname(self.fpath))
@@ -399,8 +400,8 @@ class Version(object):
         prefix = reponame + '-' # Prefix to match
         if setup_dir.startswith(prefix):
             tag = setup_dir[len(prefix):]
-            # Assuming the tag is a version if it isn't empty, 'master' and has a dot in it
-            if tag not in ['', 'master'] and ('.' in tag):
+            # Assuming the tag is a version if it isn't empty, 'master' or 'main' and has a dot in it
+            if tag not in ['', 'master', 'main'] and ('.' in tag):
                 return tag
         return None
 

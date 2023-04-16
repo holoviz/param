@@ -124,12 +124,6 @@ class TestParamDepends(unittest.TestCase):
         self.assertEqual(idx, None)
 
     def test_multiple_named_kwarg_output(self):
-        py_major = sys.version_info.major
-        py_minor = sys.version_info.minor
-        if (py_major < 3 or (py_major == 3 and py_minor < 6)):
-            raise SkipTest('Multiple keyword output declarations only '
-                           'supported in Python >= 3.6, skipping test.')
-
         class P(param.Parameterized):
 
             @param.output(value=param.Integer, value2=param.String)

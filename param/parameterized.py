@@ -11,7 +11,6 @@ __init__.py (providing specialized Parameter types).
 import copy
 import datetime as dt
 import re
-import sys
 import inspect
 import random
 import numbers
@@ -27,6 +26,7 @@ except ImportError:
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
+from threading import get_ident
 from types import FunctionType
 
 import logging
@@ -40,10 +40,7 @@ try:
 except:
     param_pager = None
 
-try:
-    from inspect import getfullargspec
-except:
-    from inspect import getargspec as getfullargspec # python2
+from inspect import getfullargspec
 
 dt_types = (dt.datetime, dt.date)
 
@@ -52,8 +49,6 @@ try:
     dt_types = dt_types + (np.datetime64,)
 except:
     pass
-
-basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -391,7 +386,7 @@ def get_method_owner(method):
         return None
     if isinstance(method, partial):
         method = method.func
-    return method.__self__ if sys.version_info.major >= 3 else method.im_self
+    return method.__self__
 
 
 @accept_arguments
@@ -412,8 +407,9 @@ def depends(func, *dependencies, **kw):
     on_init = kw.pop("on_init", False)
 
     if iscoroutinefunction(func):
-        from ._async import generate_depends
-        _depends = generate_depends(func)
+        @wraps(func)
+        async def _depends(*args, **kw):
+            return await func(*args, **kw)
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -422,7 +418,7 @@ def depends(func, *dependencies, **kw):
     deps = list(dependencies)+list(kw.values())
     string_specs = False
     for dep in deps:
-        if isinstance(dep, basestring):
+        if isinstance(dep, str):
             string_specs = True
         elif not isinstance(dep, Parameter):
             raise ValueError('The depends decorator only accepts string '
@@ -437,7 +433,7 @@ def depends(func, *dependencies, **kw):
                              'instance not %s.' % owner)
 
     if (any(isinstance(dep, Parameter) for dep in deps) and
-        any(isinstance(dep, basestring) for dep in deps)):
+        any(isinstance(dep, str) for dep in deps)):
         raise ValueError('Dependencies must either be defined as strings '
                          'referencing parameters on the class defining '
                          'the decorated method or as parameter instances. '
@@ -450,8 +446,10 @@ def depends(func, *dependencies, **kw):
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         if iscoroutinefunction(func):
-            from ._async import generate_callback
-            cb = generate_callback(func, dependencies, kw)
+            async def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                await func(*args, **dep_kwargs)
         else:
             def cb(*events):
                 args = (getattr(dep.owner, dep.name) for dep in dependencies)
@@ -481,8 +479,7 @@ def output(func, *output, **kw):
     of a Parameterized class can be queried using the
     Parameterized.param.outputs method. By default the output will
     inherit the method name but a custom name can be declared by
-    expressing the Parameter type using a keyword argument. Declaring
-    multiple return types using keywords is only supported in Python >= 3.6.
+    expressing the Parameter type using a keyword argument.
 
     The simplest declaration simply declares the method returns an
     object without any type guarantees, e.g.:
@@ -499,10 +496,9 @@ def output(func, *output, **kw):
 
       @output(custom_name=param.Number())
 
-    Multiple outputs may be declared using keywords mapping from
-    output name to the type for Python >= 3.6 or using tuples of the
-    same format, which is supported for earlier versions, i.e. these
-    two declarations are equivalent:
+    Multiple outputs may be declared using keywords mapping from output name
+    to the type or using tuples of the same format, i.e. these two declarations
+    are equivalent:
 
       @output(number=param.Number(), string=param.String())
 
@@ -524,12 +520,7 @@ def output(func, *output, **kw):
             else:
                 outputs.append((None, out, i))
     elif kw:
-        py_major = sys.version_info.major
-        py_minor = sys.version_info.minor
-        if (py_major < 3 or (py_major == 3 and py_minor < 6)) and len(kw) > 1:
-            raise ValueError('Multiple output declaration using keywords '
-                             'only supported in Python >= 3.6.')
-          # (requires keywords to be kept ordered, which was not true in previous versions)
+        # (requires keywords to be kept ordered, which was not true in previous versions)
         outputs = [(name, otype, i if len(kw) > 1 else None)
                    for i, (name, otype) in enumerate(kw.items())]
     else:
@@ -673,8 +664,11 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
-        from ._async import generate_caller
-        caller = generate_caller(function, what=what, changed=changed, callback=callback, skip_event=_skip_event)
+        async def caller(*events):
+            if callback:
+                callback(*events)
+            if not _skip_event or not _skip_event(*events, what=what, changed=changed):
+                await function()
     else:
         def caller(*events):
             if callback: callback(*events)
@@ -694,9 +688,8 @@ def _dict_update(dictionary, **kwargs):
 
 
 def _add_doc(obj, docstring):
-    """Add a docstring to a namedtuple, if on python3 where that's allowed"""
-    if sys.version_info[0]>2:
-        obj.__doc__ = docstring
+    """Add a docstring to a namedtuple"""
+    obj.__doc__ = docstring
 
 
 PInfo = namedtuple("PInfo", "inst cls name pobj what")
@@ -1407,7 +1400,7 @@ class String(Parameter):
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
-        if not isinstance(val, basestring):
+        if not isinstance(val, str):
             raise ValueError("String parameter %r only takes a string value, "
                              "not value of type %s." % (self.name, type(val)))
 
@@ -1475,7 +1468,7 @@ class Comparator:
 
     equalities = {
         numbers.Number: operator.eq,
-        basestring: operator.eq,
+        str: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq,
     }
@@ -3135,32 +3128,26 @@ dbprint_prefix=None
 
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
-if sys.version_info.major >= 3:
-    from threading import get_ident
-    def recursive_repr(fillvalue='...'):
-        'Decorator to make a repr function return fillvalue for a recursive call'
+def recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
 
-        def decorating_function(user_function):
-            repr_running = set()
+    def decorating_function(user_function):
+        repr_running = set()
 
-            def wrapper(self, *args, **kwargs):
-                key = id(self), get_ident()
-                if key in repr_running:
-                    return fillvalue
-                repr_running.add(key)
-                try:
-                    result = user_function(self, *args, **kwargs)
-                finally:
-                    repr_running.discard(key)
-                return result
-            return wrapper
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
 
-        return decorating_function
-else:
-    def recursive_repr(fillvalue='...'):
-        def decorating_function(user_function):
-            return user_function
-        return decorating_function
+    return decorating_function
+
 
 
 @add_metaclass(ParameterizedMetaclass)

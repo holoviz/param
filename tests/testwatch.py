@@ -366,7 +366,6 @@ class TestWatch(unittest.TestCase):
         obj.param.update(a=23, b=42, c=99)
 
         self.assertEqual(accumulator.call_count(), 2)
-        # Order may be undefined for Python <3.6
         for args in [accumulator.args_for_call(i) for i in [0,1]]:
             if len(args) == 1: # ['c']
                 self.assertEqual(args[0].name, 'c')
@@ -401,7 +400,6 @@ class TestWatch(unittest.TestCase):
             obj.c = 99
 
         self.assertEqual(accumulator.call_count(), 2)
-        # Order may be undefined for Python <3.6
         for args in [accumulator.args_for_call(i) for i in [0, 1]]:
             if len(args) == 1:  # ['c']
                 self.assertEqual(args[0].name, 'c')
@@ -716,7 +714,6 @@ class TestWatchValues(unittest.TestCase):
         obj.param.update(a=23, b=42, c=99)
 
         self.assertEqual(accumulator.call_count(), 2)
-        # Order may be undefined for Python <3.6
         for kwargs in [accumulator.kwargs_for_call(i) for i in [0,1]]:
             if len(kwargs) == 1: # ['c']
                 self.assertEqual(kwargs, {'c':99})

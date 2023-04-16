@@ -23,6 +23,7 @@ import glob
 import re
 import datetime as dt
 import collections
+import warnings
 
 from collections import OrderedDict
 from contextlib import contextmanager
@@ -30,7 +31,7 @@ from numbers import Real
 
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, basestring, dt_types,
+    descendents, get_logger, instance_descriptor, dt_types,
     _dict_update)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
@@ -53,9 +54,6 @@ try:
     import collections.abc as collections_abc
 except ImportError:
     collections_abc = collections
-
-if sys.version_info[0] >= 3:
-    unicode = str
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
@@ -83,20 +81,34 @@ def as_unicode(obj):
     """
     Safely casts any object to unicode including regular string
     (i.e. bytes) types in python 2.
+
+    ..deprecated:: 2.0.0
     """
-    if sys.version_info.major < 3 and isinstance(obj, str):
-        obj = obj.decode('utf-8')
-    return unicode(obj)
+    # PARAM3_DEPRECATION
+    warnings.warn(
+        message="`as_unicode' is deprecated",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+    return str(obj)
 
 
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
     ordered, and vanilla Python dictionaries are ordered for Python 3.6+
+
+    ..deprecated:: 2.0.0
     """
+    # PARAM3_DEPRECATION
+    warnings.warn(
+        message="`as_unicode' is deprecated",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
     vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
-    return isinstance(d, (OrderedDict))or (vanilla_odicts and isinstance(d, dict))
+    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
 
 
 def hashable(x):
@@ -144,7 +156,7 @@ def named_objs(objlist, namesdict=None):
         elif hasattr(obj, '__name__'):
             k = obj.__name__
         else:
-            k = as_unicode(obj)
+            k = str(obj)
         objs[k] = obj
     return objs
 
@@ -552,10 +564,6 @@ class Dynamic(Parameter):
     Note that at present, the callable object must allow attributes
     to be set on itself.
 
-    [Python 2.4 limitation: the callable object must be an instance of a
-    callable class, rather than a named function or a lambda function,
-    otherwise the object will not be picklable or deepcopyable.]
-
     If set as time_dependent, setting the Dynamic.time_fn allows the
     production of dynamic values to be controlled: a new value will be
     produced only if the current value of time_fn is different from
@@ -742,7 +750,7 @@ class Bytes(Parameter):
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
 
-    Similar to the String parameter, but instead of type basestring
+    Similar to the String parameter, but instead of type string
     this parameter only allows objects of type bytes (e.g. b'bytes').
     """
 
@@ -1453,13 +1461,7 @@ class Selector(SelectorBase):
 
         autodefault = Undefined
         if objects is not Undefined and objects:
-            if is_ordered_dict(objects):
-                autodefault = list(objects.values())[0]
-            elif isinstance(objects, dict):
-                main.param.warning("Parameter default value is arbitrary due to "
-                                   "dictionaries prior to Python 3.6 not being "
-                                   "ordered; should use an ordered dict or "
-                                   "supply an explicit default value.")
+            if isinstance(objects, dict):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, list):
                 autodefault = objects[0]
@@ -2322,7 +2324,7 @@ class Color(Parameter):
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None):
             return
-        if not isinstance(val, basestring):
+        if not isinstance(val, str):
             raise ValueError("Color parameter %r expects a string value, "
                              "not an object of type %s." % (self.name, type(val)))
 

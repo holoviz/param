@@ -127,22 +127,15 @@ class ParamPager:
 
     def sort_by_precedence(self, parameters):
         """
-        Sort the provided dictionary of parameters by their precedence value.
-        In Python 3, preserves the original ordering for parameters with the
-        same precedence; for Python 2 sorts them lexicographically by name,
-        unless explicit precedences are provided.
+        Sort the provided dictionary of parameters by their precedence value,
+        preserving the original ordering for parameters with the
+        same precedence.
         """
         params = [(p, pobj) for p, pobj in parameters.items()]
         key_fn = lambda x: x[1].precedence if x[1].precedence is not None else 1e-8
         sorted_params = sorted(params, key=key_fn)
         groups = itertools.groupby(sorted_params, key=key_fn)
-        # Params preserve definition order in Python 3.6+
-        dict_ordered = (
-            (sys.version_info.major == 3 and sys.version_info.minor >= 6) or
-            (sys.version_info.major > 3) or
-            all(p.precedence is not None for p in parameters.values())
-        )
-        ordered_groups = [list(grp) if dict_ordered else sorted(grp) for (_, grp) in groups]
+        ordered_groups = [list(grp) for (_, grp) in groups]
         ordered_params = [el[0] for group in ordered_groups for el in group
                           if (el[0] != 'name' or el[0] in parameters)]
         return ordered_params

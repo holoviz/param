@@ -1163,7 +1163,7 @@ def concrete_descendents(parentclass):
     Only non-abstract classes will be included.
     """
     return {c.__name__:c for c in descendents(parentclass)
-                if not _is_abstract(c)}
+            if not _is_abstract(c)}
 
 
 class Composite(Parameter):
@@ -1565,7 +1565,7 @@ class ObjectSelector(Selector):
     """
     def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
-                                            empty_default=True, **kwargs)
+                         empty_default=True, **kwargs)
 
 
 class ClassSelector(SelectorBase):
@@ -1870,7 +1870,7 @@ class Series(ClassSelector):
         from pandas import Series as pdSeries
         self.rows = rows
         super().__init__(pdSeries, default=default, allow_None=allow_None,
-                                    **params)
+                         **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -2115,7 +2115,7 @@ class FileSelector(Selector):
         self.path = path
         self.update()
         super().__init__(default=default, objects=self.objects,
-                                           empty_default=True, **kwargs)
+                         empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super()._on_set(attribute, new, old)

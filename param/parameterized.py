@@ -392,7 +392,7 @@ def get_method_owner(method):
 @accept_arguments
 def depends(func, *dependencies, watch=False, on_init=False, **kw):
     """Annotates a function or Parameterized method to express its dependencies.
-    
+
     The specified dependencies can be either be Parameter instances or if a
     method is supplied they can be defined as strings referring to Parameters
     of the class, or Parameters of subobjects (Parameterized objects that are

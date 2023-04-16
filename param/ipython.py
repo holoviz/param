@@ -20,7 +20,6 @@ exist in the active namespace.
 __author__ = "Jean-Luc Stevens"
 
 import re
-import sys
 import itertools
 import textwrap
 import param
@@ -73,7 +72,7 @@ class ParamPager:
 
         if not include_super:
             params = {k:v for (k,v) in params.items()
-                          if k in self_class.__dict__}
+                      if k in self_class.__dict__}
 
         params.pop('name') # Already displayed in the title.
         return (params, val_dict, changed)

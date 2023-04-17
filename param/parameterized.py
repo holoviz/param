@@ -1177,9 +1177,11 @@ class Parameter(object):
 
         if old is NotImplemented:
             return
+        self._trigger_event(attribute, old, value)
 
+    def _trigger_event(self, attribute, old, new):
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner,
-                      old=old, new=value, type=None)
+                      old=old, new=new, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
@@ -1523,9 +1525,6 @@ class Parameters(object):
     class or the instance as necessary.
     """
 
-    _disable_stubs = False # Flag used to disable stubs in the API1 tests
-                          # None for no action, True to raise and False to warn.
-
     def __init__(self_, cls, self=None):
         """
         cls is the Parameterized class which is always set.
@@ -1704,28 +1703,6 @@ class Parameters(object):
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
-    @classmethod
-    def deprecate(cls, fn):
-        """
-        Decorator to issue warnings for API moving onto the param
-        namespace and to add a docstring directing people to the
-        appropriate method.
-        """
-        def inner(*args, **kwargs):
-            if cls._disable_stubs:
-                raise AssertionError('Stubs supporting old API disabled')
-            elif cls._disable_stubs is None:
-                pass
-            elif cls._disable_stubs is False:
-                get_logger(name=args[0].__class__.__name__).log(
-                    WARNING, 'Use method %r via param namespace ' % fn.__name__)
-            return fn(*args, **kwargs)
-
-        inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
-        return inner
-
-
     @classmethod
     def _changed(cls, event):
         """
@@ -1733,7 +1710,6 @@ class Parameters(object):
         changed such that old != new.
         """
         return not Comparator.is_equal(event.old, event.new)
-
 
     def _instantiate_param(self_, param_obj, dict_=None, key=None):
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
@@ -3476,91 +3452,6 @@ class Parameterized(object):
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
-
-
-    # API to be accessed via param namespace
-
-    @classmethod
-    @Parameters.deprecate
-    def _add_parameter(cls, param_name,param_obj):
-        return cls.param._add_parameter(param_name,param_obj)
-
-    @bothmethod
-    @Parameters.deprecate
-    def params(cls,parameter_name=None):
-        return cls.param.params(parameter_name=parameter_name)
-
-    @classmethod
-    @Parameters.deprecate
-    def set_default(cls,param_name,value):
-        return cls.param.set_default(param_name,value)
-
-    @classmethod
-    @Parameters.deprecate
-    def print_param_defaults(cls):
-        return cls.param.print_param_defaults()
-
-    @bothmethod
-    @Parameters.deprecate
-    def set_param(self_or_cls,*args,**kwargs):
-        return self_or_cls.param.set_param(*args,**kwargs)
-
-    @bothmethod
-    @Parameters.deprecate
-    def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
-        return self_or_cls.param.set_dynamic_time_fn(time_fn,sublistattr=sublistattr)
-
-    @bothmethod
-    @Parameters.deprecate
-    def get_param_values(self_or_cls,onlychanged=False):
-        return self_or_cls.param.get_param_values(onlychanged=onlychanged)
-
-    @bothmethod
-    @Parameters.deprecate
-    def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
-        return cls_or_slf.param.force_new_dynamic_value(name)
-
-    @bothmethod
-    @Parameters.deprecate
-    def get_value_generator(cls_or_slf,name): # pylint: disable-msg=E0213
-        return cls_or_slf.param.get_value_generator(name)
-
-    @bothmethod
-    @Parameters.deprecate
-    def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
-        return cls_or_slf.param.inspect_value(name)
-
-    @Parameters.deprecate
-    def _set_name(self,name):
-        return self.param._set_name(name)
-
-    @Parameters.deprecate
-    def __db_print(self,level,msg,*args,**kw):
-        return self.param.__db_print(level,msg,*args,**kw)
-
-    @Parameters.deprecate
-    def warning(self,msg,*args,**kw):
-        return self.param.warning(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def message(self,msg,*args,**kw):
-        return self.param.message(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def verbose(self,msg,*args,**kw):
-        return self.param.verbose(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def debug(self,msg,*args,**kw):
-        return self.param.debug(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def print_param_values(self):
-        return self.param.print_param_values()
-
-    @Parameters.deprecate
-    def defaults(self):
-        return self.param.defaults()
 
 
 

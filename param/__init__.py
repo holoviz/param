@@ -25,6 +25,10 @@ import re
 import datetime as dt
 import collections
 
+from collections import OrderedDict
+from contextlib import contextmanager
+from numbers import Real
+
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, basestring, dt_types,
@@ -36,8 +40,6 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 
-from collections import OrderedDict
-from numbers import Real
 
 # Determine up-to-date version information, if possible, but with a
 # safe fallback to ensure that this file and parameterized.py are the
@@ -1221,6 +1223,178 @@ class SelectorBase(Parameter):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 
 
+class ListProxy(list):
+    """
+    Container that supports both list-style and dictionary-style
+    updates. Useful for replacing code that originally accepted lists
+    but needs to support dictionary access (typically for naming
+    items).
+    """
+
+    def __init__(self, iterable, parameter=None):
+        super(ListProxy, self).__init__(iterable)
+        self._parameter = parameter
+
+    def _warn(self, method):
+        clsname = type(self._parameter).__name__
+        get_logger().warning(
+            '{clsname}.objects{method} is deprecated if objects attribute '
+            'was declared as a dictionary. Use `{clsname}.objects[label] '
+            '= value` instead.'.format(clsname=clsname, method=method)
+        )
+
+    @contextmanager
+    def _trigger(self, trigger=True):
+        trigger = 'objects' in self._parameter.watchers and trigger
+        old = dict(self._parameter.names) or list(self._parameter._objects)
+        yield
+        if trigger:
+            value = self._parameter.names or self._parameter._objects
+            self._parameter._trigger_event('objects', old, value)
+
+    def __getitem__(self, index):
+        if self._parameter.names:
+            return self._parameter.names[index]
+        return super(ListProxy, self).__getitem__(index)
+
+    def __setitem__(self, index, object, trigger=True):
+        if isinstance(index, (int, slice)):
+            if self._parameter.names:
+                self._warn('[index] = object')
+            with self._trigger():
+                super(ListProxy, self).__setitem__(index, object)
+                self._parameter._objects[index] = object
+            return
+        if self and not self._parameter.names:
+            self._parameter.names = named_objs(self)
+        with self._trigger(trigger):
+            if index in self._parameter.names:
+                old = self._parameter.names[index]
+                idx = self.index(old)
+                super(ListProxy, self).__setitem__(idx, object)
+                self._parameter._objects[idx] = object
+            else:
+                super(ListProxy, self).append(object)
+                self._parameter._objects.append(object)
+            self._parameter.names[index] = object
+
+    def __eq__(self, other):
+        eq = super(ListProxy, self).__eq__(other)
+        if self._parameter.names and eq is NotImplemented:
+            return dict(zip(self._parameter.names, self)) == other
+        return eq
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def append(self, object):
+        if self._parameter.names:
+            self._warn('.append')
+        with self._trigger():
+            super(ListProxy, self).append(object)
+            self._parameter._objects.append(object)
+
+    def copy(self):
+        if self._parameter.names:
+            return self._parameter.names.copy()
+        return list(self)
+
+    def clear(self):
+        with self._trigger():
+            super(ListProxy, self).clear()
+            self._parameter._objects.clear()
+            self._parameter.names.clear()
+
+    def extend(self, objects):
+        if self._parameter.names:
+            self._warn('.append')
+        with self._trigger():
+            super(ListProxy, self).extend(objects)
+            self._parameter._objects.extend(objects)
+
+    def get(self, key, default=None):
+        if self._parameter.names:
+            return self._parameter.names.get(key, default)
+        return named_objs(self).get(key, default)
+
+    def insert(self, index, object):
+        if self._parameter.names:
+            self._warn('.insert')
+        with self._trigger():
+            super(ListProxy, self).insert(index, object)
+            self._parameter._objects.insert(index, object)
+
+    def items(self):
+        if self._parameter.names:
+            return self._parameter.names.items()
+        return named_objs(self).items()
+
+    def keys(self):
+        if self._parameter.names:
+            return self._parameter.names.keys()
+        return named_objs(self).keys()
+
+    def pop(self, *args):
+        index = args[0] if args else -1
+        if isinstance(index, int):
+            with self._trigger():
+                super(ListProxy, self).pop(index)
+                object = self._parameter._objects.pop(index)
+                if self._parameter.names:
+                    self._parameter.names = {
+                        k: v for k, v in self._parameter.names.items()
+                        if v is object
+                    }
+            return
+        if self and not self._parameter.names:
+            raise ValueError(
+                'Cannot pop an object from {clsname}.objects if '
+                'objects was not declared as a dictionary.'
+            )
+        with self._trigger():
+            object = self._parameter.names.pop(*args)
+            super(ListProxy, self).remove(object)
+            self._parameter._objects.remove(object)
+        return object
+
+    def remove(self, object):
+        with self._trigger():
+            super(ListProxy, self).remove(object)
+            self._parameter._objects.remove(object)
+            if self._parameter.names:
+                copy = self._parameter.names.copy()
+                self._parameter.names.clear()
+                self._parameter.names.update({
+                    k: v for k, v in copy.items() if v is not object
+                })
+
+    def update(self, objects, **items):
+        if not self._parameter.names:
+            self._parameter.names = named_objs(self)
+        objects = objects.items() if isinstance(objects, dict) else objects
+        with self._trigger():
+            for i, o in enumerate(objects):
+                if not isinstance(o, collections_abc.Sequence):
+                    raise TypeError(
+                        'cannot convert dictionary update sequence element #{i} to a sequence'.format(i=i)
+                    )
+                o = tuple(o)
+                n = len(o)
+                if n != 2:
+                    raise ValueError(
+                        'dictionary update sequence element #{i} has length {n}; 2 is required'.format(i=i, n=n)
+                    )
+                k, v = o
+                self.__setitem__(k, v, trigger=False)
+            for k, v in items.items():
+                self.__setitem__(k, v, trigger=False)
+
+    def values(self):
+        if self._parameter.names:
+            return self._parameter.names.values()
+        return named_objs(self).values()
+
+
 def _compute_selector_default(p):
     """
     Using a function instead of setting default to [] in _slot_defaults, as
@@ -1233,6 +1407,7 @@ def _compute_selector_default(p):
 
 def _compute_selector_checking_default(p):
     return len(p.objects) != 0
+
 
 class Selector(SelectorBase):
     """
@@ -1263,10 +1438,10 @@ class Selector(SelectorBase):
     empty_default is an internal argument that does not have a slot.
     """
 
-    __slots__ = ['objects', 'compute_default_fn', 'check_on_set', 'names']
+    __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
     _slot_defaults = _dict_update(
-        SelectorBase._slot_defaults, objects=_compute_selector_default,
+        SelectorBase._slot_defaults, _objects=_compute_selector_default,
         compute_default_fn=None, check_on_set=_compute_selector_checking_default,
         allow_None=None, instantiate=False, default=None,
     )
@@ -1292,12 +1467,7 @@ class Selector(SelectorBase):
 
         default = autodefault if (not empty_default and default is Undefined) else default
 
-        if isinstance(objects, collections_abc.Mapping):
-            self.names = objects
-            self.objects = list(objects.values())
-        else:
-            self.names = None
-            self.objects = objects
+        self.objects = objects
         self.compute_default_fn = compute_default_fn
         self.check_on_set = check_on_set
 
@@ -1308,6 +1478,19 @@ class Selector(SelectorBase):
             self.allow_None = self._slot_defaults['allow_None']
         if self.default is not None and self.check_on_set is True:
             self._validate(self.default)
+
+    @property
+    def objects(self):
+        return ListProxy(self._objects, self)
+
+    @objects.setter
+    def objects(self, objects):
+        if isinstance(objects, collections_abc.Mapping):
+            self.names = objects
+            self._objects = list(objects.values())
+        else:
+            self.names = {}
+            self._objects = objects
 
     # Note that if the list of objects is changed, the current value for
     # this parameter in existing POs could be outside of the new range.
@@ -1356,22 +1539,22 @@ class Selector(SelectorBase):
             raise ValueError("%s not in parameter%s's list of possible objects, "
                              "valid options include %s" % (val, attrib_name, items))
 
-    def _ensure_value_is_in_objects(self,val):
+    def _ensure_value_is_in_objects(self, val):
         """
         Make sure that the provided value is present on the objects list.
         Subclasses can override if they support multiple items on a list,
         to check each item instead.
         """
         if not (val in self.objects):
-            self.objects.append(val)
+            self._objects.append(val)
 
     def get_range(self):
         """
         Return the possible objects to which this parameter could be set.
 
-        (Returns the dictionary {object.name:object}.)
+        (Returns the dictionary {object.name: object}.)
         """
-        return named_objs(self.objects, self.names)
+        return named_objs(self._objects, self.names)
 
 
 class ObjectSelector(Selector):
@@ -1560,7 +1743,7 @@ class Array(ClassSelector):
 
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
-        super(Array, self).__init__(ndarray, allow_None=True, default=default, **params)
+        super(Array, self).__init__(ndarray, default=default, **params)
 
     @classmethod
     def serialize(cls, value):
@@ -2003,6 +2186,16 @@ class MultiFileSelector(ListSelector):
         return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
 
 
+def _to_datetime(x):
+    """
+    Internal function that will convert date objs to datetime objs, used
+    for comparing date and datetime objects without error.
+    """
+    if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
+        return dt.datetime(*x.timetuple()[:6])
+    return x
+
+
 class Date(Number):
     """
     Date parameter of datetime or date type.
@@ -2030,6 +2223,11 @@ class Date(Number):
                 "Step can only be None, a datetime "
                 "or datetime type, not type %r." % type(val)
             )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds):
+        val = _to_datetime(val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
+        return super()._validate_bounds(val, bounds, inclusive_bounds)
 
     @classmethod
     def serialize(cls, value):
@@ -2233,6 +2431,11 @@ class DateRange(Range):
     Bounds must be specified as datetime or date types (see param.dt_types).
     """
 
+    def _validate_bounds(self, val, bounds, inclusive_bounds):
+        val = None if val is None else map(_to_datetime, val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
+        super()._validate_bounds(val, bounds, inclusive_bounds)
+
     def _validate_value(self, val, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from
         # NumericTuple which check that the tuple values are numbers and
@@ -2379,7 +2582,6 @@ class Event(Boolean):
             self._reset_event(obj, val)
 
 
-from contextlib import contextmanager
 @contextmanager
 def exceptions_summarized():
     """Useful utility for writing docs that need to show expected errors.

@@ -856,7 +856,27 @@ class ParameterMetaclass(type):
 
 
 @add_metaclass(ParameterMetaclass)
-class Parameter(object):
+class _ParameterBase(object):
+
+    @classmethod
+    def _modified_slots_defaults(cls):
+        defaults = cls._slot_defaults.copy()
+        defaults['label'] = defaults.pop('_label')
+        return defaults
+
+    @classmethod
+    def __init_subclass__(cls):
+        sig = inspect.signature(cls)
+        defaults = cls._modified_slots_defaults()
+        params = [
+            inspect.Parameter(name=k, kind=inspect.Parameter.KEYWORD_ONLY, default=v)
+            for k, v in defaults.items()
+        ]
+        nsig = sig.replace(parameters=params)
+        cls.__signature__ = nsig
+
+
+class Parameter(_ParameterBase):
     """
     An attribute descriptor for declaring parameters.
 
@@ -1099,23 +1119,6 @@ class Parameter(object):
         self._set_allow_None(allow_None)
         self.watchers = {}
         self.per_instance = per_instance
-
-    @classmethod
-    def _modified_slots_defaults(cls):
-        defaults = cls._slot_defaults.copy()
-        defaults['label'] = defaults.pop('_label')
-        return defaults
-
-    @classmethod
-    def __init_subclass__(cls):
-        sig = inspect.signature(cls)
-        defaults = cls._modified_slots_defaults()
-        params = [
-            inspect.Parameter(name=k, kind=inspect.Parameter.KEYWORD_ONLY, default=v)
-            for k, v in defaults.items()
-        ]
-        nsig = sig.replace(parameters=params)
-        cls.__signature__ = nsig
 
     @classmethod
     def serialize(cls, value):

@@ -16,6 +16,7 @@ import inspect
 import random
 import numbers
 import operator
+import typing
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -1391,6 +1392,12 @@ class String(Parameter):
     __slots__ = ['regex']
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
+
+    @typing.overload
+    def __init__(self, default="", regex=None, precedence=None, doc=None, label=None,
+        instantiate=False, constant=False, readonly=False, pickle_default_value=True,
+        allow_None=False, per_instance=True):
+        ...
 
     def __init__(self, default=Undefined, regex=Undefined, **kwargs):
         super(String, self).__init__(default=default, **kwargs)

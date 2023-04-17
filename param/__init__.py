@@ -1395,21 +1395,48 @@ class ListProxy(list):
         return named_objs(self).values()
 
 
-def _compute_selector_default(p):
+class __compute_selector_default:
     """
     Using a function instead of setting default to [] in _slot_defaults, as
     if it were modified in place later, which would happen with check_on_set set to False,
     then the object in _slot_defaults would itself be updated and the next Selector
     instance created wouldn't have [] as the default but a populated list.
     """
-    return []
+    def __call__(self, p):
+        return []
+
+    def __repr__(self):
+        return repr([])
+
+_compute_selector_default = __compute_selector_default()
 
 
-def _compute_selector_checking_default(p):
-    return len(p.objects) != 0
+class __compute_selector_checking_default:
+    def __call__(self, p):
+        return len(p.objects) != 0
+
+    def __repr__(self):
+        return '<len(objects) != 0>'
+    
+_compute_selector_checking_default = __compute_selector_checking_default()
 
 
-class Selector(SelectorBase):
+class _SignatureSelector(Parameter):
+
+    _slot_defaults = _dict_update(
+        SelectorBase._slot_defaults, _objects=_compute_selector_default,
+        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
+        allow_None=None, instantiate=False, default=None,
+    )
+
+    @classmethod
+    def _modified_slots_defaults(cls):
+        defaults = super()._modified_slots_defaults()
+        defaults['objects'] = defaults.pop('_objects')
+        return defaults
+
+
+class Selector(SelectorBase, _SignatureSelector):
     """
     Parameter whose value must be one object from a list of possible objects.
 
@@ -1439,12 +1466,6 @@ class Selector(SelectorBase):
     """
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
-
-    _slot_defaults = _dict_update(
-        SelectorBase._slot_defaults, _objects=_compute_selector_default,
-        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
-        allow_None=None, instantiate=False, default=None,
-    )
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.

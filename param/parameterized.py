@@ -1273,7 +1273,7 @@ class Parameter(object):
             elif obj is None:
                 _old = self.default
                 self.default = val
-            elif not obj.initialized:
+            elif not obj._initialized:
                 _old = obj.__dict__.get(self._internal_name, self.default)
                 obj.__dict__[self._internal_name] = val
             else:
@@ -1291,7 +1291,7 @@ class Parameter(object):
         self._post_setter(obj, val)
 
         if obj is not None:
-            if not getattr(obj, 'initialized', False):
+            if not getattr(obj, '_initialized', False):
                 return
             obj.param._update_deps(self.name)
 
@@ -1448,10 +1448,10 @@ def as_uninitialized(fn):
     @wraps(fn)
     def override_initialization(self_,*args,**kw):
         parameterized_instance = self_.self
-        original_initialized = parameterized_instance.initialized
-        parameterized_instance.initialized = False
+        original_initialized = parameterized_instance._initialized
+        parameterized_instance._initialized = False
         fn(parameterized_instance, *args, **kw)
-        parameterized_instance.initialized = original_initialized
+        parameterized_instance._initialized = original_initialized
     return override_initialization
 
 
@@ -1591,7 +1591,7 @@ class Parameters(object):
         inst = self_.self
         parameters = self_.objects(False) if inst is None else inst.param.objects(False)
         p = parameters[key]
-        if (inst is not None and getattr(inst, 'initialized', False) and p.per_instance and
+        if (inst is not None and getattr(inst, '_initialized', False) and p.per_instance and
             not getattr(inst, '_disable_instance__params', False)):
             if key not in inst._instance__params:
                 try:
@@ -2002,7 +2002,7 @@ class Parameters(object):
 
         if instance and self_.self is not None:
             if instance == 'existing':
-                if getattr(self_.self, 'initialized', False) and self_.self._instance__params:
+                if getattr(self_.self, '_initialized', False) and self_.self._instance__params:
                     return dict(pdict, **self_.self._instance__params)
                 return pdict
             else:
@@ -3216,7 +3216,7 @@ class Parameterized(object):
 
         # Flag that can be tested to see if e.g. constant Parameters
         # can still be set
-        self.initialized = False
+        self._initialized = False
         self._parameters_state = {
             "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
             "TRIGGER": False,
@@ -3233,7 +3233,7 @@ class Parameterized(object):
 
         self.param._update_deps(init=True)
 
-        self.initialized = True
+        self._initialized = True
 
     @property
     def param(self):
@@ -3267,7 +3267,7 @@ class Parameterized(object):
 
         During this process the object is considered uninitialized.
         """
-        self.initialized=False
+        self._initialized=False
 
         # When making a copy the internal watchers have to be
         # recreated and point to the new instance
@@ -3296,7 +3296,7 @@ class Parameterized(object):
 
         for name,value in state.items():
             setattr(self,name,value)
-        self.initialized=True
+        self._initialized=True
 
     @recursive_repr()
     def __repr__(self):

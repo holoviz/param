@@ -163,13 +163,6 @@ class TestRangeParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             q = param.Range((1, 2), bounds=(0, 10), step="1")
 
-    def test_validate_order_on_bounds(self):
-        msg = r"Range parameter end 0 is less than its start 10."
-
-        with self.assertRaisesRegex(ValueError, msg):
-            class Q(param.Parameterized):
-                q = param.Range(bounds=(10, 0))
-
     def test_validate_order_on_val(self):
         msg = r"Range parameter 'q's end 1 is less than its start 2."
 

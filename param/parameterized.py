@@ -115,7 +115,7 @@ def logging_level(level):
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
 
     if level not in level_names:
-        raise Exception("Level {!r} not in {!r}".format(level, levels))
+        raise Exception(f"Level {level!r} not in {levels!r}")
 
     param_logger = get_logger()
     logging_level = param_logger.getEffectiveLevel()
@@ -810,7 +810,7 @@ class Watcher(_Watcher):
 
     def __str__(self):
         cls = type(self)
-        attrs = ', '.join(['{}={!r}'.format(f, getattr(self, f)) for f in cls._fields])
+        attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
         return f"{cls.__name__}({attrs})"
 
 
@@ -1924,7 +1924,7 @@ class Parameters:
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
                 self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("'{}' is not a parameter of {}".format(k, self_or_cls.name))
+                raise ValueError(f"'{k}' is not a parameter of {self_or_cls.name}")
             try:
                 setattr(self_or_cls, k, v)
             except:
@@ -2571,7 +2571,7 @@ class Parameters:
         """Print the values of all this object's Parameters."""
         self = self_.self
         for name, val in self.param.values().items():
-            print('{}.{} = {}'.format(self.name,name,val))
+            print(f'{self.name}.{name} = {val}')
 
     def warning(self_, msg,*args,**kw):
         """
@@ -2743,7 +2743,7 @@ class ParameterizedMetaclass(type):
             for (k,v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
                     param_type = v.__class__.__name__
-                    keyword_group.append("{}={}".format(k, param_type))
+                    keyword_group.append(f"{k}={param_type}")
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
@@ -3296,7 +3296,7 @@ class Parameterized:
         all the parameters of this object.
         """
         try:
-            settings = ['{}={}'.format(name, repr(val))
+            settings = [f'{name}={val!r}'
                         # PARAM2_DEPRECATION: Update to self.param.values.items()
                         # (once python2 support is dropped)
                         for name, val in self.param.get_param_values()]
@@ -3306,7 +3306,7 @@ class Parameterized:
 
     def __str__(self):
         """Return a short representation of the name and class of this object."""
-        return "<{} {}>".format(self.__class__.__name__,self.name)
+        return f"<{self.__class__.__name__} {self.name}>"
 
 
     # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
@@ -3367,7 +3367,7 @@ class Parameterized:
 
             if value is None:
                 if unknown_value is False:
-                    raise Exception("{}: unknown value of {!r}".format(self.name,k))
+                    raise Exception(f"{self.name}: unknown value of {k!r}")
                 elif unknown_value is None:
                     # i.e. suppress repr
                     continue
@@ -3385,7 +3385,7 @@ class Parameterized:
                   (hasattr(spec, 'keywords') and (spec.keywords is not None))):
                 # Explicit modified keywords or parameters in
                 # precendence order (if **kwargs present)
-                keywords.append('{}={}'.format(k, value))
+                keywords.append(f'{k}={value}')
 
             processed.append(k)
 

@@ -109,7 +109,7 @@ class ParamPager:
 
             lines = unindented.splitlines()
             if len(lines) > 1:
-                tail = ['{}{}'.format(' '  * right_shift, line) for line in lines[1:]]
+                tail = [f"{' '  * right_shift}{line}" for line in lines[1:]]
                 all_lines = [ heading.ljust(right_shift) + lines[0]] + tail
             elif len(lines) == 1:
                 all_lines = [ heading.ljust(right_shift) + lines[0]]
@@ -160,7 +160,7 @@ class ParamPager:
             readonly = 'RO' if p.readonly else 'RW'
             allow_None = ' AN' if hasattr(p, 'allow_None') and p.allow_None else ''
 
-            mode = '{} {}{}'.format(constant, readonly, allow_None)
+            mode = f'{constant} {readonly}{allow_None}'
 
             value = repr(val_dict[name])
             if len(value) > (max_col_len - 3):
@@ -185,7 +185,7 @@ class ParamPager:
 
                 if (lbound, ubound) != (None,None):
                     bounds_dict[name] = (mark_lbound, mark_ubound)
-                    p_dict['bounds'] = '({}, {})'.format(lbound, ubound)
+                    p_dict['bounds'] = f'({lbound}, {ubound})'
 
             for col in p_dict:
                 max_width = max([col_widths[col], len(p_dict[col])])
@@ -236,7 +236,7 @@ class ParamPager:
                     ustr, uspace = uval.rsplit(')')
                     lbound = lspace + '('+(cyan % lstr) if mark_lbound else lval
                     ubound = (cyan % ustr)+')'+uspace if mark_ubound else uval
-                    formatted = "{},{}".format(lbound, ubound)
+                    formatted = f"{lbound},{ubound}"
                 row_list.append(formatted)
 
             row_text = ''.join(row_list)
@@ -268,17 +268,18 @@ class ParamPager:
                 class_name = param_obj.__class__.__name__
                 default_name = re.match('^'+class_name+'[0-9]+$', param_obj.name)
                 obj_name = '' if default_name else (' %r' % param_obj.name)
-                title = 'Parameters of {!r} instance{}'.format(class_name, obj_name)
+                title = f'Parameters of {class_name!r} instance{obj_name}'
 
         if title is None:
             title = 'Parameters of %r' % param_obj.name
 
         heading_line = '=' * len(title)
-        heading_text = "{}\n{}\n".format(title, heading_line)
+        heading_text = f"{title}\n{heading_line}\n"
 
         param_info = self.get_param_info(param_obj, include_super=True)
         if not param_info[0]:
-            return "{}\n{}".format((green % heading_text), "Object has no parameters.")
+            top_heading = green % heading_text
+            return f"{top_heading}\nObject has no parameters."
 
         table = self._build_table(param_info, self.order, max_col_len=40,
                                   only_changed=False)
@@ -291,9 +292,9 @@ class ParamPager:
         top_heading += '\nC/V= Constant/Variable, RO/RW = ReadOnly/ReadWrite, AN=Allow None'
 
         heading_text = 'Parameter docstrings:'
-        heading_string = "{}\n{}".format(heading_text, '=' * len(heading_text))
+        heading_string = f"{heading_text}\n{'=' * len(heading_text)}"
         docstring_heading = (green % heading_string)
-        return "{}\n\n{}\n\n{}\n\n{}".format(top_heading, table, docstring_heading, docstrings)
+        return f"{top_heading}\n\n{table}\n\n{docstring_heading}\n\n{docstrings}"
 
 
 message = """Welcome to the param IPython extension! (https://param.holoviz.org/)"""

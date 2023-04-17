@@ -275,8 +275,9 @@ def _get_min_max_value(min, max, value=None, step=None):
     # Either min and max need to be given, or value needs to be given
     if value is None:
         if min is None or max is None:
-            raise ValueError('unable to infer range, value '
-                             'from: ({}, {}, {})'.format(min, max, value))
+            raise ValueError(
+                f'unable to infer range, value from: ({min}, {max}, {value})'
+            )
         diff = max - min
         value = min + (diff / 2)
         # Ensure that value has the same type as diff
@@ -1031,7 +1032,9 @@ class Boolean(Parameter):
                                  % (self.name, val))
         elif not isinstance(val, bool):
             name = "" if self.name is None else " %r" % self.name
-            raise ValueError("Boolean parameter{} must be True or False, not {}.".format(name, val))
+            raise ValueError(
+                f"Boolean parameter{name} must be True or False, not {val}."
+            )
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
@@ -1948,7 +1951,7 @@ class resolve_path(ParameterizedFunction):
                 (p.path_to_file is True  and os.path.isfile(path)) or
                 (p.path_to_file is False and os.path.isdir( path))):
                 return path
-            raise OSError("{} '{}' not found.".format(ftype,path))
+            raise OSError(f"{ftype} '{path}' not found.")
 
         else:
             paths_tried = []
@@ -2391,7 +2394,7 @@ class Range(NumericTuple):
         incmin, incmax = self.inclusive_bounds
         incmin = '[' if incmin else '('
         incmax = ']' if incmax else ')'
-        return '{}{}, {}{}'.format(incmin, vmin, vmax, incmax)
+        return f'{incmin}{vmin}, {vmax}{incmax}'
 
 
 class DateRange(Range):

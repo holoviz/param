@@ -1,14 +1,20 @@
 """
 Unit test for Date parameters.
 """
-import unittest
-import sys
-import json
 import datetime as dt
-
-from .utils import check_defaults
+import json
+import sys
+import unittest
 
 import param
+import pytest
+
+try:
+    import numpy as np
+except:
+    np = None
+
+from .utils import check_defaults
 
 
 class TestDateParameters(unittest.TestCase):
@@ -90,6 +96,30 @@ class TestDateParameters(unittest.TestCase):
         exception = "Step can only be None, a datetime or datetime type"
         with self.assertRaisesRegex(ValueError, exception):
             param.Date(dt.datetime(2017,2,27), step=3.2)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_support_mixed_date_datetime_bounds(self):
+        # No error when comparing date and Python and Numpy datetimes
+
+        date_bounds = (dt.date(2020, 1, 1), dt.date(2025, 1, 1))
+        datetime_bounds = (dt.datetime(2020, 1, 1), dt.datetime(2025, 1, 1))
+        numpy_bounds = (np.datetime64('2020-01-01T00:00'), np.datetime64('2025-01-01T00:00'))
+        date_val = dt.date(2021, 1, 1)
+        datetime_val = dt.datetime(2021, 1, 1)
+        numpy_val = np.datetime64('2021-01-01T00:00')
+
+        class A(param.Parameterized):
+            s = param.Date(default=datetime_val, bounds=date_bounds)
+            t = param.Date(default=numpy_val, bounds=date_bounds)
+            u = param.Date(default=date_val, bounds=datetime_bounds)
+            v = param.Date(default=numpy_val, bounds=datetime_bounds)
+            w = param.Date(default=date_val, bounds=numpy_bounds)
+            x = param.Date(default=datetime_val, bounds=numpy_bounds)
+
+        a = A()
+
+        a.s = date_val
+        a.s = datetime_val
 
 
 def test_date_serialization():

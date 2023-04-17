@@ -133,6 +133,42 @@ class TestDateRange(unittest.TestCase):
         ):
             q.a = self.bad_range
 
+    def test_change_value_type(self):
+        class DateSlider(param.Parameterized):
+            date = param.DateRange(
+                default=(dt.date(2021, 1, 1), dt.date(2024, 1, 1)),
+                bounds=(dt.date(2020, 1, 1), dt.date(2025, 1, 1)),
+            )
+
+        ds = DateSlider()
+
+        # Change the value from date to datetime without erroring
+        ds.date = (dt.datetime(2022, 1, 1), dt.datetime(2023, 1, 1))
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_support_mixed_date_datetime_bounds(self):
+        # No error when comparing date and Python and Numpy datetimes
+
+        date_bounds = (dt.date(2020, 1, 1), dt.date(2025, 1, 1))
+        datetime_bounds = (dt.datetime(2020, 1, 1), dt.datetime(2025, 1, 1))
+        numpy_bounds = (np.datetime64('2020-01-01T00:00'), np.datetime64('2025-01-01T00:00'))
+        date_val = (dt.date(2021, 1, 1), dt.date(2024, 1, 1))
+        datetime_val = (dt.datetime(2021, 1, 1), dt.datetime(2024, 1, 1))
+        numpy_val = (np.datetime64('2021-01-01T00:00'), np.datetime64('2024-01-01T00:00'))
+
+        class A(param.Parameterized):
+            s = param.DateRange(default=datetime_val, bounds=date_bounds)
+            t = param.DateRange(default=numpy_val, bounds=date_bounds)
+            u = param.DateRange(default=date_val, bounds=datetime_bounds)
+            v = param.DateRange(default=numpy_val, bounds=datetime_bounds)
+            w = param.DateRange(default=date_val, bounds=numpy_bounds)
+            x = param.DateRange(default=datetime_val, bounds=numpy_bounds)
+
+        a = A()
+
+        a.s = date_val
+        a.s = datetime_val
+
     @pytest.mark.skipif(np is None, reason='NumPy is not available')
     def test_numpy_default(self):
         class Q(param.Parameterized):

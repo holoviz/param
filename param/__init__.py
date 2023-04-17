@@ -2379,7 +2379,6 @@ class Range(NumericTuple):
         super(Range, self)._validate(val)
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
         self._validate_step(val, self.step)
-        self._validate_order(self.bounds, allow_None=True)
         self._validate_order(val, allow_None=self.allow_None)
 
     def _validate_step(self, val, step):

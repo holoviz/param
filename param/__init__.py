@@ -2225,7 +2225,7 @@ class Date(Number):
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
-        val = None if val is None else _to_datetime(val)
+        val = _to_datetime(val)
         bounds = None if bounds is None else map(_to_datetime, bounds)
         return super()._validate_bounds(val, bounds, inclusive_bounds)
 

@@ -1412,8 +1412,8 @@ class String(Parameter):
 
     @typing.overload
     def __init__(self, default="", regex=None, precedence=None, doc=None, label=None,
-        instantiate=False, constant=False, readonly=False, pickle_default_value=True,
-        allow_None=False, per_instance=True):
+                instantiate=False, constant=False, readonly=False, pickle_default_value=True,
+                allow_None=False, per_instance=True):
         ...
 
     def __init__(self, default=Undefined, regex=Undefined, **kwargs):

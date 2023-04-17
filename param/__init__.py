@@ -1417,7 +1417,7 @@ class __compute_selector_checking_default:
 
     def __repr__(self):
         return '<len(objects) != 0>'
-    
+
 _compute_selector_checking_default = __compute_selector_checking_default()
 
 

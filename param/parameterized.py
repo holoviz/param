@@ -23,10 +23,10 @@ try:
 except ImportError:
     serializer = None
 
-
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
-from operator import itemgetter,attrgetter
+from operator import itemgetter, attrgetter
+from threading import get_ident
 from types import FunctionType
 
 import logging
@@ -392,6 +392,27 @@ def get_method_owner(method):
     if isinstance(method, partial):
         method = method.func
     return method.__self__ if sys.version_info.major >= 3 else method.im_self
+
+
+def recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
+
+    def decorating_function(user_function):
+        repr_running = set()
+
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
+
+    return decorating_function
 
 
 @accept_arguments
@@ -1841,6 +1862,10 @@ class Parameters(object):
         return dep_obj.param._watch(
             mcaller, params, param_dep.what, queued=queued, precedence=-1)
 
+    @recursive_repr()
+    def _repr_html_(self_, open=True):
+        return _parameterized_repr_html(self_.self_or_cls, open)
+
     # Classmethods
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
@@ -3140,35 +3165,6 @@ def name_if_set(parameterized):
     default_name = re.match('^'+class_name+'[0-9]+$', parameterized.name)
     return '' if default_name else parameterized.name
 
-# Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
-if sys.version_info.major >= 3:
-    from threading import get_ident
-
-    def recursive_repr(fillvalue='...'):
-        'Decorator to make a repr function return fillvalue for a recursive call'
-
-        def decorating_function(user_function):
-            repr_running = set()
-
-            def wrapper(self, *args, **kwargs):
-                key = id(self), get_ident()
-                if key in repr_running:
-                    return fillvalue
-                repr_running.add(key)
-                try:
-                    result = user_function(self, *args, **kwargs)
-                finally:
-                    repr_running.discard(key)
-                return result
-            return wrapper
-
-        return decorating_function
-else:
-    def recursive_repr(fillvalue='...'):
-        def decorating_function(user_function):
-            return user_function
-        return decorating_function
-
 def _get_param_repr(key, val, p, truncate=40):
     """HTML representation for a single Parameter object and its value"""
     if hasattr(val, "_repr_html_"):
@@ -3514,8 +3510,10 @@ class Parameterized(object):
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
 
-    def _repr_html_(self, open=True):
-        return _parameterized_repr_html(self, open)
+    @bothmethod
+    @recursive_repr()
+    def _repr_html_(self_or_cls, open=True):
+        return _parameterized_repr_html(self_or_cls, open)
 
 
 def print_all_param_defaults():

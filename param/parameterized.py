@@ -25,6 +25,7 @@ except ImportError:
 
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
+from html import escape
 from operator import itemgetter, attrgetter
 from threading import get_ident
 from types import FunctionType
@@ -3176,23 +3177,28 @@ def _get_param_repr(key, val, p, truncate=40):
         rep = repr(val)
         value = (rep[:truncate] + '..') if len(rep) > truncate else rep
 
-    constant   = 'C' if p.constant else 'V'
-    readonly   = 'RO' if p.readonly else 'RW'
-    allow_None = ' AN' if hasattr(p, 'allow_None') and p.allow_None else ''
-    mode       = '%s %s%s' % (constant, readonly, allow_None)
+    modes = []
+    if p.constant:
+        modes.append('constant')
+    if p.readonly:
+        modes.append('read-only')
+    if getattr(p, 'allow_None', False):
+        modes.append('nullable')
+    mode = ' | '.join(modes)
     if hasattr(p, 'bounds'):
         bounds = p.bounds
     elif hasattr(p, 'objects') and p.objects:
         bounds = ', '.join(list(map(repr, p.objects)))
     else:
         bounds = ''
+    tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
     return (
         f'<tr>'
-        f'  <td><tt>{key}</tt></td>'
+        f'  <td><tt{tooltip}>{key}</tt></td>'
         f'  <td>{p.__class__.__name__}</td>'
+        f'  <td>{value}</td>'
         f'  <td style="max-width: 300px;">{bounds}</td>'
         f'  <td>{mode}</td>'
-        f'  <td>{value}</td>'
         f'</tr>\n'
     )
 
@@ -3202,20 +3208,54 @@ def _parameterized_repr_html(p, open):
     if isinstance(p, Parameterized):
         cls = p.__class__
         title = cls.name + "() " + name_if_set(p)
+        value_field = 'Value'
     else:
         cls = p
         title = cls.name
+        value_field = 'Default'
+
+    tooltip_css = """
+.param-doc-tooltip{
+  position: relative;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 100px;
+  min-width: 150px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+"""
     openstr = " open" if open else ""
     contents = "".join(_get_param_repr(key, val, p.param.params(key))
                        for key, val in p.param.get_param_values())
     return (
+        f'<style>{tooltip_css}</style>\n'
         f'<details {openstr}>\n'
         ' <summary style="display:list-item; outline:none;">\n'
         f'  <tt>{title}</tt>\n'
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        '   <tr><th>Name</th><th>Type</th><th>Bounds/Objects</th><th>Mode</th><th>Value</th></tr>\n'
+        f'   <tr><th>Name</th><th>Type</th><th>{value_field}</th><th>Bounds/Objects</th><th>Mode</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

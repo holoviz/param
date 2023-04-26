@@ -104,8 +104,8 @@ build = [
     "python -m nbsite build --org holoviz --project-name param"
 ]
 
-# [[tool.hatch.envs.docs.matrix]]
-# python = ["3.10"]
+[[tool.hatch.envs.docs.matrix]]
+python = ["3.8"]
 
 [tool.flake8]
 # TODO tests should not be excluded (one day...)

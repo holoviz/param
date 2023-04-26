@@ -61,7 +61,7 @@ setup_args = dict(
     packages=["param","numbergen"],
     provides=["param","numbergen"],
     include_package_data = True,
-    python_requires=">=2.7",
+    python_requires=">=3.7",
     install_requires=[],
     extras_require=extras_require,
     tests_require=extras_require['tests'],

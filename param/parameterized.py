@@ -986,7 +986,7 @@ class Parameter:
     __slots__ = ['name', '_internal_name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
-                 'watchers', 'owner', '_label', "required"]
+                 'watchers', 'owner', '_label', 'required']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names

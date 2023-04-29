@@ -11,7 +11,7 @@ from .utils import check_defaults
 class TestBooleanParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestBooleanParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Boolean()
             f = param.Boolean(default=None)
@@ -89,7 +89,7 @@ class TestBooleanParameters(unittest.TestCase):
 class TestEventParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestEventParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Event()
             f = param.Event(default=None)

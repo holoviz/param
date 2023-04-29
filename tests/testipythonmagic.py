@@ -27,7 +27,7 @@ test2_repr = """\x1b[1;32mParameters of 'TestClass' instance\n==================
 class TestParamPager(unittest.TestCase):
 
     def setUp(self):
-        super(TestParamPager, self).setUp()
+        super().setUp()
         self.maxDiff = None
 
         class TestClass(param.Parameterized):

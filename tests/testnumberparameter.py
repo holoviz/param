@@ -11,7 +11,7 @@ from .utils import check_defaults
 class TestNumberParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestNumberParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             b = param.Number(allow_None=False)
             c = param.Number(default=1, allow_None=True)
@@ -327,7 +327,7 @@ class TestNumberParameters(unittest.TestCase):
 class TestIntegerParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestIntegerParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             b = param.Integer(allow_None=False)
             c = param.Integer(default=1, allow_None=True)

@@ -9,7 +9,7 @@ import param
 class TestRangeParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestRangeParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Range()
             f = param.Range(default=(0, 1), allow_None=True)

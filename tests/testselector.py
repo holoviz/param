@@ -18,7 +18,7 @@ opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 class TestSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Selector([5,6,7])
             f = param.Selector(default=10)

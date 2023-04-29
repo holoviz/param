@@ -1,4 +1,3 @@
-from __future__ import print_function
 """
 Parameters are a kind of class attribute allowing special behavior,
 including dynamically generated parameter values, documentation
@@ -16,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import print_function
 
 import os.path
 import sys
@@ -29,6 +29,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from numbers import Real
 
+from . import version  # noqa: api import
+
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, basestring, dt_types,
@@ -40,15 +42,23 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 
-
-# Determine up-to-date version information, if possible, but with a
-# safe fallback to ensure that this file and parameterized.py are the
-# only two required files.
+# Define '__version__'
 try:
-    from .version import Version
-    __version__ = str(Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param"))
-except:
-    __version__ = "0.0.0+unknown"
+    # If setuptools_scm is installed (e.g. in a development environment with
+    # an editable install), then use it to determine the version dynamically.
+    from setuptools_scm import get_version
+
+    # This will fail with LookupError if the package is not installed in
+    # editable mode or if Git is not installed.
+    __version__ = get_version(root="..", relative_to=__file__)
+except (ImportError, LookupError):
+    # As a fallback, use the version that is hard-coded in the file.
+    try:
+        from ._version import __version__
+    except ModuleNotFoundError:
+        # The user is probably trying to run this without having installed
+        # the package.
+        __version__ = "0.0.0+unknown"
 
 try:
     import collections.abc as collections_abc
@@ -162,7 +172,7 @@ def param_union(*parameterizeds, **kwargs):
         raise TypeError(
             "param_union() got an unexpected keyword argument '{}'".format(
                 kwargs.popitem()[0]))
-    d = dict()
+    d = {}
     for o in parameterizeds:
         for k in o.param:
             if k != 'name':

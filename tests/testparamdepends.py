@@ -146,7 +146,7 @@ class TestParamDependsSubclassing(unittest.TestCase):
     def test_param_depends_subclass_ordering(self):
 
         values = []
-        
+
         class A(param.Parameterized):
             a = param.String()
 
@@ -166,7 +166,7 @@ class TestParamDependsSubclassing(unittest.TestCase):
 
         assert values == ['a', 'A']
 
-        
+
 
 class TestParamDepends(unittest.TestCase):
 
@@ -676,7 +676,7 @@ class TestParamDepends(unittest.TestCase):
         self.assertIs(pinfo.inst, None)
         self.assertEqual(pinfo.name, 'a')
         self.assertEqual(pinfo.what, 'value')
-    
+
     # @pytest.mark.skipif(sys.version_info.major == 2, reason='asyncio only on Python 3')
     # def test_async(self):
     #     try:

@@ -82,7 +82,7 @@ def test_resolve_path_file_not_found():
 
 
 @pytest.mark.usefixtures('reset_search_paths')
-def test_resolve_path_file_not_found(tmpdir):
+def test_resolve_path_file_not_found_other(tmpdir):
     cdir = os.getcwd()
     os.chdir(str(tmpdir))
     try:

@@ -142,7 +142,7 @@ python = [
     "3.9",
     "3.10",
     "3.11",
-    "pypy-3.9",
+    "pypy3.9",
 ]
 
 [tool.hatch.envs.tests.scripts]

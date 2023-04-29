@@ -1,4 +1,3 @@
-from __future__ import print_function
 """
 Parameters are a kind of class attribute allowing special behavior,
 including dynamically generated parameter values, documentation
@@ -16,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import print_function
 
 import os.path
 import sys
@@ -28,6 +28,8 @@ import collections
 from collections import OrderedDict
 from contextlib import contextmanager
 from numbers import Real
+
+from . import version  # noqa: api import
 
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
@@ -170,7 +172,7 @@ def param_union(*parameterizeds, **kwargs):
         raise TypeError(
             "param_union() got an unexpected keyword argument '{}'".format(
                 kwargs.popitem()[0]))
-    d = dict()
+    d = {}
     for o in parameterizeds:
         for k in o.param:
             if k != 'name':

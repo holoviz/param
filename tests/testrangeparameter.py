@@ -9,7 +9,7 @@ import param
 class TestRangeParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestRangeParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Range()
             f = param.Range(default=(0, 1), allow_None=True)
@@ -29,7 +29,7 @@ class TestRangeParameters(unittest.TestCase):
     def test_defaults_class(self):
         class P(param.Parameterized):
             r = param.Range()
-        
+
         self._check_defaults(P.param.r)
 
     def test_defaults_inst(self):
@@ -77,19 +77,19 @@ class TestRangeParameters(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
-        
+
         with self.assertRaisesRegex(ValueError, msg):
             self.P(e='test')
-        
+
         p = self.P()
 
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
-        
+
         msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
-                e = param.NumericTuple(default='test')        
+                e = param.NumericTuple(default='test')
 
     def test_support_allow_None_True(self):
         p = self.P()
@@ -99,7 +99,7 @@ class TestRangeParameters(unittest.TestCase):
 
         class P(param.Parameterized):
             f = param.Range(default=(0, 1), allow_None=True)
-        
+
         P.f = None
         assert P.f is None
 
@@ -155,4 +155,3 @@ class TestRangeParameters(unittest.TestCase):
     def test_get_soft_bounds(self):
         q = param.Range((1,3), bounds=(0, 10), softbounds=(1, 9))
         self.assertEqual(q.get_soft_bounds(), (1, 9))
-

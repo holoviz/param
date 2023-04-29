@@ -132,11 +132,11 @@ class TestTimeClass(unittest.TestCase):
 class TestTimeDependentDynamic(unittest.TestCase):
 
     def setUp(self):
-        super(TestTimeDependentDynamic, self).setUp()
+        super().setUp()
         param.Dynamic.time_dependent=None
         self.time_fn= param.Time(time_type=int)
 
-        class Incrementer(object):
+        class Incrementer:
             def __init__(self):
                 self.i = -1
             def __call__(self):

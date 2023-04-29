@@ -1108,8 +1108,7 @@ class Parameter:
         if serializer is None:
             raise ImportError('Cannot import serializer.py needed to generate schema')
         if mode not in  self._serializers:
-            raise KeyError('Mode %r not in available serialization formats %r'
-                           % (mode, list(self._serializers.keys())))
+            raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
                                                     safe=safe, subset=subset)
 
@@ -1328,13 +1327,12 @@ class Parameter:
 
     def _set_names(self, attrib_name):
         if None not in (self.owner, self.name) and attrib_name != self.name:
-            raise AttributeError('The %s parameter %r has already been '
-                                 'assigned a name by the %s class, '
-                                 'could not assign new name %r. Parameters '
+            raise AttributeError('The {} parameter {!r} has already been '
+                                 'assigned a name by the {} class, '
+                                 'could not assign new name {!r}. Parameters '
                                  'may not be shared by multiple classes; '
                                  'ensure that you create a new parameter '
-                                 'instance for each new class.'
-                                 % (type(self).__name__, self.name,
+                                 'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
         self._internal_name = "_%s_param_value" % attrib_name
@@ -1396,15 +1394,14 @@ class String(Parameter):
         if (val is None and self.allow_None):
             return
         if regex is not None and re.match(regex, val) is None:
-            raise ValueError("String parameter %r value %r does not match regex %r."
-                             % (self.name, val, regex))
+            raise ValueError(f"String parameter {self.name!r} value {val!r} does not match regex {regex!r}.")
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
         if not isinstance(val, str):
-            raise ValueError("String parameter %r only takes a string value, "
-                             "not value of type %s." % (self.name, type(val)))
+            raise ValueError("String parameter {!r} only takes a string value, "
+                             "not value of type {}.".format(self.name, type(val)))
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
@@ -1640,11 +1637,9 @@ class Parameters:
         if attr in params:
             return self_.__getitem__(attr)
         elif self_.self is None:
-            raise AttributeError("type object '%s.param' has no attribute %r" %
-                                 (self_.cls.__name__, attr))
+            raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
         else:
-            raise AttributeError("'%s.param' object has no attribute %r" %
-                                 (self_.cls.__name__, attr))
+            raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
 
     @as_uninitialized
@@ -2140,16 +2135,14 @@ class Parameters:
     def serialize_parameters(self_, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
 
     def serialize_value(self_, pname, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
@@ -2161,8 +2154,7 @@ class Parameters:
     def deserialize_value(self_, pname, value, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
@@ -2172,8 +2164,7 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
@@ -2413,8 +2404,7 @@ class Parameters:
         elif getattr(src, "abstract", None):
             return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:
-            raise AttributeError("Attribute %r could not be resolved on %s."
-                                 % (attr, src))
+            raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
 
         if obj is None or not intermediate:
             return [info], []
@@ -2427,9 +2417,8 @@ class Parameters:
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:
-                raise ValueError("%s parameter was not found in list of "
-                                 "parameters of class %s" %
-                                 (parameter_name, self_.cls.__name__))
+                raise ValueError("{} parameter was not found in list of "
+                                 "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
                 watchers = self_.self._param_watchers

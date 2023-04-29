@@ -6,7 +6,6 @@ exclude =
     jupyter_execute,
     .git,
     __pycache__,
-    .tox,
     .eggs,
     *.egg,
     doc,

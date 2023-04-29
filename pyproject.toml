@@ -48,7 +48,6 @@ doc = [
 ]
 tests = [
     "coverage[toml]",
-    "flake8",
     "pytest",
 ]
 tests-full = [
@@ -59,9 +58,14 @@ tests-full = [
     "jsonschema",
     "gmpy",
 ]
+lint = [
+    "flake8",
+    "pre-commit",
+]
 all = [
     "param[tests-full]",
     "param[doc]",
+    "param[lint]",
 ]
 
 [project.urls]
@@ -92,6 +96,8 @@ version-file = "param/_version.py"
 
 [tool.hatch.envs.default]
 dependencies = [
+    # Linters
+    "param[lint]",
     # Base tests dependencies
     "param[tests]",
     # Additional tests dependencies, not including gmpy as

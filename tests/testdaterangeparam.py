@@ -31,7 +31,7 @@ class TestDateRange(unittest.TestCase):
     def test_defaults_class(self):
         class P(param.Parameterized):
             r = param.DateRange()
-        
+
         check_defaults(P.param.r, label='R')
         self._check_defaults(P.param.r)
 

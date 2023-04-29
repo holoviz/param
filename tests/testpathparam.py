@@ -64,7 +64,7 @@ class TestPathParameters(unittest.TestCase):
     def test_no_path_class(self):
         assert self.P.a is None
 
-    def test_no_path_class(self):
+    def test_no_path_inst(self):
         p = self.P()
         assert p.a is None
 
@@ -84,7 +84,7 @@ class TestPathParameters(unittest.TestCase):
 
     def test_search_paths(self):
         p = self.P()
-        
+
         assert isinstance(p.c, str)
         assert os.path.isfile(p.c)
         assert os.path.isabs(p.c)
@@ -92,9 +92,9 @@ class TestPathParameters(unittest.TestCase):
 
     def test_inheritance_behavior(self):
 
-            # a = param.Path()
-            # b = param.Path(self.fb)
-            # c = param.Path('a.txt', search_paths=[tmpdir1])
+        # a = param.Path()
+        # b = param.Path(self.fb)
+        # c = param.Path('a.txt', search_paths=[tmpdir1])
 
         class B(self.P):
             a = param.Path()
@@ -173,7 +173,7 @@ class TestFilenameParameters(unittest.TestCase):
     def test_no_path_class(self):
         assert self.P.a is None
 
-    def test_no_path_class(self):
+    def test_no_path_inst(self):
         p = self.P()
         assert p.a is None
 
@@ -193,7 +193,7 @@ class TestFilenameParameters(unittest.TestCase):
 
     def test_search_paths(self):
         p = self.P()
-        
+
         assert isinstance(p.c, str)
         assert os.path.isfile(p.c)
         assert os.path.isabs(p.c)
@@ -252,7 +252,7 @@ class TestFoldernameParameters(unittest.TestCase):
     def test_no_path_class(self):
         assert self.P.a is None
 
-    def test_no_path_class(self):
+    def test_no_path_inst(self):
         p = self.P()
         assert p.a is None
 
@@ -272,7 +272,7 @@ class TestFoldernameParameters(unittest.TestCase):
 
     def test_search_paths(self):
         p = self.P()
-        
+
         assert isinstance(p.c, str)
         assert os.path.isdir(p.c)
         assert os.path.isabs(p.c)

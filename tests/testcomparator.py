@@ -47,4 +47,3 @@ else:
 @pytest.mark.parametrize('obj', _supported.values(), ids=_supported.keys())
 def test_comparator_equal(obj):
     assert Comparator.is_equal(obj, obj)
-

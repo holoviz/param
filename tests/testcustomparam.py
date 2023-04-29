@@ -97,10 +97,10 @@ def test_customparam_slot_defaults_inst(custom_parameter_with_slot):
 def test_customparam_inheritance(custom_parameter_with_slot):
     class A(param.Parameterized):
         c = param.Parameter(doc='foo')
-    
+
     class B(A):
         c = custom_parameter_with_slot()
-    
+
     assert B.param.c.doc == 'foo'
     assert B().param.c.doc == 'foo'
 
@@ -108,10 +108,10 @@ def test_customparam_inheritance(custom_parameter_with_slot):
 def test_customparam_inheritance_override(custom_parameter_with_slot):
     class A(param.Parameterized):
         c = param.Parameter(doc='foo')
-    
+
     class B(A):
         c = custom_parameter_with_slot(doc='bar')
-    
+
     assert B.param.c.doc == 'bar'
     assert B().param.c.doc == 'bar'
 
@@ -134,5 +134,4 @@ def test_inheritance_parameter_attribute_without_default():
         KeyError,
         match="Slot 'foo' on unbound parameter 'CustomParameter' has no default value defined in `_slot_defaults`"
     ):
-        c = CustomParameter()
-
+        CustomParameter()

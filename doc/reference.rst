@@ -89,4 +89,3 @@ version Module
 .. _ipython: #ipython-module
 .. _serializer: #serializer-module
 .. _version: #version-module
-       

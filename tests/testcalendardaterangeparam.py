@@ -23,7 +23,7 @@ class TestDateTimeRange(unittest.TestCase):
     def test_defaults_class(self):
         class P(param.Parameterized):
             r = param.CalendarDateRange()
-        
+
         self._check_defaults(P.param.r)
 
     def test_defaults_inst(self):

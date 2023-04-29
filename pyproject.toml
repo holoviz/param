@@ -109,11 +109,16 @@ dependencies = [
     # To keep __version__ up-to-date in editable installs
     "setuptools_scm",
 ]
+post-install-commands = [
+  "python -m pip install pre-commit",
+  "pre-commit install",
+]
 
 [tool.hatch.envs.default.scripts]
-dev = "pytest tests"
+dev = "pytest tests {args}"
 
 [tool.hatch.envs.docs]
+template = "docs"
 features = ["doc"]
 python = "3.9"
 

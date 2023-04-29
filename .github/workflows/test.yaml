@@ -54,6 +54,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install hatch
       - name: run tests
-        run: hatch run tests:test
+        run: hatch -v run tests:test
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

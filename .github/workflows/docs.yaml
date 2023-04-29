@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install hatch
       - name: build docs
-        run: hatch run docs:build
+        run: hatch -v run docs:build
       - name: Deploy dev
         uses: peaceiris/actions-gh-pages@v3
         if: |

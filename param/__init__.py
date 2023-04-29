@@ -60,11 +60,6 @@ except (ImportError, LookupError):
         # the package.
         __version__ = "0.0.0+unknown"
 
-try:
-    import collections.abc as collections_abc
-except ImportError:
-    collections_abc = collections
-
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
 main=Parameterized(name="main")
@@ -130,9 +125,9 @@ def hashable(x):
     part of the object has changed.  Does not (currently) recursively
     replace mutable subobjects.
     """
-    if isinstance(x, collections_abc.MutableSequence):
+    if isinstance(x, collections.abc.MutableSequence):
         return tuple(x)
-    elif isinstance(x, collections_abc.MutableMapping):
+    elif isinstance(x, collections.abc.MutableMapping):
         return tuple([(k,v) for k,v in x.items()])
     else:
         return x
@@ -1396,7 +1391,7 @@ class ListProxy(list):
         objects = objects.items() if isinstance(objects, dict) else objects
         with self._trigger():
             for i, o in enumerate(objects):
-                if not isinstance(o, collections_abc.Sequence):
+                if not isinstance(o, collections.abc.Sequence):
                     raise TypeError(
                         f'cannot convert dictionary update sequence element #{i} to a sequence'
                     )
@@ -1501,7 +1496,7 @@ class Selector(SelectorBase):
 
     @objects.setter
     def objects(self, objects):
-        if isinstance(objects, collections_abc.Mapping):
+        if isinstance(objects, collections.abc.Mapping):
             self.names = objects
             self._objects = list(objects.values())
         else:

@@ -47,7 +47,7 @@ doc = [
     "sphinx-copybutton",
 ]
 tests = [
-    "coverage",
+    "coverage[toml]",
     "flake8",
     "pytest",
 ]
@@ -155,3 +155,6 @@ platform.linux.dependencies = [
 
 [tool.pytest.ini_options]
 python_files = "test*.py"
+
+[tool.coverage.report]
+omit = ["param/version.py"]

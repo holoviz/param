@@ -32,6 +32,7 @@ jobs:
         uses: pre-commit/action@v3.0.0
   test_suite:
     name: Test ${{ matrix.python-version }}, ${{ matrix.platform }}
+    needs: [pre_commit]
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false

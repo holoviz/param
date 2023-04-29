@@ -1,10 +1,19 @@
-[wheel]
-universal = 1
-
 [flake8]
 # TODO tests should not be excluded (one day...)
-include = setup.py param numbergen
-exclude = .git,__pycache__,.tox,.eggs,*.egg,doc,dist,build,_build,tests,.ipynb_checkpoints,run_test.py
+include = param numbergen
+exclude =
+    .venv,
+    jupyter_execute,
+    .git,
+    __pycache__,
+    .eggs,
+    *.egg,
+    doc,
+    dist,
+    build,
+    _build,
+    tests,
+    .ipynb_checkpoints
 ignore = E114,
          E116,
          E126,
@@ -25,6 +34,3 @@ ignore = E114,
          E743,
          W503,
          W504,
-
-[tool:pytest]
-python_files = test*.py

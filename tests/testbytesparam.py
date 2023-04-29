@@ -2,7 +2,6 @@
 Unit test for Bytes parameters
 """
 import unittest
-import sys
 
 import pytest
 
@@ -53,8 +52,8 @@ class TestBytesParameters(unittest.TestCase):
 
         with pytest.raises(ValueError):
             A(s='abc')
-        
-            
+
+
     def test_regex_ok(self):
         class A(param.Parameterized):
             s = param.Bytes(b'0.0.0.0', ip_regex)

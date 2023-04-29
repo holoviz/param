@@ -251,38 +251,34 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
 # Commented out block in the original doctest version.
 # Maybe these are features originally planned but never implemented
 
-"""
-It is not yet possible to set time_fn for a Parameter instance
->>> class TestPO5(param.Parameterized):
-...    x = param.Dynamic(default=numbergen.UniformRandom(),dynamic_time_fn=None)
-"""
+# It is not yet possible to set time_fn for a Parameter instance
+# >>> class TestPO5(param.Parameterized):
+# ...    x = param.Dynamic(default=numbergen.UniformRandom(),dynamic_time_fn=None)
 
-"""
-We currently don't support iterators/generators in Dynamic unless
-they're wrapped.
+# We currently don't support iterators/generators in Dynamic unless
+# they're wrapped.
 
->>> i = iter([1,2,3])
->>> t11.x = i
+# >>> i = iter([1,2,3])
+# >>> t11.x = i
 
->>> topo.sim.run(1)
+# >>> topo.sim.run(1)
 
->>> t11.x
-1
+# >>> t11.x
+# 1
 
->>> def gen():
-...     yield 2
-...     yield 4
-...     yield 6
+# >>> def gen():
+# ...     yield 2
+# ...     yield 4
+# ...     yield 6
 
->>> g = gen()
+# >>> g = gen()
 
->>> t11.x = g
+# >>> t11.x = g
 
->>> t11.x
-2
+# >>> t11.x
+# 2
 
->>> topo.sim.run(1)
+# >>> topo.sim.run(1)
 
->>> t11.x
-4
-"""
+# >>> t11.x
+# 4

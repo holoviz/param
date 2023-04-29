@@ -302,7 +302,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
     def test_int_getitem_objects_list(self):
         p = self.P()
 
-        self.assertEqual(p.param.e.objects[0], 5) 
+        self.assertEqual(p.param.e.objects[0], 5)
 
     def test_slice_getitem_objects_list(self):
         p = self.P()

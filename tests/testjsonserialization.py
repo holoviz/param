@@ -4,7 +4,6 @@ Testing JSON serialization of parameters and the corresponding schemas.
 import datetime
 import json
 import unittest
-import sys
 
 from unittest import SkipTest, skipIf
 

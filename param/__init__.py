@@ -15,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import print_function
 
 import os.path
 import sys
@@ -29,6 +30,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from numbers import Real
 
+from . import version  # noqa: api import
+
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     descendents, get_logger, instance_descriptor, dt_types,
@@ -40,15 +43,23 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 
-
-# Determine up-to-date version information, if possible, but with a
-# safe fallback to ensure that this file and parameterized.py are the
-# only two required files.
+# Define '__version__'
 try:
-    from .version import Version
-    __version__ = str(Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param"))
-except:
-    __version__ = "0.0.0+unknown"
+    # If setuptools_scm is installed (e.g. in a development environment with
+    # an editable install), then use it to determine the version dynamically.
+    from setuptools_scm import get_version
+
+    # This will fail with LookupError if the package is not installed in
+    # editable mode or if Git is not installed.
+    __version__ = get_version(root="..", relative_to=__file__)
+except (ImportError, LookupError):
+    # As a fallback, use the version that is hard-coded in the file.
+    try:
+        from ._version import __version__
+    except ModuleNotFoundError:
+        # The user is probably trying to run this without having installed
+        # the package.
+        __version__ = "0.0.0+unknown"
 
 try:
     import collections.abc as collections_abc
@@ -177,7 +188,7 @@ def param_union(*parameterizeds, warn=True):
     dict
         Union of all param name,value pairs
     """
-    d = dict()
+    d = {}
     for o in parameterizeds:
         for k in o.param:
             if k != 'name':
@@ -2194,6 +2205,16 @@ class MultiFileSelector(ListSelector):
         return abbreviate_paths(self.path,super().get_range())
 
 
+def _to_datetime(x):
+    """
+    Internal function that will convert date objs to datetime objs, used
+    for comparing date and datetime objects without error.
+    """
+    if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
+        return dt.datetime(*x.timetuple()[:6])
+    return x
+
+
 class Date(Number):
     """
     Date parameter of datetime or date type.
@@ -2221,6 +2242,11 @@ class Date(Number):
                 "Step can only be None, a datetime "
                 "or datetime type, not type %r." % type(val)
             )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds):
+        val = _to_datetime(val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
+        return super()._validate_bounds(val, bounds, inclusive_bounds)
 
     @classmethod
     def serialize(cls, value):
@@ -2403,6 +2429,11 @@ class DateRange(Range):
 
     Bounds must be specified as datetime or date types (see param.dt_types).
     """
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds):
+        val = None if val is None else map(_to_datetime, val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
+        super()._validate_bounds(val, bounds, inclusive_bounds)
 
     def _validate_value(self, val, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from

@@ -794,7 +794,7 @@ def test_inheritance_allow_None_behavior():
 def test_inheritance_allow_None_behavior2():
     class A(param.Parameterized):
         p = param.Parameter(allow_None=False)
-        
+
     class B(A):
         p = param.Parameter(default=None)
 
@@ -811,7 +811,7 @@ def test_inheritance_allow_None_behavior2():
 def test_inheritance_class_attribute_behavior():
     class A(param.Parameterized):
         p = param.Parameter(1)
-        
+
     class B(A):
         p = param.Parameter()
 

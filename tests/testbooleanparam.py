@@ -59,10 +59,10 @@ class TestBooleanParameters(unittest.TestCase):
 
         msg = r"Boolean parameter 'e' must be True or False, not None"
         with self.assertRaisesRegex(ValueError, msg):
-                p.e = None
+            p.e = None
 
         with self.assertRaisesRegex(ValueError, msg):
-                self.P.e = None
+            self.P.e = None
 
     def test_bad_type(self):
         msg = r"Boolean parameter 'e' must be True or False, not test"
@@ -141,10 +141,10 @@ class TestEventParameters(unittest.TestCase):
 
         msg = r"Boolean parameter 'e' must be True or False, not None"
         with self.assertRaisesRegex(ValueError, msg):
-                p.e = None
+            p.e = None
 
         with self.assertRaisesRegex(ValueError, msg):
-                self.P.e = None
+            self.P.e = None
 
     def test_bad_type(self):
         msg = r"Boolean parameter 'e' must be True or False, not test"

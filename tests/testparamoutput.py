@@ -1,10 +1,7 @@
 """
 Unit test for param.output.
 """
-import sys
 import unittest
-
-from unittest import SkipTest
 
 import param
 

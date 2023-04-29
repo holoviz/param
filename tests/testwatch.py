@@ -154,7 +154,7 @@ class TestWatch(unittest.TestCase):
         obj.param.watch(accumulator, 'a')
         obj.a = []
         self.assertEqual(self.accumulator, [])
-        obj.a = tuple()
+        obj.a = ()
         self.assertEqual(self.accumulator, tuple())
 
     def test_triggered_when_changed_mapping_type(self):

@@ -1,7 +1,6 @@
 """
 Unit test for String parameters
 """
-import sys
 import unittest
 
 import param

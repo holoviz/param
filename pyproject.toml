@@ -159,9 +159,9 @@ name."^(?!pypy).*".dependencies = [
     "numpy",
     "pandas",
 ]
-# Only install gmpy on Linux
-platform.linux.dependencies = [
-    "gmpy",
+# Only install gmpy on Linux on these version
+matrix.python.dependencies = [
+    { value = "gmpy", if = ["3.7", "3.8", "3.9", "3.10"], platform = ["linux"] },
 ]
 
 [tool.pytest.ini_options]

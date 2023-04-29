@@ -39,7 +39,7 @@ jobs:
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: conda setup
         run: |
-          conda update conda
+          conda update --name base conda
           conda install anaconda-client conda-build
           pip install hatch
       - name: conda build

@@ -11,7 +11,6 @@ __init__.py (providing specialized Parameter types).
 import copy
 import datetime as dt
 import re
-import sys
 import inspect
 import random
 import numbers
@@ -27,6 +26,7 @@ except ImportError:
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
+from threading import get_ident
 from types import FunctionType
 
 import logging
@@ -40,10 +40,7 @@ try:
 except:
     param_pager = None
 
-try:
-    from inspect import getfullargspec
-except:
-    from inspect import getargspec as getfullargspec # python2
+from inspect import getfullargspec
 
 dt_types = (dt.datetime, dt.date)
 
@@ -52,8 +49,6 @@ try:
     dt_types = dt_types + (np.datetime64,)
 except:
     pass
-
-basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -97,6 +92,19 @@ class _Undefined:
     simple None values.
     """
 
+    def __bool__(self):
+        # Haven't defined whether Undefined is falsy or truthy,
+        # so to avoid subtle bugs raise an error when it
+        # is used in a comparison without `is`.
+        raise RuntimeError('Use `is` to compare Undefined')
+
+    def __repr__(self):
+        return '<Undefined>'
+
+
+Undefined = _Undefined()
+
+
 @contextmanager
 def logging_level(level):
     """
@@ -107,7 +115,7 @@ def logging_level(level):
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
 
     if level not in level_names:
-        raise Exception("Level %r not in %r" % (level, levels))
+        raise Exception(f"Level {level!r} not in {levels!r}")
 
     param_logger = get_logger()
     logging_level = param_logger.getEffectiveLevel()
@@ -295,7 +303,7 @@ def add_metaclass(metaclass):
 
 
 
-class bothmethod(object): # pylint: disable-msg=R0903
+class bothmethod: # pylint: disable-msg=R0903
     """
     'optional @classmethod'
 
@@ -378,29 +386,32 @@ def get_method_owner(method):
         return None
     if isinstance(method, partial):
         method = method.func
-    return method.__self__ if sys.version_info.major >= 3 else method.im_self
+    return method.__self__
 
 
 @accept_arguments
-def depends(func, *dependencies, **kw):
-    """
-    Annotates a function or Parameterized method to express its
-    dependencies.  The specified dependencies can be either be
-    Parameter instances or if a method is supplied they can be
-    defined as strings referring to Parameters of the class,
-    or Parameters of subobjects (Parameterized objects that are
-    values of this object's parameters).  Dependencies can either be
-    on Parameter values, or on other metadata about the Parameter.
-    """
+def depends(func, *dependencies, watch=False, on_init=False, **kw):
+    """Annotates a function or Parameterized method to express its dependencies.
 
-    # PARAM2_DEPRECATION: python2 workaround; python3 allows kw-only args
-    # (i.e. "func, *dependencies, watch=False" rather than **kw and the check below)
-    watch = kw.pop("watch", False)
-    on_init = kw.pop("on_init", False)
+    The specified dependencies can be either be Parameter instances or if a
+    method is supplied they can be defined as strings referring to Parameters
+    of the class, or Parameters of subobjects (Parameterized objects that are
+    values of this object's parameters). Dependencies can either be on
+    Parameter values, or on other metadata about the Parameter.
 
+    Parameters
+    ----------
+    watch : bool, optional
+        Wether to invoke the function/method when the dependency is updated,
+        by default False
+    on_init : bool, optional
+        Whether to invoke the function/method when the instance is created,
+        by default False
+    """
     if iscoroutinefunction(func):
-        from ._async import generate_depends
-        _depends = generate_depends(func)
+        @wraps(func)
+        async def _depends(*args, **kw):
+            return await func(*args, **kw)
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -409,7 +420,7 @@ def depends(func, *dependencies, **kw):
     deps = list(dependencies)+list(kw.values())
     string_specs = False
     for dep in deps:
-        if isinstance(dep, basestring):
+        if isinstance(dep, str):
             string_specs = True
         elif not isinstance(dep, Parameter):
             raise ValueError('The depends decorator only accepts string '
@@ -424,7 +435,7 @@ def depends(func, *dependencies, **kw):
                              'instance not %s.' % owner)
 
     if (any(isinstance(dep, Parameter) for dep in deps) and
-        any(isinstance(dep, basestring) for dep in deps)):
+        any(isinstance(dep, str) for dep in deps)):
         raise ValueError('Dependencies must either be defined as strings '
                          'referencing parameters on the class defining '
                          'the decorated method or as parameter instances. '
@@ -437,8 +448,10 @@ def depends(func, *dependencies, **kw):
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         if iscoroutinefunction(func):
-            from ._async import generate_callback
-            cb = generate_callback(func, dependencies, kw)
+            async def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                await func(*args, **dep_kwargs)
         else:
             def cb(*events):
                 args = (getattr(dep.owner, dep.name) for dep in dependencies)
@@ -468,8 +481,7 @@ def output(func, *output, **kw):
     of a Parameterized class can be queried using the
     Parameterized.param.outputs method. By default the output will
     inherit the method name but a custom name can be declared by
-    expressing the Parameter type using a keyword argument. Declaring
-    multiple return types using keywords is only supported in Python >= 3.6.
+    expressing the Parameter type using a keyword argument.
 
     The simplest declaration simply declares the method returns an
     object without any type guarantees, e.g.:
@@ -486,10 +498,9 @@ def output(func, *output, **kw):
 
       @output(custom_name=param.Number())
 
-    Multiple outputs may be declared using keywords mapping from
-    output name to the type for Python >= 3.6 or using tuples of the
-    same format, which is supported for earlier versions, i.e. these
-    two declarations are equivalent:
+    Multiple outputs may be declared using keywords mapping from output name
+    to the type or using tuples of the same format, i.e. these two declarations
+    are equivalent:
 
       @output(number=param.Number(), string=param.String())
 
@@ -511,12 +522,7 @@ def output(func, *output, **kw):
             else:
                 outputs.append((None, out, i))
     elif kw:
-        py_major = sys.version_info.major
-        py_minor = sys.version_info.minor
-        if (py_major < 3 or (py_major == 3 and py_minor < 6)) and len(kw) > 1:
-            raise ValueError('Multiple output declaration using keywords '
-                             'only supported in Python >= 3.6.')
-          # (requires keywords to be kept ordered, which was not true in previous versions)
+        # (requires keywords to be kept ordered, which was not true in previous versions)
         outputs = [(name, otype, i if len(kw) > 1 else None)
                    for i, (name, otype) in enumerate(kw.items())]
     else:
@@ -642,11 +648,11 @@ def _skip_event(*events, **kwargs):
     for e in events:
         for p in changed:
             if what == 'value':
-                old = _Undefined if e.old is None else _getattrr(e.old, p, None)
-                new = _Undefined if e.new is None else _getattrr(e.new, p, None)
+                old = Undefined if e.old is None else _getattrr(e.old, p, None)
+                new = Undefined if e.new is None else _getattrr(e.new, p, None)
             else:
-                old = _Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
-                new = _Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
+                old = Undefined if e.old is None else _getattrr(e.old.param[p], what, None)
+                new = Undefined if e.new is None else _getattrr(e.new.param[p], what, None)
             if not Comparator.is_equal(old, new):
                 return False
     return True
@@ -660,8 +666,11 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
-        from ._async import generate_caller
-        caller = generate_caller(function, what=what, changed=changed, callback=callback, skip_event=_skip_event)
+        async def caller(*events):
+            if callback:
+                callback(*events)
+            if not _skip_event or not _skip_event(*events, what=what, changed=changed):
+                await function()
     else:
         def caller(*events):
             if callback: callback(*events)
@@ -671,10 +680,18 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     return caller
 
 
+def _dict_update(dictionary, **kwargs):
+    """
+    Small utility to update a copy of a dict with the provided keyword args.
+    """
+    d = dictionary.copy()
+    d.update(kwargs)
+    return d
+
+
 def _add_doc(obj, docstring):
-    """Add a docstring to a namedtuple, if on python3 where that's allowed"""
-    if sys.version_info[0]>2:
-        obj.__doc__ = docstring
+    """Add a docstring to a namedtuple"""
+    obj.__doc__ = docstring
 
 
 PInfo = namedtuple("PInfo", "inst cls name pobj what")
@@ -780,7 +797,7 @@ class Watcher(_Watcher):
         values.update(kwargs)
         if 'precedence' not in values:
             values['precedence'] = 0
-        return super(Watcher, cls_).__new__(cls_, **values)
+        return super().__new__(cls_, **values)
 
     def __iter__(self):
         """
@@ -793,8 +810,8 @@ class Watcher(_Watcher):
 
     def __str__(self):
         cls = type(self)
-        attrs = ', '.join(['%s=%r' % (f, getattr(self, f)) for f in cls._fields])
-        return "{cls}({attrs})".format(cls=cls.__name__, attrs=attrs)
+        attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
+        return f"{cls.__name__}({attrs})"
 
 
 
@@ -832,9 +849,8 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
-
 @add_metaclass(ParameterMetaclass)
-class Parameter(object):
+class Parameter:
     """
     An attribute descriptor for declaring parameters.
 
@@ -980,10 +996,17 @@ class Parameter(object):
 
     _serializers = {'json': serializer.JSONSerialization}
 
-    def __init__(self,default=None, doc=None, label=None, precedence=None,  # pylint: disable-msg=R0913
-                 instantiate=False, constant=False, readonly=False,
-                 pickle_default_value=True, allow_None=False,
-                 per_instance=True, required=False):
+    _slot_defaults = dict(
+        default=None, precedence=None, doc=None, _label=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, allow_None=False,
+        per_instance=True, required=False
+    )
+
+    def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
+                 label=Undefined, precedence=Undefined,
+                 instantiate=Undefined, constant=Undefined, readonly=Undefined,
+                 pickle_default_value=Undefined, allow_None=Undefined,
+                 per_instance=Undefined, required=Undefined):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1063,13 +1086,13 @@ class Parameter(object):
         self.precedence = precedence
         self.default = default
         self.doc = doc
-        self.constant = constant or readonly # readonly => constant
+        self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
         self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
-        self.allow_None = (default is None or allow_None)
+        self._set_allow_None(allow_None)
         self.watchers = {}
         self.per_instance = per_instance
         self.required = required
@@ -1088,8 +1111,7 @@ class Parameter(object):
         if serializer is None:
             raise ImportError('Cannot import serializer.py needed to generate schema')
         if mode not in  self._serializers:
-            raise KeyError('Mode %r not in available serialization formats %r'
-                           % (mode, list(self._serializers.keys())))
+            raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
                                                     safe=safe, subset=subset)
 
@@ -1104,6 +1126,18 @@ class Parameter(object):
     def label(self, val):
         self._label = val
 
+    def _set_allow_None(self, allow_None):
+        # allow_None is set following these rules (last takes precedence):
+        # 1. to False by default
+        # 2. to the value provided in the constructor, if any
+        # 3. to True if default is None
+        if self.default is None:
+            self.allow_None = True
+        elif allow_None is not Undefined:
+            self.allow_None = allow_None
+        else:
+            self.allow_None = self._slot_defaults['allow_None']
+
     def _set_instantiate(self,instantiate):
         """Constant parameters must be instantiated."""
         # instantiate doesn't actually matter for read-only
@@ -1111,8 +1145,11 @@ class Parameter(object):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
-        else:
+        elif instantiate is not Undefined:
             self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
+        else:
+            # Default value
+            self.instantiate = self._slot_defaults['instantiate']
 
     def __setattr__(self, attribute, value):
         if attribute == 'name' and getattr(self, 'name', None) and value != self.name:
@@ -1137,13 +1174,35 @@ class Parameter(object):
 
         if old is NotImplemented:
             return
+        self._trigger_event(attribute, old, value)
 
+    def _trigger_event(self, attribute, old, new):
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner,
-                      old=old, new=value, type=None)
+                      old=old, new=new, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
             self.owner.param._batch_call_watchers()
+
+    def __getattribute__(self, key):
+        """
+        Allow slot values to be Undefined in an "unbound" parameter, i.e. one
+        that is not (yet) owned by a Parameterized object, in which case their
+        value will be retrieved from the _slot_defaults dictionary.
+        """
+        v = object.__getattribute__(self, key)
+        # Safely checks for name (avoiding recursion) to decide if this object is unbound
+        if v is Undefined and key != "name" and getattr(self, "name", None) is None:
+            try:
+                v = self._slot_defaults[key]
+            except KeyError as e:
+                raise KeyError(
+                    f'Slot {key!r} on unbound parameter {self.__class__.__name__!r} '
+                    'has no default value defined in `_slot_defaults`'
+                ) from e
+            if callable(v):
+                v = v(self)
+        return v
 
     def _on_set(self, attribute, old, value):
         """
@@ -1271,13 +1330,12 @@ class Parameter(object):
 
     def _set_names(self, attrib_name):
         if None not in (self.owner, self.name) and attrib_name != self.name:
-            raise AttributeError('The %s parameter %r has already been '
-                                 'assigned a name by the %s class, '
-                                 'could not assign new name %r. Parameters '
+            raise AttributeError('The {} parameter {!r} has already been '
+                                 'assigned a name by the {} class, '
+                                 'could not assign new name {!r}. Parameters '
                                  'may not be shared by multiple classes; '
                                  'ensure that you create a new parameter '
-                                 'instance for each new class.'
-                                 % (type(self).__name__, self.name,
+                                 'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
         self._internal_name = "_%s_param_value" % attrib_name
@@ -1328,32 +1386,32 @@ class String(Parameter):
 
     __slots__ = ['regex']
 
-    def __init__(self, default="", regex=None, allow_None=False, **kwargs):
-        super(String, self).__init__(default=default, allow_None=allow_None, **kwargs)
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
+
+    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
         self.regex = regex
-        self.allow_None = (default is None or allow_None)
-        self._validate(default)
+        self._validate(self.default)
 
     def _validate_regex(self, val, regex):
         if (val is None and self.allow_None):
             return
         if regex is not None and re.match(regex, val) is None:
-            raise ValueError("String parameter %r value %r does not match regex %r."
-                             % (self.name, val, regex))
+            raise ValueError(f"String parameter {self.name!r} value {val!r} does not match regex {regex!r}.")
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
-        if not isinstance(val, basestring):
-            raise ValueError("String parameter %r only takes a string value, "
-                             "not value of type %s." % (self.name, type(val)))
+        if not isinstance(val, str):
+            raise ValueError("String parameter {!r} only takes a string value, "
+                             "not value of type {}.".format(self.name, type(val)))
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
         self._validate_regex(val, self.regex)
 
 
-class shared_parameters(object):
+class shared_parameters:
     """
     Context manager to share parameter instances when creating
     multiple Parameterized objects of the same type. Parameter default
@@ -1392,7 +1450,7 @@ def as_uninitialized(fn):
     return override_initialization
 
 
-class Comparator(object):
+class Comparator:
     """
     Comparator defines methods for determining whether two objects
     should be considered equal. It works by registering custom
@@ -1412,7 +1470,7 @@ class Comparator(object):
 
     equalities = {
         numbers.Number: operator.eq,
-        basestring: operator.eq,
+        str: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq,
     }
@@ -1452,7 +1510,7 @@ class Comparator(object):
         return True
 
 
-class Parameters(object):
+class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
     Parameters themselves.
@@ -1461,9 +1519,6 @@ class Parameters(object):
     and at the instance level. Can contain state specific to either the
     class or the instance as necessary.
     """
-
-    _disable_stubs = False # Flag used to disable stubs in the API1 tests
-                          # None for no action, True to raise and False to warn.
 
     def __init__(self_, cls, self=None):
         """
@@ -1554,15 +1609,14 @@ class Parameters(object):
         """
         Adds parameters to dir
         """
-        return super(Parameters, self_).__dir__() + list(self_)
+        return super().__dir__() + list(self_)
 
 
     def __iter__(self_):
         """
         Iterates over the parameters on this object.
         """
-        for p in self_.objects(instance=False):
-            yield p
+        yield from self_.objects(instance=False)
 
 
     def __contains__(self_, param):
@@ -1586,11 +1640,9 @@ class Parameters(object):
         if attr in params:
             return self_.__getitem__(attr)
         elif self_.self is None:
-            raise AttributeError("type object '%s.param' has no attribute %r" %
-                                 (self_.cls.__name__, attr))
+            raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
         else:
-            raise AttributeError("'%s.param' object has no attribute %r" %
-                                 (self_.cls.__name__, attr))
+            raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
 
     @as_uninitialized
@@ -1653,28 +1705,6 @@ class Parameters(object):
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
-    @classmethod
-    def deprecate(cls, fn):
-        """
-        Decorator to issue warnings for API moving onto the param
-        namespace and to add a docstring directing people to the
-        appropriate method.
-        """
-        def inner(*args, **kwargs):
-            if cls._disable_stubs:
-                raise AssertionError('Stubs supporting old API disabled')
-            elif cls._disable_stubs is None:
-                pass
-            elif cls._disable_stubs is False:
-                get_logger(name=args[0].__class__.__name__).log(
-                    WARNING, 'Use method %r via param namespace ' % fn.__name__)
-            return fn(*args, **kwargs)
-
-        inner.__doc__= "Inspect .param.%s method for the full docstring"  % fn.__name__
-        return inner
-
-
     @classmethod
     def _changed(cls, event):
         """
@@ -1682,7 +1712,6 @@ class Parameters(object):
         changed such that old != new.
         """
         return not Comparator.is_equal(event.old, event.new)
-
 
     def _instantiate_param(self_, param_obj, dict_=None, key=None):
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
@@ -1903,7 +1932,7 @@ class Parameters(object):
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
                 self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("'%s' is not a parameter of %s" % (k, self_or_cls.name))
+                raise ValueError(f"'{k}' is not a parameter of {self_or_cls.name}")
             try:
                 setattr(self_or_cls, k, v)
             except:
@@ -2119,16 +2148,14 @@ class Parameters(object):
     def serialize_parameters(self_, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
 
     def serialize_value(self_, pname, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
@@ -2140,8 +2167,7 @@ class Parameters(object):
     def deserialize_value(self_, pname, value, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
@@ -2151,8 +2177,7 @@ class Parameters(object):
         """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
@@ -2392,8 +2417,7 @@ class Parameters(object):
         elif getattr(src, "abstract", None):
             return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:
-            raise AttributeError("Attribute %r could not be resolved on %s."
-                                 % (attr, src))
+            raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
 
         if obj is None or not intermediate:
             return [info], []
@@ -2406,9 +2430,8 @@ class Parameters(object):
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:
-                raise ValueError("%s parameter was not found in list of "
-                                 "parameters of class %s" %
-                                 (parameter_name, self_.cls.__name__))
+                raise ValueError("{} parameter was not found in list of "
+                                 "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
                 watchers = self_.self._param_watchers
@@ -2481,7 +2504,7 @@ class Parameters(object):
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
-            self_.warning('No such watcher {watcher} to remove.'.format(watcher=str(watcher)))
+            self_.warning(f'No such watcher {str(watcher)} to remove.')
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """
@@ -2550,7 +2573,7 @@ class Parameters(object):
         """Print the values of all this object's Parameters."""
         self = self_.self
         for name, val in self.param.values().items():
-            print('%s.%s = %s' % (self.name,name,val))
+            print(f'{self.name}.{name} = {val}')
 
     def warning(self_, msg,*args,**kw):
         """
@@ -2722,7 +2745,7 @@ class ParameterizedMetaclass(type):
             for (k,v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
                     param_type = v.__class__.__name__
-                    keyword_group.append("%s=%s" % (k, param_type))
+                    keyword_group.append(f"{k}={param_type}")
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
@@ -2831,9 +2854,9 @@ class ParameterizedMetaclass(type):
         given in the object's class, or in its superclasses.  For
         Parameters owned by Parameterized classes, we have implemented
         an additional level of default lookup, should this ordinary
-        lookup return only None.
+        lookup return only `Undefined`.
 
-        In such a case, i.e. when no non-None value was found for a
+        In such a case, i.e. when no non-`Undefined` value was found for a
         Parameter by the usual inheritance mechanisms, we explicitly
         look for Parameters with the same name in superclasses of this
         Parameterized class, and use the first such value that we
@@ -2874,14 +2897,15 @@ class ParameterizedMetaclass(type):
                 param.instantiate=True
         del slots['instantiate']
 
-
+        supers = classlist(mcs)[::-1]
+        callables = {}
         for slot in slots.keys():
-            superclasses = iter(classlist(mcs)[::-1])
+            superclasses = iter(supers)
 
             # Search up the hierarchy until param.slot (which has to
-            # be obtained using getattr(param,slot)) is not None, or
+            # be obtained using getattr(param,slot)) is not Undefined, or
             # we run out of classes to search.
-            while getattr(param,slot) is None:
+            while getattr(param,slot) is Undefined:
                 try:
                     param_super_class = next(superclasses)
                 except StopIteration:
@@ -2892,8 +2916,25 @@ class ParameterizedMetaclass(type):
                     # (slot might not be there because could be a more
                     # general type of Parameter)
                     new_value = getattr(new_param,slot)
-                    setattr(param,slot,new_value)
+                    if new_value is not Undefined:
+                        setattr(param, slot, new_value)
+            if getattr(param, slot) is Undefined:
+                try:
+                    default_val = param._slot_defaults[slot]
+                except KeyError as e:
+                    raise KeyError(
+                        f'Slot {slot!r} of parameter {param_name!r} has no '
+                        'default value defined in `_slot_defaults`'
+                    ) from e
+                if callable(default_val):
+                    callables[slot] = default_val
+                else:
+                    setattr(param, slot, default_val)
 
+        # Once all the static slots have been filled in, fill in the dynamic ones
+        # (which are only allowed to use static values or results are undefined)
+        for slot, fn in callables.items():
+            setattr(param, slot, fn(param))
 
     def get_param_descriptor(mcs,param_name):
         """
@@ -3091,36 +3132,30 @@ dbprint_prefix=None
 
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
-if sys.version_info.major >= 3:
-    from threading import get_ident
-    def recursive_repr(fillvalue='...'):
-        'Decorator to make a repr function return fillvalue for a recursive call'
+def recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
 
-        def decorating_function(user_function):
-            repr_running = set()
+    def decorating_function(user_function):
+        repr_running = set()
 
-            def wrapper(self, *args, **kwargs):
-                key = id(self), get_ident()
-                if key in repr_running:
-                    return fillvalue
-                repr_running.add(key)
-                try:
-                    result = user_function(self, *args, **kwargs)
-                finally:
-                    repr_running.discard(key)
-                return result
-            return wrapper
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
 
-        return decorating_function
-else:
-    def recursive_repr(fillvalue='...'):
-        def decorating_function(user_function):
-            return user_function
-        return decorating_function
+    return decorating_function
+
 
 
 @add_metaclass(ParameterizedMetaclass)
-class Parameterized(object):
+class Parameterized:
     """
     Base class for named objects that support Parameters and message
     formatting.
@@ -3264,7 +3299,7 @@ class Parameterized(object):
         all the parameters of this object.
         """
         try:
-            settings = ['%s=%s' % (name, repr(val))
+            settings = [f'{name}={val!r}'
                         # PARAM2_DEPRECATION: Update to self.param.values.items()
                         # (once python2 support is dropped)
                         for name, val in self.param.get_param_values()]
@@ -3274,7 +3309,7 @@ class Parameterized(object):
 
     def __str__(self):
         """Return a short representation of the name and class of this object."""
-        return "<%s %s>" % (self.__class__.__name__,self.name)
+        return f"<{self.__class__.__name__} {self.name}>"
 
 
     # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
@@ -3335,7 +3370,7 @@ class Parameterized(object):
 
             if value is None:
                 if unknown_value is False:
-                    raise Exception("%s: unknown value of %r" % (self.name,k))
+                    raise Exception(f"{self.name}: unknown value of {k!r}")
                 elif unknown_value is None:
                     # i.e. suppress repr
                     continue
@@ -3353,13 +3388,13 @@ class Parameterized(object):
                   (hasattr(spec, 'keywords') and (spec.keywords is not None))):
                 # Explicit modified keywords or parameters in
                 # precendence order (if **kwargs present)
-                keywords.append('%s=%s' % (k, value))
+                keywords.append(f'{k}={value}')
 
             processed.append(k)
 
         qualifier = mod + '.'  if qualify else ''
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
+        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
     # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
     pprint = _pprint
@@ -3408,91 +3443,6 @@ class Parameterized(object):
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
-
-
-    # API to be accessed via param namespace
-
-    @classmethod
-    @Parameters.deprecate
-    def _add_parameter(cls, param_name,param_obj):
-        return cls.param._add_parameter(param_name,param_obj)
-
-    @bothmethod
-    @Parameters.deprecate
-    def params(cls,parameter_name=None):
-        return cls.param.params(parameter_name=parameter_name)
-
-    @classmethod
-    @Parameters.deprecate
-    def set_default(cls,param_name,value):
-        return cls.param.set_default(param_name,value)
-
-    @classmethod
-    @Parameters.deprecate
-    def print_param_defaults(cls):
-        return cls.param.print_param_defaults()
-
-    @bothmethod
-    @Parameters.deprecate
-    def set_param(self_or_cls,*args,**kwargs):
-        return self_or_cls.param.set_param(*args,**kwargs)
-
-    @bothmethod
-    @Parameters.deprecate
-    def set_dynamic_time_fn(self_or_cls,time_fn,sublistattr=None):
-        return self_or_cls.param.set_dynamic_time_fn(time_fn,sublistattr=sublistattr)
-
-    @bothmethod
-    @Parameters.deprecate
-    def get_param_values(self_or_cls,onlychanged=False):
-        return self_or_cls.param.get_param_values(onlychanged=onlychanged)
-
-    @bothmethod
-    @Parameters.deprecate
-    def force_new_dynamic_value(cls_or_slf,name): # pylint: disable-msg=E0213
-        return cls_or_slf.param.force_new_dynamic_value(name)
-
-    @bothmethod
-    @Parameters.deprecate
-    def get_value_generator(cls_or_slf,name): # pylint: disable-msg=E0213
-        return cls_or_slf.param.get_value_generator(name)
-
-    @bothmethod
-    @Parameters.deprecate
-    def inspect_value(cls_or_slf,name): # pylint: disable-msg=E0213
-        return cls_or_slf.param.inspect_value(name)
-
-    @Parameters.deprecate
-    def _set_name(self,name):
-        return self.param._set_name(name)
-
-    @Parameters.deprecate
-    def __db_print(self,level,msg,*args,**kw):
-        return self.param.__db_print(level,msg,*args,**kw)
-
-    @Parameters.deprecate
-    def warning(self,msg,*args,**kw):
-        return self.param.warning(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def message(self,msg,*args,**kw):
-        return self.param.message(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def verbose(self,msg,*args,**kw):
-        return self.param.verbose(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def debug(self,msg,*args,**kw):
-        return self.param.debug(msg,*args,**kw)
-
-    @Parameters.deprecate
-    def print_param_values(self):
-        return self.param.print_param_values()
-
-    @Parameters.deprecate
-    def defaults(self):
-        return self.param.defaults()
 
 
 
@@ -3564,7 +3514,7 @@ class ParamOverrides(dict):
         supplied `dict_` whose names are parameters of the
         overridden object (i.e. not extra keywords/parameters).
         """
-        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
+        return {key: self[key] for key in self if key not in self.extra_keywords()}
 
     def __missing__(self,name):
         # Return 'name' from the overridden object
@@ -3740,7 +3690,7 @@ label_formatter = default_label_formatter
 # infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
 # but since python 2.6 the getter, setter, and deleter attributes of
 # a property should provide similar functionality already.
-class overridable_property(object):
+class overridable_property:
     """
     The same as Python's "property" attribute, but allows the accessor
     methods to be overridden in subclasses.

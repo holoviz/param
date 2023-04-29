@@ -71,7 +71,7 @@ Error handling and documentation:
 - Fixed description of shared_parameters ([#568](https://github.com/holoviz/param/pull/568))
 - Improve the error messages of Date and DateRange ([#579](https://github.com/holoviz/param/pull/579))
 - Clarified step error messages and other docs and links ([#604](https://github.com/holoviz/param/pull/604))
-  
+
 Bug fixes:
 
 - Make iscoroutinefunction more robust ([#572](https://github.com/holoviz/param/pull/572))
@@ -203,7 +203,7 @@ Minor release for Panel-related bugfixes and minor features, from @philippjfr.
 
 ## Version 1.9.2
 
-- Compatibility with Python 3.8 
+- Compatibility with Python 3.8
 - Add eager option to watch calls ([#351](https://github.com/holoviz/param/pull/351))
 - Add Calendar and CalendarDateRange for real date types ([#348](https://github.com/holoviz/param/pull/348))
 
@@ -348,7 +348,7 @@ A full list of changes since the previous release is available [here](https://gi
 * Selector parameters now respect order of options supplied
 * Allowed softbounds to be accessed like an attribute
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.4.0...v1.4.1).
 
 ## Version 1.4.0 (2016/07)
@@ -356,7 +356,7 @@ A full list of changes since the previous release is available
 * Added support for new [ParamNB](https://github.com/ioam/paramnb) project
 * Added new parameter types Action, FileSelector, and ListSelector
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.3.2...v1.4.0).
 
 ## Version 1.3.2 (2015/04)
@@ -364,7 +364,7 @@ A full list of changes since the previous release is available
 * Added Unicode support for param.String.
 * Minor bugfixes.
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.3.1...v1.3.2).
 
 ## Version 1.3.1 (2015/03)
@@ -381,7 +381,7 @@ A full list of changes since the previous release is available
 * Improved set_param() method, now allowing multiple parameters to be
   set easily via keyword arguments (as on initialization).
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.3.0...v1.3.1).
 
 ## Version 1.3.0 (2015/03)
@@ -397,7 +397,7 @@ A full list of changes since the previous release is available
 * Added label and unit parameters to param.Time class.
 * Improved optional IPython extension.
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.2.1...v1.3.0).
 
 ## Version 1.2.1 (2014/06)
@@ -407,7 +407,7 @@ A full list of changes since the previous release is available
 * Made version module optional
 * Improved ClassSelector and ParamOverrides
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.2.0...v1.2.1).
 
 ## Version 1.2.0 (2014/06)
@@ -417,7 +417,7 @@ A full list of changes since the previous release is available
 * Added version module.
 * Added optional numbergen package.
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.1.0...v1.2.0).
 
 ## Version 1.1.0 (2014/05)
@@ -426,7 +426,7 @@ A full list of changes since the previous release is available
 * Improved support for time when using Dynamic parameters.
 * Optional extension for IPython users.
 
-A full list of changes since the previous release is available 
+A full list of changes since the previous release is available
 [on GitHub](https://github.com/holoviz/param/compare/v1.0.0...v1.1.0).
 
 ## Version 1.0.0 (2012/07)

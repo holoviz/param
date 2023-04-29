@@ -11,8 +11,9 @@
 *.lock
 .ipynb_checkpoints
 .vscode
-.tox
 data.pickle
+dist/
+.venv/
 
 # Docs
 builtdocs/
@@ -24,7 +25,5 @@ doc/Reference_Manual/
 .coverage
 coverage.xml
 
-# autover
-param/.version
-.venv/
-script.*
+# Versionning
+param/_version.py

@@ -7,7 +7,7 @@ name = "param"
 dynamic = ["version"]
 description = "Make your Python code clearer and more reliable by declaring Parameters."
 readme = "README.md"
-license = { file = "LICENSE.txt" }
+license = { text = "BSD-3-Clause" }
 requires-python = ">=3.7"
 authors = [
     { name = "HoloViz", email = "developers@holoviz.org" },
@@ -34,26 +34,8 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-all = [
-    "aiohttp",
-    "coverage",
-    "flake8",
-    "graphviz",
-    "ipython !=8.7.0",
-    "myst-parser",
-    "myst_nb ==0.12.2",
-    "nbconvert",
-    "nbsite ==0.8.0rc2",
-    "pandas",
-    "panel",
-    "pydata-sphinx-theme <0.9.0",
-    # "pygraphviz",
-    "pytest",
-    "sphinx-copybutton",
-]
 doc = [
     "aiohttp",
-    "graphviz",
     "ipython !=8.7.0",
     "myst-parser",
     "myst_nb ==0.12.2",
@@ -62,7 +44,6 @@ doc = [
     "pandas",
     "panel",
     "pydata-sphinx-theme <0.9.0",
-    # "pygraphviz",
     "sphinx-copybutton",
 ]
 tests = [
@@ -70,14 +51,25 @@ tests = [
     "flake8",
     "pytest",
 ]
+tests-full = [
+    "param[tests]",
+    "numpy",
+    "pandas",
+    "ipython",
+    "jsonschema",
+    "gmpy",
+]
+all = [
+    "param[tests-full]",
+    "param[doc]",
+]
 
 [project.urls]
-"Bug Tracker" = "https://github.com/holoviz/param/issues"
-Documentation = "https://param.holoviz.org/"
-Homepage = "http://param.holoviz.org/"
-"Panel Examples" = "https://panel.holoviz.org/user_guide/Param.html"
+Homepage = "https://param.holoviz.org/"
+Tracker = "https://github.com/holoviz/param/issues"
 Releases = "https://github.com/holoviz/param/releases"
-"Source Code" = "https://github.com/holoviz/param"
+Source = "https://github.com/holoviz/param"
+HoloViz = "https://holoviz.org/"
 
 [tool.hatch.version]
 source = "vcs"
@@ -92,62 +84,74 @@ include = [
 include = [
     "param",
     "numbergen",
-    "tests"
+    "tests",
 ]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "param/_version.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+    # Base tests dependencies
+    "param[tests]",
+    # Additional tests dependencies, not including gmpy as
+    # it's tricky to install.
+    "ipython",
+    "jsonschema",
+    "numpy",
+    "pandas",
+    # To keep __version__ up-to-date in editable installs
+    "setuptools_scm",
+]
+
+[tool.hatch.envs.default.scripts]
+dev = "pytest tests"
 
 [tool.hatch.envs.docs]
 features = ["doc"]
+python = "3.9"
 
 [tool.hatch.envs.docs.scripts]
 build = [
     "cp examples/user_guide/*.ipynb doc/user_guide/",
-    "python -m nbsite build --org holoviz --project-name param"
+    "python -m nbsite build --org holoviz --project-name param",
 ]
 
-[[tool.hatch.envs.docs.matrix]]
-python = ["3.8"]
-
-[tool.flake8]
-# TODO tests should not be excluded (one day...)
-include = [
-    "param",
-    "numbergen"
-]
-exclude = [
-    ".git",
-    "__pycache__",
-    ".tox",".eggs",
-    "*.egg",
-    "doc",
-    "dist",
-    "build",
-    "_build",
-    "tests",
-    ".ipynb_checkpoints",
-    "run_test.py"
-]
-ignore = [
-    "E114",
-    "E116",
-    "E126",
-    "E128",
-    "E129",
-    "E2",
-    "E3",
-    "E4",
-    "E5",
-    "E731",
-    "E701",
-    "E702",
-    "E703",
-    "E704",
-    "E722",
-    "E741",
-    "E742",
-    "E743",
-    "W503",
-    "W504"
+[tool.hatch.envs.tests]
+dependencies = [
+    "param[tests]",
+    "ipython",
+    "jsonschema",
 ]
 
-[tool.pytest]
+[[tool.hatch.envs.tests.matrix]]
+python = [
+    "3.7",
+    "3.8",
+    "3.9",
+    "3.10",
+    "3.11",
+    "pypy3",
+]
+
+[tool.hatch.envs.tests.scripts]
+test = "pytest tests"
+with_coverage = [
+    "coverage run --source=numbergen,param -m pytest tests",
+    "coverage report",
+    "coverage xml",
+]
+
+[tool.hatch.envs.tests.overrides]
+# Only install numpy and pandas on non PyPy environments
+name."^(?!pypy).*".dependencies = [
+    "numpy",
+    "pandas",
+]
+# Only install gmpy on Linux
+platform.linux.dependencies = [
+    "gmpy",
+]
+
+[tool.pytest.ini_options]
 python_files = "test*.py"

@@ -827,28 +827,94 @@ def test_inheritance_class_attribute_behavior():
 @pytest.mark.parametrize(["default", "value"], [
     (None,"v"), ("d", "v")
 ])
-def test_constant_parameter_not_raises(default, value):
+def test_required(default, value):
     """Test that you can make a parameter required and it will not raise
     an error if provided."""
-    class TestConstant(param.Parameterized):
-        value = param.Parameter(default=default, required=True)
+    class P(param.Parameterized):
+        value1 = param.Parameter(default=default, required=True)
+        value2 = param.Parameter(default=default, required=True)
+        notrequired = param.Parameter(default=default, required=False)
 
-    po = TestConstant(value=value)
-    assert po.value == value
+    po = P(value1=value, value2=value)
+    assert po.value1 == value
+    assert po.value2 == value
 
 
 @pytest.mark.parametrize("default", [None, "d"])
-def test_constant_parameter_raises(default):
+def test_required_raises(default):
     """Test that you can make a parameter required and it will raise
     an error if not provided."""
-    class TestConstant(param.Parameterized):
-        value = param.Parameter(default=default, required=True)
+    class P(param.Parameterized):
+        value1 = param.Parameter(default=default, required=True)
+        notrequired = param.Parameter(default=default, required=False)
 
     with pytest.raises(
         TypeError,
-        match=re.escape(r"__init__() missing 1 required positional argument: 'value'"),
+        match=re.escape(r"P.__init__() missing 1 required keyword-only argument: 'value1'"),
     ):
-        TestConstant()
+        P()
+
+    class Q(param.Parameterized):
+        value1 = param.Parameter(default=default, required=True)
+        value2 = param.Parameter(default=default, required=True)
+        notrequired = param.Parameter(default=default, required=False)
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"Q.__init__() missing 2 required keyword-only arguments: 'value1' and 'value2'"),
+    ):
+        Q()
+
+    class R(param.Parameterized):
+        value1 = param.Parameter(default=default, required=True)
+        value2 = param.Parameter(default=default, required=True)
+        value3 = param.Parameter(default=default, required=True)
+        notrequired = param.Parameter(default=default, required=False)
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"R.__init__() missing 3 required keyword-only arguments: 'value1', 'value2', and 'value3'"),
+    ):
+        R()
+
+
+def test_required_inheritance():
+    class A(param.Parameterized):
+        p = param.Parameter(default=1, required=True, doc='aaa')
+
+    class B(A):
+        pass
+
+    class C(B):
+        p = param.Parameter(required=False, doc='bbb')
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"A.__init__() missing 1 required keyword-only argument: 'p'"),
+    ):
+        A()
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"B.__init__() missing 1 required keyword-only argument: 'p'"),
+    ):
+        B()
+
+    c = C()
+
+    assert c.p == 1
+
+    C.param.p.required = True
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"C.__init__() missing 1 required keyword-only argument: 'p'"),
+    ):
+        C()
+
+    c = C(p=2)
+
+    assert c.p == 2
 
 
 @pytest.fixture

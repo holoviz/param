@@ -352,8 +352,8 @@ class TestParameterized(unittest.TestCase):
         param.parameterized.label_formatter = default_label_formatter
 
     def test_error_if_non_param_in_constructor(self):
-        msg = "TestPO has no Parameter 'not_a_param'; cannot set 'not_a_param' in the constructor"
-        with pytest.raises(TypeError, match=msg):
+        msg = "TestPO.__init__() got an unexpected keyword argument 'not_a_param'"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             TestPO(not_a_param=2)
 
 

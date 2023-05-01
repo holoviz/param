@@ -1689,8 +1689,8 @@ class Parameters:
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
                 raise TypeError(
-                    f"{self.__class__.__name__} has no Parameter '{name}'; "
-                    f"cannot set '{name}' in the constructor"
+                    f"{self.__class__.__name__}.__init__() got an unexpected "
+                    f"keyword argument {name!r}"
                 )
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)

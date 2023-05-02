@@ -43,10 +43,12 @@ except:
 from inspect import getfullargspec
 
 dt_types = (dt.datetime, dt.date)
+_int_types = (int,)
 
 try:
     import numpy as np
     dt_types = dt_types + (np.datetime64,)
+    _int_types = _int_types + (np.integer,)
 except:
     pass
 

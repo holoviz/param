@@ -42,6 +42,7 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 from .parameterized import _identity_hook
+from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning
 
 # Define '__version__'
 try:
@@ -93,7 +94,7 @@ def as_unicode(obj):
     # PARAM3_DEPRECATION
     warnings.warn(
         message="`as_unicode' is deprecated",
-        category=DeprecationWarning,
+        category=_ParamDeprecationWarning,
         stacklevel=2,
     )
     return str(obj)
@@ -109,7 +110,7 @@ def is_ordered_dict(d):
     # PARAM3_DEPRECATION
     warnings.warn(
         message="`as_unicode' is deprecated",
-        category=DeprecationWarning,
+        category=_ParamDeprecationWarning,
         stacklevel=2,
     )
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
@@ -1667,7 +1668,7 @@ class List(Parameter):
             # PARAM3_DEPRECATION
             warnings.warn(
                 message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=DeprecationWarning,
+                category=_ParamDeprecationWarning,
                 stacklevel=2,
             )
         if item_type is not Undefined and class_ is not Undefined:

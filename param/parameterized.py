@@ -10,7 +10,6 @@ __init__.py (providing specialized Parameter types).
 
 import copy
 import datetime as dt
-import functools
 import re
 import inspect
 import random
@@ -34,6 +33,8 @@ from types import FunctionType
 import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+from ._utils import _deprecated
 
 try:
     # In case the optional ipython module is unavailable
@@ -92,20 +93,6 @@ warning_count = 0
 def _identity_hook(obj, val):
     """To be removed when set_hook is removed"""
     return val
-
-
-def _deprecated(extra_msg=""):
-    def decorator(func):
-        """Internal decorator used to mark functions/methods as deprecated."""
-        @functools.wraps(func)
-        def inner(*args, **kwargs):
-            msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
-            if extra_msg:
-                msg = msg + ' ' + extra_msg
-            warnings.warn(msg, category=FutureWarning, stacklevel=2)
-            return func(*args, **kwargs)
-        return inner
-    return decorator
 
 
 class _Undefined:
@@ -3745,6 +3732,8 @@ class ParameterizedFunction(Parameterized):
         """
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
+
+        ..deprecated:: 2.0.0
         """
         return self.pprint(imports,prefix,unknown_value='',qualify=True,
                            separator="\n")

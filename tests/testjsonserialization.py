@@ -55,7 +55,7 @@ class TestSet(param.Parameterized):
     b = param.Number(default=4.3, allow_None=True)
     c = param.String(default='foo')
     d = param.Boolean(default=False)
-    e = param.List([1,2,3], class_=int)
+    e = param.List([1,2,3], item_type=int)
     f = param.List([1,2,3])
     g = param.Date(default=datetime.datetime.now())
     g2 = None if np is None else param.Date(default=npdt1)

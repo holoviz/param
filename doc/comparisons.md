@@ -27,7 +27,7 @@ Python properties can be used to express nearly anything Param or Traitlets can 
 Specifically, where Param or Traitlets can express an automatically validated type and bounds on an attribute in a simple and localized one-line declaration like `a = param.Integer(5, bounds=(1,10))`, implementing the same functionality using properties requires changes to the constructor plus separate explicit `get` and `set` methods, each with at least a half-dozen lines of validation code. Though this get/set/validate code may seem easy to write, it is difficult to read, difficult to maintain, and difficult to make comprehensive or exhaustive.
 In practice, most programmers simply skip validation or implement it only partially, leaving their code behaving in undefined ways for unexpected inputs. With Param or Traitlets, you don't have to choose between short/readable/maintainable code and heavily validated code; you can have both for far less work!
 
-`pydantic` and `attrs` provide many of these same benefits, though `attrs` type and bounds validation is treated as an extra step that is more general but also typically much more verbose. 
+`pydantic` and `attrs` provide many of these same benefits, though `attrs` type and bounds validation is treated as an extra step that is more general but also typically much more verbose.
 
 ## Runtime checking
 

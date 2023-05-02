@@ -18,7 +18,7 @@ import random
 from param.parameterized import ParamOverrides, shared_parameters
 from param.parameterized import default_label_formatter, no_instance_params
 
-class _SomeRandomNumbers(object):
+class _SomeRandomNumbers:
     def __call__(self):
         return random.random()
 
@@ -66,7 +66,7 @@ class TestParameterized(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestParameterized, cls).setUpClass()
+        super().setUpClass()
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
@@ -144,10 +144,10 @@ class TestParameterized(unittest.TestCase):
         # check you cannot set on class
         self.assertRaises(TypeError,setattr,TestPO,'ro',5)
 
-        self.assertEqual(testpo.param.params()['ro'].constant,True)
+        self.assertEqual(testpo.param['ro'].constant,True)
 
         # check that instantiate was ignored for readonly
-        self.assertEqual(testpo.param.params()['ro2'].instantiate,False)
+        self.assertEqual(testpo.param['ro2'].instantiate,False)
 
     def test_basic_instantiation(self):
         """Check that instantiated parameters are copied into objects."""
@@ -180,7 +180,7 @@ class TestParameterized(unittest.TestCase):
     def test_instantiation_inheritance(self):
         """Check that instantiate=True is always inherited (SF.net #2483932)."""
         t = TestParamInstantiation()
-        assert t.param.params('instPO').instantiate is True
+        assert t.param['instPO'].instantiate is True
         assert isinstance(t.instPO,AnotherTestPO)
 
     def test_abstract_class(self):
@@ -203,21 +203,18 @@ class TestParameterized(unittest.TestCase):
         with self.assertRaises(ValueError):
             TestPOValidation.value = 10
 
-    def test_params(self):
+    def test_values(self):
         """Basic tests of params() method."""
 
         # CB: test not so good because it requires changes if params
         # of PO are changed
-        assert 'name' in param.Parameterized.param.params()
-        assert len(param.Parameterized.param.params()) in [1,2]
+        assert 'name' in param.Parameterized.param.values()
+        assert len(param.Parameterized.param.values()) in [1,2]
 
         ## check for bug where subclass Parameters were not showing up
-        ## if params() already called on a super class.
-        assert 'inst' in TestPO.param.params()
-        assert 'notinst' in TestPO.param.params()
-
-        ## check caching
-        assert param.Parameterized.param.params() is param.Parameterized().param.params(), "Results of params() should be cached." # just for performance reasons
+        ## if values() already called on a super class.
+        assert 'inst' in TestPO.param.values()
+        assert 'notinst' in TestPO.param.values()
 
     def test_param_iterator(self):
         self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn',
@@ -285,9 +282,9 @@ class TestParameterized(unittest.TestCase):
         assert test.param.inst.default is TestPO.param.inst.default
 
     def test_pprint_instance_params(self):
-        # Ensure pprint does not make instance parameter copies
+        # Ensure .param.pprint does not make instance parameter copies
         test = TestPO()
-        test.pprint()
+        test.param.pprint()
         for p, obj in TestPO.param.objects('current').items():
             assert obj is TestPO.param[p]
 
@@ -305,20 +302,13 @@ class TestParameterized(unittest.TestCase):
         for p, obj in TestPO.param.objects('current').items():
             assert obj is TestPO.param[p]
 
-    def test_defaults_instance_params(self):
-        # Ensure defaults does not make instance parameter copies
-        test = TestPO()
-        test.param.defaults()
-        for p, obj in TestPO.param.objects('current').items():
-            assert obj is TestPO.param[p]
-
     def test_state_saving(self):
         t = TestPO(dyn=_SomeRandomNumbers())
         g = t.param.get_value_generator('dyn')
         g._Dynamic_time_fn=None
         assert t.dyn!=t.dyn
         orig = t.dyn
-        t.state_push()
+        t._state_push()
         t.dyn
         assert t.param.inspect_value('dyn')!=orig
         t.state_pop()
@@ -326,28 +316,28 @@ class TestParameterized(unittest.TestCase):
 
     def test_label(self):
         t = TestPO()
-        assert t.param.params('ro_label').label == 'Ro Label'
+        assert t.param['ro_label'].label == 'Ro Label'
 
     def test_label_set(self):
         t = TestPO()
-        assert t.param.params('ro_label').label == 'Ro Label'
-        t.param.params('ro_label').label = 'Ro relabeled'
-        assert t.param.params('ro_label').label == 'Ro relabeled'
+        assert t.param['ro_label'].label == 'Ro Label'
+        t.param['ro_label'].label = 'Ro relabeled'
+        assert t.param['ro_label'].label == 'Ro relabeled'
 
     def test_label_default_format(self):
         t = TestPO()
-        assert t.param.params('ro_format').label == 'Ro format'
+        assert t.param['ro_format'].label == 'Ro format'
 
     def test_label_custom_format(self):
         param.parameterized.label_formatter = default_label_formatter.instance(capitalize=False)
         t = TestPO()
-        assert t.param.params('ro_format').label == 'ro format'
+        assert t.param['ro_format'].label == 'ro format'
         param.parameterized.label_formatter = default_label_formatter
 
     def test_label_constant_format(self):
         param.parameterized.label_formatter = lambda x: 'Foo'
         t = TestPO()
-        assert t.param.params('ro_format').label == 'Foo'
+        assert t.param['ro_format'].label == 'Foo'
         param.parameterized.label_formatter = default_label_formatter
 
 
@@ -427,7 +417,7 @@ class TestNumberParameter(unittest.TestCase):
 class TestStringParameter(unittest.TestCase):
 
     def setUp(self):
-        super(TestStringParameter, self).setUp()
+        super().setUp()
 
         class TestString(param.Parameterized):
             a = param.String()
@@ -450,7 +440,7 @@ class TestStringParameter(unittest.TestCase):
 class TestParameterizedUtilities(unittest.TestCase):
 
     def setUp(self):
-        super(TestParameterizedUtilities, self).setUp()
+        super().setUp()
 
 
     def test_default_label_formatter(self):
@@ -469,7 +459,7 @@ class TestParameterizedUtilities(unittest.TestCase):
 class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):
-        super(TestParamOverrides, self).setUp()
+        super().setUp()
         self.po = param.Parameterized(name='A',print_level=0)
 
     def test_init_name(self):
@@ -493,7 +483,7 @@ class TestParamOverrides(unittest.TestCase):
 class TestSharedParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestSharedParameters, self).setUp()
+        super().setUp()
         with shared_parameters():
             self.p1 = TestPO(name='A', print_level=0)
             self.p2 = TestPO(name='B', print_level=0)
@@ -502,11 +492,11 @@ class TestSharedParameters(unittest.TestCase):
 
     def test_shared_object(self):
         self.assertTrue(self.ap1.instPO is self.ap2.instPO)
-        self.assertTrue(self.ap1.param.params('instPO').default is not self.ap2.instPO)
+        self.assertTrue(self.ap1.param['instPO'].default is not self.ap2.instPO)
 
     def test_shared_list(self):
         self.assertTrue(self.p1.inst is self.p2.inst)
-        self.assertTrue(self.p1.param.params('inst').default is not self.p2.inst)
+        self.assertTrue(self.p1.param['inst'].default is not self.p2.inst)
 
 
 def test_inheritance_None_is_not_special_cased_default():
@@ -794,7 +784,7 @@ def test_inheritance_allow_None_behavior():
 def test_inheritance_allow_None_behavior2():
     class A(param.Parameterized):
         p = param.Parameter(allow_None=False)
-        
+
     class B(A):
         p = param.Parameter(default=None)
 
@@ -811,7 +801,7 @@ def test_inheritance_allow_None_behavior2():
 def test_inheritance_class_attribute_behavior():
     class A(param.Parameterized):
         p = param.Parameter(1)
-        
+
     class B(A):
         p = param.Parameter()
 

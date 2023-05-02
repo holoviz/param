@@ -13,7 +13,7 @@ from .utils import check_defaults
 class TestListSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestListSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.ListSelector(default=[5],objects=[5,6,7])
             f = param.ListSelector(default=10)
@@ -186,16 +186,16 @@ class TestListSelectorParameters(unittest.TestCase):
             r = param.ListSelector(default=None, compute_default_fn=lambda: [1,2,3])
 
         self.assertEqual(Q.r, None)
-        Q.param.params('r').compute_default()
+        Q.param['r'].compute_default()
         self.assertEqual(Q.r, [1,2,3])
-        self.assertEqual(Q.param.params('r').objects, [1,2,3])
+        self.assertEqual(Q.param['r'].objects, [1,2,3])
 
     def test_bad_compute_default(self):
         class Q(param.Parameterized):
             r = param.ListSelector(default=None,compute_default_fn=lambda:1)
 
         with self.assertRaises(TypeError):
-            Q.param.params('r').compute_default()
+            Q.param['r'].compute_default()
 
     def test_initialization_bad_iterable(self):
         with self.assertRaises(ValueError):

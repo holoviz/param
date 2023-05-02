@@ -18,7 +18,7 @@ opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 class TestSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Selector([5,6,7])
             f = param.Selector(default=10)
@@ -117,22 +117,22 @@ class TestSelectorParameters(unittest.TestCase):
         assert p.o2 == 1
 
     def test_get_range_list(self):
-        r = self.P.param.params("g").get_range()
+        r = self.P.param['g'].get_range()
         self.assertEqual(r['7'],7)
         self.assertEqual(r['8'],8)
 
     def test_get_range_ordereddict(self):
-        r = self.P.param.params("s").get_range()
+        r = self.P.param['s'].get_range()
         self.assertEqual(r['one'],1)
         self.assertEqual(r['two'],2)
 
     def test_get_range_dict(self):
-        r = self.P.param.params("p").get_range()
+        r = self.P.param['p'].get_range()
         self.assertEqual(r['one'],1)
         self.assertEqual(r['two'],2)
 
     def test_get_range_mutable(self):
-        r = self.P.param.params("d").get_range()
+        r = self.P.param['d'].get_range()
         self.assertEqual(r['A'],opts['A'])
         self.assertEqual(r['C'],opts['C'])
         self.d=opts['A']

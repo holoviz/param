@@ -35,7 +35,7 @@ def run_cmd(args, cwd=None):
 
 
 
-class Version(object):
+class Version:
     """
     A simple approach to Python package versioning that supports PyPI
     releases and additional information when working with version
@@ -87,7 +87,7 @@ class Version(object):
            ('commit_count' in kw):
             return OldDeprecatedVersion(**kw)
         else:
-            return super(Version, cls).__new__(cls)
+            return super().__new__(cls)
 
 
     def __init__(self, release=None, fpath=None, commit=None, reponame=None,
@@ -164,7 +164,7 @@ class Version(object):
             try:
                 self.git_fetch(cmd)
                 break
-            except EnvironmentError:
+            except OSError:
                 pass
         return self
 
@@ -210,7 +210,7 @@ class Version(object):
                     self._commit = commit_argument
                 return
 
-            except IOError:
+            except OSError:
                 if e1.args[1] == 'fatal: No names found, cannot describe anything.':
                     raise Exception("Cannot find any git version tags of format v*.*")
                 # If there is any other error, return (release value still useful)
@@ -245,7 +245,7 @@ class Version(object):
         """
         try:
             vfile = os.path.join(os.path.dirname(self.fpath), '.version')
-            with open(vfile, 'r') as f:
+            with open(vfile) as f:
                 return json.loads(f.read()).get(entry, None)
         except: # File may be missing if using pip + git archive
             return None
@@ -535,7 +535,7 @@ def get_setupcfg_version():
 
 
 # from param/version.py aa087db29976d9b7e0f59c29789dfd721c85afd0
-class OldDeprecatedVersion(object):
+class OldDeprecatedVersion:
     """
     A simple approach to Python package versioning that supports PyPI
     releases and additional information when working with version
@@ -632,7 +632,7 @@ class OldDeprecatedVersion(object):
             try:
                 self.git_fetch(cmd)
                 break
-            except EnvironmentError:
+            except OSError:
                 pass
         return self
 
@@ -702,7 +702,7 @@ class OldDeprecatedVersion(object):
             return release
 
         dirty_status = '-dirty' if self.dirty else ''
-        return '%s-%s-g%s%s' % (release, self.commit_count if self.commit_count else 'x',
+        return '{}-{}-g{}{}'.format(release, self.commit_count if self.commit_count else 'x',
                                 self.commit, dirty_status)
 
     def __repr__(self):

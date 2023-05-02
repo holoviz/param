@@ -2,7 +2,6 @@
 Unit test for Bytes parameters
 """
 import unittest
-import sys
 
 import pytest
 
@@ -43,24 +42,18 @@ class TestBytesParameters(unittest.TestCase):
         self._check_defaults(b)
 
     def test_bytes_default_type(self):
-        if sys.version_info.major < 3:
-            pytest.skip()
-
         with pytest.raises(ValueError):
             class A(param.Parameterized):
                 s = param.Bytes('abc')
 
     def test_bytes_value_type(self):
-        if sys.version_info.major < 3:
-            pytest.skip()
-
         class A(param.Parameterized):
             s = param.Bytes()
 
         with pytest.raises(ValueError):
             A(s='abc')
-        
-            
+
+
     def test_regex_ok(self):
         class A(param.Parameterized):
             s = param.Bytes(b'0.0.0.0', ip_regex)
@@ -74,8 +67,7 @@ class TestBytesParameters(unittest.TestCase):
 
         a = A()
 
-        cls = 'class' if sys.version_info.major > 2 else 'type'
-        exception = "Bytes parameter 's' only takes a byte string value, not value of type <%s 'NoneType'>." % cls
+        exception = "Bytes parameter 's' only takes a byte string value, not value of type <class 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 
@@ -93,15 +85,13 @@ class TestBytesParameters(unittest.TestCase):
 
         a = A()
 
-        b = 'b' if sys.version_info.major > 2 else ''
-        exception = "Bytes parameter 's' value %s'123.123.0.256' does not match regex %r."  % (b, ip_regex)
+        exception = "Bytes parameter 's' value b'123.123.0.256' does not match regex %r."  % ip_regex
         with self.assertRaises(ValueError) as e:
             a.s = b'123.123.0.256'
         self.assertEqual(str(e.exception), exception)
 
     def test_regex_incorrect_default(self):
-        b = 'b' if sys.version_info.major > 2 else ''
-        exception = "Bytes parameter None value %s'' does not match regex %r." % (b, ip_regex)
+        exception = f"Bytes parameter None value b'' does not match regex {ip_regex!r}."
         with self.assertRaises(ValueError) as e:
             class A(param.Parameterized):
                 s = param.Bytes(regex=ip_regex)  # default value '' does not match regular expression

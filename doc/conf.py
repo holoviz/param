@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from nbsite.shared_conf import *
+from nbsite.shared_conf import *  # noqa
 
 project = u'param'
 authors = u'HoloViz developers'
@@ -12,11 +12,11 @@ import param
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
-version = release = base_version(param.__version__)
+version = release = base_version(param.__version__)  # noqa
 
 nbbuild_cell_timeout = 600
 
-html_static_path += ['_static']
+html_static_path += ['_static']  # noqa
 
 html_theme = "pydata_sphinx_theme"
 
@@ -26,7 +26,7 @@ html_favicon = "_static/favicon.ico"
 
 html_css_files = ['site.css']
 
-exclude_patterns += ['historical_release_notes.rst']
+exclude_patterns += ['historical_release_notes.rst']  # noqa
 
 html_theme_options = {
     "github_url": "https://github.com/holoviz/param",
@@ -49,7 +49,7 @@ html_theme_options = {
     'google_analytics_id': 'UA-154795830-6',
 }
 
-extensions += ['sphinx_copybutton']
+extensions += ['sphinx_copybutton']  # noqa
 
 # Override the Sphinx default title that appends `documentation`
 html_title = f'{project} v{version}'

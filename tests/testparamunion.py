@@ -10,7 +10,7 @@ import param
 class MyHandler(logging.StreamHandler):
 
     def __init__(self):
-        super(MyHandler, self).__init__()
+        super().__init__()
         self.records = []
 
     def emit(self, record):

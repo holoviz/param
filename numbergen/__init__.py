@@ -42,7 +42,7 @@ class TimeAware(param.Parameterized):
 
 
     def __init__(self, **params):
-        super(TimeAware, self).__init__(**params)
+        super().__init__(**params)
         self._check_time_fn()
 
 
@@ -81,7 +81,7 @@ class TimeDependent(TimeAware):
        Read-only parameter that is always True.""")
 
     def _check_time_fn(self):
-        super(TimeDependent,self)._check_time_fn(time_instance=True)
+        super()._check_time_fn(time_instance=True)
 
 
 
@@ -151,7 +151,7 @@ class BinaryOperator(NumberGenerator):
         # Note that it's currently not possible to set
         # parameters in the superclass when creating an instance,
         # because **args is used by this class itself.
-        super(BinaryOperator,self).__init__()
+        super().__init__()
 
         if reverse:
             self.lhs=rhs
@@ -184,7 +184,7 @@ class UnaryOperator(NumberGenerator):
         # Note that it's currently not possible to set
         # parameters in the superclass when creating an instance,
         # because **args is used by this class itself.
-        super(UnaryOperator,self).__init__()
+        super().__init__()
 
         self.operand=operand
         self.operator=operator
@@ -198,7 +198,7 @@ class UnaryOperator(NumberGenerator):
                 pprint(self.operand,  *args, **kwargs) + ')')
 
 
-class Hash(object):
+class Hash:
     """
     A platform- and architecture-independent hash function (unlike
     Python's inbuilt hash function) for use with an ordered collection
@@ -442,7 +442,7 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
         Otherwise, calls creates an unseeded Random instance which is
         likely to result in a state very different from any just used.
         """
-        super(RandomDistribution,self).__init__(**params)
+        super().__init__(**params)
         self._initialize_random_state(seed=self.seed, shared=False)
 
     def __call__(self):
@@ -464,7 +464,7 @@ class UniformRandom(RandomDistribution):
 
 
     def __call__(self):
-        super(UniformRandom, self).__call__()
+        super().__call__()
         return self.random_generator.uniform(self.lbound,self.ubound)
 
 
@@ -485,7 +485,7 @@ class UniformRandomOffset(RandomDistribution):
 
 
     def __call__(self):
-        super(UniformRandomOffset, self).__call__()
+        super().__call__()
         return self.random_generator.uniform(
                 self.mean - self.range / 2.0,
                 self.mean + self.range / 2.0)
@@ -505,7 +505,7 @@ class UniformRandomInt(RandomDistribution):
 
 
     def __call__(self):
-        super(UniformRandomInt, self).__call__()
+        super().__call__()
         x = self.random_generator.randint(self.lbound,self.ubound)
         return x
 
@@ -524,7 +524,7 @@ class Choice(RandomDistribution):
 
 
     def __call__(self):
-        super(Choice, self).__call__()
+        super().__call__()
         return self.random_generator.choice(self.choices)
 
 
@@ -543,7 +543,7 @@ class NormalRandom(RandomDistribution):
 
 
     def __call__(self):
-        super(NormalRandom, self).__call__()
+        super().__call__()
         return self.random_generator.normalvariate(self.mu,self.sigma)
 
 
@@ -568,7 +568,7 @@ class VonMisesRandom(RandomDistribution):
 
 
     def __call__(self):
-        super(VonMisesRandom, self).__call__()
+        super().__call__()
         return self.random_generator.vonmisesvariate(self.mu,self.kappa)
 
 
@@ -645,7 +645,7 @@ class SquareWave(NumberGenerator, TimeDependent):
 
 
     def __init__(self, **params):
-        super(SquareWave,self).__init__(**params)
+        super().__init__(**params)
 
         if self.off_duration is None:
             self.off_duration = self.duration
@@ -715,7 +715,7 @@ class TimeSampledFn(NumberGenerator, TimeDependent):
 
 
     def __init__(self, **params):
-        super(TimeSampledFn, self).__init__(**params)
+        super().__init__(**params)
 
         if not getattr(self.fn,'time_dependent', False):
             raise Exception("The function 'fn' needs to be time dependent.")
@@ -763,5 +763,5 @@ class BoundedNumber(NumberGenerator):
         else: return val
 
 
-_public = list(set([_k for _k,_v in locals().items() if isinstance(_v,type) and issubclass(_v,NumberGenerator)]))
+_public = list({_k for _k,_v in locals().items() if isinstance(_v,type) and issubclass(_v,NumberGenerator)})
 __all__ = _public

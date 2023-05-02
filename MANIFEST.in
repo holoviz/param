@@ -1,6 +1,0 @@
-include README.rst
-include LICENSE.txt
-include setup.py
-include param/.version
-recursive-include param *.py
-recursive-include numbergen *.py

@@ -11,7 +11,7 @@ from .utils import check_defaults
 class TestNumberParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestNumberParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             b = param.Number(allow_None=False)
             c = param.Number(default=1, allow_None=True)
@@ -199,17 +199,17 @@ class TestNumberParameters(unittest.TestCase):
 
         exception = "Parameter None must be less than 1, not 1"
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class Q(param.Parameterized):
                 j = param.Number(default=1, bounds=(-1, 1), inclusive_bounds=(True, False))
 
         exception = "Parameter None must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class R(param.Parameterized):
                 j = param.Number(default=-1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
         exception = "Parameter None must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class S(param.Parameterized):
                 j = param.Number(default=1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
     def test_invalid_default_for_bounds(self):
@@ -286,7 +286,7 @@ class TestNumberParameters(unittest.TestCase):
     def test_inheritance_allow_None_behavior2(self):
         class A(param.Parameterized):
             p = param.Number(allow_None=False)
-            
+
         class B(A):
             p = param.Number(default=None)
 
@@ -304,7 +304,7 @@ class TestNumberParameters(unittest.TestCase):
         f = lambda: 2
         class A(param.Parameterized):
             p = param.Number(default=f)
-            
+
         class B(A):
             p = param.Number()
 
@@ -327,7 +327,7 @@ class TestNumberParameters(unittest.TestCase):
 class TestIntegerParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestIntegerParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             b = param.Integer(allow_None=False)
             c = param.Integer(default=1, allow_None=True)
@@ -404,7 +404,7 @@ class TestIntegerParameters(unittest.TestCase):
         self.assertEqual(Q.param['q'].step, None)
 
 
-    def test_initialization_without_step_class(self):
+    def test_initialization_without_step_class2(self):
         self.assertEqual(self.P.param['e'].step, None)
 
     def test_initialization_with_step_class(self):
@@ -528,17 +528,17 @@ class TestIntegerParameters(unittest.TestCase):
 
         exception = "Parameter None must be less than 1, not 1"
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class Q(param.Parameterized):
                 j = param.Integer(default=1, bounds=(-1, 1), inclusive_bounds=(True, False))
 
         exception = "Parameter None must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class R(param.Parameterized):
                 j = param.Integer(default=-1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
         exception = "Parameter None must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class S(param.Parameterized):
                 j = param.Integer(default=1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
     def test_invalid_default_for_bounds(self):

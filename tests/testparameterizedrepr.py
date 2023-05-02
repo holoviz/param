@@ -9,7 +9,7 @@ import param
 class TestParameterizedRepr(unittest.TestCase):
 
     def setUp(self):
-        super(TestParameterizedRepr, self).setUp()
+        super().setUp()
         # initialize a parameterized class
         class A(param.Parameterized):
             a = param.Number(4, precedence=-5)
@@ -21,7 +21,7 @@ class TestParameterizedRepr(unittest.TestCase):
             y = param.Number(2, precedence=-1)
             z = param.Number(3, precedence=-2)
             def __init__(self, a, b, c=4, d=-22, **kwargs):
-                super(A, self).__init__(a=a, b=b, c=c, **kwargs)
+                super().__init__(a=a, b=b, c=c, **kwargs)
 
         self.A = A
 
@@ -33,7 +33,7 @@ class TestParameterizedRepr(unittest.TestCase):
 
             x = param.Number(1, precedence=2)
             def __init__(self, a, b, c=4, d=-22):
-                super(B, self).__init__(a=a, b=b, c=c, name='ClassB')
+                super().__init__(a=a, b=b, c=c, name='ClassB')
 
         self.B = B
 
@@ -48,7 +48,7 @@ class TestParameterizedRepr(unittest.TestCase):
             z = param.Number(3, precedence=-2)
 
             def __init__(self, a, b, c=4, d=-22, *varargs, **kwargs):
-                super(C, self).__init__(a=a, b=b, c=c, **kwargs)
+                super().__init__(a=a, b=b, c=c, **kwargs)
 
         self.C = C
 
@@ -58,7 +58,7 @@ class TestParameterizedRepr(unittest.TestCase):
             b = param.String('B', precedence=-4)
 
             def __init__(self, a, b, c=4, d=-22, **kwargs):
-                super(D, self).__init__(a=a, b=b, **kwargs)
+                super().__init__(a=a, b=b, **kwargs)
 
         self.D = D
 
@@ -68,7 +68,7 @@ class TestParameterizedRepr(unittest.TestCase):
             a = param.Number(4, precedence=-5)
 
             def __init__(self, p, q=4, **params): # (plus non-param kw too)
-                super(E, self).__init__(**params)
+                super().__init__(**params)
 
         self.E = E
 

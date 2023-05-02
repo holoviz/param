@@ -1,6 +1,7 @@
 """
 Unit test for Parameterized.
 """
+import re
 import unittest
 
 import param
@@ -17,7 +18,7 @@ import random
 from param.parameterized import ParamOverrides, shared_parameters
 from param.parameterized import default_label_formatter, no_instance_params
 
-class _SomeRandomNumbers(object):
+class _SomeRandomNumbers:
     def __call__(self):
         return random.random()
 
@@ -65,10 +66,52 @@ class TestParameterized(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestParameterized, cls).setUpClass()
+        super().setUpClass()
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
+
+    def test_name_default_to_class_name(self):
+        assert TestPO.name == 'TestPO'
+
+    def test_name_default_to_subclass_name(self):
+        class Foo(TestPO):
+            pass
+
+        assert Foo.name == 'Foo'
+
+    def test_name_as_argument(self):
+        testpo = TestPO(name='custom')
+
+        assert testpo.name == 'custom'
+
+    def test_name_instance_generated(self):
+        testpo = TestPO()
+
+        match = re.fullmatch(r'TestPO\w{5}', testpo.name)
+        assert match is not None
+
+    def test_name_instance_generated_subclass(self):
+        class Foo(TestPO):
+            pass
+
+        foo = Foo()
+
+        match = re.fullmatch(r'Foo\w{5}', foo.name)
+        assert match is not None
+
+    def test_name_instance_generated_class_name_reset(self):
+        class P(param.Parameterized):
+            pass
+
+        P.name = 'Other'
+
+        assert P.name == 'Other'
+
+        p = P()
+
+        match = re.fullmatch(r'P\w{5}', p.name)
+        assert match is not None
 
     def test_parameter_name_fixed(self):
         testpo = TestPO()
@@ -374,7 +417,7 @@ class TestNumberParameter(unittest.TestCase):
 class TestStringParameter(unittest.TestCase):
 
     def setUp(self):
-        super(TestStringParameter, self).setUp()
+        super().setUp()
 
         class TestString(param.Parameterized):
             a = param.String()
@@ -397,7 +440,7 @@ class TestStringParameter(unittest.TestCase):
 class TestParameterizedUtilities(unittest.TestCase):
 
     def setUp(self):
-        super(TestParameterizedUtilities, self).setUp()
+        super().setUp()
 
 
     def test_default_label_formatter(self):
@@ -416,7 +459,7 @@ class TestParameterizedUtilities(unittest.TestCase):
 class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):
-        super(TestParamOverrides, self).setUp()
+        super().setUp()
         self.po = param.Parameterized(name='A',print_level=0)
 
     def test_init_name(self):
@@ -440,7 +483,7 @@ class TestParamOverrides(unittest.TestCase):
 class TestSharedParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestSharedParameters, self).setUp()
+        super().setUp()
         with shared_parameters():
             self.p1 = TestPO(name='A', print_level=0)
             self.p2 = TestPO(name='B', print_level=0)
@@ -741,7 +784,7 @@ def test_inheritance_allow_None_behavior():
 def test_inheritance_allow_None_behavior2():
     class A(param.Parameterized):
         p = param.Parameter(allow_None=False)
-        
+
     class B(A):
         p = param.Parameter(default=None)
 
@@ -758,7 +801,7 @@ def test_inheritance_allow_None_behavior2():
 def test_inheritance_class_attribute_behavior():
     class A(param.Parameterized):
         p = param.Parameter(1)
-        
+
     class B(A):
         p = param.Parameter()
 
@@ -801,4 +844,3 @@ def test_inheritance_parameter_attribute_without_default():
     with pytest.raises(KeyError, match="Slot 'foo' of parameter 'c' has no default value defined in `_slot_defaults`"):
         class A(param.Parameterized):
             c = CustomParameter()
-

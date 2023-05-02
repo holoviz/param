@@ -19,7 +19,7 @@ opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 class TestObjectSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestObjectSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.ObjectSelector(default=5,objects=[5,6,7])
             f = param.ObjectSelector(default=10)
@@ -302,7 +302,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
     def test_int_getitem_objects_list(self):
         p = self.P()
 
-        self.assertEqual(p.param.e.objects[0], 5) 
+        self.assertEqual(p.param.e.objects[0], 5)
 
     def test_slice_getitem_objects_list(self):
         p = self.P()

@@ -7,7 +7,6 @@ import pytest
 
 import param
 
-from param.parameterized import add_metaclass
 from param import concrete_descendents, Parameter
 
 # import all parameter types
@@ -101,8 +100,7 @@ class DefaultsMetaclassTest(type):
         return type.__new__(mcs, name, bases, dict_)
 
 
-@add_metaclass(DefaultsMetaclassTest)
-class TestDefaults(unittest.TestCase):
+class TestDefaults(unittest.TestCase, metaclass=DefaultsMetaclassTest):
     pass
 
 

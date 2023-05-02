@@ -41,6 +41,8 @@ from .parameterized import (batch_watch, depends, output, script_repr, # noqa: a
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
+from .parameterized import _identity_hook
+from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning
 
 # Define '__version__'
 try:
@@ -92,7 +94,7 @@ def as_unicode(obj):
     # PARAM3_DEPRECATION
     warnings.warn(
         message="`as_unicode' is deprecated",
-        category=DeprecationWarning,
+        category=_ParamDeprecationWarning,
         stacklevel=2,
     )
     return str(obj)
@@ -108,7 +110,7 @@ def is_ordered_dict(d):
     # PARAM3_DEPRECATION
     warnings.warn(
         message="`as_unicode' is deprecated",
-        category=DeprecationWarning,
+        category=_ParamDeprecationWarning,
         stacklevel=2,
     )
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
@@ -723,8 +725,6 @@ def _is_number(obj):
     else: return False
 
 
-def identity_hook(obj,val): return val
-
 def get_soft_bounds(bounds, softbounds):
     """
     For each soft bound (upper and lower), if there is a defined bound
@@ -793,6 +793,11 @@ class Bytes(Parameter):
         self._validate_regex(val, self.regex)
 
 
+def _compute_set_hook(p):
+    """Remove when set_hook is removed"""
+    return _identity_hook
+
+
 class Number(Dynamic):
     """
     A numeric Dynamic Parameter, with a default value and optional bounds.
@@ -842,18 +847,18 @@ class Number(Dynamic):
 
     _slot_defaults = _dict_update(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
-        inclusive_bounds=(True,True), step=None
+        inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
         super().__init__(default=default, **params)
-        self.set_hook = identity_hook
+        self.set_hook = set_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -1659,6 +1664,13 @@ class List(Parameter):
 
     def __init__(self, default=Undefined, class_=Undefined, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, **params):
+        if class_ is not Undefined:
+            # PARAM3_DEPRECATION
+            warnings.warn(
+                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
+                category=_ParamDeprecationWarning,
+                stacklevel=2,
+            )
         if item_type is not Undefined and class_ is not Undefined:
             self.item_type = item_type
         elif item_type is Undefined or item_type is None:

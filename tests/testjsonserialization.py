@@ -4,7 +4,6 @@ Testing JSON serialization of parameters and the corresponding schemas.
 import datetime
 import json
 import unittest
-import sys
 
 from unittest import SkipTest, skipIf
 
@@ -30,9 +29,6 @@ except:
     np, ndarray, npdt1, npdt2 = None, None, None, None
 
 np_skip = skipIf(np is None, "NumPy is not available")
-
-on_py2 = sys.version_info[0] == 2
-py2_skip = skipIf(on_py2, "Ignore Python 2")
 
 try:
     import pandas as pd
@@ -62,7 +58,7 @@ class TestSet(param.Parameterized):
     e = param.List([1,2,3], class_=int)
     f = param.List([1,2,3])
     g = param.Date(default=datetime.datetime.now())
-    g2 = None if (np is None or on_py2) else param.Date(default=npdt1)
+    g2 = None if np is None else param.Date(default=npdt1)
     g3 = None if pd is None else param.Date(default=pdts1)
     h = param.Tuple(default=(1,2,3), length=3)
     i = param.NumericTuple(default=(1,2,3,4))
@@ -97,8 +93,7 @@ class TestSet(param.Parameterized):
         datetime.datetime(2020, 1, 1, 1, 1, 1, 1),
         datetime.datetime(2021, 1, 1, 1, 1, 1, 1)
     ))
-    # datetime.datetime comparison with numpy.datetime64 fails on Python 2
-    ae = None if (np is None or on_py2) else param.DateRange(default=(npdt1, npdt2))
+    ae = None if np is None else param.DateRange(default=(npdt1, npdt2))
     af = None if pd is None else param.DateRange(default=(pdts1, pdts2))
 
 
@@ -155,12 +150,10 @@ class TestSerialization(unittest.TestCase):
     def test_serialize_date_instance(self):
         self._test_serialize(test, 'g')
 
-    @py2_skip
     @np_skip
     def test_serialize_date_numpy_class(self):
         self._test_serialize(TestSet, 'g2')
 
-    @py2_skip
     @np_skip
     def test_serialize_date_numpy_instance(self):
         self._test_serialize(test, 'g2')
@@ -257,12 +250,10 @@ class TestSerialization(unittest.TestCase):
     def test_serialize_datetime_range_instance(self):
         self._test_serialize(test, 'ad')
 
-    @py2_skip
     @np_skip
     def test_serialize_datetime_range_numpy_class(self):
         self._test_serialize(TestSet, 'ae')
 
-    @py2_skip
     @np_skip
     def test_serialize_datetime_range_numpy_instance(self):
         self._test_serialize(test, 'ae')

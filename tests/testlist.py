@@ -13,7 +13,7 @@ from .utils import check_defaults
 class TestListParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestListParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.List([5,6,7], item_type=int)
             l = param.List(["red","green","blue"], item_type=str, bounds=(0,10))
@@ -199,7 +199,7 @@ class TestListParameters(unittest.TestCase):
 class TestHookListParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestHookListParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.HookList([abs])
             l = param.HookList(bounds=(0,10))

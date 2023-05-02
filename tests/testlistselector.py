@@ -13,7 +13,7 @@ from .utils import check_defaults
 class TestListSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestListSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.ListSelector(default=[5],objects=[5,6,7])
             f = param.ListSelector(default=10)

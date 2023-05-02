@@ -11,7 +11,7 @@ from .utils import check_defaults
 class TestFileSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestFileSelectorParameters, self).setUp()
+        super().setUp()
 
         tmpdir1 = tempfile.mkdtemp()
         fa = os.path.join(tmpdir1, 'a.txt')

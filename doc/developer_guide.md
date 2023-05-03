@@ -18,10 +18,16 @@ hatch shell
 
 ## Testing
 
-The simplest way to run the tests is to run the following command:
+The simplest way to run the unit tests is to run the following command:
 
 ```bash
-hatch run dev
+hatch run tests
+```
+
+You can also run the examples tests, i.e. check that the notebooks run without any error, with:
+
+```bash
+hatch run examples
 ```
 
 ## Documentation building

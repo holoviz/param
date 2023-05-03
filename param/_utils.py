@@ -1,3 +1,4 @@
+import inspect
 import functools
 import warnings
 
@@ -22,3 +23,99 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
             return func(*args, **kwargs)
         return inner
     return decorator
+
+
+def _deprecate_positional_args(func):
+    """Internal decorator for methods that issues warnings for positional arguments
+    Using the keyword-only argument syntax in pep 3102, arguments after the
+    ``*`` will issue a warning when passed as a positional argument.
+    Adapted from scikit-learn
+    """
+    signature = inspect.signature(func)
+
+    pos_or_kw_args = []
+    kwonly_args = []
+    for name, param in signature.parameters.items():
+        if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
+            pos_or_kw_args.append(name)
+        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+            kwonly_args.append(name)
+            # if param.default is inspect.Parameter.empty:
+            #     raise TypeError("Keyword-only param without default disallowed.")
+
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        name = func.__qualname__.split('.')[0]
+        n_extra_args = len(args) - len(pos_or_kw_args)
+        if n_extra_args > 0:
+            extra_args = ", ".join(kwonly_args[:n_extra_args])
+
+            warnings.warn(
+                f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
+                "was deprecated, please pass them as keyword arguments.",
+                ParamDeprecationWarning,
+                stacklevel=2,
+            )
+
+            zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
+            kwargs.update({name: arg for name, arg in zip_args})
+
+            return func(*args[:-n_extra_args], **kwargs)
+
+        return func(*args, **kwargs)
+
+    return inner
+
+
+# def _deprecate_positional_args_selector(func):
+#     """Internal decorator for methods that issues warnings for positional arguments
+#     Using the keyword-only argument syntax in pep 3102, arguments after the
+#     ``*`` will issue a warning when passed as a positional argument.
+#     Adapted from scikit-learn
+#     """
+#     signature = inspect.signature(func)
+
+#     pos_or_kw_args = []
+#     kwonly_args = []
+#     for name, param in signature.parameters.items():
+#         if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
+#             pos_or_kw_args.append(name)
+#         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+#             kwonly_args.append(name)
+#             if param.default is inspect.Parameter.empty:
+#                 raise TypeError("Keyword-only param without default disallowed.")
+
+#     @functools.wraps(func)
+#     def inner(*args, **kwargs):
+#         name = func.__qualname__.split('.')[0]
+#         n_extra_args = len(args) - len(pos_or_kw_args)
+#         if n_extra_args > 0:
+#             if n_extra_args == 1:
+#                 warnings.warn(
+#                     f"Passing 'objects' as positional argument to 'param.Selector' "
+#                     "was deprecated, please pass it as a keyword argument.",
+#                     ParamDeprecationWarning,
+#                     stacklevel=2,
+#                 )
+#             elif n_extra_args == 2:
+#                 warnings.warn(
+#                     f"Passing 'objects' as positional argument to 'param.Selector' "
+#                     "was deprecated, please pass it as a keyword argument.",
+#                     ParamDeprecationWarning,
+#                     stacklevel=2,
+#                 )
+
+
+#             extra_args = ", ".join(kwonly_args[:n_extra_args])
+
+
+#             zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
+#             kwargs.update({name: arg for name, arg in zip_args})
+
+#             tmp = args[:-n_extra_args]
+#             import pdb; pdb.set_trace()
+#             return func(*tmp, **kwargs)
+
+#         return func(*args, **kwargs)
+
+#     return inner

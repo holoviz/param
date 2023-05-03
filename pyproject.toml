@@ -34,15 +34,18 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-doc = [
+examples = [
     "aiohttp",
+    "pandas",
+    "panel",
+]
+doc = [
+    "param[examples]",
     "ipython !=8.7.0",
     "myst-parser",
     "myst_nb ==0.12.2",
     "nbconvert",
     "nbsite ==0.8.0rc2",
-    "pandas",
-    "panel",
     "pydata-sphinx-theme <0.9.0",
     "sphinx-copybutton",
 ]
@@ -50,8 +53,15 @@ tests = [
     "coverage[toml]",
     "pytest",
 ]
+tests-examples = [
+    "pytest",
+    "pytest-xdist",
+    "nbval",
+    "param[examples]",
+]
 tests-full = [
     "param[tests]",
+    "param[tests-examples]",
     "numpy",
     "pandas",
     "ipython",
@@ -100,6 +110,8 @@ dependencies = [
     "param[lint]",
     # Base tests dependencies
     "param[tests]",
+    # Examples tests dependencies
+    "param[tests-examples]",
     # Additional tests dependencies, not including gmpy as
     # it's tricky to install.
     "ipython",
@@ -115,7 +127,8 @@ post-install-commands = [
 ]
 
 [tool.hatch.envs.default.scripts]
-dev = "pytest tests {args}"
+tests = "pytest tests {args}"
+examples = "pytest -n logical --dist loadscope --nbval-lax examples {args}"
 
 [tool.hatch.envs.docs]
 template = "docs"
@@ -129,6 +142,7 @@ build = [
 ]
 
 [tool.hatch.envs.tests]
+template = "tests"
 dependencies = [
     "param[tests]",
     "ipython",
@@ -146,9 +160,9 @@ python = [
 ]
 
 [tool.hatch.envs.tests.scripts]
-test = "pytest tests"
+tests = "pytest tests {args}"
 with_coverage = [
-    "coverage run --source=numbergen,param -m pytest tests",
+    "coverage run --source=numbergen,param -m pytest -v tests {args}",
     "coverage report",
     "coverage xml",
 ]
@@ -163,6 +177,26 @@ name."^(?!pypy).*".dependencies = [
 matrix.python.dependencies = [
     { value = "gmpy", if = ["3.7", "3.8", "3.9", "3.10"], platform = ["linux"] },
 ]
+
+[tool.hatch.envs.tests_examples]
+template = "tests_examples"
+dependencies = [
+    "param[tests-examples]",
+    "ipython",
+    "jsonschema",
+]
+
+[[tool.hatch.envs.tests_examples.matrix]]
+python = [
+    "3.7",
+    "3.8",
+    "3.9",
+    "3.10",
+    "3.11",
+]
+
+[tool.hatch.envs.tests_examples.scripts]
+examples = "pytest -v -n logical --dist loadscope --nbval-lax examples {args}"
 
 [tool.pytest.ini_options]
 python_files = "test*.py"

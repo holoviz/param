@@ -54,7 +54,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
-      - name: run tests
+      - name: run unit tests
         run: hatch -v run +py=${{ matrix.python-version }} tests:with_coverage
+      - name: run examples tests
+        run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

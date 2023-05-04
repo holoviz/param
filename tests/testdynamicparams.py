@@ -17,7 +17,7 @@ import numbergen
 class TestDynamicParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestDynamicParameters, self).setUp()
+        super().setUp()
         param.Dynamic.time_dependent = False
 
         class TestPO1(param.Parameterized):
@@ -46,11 +46,11 @@ class TestDynamicParameterBasics(TestDynamicParameters):
     def test_set_dynamic_time_fn_x(self):
         self.t1.param.set_dynamic_time_fn(None)
         self.assertEqual(
-            self.t1.param.params()['x']._value_is_dynamic(self.t1), True)
+            self.t1.param['x']._value_is_dynamic(self.t1), True)
 
     def test_set_dynamic_time_fn_y(self):
         self.assertEqual(
-            self.t1.param.params()['y']._value_is_dynamic(self.t1), False)
+            self.t1.param['y']._value_is_dynamic(self.t1), False)
 
     def test_inspect_x(self):
         "no value generated yet"
@@ -118,20 +118,20 @@ class TestDynamicParameterBasics(TestDynamicParameters):
         parameter share one UniformRandom object
         """
         self.TestPO2.y=numbergen.UniformRandom()  # now the Parameter instantiate should be true
-        self.assertEqual(self.t7.param.get_value_generator('y') is self.TestPO2().param.params()['y'].default, True)
-        self.assertEqual(self.TestPO2().param.params()['y'].default.__class__.__name__, 'UniformRandom')
+        self.assertEqual(self.t7.param.get_value_generator('y') is self.TestPO2().param['y'].default, True)
+        self.assertEqual(self.TestPO2().param['y'].default.__class__.__name__, 'UniformRandom')
 
     def test_copy_match(self):
         "check a copy is the same"
         t9 = copy.deepcopy(self.t7)
-        self.assertEqual(t9.param.get_value_generator('y') is self.TestPO2().param.params()['y'].default, True)
+        self.assertEqual(t9.param.get_value_generator('y') is self.TestPO2().param['y'].default, True)
 
 
 
 class TestDynamicTimeDependent(TestDynamicParameters):
 
     def setUp(self):
-        super(TestDynamicTimeDependent, self).setUp()
+        super().setUp()
         param.Dynamic.time_dependent = True
 
         class TestPO3(param.Parameterized):
@@ -232,7 +232,7 @@ class TestDynamicTimeDependent(TestDynamicParameters):
 class TestDynamicSharedNumbergen(TestDynamicParameters):
     "Check shared generator"
     def setUp(self):
-        super(TestDynamicSharedNumbergen, self).setUp()
+        super().setUp()
         self.shared = numbergen.UniformRandom(lbound=-1,ubound=1,seed=20)
 
     def test_dynamic_shared_numbergen(self):
@@ -251,38 +251,34 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
 # Commented out block in the original doctest version.
 # Maybe these are features originally planned but never implemented
 
-"""
-It is not yet possible to set time_fn for a Parameter instance
->>> class TestPO5(param.Parameterized):
-...    x = param.Dynamic(default=numbergen.UniformRandom(),dynamic_time_fn=None)
-"""
+# It is not yet possible to set time_fn for a Parameter instance
+# >>> class TestPO5(param.Parameterized):
+# ...    x = param.Dynamic(default=numbergen.UniformRandom(),dynamic_time_fn=None)
 
-"""
-We currently don't support iterators/generators in Dynamic unless
-they're wrapped.
+# We currently don't support iterators/generators in Dynamic unless
+# they're wrapped.
 
->>> i = iter([1,2,3])
->>> t11.x = i
+# >>> i = iter([1,2,3])
+# >>> t11.x = i
 
->>> topo.sim.run(1)
+# >>> topo.sim.run(1)
 
->>> t11.x
-1
+# >>> t11.x
+# 1
 
->>> def gen():
-...     yield 2
-...     yield 4
-...     yield 6
+# >>> def gen():
+# ...     yield 2
+# ...     yield 4
+# ...     yield 6
 
->>> g = gen()
+# >>> g = gen()
 
->>> t11.x = g
+# >>> t11.x = g
 
->>> t11.x
-2
+# >>> t11.x
+# 2
 
->>> topo.sim.run(1)
+# >>> topo.sim.run(1)
 
->>> t11.x
-4
-"""
+# >>> t11.x
+# 4

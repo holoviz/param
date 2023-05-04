@@ -104,7 +104,7 @@ class TestDataFrame(unittest.TestCase):
 
 
         test = Test()
-        self.assertEqual(test.param.params('df').ordered, False)
+        self.assertEqual(test.param['df'].ordered, False)
         exception = r"Provided DataFrame columns \['b', 'a', 'c'\] does not contain required columns \['a', 'd'\]"
         with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
@@ -123,7 +123,7 @@ class TestDataFrame(unittest.TestCase):
             df = param.DataFrame(default=valid_df, columns=['b', 'a', 'd'])
 
         test = Test()
-        self.assertEqual(test.param.params('df').ordered, True)
+        self.assertEqual(test.param['df'].ordered, True)
 
         exception = r"Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
         with self.assertRaisesRegex(ValueError, exception):
@@ -142,7 +142,7 @@ class TestDataFrame(unittest.TestCase):
             df = param.DataFrame(default=valid_df, columns=3)
 
         test = Test()
-        self.assertEqual(test.param.params('df').ordered, None)
+        self.assertEqual(test.param['df'].ordered, None)
 
         exception = "Column length 2 does not match declared bounds of 3"
         with self.assertRaisesRegex(ValueError, exception):

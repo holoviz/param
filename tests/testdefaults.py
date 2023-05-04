@@ -7,7 +7,6 @@ import pytest
 
 import param
 
-from param.parameterized import add_metaclass
 from param import concrete_descendents, Parameter
 
 # import all parameter types
@@ -17,7 +16,7 @@ from param import ClassSelector
 from .utils import check_defaults
 
 positional_args = {
-   ClassSelector: (object,)
+    ClassSelector: (object,)
 }
 
 skip = []
@@ -44,7 +43,7 @@ class DefaultsMetaclassTest(type):
                 # instantiate parameter with no default (but supply
                 # any required args)
                 p = parameter(*positional_args.get(parameter,tuple()))
-                
+
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
                     if parameter == param.Composite and slot == 'objtype':
@@ -59,7 +58,7 @@ class DefaultsMetaclassTest(type):
                 # any required args)
                 class P(param.Parameterized):
                     p = parameter(*positional_args.get(parameter,tuple()))
-                
+
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
                     if type(parameter) == param.Composite and slot == 'objtype':
@@ -78,9 +77,9 @@ class DefaultsMetaclassTest(type):
                 # any required args)
                 class P(param.Parameterized):
                     p = parameter(*positional_args.get(parameter,tuple()))
-                
+
                 inst = P()
-                
+
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
                     if type(parameter) == param.Composite and slot == 'objtype':
@@ -101,15 +100,14 @@ class DefaultsMetaclassTest(type):
         return type.__new__(mcs, name, bases, dict_)
 
 
-@add_metaclass(DefaultsMetaclassTest)
-class TestDefaults(unittest.TestCase):
+class TestDefaults(unittest.TestCase, metaclass=DefaultsMetaclassTest):
     pass
 
 
 def test_defaults_parameter_inst():
     class A(param.Parameterized):
         s = param.Parameter()
-    
+
     a = A()
 
     check_defaults(a.param.s, label='S')
@@ -119,7 +117,7 @@ def test_defaults_parameter_inst():
 def test_defaults_parameter_class():
     class A(param.Parameterized):
         s = param.Parameter()
-    
+
     check_defaults(A.param.s, label='S')
     assert A.param.s.default is None
     assert A.param.s.allow_None is True
@@ -139,7 +137,7 @@ def test_defaults_parameter_inst_allow_None():
         s4 = param.Parameter(default=None)
         s5 = param.Parameter(default=None, allow_None=False)
         s6 = param.Parameter(default=None, allow_None=True)
-    
+
     a = A()
 
     assert a.param.s1.allow_None is False
@@ -158,7 +156,7 @@ def test_defaults_parameter_class_allow_None():
         s4 = param.Parameter(default=None)
         s5 = param.Parameter(default=None, allow_None=False)
         s6 = param.Parameter(default=None, allow_None=True)
-    
+
     assert A.param.s1.allow_None is False
     assert A.param.s2.allow_None is False
     assert A.param.s3.allow_None is True

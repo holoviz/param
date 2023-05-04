@@ -2,16 +2,21 @@
 Unit test for Number parameters and their subclasses.
 """
 import unittest
+import pytest
 
 import param
 
 from .utils import check_defaults
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 class TestNumberParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestNumberParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             b = param.Number(allow_None=False)
             c = param.Number(default=1, allow_None=True)
@@ -199,17 +204,17 @@ class TestNumberParameters(unittest.TestCase):
 
         exception = "Parameter None must be less than 1, not 1"
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class Q(param.Parameterized):
                 j = param.Number(default=1, bounds=(-1, 1), inclusive_bounds=(True, False))
 
         exception = "Parameter None must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class R(param.Parameterized):
                 j = param.Number(default=-1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
         exception = "Parameter None must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class S(param.Parameterized):
                 j = param.Number(default=1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
     def test_invalid_default_for_bounds(self):
@@ -286,7 +291,7 @@ class TestNumberParameters(unittest.TestCase):
     def test_inheritance_allow_None_behavior2(self):
         class A(param.Parameterized):
             p = param.Number(allow_None=False)
-            
+
         class B(A):
             p = param.Number(default=None)
 
@@ -304,7 +309,7 @@ class TestNumberParameters(unittest.TestCase):
         f = lambda: 2
         class A(param.Parameterized):
             p = param.Number(default=f)
-            
+
         class B(A):
             p = param.Number()
 
@@ -323,11 +328,29 @@ class TestNumberParameters(unittest.TestCase):
         assert b.param.p.default == f
         assert b.param.p.instantiate is True
 
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_default(self):
+        class Q(param.Parameterized):
+            a = param.Number(default=np.float32(2.3))
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_set(self):
+        class Q(param.Parameterized):
+            a = param.Number()
+        q = Q()
+        q.a = np.float32(2.3)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_init(self):
+        class Q(param.Parameterized):
+            a = param.Number()
+        Q(a=np.float32(2.3))
+
 
 class TestIntegerParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestIntegerParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             b = param.Integer(allow_None=False)
             c = param.Integer(default=1, allow_None=True)
@@ -404,7 +427,7 @@ class TestIntegerParameters(unittest.TestCase):
         self.assertEqual(Q.param['q'].step, None)
 
 
-    def test_initialization_without_step_class(self):
+    def test_initialization_without_step_class2(self):
         self.assertEqual(self.P.param['e'].step, None)
 
     def test_initialization_with_step_class(self):
@@ -528,17 +551,17 @@ class TestIntegerParameters(unittest.TestCase):
 
         exception = "Parameter None must be less than 1, not 1"
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class Q(param.Parameterized):
                 j = param.Integer(default=1, bounds=(-1, 1), inclusive_bounds=(True, False))
 
         exception = "Parameter None must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class R(param.Parameterized):
                 j = param.Integer(default=-1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
         exception = "Parameter None must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
-            class P(param.Parameterized):
+            class S(param.Parameterized):
                 j = param.Integer(default=1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
     def test_invalid_default_for_bounds(self):
@@ -597,6 +620,28 @@ class TestIntegerParameters(unittest.TestCase):
         # Unbound
         assert p.param.m.crop_to_bounds(10) == 10
         assert p.param.n.crop_to_bounds(-10) == -10
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_default(self):
+        class Q(param.Parameterized):
+            a = param.Integer(default=np.int64(2))
+
+        assert isinstance(Q.a, np.integer)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_set(self):
+        class Q(param.Parameterized):
+            a = param.Integer()
+        q = Q()
+        q.a = np.int64(2)
+        assert isinstance(q.a, np.integer)
+
+    @pytest.mark.skipif(np is None, reason='NumPy is not available')
+    def test_numpy_init(self):
+        class Q(param.Parameterized):
+            a = param.Integer()
+        q = Q(a=np.int64(2))
+        assert isinstance(q.a, np.integer)
 
 
 class TestMagnitudeParameters(unittest.TestCase):

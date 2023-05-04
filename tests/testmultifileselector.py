@@ -11,7 +11,7 @@ from .utils import check_defaults
 class TestMultiFileSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestMultiFileSelectorParameters, self).setUp()
+        super().setUp()
 
         tmpdir1 = tempfile.mkdtemp()
         fa = os.path.join(tmpdir1, 'a.txt')
@@ -99,7 +99,7 @@ class TestMultiFileSelectorParameters(unittest.TestCase):
             class P(param.Parameterized):
                 a = param.MultiFileSelector(default=['not/in/glob'], path=self.glob1)
 
-    def test_objects_auto_set(self):
+    def test_objects_auto_set_sorted(self):
         p = self.P()
         assert sorted(p.param.a.objects) == sorted([self.fa, self.fb])
 

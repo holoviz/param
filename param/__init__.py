@@ -315,7 +315,11 @@ def _get_min_max_value(min, max, value=None, step=None):
 
 
 def _deserialize_from_path(ext_to_routine, path, type_name):
-    """Call deserialization routine with path according to extension"""
+    """
+    Call deserialization routine with path according to extension.
+    ext_to_routine should be a dictionary mapping each supported
+    file extension to a corresponding loading function.
+    """
     if not os.path.isfile(path):
         raise FileNotFoundError(
             "Could not parse file '{}' as {}: does not exist or is not a file"

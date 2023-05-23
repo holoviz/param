@@ -15,6 +15,7 @@ import pytest
 
 import random
 
+from param import parameterized
 from param.parameterized import ParamOverrides, shared_parameters
 from param.parameterized import default_label_formatter, no_instance_params
 
@@ -340,8 +341,11 @@ class TestParameterized(unittest.TestCase):
         assert t.param['ro_format'].label == 'Foo'
         param.parameterized.label_formatter = default_label_formatter
 
+    def test_error_if_non_param_in_constructor(self):
+        msg = "TestPO.__init__() got an unexpected keyword argument 'not_a_param'"
+        with pytest.raises(TypeError, match=re.escape(msg)):
+            TestPO(not_a_param=2)
 
-from param import parameterized
 
 class some_fn(param.ParameterizedFunction):
     __test__ = False
@@ -460,7 +464,7 @@ class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.po = param.Parameterized(name='A',print_level=0)
+        self.po = param.Parameterized(name='A')
 
     def test_init_name(self):
         self.assertEqual(self.po.name, 'A')
@@ -468,7 +472,6 @@ class TestParamOverrides(unittest.TestCase):
     def test_simple_override(self):
         overrides = ParamOverrides(self.po,{'name':'B'})
         self.assertEqual(overrides['name'], 'B')
-        self.assertEqual(overrides['print_level'], 0)
 
     # CEBALERT: missing test for allow_extra_keywords (e.g. getting a
     # warning on attempting to override non-existent parameter when
@@ -485,10 +488,10 @@ class TestSharedParameters(unittest.TestCase):
     def setUp(self):
         super().setUp()
         with shared_parameters():
-            self.p1 = TestPO(name='A', print_level=0)
-            self.p2 = TestPO(name='B', print_level=0)
-            self.ap1 = AnotherTestPO(name='A', print_level=0)
-            self.ap2 = AnotherTestPO(name='B', print_level=0)
+            self.p1 = TestPO(name='A')
+            self.p2 = TestPO(name='B')
+            self.ap1 = AnotherTestPO(name='A')
+            self.ap2 = AnotherTestPO(name='B')
 
     def test_shared_object(self):
         self.assertTrue(self.ap1.instPO is self.ap2.instPO)

@@ -1713,7 +1713,10 @@ class Parameters:
         for name, val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
+                raise TypeError(
+                    f"{self.__class__.__name__}.__init__() got an unexpected "
+                    f"keyword argument {name!r}"
+                )
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 
@@ -2894,26 +2897,6 @@ class ParameterizedMetaclass(type):
 
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
-            elif isinstance(value,Parameters):
-                pass
-            else:
-                # the purpose of the warning below is to catch
-                # mistakes ("thinking you are setting a parameter, but
-                # you're not"). There are legitimate times when
-                # something needs be set on the class, and we don't
-                # want to see a warning then. Such attributes should
-                # presumably be prefixed by at least one underscore.
-                # (For instance, python's own pickling mechanism
-                # caches __slotnames__ on the class:
-                # http://mail.python.org/pipermail/python-checkins/2003-February/033517.html.)
-                # This warning bypasses the usual mechanisms, which
-                # has have consequences for warning counts, warnings
-                # as exceptions, etc.
-                if not attribute_name.startswith('_'):
-                    get_logger().log(WARNING,
-                                     "Setting non-Parameter class attribute %s.%s = %s ",
-                                     mcs.__name__,attribute_name,repr(value))
-
 
     def __param_inheritance(mcs,param_name,param):
         """

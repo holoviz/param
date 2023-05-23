@@ -41,7 +41,7 @@ examples = [
 ]
 doc = [
     "param[examples]",
-    "nbsite >=0.8.0rc39",
+    "nbsite ==0.8.0",
 ]
 tests = [
     "coverage[toml]",

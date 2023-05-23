@@ -2462,8 +2462,14 @@ class Parameters:
             info = PInfo(inst=inst, cls=cls, name=attr,
                          pobj=src.param[attr], what=what)
         elif hasattr(src, attr):
-            info = MInfo(inst=inst, cls=cls, name=attr,
-                         method=getattr(src, attr))
+            attr_obj = getattr(src, attr)
+            if isinstance(attr_obj, Parameterized):
+                return [], []
+            elif isinstance(attr_obj, FunctionType):
+                info = MInfo(inst=inst, cls=cls, name=attr,
+                             method=attr_obj)
+            else:
+                raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
         elif getattr(src, "abstract", None):
             return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:

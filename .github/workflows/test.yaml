@@ -15,17 +15,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pre_commit:
+    name: Run pre-commit hooks
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: "1"
+      - name: set PY
+        run: echo "PY=$(python -VV | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: pre-commit
+        uses: pre-commit/action@v3.0.0
   test_suite:
-    name: Tox on ${{ matrix.python-version }}, ${{ matrix.platform }}
+    name: Test ${{ matrix.python-version }}, ${{ matrix.platform }}
+    needs: [pre_commit]
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
         platform: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.7", "3.8", "3.9", "3.10", "3.11", "pypy-3.9"]') || fromJSON('["3.7", "3.9", "3.11"]') }}
+        python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.7", "3.8", "3.9", "3.10", "3.11", "pypy3.9"]') || fromJSON('["3.7", "3.9", "3.11"]') }}
     timeout-minutes: 30
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -38,27 +52,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: env setup
         run: |
-          python -m pip install --upgrade setuptools pip wheel
-          python -m pip install "tox<4" tox-gh-actions
-      - name: lint
-        run: tox -e flakes
-      - name: unit
-        run: tox
-      - name: unit with_ipython
-        run: tox -e with_ipython
-      - name: unit with_numpy
-        if: (!startsWith(matrix.python-version, 'py'))
-        run: tox -e with_numpy
-      - name: unit with_pandas
-        if: (!startsWith(matrix.python-version, 'py'))
-        run: tox -e with_pandas
-      - name: unit with_jsonschema
-        run: tox -e with_jsonschema
-      - name: unit with_gmpy
-        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.11'
-        run: tox -e with_gmpy
-      - name: unit all_deps
-        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.11'
-        run: tox -e with_all
+          python -m pip install --upgrade pip
+          python -m pip install hatch
+      - name: run unit tests
+        run: hatch -v run +py=${{ matrix.python-version }} tests:with_coverage
+      - name: run examples tests
+        # A notebook fails on Windows (UNIX path used in an example)
+        # No need to run these tests for PyPy really
+        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
+        run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

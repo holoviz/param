@@ -11,11 +11,11 @@ __init__.py (providing specialized Parameter types).
 import copy
 import datetime as dt
 import re
-import sys
 import inspect
 import random
 import numbers
 import operator
+import warnings
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -27,11 +27,14 @@ except ImportError:
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
+from threading import get_ident
 from types import FunctionType
 
 import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+from ._utils import _deprecated
 
 try:
     # In case the optional ipython module is unavailable
@@ -40,20 +43,17 @@ try:
 except:
     param_pager = None
 
-try:
-    from inspect import getfullargspec
-except:
-    from inspect import getargspec as getfullargspec # python2
+from inspect import getfullargspec
 
 dt_types = (dt.datetime, dt.date)
+_int_types = (int,)
 
 try:
     import numpy as np
     dt_types = dt_types + (np.datetime64,)
+    _int_types = _int_types + (np.integer,)
 except:
     pass
-
-basestring = basestring if sys.version_info[0]==2 else str # noqa: it is defined
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -91,6 +91,12 @@ docstring_describe_params = True  # Add parameter description to class
 object_count = 0
 warning_count = 0
 
+
+def _identity_hook(obj, val):
+    """To be removed when set_hook is removed"""
+    return val
+
+
 class _Undefined:
     """
     Dummy value to signal completely undefined values rather than
@@ -120,7 +126,7 @@ def logging_level(level):
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
 
     if level not in level_names:
-        raise Exception("Level %r not in %r" % (level, levels))
+        raise Exception(f"Level {level!r} not in {levels!r}")
 
     param_logger = get_logger()
     logging_level = param_logger.getEffectiveLevel()
@@ -147,7 +153,14 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
         if run and not BATCH_WATCH:
             parameterized.param._batch_call_watchers()
 
-batch_watch = _batch_call_watchers # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later.
+
+# PARAM3_DEPRECATION
+@_deprecated(extra_msg="Use instead `batch_call_watchers`.")
+@contextmanager
+def batch_watch(parameterized, enable=True, run=True):
+    with _batch_call_watchers(parameterized, enable, run):
+        yield
+
 
 @contextmanager
 def batch_call_watchers(parameterized):
@@ -286,8 +299,7 @@ def all_equal(arg1,arg2):
         return arg1==arg2
 
 
-# PARAM2_DEPRECATION: For Python 2 compatibility only; can be removed in param2.
-#
+# PARAM3_DEPRECATION
 # The syntax to use a metaclass changed incompatibly between 2 and
 # 3. The add_metaclass() class decorator below creates a class using a
 # specified metaclass in a way that works on both 2 and 3. For 3, can
@@ -295,8 +307,12 @@ def all_equal(arg1,arg2):
 # (https://docs.python.org/3/reference/datamodel.html#customizing-class-creation)
 #
 # Code from six (https://bitbucket.org/gutworth/six; version 1.4.1).
+@_deprecated()
 def add_metaclass(metaclass):
-    """Class decorator for creating a class with a metaclass."""
+    """Class decorator for creating a class with a metaclass.
+
+    .. deprecated:: 2.0.0
+    """
     def wrapper(cls):
         orig_vars = cls.__dict__.copy()
         orig_vars.pop('__dict__', None)
@@ -308,7 +324,7 @@ def add_metaclass(metaclass):
 
 
 
-class bothmethod(object): # pylint: disable-msg=R0903
+class bothmethod: # pylint: disable-msg=R0903
     """
     'optional @classmethod'
 
@@ -391,29 +407,32 @@ def get_method_owner(method):
         return None
     if isinstance(method, partial):
         method = method.func
-    return method.__self__ if sys.version_info.major >= 3 else method.im_self
+    return method.__self__
 
 
 @accept_arguments
-def depends(func, *dependencies, **kw):
-    """
-    Annotates a function or Parameterized method to express its
-    dependencies.  The specified dependencies can be either be
-    Parameter instances or if a method is supplied they can be
-    defined as strings referring to Parameters of the class,
-    or Parameters of subobjects (Parameterized objects that are
-    values of this object's parameters).  Dependencies can either be
-    on Parameter values, or on other metadata about the Parameter.
-    """
+def depends(func, *dependencies, watch=False, on_init=False, **kw):
+    """Annotates a function or Parameterized method to express its dependencies.
 
-    # PARAM2_DEPRECATION: python2 workaround; python3 allows kw-only args
-    # (i.e. "func, *dependencies, watch=False" rather than **kw and the check below)
-    watch = kw.pop("watch", False)
-    on_init = kw.pop("on_init", False)
+    The specified dependencies can be either be Parameter instances or if a
+    method is supplied they can be defined as strings referring to Parameters
+    of the class, or Parameters of subobjects (Parameterized objects that are
+    values of this object's parameters). Dependencies can either be on
+    Parameter values, or on other metadata about the Parameter.
 
+    Parameters
+    ----------
+    watch : bool, optional
+        Wether to invoke the function/method when the dependency is updated,
+        by default False
+    on_init : bool, optional
+        Whether to invoke the function/method when the instance is created,
+        by default False
+    """
     if iscoroutinefunction(func):
-        from ._async import generate_depends
-        _depends = generate_depends(func)
+        @wraps(func)
+        async def _depends(*args, **kw):
+            return await func(*args, **kw)
     else:
         @wraps(func)
         def _depends(*args, **kw):
@@ -422,7 +441,7 @@ def depends(func, *dependencies, **kw):
     deps = list(dependencies)+list(kw.values())
     string_specs = False
     for dep in deps:
-        if isinstance(dep, basestring):
+        if isinstance(dep, str):
             string_specs = True
         elif not isinstance(dep, Parameter):
             raise ValueError('The depends decorator only accepts string '
@@ -437,7 +456,7 @@ def depends(func, *dependencies, **kw):
                              'instance not %s.' % owner)
 
     if (any(isinstance(dep, Parameter) for dep in deps) and
-        any(isinstance(dep, basestring) for dep in deps)):
+        any(isinstance(dep, str) for dep in deps)):
         raise ValueError('Dependencies must either be defined as strings '
                          'referencing parameters on the class defining '
                          'the decorated method or as parameter instances. '
@@ -450,8 +469,10 @@ def depends(func, *dependencies, **kw):
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
         if iscoroutinefunction(func):
-            from ._async import generate_callback
-            cb = generate_callback(func, dependencies, kw)
+            async def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                await func(*args, **dep_kwargs)
         else:
             def cb(*events):
                 args = (getattr(dep.owner, dep.name) for dep in dependencies)
@@ -481,8 +502,7 @@ def output(func, *output, **kw):
     of a Parameterized class can be queried using the
     Parameterized.param.outputs method. By default the output will
     inherit the method name but a custom name can be declared by
-    expressing the Parameter type using a keyword argument. Declaring
-    multiple return types using keywords is only supported in Python >= 3.6.
+    expressing the Parameter type using a keyword argument.
 
     The simplest declaration simply declares the method returns an
     object without any type guarantees, e.g.:
@@ -499,10 +519,9 @@ def output(func, *output, **kw):
 
       @output(custom_name=param.Number())
 
-    Multiple outputs may be declared using keywords mapping from
-    output name to the type for Python >= 3.6 or using tuples of the
-    same format, which is supported for earlier versions, i.e. these
-    two declarations are equivalent:
+    Multiple outputs may be declared using keywords mapping from output name
+    to the type or using tuples of the same format, i.e. these two declarations
+    are equivalent:
 
       @output(number=param.Number(), string=param.String())
 
@@ -524,12 +543,7 @@ def output(func, *output, **kw):
             else:
                 outputs.append((None, out, i))
     elif kw:
-        py_major = sys.version_info.major
-        py_minor = sys.version_info.minor
-        if (py_major < 3 or (py_major == 3 and py_minor < 6)) and len(kw) > 1:
-            raise ValueError('Multiple output declaration using keywords '
-                             'only supported in Python >= 3.6.')
-          # (requires keywords to be kept ordered, which was not true in previous versions)
+        # (requires keywords to be kept ordered, which was not true in previous versions)
         outputs = [(name, otype, i if len(kw) > 1 else None)
                    for i, (name, otype) in enumerate(kw.items())]
     else:
@@ -673,8 +687,11 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     function = getattr(self, method_name)
     if iscoroutinefunction(function):
-        from ._async import generate_caller
-        caller = generate_caller(function, what=what, changed=changed, callback=callback, skip_event=_skip_event)
+        async def caller(*events):
+            if callback:
+                callback(*events)
+            if not _skip_event or not _skip_event(*events, what=what, changed=changed):
+                await function()
     else:
         def caller(*events):
             if callback: callback(*events)
@@ -694,9 +711,8 @@ def _dict_update(dictionary, **kwargs):
 
 
 def _add_doc(obj, docstring):
-    """Add a docstring to a namedtuple, if on python3 where that's allowed"""
-    if sys.version_info[0]>2:
-        obj.__doc__ = docstring
+    """Add a docstring to a namedtuple"""
+    obj.__doc__ = docstring
 
 
 PInfo = namedtuple("PInfo", "inst cls name pobj what")
@@ -802,7 +818,7 @@ class Watcher(_Watcher):
         values.update(kwargs)
         if 'precedence' not in values:
             values['precedence'] = 0
-        return super(Watcher, cls_).__new__(cls_, **values)
+        return super().__new__(cls_, **values)
 
     def __iter__(self):
         """
@@ -815,8 +831,8 @@ class Watcher(_Watcher):
 
     def __str__(self):
         cls = type(self)
-        attrs = ', '.join(['%s=%r' % (f, getattr(self, f)) for f in cls._fields])
-        return "{cls}({attrs})".format(cls=cls.__name__, attrs=attrs)
+        attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
+        return f"{cls.__name__}({attrs})"
 
 
 
@@ -854,8 +870,7 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
-@add_metaclass(ParameterMetaclass)
-class Parameter(object):
+class Parameter(metaclass=ParameterMetaclass):
     """
     An attribute descriptor for declaring parameters.
 
@@ -1113,8 +1128,7 @@ class Parameter(object):
         if serializer is None:
             raise ImportError('Cannot import serializer.py needed to generate schema')
         if mode not in  self._serializers:
-            raise KeyError('Mode %r not in available serialization formats %r'
-                           % (mode, list(self._serializers.keys())))
+            raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
                                                     safe=safe, subset=subset)
 
@@ -1258,10 +1272,15 @@ class Parameter(object):
         item in a list).
         """
 
-        # PARAM2_DEPRECATION: For Python 2 compatibility only;
         # Deprecated Number set_hook called here to avoid duplicating setter
         if hasattr(self, 'set_hook'):
-            val = self.set_hook(obj,val)
+            val = self.set_hook(obj, val)
+            if self.set_hook is not _identity_hook:
+                # PARAM3_DEPRECATION
+                warnings.warn(
+                    'Number.set_hook has been deprecated.',
+                    category=DeprecationWarning,
+                )
 
         self._validate(val)
 
@@ -1333,13 +1352,12 @@ class Parameter(object):
 
     def _set_names(self, attrib_name):
         if None not in (self.owner, self.name) and attrib_name != self.name:
-            raise AttributeError('The %s parameter %r has already been '
-                                 'assigned a name by the %s class, '
-                                 'could not assign new name %r. Parameters '
+            raise AttributeError('The {} parameter {!r} has already been '
+                                 'assigned a name by the {} class, '
+                                 'could not assign new name {!r}. Parameters '
                                  'may not be shared by multiple classes; '
                                  'ensure that you create a new parameter '
-                                 'instance for each new class.'
-                                 % (type(self).__name__, self.name,
+                                 'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
         self._internal_name = "_%s_param_value" % attrib_name
@@ -1393,7 +1411,7 @@ class String(Parameter):
     _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
 
     def __init__(self, default=Undefined, regex=Undefined, **kwargs):
-        super(String, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
 
@@ -1401,22 +1419,21 @@ class String(Parameter):
         if (val is None and self.allow_None):
             return
         if regex is not None and re.match(regex, val) is None:
-            raise ValueError("String parameter %r value %r does not match regex %r."
-                             % (self.name, val, regex))
+            raise ValueError(f"String parameter {self.name!r} value {val!r} does not match regex {regex!r}.")
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
-        if not isinstance(val, basestring):
-            raise ValueError("String parameter %r only takes a string value, "
-                             "not value of type %s." % (self.name, type(val)))
+        if not isinstance(val, str):
+            raise ValueError("String parameter {!r} only takes a string value, "
+                             "not value of type {}.".format(self.name, type(val)))
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
         self._validate_regex(val, self.regex)
 
 
-class shared_parameters(object):
+class shared_parameters:
     """
     Context manager to share parameter instances when creating
     multiple Parameterized objects of the same type. Parameter default
@@ -1455,7 +1472,7 @@ def as_uninitialized(fn):
     return override_initialization
 
 
-class Comparator(object):
+class Comparator:
     """
     Comparator defines methods for determining whether two objects
     should be considered equal. It works by registering custom
@@ -1475,7 +1492,7 @@ class Comparator(object):
 
     equalities = {
         numbers.Number: operator.eq,
-        basestring: operator.eq,
+        str: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq,
     }
@@ -1515,7 +1532,7 @@ class Comparator(object):
         return True
 
 
-class Parameters(object):
+class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
     Parameters themselves.
@@ -1614,15 +1631,14 @@ class Parameters(object):
         """
         Adds parameters to dir
         """
-        return super(Parameters, self_).__dir__() + list(self_)
+        return super().__dir__() + list(self_)
 
 
     def __iter__(self_):
         """
         Iterates over the parameters on this object.
         """
-        for p in self_.objects(instance=False):
-            yield p
+        yield from self_.objects(instance=False)
 
 
     def __contains__(self_, param):
@@ -1646,11 +1662,9 @@ class Parameters(object):
         if attr in params:
             return self_.__getitem__(attr)
         elif self_.self is None:
-            raise AttributeError("type object '%s.param' has no attribute %r" %
-                                 (self_.cls.__name__, attr))
+            raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
         else:
-            raise AttributeError("'%s.param' object has no attribute %r" %
-                                 (self_.cls.__name__, attr))
+            raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
 
     @as_uninitialized
@@ -1843,21 +1857,29 @@ class Parameters(object):
 
     # Classmethods
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""")
     def print_param_defaults(self_):
-        """Print the default values of all cls's Parameters."""
+        """Print the default values of all cls's Parameters.
+
+        ..deprecated:: 1.12.0
+            Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
+        """
         cls = self_.cls
         for key,val in cls.__dict__.items():
             if isinstance(val,Parameter):
                 print(cls.__name__+'.'+key+ '='+ repr(val.default))
 
-
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `p.param.default =`")
     def set_default(self_,param_name,value):
         """
         Set the default value of param_name.
 
         Equivalent to setting param_name on the class.
+
+        ..deprecated:: 1.12.0
+             Use instead `p.param.default =`
         """
         cls = self_.cls
         setattr(cls,param_name,value)
@@ -1883,11 +1905,17 @@ class Parameters(object):
         except AttributeError:
             pass
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
-    _add_parameter = add_parameter
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.add_parameter`")
+    def _add_parameter(self_,param_name, param_obj):
+        """Add a new Parameter object into this object's class.
 
+        ..deprecated :: 1.12.0
+        """
+        return self_.add_parameter(param_name, param_obj)
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.values()` or `.param['param']`")
     def params(self_, parameter_name=None):
         """
         Return the Parameters of this class as the
@@ -1895,6 +1923,9 @@ class Parameters(object):
 
         Includes Parameters from this class and its
         superclasses.
+
+        ..deprecated:: 1.12.0
+            Use instead `.param.values()` or `.param['param']`
         """
         pdict = self_.objects(instance='existing')
         if parameter_name is None:
@@ -1930,7 +1961,7 @@ class Parameters(object):
         for (k, v) in kwargs.items():
             if k not in self_or_cls.param:
                 self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("'%s' is not a parameter of %s" % (k, self_or_cls.name))
+                raise ValueError(f"'{k}' is not a parameter of {self_or_cls.name}")
             try:
                 setattr(self_or_cls, k, v)
             except:
@@ -1947,8 +1978,8 @@ class Parameters(object):
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
 
-
-    # PARAM2_DEPRECATION: Could be removed post param 2.0; use update() instead.
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.update`")
     def set_param(self_, *args,**kwargs):
         """
         For each param=value keyword argument, sets the corresponding
@@ -1958,6 +1989,9 @@ class Parameters(object):
         set_param("param",value) for a single parameter value using
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
+
+        ..deprecated:: 1.12.0
+            Use instead `.param.update`
         """
         self_or_cls = self_.self_or_cls
         if args:
@@ -2030,7 +2064,7 @@ class Parameters(object):
         param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
-        self_.set_param(**dict(params, **triggers))
+        self_.update(dict(params, **triggers))
         self_.self_or_cls.param._TRIGGER = False
         self_.self_or_cls.param._events += events
         self_.self_or_cls.param._watchers += watchers
@@ -2146,16 +2180,14 @@ class Parameters(object):
     def serialize_parameters(self_, subset=None, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
 
     def serialize_value(self_, pname, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
@@ -2167,8 +2199,7 @@ class Parameters(object):
     def deserialize_value(self_, pname, value, mode='json'):
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
@@ -2178,17 +2209,35 @@ class Parameters(object):
         """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
-            raise ValueError('Mode %r not in available serialization formats %r'
-                             % (mode, list(Parameter._serializers.keys())))
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    # PARAM2_DEPRECATION: Could be removed post param 2.0; same as values() but returns list, not dict
+    # PARAM3_DEPRECATION
+    # same as values() but returns list, not dict
+    @_deprecated(extra_msg="""
+        Use `.param.values().items()` instead (or `.param.values()` for the
+        common case of `dict(....param.get_param_values())`)
+    """)
     def get_param_values(self_, onlychanged=False):
         """
-        (Deprecated; use .values() instead.)
-
         Return a list of name,value pairs for all Parameters of this
+        object.
+
+        When called on an instance with onlychanged set to True, will
+        only return values that are not equal to the default value
+        (onlychanged has no effect when called on a class).
+
+        ..deprecated:: 1.12.0
+            Use `.param.values().items()` instead (or `.param.values()` for the
+            common case of `dict(....param.get_param_values())`)
+        """
+        vals = self_.values(onlychanged)
+        return [(k, v) for k, v in vals.items()]
+
+    def values(self_, onlychanged=False):
+        """
+        Return a dictionary of name,value pairs for the Parameters of this
         object.
 
         When called on an instance with onlychanged set to True, will
@@ -2203,21 +2252,7 @@ class Parameters(object):
                 vals.append((name, value))
 
         vals.sort(key=itemgetter(0))
-        return vals
-
-    def values(self_, onlychanged=False):
-        """
-        Return a dictionary of name,value pairs for the Parameters of this
-        object.
-
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
-        """
-        # Defined in terms of get_param_values() to avoid ordering
-        # issues in python2, but can be inverted if get_param_values
-        # is removed when python2 support is dropped
-        return dict(self_.get_param_values(onlychanged))
+        return dict(vals)
 
     def force_new_dynamic_value(self_, name): # pylint: disable-msg=E0213
         """
@@ -2322,8 +2357,21 @@ class Parameters(object):
         return _resolve_mcs_deps(
             self_.self, deps, dynamic, intermediate=intermediate)
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
-    params_depended_on = method_dependencies
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg='Use instead `.param.method_dependencies`')
+    def params_depended_on(self_, *args, **kwargs):
+        """
+        Given the name of a method, returns a PInfo object for each dependency
+        of this method. See help(PInfo) for the contents of these objects.
+
+        By default intermediate dependencies on sub-objects are not
+        returned as these are primarily useful for internal use to
+        determine when a sub-object dependency has to be updated.
+
+        ..deprecated: 2.0.0
+            Use instead `.param.method_dependencies`
+        """
+        return self_.method_dependencies(*args, **kwargs)
 
     def outputs(self_):
         """
@@ -2419,8 +2467,7 @@ class Parameters(object):
         elif getattr(src, "abstract", None):
             return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:
-            raise AttributeError("Attribute %r could not be resolved on %s."
-                                 % (attr, src))
+            raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
 
         if obj is None or not intermediate:
             return [info], []
@@ -2433,9 +2480,8 @@ class Parameters(object):
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:
-                raise ValueError("%s parameter was not found in list of "
-                                 "parameters of class %s" %
-                                 (parameter_name, self_.cls.__name__))
+                raise ValueError("{} parameter was not found in list of "
+                                 "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
                 watchers = self_.self._param_watchers
@@ -2508,7 +2554,7 @@ class Parameters(object):
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
-            self_.warning('No such watcher {watcher} to remove.'.format(watcher=str(watcher)))
+            self_.warning(f'No such watcher {str(watcher)} to remove.')
 
     def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
         """
@@ -2535,7 +2581,8 @@ class Parameters(object):
 
     # Instance methods
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `{k:v.default for k,v in p.param.objects().items()}`")
     def defaults(self_):
         """
         Return {parameter_name:parameter.default} for all non-constant
@@ -2543,6 +2590,9 @@ class Parameters(object):
 
         Note that a Parameter for which instantiate==True has its default
         instantiated.
+
+        ..deprecated:: 1.12.0
+            Use instead `{k:v.default for k,v in p.param.objects().items()}`
         """
         self = self_.self
         d = {}
@@ -2572,12 +2622,17 @@ class Parameters(object):
 
             get_logger(name=self_or_cls.name).log(level, msg, *args, **kw)
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""")
     def print_param_values(self_):
-        """Print the values of all this object's Parameters."""
+        """Print the values of all this object's Parameters.
+
+        ..deprecated:: 1.12.0
+            Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
+        """
         self = self_.self
         for name, val in self.param.values().items():
-            print('%s.%s = %s' % (self.name,name,val))
+            print(f'{self.name}.{name} = {val}')
 
     def warning(self_, msg,*args,**kw):
         """
@@ -2589,30 +2644,42 @@ class Parameters(object):
         """
         self_.log(WARNING, msg, *args, **kw)
 
-    # PARAM2_DEPRECATION: Could be removed post param 2.0
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.log(param.MESSAGE, ...)`")
     def message(self_,msg,*args,**kw):
         """
         Print msg merged with args as a message.
 
         See Python's logging module for details of message formatting.
+
+        ..deprecated:: 1.12.0
+            Use instead `.param.log(param.MESSAGE, ...)`
         """
         self_.__db_print(INFO,msg,*args,**kw)
 
-    # PARAM2_DEPRECATION: Could be removed post param 2.0
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.log(param.VERBOSE, ...)`")
     def verbose(self_,msg,*args,**kw):
         """
         Print msg merged with args as a verbose message.
 
         See Python's logging module for details of message formatting.
+
+        ..deprecated:: 1.12.0
+            Use instead `.param.log(param.VERBOSE, ...)`
         """
         self_.__db_print(VERBOSE,msg,*args,**kw)
 
-    # PARAM2_DEPRECATION: Could be removed post param 2.0
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.log(param.DEBUG, ...)`")
     def debug(self_,msg,*args,**kw):
         """
         Print msg merged with args as a debugging statement.
 
         See Python's logging module for details of message formatting.
+
+        ..deprecated:: 1.12.0
+            Use instead `.param.log(param.DEBUG, ...)`
         """
         self_.__db_print(DEBUG,msg,*args,**kw)
 
@@ -2749,7 +2816,7 @@ class ParameterizedMetaclass(type):
             for (k,v) in sorted(cls.__dict__.items()):
                 if isinstance(v, Parameter) and k not in processed_kws:
                     param_type = v.__class__.__name__
-                    keyword_group.append("%s=%s" % (k, param_type))
+                    keyword_group.append(f"{k}={param_type}")
                     processed_kws.add(k)
             keyword_groups.append(keyword_group)
 
@@ -3136,36 +3203,28 @@ dbprint_prefix=None
 
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
-if sys.version_info.major >= 3:
-    from threading import get_ident
-    def recursive_repr(fillvalue='...'):
-        'Decorator to make a repr function return fillvalue for a recursive call'
+def recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
 
-        def decorating_function(user_function):
-            repr_running = set()
+    def decorating_function(user_function):
+        repr_running = set()
 
-            def wrapper(self, *args, **kwargs):
-                key = id(self), get_ident()
-                if key in repr_running:
-                    return fillvalue
-                repr_running.add(key)
-                try:
-                    result = user_function(self, *args, **kwargs)
-                finally:
-                    repr_running.discard(key)
-                return result
-            return wrapper
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
 
-        return decorating_function
-else:
-    def recursive_repr(fillvalue='...'):
-        def decorating_function(user_function):
-            return user_function
-        return decorating_function
+    return decorating_function
 
 
-@add_metaclass(ParameterizedMetaclass)
-class Parameterized(object):
+class Parameterized(metaclass=ParameterizedMetaclass):
     """
     Base class for named objects that support Parameters and message
     formatting.
@@ -3308,23 +3367,24 @@ class Parameterized(object):
         all the parameters of this object.
         """
         try:
-            settings = ['%s=%s' % (name, repr(val))
-                        # PARAM2_DEPRECATION: Update to self.param.values.items()
-                        # (once python2 support is dropped)
-                        for name, val in self.param.get_param_values()]
+            settings = [f'{name}={val!r}'
+                        for name, val in self.param.values().items()]
         except RuntimeError: # Handle recursion in parameter depth
             settings = []
         return self.__class__.__name__ + "(" + ", ".join(settings) + ")"
 
     def __str__(self):
         """Return a short representation of the name and class of this object."""
-        return "<%s %s>" % (self.__class__.__name__,self.name)
+        return f"<{self.__class__.__name__} {self.name}>"
 
-
-    # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
+    # PARAM3_DEPRECATION
+    @_deprecated(extra_msg="Use instead `.param.pprint()`")
     def script_repr(self,imports=[],prefix="    "):
         """
         Deprecated variant of __repr__ designed for generating a runnable script.
+
+        ..deprecated:: 1.12.0
+            Use instead `.param.pprint()`
         """
         return self.pprint(imports,prefix, unknown_value=None, qualify=True,
                            separator="\n")
@@ -3379,7 +3439,7 @@ class Parameterized(object):
 
             if value is None:
                 if unknown_value is False:
-                    raise Exception("%s: unknown value of %r" % (self.name,k))
+                    raise Exception(f"{self.name}: unknown value of {k!r}")
                 elif unknown_value is None:
                     # i.e. suppress repr
                     continue
@@ -3397,16 +3457,24 @@ class Parameterized(object):
                   (hasattr(spec, 'keywords') and (spec.keywords is not None))):
                 # Explicit modified keywords or parameters in
                 # precendence order (if **kwargs present)
-                keywords.append('%s=%s' % (k, value))
+                keywords.append(f'{k}={value}')
 
             processed.append(k)
 
         qualifier = mod + '.'  if qualify else ''
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '%s(%s)' % (self.__class__.__name__,  (','+separator+prefix).join(arguments))
+        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
-    # PARAM2_DEPRECATION: Backwards compatibilitity for param<1.12
-    pprint = _pprint
+    # PARAM3_DEPRECATION
+    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
+        warnings.warn(
+            message="'pprint' is deprecated. Use instead `.param.pprint`",
+            category=DeprecationWarning,
+            stacklevel=2
+        )
+        return self._pprint(imports=imports, prefix=prefix, unknown_value=unknown_value,
+               qualify=qualify, separator=separator)
 
     # Note that there's no state_push method on the class, so
     # dynamic parameters set on a class can't have state saved. This
@@ -3415,7 +3483,16 @@ class Parameterized(object):
     # already have a state_push() method.
     # (isinstance(g,Parameterized) below is used to exclude classes.)
 
+    # PARAM3_DEPRECATION
+    @_deprecated()
     def state_push(self):
+        """Save this instance's state.
+
+        ..deprecated:: 2.0.0
+        """
+        return self._state_push()
+
+    def _state_push(self):
         """
         Save this instance's state.
 
@@ -3440,6 +3517,14 @@ class Parameterized(object):
                 g.state_push()
 
     def state_pop(self):
+        """
+        Restore the most recently saved state.
+
+        ..deprecated:: 2.0.0
+        """
+        return self._state_pop()
+
+    def _state_pop(self):
         """
         Restore the most recently saved state.
 
@@ -3523,7 +3608,7 @@ class ParamOverrides(dict):
         supplied `dict_` whose names are parameters of the
         overridden object (i.e. not extra keywords/parameters).
         """
-        return dict((key, self[key]) for key in self if key not in self.extra_keywords())
+        return {key: self[key] for key in self if key not in self.extra_keywords()}
 
     def __missing__(self,name):
         # Return 'name' from the overridden object
@@ -3643,11 +3728,14 @@ class ParameterizedFunction(Parameterized):
         # __main__. Pretty obscure aspect of pickle.py...
         return (_new_parameterized,(self.__class__,),state)
 
-    # PARAM2_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
+    # PARAM3_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
+    @_deprecated()
     def script_repr(self,imports=[],prefix="    "):
         """
         Same as Parameterized.script_repr, except that X.classname(Y
         is replaced with X.classname.instance(Y
+
+        ..deprecated:: 2.0.0
         """
         return self.pprint(imports,prefix,unknown_value='',qualify=True,
                            separator="\n")
@@ -3694,15 +3782,17 @@ class default_label_formatter(ParameterizedFunction):
 label_formatter = default_label_formatter
 
 
-# PARAM2_DEPRECATION: Should be able to remove this; was originally
+# PARAM3_DEPRECATION: Should be able to remove this; was originally
 # adapted from OProperty from
 # infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
 # but since python 2.6 the getter, setter, and deleter attributes of
 # a property should provide similar functionality already.
-class overridable_property(object):
+class overridable_property:
     """
     The same as Python's "property" attribute, but allows the accessor
     methods to be overridden in subclasses.
+
+    ..deprecated:: 2.0.0
     """
     # Delays looking up the accessors until they're needed, rather
     # than finding them when the class is first created.
@@ -3710,6 +3800,11 @@ class overridable_property(object):
     # Based on the emulation of PyProperty_Type() in Objects/descrobject.c
 
     def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+        warnings.warn(
+            message="overridable_property has been deprecated.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
         self.fget = fget
         self.fset = fset
         self.fdel = fdel

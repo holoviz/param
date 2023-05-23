@@ -41,13 +41,7 @@ examples = [
 ]
 doc = [
     "param[examples]",
-    "ipython !=8.7.0",
-    "myst-parser",
-    "myst_nb ==0.12.2",
-    "nbconvert",
-    "nbsite ==0.8.0rc2",
-    "pydata-sphinx-theme <0.9.0",
-    "sphinx-copybutton",
+    "nbsite >=0.8.0rc39",
 ]
 tests = [
     "coverage[toml]",

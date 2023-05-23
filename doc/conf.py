@@ -26,7 +26,6 @@ html_css_files = [
     'nbsite.css',
     'scroller.css',
     'notebook.css',
-    'site.css'
 ]
 
 exclude_patterns += ['historical_release_notes.rst']  # noqa

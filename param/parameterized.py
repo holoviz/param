@@ -35,7 +35,7 @@ import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-from ._utils import _deprecated
+from ._utils import _deprecated, _deprecate_positional_args
 
 try:
     # In case the optional ipython module is unavailable
@@ -1099,7 +1099,7 @@ class Parameter(_ParameterBase):
     ):
         ...
 
-    def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
+    def __init__(self, default=Undefined, *, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
@@ -1496,7 +1496,8 @@ class String(Parameter):
     ):
         ...
 
-    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)

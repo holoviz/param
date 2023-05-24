@@ -2234,7 +2234,7 @@ class Path(Parameter):
     ):
         ...
 
-    def __init__(self, default=Undefined, search_paths=None, **params):
+    def __init__(self, default=Undefined, search_paths=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
 
@@ -2468,7 +2468,7 @@ class Date(Number):
     ):
         ...
 
-    def __init__(self, default=None, **kwargs):
+    def __init__(self, default=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
@@ -2528,7 +2528,7 @@ class CalendarDate(Number):
     ):
         ...
 
-    def __init__(self, default=None, **kwargs):
+    def __init__(self, default=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):

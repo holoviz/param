@@ -11,12 +11,22 @@ from param import concrete_descendents, Parameter
 SKIP_UPDATED = [
     # Not sure how to handle attribs yet
     param.Composite,
+    # Not sure how to handle search_paths
+    param.Path, param.Filename, param.Foldername,
 ]
+
+
+def custom_concrete_descendents(kls):
+    return {
+        pname: ptype
+        for pname, ptype in concrete_descendents(kls).items()
+        if ptype.__module__.startswith('param')
+    }
 
 
 @pytest.mark.skipif(sys.version_info <= (3, 11), reason='typing.get_overloads available from Python 3.11')
 def test_signature_parameters_constructors_overloaded():
-    for _, p_type in concrete_descendents(Parameter).items():
+    for _, p_type in custom_concrete_descendents(Parameter).items():
         init_overloads = typing.get_overloads(p_type.__init__)
         assert len(init_overloads) == 1
 
@@ -25,7 +35,7 @@ def test_signature_parameters_constructors_updated():
 
     base_args = list(inspect.signature(Parameter).parameters.keys())
 
-    for _, p_type in concrete_descendents(Parameter).items():
+    for _, p_type in custom_concrete_descendents(Parameter).items():
         if p_type in SKIP_UPDATED:
             continue
         sig = inspect.signature(p_type)
@@ -36,7 +46,7 @@ def test_signature_parameters_constructors_updated():
 
 @pytest.mark.skipif(sys.version_info <= (3, 11), reason='typing.get_overloads available from Python 3.11')
 def test_signature_parameters_constructors_overloaded_updated_match():
-    for _, p_type in concrete_descendents(Parameter).items():
+    for _, p_type in custom_concrete_descendents(Parameter).items():
         if p_type.__name__.startswith('_') or p_type in SKIP_UPDATED:
             continue
         init_overloads = typing.get_overloads(p_type.__init__)

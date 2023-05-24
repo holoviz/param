@@ -40,8 +40,6 @@ def _deprecate_positional_args(func):
             pos_or_kw_args.append(name)
         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
             kwonly_args.append(name)
-            # if param.default is inspect.Parameter.empty:
-            #     raise TypeError("Keyword-only param without default disallowed.")
 
     @functools.wraps(func)
     def inner(*args, **kwargs):

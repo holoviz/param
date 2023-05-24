@@ -18,7 +18,7 @@ def JSONNullable(json_type):
 
 
 
-class Serialization(object):
+class Serialization:
     """
     Base class used to implement different types of serialization.
     """

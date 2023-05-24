@@ -16,7 +16,7 @@ or
 pip install --user param
 ```
 
-or 
+or
 
 ```
 pip install param
@@ -24,20 +24,20 @@ pip install param
 
 ## Using Param to get simple, robust code
 
-The `param` library gives you Parameters, which are used in Parameterized classes. 
+The `param` library gives you Parameters, which are used in Parameterized classes.
 
 A Parameter is a special type of Python class attribute extended to have various optional features such as type and range checking, dynamically generated values, documentation strings, default values, etc., each of which is inherited from parent classes if not specified in a subclass or instance:
 
 ```{code-block} python
 import param
-        
+
 class A(param.Parameterized):
     title = param.String(default="sum", doc="Title for the result")
-    
+
 class B(A):
     a = param.Integer(2, bounds=(0,10), doc="First addend")
     b = param.Integer(3, bounds=(0,10), doc="Second addend")
-    
+
     def __call__(self):
         return self.title + ": " + str(self.a + self.b)
 ```
@@ -67,7 +67,7 @@ ValueError: Parameter 'a' must be an integer.
 ValueError: Parameter 'b' must be at least 0
 ```
 
-Of course, you could always add more code to an ordinary Python class to check for errors like that, but as described in the [User Guide](user_guide/Simplifying_Codebases), that quickly gets unwieldy, with dozens of lines of exceptions, assertions, property definitions, and decorators that obscure what you actually wrote your code to do. Param lets you focus on the code you're writing, while letting your users know exactly what inputs they can supply. 
+Of course, you could always add more code to an ordinary Python class to check for errors like that, but as described in the [User Guide](user_guide/Simplifying_Codebases), that quickly gets unwieldy, with dozens of lines of exceptions, assertions, property definitions, and decorators that obscure what you actually wrote your code to do. Param lets you focus on the code you're writing, while letting your users know exactly what inputs they can supply.
 
 The types in Param may remind you of the static types found in some languages, but here the validation is done at runtime and is checking not just types but also numeric ranges or for specific allowed values. Param thus helps you not just with programming correctness, as for static types, but also for validating user inputs. Validating user inputs is generally a large fraction of a program's code, because such inputs are a huge source of vulnerabilities and potential error conditions, and Param lets you avoid ever having to write nearly any of that code.
 

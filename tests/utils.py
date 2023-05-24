@@ -24,7 +24,7 @@ class MockLoggingHandler(logging.Handler):
     def __init__(self, *args, **kwargs):
         self.messages = {'DEBUG': [], 'INFO': [], 'WARNING': [],
                          'ERROR': [], 'CRITICAL': [], 'VERBOSE':[]}
-        super(MockLoggingHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def emit(self, record):
         "Store a message to the instance's messages dictionary"
@@ -68,7 +68,7 @@ class MockLoggingHandler(logging.Handler):
         last_line = self.tail(level, n=1)
         if len(last_line) == 0:
             raise AssertionError('Missing output: {substring}'.format(
-                level=level, substring=repr(substring)))
+                substring=repr(substring)))
         if substring not in last_line[0]:
             raise AssertionError(msg.format(level=level,
                                             last_line=repr(last_line[0]),

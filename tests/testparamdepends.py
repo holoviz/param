@@ -683,6 +683,30 @@ class TestParamDepends(unittest.TestCase):
         finally:
             param.parameterized.async_executor = None
 
+    def test_param_depends_on_parameterized_attribute(self):
+        # Issue https://github.com/holoviz/param/issues/635
+
+        called = []
+
+        class Sub(param.Parameterized):
+            s = param.String()
+
+        class P(param.Parameterized):
+            test_param = param.Parameter()
+
+            def __init__(self, **params):
+                self._sub = Sub()
+                super().__init__(**params)
+
+            @param.depends('_sub.s', watch=True)
+            def cb(self):
+                called.append(1)
+
+        p = P()
+        p.test_param = 'modified'
+
+        assert not called
+
 
 class TestParamDependsFunction(unittest.TestCase):
 

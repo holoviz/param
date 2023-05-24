@@ -1022,14 +1022,9 @@ class Magnitude(Number):
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
-    __slots__ = ['bounds']
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
 
-    # Bounds are set for consistency and are arguably accurate, but have
-    # no effect since values are either False, True, or None (if allowed).
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
-
-    def __init__(self, default=Undefined, bounds=Undefined, **params):
-        self.bounds = bounds
+    def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
 

@@ -594,10 +594,11 @@ class Dynamic(Parameter):
     time_dependent = False
 
     @typing.overload
-    def __init__(self,
-        *,
-        default=None, allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True):
+    def __init__(
+        self, *, default=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
         ...
 
     def __init__(self,**params):
@@ -782,8 +783,8 @@ class Bytes(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=b"", *, regex=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=b"", regex=None, allow_None=False, *,
+        doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -811,9 +812,20 @@ class Bytes(Parameter):
         self._validate_regex(val, self.regex)
 
 
-def _compute_set_hook(p):
+class __compute_set_hook:
     """Remove when set_hook is removed"""
-    return _identity_hook
+    def __call__(self, p):
+        return _identity_hook
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return None
+
+
+_compute_set_hook = __compute_set_hook()
 
 
 class Number(Dynamic):
@@ -871,7 +883,7 @@ class Number(Dynamic):
     @typing.overload
     def __init__(
         self,
-        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
+        default=0.0, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None, *,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1044,6 +1056,21 @@ class Magnitude(Number):
 
     _slot_defaults = _dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
+    @typing.overload
+    def __init__(
+        self,
+        default=1.0, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+        super().__init__(
+            default=default, bounds=bounds, softbounds=softbounds,
+            inclusive_bounds=inclusive_bounds, step=step, set_hook=set_hook, **params
+        )
 
 
 class Boolean(Parameter):
@@ -1079,8 +1106,19 @@ class Boolean(Parameter):
         self._validate_value(val, self.allow_None)
 
 
-def _compute_length_of_default(p):
-    return len(p.default)
+class __compute_length_of_default:
+    def __call__(self, p):
+        return len(p.default)
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return None
+
+
+_compute_length_of_default = __compute_length_of_default()
 
 
 class Tuple(Parameter):
@@ -1093,9 +1131,9 @@ class Tuple(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=(0,0), *, length=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+        default=(0,0), length=None, *,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
         ...
 
@@ -1486,7 +1524,11 @@ class __compute_selector_default:
         return []
 
     def __repr__(self):
-        return repr([])
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return []
 
 _compute_selector_default = __compute_selector_default()
 
@@ -1496,7 +1538,11 @@ class __compute_selector_checking_default:
         return len(p.objects) != 0
 
     def __repr__(self):
-        return '<len(objects) != 0>'
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return None
 
 _compute_selector_checking_default = __compute_selector_checking_default()
 
@@ -1550,8 +1596,9 @@ class Selector(SelectorBase, _SignatureSelector):
     @typing.overload
     def __init__(
         self,
-        objects=None, *, default=None, compute_default_fn=None, check_on_set=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        objects=[], default=None, instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False, *,
+        doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -1669,8 +1716,9 @@ class ObjectSelector(Selector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, objects=None, compute_default_fn=None, check_on_set=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=None, objects=[], *, instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -1695,8 +1743,8 @@ class ClassSelector(SelectorBase):
     @typing.overload
     def __init__(
         self,
-        class_, *, default=None, is_instance=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        class_, default=None, instantiate=True, is_instance=True, *,
+        allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -1771,8 +1819,8 @@ class List(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=[], *, item_type=None, bounds=(0, None),
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=[], class_=None, item_type=None, instantiate=True, bounds=(0, None), *,
+        allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -1938,7 +1986,7 @@ class DataFrame(ClassSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
+        default=None, rows=None, columns=None, ordered=None, *, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -2028,8 +2076,8 @@ class Series(ClassSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, rows=None, is_instance=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        default=None, rows=None, allow_None=False, *, is_instance=True,
+        doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -2180,13 +2228,13 @@ class Path(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=None, *, search_paths=None,
+        default=None, search_paths=None, *,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
 
-    def __init__(self, default=Undefined, search_paths=Undefined, **params):
+    def __init__(self, default=Undefined, search_paths=None, **params):
         if search_paths is Undefined:
             search_paths = []
 
@@ -2290,8 +2338,9 @@ class FileSelector(Selector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, path="", objects=None, compute_default_fn=None, check_on_set=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=None, path="", *, objects=[], instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -2327,8 +2376,9 @@ class ListSelector(Selector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, objects=None, compute_default_fn=None, check_on_set=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=None, objects=[], *, instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -2364,8 +2414,9 @@ class MultiFileSelector(ListSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, path="", objects=None, compute_default_fn=None, check_on_set=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=None, path="", *, objects=[], compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
@@ -2411,9 +2462,9 @@ class Date(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
         ...
 
@@ -2471,9 +2522,9 @@ class CalendarDate(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
         ...
 
@@ -2558,7 +2609,7 @@ class Color(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=None, *, allow_named=True,
+        default=None, allow_named=True, *,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -2608,9 +2659,9 @@ class Range(NumericTuple):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, inclusive_bounds=(True,True), softbounds=None, step=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+        default=None, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, *, length=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
         ...
 
@@ -2772,7 +2823,7 @@ class Event(Boolean):
     @typing.overload
     def __init__(
         self,
-        default=False, *,
+        default=False, bounds=(0, 1), *,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):

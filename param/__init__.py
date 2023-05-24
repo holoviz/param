@@ -1024,15 +1024,10 @@ class Magnitude(Number):
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
-    __slots__ = ['bounds']
-
-    # Bounds are set for consistency and are arguably accurate, but have
-    # no effect since values are either False, True, or None (if allowed).
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, bounds=Undefined, **params):
-        self.bounds = bounds
+    def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
 
@@ -2558,7 +2553,7 @@ class Event(Boolean):
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
     @_deprecate_positional_args
-    def __init__(self,default=False, *, bounds=(0,1),**params):
+    def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'

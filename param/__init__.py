@@ -2535,7 +2535,7 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
-    def __init__(self,default=False,bounds=(0,1),**params):
+    def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'

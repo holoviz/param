@@ -1043,6 +1043,15 @@ class Parameter(_ParameterBase):
         per_instance=True
     )
 
+    @typing.overload
+    def __init__(
+        self,
+        default="", *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
@@ -1432,9 +1441,12 @@ class String(Parameter):
     _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
 
     @typing.overload
-    def __init__(self, default="", regex=None, precedence=None, doc=None, label=None,
-                instantiate=False, constant=False, readonly=False, pickle_default_value=True,
-                allow_None=False, per_instance=True):
+    def __init__(
+        self,
+        default="", *, regex=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
         ...
 
     def __init__(self, default=Undefined, regex=Undefined, **kwargs):

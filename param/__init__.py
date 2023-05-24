@@ -23,6 +23,7 @@ import glob
 import re
 import datetime as dt
 import collections
+import typing
 import warnings
 
 from collections import OrderedDict
@@ -592,6 +593,13 @@ class Dynamic(Parameter):
     time_fn = Time()
     time_dependent = False
 
+    @typing.overload
+    def __init__(self,
+        *,
+        default=None, allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True):
+        ...
+
     def __init__(self,**params):
         """
         Call the superclass's __init__ and set instantiate=True if the
@@ -770,6 +778,16 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
+
+    @typing.overload
+    def __init__(
+        self,
+        default=b"", *, regex=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
@@ -849,6 +867,15 @@ class Number(Dynamic):
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
@@ -1024,6 +1051,15 @@ class Boolean(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
 
+    @typing.overload
+    def __init__(
+        self,
+        default=False, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1053,6 +1089,15 @@ class Tuple(Parameter):
     __slots__ = ['length']
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=(0,0), *, length=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, length=Undefined, **params):
         """
@@ -1124,6 +1169,15 @@ class XYCoordinates(NumericTuple):
 
     _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
+    @typing.overload
+    def __init__(
+        self,
+        default=(0.0, 0.0), *, length=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, length=2, **params)
 
@@ -1192,6 +1246,15 @@ class Composite(Parameter):
     """
 
     __slots__ = ['attribs', 'objtype']
+
+    @typing.overload
+    def __init__(
+        self,
+        attribs=None, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, attribs=Undefined, **kw):
         if attribs is Undefined:
@@ -1484,6 +1547,15 @@ class Selector(SelectorBase, _SignatureSelector):
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
+    @typing.overload
+    def __init__(
+        self,
+        objects=None, *, default=None, compute_default_fn=None, check_on_set=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self, objects=Undefined, default=Undefined, instantiate=Undefined,
@@ -1594,6 +1666,15 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, objects=None, compute_default_fn=None, check_on_set=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
                          empty_default=True, **kwargs)
@@ -1610,6 +1691,15 @@ class ClassSelector(SelectorBase):
     __slots__ = ['class_', 'is_instance']
 
     _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
+
+    @typing.overload
+    def __init__(
+        self,
+        class_, *, default=None, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
@@ -1677,6 +1767,15 @@ class List(Parameter):
         Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
         instantiate=True, default=[],
     )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=[], *, item_type=None, bounds=(0, None),
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, class_=Undefined, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, **params):
@@ -1766,6 +1865,15 @@ class Dict(ClassSelector):
     Parameter whose value is a dictionary.
     """
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, **params):
         super().__init__(dict, default=default, **params)
 
@@ -1774,6 +1882,15 @@ class Array(ClassSelector):
     """
     Parameter whose value is a numpy array.
     """
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
@@ -1817,6 +1934,15 @@ class DataFrame(ClassSelector):
     _slot_defaults = _dict_update(
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
@@ -1898,6 +2024,15 @@ class Series(ClassSelector):
     _slot_defaults = _dict_update(
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, rows=None, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
@@ -2042,6 +2177,15 @@ class Path(Parameter):
 
     __slots__ = ['search_paths']
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, search_paths=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, search_paths=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
@@ -2143,6 +2287,15 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, path="", objects=None, compute_default_fn=None, check_on_set=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
         self.path = path
@@ -2171,6 +2324,15 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, objects=None, compute_default_fn=None, check_on_set=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, objects=Undefined, **kwargs):
         super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
@@ -2198,6 +2360,15 @@ class MultiFileSelector(ListSelector):
     Given a path glob, allows multiple files to be selected from the list of matches.
     """
     __slots__ = ['path']
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, path="", objects=None, compute_default_fn=None, check_on_set=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, path="", **kwargs):
         self.default = default
@@ -2236,6 +2407,18 @@ class Date(Number):
     """
 
     _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=None, **kwargs):
+        super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2284,6 +2467,18 @@ class CalendarDate(Number):
     """
 
     _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=None, **kwargs):
+        super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2360,6 +2555,15 @@ class Color(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, allow_named=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
@@ -2400,6 +2604,15 @@ class Range(NumericTuple):
         NumericTuple._slot_defaults, default=None, bounds=None,
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, inclusive_bounds=(True,True), softbounds=None, step=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
@@ -2555,6 +2768,15 @@ class Event(Boolean):
     # to when the parameter is supplied to the trigger method. This
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
+
+    @typing.overload
+    def __init__(
+        self,
+        default=False, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     def __init__(self,default=False,bounds=(0,1),**params):
         self._autotrigger_value = True

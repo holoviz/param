@@ -2823,13 +2823,13 @@ class Event(Boolean):
     @typing.overload
     def __init__(
         self,
-        default=False, bounds=(0, 1), *,
+        default=False, *,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
 
-    def __init__(self,default=False,bounds=(0,1),**params):
+    def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'

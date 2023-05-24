@@ -595,7 +595,7 @@ class Dynamic(Parameter):
 
     @typing.overload
     def __init__(
-        self, *, default=None,
+        self, default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
@@ -783,7 +783,7 @@ class Bytes(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=b"", regex=None, allow_None=False, *,
+        default=b"", *, regex=None, allow_None=False,
         doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -884,7 +884,7 @@ class Number(Dynamic):
     @typing.overload
     def __init__(
         self,
-        default=0.0, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None, *,
+        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1061,13 +1061,13 @@ class Magnitude(Number):
     @typing.overload
     def __init__(
         self,
-        default=1.0, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None, *,
+        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
         super().__init__(
             default=default, bounds=bounds, softbounds=softbounds,
@@ -1134,7 +1134,7 @@ class Tuple(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=(0,0), length=None, *,
+        default=(0,0), *, length=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
@@ -1292,7 +1292,7 @@ class Composite(Parameter):
     @typing.overload
     def __init__(
         self,
-        attribs=None, *,
+        *, attribs=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1601,8 +1601,8 @@ class Selector(SelectorBase, _SignatureSelector):
     @typing.overload
     def __init__(
         self,
-        objects=[], default=None, instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False, *,
+        *, objects=[], default=None, instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
         doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1722,7 +1722,7 @@ class ObjectSelector(Selector):
     @typing.overload
     def __init__(
         self,
-        default=None, objects=[], *, instantiate=False, compute_default_fn=None,
+        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
         check_on_set=None, allow_None=None, empty_default=False,
         doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
@@ -1750,7 +1750,7 @@ class ClassSelector(SelectorBase):
     @typing.overload
     def __init__(
         self,
-        class_, default=None, instantiate=True, is_instance=True, *,
+        *, class_, default=None, instantiate=True, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1827,7 +1827,7 @@ class List(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=[], class_=None, item_type=None, instantiate=True, bounds=(0, None), *,
+        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
         allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1995,7 +1995,7 @@ class DataFrame(ClassSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, rows=None, columns=None, ordered=None, *, is_instance=True,
+        default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -2086,7 +2086,7 @@ class Series(ClassSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, rows=None, allow_None=False, *, is_instance=True,
+        default=None, *, rows=None, allow_None=False, is_instance=True,
         doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -2239,7 +2239,7 @@ class Path(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=None, search_paths=None, *,
+        default=None, *, search_paths=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -2350,7 +2350,7 @@ class FileSelector(Selector):
     @typing.overload
     def __init__(
         self,
-        default=None, path="", *, objects=[], instantiate=False, compute_default_fn=None,
+        default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
         check_on_set=None, allow_None=None, empty_default=False,
         doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
@@ -2389,7 +2389,7 @@ class ListSelector(Selector):
     @typing.overload
     def __init__(
         self,
-        default=None, objects=[], *, instantiate=False, compute_default_fn=None,
+        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
         check_on_set=None, allow_None=None, empty_default=False,
         doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
@@ -2428,7 +2428,7 @@ class MultiFileSelector(ListSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, path="", *, objects=[], compute_default_fn=None,
+        default=None, *, path="", objects=[], compute_default_fn=None,
         check_on_set=None, allow_None=None, empty_default=False,
         doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
@@ -2624,7 +2624,7 @@ class Color(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=None, allow_named=True, *,
+        default=None, *, allow_named=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -2675,7 +2675,7 @@ class Range(NumericTuple):
     @typing.overload
     def __init__(
         self,
-        default=None, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, *, length=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):

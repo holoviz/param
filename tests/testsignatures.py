@@ -6,6 +6,7 @@ import param
 import pytest
 
 from param import concrete_descendents, Parameter
+from param._utils import ParamDeprecationWarning
 
 
 SKIP_UPDATED = [
@@ -54,3 +55,60 @@ def test_signature_parameters_constructors_overloaded_updated_match():
         osig = osig.replace(parameters=[parameter for pname, parameter in osig.parameters.items() if pname != 'self'])
         usig = inspect.signature(p_type)
         assert osig == usig, _
+
+
+def test_signature_position_keywords():
+    NO_POSITIONAL = [
+        # class_ is first
+        param.ClassSelector,
+        # objects is first
+        param.Selector,
+        # attribs is first
+        param.Composite,
+    ]
+
+    for ptype in custom_concrete_descendents(Parameter).values():
+        if ptype.__name__.startswith('_'):
+            continue
+        sig = inspect.signature(ptype)
+        parameters = dict(sig.parameters)
+        parameters.pop('self', None)
+        if ptype in NO_POSITIONAL:
+            assert all(
+                p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
+                for pname, p in parameters.items()
+                if pname != 'self'
+            )
+        else:
+            positional_or_kw = [
+                p
+                for p in parameters.values()
+                if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+            ]
+            assert len(positional_or_kw) == 1
+            assert positional_or_kw[0].name == 'default'
+            del parameters['default']
+
+            assert all(
+                p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
+                for p in parameters.values()
+            )
+
+
+def test_signature_warning_by_position():
+    # Simple test as it's tricky to automatically test all the Parameters
+    with pytest.warns(
+        ParamDeprecationWarning,
+        match=r"Passing 'objects' as positional argument\(s\) to 'param.Selector' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+    ):
+        param.Selector([0, 1])  # objects
+    with pytest.warns(
+        ParamDeprecationWarning,
+        match=r"Passing 'class_' as positional argument\(s\) to 'param.ClassSelector' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+    ):
+        param.ClassSelector(int)  # class_
+    with pytest.warns(
+        ParamDeprecationWarning,
+        match=r"Passing 'bounds, softbounds' as positional argument\(s\) to 'param.Number' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+    ):
+        param.Number(1, (0, 2), (0, 2))  # default (OK), bounds (not OK), softbounds (not OK)

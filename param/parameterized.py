@@ -1093,7 +1093,7 @@ class Parameter(_ParameterBase):
     @typing.overload
     def __init__(
         self,
-        default=None,
+        default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):
@@ -1490,7 +1490,7 @@ class String(Parameter):
     @typing.overload
     def __init__(
         self,
-        default="", regex=None, *,
+        default="", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
     ):

@@ -42,7 +42,7 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 from .parameterized import _identity_hook
-from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning
+from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning, _deprecate_positional_args
 
 # Define '__version__'
 try:
@@ -592,12 +592,12 @@ class Dynamic(Parameter):
     time_fn = Time()
     time_dependent = False
 
-    def __init__(self,**params):
+    def __init__(self, default=Undefined, **params):
         """
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
         """
-        super().__init__(**params)
+        super().__init__(default=default, **params)
 
         if callable(self.default):
             self._set_instantiate(True)
@@ -770,7 +770,8 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
-    def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
@@ -850,7 +851,8 @@ class Number(Dynamic):
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
@@ -1024,6 +1026,7 @@ class Boolean(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
 
+    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1054,7 +1057,8 @@ class Tuple(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
-    def __init__(self, default=Undefined, length=Undefined, **params):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -1193,7 +1197,8 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    def __init__(self, attribs=Undefined, **kw):
+    @_deprecate_positional_args
+    def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
         super().__init__(default=Undefined, **kw)
@@ -1465,7 +1470,8 @@ class Selector(SelectorBase):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, objects=Undefined, default=Undefined, instantiate=Undefined,
+    @_deprecate_positional_args
+    def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
@@ -1573,7 +1579,8 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
-    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
                          empty_default=True, **kwargs)
 
@@ -1590,7 +1597,8 @@ class ClassSelector(SelectorBase):
 
     _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
-    def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+    @_deprecate_positional_args
+    def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super().__init__(default=default,instantiate=instantiate,**params)
@@ -1657,7 +1665,8 @@ class List(Parameter):
         instantiate=True, default=[],
     )
 
-    def __init__(self, default=Undefined, class_=Undefined, item_type=Undefined,
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, **params):
         if class_ is not Undefined:
             # PARAM3_DEPRECATION
@@ -1746,7 +1755,7 @@ class Dict(ClassSelector):
     """
 
     def __init__(self, default=Undefined, **params):
-        super().__init__(dict, default=default, **params)
+        super().__init__(default=default, class_=dict, **params)
 
 
 class Array(ClassSelector):
@@ -1756,7 +1765,7 @@ class Array(ClassSelector):
 
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
-        super().__init__(ndarray, default=default, **params)
+        super().__init__(default=default, class_=ndarray, **params)
 
     @classmethod
     def serialize(cls, value):
@@ -1797,12 +1806,13 @@ class DataFrame(ClassSelector):
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
-    def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super().__init__(pdDFrame, default=default, **params)
+        super().__init__(default=default, class_=pdDFrame, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -1878,10 +1888,11 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super().__init__(pdSeries, default=default, allow_None=allow_None,
+        super().__init__(default=default, class_=pdSeries, allow_None=allow_None,
                          **params)
         self._validate(self.default)
 
@@ -2021,7 +2032,8 @@ class Path(Parameter):
 
     __slots__ = ['search_paths']
 
-    def __init__(self, default=Undefined, search_paths=Undefined, **params):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, search_paths=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
 
@@ -2122,7 +2134,8 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -2150,7 +2163,8 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
@@ -2178,7 +2192,8 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
@@ -2339,7 +2354,8 @@ class Color(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
 
-    def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
         self._validate(self.default)
@@ -2380,7 +2396,8 @@ class Range(NumericTuple):
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
@@ -2535,6 +2552,7 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
+    @_deprecate_positional_args
     def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False

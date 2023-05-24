@@ -41,14 +41,14 @@ class TestStringParameters(unittest.TestCase):
 
     def test_regex_ok(self):
         class A(param.Parameterized):
-            s = param.String('0.0.0.0', ip_regex)
+            s = param.String('0.0.0.0', regex=ip_regex)
 
         a = A()
         a.s = '123.123.0.1'
 
     def test_reject_none(self):
         class A(param.Parameterized):
-            s = param.String('0.0.0.0', ip_regex)
+            s = param.String('0.0.0.0', regex=ip_regex)
 
         a = A()
 
@@ -58,7 +58,7 @@ class TestStringParameters(unittest.TestCase):
 
     def test_default_none(self):
         class A(param.Parameterized):
-            s = param.String(None, ip_regex)
+            s = param.String(None, regex=ip_regex)
 
         a = A()
         a.s = '123.123.0.1'

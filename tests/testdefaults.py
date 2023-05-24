@@ -15,8 +15,8 @@ from param import ClassSelector
 
 from .utils import check_defaults
 
-positional_args = {
-    ClassSelector: (object,)
+kw_args = {
+    ClassSelector: dict(class_=object),
 }
 
 skip = []
@@ -42,7 +42,7 @@ class DefaultsMetaclassTest(type):
             def test(self):
                 # instantiate parameter with no default (but supply
                 # any required args)
-                p = parameter(*positional_args.get(parameter,tuple()))
+                p = parameter(**kw_args.get(parameter, {}))
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
@@ -57,7 +57,7 @@ class DefaultsMetaclassTest(type):
                 # instantiate parameter with no default (but supply
                 # any required args)
                 class P(param.Parameterized):
-                    p = parameter(*positional_args.get(parameter,tuple()))
+                    p = parameter(**kw_args.get(parameter, {}))
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
@@ -76,7 +76,7 @@ class DefaultsMetaclassTest(type):
                 # instantiate parameter with no default (but supply
                 # any required args)
                 class P(param.Parameterized):
-                    p = parameter(*positional_args.get(parameter,tuple()))
+                    p = parameter(**kw_args.get(parameter, {}))
 
                 inst = P()
 
@@ -179,3 +179,62 @@ def test_defaults_parameter_unbound_allow_None():
     assert s4.allow_None is True
     assert s5.allow_None is True
     assert s6.allow_None is True
+
+
+def test_signature_position_keywords():
+    # TODO: to be moved to testsignatures.py
+    import inspect  # noqa
+
+    NO_POSITIONAL = [
+        # class_ is first
+        param.ClassSelector,
+        # objects is first
+        param.Selector,
+        # attribs is first
+        param.Composite,
+    ]
+
+    for ptype in concrete_descendents(Parameter).values():
+        sig = inspect.signature(ptype)
+        if ptype in NO_POSITIONAL:
+            assert all(
+                p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
+                for p in sig.parameters.values()
+            )
+        else:
+            parameters = dict(sig.parameters)
+            positional_or_kw = [
+                p
+                for p in parameters.values()
+                if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+            ]
+            assert len(positional_or_kw) == 1
+            assert positional_or_kw[0].name == 'default'
+            del parameters['default']
+
+            assert all(
+                p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
+                for p in parameters.values()
+            )
+
+
+def test_signature_warning_by_position():
+    from param._utils import ParamDeprecationWarning
+    # TODO: to be moved to testsignatures.py
+
+    # Simple test as it's tricky to automatically test all the Parameters
+    with pytest.warns(
+        ParamDeprecationWarning,
+        match=r"Passing 'objects' as positional argument\(s\) to 'param.Selector' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+    ):
+        param.Selector([0, 1])  # objects
+    with pytest.warns(
+        ParamDeprecationWarning,
+        match=r"Passing 'class_' as positional argument\(s\) to 'param.ClassSelector' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+    ):
+        param.ClassSelector(int)  # class_
+    with pytest.warns(
+        ParamDeprecationWarning,
+        match=r"Passing 'bounds, softbounds' as positional argument\(s\) to 'param.Number' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+    ):
+        param.Number(1, (0, 2), (0, 2))  # default (OK), bounds (not OK), softbounds (not OK)

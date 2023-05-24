@@ -200,7 +200,7 @@ class TestListSelectorParameters(unittest.TestCase):
     def test_initialization_bad_iterable(self):
         with self.assertRaises(ValueError):
             class Q(param.Parameterized):
-                j = param.ListSelector('ab', ['a', 'b', 'c', 'd'])
+                j = param.ListSelector('ab', objects=['a', 'b', 'c', 'd'])
 
     def test_set_bad_iterable(self):
         class Q(param.Parameterized):

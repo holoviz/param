@@ -1099,6 +1099,7 @@ class Parameter(_ParameterBase):
     ):
         ...
 
+    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,

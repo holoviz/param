@@ -98,16 +98,16 @@ def test_signature_warning_by_position():
     # Simple test as it's tricky to automatically test all the Parameters
     with pytest.warns(
         PendingDeprecationWarning,
-        match=r"Passing 'objects' as positional argument\(s\) to 'param.Selector' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+        match=r"Passing 'objects' as positional argument\(s\) to 'param.Selector' has been deprecated since Param 2.0.0 and will raise an error in a future version, please pass them as keyword arguments"
     ):
         param.Selector([0, 1])  # objects
     with pytest.warns(
         PendingDeprecationWarning,
-        match=r"Passing 'class_' as positional argument\(s\) to 'param.ClassSelector' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+        match=r"Passing 'class_' as positional argument\(s\) to 'param.ClassSelector' has been deprecated since Param 2.0.0 and will raise an error in a future version, please pass them as keyword arguments"
     ):
         param.ClassSelector(int)  # class_
     with pytest.warns(
         PendingDeprecationWarning,
-        match=r"Passing 'bounds, softbounds' as positional argument\(s\) to 'param.Number' was deprecated and will raise an error in a future version, please pass them as keyword arguments"
+        match=r"Passing 'bounds, softbounds' as positional argument\(s\) to 'param.Number' has been deprecated since Param 2.0.0 and will raise an error in a future version, please pass them as keyword arguments"
     ):
         param.Number(1, (0, 2), (0, 2))  # default (OK), bounds (not OK), softbounds (not OK)

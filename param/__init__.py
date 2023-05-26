@@ -315,6 +315,32 @@ def _get_min_max_value(min, max, value=None, step=None):
     return min, max, value
 
 
+def _deserialize_from_path(ext_to_routine, path, type_name):
+    """
+    Call deserialization routine with path according to extension.
+    ext_to_routine should be a dictionary mapping each supported
+    file extension to a corresponding loading function.
+    """
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            "Could not parse file '{}' as {}: does not exist or is not a file"
+            "".format(path, type_name))
+    root, ext = os.path.splitext(path)
+    if ext in {'.gz', '.bz2', '.xz', '.zip'}:
+        # A compressed type. We'll assume the routines can handle such extensions
+        # transparently (if not, we'll fail later)
+        ext = os.path.splitext(root)[1]
+    # FIXME(sdrobert): try...except block below with "raise from" might be a good idea
+    # once py2.7 support is removed. Provides error + fact that failure occurred in
+    # deserialization
+    if ext in ext_to_routine:
+        return ext_to_routine[ext](path)
+    raise ValueError(
+        "Could not parse file '{}' as {}: no deserialization method for files with "
+        "'{}' extension. Supported extensions: {}"
+        "".format(path, type_name, ext, ', '.join(sorted(ext_to_routine))))
+
+
 class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
@@ -1963,8 +1989,14 @@ class Array(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        from numpy import asarray
-        return asarray(value)
+        import numpy
+        if isinstance(value, str):
+            return _deserialize_from_path(
+                {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
+                value, 'Array'
+            )
+        else:
+            return numpy.asarray(value)
 
 
 class DataFrame(ClassSelector):
@@ -2064,8 +2096,25 @@ class DataFrame(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        from pandas import DataFrame as pdDFrame
-        return pdDFrame(value)
+        import pandas
+        if isinstance(value, str):
+            return _deserialize_from_path(
+                {
+                    '.csv': pandas.read_csv,
+                    '.dta': pandas.read_stata,
+                    '.feather': pandas.read_feather,
+                    '.h5': pandas.read_hdf,
+                    '.hdf5': pandas.read_hdf,
+                    '.json': pandas.read_json,
+                    '.ods': pandas.read_excel,
+                    '.parquet': pandas.read_parquet,
+                    '.pkl': pandas.read_pickle,
+                    '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
+                    '.xlsm': pandas.read_excel,
+                    '.xlsx': pandas.read_excel,
+                }, value, 'DataFrame')
+        else:
+            return pandas.DataFrame(value)
 
 
 class Series(ClassSelector):

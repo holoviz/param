@@ -707,6 +707,35 @@ class TestParamDepends(unittest.TestCase):
 
         assert not called
 
+    def test_param_depends_on_method(self):
+
+        method_count = 0
+
+        class A(param.Parameterized):
+            a = param.Integer()
+
+            @param.depends('a', watch=True)
+            def method1(self):
+                pass
+
+            @param.depends('method1', watch=True)
+            def method2(self):
+                nonlocal method_count
+                method_count += 1
+
+        inst = A()
+        pinfos = inst.param.method_dependencies('method2')
+        assert len(pinfos) == 1
+
+        pinfo = pinfos[0]
+        assert pinfo.cls is A
+        assert pinfo.inst is inst
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
+
+        inst.a = 2
+        assert method_count == 1
+
 
 class TestParamDependsFunction(unittest.TestCase):
 

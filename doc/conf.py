@@ -53,7 +53,7 @@ html_theme_options = {
         "copyright",
         "last-updated",
     ],
-    "analytics": {"google_analytics_id": 'UA-154795830-6'},
+    "analytics": {"google_analytics_id": 'G-KD5GGLCB54'}
 }
 
 # Override the Sphinx default title that appends `documentation`

@@ -284,7 +284,7 @@ Since the previous release (1.6.1), there should be no changes that affect exist
 
 * A new param namespace object, which in future will allow subclasses of Parameterized to have much cleaner namespaces ([#230](https://github.com/holoviz/param/pull/230)).
 * Started testing on python 3.7-dev ([#223](https://github.com/holoviz/param/pull/223)).
-* param.version now provides functions to simplify dependants' setup.py/setup.cfg files (see https://github.com/pyviz-dev/autover/pull/49).
+* param.version now provides functions to simplify dependants' setup.py/setup.cfg files (see https://github.com/holoviz-dev/autover/pull/49).
 
 Although param should still work on python 3.3, we are no longer testing against it (unsupported by our test environment; [#234](https://github.com/holoviz/param/pull/234)).
 
@@ -294,9 +294,9 @@ For more details, you can see a [full list of changes since the previous release
 
 Restores support for the previous versioning system (pre 1.6; see [#225](https://github.com/holoviz/param/pull/225)), and fixes a number of issues with the new versioning system:
 
-* Allow package name to differ from repository name (https://github.com/pyviz-dev/autover/pull/39)
-* Allow develop install to work when repository is dirty (https://github.com/pyviz-dev/autover/pull/41)
-* Fixed failure to report dirty when commit count is 0 (https://github.com/pyviz-dev/autover/pull/44)
+* Allow package name to differ from repository name (https://github.com/holoviz-dev/autover/pull/39)
+* Allow develop install to work when repository is dirty (https://github.com/holoviz-dev/autover/pull/41)
+* Fixed failure to report dirty when commit count is 0 (https://github.com/holoviz-dev/autover/pull/44)
 
 ## Version 1.6.0
 

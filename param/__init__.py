@@ -1867,7 +1867,7 @@ class List(Parameter):
             warnings.warn(
                 message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
                 category=_ParamDeprecationWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
         if item_type is not Undefined and class_ is not Undefined:
             self.item_type = item_type

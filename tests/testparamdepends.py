@@ -736,6 +736,90 @@ class TestParamDepends(unittest.TestCase):
         inst.a = 2
         assert method_count == 1
 
+    def test_param_depends_on_method_subparameter(self):
+
+        method1_count = 0
+        method2_count = 0
+
+        class Sub(param.Parameterized):
+            a = param.Integer()
+
+            @param.depends('a')
+            def method1(self):
+                nonlocal method1_count
+                method1_count += 1
+
+        class Main(param.Parameterized):
+            sub = param.Parameter()
+
+            @param.depends('sub.method1', watch=True)
+            def method2(self):
+                nonlocal method2_count
+                method2_count += 1
+
+        sub = Sub()
+        main = Main(sub=sub)
+        pinfos = main.param.method_dependencies('method2')
+        assert len(pinfos) == 1
+
+        pinfo = pinfos[0]
+        assert pinfo.cls is Sub
+        assert pinfo.inst is sub
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
+
+        sub.a = 2
+        assert method1_count == 0
+        assert method2_count == 1
+
+
+    def test_param_depends_on_method_subparameter_after_init(self):
+        # Setup inspired from https://github.com/holoviz/param/issues/764
+
+        method1_count = 0
+        method2_count = 0
+
+        class Controls(param.Parameterized):
+
+            explorer = param.Parameter()
+
+            @param.depends('explorer.method1', watch=True)
+            def method2(self):
+                nonlocal method2_count
+                method2_count += 1
+
+
+        class Explorer(param.Parameterized):
+
+            controls = param.Parameter()
+
+            x = param.Selector(objects=['a', 'b'])
+
+            def __init__(self, **params):
+                super().__init__(**params)
+                self.controls = Controls(explorer=self)
+
+            @param.depends('x')
+            def method1(self):
+                nonlocal method1_count
+                method1_count += 1
+
+        explorer = Explorer()
+
+        pinfos = explorer.controls.param.method_dependencies('method2')
+        assert len(pinfos) == 1
+
+        pinfo = pinfos[0]
+        assert pinfo.cls is Explorer
+        assert pinfo.inst is explorer
+        assert pinfo.name == 'x'
+        assert pinfo.what == 'value'
+
+        explorer.x = 'b'
+
+        assert method1_count == 0
+        assert method2_count == 1
+
 
 class TestParamDependsFunction(unittest.TestCase):
 

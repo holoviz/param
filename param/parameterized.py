@@ -29,7 +29,7 @@ from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
 from threading import get_ident
-from types import FunctionType
+from types import FunctionType, MethodType
 
 import logging
 from contextlib import contextmanager
@@ -2556,7 +2556,7 @@ class Parameters:
             attr_obj = getattr(src, attr)
             if isinstance(attr_obj, Parameterized):
                 return [], []
-            elif isinstance(attr_obj, FunctionType):
+            elif isinstance(attr_obj, (FunctionType, MethodType)):
                 info = MInfo(inst=inst, cls=cls, name=attr,
                              method=attr_obj)
             else:

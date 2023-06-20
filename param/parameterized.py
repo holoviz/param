@@ -2859,14 +2859,14 @@ class ParameterizedMetaclass(type):
             parameters_state=parameters_state,
         )
         mcs._param__private = _param__private
-        mcs._param_parameters = Parameters(mcs)
+        mcs._param__parameters = Parameters(mcs)
 
         # All objects (with their names) of type Parameter that are
         # defined in this class
         parameters = [(n, o) for (n, o) in dict_.items()
                       if isinstance(o, Parameter)]
 
-        mcs._param_parameters._parameters = dict(parameters)
+        mcs._param__parameters._parameters = dict(parameters)
 
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name, param)
@@ -2890,7 +2890,7 @@ class ParameterizedMetaclass(type):
         # Resolve dependencies in class hierarchy
         _inherited = []
         for cls in classlist(mcs)[:-1][::-1]:
-            if not hasattr(cls, '_param_parameters'):
+            if not hasattr(cls, '_param__parameters'):
                 continue
             for dep in cls.param._depends['watch']:
                 method = getattr(mcs, dep[0], None)
@@ -2963,7 +2963,7 @@ class ParameterizedMetaclass(type):
     abstract = property(__is_abstract)
 
     def _get_param(mcs):
-        return mcs._param_parameters
+        return mcs._param__parameters
 
     param = property(_get_param)
 

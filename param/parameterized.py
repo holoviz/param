@@ -3408,10 +3408,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def param(self):
         return Parameters(self.__class__, self=self)
 
-    @property
-    def _private(self):
-        return Private(self.__class__, self=self)
-
     # 'Special' methods
 
     def __getstate__(self):

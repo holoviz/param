@@ -3745,7 +3745,7 @@ class ParameterizedFunction(Parameterized):
     def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
                 qualify=False, separator=""):
         """
-        Same as Parameters._pprint, except that X.classname(Y
+        Same as self.param.pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
         r = self.param.pprint(imports,prefix,

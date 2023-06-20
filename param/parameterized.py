@@ -15,6 +15,7 @@ import inspect
 import random
 import numbers
 import operator
+import typing
 import warnings
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
@@ -28,13 +29,13 @@ from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
 from threading import get_ident
-from types import FunctionType
+from types import FunctionType, MethodType
 
 import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-from ._utils import _deprecated
+from ._utils import _deprecated, _deprecate_positional_args
 
 try:
     # In case the optional ipython module is unavailable
@@ -870,7 +871,74 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
-class Parameter(metaclass=ParameterMetaclass):
+class _ParameterBase(metaclass=ParameterMetaclass):
+    """
+    Base Parameter class used to dynamically update the signature of all
+    the Parameters.
+    """
+
+    @classmethod
+    def _modified_slots_defaults(cls):
+        defaults = cls._slot_defaults.copy()
+        defaults['label'] = defaults.pop('_label')
+        return defaults
+
+    @classmethod
+    def __init_subclass__(cls):
+        # _update_signature has been tested against the Parameters available
+        # in Param, we don't want to break the Parameters created elsewhere
+        # so wrapping this in a loose try/except.
+        try:
+            cls._update_signature()
+        except Exception:
+            # The super signature has been changed so we need to get the one
+            # from the class constructor directly.
+            cls.__signature__ = inspect.signature(cls.__init__)
+
+    @classmethod
+    def _update_signature(cls):
+        defaults = cls._modified_slots_defaults()
+        new_parameters = {}
+
+        for i, kls in enumerate(cls.mro()):
+            if kls.__name__.startswith('_'):
+                continue
+            sig = inspect.signature(kls.__init__)
+            for pname, parameter in sig.parameters.items():
+                if pname == 'self':
+                    continue
+                if i >= 1 and parameter.default == inspect.Signature.empty:
+                    continue
+                if parameter.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
+                    continue
+                if getattr(parameter, 'default', None) is Undefined:
+                    if pname not in defaults:
+                        raise LookupError(
+                            f'Argument {pname!r} of Parameter {cls.__name__!r} has no '
+                            'entry in _slot_defaults.'
+                        )
+                    default = defaults[pname]
+                    if callable(default) and hasattr(default, 'sig'):
+                        default = default.sig
+                    new_parameter = parameter.replace(default=default)
+                else:
+                    new_parameter = parameter
+                if i >= 1:
+                    new_parameter = new_parameter.replace(kind=inspect.Parameter.KEYWORD_ONLY)
+                new_parameters.setdefault(pname, new_parameter)
+
+        def _sorter(p):
+            if p.default == inspect.Signature.empty:
+                return 0
+            else:
+                return 1
+
+        new_parameters = sorted(new_parameters.values(), key=_sorter)
+        new_sig = sig.replace(parameters=new_parameters)
+        cls.__signature__ = new_sig
+
+
+class Parameter(_ParameterBase):
     """
     An attribute descriptor for declaring parameters.
 
@@ -1022,7 +1090,17 @@ class Parameter(metaclass=ParameterMetaclass):
         per_instance=True
     )
 
-    def __init__(self, default=Undefined, doc=Undefined, # pylint: disable-msg=R0913
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, doc=Undefined, # pylint: disable-msg=R0913
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
@@ -1410,7 +1488,17 @@ class String(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
 
-    def __init__(self, default=Undefined, regex=Undefined, **kwargs):
+    @typing.overload
+    def __init__(
+        self,
+        default="", *, regex=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
@@ -1713,7 +1801,10 @@ class Parameters:
         for name, val in params.items():
             desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
-                self.param.warning("Setting non-parameter attribute %s=%s using a mechanism intended only for parameters", name, val)
+                raise TypeError(
+                    f"{self.__class__.__name__}.__init__() got an unexpected "
+                    f"keyword argument {name!r}"
+                )
             # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
             setattr(self, name, val)
 
@@ -2462,8 +2553,14 @@ class Parameters:
             info = PInfo(inst=inst, cls=cls, name=attr,
                          pobj=src.param[attr], what=what)
         elif hasattr(src, attr):
-            info = MInfo(inst=inst, cls=cls, name=attr,
-                         method=getattr(src, attr))
+            attr_obj = getattr(src, attr)
+            if isinstance(attr_obj, Parameterized):
+                return [], []
+            elif isinstance(attr_obj, (FunctionType, MethodType)):
+                info = MInfo(inst=inst, cls=cls, name=attr,
+                             method=attr_obj)
+            else:
+                raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
         elif getattr(src, "abstract", None):
             return [], [] if intermediate == 'only' else [DInfo(spec=spec)]
         else:
@@ -2894,26 +2991,6 @@ class ParameterizedMetaclass(type):
 
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
-            elif isinstance(value,Parameters):
-                pass
-            else:
-                # the purpose of the warning below is to catch
-                # mistakes ("thinking you are setting a parameter, but
-                # you're not"). There are legitimate times when
-                # something needs be set on the class, and we don't
-                # want to see a warning then. Such attributes should
-                # presumably be prefixed by at least one underscore.
-                # (For instance, python's own pickling mechanism
-                # caches __slotnames__ on the class:
-                # http://mail.python.org/pipermail/python-checkins/2003-February/033517.html.)
-                # This warning bypasses the usual mechanisms, which
-                # has have consequences for warning counts, warnings
-                # as exceptions, etc.
-                if not attribute_name.startswith('_'):
-                    get_logger().log(WARNING,
-                                     "Setting non-Parameter class attribute %s.%s = %s ",
-                                     mcs.__name__,attribute_name,repr(value))
-
 
     def __param_inheritance(mcs,param_name,param):
         """

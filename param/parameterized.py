@@ -28,14 +28,13 @@ except ImportError:
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from operator import itemgetter,attrgetter
-from threading import get_ident
 from types import FunctionType, MethodType
 
 import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-from ._utils import _deprecated, _deprecate_positional_args
+from ._utils import _deprecated, _deprecate_positional_args, _recursive_repr
 
 try:
     # In case the optional ipython module is unavailable
@@ -2801,13 +2800,6 @@ class Parameters:
                 warning_count+=1
         self_.__db_print(level, msg, *args, **kw)
 
-
-    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        """See Parameterized.pprint"""
-        self = self_.self
-        return self._pprint(imports, prefix, unknown_value, qualify, separator)
-
     # Note that there's no state_push method on the class, so
     # dynamic parameters set on a class can't have state saved. This
     # is because, to do this, state_push() would need to be a
@@ -2858,6 +2850,85 @@ class Parameters:
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
+
+    @_recursive_repr()
+    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
+        """
+        (Experimental) Pretty printed representation that may be
+        evaluated with eval. See pprint() function for more details.
+        """
+        self = self_.self_or_cls
+        if not isinstance(self, Parameterized):
+            raise NotImplementedError('_pprint is not implemented at the class level')
+        if imports is None:
+            imports = [] # would have been simpler to use a set from the start
+        imports[:] = list(set(imports))
+
+        # Generate import statement
+        mod = self.__module__
+        bits = mod.split('.')
+        imports.append("import %s"%mod)
+        imports.append("import %s"%bits[0])
+
+        changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
+        values = self.param.values()
+        spec = getfullargspec(self.__init__)
+        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
+
+        if spec.defaults is not None:
+            posargs = spec.args[:-len(spec.defaults)]
+            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
+        else:
+            posargs, kwargs = args, []
+
+        parameters = self.param.objects('existing')
+        ordering = sorted(
+            sorted(changed_params), # alphanumeric tie-breaker
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if parameters[k].precedence is None else
+                           parameters[k].precedence))
+
+        arglist, keywords, processed = [], [], []
+        for k in args + ordering:
+            if k in processed: continue
+
+            # Suppresses automatically generated names.
+            if k == 'name' and (values[k] is not None
+                                and re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+                continue
+
+            value = pprint(values[k], imports, prefix=prefix,settings=[],
+                           unknown_value=unknown_value,
+                           qualify=qualify) if k in values else None
+
+            if value is None:
+                if unknown_value is False:
+                    raise Exception(f"{self.name}: unknown value of {k!r}")
+                elif unknown_value is None:
+                    # i.e. suppress repr
+                    continue
+                else:
+                    value = unknown_value
+
+            # Explicit kwarg (unchanged, known value)
+            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
+
+            if k in posargs:
+                # value will be unknown_value unless k is a parameter
+                arglist.append(value)
+            elif (k in kwargs or
+                  (hasattr(spec, 'varkw') and (spec.varkw is not None)) or
+                  (hasattr(spec, 'keywords') and (spec.keywords is not None))):
+                # Explicit modified keywords or parameters in
+                # precendence order (if **kwargs present)
+                keywords.append(f'{k}={value}')
+
+            processed.append(k)
+
+        qualifier = mod + '.'  if qualify else ''
+        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
+        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
 
 class ParameterizedMetaclass(type):
@@ -3329,28 +3400,6 @@ script_repr_reg[FunctionType]=function_script_repr
 dbprint_prefix=None
 
 
-# Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
-def recursive_repr(fillvalue='...'):
-    'Decorator to make a repr function return fillvalue for a recursive call'
-
-    def decorating_function(user_function):
-        repr_running = set()
-
-        def wrapper(self, *args, **kwargs):
-            key = id(self), get_ident()
-            if key in repr_running:
-                return fillvalue
-            repr_running.add(key)
-            try:
-                result = user_function(self, *args, **kwargs)
-            finally:
-                repr_running.discard(key)
-            return result
-        return wrapper
-
-    return decorating_function
-
-
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
     Base class for named objects that support Parameters and message
@@ -3484,7 +3533,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             setattr(self,name,value)
         self.initialized=True
 
-    @recursive_repr()
+    @_recursive_repr()
     def __repr__(self):
         """
         Provide a nearly valid Python representation that could be used to recreate
@@ -3515,93 +3564,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         """
         return self.pprint(imports,prefix, unknown_value=None, qualify=True,
                            separator="\n")
-
-    @recursive_repr()
-    def _pprint(self, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        """
-        (Experimental) Pretty printed representation that may be
-        evaluated with eval. See pprint() function for more details.
-        """
-        if imports is None:
-            imports = [] # would have been simpler to use a set from the start
-        imports[:] = list(set(imports))
-
-        # Generate import statement
-        mod = self.__module__
-        bits = mod.split('.')
-        imports.append("import %s"%mod)
-        imports.append("import %s"%bits[0])
-
-        changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
-        values = self.param.values()
-        spec = getfullargspec(self.__init__)
-        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
-
-        if spec.defaults is not None:
-            posargs = spec.args[:-len(spec.defaults)]
-            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
-        else:
-            posargs, kwargs = args, []
-
-        parameters = self.param.objects('existing')
-        ordering = sorted(
-            sorted(changed_params), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if parameters[k].precedence is None else
-                           parameters[k].precedence))
-
-        arglist, keywords, processed = [], [], []
-        for k in args + ordering:
-            if k in processed: continue
-
-            # Suppresses automatically generated names.
-            if k == 'name' and (values[k] is not None
-                                and re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
-                continue
-
-            value = pprint(values[k], imports, prefix=prefix,settings=[],
-                           unknown_value=unknown_value,
-                           qualify=qualify) if k in values else None
-
-            if value is None:
-                if unknown_value is False:
-                    raise Exception(f"{self.name}: unknown value of {k!r}")
-                elif unknown_value is None:
-                    # i.e. suppress repr
-                    continue
-                else:
-                    value = unknown_value
-
-            # Explicit kwarg (unchanged, known value)
-            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
-
-            if k in posargs:
-                # value will be unknown_value unless k is a parameter
-                arglist.append(value)
-            elif (k in kwargs or
-                  (hasattr(spec, 'varkw') and (spec.varkw is not None)) or
-                  (hasattr(spec, 'keywords') and (spec.keywords is not None))):
-                # Explicit modified keywords or parameters in
-                # precendence order (if **kwargs present)
-                keywords.append(f'{k}={value}')
-
-            processed.append(k)
-
-        qualifier = mod + '.'  if qualify else ''
-        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
-
-    # PARAM3_DEPRECATION
-    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        warnings.warn(
-            message="'pprint' is deprecated. Use instead `.param.pprint`",
-            category=DeprecationWarning,
-            stacklevel=2
-        )
-        return self._pprint(imports=imports, prefix=prefix, unknown_value=unknown_value,
-               qualify=qualify, separator=separator)
 
 
 def print_all_param_defaults():
@@ -3808,12 +3770,12 @@ class ParameterizedFunction(Parameterized):
     def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
                 qualify=False, separator=""):
         """
-        Same as Parameterized._pprint, except that X.classname(Y
+        Same as Parameters._pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        r = Parameterized._pprint(self,imports,prefix,
-                                  unknown_value=unknown_value,
-                                  qualify=qualify,separator=separator)
+        r = self.param.pprint(imports,prefix,
+                              unknown_value=unknown_value,
+                              qualify=qualify,separator=separator)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
 

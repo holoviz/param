@@ -2855,7 +2855,7 @@ class ParameterizedMetaclass(type):
             "events": [], # Queue of batched events
             "watchers": [] # Queue of batched watchers
         }
-        _private = Private(
+        _private = _ClassPrivate(
             _parameters_state=_parameters_state,
         )
         mcs._private = _private
@@ -3307,7 +3307,23 @@ def recursive_repr(fillvalue='...'):
     return decorating_function
 
 
-class Private:
+class _ClassPrivate:
+
+    __slots__ = [
+        '_parameters_state',
+        '_disable_instance__params',
+    ]
+
+    def __init__(
+        self,
+        _parameters_state=None,
+        _disable_instance__params=None,
+    ):
+        self._parameters_state = _parameters_state
+        self._disable_instance__params = _disable_instance__params
+
+
+class _InstancePrivate:
 
     __slots__ = [
         'initialized',
@@ -3315,7 +3331,6 @@ class Private:
         '_dynamic_watchers',
         '_instance__params',
         '_param_watchers',
-        '_disable_instance__params',
     ]
 
     def __init__(
@@ -3325,14 +3340,12 @@ class Private:
         _dynamic_watchers=None,
         _instance__params=None,
         _param_watchers=None,
-        _disable_instance__params=None,
     ):
         self.initialized = initialized
         self._parameters_state = _parameters_state
         self._dynamic_watchers = _dynamic_watchers
         self._instance__params = _instance__params
         self._param_watchers = _param_watchers
-        self._disable_instance__params = _disable_instance__params
 
 
 class Parameterized(metaclass=ParameterizedMetaclass):
@@ -3386,23 +3399,18 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # Flag that can be tested to see if e.g. constant Parameters
         # can still be set
-        initialized = False
         _parameters_state = {
             "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
             "TRIGGER": False,
             "events": [], # Queue of batched events
             "watchers": [] # Queue of batched watchers
         }
-        _instance__params = {}
-        _param_watchers = {}
-        _dynamic_watchers = defaultdict(list)
-
-        self._private = Private(
-            initialized=initialized,
+        self._private = _InstancePrivate(
+            initialized=False,
             _parameters_state=_parameters_state,
-            _dynamic_watchers=_dynamic_watchers,
-            _instance__params=_instance__params,
-            _param_watchers=_param_watchers,
+            _dynamic_watchers=defaultdict(list),
+            _instance__params={},
+            _param_watchers={},
         )
 
         self.param._generate_name()
@@ -3445,11 +3453,12 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         During this process the object is considered uninitialized.
         """
+        self._private = _InstancePrivate()
         self._private.initialized = False
 
         _private = state.get('_private', None)
         if _private is None:
-            _private = Private()
+            _private = _InstancePrivate()
 
         # When making a copy the internal watchers have to be
         # recreated and point to the new instance

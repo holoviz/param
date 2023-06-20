@@ -93,3 +93,5 @@ def check_defaults(parameter, label, skip=[]):
         assert parameter.per_instance is True
     if 'label' not in skip:
         assert parameter.label == label
+    if 'required' not in skip:
+        assert parameter.required is False

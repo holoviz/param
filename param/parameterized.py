@@ -1074,7 +1074,7 @@ class Parameter(_ParameterBase):
     __slots__ = ['name', '_internal_name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
-                 'watchers', 'owner', '_label']
+                 'watchers', 'owner', '_label', 'required']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -1087,7 +1087,7 @@ class Parameter(_ParameterBase):
     _slot_defaults = dict(
         default=None, precedence=None, doc=None, _label=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
-        per_instance=True
+        per_instance=True, required=False
     )
 
     @typing.overload
@@ -1104,7 +1104,7 @@ class Parameter(_ParameterBase):
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
-                 per_instance=Undefined):
+                 per_instance=Undefined, required=Undefined):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1172,6 +1172,9 @@ class Parameter(_ParameterBase):
         allowed. If the default value is defined as None, allow_None
         is set to True automatically.
 
+        required: If True a value must be provided on instantiation of a
+        Parameterized object.
+
         default, doc, and precedence all default to None, which allows
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
@@ -1191,6 +1194,7 @@ class Parameter(_ParameterBase):
         self._set_allow_None(allow_None)
         self.watchers = {}
         self.per_instance = per_instance
+        self.required = required
 
     @classmethod
     def serialize(cls, value):
@@ -1766,6 +1770,36 @@ class Parameters:
         self = self_.param.self
         self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
 
+    @as_uninitialized
+    def _check_required(self_, **params):
+        cls = self_.param.cls
+
+        # Map of all the class parameters
+        parameters = {}
+        for class_ in classlist(cls):
+            for name, val in class_.__dict__.items():
+                if isinstance(val, Parameter):
+                    parameters[name] = val
+        # Find what Parameters are required but were not passed to the
+        # constructor.
+        missing = [
+            pname
+            for pname, p in parameters.items()
+            if p.required and pname not in params
+        ]
+        # Format the error
+        if missing:
+            missing = [f'{s!r}' for s in missing]
+            if len(missing) > 1:
+                kw = ', '.join(missing[:-1])
+                kw = kw + f'{"," if len(missing) > 2 else ""} and {missing[-1]}'
+            else:
+                kw = missing[0]
+            message = (
+                f"{cls.name}.__init__() missing {len(missing)} required keyword-only "
+                f"argument{'s' if len(missing) >1 else ''}: {kw}"
+            )
+            raise TypeError(message)
 
     @as_uninitialized
     def _setup_params(self_,**params):
@@ -3364,6 +3398,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self._dynamic_watchers = defaultdict(list)
 
         self.param._generate_name()
+        self.param._check_required(**params)
         self.param._setup_params(**params)
         object_count += 1
 

@@ -3309,6 +3309,15 @@ def recursive_repr(fillvalue='...'):
 
 class Private:
 
+    __slots__ = [
+        'initialized',
+        '_parameters_state',
+        '_dynamic_watchers',
+        '_instance__params',
+        '_param_watchers',
+        '_disable_instance__params',
+    ]
+
     def __init__(
         self,
         initialized=None,

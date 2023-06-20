@@ -1372,7 +1372,7 @@ class Parameter(_ParameterBase):
             elif obj is None:
                 _old = self.default
                 self.default = val
-            elif not obj.initialized:
+            elif not obj._private.initialized:
                 _old = obj.__dict__.get(self._internal_name, self.default)
                 obj.__dict__[self._internal_name] = val
             else:
@@ -1390,7 +1390,7 @@ class Parameter(_ParameterBase):
         self._post_setter(obj, val)
 
         if obj is not None:
-            if not getattr(obj, 'initialized', False):
+            if not hasattr(obj, '_private') or not getattr(obj._private, 'initialized', False):
                 return
             obj.param._update_deps(self.name)
 
@@ -1555,10 +1555,10 @@ def as_uninitialized(fn):
     @wraps(fn)
     def override_initialization(self_,*args,**kw):
         parameterized_instance = self_.self
-        original_initialized = parameterized_instance.initialized
-        parameterized_instance.initialized = False
+        original_initialized = parameterized_instance._private.initialized
+        parameterized_instance._private.initialized = False
         fn(parameterized_instance, *args, **kw)
-        parameterized_instance.initialized = original_initialized
+        parameterized_instance._private.initialized = original_initialized
     return override_initialization
 
 
@@ -1698,7 +1698,7 @@ class Parameters:
         inst = self_.self
         parameters = self_.objects(False) if inst is None else inst.param.objects(False)
         p = parameters[key]
-        if (inst is not None and getattr(inst, 'initialized', False) and p.per_instance and
+        if (inst is not None and getattr(inst._private, 'initialized', False) and p.per_instance and
             not getattr(self_.cls._private, '_disable_instance__params', False)):
             if key not in inst._private._instance__params:
                 try:
@@ -2129,7 +2129,7 @@ class Parameters:
 
         if instance and self_.self is not None:
             if instance == 'existing':
-                if getattr(self_.self, 'initialized', False) and self_.self._private._instance__params:
+                if getattr(self_.self._private, 'initialized', False) and self_.self._private._instance__params:
                     return dict(pdict, **self_.self._private._instance__params)
                 return pdict
             else:
@@ -3311,12 +3311,14 @@ class Private:
 
     def __init__(
         self,
+        initialized=None,
         _parameters_state=None,
         _dynamic_watchers=None,
         _instance__params=None,
         _param_watchers=None,
         _disable_instance__params=None,
     ):
+        self.initialized = initialized
         self._parameters_state = _parameters_state
         self._dynamic_watchers = _dynamic_watchers
         self._instance__params = _instance__params
@@ -3375,7 +3377,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # Flag that can be tested to see if e.g. constant Parameters
         # can still be set
-        self.initialized = False
+        initialized = False
         _parameters_state = {
             "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
             "TRIGGER": False,
@@ -3387,6 +3389,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         _dynamic_watchers = defaultdict(list)
 
         self._private = Private(
+            initialized=initialized,
             _parameters_state=_parameters_state,
             _dynamic_watchers=_dynamic_watchers,
             _instance__params=_instance__params,
@@ -3399,7 +3402,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         self.param._update_deps(init=True)
 
-        self.initialized = True
+        self._private.initialized = True
 
     @property
     def param(self):
@@ -3437,7 +3440,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         During this process the object is considered uninitialized.
         """
-        self.initialized=False
+        self._private.initialized = False
 
         _private = state.get('_private', None)
         if _private is None:
@@ -3470,7 +3473,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         for name,value in state.items():
             setattr(self,name,value)
-        self.initialized=True
+        self._private.initialized = True
 
     @recursive_repr()
     def __repr__(self):

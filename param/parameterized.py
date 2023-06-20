@@ -3553,18 +3553,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.pprint()`")
-    def script_repr(self,imports=[],prefix="    "):
-        """
-        Deprecated variant of __repr__ designed for generating a runnable script.
-
-        ..deprecated:: 1.12.0
-            Use instead `.param.pprint()`
-        """
-        return self.pprint(imports,prefix, unknown_value=None, qualify=True,
-                           separator="\n")
-
 
 def print_all_param_defaults():
     """Print the default values for all imported Parameters."""
@@ -3754,19 +3742,6 @@ class ParameterizedFunction(Parameterized):
         # __main__. Pretty obscure aspect of pickle.py...
         return (_new_parameterized,(self.__class__,),state)
 
-    # PARAM3_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
-    @_deprecated()
-    def script_repr(self,imports=[],prefix="    "):
-        """
-        Same as Parameterized.script_repr, except that X.classname(Y
-        is replaced with X.classname.instance(Y
-
-        ..deprecated:: 2.0.0
-        """
-        return self.pprint(imports,prefix,unknown_value='',qualify=True,
-                           separator="\n")
-
-
     def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
                 qualify=False, separator=""):
         """
@@ -3778,7 +3753,6 @@ class ParameterizedFunction(Parameterized):
                               qualify=qualify,separator=separator)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
-
 
 
 class default_label_formatter(ParameterizedFunction):

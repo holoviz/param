@@ -101,10 +101,13 @@ def check_defaults(parameter, label, skip=[]):
 
 
 @contextmanager
-def accept_warnings():
+def warnings_as_excepts(match=None):
     orig = param.parameterized.warnings_as_exceptions
-    param.parameterized.warnings_as_exceptions = False
+    param.parameterized.warnings_as_exceptions = True
     try:
         yield
+    except Exception as e:
+        if match and match not in str(e):
+            raise ValueError(f'Exception emitted {str(e)!r} does not contain {match!r}')
     finally:
         param.parameterized.warnings_as_exceptions = orig

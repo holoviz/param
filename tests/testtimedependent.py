@@ -20,7 +20,7 @@ except ImportError:
     else:
         gmpy = None
 
-from .utils import accept_warnings
+from .utils import warnings_as_excepts
 
 
 class TestTimeClass(unittest.TestCase):
@@ -271,15 +271,15 @@ class TestTimeDependentDynamic(unittest.TestCase):
         hash_200001 = hashfn(200001)
 
         self.assertEqual(hash_1, hashfn(fractions.Fraction(1)))
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'str' to Fraction.fraction"):
             self.assertEqual(hash_1, hashfn("1"))
 
         self.assertEqual(hash_42, hashfn(fractions.Fraction(42)))
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'str' to Fraction.fraction"):
             self.assertEqual(hash_42, hashfn("42"))
 
         self.assertEqual(hash_200001, hashfn(fractions.Fraction(200001)))
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'str' to Fraction.fraction"):
             self.assertEqual(hash_200001, hashfn("200001"))
 
 
@@ -291,9 +291,9 @@ class TestTimeDependentDynamic(unittest.TestCase):
         hashfn = numbergen.Hash("test", input_count=1)
         pi = "3.141592"
         half = fractions.Fraction(0.5)
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'float' to Fraction.fraction"):
             self.assertEqual(hashfn(0.5), hashfn(half))
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'str' to Fraction.fraction"):
             self.assertEqual(hashfn(pi), hashfn(fractions.Fraction(pi)))
 
 
@@ -321,7 +321,7 @@ class TestTimeDependentDynamic(unittest.TestCase):
         """
         pi = "3.141592"
         hashfn = numbergen.Hash("test", input_count=1)
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'str' to Fraction.fraction"):
             self.assertEqual(hashfn(0.5), hashfn(gmpy.mpq(0.5)))
-        with accept_warnings():
+        with warnings_as_excepts(match="Casting type 'str' to Fraction.fraction"):
             self.assertEqual(hashfn(pi), hashfn(gmpy.mpq(3.141592)))

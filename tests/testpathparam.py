@@ -6,7 +6,7 @@ import unittest
 import param
 import pytest
 
-from .utils import accept_warnings, check_defaults
+from .utils import warnings_as_excepts, check_defaults
 
 
 class TestPathParameters(unittest.TestCase):
@@ -80,7 +80,7 @@ class TestPathParameters(unittest.TestCase):
 
         assert p.param.b.allow_None is False
         # This should probably raise an error (#708)
-        with accept_warnings():
+        with warnings_as_excepts(match='None is not allowed'):
             p.b = None
 
     def test_search_paths(self):
@@ -190,7 +190,7 @@ class TestFilenameParameters(unittest.TestCase):
 
         assert p.param.b.allow_None is False
         # This should probably raise an error (#708)
-        with accept_warnings():
+        with warnings_as_excepts(match='None is not allowed'):
             p.b = None
 
     def test_search_paths(self):
@@ -270,7 +270,7 @@ class TestFoldernameParameters(unittest.TestCase):
 
         assert p.param.b.allow_None is False
         # This should probably raise an error (#708)
-        with accept_warnings():
+        with warnings_as_excepts(match='None is not allowed'):
             p.b = None
 
     def test_search_paths(self):

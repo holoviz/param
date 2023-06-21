@@ -619,7 +619,7 @@ def _params_depended_on(minfo, dynamic=True, intermediate=True):
     deps, dynamic_deps = [], []
     dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
-        ddeps, ddynamic_deps = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic, intermediate)
+        ddeps, ddynamic_deps = (minfo.inst if minfo.inst is not None else minfo.cls).param._spec_to_obj(d, dynamic, intermediate)
         dynamic_deps += ddynamic_deps
         for dep in ddeps:
             if isinstance(dep, PInfo):
@@ -1859,7 +1859,7 @@ class Parameters:
                     init_methods.append(m)
             elif dynamic:
                 for w in obj._dynamic_watchers.pop(method, []):
-                    (w.inst or w.cls).param.unwatch(w)
+                    (w.inst if w.inst is not None else w.cls).param.unwatch(w)
             else:
                 continue
 
@@ -1894,7 +1894,7 @@ class Parameters:
             subobj = getattr(subobj, subpath.split(':')[0], None)
             subobjs.append(subobj)
 
-        dep_obj = (param_dep.inst or param_dep.cls)
+        dep_obj = param_dep.inst if param_dep.inst is not None else param_dep.cls
         if dep_obj not in subobjs[:-1]:
             return None, None, param_dep.what
 
@@ -1930,7 +1930,7 @@ class Parameters:
         on the old subobject and create watchers on the new subobject.
         """
         dynamic_dep, param_dep = group[0]
-        dep_obj = (param_dep.inst or param_dep.cls)
+        dep_obj = param_dep.inst if param_dep.inst is not None else param_dep.cls
         params = []
         for _, g in group:
             if g.name not in params:

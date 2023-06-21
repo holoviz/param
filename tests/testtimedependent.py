@@ -321,5 +321,7 @@ class TestTimeDependentDynamic(unittest.TestCase):
         """
         pi = "3.141592"
         hashfn = numbergen.Hash("test", input_count=1)
-        self.assertEqual(hashfn(0.5), hashfn(gmpy.mpq(0.5)))
-        self.assertEqual(hashfn(pi), hashfn(gmpy.mpq(3.141592)))
+        with accept_warnings():
+            self.assertEqual(hashfn(0.5), hashfn(gmpy.mpq(0.5)))
+        with accept_warnings():
+            self.assertEqual(hashfn(pi), hashfn(gmpy.mpq(3.141592)))

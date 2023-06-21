@@ -2845,8 +2845,7 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-        # Give Parameterized classes a useful 'name' attribute.
-        mcs.name = name
+        mcs.__set_name(name, dict_)
 
         mcs._parameters_state = {
             "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
@@ -2898,6 +2897,37 @@ class ParameterizedMetaclass(type):
 
         if docstring_signature:
             mcs.__class_docstring_signature()
+
+    def __set_name(mcs, name, dict_):
+        """
+        Give Parameterized classes a useful 'name' attribute that is by
+        default the class name, unless a class in the hierarchy has defined
+        a `name` String Parameter with a defined `default` value, in which case
+        that value is used to set the class name.
+        """
+        mcs.__renamed = False
+        name_param = dict_.get("name", None)
+        if name_param is not None:
+            if not type(name_param) is String:
+                raise TypeError(
+                    f"Parameterized class {name!r} cannot override "
+                    f"the 'name' Parameter with type {type(name_param)}. "
+                    "Overriding 'name' is only allowed with a 'String' Parameter."
+                )
+            if name_param.default:
+                mcs.name = name_param.default
+                mcs.__renamed = True
+            else:
+                mcs.name = name
+        else:
+            classes = classlist(mcs)[::-1]
+            found_renamed = False
+            for c in classes:
+                if getattr(c, "_ParameterizedMetaclass__renamed", False):
+                    found_renamed = True
+                    break
+            if not found_renamed:
+                mcs.name = name
 
     def __class_docstring_signature(mcs, max_repr_len=15):
         """
@@ -3039,14 +3069,15 @@ class ParameterizedMetaclass(type):
             setattr(param,'objtype',mcs)
             del slots['objtype']
 
+        supers = classlist(mcs)[::-1]
+
         # instantiate is handled specially
-        for superclass in classlist(mcs)[::-1]:
+        for superclass in supers:
             super_param = superclass.__dict__.get(param_name)
             if isinstance(super_param, Parameter) and super_param.instantiate is True:
                 param.instantiate=True
         del slots['instantiate']
 
-        supers = classlist(mcs)[::-1]
         callables = {}
         for slot in slots.keys():
             superclasses = iter(supers)
@@ -3364,7 +3395,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self._param_watchers = {}
         self._dynamic_watchers = defaultdict(list)
 
-        self.param._generate_name()
+        # Skip generating a custom instance name when a class in the hierarchy
+        # has overriden the default of the `name` Parameter.
+        if self.param.name.default == self.__class__.__name__:
+            self.param._generate_name()
         self.param._setup_params(**params)
         object_count += 1
 

@@ -324,29 +324,24 @@ def add_metaclass(metaclass):
     return wrapper
 
 
-
-class bothmethod: # pylint: disable-msg=R0903
+class bothmethod:
     """
     'optional @classmethod'
 
     A decorator that allows a method to receive either the class
     object (if called on the class) or the instance object
     (if called on the instance) as its first argument.
-
-    Code (but not documentation) copied from:
-    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/523033.
     """
-    # pylint: disable-msg=R0903
+    def __init__(self, method):
+        self.method = method
 
-    def __init__(self, func):
-        self.func = func
-
-    # i.e. this is also a non-data descriptor
-    def __get__(self, obj, type_=None):
-        if obj is None:
-            return wraps(self.func)(partial(self.func, type_))
+    def __get__(self, instance, owner):
+        if instance is None:
+            # Class call
+            return self.method.__get__(owner)
         else:
-            return wraps(self.func)(partial(self.func, obj))
+            # Instance call
+            return self.method.__get__(instance, owner)
 
 
 def _getattrr(obj, attr, *args):

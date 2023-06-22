@@ -111,14 +111,157 @@ class TestParameterized(unittest.TestCase):
 
         p = P()
 
-        match = re.fullmatch(r'P\w{5}', p.name)
-        assert match is not None
+        assert p.name == 'Other'
 
     def test_parameter_name_fixed(self):
         testpo = TestPO()
 
         with pytest.raises(AttributeError):
             testpo.param.const.name = 'notconst'
+
+    def test_name_overriden(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        assert P.name == 'other'
+
+        p = P()
+
+        assert p.name == 'other'
+
+    def test_name_overriden_without_default(self):
+        class A(param.Parameterized):
+            pass
+        class B(param.Parameterized):
+            name = param.String(doc='some help')
+
+        class C(B):
+            pass
+
+        assert B.name == 'B'
+        assert B.param.name.doc == 'some help'
+        assert C.name == 'C'
+        assert C.param.name.doc == 'some help'
+
+    def test_name_overriden_constructor(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        p = P(name='another')
+
+        assert p.name == 'another'
+
+    def test_name_overriden_subclasses(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        class Q(P):
+            pass
+
+        class R(Q):
+            name = param.String(default='yetanother')
+
+        assert Q.name == 'other'
+
+        q1 = Q()
+
+        assert q1.name == 'other'
+
+        q2 = Q(name='another')
+
+        assert q2.name == 'another'
+
+        assert R.name == 'yetanother'
+
+        r1 = R()
+
+        assert r1.name == 'yetanother'
+
+        r2 = R(name='last')
+
+        assert r2.name == 'last'
+
+
+    def test_name_overriden_subclasses_name_set(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        class Q(P):
+            pass
+
+        P.name = 'another'
+
+        assert Q.name == 'another'
+
+        Q.name = 'yetanother'
+
+        assert Q.name == 'yetanother'
+
+        q = Q()
+
+        assert q.name == 'yetanother'
+
+    def test_name_overriden_error_not_String(self):
+
+        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+              "with type <class 'str'>. Overriding 'name' is only allowed with " \
+              "a 'String' Parameter."
+
+        with pytest.raises(TypeError, match=msg):
+            class P(param.Parameterized):
+                name = 'other'
+
+        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+              "with type <class 'param.parameterized.Parameter'>. Overriding 'name' " \
+              "is only allowed with a 'String' Parameter."
+
+        with pytest.raises(TypeError, match=msg):
+            class P(param.Parameterized):  # noqa
+                name = param.Parameter(default='other')
+
+    def test_name_complex_hierarchy(self):
+        class Mixin1: pass
+        class Mixin2: pass
+        class Mixin3(param.Parameterized): pass
+
+        class A(param.Parameterized, Mixin1): pass
+        class B(A): pass
+        class C(B, Mixin2): pass
+        class D(C, Mixin3): pass
+
+        assert A.name == 'A'
+        assert B.name == 'B'
+        assert C.name == 'C'
+        assert D.name == 'D'
+
+    def test_name_overriden_complex_hierarchy(self):
+        class Mixin1: pass
+        class Mixin2: pass
+        class Mixin3(param.Parameterized): pass
+
+        class A(param.Parameterized, Mixin1): pass
+        class B(A):
+            name = param.String(default='other')
+
+        class C(B, Mixin2):
+            name = param.String(default='another')
+
+        class D(C, Mixin3): pass
+
+        assert A.name == 'A'
+        assert B.name == 'other'
+        assert C.name == 'another'
+        assert D.name == 'another'
+
+    def test_name_overriden_multiple(self):
+        class A(param.Parameterized):
+            name = param.String(default='AA')
+        class B(param.Parameterized):
+            name = param.String(default='BB')
+
+        class C(A, B): pass
+
+        assert C.name == 'AA'
 
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""

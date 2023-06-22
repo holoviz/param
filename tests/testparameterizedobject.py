@@ -15,6 +15,7 @@ import pytest
 
 import random
 
+from param import parameterized
 from param.parameterized import ParamOverrides, shared_parameters
 from param.parameterized import default_label_formatter, no_instance_params
 
@@ -110,14 +111,157 @@ class TestParameterized(unittest.TestCase):
 
         p = P()
 
-        match = re.fullmatch(r'P\w{5}', p.name)
-        assert match is not None
+        assert p.name == 'Other'
 
     def test_parameter_name_fixed(self):
         testpo = TestPO()
 
         with pytest.raises(AttributeError):
             testpo.param.const.name = 'notconst'
+
+    def test_name_overriden(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        assert P.name == 'other'
+
+        p = P()
+
+        assert p.name == 'other'
+
+    def test_name_overriden_without_default(self):
+        class A(param.Parameterized):
+            pass
+        class B(param.Parameterized):
+            name = param.String(doc='some help')
+
+        class C(B):
+            pass
+
+        assert B.name == 'B'
+        assert B.param.name.doc == 'some help'
+        assert C.name == 'C'
+        assert C.param.name.doc == 'some help'
+
+    def test_name_overriden_constructor(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        p = P(name='another')
+
+        assert p.name == 'another'
+
+    def test_name_overriden_subclasses(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        class Q(P):
+            pass
+
+        class R(Q):
+            name = param.String(default='yetanother')
+
+        assert Q.name == 'other'
+
+        q1 = Q()
+
+        assert q1.name == 'other'
+
+        q2 = Q(name='another')
+
+        assert q2.name == 'another'
+
+        assert R.name == 'yetanother'
+
+        r1 = R()
+
+        assert r1.name == 'yetanother'
+
+        r2 = R(name='last')
+
+        assert r2.name == 'last'
+
+
+    def test_name_overriden_subclasses_name_set(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        class Q(P):
+            pass
+
+        P.name = 'another'
+
+        assert Q.name == 'another'
+
+        Q.name = 'yetanother'
+
+        assert Q.name == 'yetanother'
+
+        q = Q()
+
+        assert q.name == 'yetanother'
+
+    def test_name_overriden_error_not_String(self):
+
+        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+              "with type <class 'str'>. Overriding 'name' is only allowed with " \
+              "a 'String' Parameter."
+
+        with pytest.raises(TypeError, match=msg):
+            class P(param.Parameterized):
+                name = 'other'
+
+        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+              "with type <class 'param.parameterized.Parameter'>. Overriding 'name' " \
+              "is only allowed with a 'String' Parameter."
+
+        with pytest.raises(TypeError, match=msg):
+            class P(param.Parameterized):  # noqa
+                name = param.Parameter(default='other')
+
+    def test_name_complex_hierarchy(self):
+        class Mixin1: pass
+        class Mixin2: pass
+        class Mixin3(param.Parameterized): pass
+
+        class A(param.Parameterized, Mixin1): pass
+        class B(A): pass
+        class C(B, Mixin2): pass
+        class D(C, Mixin3): pass
+
+        assert A.name == 'A'
+        assert B.name == 'B'
+        assert C.name == 'C'
+        assert D.name == 'D'
+
+    def test_name_overriden_complex_hierarchy(self):
+        class Mixin1: pass
+        class Mixin2: pass
+        class Mixin3(param.Parameterized): pass
+
+        class A(param.Parameterized, Mixin1): pass
+        class B(A):
+            name = param.String(default='other')
+
+        class C(B, Mixin2):
+            name = param.String(default='another')
+
+        class D(C, Mixin3): pass
+
+        assert A.name == 'A'
+        assert B.name == 'other'
+        assert C.name == 'another'
+        assert D.name == 'another'
+
+    def test_name_overriden_multiple(self):
+        class A(param.Parameterized):
+            name = param.String(default='AA')
+        class B(param.Parameterized):
+            name = param.String(default='BB')
+
+        class C(A, B): pass
+
+        assert C.name == 'AA'
 
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""
@@ -340,8 +484,11 @@ class TestParameterized(unittest.TestCase):
         assert t.param['ro_format'].label == 'Foo'
         param.parameterized.label_formatter = default_label_formatter
 
+    def test_error_if_non_param_in_constructor(self):
+        msg = "TestPO.__init__() got an unexpected keyword argument 'not_a_param'"
+        with pytest.raises(TypeError, match=re.escape(msg)):
+            TestPO(not_a_param=2)
 
-from param import parameterized
 
 class some_fn(param.ParameterizedFunction):
     __test__ = False
@@ -460,7 +607,7 @@ class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.po = param.Parameterized(name='A',print_level=0)
+        self.po = param.Parameterized(name='A')
 
     def test_init_name(self):
         self.assertEqual(self.po.name, 'A')
@@ -468,7 +615,6 @@ class TestParamOverrides(unittest.TestCase):
     def test_simple_override(self):
         overrides = ParamOverrides(self.po,{'name':'B'})
         self.assertEqual(overrides['name'], 'B')
-        self.assertEqual(overrides['print_level'], 0)
 
     # CEBALERT: missing test for allow_extra_keywords (e.g. getting a
     # warning on attempting to override non-existent parameter when
@@ -485,10 +631,10 @@ class TestSharedParameters(unittest.TestCase):
     def setUp(self):
         super().setUp()
         with shared_parameters():
-            self.p1 = TestPO(name='A', print_level=0)
-            self.p2 = TestPO(name='B', print_level=0)
-            self.ap1 = AnotherTestPO(name='A', print_level=0)
-            self.ap2 = AnotherTestPO(name='B', print_level=0)
+            self.p1 = TestPO(name='A')
+            self.p2 = TestPO(name='B')
+            self.ap1 = AnotherTestPO(name='A')
+            self.ap2 = AnotherTestPO(name='B')
 
     def test_shared_object(self):
         self.assertTrue(self.ap1.instPO is self.ap2.instPO)

@@ -20,14 +20,14 @@ class TestSelectorParameters(unittest.TestCase):
     def setUp(self):
         super().setUp()
         class P(param.Parameterized):
-            e = param.Selector([5,6,7])
+            e = param.Selector(objects=[5,6,7])
             f = param.Selector(default=10)
             h = param.Selector(default=None)
-            g = param.Selector([7,8])
-            i = param.Selector([9],default=7, check_on_set=False)
-            s = param.Selector(OrderedDict(one=1,two=2,three=3), default=3)
-            p = param.Selector(dict(one=1,two=2,three=3), default=3)
-            d = param.Selector(opts, default=opts['B'])
+            g = param.Selector(objects=[7,8])
+            i = param.Selector(default=7, objects=[9], check_on_set=False)
+            s = param.Selector(default=3, objects=OrderedDict(one=1,two=2,three=3))
+            p = param.Selector(default=3, objects=dict(one=1,two=2,three=3))
+            d = param.Selector(default=opts['B'], objects=opts)
 
         self.P = P
 
@@ -105,8 +105,8 @@ class TestSelectorParameters(unittest.TestCase):
 
     def test_autodefault(self):
         class P(param.Parameterized):
-            o1 = param.Selector([6, 7])
-            o2 = param.Selector({'a': 1, 'b': 2})
+            o1 = param.Selector(objects=[6, 7])
+            o2 = param.Selector(objects={'a': 1, 'b': 2})
 
         assert P.o1 == 6
         assert P.o2 == 1
@@ -187,7 +187,7 @@ class TestSelectorParameters(unittest.TestCase):
     def test_initialization_out_of_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.Selector([4], 5)
+                q = param.Selector(default=5, objects=[4])
         except ValueError:
             pass
         else:
@@ -197,7 +197,7 @@ class TestSelectorParameters(unittest.TestCase):
     def test_initialization_no_bounds(self):
         try:
             class Q(param.Parameterized):
-                q = param.Selector(10, default=5)
+                q = param.Selector(default=5, objects=10)
         except TypeError:
             pass
         else:
@@ -255,7 +255,7 @@ class TestSelectorParameters(unittest.TestCase):
 
     def test_inheritance_behavior2(self):
         class A(param.Parameterized):
-            p = param.Selector([0, 1])
+            p = param.Selector(objects=[0, 1])
 
         class B(A):
             p = param.Selector()
@@ -289,7 +289,7 @@ class TestSelectorParameters(unittest.TestCase):
 
     def test_inheritance_behavior4(self):
         class A(param.Parameterized):
-            p = param.Selector([0, 1], check_on_set=False)
+            p = param.Selector(objects=[0, 1], check_on_set=False)
 
         class B(A):
             p = param.Selector()
@@ -306,7 +306,7 @@ class TestSelectorParameters(unittest.TestCase):
 
     def test_inheritance_behavior5(self):
         class A(param.Parameterized):
-            p = param.Selector([0, 1], check_on_set=True)
+            p = param.Selector(objects=[0, 1], check_on_set=True)
 
         class B(A):
             p = param.Selector()

@@ -34,24 +34,36 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-doc = [
+examples = [
     "aiohttp",
-    "ipython !=8.7.0",
-    "myst-parser",
-    "myst_nb ==0.12.2",
-    "nbconvert",
-    "nbsite ==0.8.0rc2",
     "pandas",
     "panel",
-    "pydata-sphinx-theme <0.9.0",
-    "sphinx-copybutton",
+]
+doc = [
+    "param[examples]",
+    "nbsite ==0.8.0",
 ]
 tests = [
     "coverage[toml]",
     "pytest",
 ]
+tests-deser = [
+    "xlrd",
+    "openpyxl",
+    "odfpy",
+    "feather-format",
+    "pyarrow",
+]
+tests-examples = [
+    "pytest",
+    "pytest-xdist",
+    "nbval",
+    "param[examples]",
+]
 tests-full = [
     "param[tests]",
+    "param[tests-examples]",
+    "param[tests-deser]",
     "numpy",
     "pandas",
     "ipython",
@@ -100,6 +112,10 @@ dependencies = [
     "param[lint]",
     # Base tests dependencies
     "param[tests]",
+    # Examples tests dependencies
+    "param[tests-examples]",
+    # Deserializatoin dependencies
+    "param[tests-deser]",
     # Additional tests dependencies, not including gmpy as
     # it's tricky to install.
     "ipython",
@@ -115,7 +131,8 @@ post-install-commands = [
 ]
 
 [tool.hatch.envs.default.scripts]
-dev = "pytest tests {args}"
+tests = "pytest {args:tests}"
+examples = "pytest -n logical --dist loadscope --nbval-lax {args:examples}"
 
 [tool.hatch.envs.docs]
 template = "docs"
@@ -129,6 +146,7 @@ build = [
 ]
 
 [tool.hatch.envs.tests]
+template = "tests"
 dependencies = [
     "param[tests]",
     "ipython",
@@ -146,23 +164,50 @@ python = [
 ]
 
 [tool.hatch.envs.tests.scripts]
-test = "pytest tests"
+tests = "pytest {args:tests}"
 with_coverage = [
-    "coverage run --source=numbergen,param -m pytest tests",
+    "coverage run --source=numbergen,param -m pytest -v {args:tests}",
     "coverage report",
     "coverage xml",
 ]
 
 [tool.hatch.envs.tests.overrides]
-# Only install numpy and pandas on non PyPy environments
+# Only install these on non PyPy environments
 name."^(?!pypy).*".dependencies = [
     "numpy",
     "pandas",
+    "xlrd",
+    "openpyxl",
+    "odfpy",
+    "feather-format",
+    "pyarrow",
 ]
 # Only install gmpy on Linux on these version
+# Only install tables (deser HDF5) on Linux on these version
 matrix.python.dependencies = [
     { value = "gmpy", if = ["3.7", "3.8", "3.9", "3.10"], platform = ["linux"] },
+    { value = "tables", if = ["3.7", "3.8", "3.9", "3.10", "3.11"], platform = ["linux"] },
 ]
+
+[tool.hatch.envs.tests_examples]
+template = "tests_examples"
+dependencies = [
+    "param[tests-examples]",
+    "ipython",
+    "jsonschema",
+]
+
+[[tool.hatch.envs.tests_examples.matrix]]
+python = [
+    "3.7",
+    "3.8",
+    "3.9",
+    "3.10",
+    "3.11",
+]
+
+[tool.hatch.envs.tests_examples.scripts]
+examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:examples}"
 
 [tool.pytest.ini_options]
 python_files = "test*.py"

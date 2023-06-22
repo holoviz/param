@@ -21,7 +21,6 @@ class TestBooleanParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default is False
         assert p.allow_None is False
-        assert p.bounds == (0, 1)
 
     def test_defaults_class(self):
         class A(param.Parameterized):
@@ -99,7 +98,6 @@ class TestEventParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default is False
         assert p.allow_None is False
-        assert p.bounds == (0, 1)
 
     def test_defaults_class(self):
         class A(param.Parameterized):

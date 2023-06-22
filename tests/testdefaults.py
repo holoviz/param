@@ -15,8 +15,8 @@ from param import ClassSelector
 
 from .utils import check_defaults
 
-positional_args = {
-    ClassSelector: (object,)
+kw_args = {
+    ClassSelector: dict(class_=object),
 }
 
 skip = []
@@ -42,7 +42,7 @@ class DefaultsMetaclassTest(type):
             def test(self):
                 # instantiate parameter with no default (but supply
                 # any required args)
-                p = parameter(*positional_args.get(parameter,tuple()))
+                p = parameter(**kw_args.get(parameter, {}))
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
@@ -57,7 +57,7 @@ class DefaultsMetaclassTest(type):
                 # instantiate parameter with no default (but supply
                 # any required args)
                 class P(param.Parameterized):
-                    p = parameter(*positional_args.get(parameter,tuple()))
+                    p = parameter(**kw_args.get(parameter, {}))
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
@@ -76,7 +76,7 @@ class DefaultsMetaclassTest(type):
                 # instantiate parameter with no default (but supply
                 # any required args)
                 class P(param.Parameterized):
-                    p = parameter(*positional_args.get(parameter,tuple()))
+                    p = parameter(**kw_args.get(parameter, {}))
 
                 inst = P()
 

@@ -1240,8 +1240,10 @@ class Parameter(_ParameterBase):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
+        elif self.constant is True:
+            self.instantiate = True
         elif instantiate is not Undefined:
-            self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
+            self.instantiate = instantiate
         else:
             # Default value
             self.instantiate = self._slot_defaults['instantiate']

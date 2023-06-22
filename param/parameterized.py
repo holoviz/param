@@ -1930,7 +1930,7 @@ class Parameters:
         on the old subobject and create watchers on the new subobject.
         """
         dynamic_dep, param_dep = group[0]
-        dep_obj = param_dep.cls if param_dep.inst is None else param_dep.inst 
+        dep_obj = param_dep.cls if param_dep.inst is None else param_dep.inst
         params = []
         for _, g in group:
             if g.name not in params:

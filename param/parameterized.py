@@ -478,6 +478,39 @@ def recursive_repr(fillvalue='...'):
     return _recursive_repr(fillvalue=fillvalue)
 
 
+# Hooks to apply to depends and bind arguments to turn them into valid parameters
+DEPENDENCY_TRANSFORMS = []
+
+def _transform_arg(arg):
+    """
+    Transforms arguments for depends and bind functions applying any
+    DEPENDENCY_TRANSFORMS. This is useful for adding handling for
+    depending on object that are not simple Parameters or functions
+    with dependency definitions.
+    """
+    for transform in DEPENDENCY_TRANSFORMS:
+        if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
+            break
+        arg = transform(arg)
+    return arg
+
+def _eval_function_with_deps(function):
+    """Evaluates a function after resolving its dependencies.
+
+    Calls and returns a function after resolving any dependencies
+    stored on the _dinfo attribute and passing the resolved values
+    as arguments.
+    """
+    args, kwargs = (), {}
+    if hasattr(function, '_dinfo'):
+        arg_deps = function._dinfo['dependencies']
+        kw_deps = function._dinfo.get('kw', {})
+        if kw_deps or any(isinstance(d, param.Parameter) for d in arg_deps):
+            args = (getattr(dep.owner, dep.name) for dep in arg_deps)
+            kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
+    return function(*args, **kwargs)
+
+
 @accept_arguments
 def depends(func, *dependencies, watch=False, on_init=False, **kw):
     """Annotates a function or Parameterized method to express its dependencies.
@@ -497,6 +530,11 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
         Whether to invoke the function/method when the instance is created,
         by default False
     """
+    dependencies, kw = (
+        tuple(_transform_arg(arg) for arg in dependencies),
+        {key: _transform_arg(arg) for key, arg in kw.items()}
+    )
+
     if iscoroutinefunction(func):
         @wraps(func)
         async def _depends(*args, **kw):
@@ -570,7 +608,7 @@ def bind(function, *args, **kwargs):
     whenever the underlying values change and the output will reflect
     those updated values.
 
-    As for functools.partial, arguments can also be bound to constants, 
+    As for functools.partial, arguments can also be bound to constants,
     which allows all of the arguments to be bound, leaving a simple
     callable object.
 
@@ -580,6 +618,9 @@ def bind(function, *args, **kwargs):
         The function to bind constant or dynamic args and kwargs to.
     args: object, param.Parameter
         Positional arguments to bind to the function.
+    watch: boolean
+        Whether to evaluate the function automatically whenever one of
+        the bound parameters changes.
     kwargs: object, param.Parameter
         Keyword arguments to bind to the function.
 
@@ -588,35 +629,98 @@ def bind(function, *args, **kwargs):
     Returns a new function with the args and kwargs bound to it and
     annotated with all dependencies.
     """
+    args, kwargs = (
+        tuple(_transform_arg(arg) for arg in args),
+        {key: _transform_arg(arg) for key, arg in kwargs.items()}
+    )
     dependencies = {}
-    for i, arg in enumerate(args):
-        p = param_value_if_widget(arg)
-        if isinstance(p, param.Parameter):
+
+    # If the wrapped function has a dependency add it
+    fn_dep = _transform_arg(function)
+    if isinstance(fn_dep, param.Parameter) or hasattr(fn_dep, '_dinfo'):
+        dependencies['__fn'] = fn_dep
+
+    # Extract dependencies from args and kwargs
+    for i, p in enumerate(args):
+        if hasattr(p, '_dinfo'):
+            for j, arg in enumerate(p._dinfo['dependencies']):
+                dependencies[f'__arg{i}_arg{j}'] = arg
+            for kw, kwarg in p._dinfo['kw'].items():
+                dependencies[f'__arg{i}_arg_{kw}'] = kwarg
+        elif isinstance(p, param.Parameter):
             dependencies[f'__arg{i}'] = p
     for kw, v in kwargs.items():
-        p = param_value_if_widget(v)
-        if isinstance(p, param.Parameter):
-            dependencies[kw] = p
+        if hasattr(v, '_dinfo'):
+            for j, arg in enumerate(v._dinfo['dependencies']):
+                dependencies[f'__kwarg_{kw}_arg{j}'] = arg
+            for pkw, kwarg in v._dinfo['kw'].items():
+                dependencies[f'__kwarg_{kw}_{pkw}'] = kwarg
+        elif isinstance(v, param.Parameter):
+            dependencies[kw] = v
 
-    @depends(**dependencies)
-    def wrapped(*wargs, **wkwargs):
+    def combine_arguments(wargs, wkwargs, asynchronous=False):
         combined_args = []
         for arg in args:
-            if isinstance(arg, param.Parameter):
-                combined_args.append(getattr(arg.owner, arg.name))
-            else:
-                combined_args.append(arg)
+            if hasattr(arg, '_dinfo'):
+                arg = _eval_function_with_deps(arg)
+            elif isinstance(arg, param.Parameter):
+                arg = getattr(arg.owner, arg.name)
+            combined_args.append(arg)
         combined_args += list(wargs)
         combined_kwargs = {}
         for kw, arg in kwargs.items():
-            if isinstance(arg, param.Parameter):
+            if hasattr(arg, '_dinfo'):
+                arg = _eval_function_with_deps(arg)
+            elif isinstance(arg, param.Parameter):
                 arg = getattr(arg.owner, arg.name)
             combined_kwargs[kw] = arg
         for kw, arg in wkwargs.items():
-            if kw.startswith('__arg'):
+            if asynchronous:
+                if kw.startswith('__arg'):
+                    combined_args[int(kw[5:])] = arg
+                elif kw.startswith('__kwarg'):
+                    combined_kwargs[kw[8:]] = arg
+                continue
+            elif kw.startswith('__arg') or kw.startswith('__kwarg') or kw.startswith('__fn'):
                 continue
             combined_kwargs[kw] = arg
-        return function(*combined_args, **combined_kwargs)
+        return combined_args, combined_kwargs
+
+    def eval_fn():
+        if callable(function):
+            fn = function
+        else:
+            p = param_value_if_widget(function)
+            if isinstance(p, param.Parameter):
+                fn = getattr(p.owner, p.name)
+            else:
+                fn = _eval_function_with_deps(p)
+        return fn
+
+    if isasyncgenfunction(function):
+        async def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(
+                wargs, wkwargs, asynchronous=True
+            )
+            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            async for val in evaled:
+                yield val
+        wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
+        wrapped._dinfo = wrapper_fn._dinfo
+    elif iscoroutinefunction(function):
+        @depends(**dependencies, watch=watch)
+        async def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(
+                wargs, wkwargs, asynchronous=True
+            )
+            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            return await evaled
+    else:
+        @depends(**dependencies, watch=watch)
+        def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
+            return eval_fn()(*combined_args, **combined_kwargs)
+    wrapped.__bound_function__ = function
     return wrapped
 
 

@@ -3331,11 +3331,13 @@ script_repr_reg[FunctionType] = function_script_repr
 #: as some indicator of the global state).
 dbprint_prefix=None
 
-def name_if_set(parameterized):
+
+def _name_if_set(parameterized):
     """Return the name of this Parameterized if explicitly set to other than the default"""
     class_name = parameterized.__class__.__name__
     default_name = re.match('^'+class_name+'[0-9]+$', parameterized.name)
     return '' if default_name else parameterized.name
+
 
 def _get_param_repr(key, val, p, truncate=40):
     """HTML representation for a single Parameter object and its value"""
@@ -3378,7 +3380,7 @@ def _parameterized_repr_html(p, open):
     """HTML representation for a Parameterized object"""
     if isinstance(p, Parameterized):
         cls = p.__class__
-        title = cls.name + "() " + name_if_set(p)
+        title = cls.name + "() " + _name_if_set(p)
         value_field = 'Value'
     else:
         cls = p

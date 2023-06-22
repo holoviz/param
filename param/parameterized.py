@@ -505,7 +505,7 @@ def _eval_function_with_deps(function):
     if hasattr(function, '_dinfo'):
         arg_deps = function._dinfo['dependencies']
         kw_deps = function._dinfo.get('kw', {})
-        if kw_deps or any(isinstance(d, param.Parameter) for d in arg_deps):
+        if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
             args = (getattr(dep.owner, dep.name) for dep in arg_deps)
             kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
     return function(*args, **kwargs)
@@ -600,7 +600,7 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
     return _depends
 
 
-def bind(function, *args, **kwargs):
+def bind(function, *args, watch=False, **kwargs):
     """
     Given a function, returns a wrapper function that binds the values
     of some or all arguments to Parameter values and expresses Param
@@ -637,7 +637,7 @@ def bind(function, *args, **kwargs):
 
     # If the wrapped function has a dependency add it
     fn_dep = _transform_arg(function)
-    if isinstance(fn_dep, param.Parameter) or hasattr(fn_dep, '_dinfo'):
+    if isinstance(fn_dep, Parameter) or hasattr(fn_dep, '_dinfo'):
         dependencies['__fn'] = fn_dep
 
     # Extract dependencies from args and kwargs
@@ -647,7 +647,7 @@ def bind(function, *args, **kwargs):
                 dependencies[f'__arg{i}_arg{j}'] = arg
             for kw, kwarg in p._dinfo['kw'].items():
                 dependencies[f'__arg{i}_arg_{kw}'] = kwarg
-        elif isinstance(p, param.Parameter):
+        elif isinstance(p, Parameter):
             dependencies[f'__arg{i}'] = p
     for kw, v in kwargs.items():
         if hasattr(v, '_dinfo'):
@@ -655,7 +655,7 @@ def bind(function, *args, **kwargs):
                 dependencies[f'__kwarg_{kw}_arg{j}'] = arg
             for pkw, kwarg in v._dinfo['kw'].items():
                 dependencies[f'__kwarg_{kw}_{pkw}'] = kwarg
-        elif isinstance(v, param.Parameter):
+        elif isinstance(v, Parameter):
             dependencies[kw] = v
 
     def combine_arguments(wargs, wkwargs, asynchronous=False):
@@ -663,7 +663,7 @@ def bind(function, *args, **kwargs):
         for arg in args:
             if hasattr(arg, '_dinfo'):
                 arg = _eval_function_with_deps(arg)
-            elif isinstance(arg, param.Parameter):
+            elif isinstance(arg, Parameter):
                 arg = getattr(arg.owner, arg.name)
             combined_args.append(arg)
         combined_args += list(wargs)
@@ -671,7 +671,7 @@ def bind(function, *args, **kwargs):
         for kw, arg in kwargs.items():
             if hasattr(arg, '_dinfo'):
                 arg = _eval_function_with_deps(arg)
-            elif isinstance(arg, param.Parameter):
+            elif isinstance(arg, Parameter):
                 arg = getattr(arg.owner, arg.name)
             combined_kwargs[kw] = arg
         for kw, arg in wkwargs.items():
@@ -690,14 +690,14 @@ def bind(function, *args, **kwargs):
         if callable(function):
             fn = function
         else:
-            p = param_value_if_widget(function)
-            if isinstance(p, param.Parameter):
+            p = _transform_arg(function)
+            if isinstance(p, Parameter):
                 fn = getattr(p.owner, p.name)
             else:
                 fn = _eval_function_with_deps(p)
         return fn
 
-    if isasyncgenfunction(function):
+    if inspect.isasyncgenfunction(function):
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True

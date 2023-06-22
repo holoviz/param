@@ -35,10 +35,10 @@ from . import version  # noqa: api import
 
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    Undefined, bind, descendents, get_logger, instance_descriptor,
-    dt_types, _int_types
+    Undefined, descendents, get_logger, instance_descriptor, dt_types,
+    _int_types
 )
-from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
+from .parameterized import (batch_watch, bind, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import

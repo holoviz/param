@@ -413,6 +413,7 @@ def recursive_repr(fillvalue='...'):
     def decorating_function(user_function):
         repr_running = set()
 
+        @wraps(user_function)
         def wrapper(self, *args, **kwargs):
             key = id(self), get_ident()
             if key in repr_running:

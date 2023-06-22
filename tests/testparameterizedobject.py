@@ -122,7 +122,7 @@ class TestParameterized(unittest.TestCase):
     def test_name_overriden(self):
         class P(param.Parameterized):
             name = param.String(default='other')
-        
+
         assert P.name == 'other'
 
         p = P()
@@ -134,10 +134,10 @@ class TestParameterized(unittest.TestCase):
             pass
         class B(param.Parameterized):
             name = param.String(doc='some help')
-        
+
         class C(B):
             pass
-        
+
         assert B.name == 'B'
         assert B.param.name.doc == 'some help'
         assert C.name == 'C'
@@ -146,7 +146,7 @@ class TestParameterized(unittest.TestCase):
     def test_name_overriden_constructor(self):
         class P(param.Parameterized):
             name = param.String(default='other')
-        
+
         p = P(name='another')
 
         assert p.name == 'another'
@@ -154,7 +154,7 @@ class TestParameterized(unittest.TestCase):
     def test_name_overriden_subclasses(self):
         class P(param.Parameterized):
             name = param.String(default='other')
-        
+
         class Q(P):
             pass
 
@@ -185,7 +185,7 @@ class TestParameterized(unittest.TestCase):
     def test_name_overriden_subclasses_name_set(self):
         class P(param.Parameterized):
             name = param.String(default='other')
-        
+
         class Q(P):
             pass
 
@@ -216,14 +216,14 @@ class TestParameterized(unittest.TestCase):
               "is only allowed with a 'String' Parameter."
 
         with pytest.raises(TypeError, match=msg):
-            class P(param.Parameterized):
+            class P(param.Parameterized):  # noqa
                 name = param.Parameter(default='other')
 
     def test_name_complex_hierarchy(self):
         class Mixin1: pass
         class Mixin2: pass
         class Mixin3(param.Parameterized): pass
-        
+
         class A(param.Parameterized, Mixin1): pass
         class B(A): pass
         class C(B, Mixin2): pass
@@ -238,7 +238,7 @@ class TestParameterized(unittest.TestCase):
         class Mixin1: pass
         class Mixin2: pass
         class Mixin3(param.Parameterized): pass
-        
+
         class A(param.Parameterized, Mixin1): pass
         class B(A):
             name = param.String(default='other')
@@ -258,7 +258,7 @@ class TestParameterized(unittest.TestCase):
             name = param.String(default='AA')
         class B(param.Parameterized):
             name = param.String(default='BB')
-        
+
         class C(A, B): pass
 
         assert C.name == 'AA'

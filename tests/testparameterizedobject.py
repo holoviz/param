@@ -218,7 +218,7 @@ class TestParameterized(unittest.TestCase):
             class P(param.Parameterized):
                 name = 'other'
 
-        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+        msg = "Parameterized class 'P2' cannot override the 'name' Parameter " \
               "with type <class 'param.parameterized.Parameter'>. Overriding 'name' " \
               "is only allowed with a 'String' Parameter."
 

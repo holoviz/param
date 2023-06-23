@@ -2423,7 +2423,7 @@ class Parameters:
         else:
             internal_name = "_%s_param_value" % name
             # TODO: is this always an instance?
-            if internal_name in cls_or_slf._param__private.values:
+            if isinstance(cls_or_slf, Parameterized) and internal_name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
                 value = cls_or_slf._param__private.values[internal_name]
             else:

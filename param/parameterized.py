@@ -24,10 +24,10 @@ try:
 except ImportError:
     serializer = None
 
-
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
-from operator import itemgetter,attrgetter
+from html import escape
+from operator import itemgetter, attrgetter
 from threading import get_ident
 from types import FunctionType, MethodType
 
@@ -324,29 +324,24 @@ def add_metaclass(metaclass):
     return wrapper
 
 
-
-class bothmethod: # pylint: disable-msg=R0903
+class bothmethod:
     """
     'optional @classmethod'
 
     A decorator that allows a method to receive either the class
     object (if called on the class) or the instance object
     (if called on the instance) as its first argument.
-
-    Code (but not documentation) copied from:
-    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/523033.
     """
-    # pylint: disable-msg=R0903
+    def __init__(self, method):
+        self.method = method
 
-    def __init__(self, func):
-        self.func = func
-
-    # i.e. this is also a non-data descriptor
-    def __get__(self, obj, type_=None):
-        if obj is None:
-            return wraps(self.func)(partial(self.func, type_))
+    def __get__(self, instance, owner):
+        if instance is None:
+            # Class call
+            return self.method.__get__(owner)
         else:
-            return wraps(self.func)(partial(self.func, obj))
+            # Instance call
+            return self.method.__get__(instance, owner)
 
 
 def _getattrr(obj, attr, *args):
@@ -411,6 +406,29 @@ def get_method_owner(method):
     if isinstance(method, partial):
         method = method.func
     return method.__self__
+
+
+def recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
+    # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
+
+    def decorating_function(user_function):
+        repr_running = set()
+
+        @wraps(user_function)
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
+
+    return decorating_function
 
 
 @accept_arguments
@@ -621,7 +639,7 @@ def _params_depended_on(minfo, dynamic=True, intermediate=True):
     deps, dynamic_deps = [], []
     dinfo = getattr(minfo.method, "_dinfo", {})
     for d in dinfo.get('dependencies', list(minfo.cls.param)):
-        ddeps, ddynamic_deps = (minfo.inst or minfo.cls).param._spec_to_obj(d, dynamic, intermediate)
+        ddeps, ddynamic_deps = (minfo.cls if minfo.inst is None else minfo.inst).param._spec_to_obj(d, dynamic, intermediate)
         dynamic_deps += ddynamic_deps
         for dep in ddeps:
             if isinstance(dep, PInfo):
@@ -1242,8 +1260,10 @@ class Parameter(_ParameterBase):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
+        elif self.constant is True:
+            self.instantiate = True
         elif instantiate is not Undefined:
-            self.instantiate = instantiate or self.constant # pylint: disable-msg=W0201
+            self.instantiate = instantiate
         else:
             # Default value
             self.instantiate = self._slot_defaults['instantiate']
@@ -1861,7 +1881,7 @@ class Parameters:
                     init_methods.append(m)
             elif dynamic:
                 for w in obj._param__private.dynamic_watchers.pop(method, []):
-                    (w.inst or w.cls).param.unwatch(w)
+                    (w.cls if w.inst is None else w.inst).param.unwatch(w)
             else:
                 continue
 
@@ -1896,7 +1916,7 @@ class Parameters:
             subobj = getattr(subobj, subpath.split(':')[0], None)
             subobjs.append(subobj)
 
-        dep_obj = (param_dep.inst or param_dep.cls)
+        dep_obj = param_dep.cls if param_dep.inst is None else param_dep.inst
         if dep_obj not in subobjs[:-1]:
             return None, None, param_dep.what
 
@@ -1932,7 +1952,7 @@ class Parameters:
         on the old subobject and create watchers on the new subobject.
         """
         dynamic_dep, param_dep = group[0]
-        dep_obj = (param_dep.inst or param_dep.cls)
+        dep_obj = param_dep.cls if param_dep.inst is None else param_dep.inst
         params = []
         for _, g in group:
             if g.name not in params:
@@ -1947,6 +1967,10 @@ class Parameters:
         mcaller = _m_caller(obj, name, what, subparams, callback)
         return dep_obj.param._watch(
             mcaller, params, param_dep.what, queued=queued, precedence=-1)
+
+    @recursive_repr()
+    def _repr_html_(self_, open=True):
+        return _parameterized_repr_html(self_.self_or_cls, open)
 
     # Classmethods
 
@@ -2846,8 +2870,7 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-        # Give Parameterized classes a useful 'name' attribute.
-        mcs.name = name
+        mcs.__set_name(name, dict_)
 
         parameters_state = {
             "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
@@ -2903,6 +2926,37 @@ class ParameterizedMetaclass(type):
 
         if docstring_signature:
             mcs.__class_docstring_signature()
+
+    def __set_name(mcs, name, dict_):
+        """
+        Give Parameterized classes a useful 'name' attribute that is by
+        default the class name, unless a class in the hierarchy has defined
+        a `name` String Parameter with a defined `default` value, in which case
+        that value is used to set the class name.
+        """
+        mcs.__renamed = False
+        name_param = dict_.get("name", None)
+        if name_param is not None:
+            if not type(name_param) is String:
+                raise TypeError(
+                    f"Parameterized class {name!r} cannot override "
+                    f"the 'name' Parameter with type {type(name_param)}. "
+                    "Overriding 'name' is only allowed with a 'String' Parameter."
+                )
+            if name_param.default:
+                mcs.name = name_param.default
+                mcs.__renamed = True
+            else:
+                mcs.name = name
+        else:
+            classes = classlist(mcs)[::-1]
+            found_renamed = False
+            for c in classes:
+                if getattr(c, "_ParameterizedMetaclass__renamed", False):
+                    found_renamed = True
+                    break
+            if not found_renamed:
+                mcs.name = name
 
     def __class_docstring_signature(mcs, max_repr_len=15):
         """
@@ -3044,14 +3098,15 @@ class ParameterizedMetaclass(type):
             setattr(param,'objtype',mcs)
             del slots['objtype']
 
+        supers = classlist(mcs)[::-1]
+
         # instantiate is handled specially
-        for superclass in classlist(mcs)[::-1]:
+        for superclass in supers:
             super_param = superclass.__dict__.get(param_name)
             if isinstance(super_param, Parameter) and super_param.instantiate is True:
                 param.instantiate=True
         del slots['instantiate']
 
-        supers = classlist(mcs)[::-1]
         callables = {}
         for slot in slots.keys():
             superclasses = iter(supers)
@@ -3273,9 +3328,9 @@ def type_script_repr(type_,imports,prefix,settings):
         imports.append('import %s'%module)
     return module+'.'+type_.__name__
 
-script_repr_reg[list]=container_script_repr
-script_repr_reg[tuple]=container_script_repr
-script_repr_reg[FunctionType]=function_script_repr
+script_repr_reg[list] = container_script_repr
+script_repr_reg[tuple] = container_script_repr
+script_repr_reg[FunctionType] = function_script_repr
 
 
 #: If not None, the value of this Parameter will be called (using '()')
@@ -3285,26 +3340,106 @@ script_repr_reg[FunctionType]=function_script_repr
 dbprint_prefix=None
 
 
-# Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
-def recursive_repr(fillvalue='...'):
-    'Decorator to make a repr function return fillvalue for a recursive call'
+def _name_if_set(parameterized):
+    """Return the name of this Parameterized if explicitly set to other than the default"""
+    class_name = parameterized.__class__.__name__
+    default_name = re.match('^'+class_name+'[0-9]+$', parameterized.name)
+    return '' if default_name else parameterized.name
 
-    def decorating_function(user_function):
-        repr_running = set()
 
-        def wrapper(self, *args, **kwargs):
-            key = id(self), get_ident()
-            if key in repr_running:
-                return fillvalue
-            repr_running.add(key)
-            try:
-                result = user_function(self, *args, **kwargs)
-            finally:
-                repr_running.discard(key)
-            return result
-        return wrapper
+def _get_param_repr(key, val, p, truncate=40):
+    """HTML representation for a single Parameter object and its value"""
+    if hasattr(val, "_repr_html_"):
+        try:
+            value = val._repr_html_(open=False)
+        except:
+            value = val._repr_html_()
+    else:
+        rep = repr(val)
+        value = (rep[:truncate] + '..') if len(rep) > truncate else rep
 
-    return decorating_function
+    modes = []
+    if p.constant:
+        modes.append('constant')
+    if p.readonly:
+        modes.append('read-only')
+    if getattr(p, 'allow_None', False):
+        modes.append('nullable')
+    mode = ' | '.join(modes)
+    if hasattr(p, 'bounds'):
+        bounds = p.bounds
+    elif hasattr(p, 'objects') and p.objects:
+        bounds = ', '.join(list(map(repr, p.objects)))
+    else:
+        bounds = ''
+    tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
+    return (
+        f'<tr>'
+        f'  <td><tt{tooltip}>{key}</tt></td>'
+        f'  <td>{p.__class__.__name__}</td>'
+        f'  <td>{value}</td>'
+        f'  <td style="max-width: 300px;">{bounds}</td>'
+        f'  <td>{mode}</td>'
+        f'</tr>\n'
+    )
+
+
+def _parameterized_repr_html(p, open):
+    """HTML representation for a Parameterized object"""
+    if isinstance(p, Parameterized):
+        cls = p.__class__
+        title = cls.name + "() " + _name_if_set(p)
+        value_field = 'Value'
+    else:
+        cls = p
+        title = cls.name
+        value_field = 'Default'
+
+    tooltip_css = """
+.param-doc-tooltip{
+  position: relative;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 100px;
+  min-width: 150px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+"""
+    openstr = " open" if open else ""
+    contents = "".join(_get_param_repr(key, val, p.param.params(key))
+                       for key, val in p.param.get_param_values())
+    return (
+        f'<style>{tooltip_css}</style>\n'
+        f'<details {openstr}>\n'
+        ' <summary style="display:list-item; outline:none;">\n'
+        f'  <tt>{title}</tt>\n'
+        ' </summary>\n'
+        ' <div style="padding-left:10px; padding-bottom:5px;">\n'
+        '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
+        f'   <tr><th>Name</th><th>Type</th><th>{value_field}</th><th>Bounds/Objects</th><th>Mode</th></tr>\n'
+        f'{contents}\n'
+        '  </table>\n </div>\n</details>\n'
+    )
 
 
 class _ClassPrivate:
@@ -3413,7 +3548,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             param_watchers={},
         )
 
-        self.param._generate_name()
+        # Skip generating a custom instance name when a class in the hierarchy
+        # has overriden the default of the `name` Parameter.
+        if self.param.name.default == self.__class__.__name__:
+            self.param._generate_name()
         self.param._setup_params(**params)
         object_count += 1
 
@@ -3670,6 +3808,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
 
+    @bothmethod
+    @recursive_repr()
+    def _repr_html_(self_or_cls, open=True):
+        return _parameterized_repr_html(self_or_cls, open)
 
 
 def print_all_param_defaults():

@@ -5,6 +5,7 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
+from param.parameterized import bothmethod
 
 try:
     import numpy as np
@@ -319,3 +320,18 @@ def test_resolve_path_search_paths_multiple_file(tmpdir):
     assert os.path.basename(p) == 'foo2'
     assert os.path.isabs(p)
     assert p == fp2
+
+
+def test_both_method():
+
+    class A:
+
+        @bothmethod
+        def method(self_or_cls):
+            return self_or_cls
+
+    assert A.method() is A
+
+    a = A()
+
+    assert a.method() is a

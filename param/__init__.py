@@ -43,7 +43,7 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 from .parameterized import _identity_hook
-from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning, _deprecate_positional_args
+from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning, _deprecate_positional_args, _deprecated
 
 # Define '__version__'
 try:
@@ -73,7 +73,7 @@ main=Parameterized(name="main")
 random_seed = 42
 
 
-def produce_value(value_obj):
+def _produce_value(value_obj):
     """
     A helper function that produces an actual parameter from a stored
     object: if the object is callable, call it, otherwise return the
@@ -85,6 +85,21 @@ def produce_value(value_obj):
         return value_obj
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
+def produce_value(value_obj):
+    """
+    A helper function that produces an actual parameter from a stored
+    object: if the object is callable, call it, otherwise return the
+    object.
+
+    ..deprecated:: 2.0.0
+    """
+    return _produce_value(value_obj)
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
 def as_unicode(obj):
     """
     Safely casts any object to unicode including regular string
@@ -92,15 +107,11 @@ def as_unicode(obj):
 
     ..deprecated:: 2.0.0
     """
-    # PARAM3_DEPRECATION
-    warnings.warn(
-        message="`as_unicode' is deprecated",
-        category=_ParamDeprecationWarning,
-        stacklevel=2,
-    )
     return str(obj)
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
@@ -108,18 +119,12 @@ def is_ordered_dict(d):
 
     ..deprecated:: 2.0.0
     """
-    # PARAM3_DEPRECATION
-    warnings.warn(
-        message="`as_unicode' is deprecated",
-        category=_ParamDeprecationWarning,
-        stacklevel=2,
-    )
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
     vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
     return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
 
 
-def hashable(x):
+def _hashable(x):
     """
     Return a hashable version of the given object x, with lists and
     dictionaries converted to tuples.  Allows mutable objects to be
@@ -136,7 +141,23 @@ def hashable(x):
         return x
 
 
-def named_objs(objlist, namesdict=None):
+# PARAM3_DEPRECATION
+@_deprecated()
+def hashable(x):
+    """
+    Return a hashable version of the given object x, with lists and
+    dictionaries converted to tuples.  Allows mutable objects to be
+    used as a lookup key in cases where the object has not actually
+    been mutated. Lookup will fail (appropriately) in cases where some
+    part of the object has changed.  Does not (currently) recursively
+    replace mutable subobjects.
+
+    ..deprecated:: 2.0.0
+    """
+    return _hashable(x)
+
+
+def _named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
     string name for the object to the object itself. Accepts
@@ -150,13 +171,13 @@ def named_objs(objlist, namesdict=None):
     if namesdict is not None:
         for k, v in namesdict.items():
             try:
-                objtoname[hashable(v)] = k
+                objtoname[_hashable(v)] = k
             except TypeError:
                 unhashables.append((k, v))
 
     for obj in objlist:
-        if objtoname and hashable(obj) in objtoname:
-            k = objtoname[hashable(obj)]
+        if objtoname and _hashable(obj) in objtoname:
+            k = objtoname[_hashable(obj)]
         elif any(obj is v for (_, v) in unhashables):
             k = [k for (k, v) in unhashables if v is obj][0]
         elif hasattr(obj, "name"):
@@ -167,6 +188,20 @@ def named_objs(objlist, namesdict=None):
             k = str(obj)
         objs[k] = obj
     return objs
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def named_objs(objlist, namesdict=None):
+    """
+    Given a list of objects, returns a dictionary mapping from
+    string name for the object to the object itself. Accepts
+    an optional name,obj dictionary, which will override any other
+    name if that item is present in the dictionary.
+
+    ..deprecated:: 2.0.0
+    """
+    return _named_objs(objlist, namesdict=namesdict)
 
 
 def param_union(*parameterizeds, warn=True):
@@ -694,7 +729,7 @@ class Dynamic(Parameter):
         (i.e. gen will be asked to produce a new value).
 
         If force is True, or the value of time_fn() is different from
-        what it was was last time produce_value was called, a new
+        what it was was last time _produce_value was called, a new
         value will be produced and returned. Otherwise, the last value
         gen produced will be returned.
         """
@@ -705,14 +740,14 @@ class Dynamic(Parameter):
             time_fn = self.time_fn
 
         if (time_fn is None) or (not self.time_dependent):
-            value = produce_value(gen)
+            value = _produce_value(gen)
             gen._Dynamic_last = value
         else:
 
             time = time_fn()
 
             if force or time!=gen._Dynamic_time:
-                value = produce_value(gen)
+                value = _produce_value(gen)
                 gen._Dynamic_last = value
                 gen._Dynamic_time = time
             else:
@@ -1415,7 +1450,7 @@ class ListProxy(list):
                 self._parameter._objects[index] = object
             return
         if self and not self._parameter.names:
-            self._parameter.names = named_objs(self)
+            self._parameter.names = _named_objs(self)
         with self._trigger(trigger):
             if index in self._parameter.names:
                 old = self._parameter.names[index]
@@ -1464,7 +1499,7 @@ class ListProxy(list):
     def get(self, key, default=None):
         if self._parameter.names:
             return self._parameter.names.get(key, default)
-        return named_objs(self).get(key, default)
+        return _named_objs(self).get(key, default)
 
     def insert(self, index, object):
         if self._parameter.names:
@@ -1476,12 +1511,12 @@ class ListProxy(list):
     def items(self):
         if self._parameter.names:
             return self._parameter.names.items()
-        return named_objs(self).items()
+        return _named_objs(self).items()
 
     def keys(self):
         if self._parameter.names:
             return self._parameter.names.keys()
-        return named_objs(self).keys()
+        return _named_objs(self).keys()
 
     def pop(self, *args):
         index = args[0] if args else -1
@@ -1519,7 +1554,7 @@ class ListProxy(list):
 
     def update(self, objects, **items):
         if not self._parameter.names:
-            self._parameter.names = named_objs(self)
+            self._parameter.names = _named_objs(self)
         objects = objects.items() if isinstance(objects, dict) else objects
         with self._trigger():
             for i, o in enumerate(objects):
@@ -1541,7 +1576,7 @@ class ListProxy(list):
     def values(self):
         if self._parameter.names:
             return self._parameter.names.values()
-        return named_objs(self).values()
+        return _named_objs(self).values()
 
 
 class __compute_selector_default:
@@ -1737,7 +1772,7 @@ class Selector(SelectorBase, _SignatureSelector):
 
         (Returns the dictionary {object.name: object}.)
         """
-        return named_objs(self._objects, self.names)
+        return _named_objs(self._objects, self.names)
 
 
 class ObjectSelector(Selector):
@@ -2237,6 +2272,8 @@ class resolve_path(ParameterizedFunction):
             raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
 class normalize_path(ParameterizedFunction):
     """
     Convert a UNIX-style path to the current OS's format,
@@ -2378,7 +2415,7 @@ class Foldername(Path):
 
 
 
-def abbreviate_paths(pathspec,named_paths):
+def _abbreviate_paths(pathspec,named_paths):
     """
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
     Helps keep menu items short yet unambiguous.
@@ -2388,6 +2425,17 @@ def abbreviate_paths(pathspec,named_paths):
     prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
     return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
 
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def abbreviate_paths(pathspec,named_paths):
+    """
+    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
+    Helps keep menu items short yet unambiguous.
+
+    ..deprecated:: 2.0.0
+    """
+    return _abbreviate_paths(pathspec, named_paths)
 
 
 class FileSelector(Selector):
@@ -2426,7 +2474,7 @@ class FileSelector(Selector):
         self.default = self.objects[0] if self.objects else None
 
     def get_range(self):
-        return abbreviate_paths(self.path,super().get_range())
+        return _abbreviate_paths(self.path,super().get_range())
 
 
 class ListSelector(Selector):
@@ -2503,7 +2551,7 @@ class MultiFileSelector(ListSelector):
         self.default = self.objects
 
     def get_range(self):
-        return abbreviate_paths(self.path,super().get_range())
+        return _abbreviate_paths(self.path,super().get_range())
 
 
 def _to_datetime(x):

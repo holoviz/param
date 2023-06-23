@@ -479,16 +479,28 @@ def recursive_repr(fillvalue='...'):
 
 
 # Hooks to apply to depends and bind arguments to turn them into valid parameters
-DEPENDENCY_TRANSFORMS = []
 
-def _transform_arg(arg):
+_dependency_transforms = []
+
+def register_depends_transform(transform):
+    """
+    Appends a transform to extract potential parameter dependencies
+    from an object.
+
+    Arguments
+    ---------
+    transform: Callable[Any, Any]
+    """
+    return _dependency_transforms.append(transform)
+
+def transform_dependency(arg):
     """
     Transforms arguments for depends and bind functions applying any
-    DEPENDENCY_TRANSFORMS. This is useful for adding handling for
-    depending on object that are not simple Parameters or functions
-    with dependency definitions.
+    registered dependency transforms. This is useful for adding
+    handling for depending on object that are not simple Parameters or
+    functions with dependency definitions.
     """
-    for transform in DEPENDENCY_TRANSFORMS:
+    for transform in _dependency_transforms:
         if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
             break
         arg = transform(arg)
@@ -531,8 +543,8 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
         by default False
     """
     dependencies, kw = (
-        tuple(_transform_arg(arg) for arg in dependencies),
-        {key: _transform_arg(arg) for key, arg in kw.items()}
+        tuple(transform_dependency(arg) for arg in dependencies),
+        {key: transform_dependency(arg) for key, arg in kw.items()}
     )
 
     if iscoroutinefunction(func):
@@ -630,13 +642,13 @@ def bind(function, *args, watch=False, **kwargs):
     annotated with all dependencies.
     """
     args, kwargs = (
-        tuple(_transform_arg(arg) for arg in args),
-        {key: _transform_arg(arg) for key, arg in kwargs.items()}
+        tuple(transform_dependency(arg) for arg in args),
+        {key: transform_dependency(arg) for key, arg in kwargs.items()}
     )
     dependencies = {}
 
     # If the wrapped function has a dependency add it
-    fn_dep = _transform_arg(function)
+    fn_dep = transform_dependency(function)
     if isinstance(fn_dep, Parameter) or hasattr(fn_dep, '_dinfo'):
         dependencies['__fn'] = fn_dep
 
@@ -667,6 +679,7 @@ def bind(function, *args, watch=False, **kwargs):
                 arg = getattr(arg.owner, arg.name)
             combined_args.append(arg)
         combined_args += list(wargs)
+
         combined_kwargs = {}
         for kw, arg in kwargs.items():
             if hasattr(arg, '_dinfo'):
@@ -690,7 +703,7 @@ def bind(function, *args, watch=False, **kwargs):
         if callable(function):
             fn = function
         else:
-            p = _transform_arg(function)
+            p = transform_dependency(function)
             if isinstance(p, Parameter):
                 fn = getattr(p.owner, p.name)
             else:

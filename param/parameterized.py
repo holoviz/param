@@ -2871,7 +2871,6 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-        mcs.__set_name(name, dict_)
 
         parameters_state = {
             "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
@@ -2883,6 +2882,7 @@ class ParameterizedMetaclass(type):
             parameters_state=parameters_state,
         )
         mcs._param__private = _param__private
+        mcs.__set_name(name, dict_)
         mcs._param__parameters = Parameters(mcs)
 
         # All objects (with their names) of type Parameter that are
@@ -2935,7 +2935,7 @@ class ParameterizedMetaclass(type):
         a `name` String Parameter with a defined `default` value, in which case
         that value is used to set the class name.
         """
-        mcs.__renamed = False
+        mcs._param__private.renamed = False
         name_param = dict_.get("name", None)
         if name_param is not None:
             if not type(name_param) is String:
@@ -2946,14 +2946,15 @@ class ParameterizedMetaclass(type):
                 )
             if name_param.default:
                 mcs.name = name_param.default
-                mcs.__renamed = True
+                mcs._param__private.renamed = True
             else:
                 mcs.name = name
         else:
             classes = classlist(mcs)[::-1]
             found_renamed = False
             for c in classes:
-                if getattr(c, "_ParameterizedMetaclass__renamed", False):
+                # if getattr(c, "_ParameterizedMetaclass__renamed", False):
+                if hasattr(c, '_param__private') and c._param__private.renamed:
                     found_renamed = True
                     break
             if not found_renamed:
@@ -3448,6 +3449,7 @@ class _ClassPrivate:
     __slots__ = [
         'parameters_state',
         '_disable_instance__params',
+        'renamed',
     ]
 
     def __init__(

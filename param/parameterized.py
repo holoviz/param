@@ -1342,7 +1342,7 @@ class Parameter(_ParameterBase):
         if obj is None: # e.g. when __get__ called for a Parameterized class
             result = self.default
         else:
-            result = obj.__dict__.get(self._internal_name,self.default)
+            result = obj._param__private.values.get(self._internal_name, self.default)
         return result
 
     @instance_descriptor
@@ -1393,10 +1393,10 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             elif not obj._param__private.initialized:
-                _old = obj.__dict__.get(self._internal_name, self.default)
-                obj.__dict__[self._internal_name] = val
+                _old = obj._param__private.values.get(self._internal_name, self.default)
+                obj._param__private.values[self._internal_name] = val
             else:
-                _old = obj.__dict__.get(self._internal_name, self.default)
+                _old = obj._param__private.values.get(self._internal_name, self.default)
                 if val is not _old:
                     raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
         else:
@@ -1404,8 +1404,8 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             else:
-                _old = obj.__dict__.get(self._internal_name, self.default)
-                obj.__dict__[self._internal_name] = val
+                _old = obj._param__private.values.get(self._internal_name, self.default)
+                obj._param__private.values[self._internal_name] = val
 
         self._post_setter(obj, val)
 
@@ -1842,7 +1842,7 @@ class Parameters:
         # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
         # under the parameter's _internal_name (or key if supplied)
         self = self_.self
-        dict_ = dict_ or self.__dict__
+        dict_ = dict_ or self._param__private.values
         key = key or param_obj._internal_name
         if shared_parameters._share:
             param_key = (str(type(self)), param_obj.name)
@@ -2421,10 +2421,11 @@ class Parameters:
 
         # Dynamic Parameter...
         else:
-            internal_name = "_%s_param_value"%name
-            if hasattr(cls_or_slf,internal_name):
+            internal_name = "_%s_param_value" % name
+            # TODO: is this always an instance?
+            if internal_name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
-                value = getattr(cls_or_slf,internal_name)
+                value = cls_or_slf._param__private.values[internal_name]
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default
@@ -3466,6 +3467,7 @@ class _InstancePrivate:
         'dynamic_watchers',
         'instance_params',
         'param_watchers',
+        'values',
     ]
 
     def __init__(
@@ -3481,6 +3483,7 @@ class _InstancePrivate:
         self.dynamic_watchers = dynamic_watchers
         self.instance_params = instance_params
         self.param_watchers = param_watchers
+        self.values = {}
 
 
 class Parameterized(metaclass=ParameterizedMetaclass):

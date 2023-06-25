@@ -1764,8 +1764,8 @@ class Parameters:
             raise AttributeError
 
         try:
-            params = list(getattr(cls, '_%s__params' % cls.__name__))
-        except AttributeError:
+            params = list(cls._param__private.params['_%s__params' % cls.__name__])
+        except KeyError:
             params = [n for class_ in classlist(cls) for n, v in class_.__dict__.items()
                       if isinstance(v, Parameter)]
 
@@ -2018,7 +2018,7 @@ class Parameters:
         ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
         # delete cached params()
         try:
-            delattr(cls,'_%s__params'%cls.__name__)
+            delattr(cls._param__private, '_%s__params' % cls.__name__)
         except AttributeError:
             pass
 
@@ -2136,8 +2136,8 @@ class Parameters:
         # We cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
         try:
-            pdict = getattr(cls, '_%s__params' % cls.__name__)
-        except AttributeError:
+            pdict = cls._param__private.params[f'_{cls.__name__}__params']
+        except KeyError:
             paramdict = {}
             for class_ in classlist(cls):
                 for name, val in class_.__dict__.items():
@@ -2148,7 +2148,7 @@ class Parameters:
             # params() is called, so we mangle the name ourselves at
             # runtime (if we were to mangle it now, it would be
             # _Parameterized.__params for all classes).
-            setattr(cls, '_%s__params' % cls.__name__, paramdict)
+            cls._param__private.params[f'_{cls.__name__}__params'] = paramdict
             pdict = paramdict
 
         if instance and self_.self is not None:
@@ -3450,6 +3450,7 @@ class _ClassPrivate:
         'parameters_state',
         '_disable_instance__params',
         'renamed',
+        'params',
     ]
 
     def __init__(
@@ -3459,6 +3460,7 @@ class _ClassPrivate:
     ):
         self.parameters_state = parameters_state
         self._disable_instance__params = _disable_instance__params
+        self.params = {}
 
 
 class _InstancePrivate:

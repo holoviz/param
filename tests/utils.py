@@ -1,5 +1,10 @@
 import logging
 
+from contextlib import contextmanager
+
+import param
+
+
 class MockLoggingHandler(logging.Handler):
     """Mock logging handler to check for expected logs.
 
@@ -93,3 +98,16 @@ def check_defaults(parameter, label, skip=[]):
         assert parameter.per_instance is True
     if 'label' not in skip:
         assert parameter.label == label
+
+
+@contextmanager
+def warnings_as_excepts(match=None):
+    orig = param.parameterized.warnings_as_exceptions
+    param.parameterized.warnings_as_exceptions = True
+    try:
+        yield
+    except Exception as e:
+        if match and match not in str(e):
+            raise ValueError(f'Exception emitted {str(e)!r} does not contain {match!r}')
+    finally:
+        param.parameterized.warnings_as_exceptions = orig

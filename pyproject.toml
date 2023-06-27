@@ -211,6 +211,9 @@ examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:examples}"
 
 [tool.pytest.ini_options]
 python_files = "test*.py"
+filterwarnings = [
+  "error",
+]
 
 [tool.coverage.report]
 omit = ["param/version.py"]

@@ -38,11 +38,16 @@ from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 from ._utils import _deprecated, _deprecate_positional_args, ParamDeprecationWarning as _ParamDeprecationWarning
 
 try:
-    # In case the optional ipython module is unavailable
-    from .ipython import ParamPager
-    param_pager = ParamPager(metaclass=True)  # Generates param description
-except:
+    get_ipython()
+except NameError:
     param_pager = None
+else:
+    # In case the optional ipython module is unavailable
+    try:
+        from .ipython import ParamPager
+        param_pager = ParamPager(metaclass=True)  # Generates param description
+    except:
+        param_pager = None
 
 from inspect import getfullargspec
 

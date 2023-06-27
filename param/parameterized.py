@@ -1763,9 +1763,8 @@ class Parameters:
         if cls is None: # Class not initialized
             raise AttributeError
 
-        try:
-            params = list(cls._param__private.params['_%s__params' % cls.__name__])
-        except KeyError:
+        params = list(cls._param__private.params)
+        if not params:
             params = [n for class_ in classlist(cls) for n, v in class_.__dict__.items()
                       if isinstance(v, Parameter)]
 
@@ -2017,10 +2016,7 @@ class Parameters:
         type.__setattr__(cls,param_name,param_obj)
         ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
         # delete cached params()
-        try:
-            delattr(cls._param__private, '_%s__params' % cls.__name__)
-        except AttributeError:
-            pass
+        cls._param__private.params.clear()
 
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.add_parameter`")
@@ -2135,9 +2131,8 @@ class Parameters:
         cls = self_.cls
         # We cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
-        try:
-            pdict = cls._param__private.params[f'_{cls.__name__}__params']
-        except KeyError:
+        pdict = cls._param__private.params
+        if not pdict:
             paramdict = {}
             for class_ in classlist(cls):
                 for name, val in class_.__dict__.items():
@@ -2148,7 +2143,8 @@ class Parameters:
             # params() is called, so we mangle the name ourselves at
             # runtime (if we were to mangle it now, it would be
             # _Parameterized.__params for all classes).
-            cls._param__private.params[f'_{cls.__name__}__params'] = paramdict
+            # cls._param__private.params[f'_{cls.__name__}__params'] = paramdict
+            cls._param__private.params = paramdict
             pdict = paramdict
 
         if instance and self_.self is not None:

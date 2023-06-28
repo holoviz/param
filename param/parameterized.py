@@ -2952,7 +2952,6 @@ class ParameterizedMetaclass(type):
             classes = classlist(mcs)[::-1]
             found_renamed = False
             for c in classes:
-                # if getattr(c, "_ParameterizedMetaclass__renamed", False):
                 if hasattr(c, '_param__private') and c._param__private.renamed:
                     found_renamed = True
                     break

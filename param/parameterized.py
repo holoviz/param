@@ -364,7 +364,7 @@ def no_instance_params(cls):
     """
     Disables instance parameters on the class
     """
-    cls._param__private._disable_instance__params = True
+    cls._param__private.disable_instance_params = True
     return cls
 
 
@@ -390,8 +390,8 @@ def instance_descriptor(f):
         if obj is None:
             # obj is None when the metaclass is setting
             return f(self, obj, val)
-        instance_params = obj._param__private.instance_params
-        instance_param = None if instance_params is None else instance_params.get(self.name)
+        params = obj._param__private.params
+        instance_param = None if params is None else params.get(self.name)
         if instance_param is not None and self is not instance_param:
             instance_param.__set__(obj, val)
             return
@@ -1419,8 +1419,8 @@ class Parameter(_ParameterBase):
 
         if obj is None:
             watchers = self.watchers.get("value")
-        elif hasattr(obj, '_param__private') and hasattr(obj._param__private, 'param_watchers') and obj._param__private.param_watchers is not None and self.name in obj._param__private.param_watchers:
-            watchers = obj._param__private.param_watchers[self.name].get('value')
+        elif hasattr(obj, '_param__private') and hasattr(obj._param__private, 'watchers') and obj._param__private.watchers is not None and self.name in obj._param__private.watchers:
+            watchers = obj._param__private.watchers[self.name].get('value')
             if watchers is None:
                 watchers = self.watchers.get("value")
         else:
@@ -1722,8 +1722,8 @@ class Parameters:
         parameters = self_.objects(False) if inst is None else inst.param.objects(False)
         p = parameters[key]
         if (inst is not None and getattr(inst._param__private, 'initialized', False) and p.per_instance and
-            not getattr(self_.cls._param__private, '_disable_instance__params', False)):
-            if key not in inst._param__private.instance_params:
+            not getattr(self_.cls._param__private, 'disable_instance_params', False)):
+            if key not in inst._param__private.params:
                 try:
                     # Do not copy watchers on class parameter
                     watchers = p.watchers
@@ -1734,9 +1734,9 @@ class Parameters:
                 finally:
                     p.watchers = {k: list(v) for k, v in watchers.items()}
                 p.owner = inst
-                inst._param__private.instance_params[key] = p
+                inst._param__private.params[key] = p
             else:
-                p = inst._param__private.instance_params[key]
+                p = inst._param__private.params[key]
         return p
 
 
@@ -2152,8 +2152,8 @@ class Parameters:
 
         if instance and self_.self is not None:
             if instance == 'existing':
-                if getattr(self_.self._param__private, 'initialized', False) and self_.self._param__private.instance_params:
-                    return dict(pdict, **self_.self._param__private.instance_params)
+                if getattr(self_.self._param__private, 'initialized', False) and self_.self._param__private.params:
+                    return dict(pdict, **self_.self._param__private.params)
                 return pdict
             else:
                 return {k: self_.self.param[k] for k in pdict}
@@ -2607,7 +2607,7 @@ class Parameters:
                                  "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
-                watchers = self_.self._param__private.param_watchers
+                watchers = self_.self._param__private.watchers
                 if parameter_name not in watchers:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
@@ -2870,16 +2870,7 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-
-        parameters_state = {
-            "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
-            "TRIGGER": False,
-            "events": [], # Queue of batched events
-            "watchers": [] # Queue of batched watchers
-        }
-        _param__private = _ClassPrivate(
-            parameters_state=parameters_state,
-        )
+        _param__private = _ClassPrivate()
         mcs._param__private = _param__private
         mcs.__set_name(name, dict_)
         mcs._param__parameters = Parameters(mcs)
@@ -2934,7 +2925,6 @@ class ParameterizedMetaclass(type):
         a `name` String Parameter with a defined `default` value, in which case
         that value is used to set the class name.
         """
-        mcs._param__private.renamed = False
         name_param = dict_.get("name", None)
         if name_param is not None:
             if not type(name_param) is String:
@@ -3441,12 +3431,25 @@ def _parameterized_repr_html(p, open):
         '  </table>\n </div>\n</details>\n'
     )
 
+# _ClassPrivate and _InstancePrivate are the private namespaces of Parameterized
+# classes and instance respectively, stored on the `_param__private` attribute.
+# They are implemented with slots for performance reasons.
 
 class _ClassPrivate:
+    """
+    parameters_state: dict
+        Dict holding some transient states
+    disable_instance_params: bool
+        Whether to disable instance parameters
+    renamed: bool
+        Whethe the class has been renamed by a super class
+    params: dict
+        Dict of parameter_name:parameter
+    """
 
     __slots__ = [
         'parameters_state',
-        '_disable_instance__params',
+        'disable_instance_params',
         'renamed',
         'params',
     ]
@@ -3454,38 +3457,72 @@ class _ClassPrivate:
     def __init__(
         self,
         parameters_state=None,
-        _disable_instance__params=None,
+        disable_instance_params=False,
+        renamed=False,
+        params=None,
     ):
+        if parameters_state is None:
+            parameters_state = {
+                "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
+                "TRIGGER": False,
+                "events": [], # Queue of batched events
+                "watchers": [] # Queue of batched watchers
+            }
         self.parameters_state = parameters_state
-        self._disable_instance__params = _disable_instance__params
-        self.params = {}
+        self.disable_instance_params = disable_instance_params
+        self.renamed = renamed
+        self.params = {} if params is None else params
 
 
 class _InstancePrivate:
+    """
+    initialized: bool
+        Flag that can be tested to see if e.g. constant Parameters can still be set
+    parameters_state: dict
+        Dict holding some transient states
+    dynamic_watchers: defaultdict
+        Dynamic watchers
+    params: dict
+        Dict of parameter_name:parameter
+    watchers: dict
+        Dict of dict:
+            parameter_name:
+                parameter_attribute (e.g. 'value'): list of `Watcher`s
+    values: dict
+        Dict of internal_name: value
+    """
 
     __slots__ = [
         'initialized',
         'parameters_state',
         'dynamic_watchers',
-        'instance_params',
-        'param_watchers',
+        'params',
+        'watchers',
         'values',
     ]
 
     def __init__(
         self,
-        initialized=None,
+        initialized=False,
         parameters_state=None,
         dynamic_watchers=None,
-        instance_params=None,
-        param_watchers=None,
+        params=None,
+        watchers=None,
+        values=None,
     ):
         self.initialized = initialized
+        if parameters_state is None:
+            parameters_state = {
+                "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
+                "TRIGGER": False,
+                "events": [], # Queue of batched events
+                "watchers": [] # Queue of batched watchers
+            }
         self.parameters_state = parameters_state
-        self.dynamic_watchers = dynamic_watchers
-        self.instance_params = instance_params
-        self.param_watchers = param_watchers
-        self.values = {}
+        self.dynamic_watchers = defaultdict(list) if dynamic_watchers is None else dynamic_watchers
+        self.params = {} if params is None else params
+        self.watchers = {} if watchers is None else watchers
+        self.values = {} if values is None else values
 
 
 class Parameterized(metaclass=ParameterizedMetaclass):
@@ -3537,21 +3574,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __init__(self, **params):
         global object_count
 
-        # Flag that can be tested to see if e.g. constant Parameters
-        # can still be set
-        parameters_state = {
-            "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
-            "TRIGGER": False,
-            "events": [], # Queue of batched events
-            "watchers": [] # Queue of batched watchers
-        }
-        self._param__private = _InstancePrivate(
-            initialized=False,
-            parameters_state=parameters_state,
-            dynamic_watchers=defaultdict(list),
-            instance_params={},
-            param_watchers={},
-        )
+        self._param__private = _InstancePrivate()
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.
@@ -3605,8 +3628,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # When making a copy the internal watchers have to be
         # recreated and point to the new instance
-        if getattr(_param__private, 'param_watchers', None) is not None:
-            param_watchers = _param__private.param_watchers
+        if _param__private.watchers:
+            param_watchers = _param__private.watchers
             for p, attrs in param_watchers.items():
                 for attr, watchers in attrs.items():
                     new_watchers = []
@@ -3622,10 +3645,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                         new_watchers.append(Watcher(*watcher_args))
                     param_watchers[p][attr] = new_watchers
 
-        if getattr(_param__private, 'instance_params', None) is None:
-            _param__private.instance_params = {}
-        if getattr(_param__private, 'param_watchers', None) is None:
-            _param__private.param_watchers = {}
         state.pop('param', None)
 
         for name,value in state.items():

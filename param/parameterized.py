@@ -35,7 +35,7 @@ import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-from ._utils import _deprecated, _deprecate_positional_args
+from ._utils import _deprecated, _deprecate_positional_args, ParamDeprecationWarning as _ParamDeprecationWarning
 
 try:
     # In case the optional ipython module is unavailable
@@ -1379,7 +1379,8 @@ class Parameter(_ParameterBase):
                 # PARAM3_DEPRECATION
                 warnings.warn(
                     'Number.set_hook has been deprecated.',
-                    category=DeprecationWarning,
+                    category=_ParamDeprecationWarning,
+                    stacklevel=5,
                 )
 
         self._validate(val)
@@ -3743,7 +3744,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                qualify=False, separator=""):
         warnings.warn(
             message="'pprint' is deprecated. Use instead `.param.pprint`",
-            category=DeprecationWarning,
+            category=_ParamDeprecationWarning,
             stacklevel=2
         )
         return self._pprint(imports=imports, prefix=prefix, unknown_value=unknown_value,
@@ -4079,7 +4080,7 @@ class overridable_property:
     def __init__(self, fget=None, fset=None, fdel=None, doc=None):
         warnings.warn(
             message="overridable_property has been deprecated.",
-            category=DeprecationWarning,
+            category=_ParamDeprecationWarning,
             stacklevel=2,
         )
         self.fget = fget

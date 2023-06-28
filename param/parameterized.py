@@ -1093,7 +1093,7 @@ class Parameter(_ParameterBase):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['name', 'default', 'doc',
+    __slots__ = ['name', '_internal_name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
                  'watchers', 'owner', '_label']
@@ -1207,6 +1207,7 @@ class Parameter(_ParameterBase):
         self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
+        self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
@@ -1343,7 +1344,7 @@ class Parameter(_ParameterBase):
         if obj is None: # e.g. when __get__ called for a Parameterized class
             result = self.default
         else:
-            result = obj._param__private.values.get(self.name, self.default)
+            result = obj._param__private.values.get(self._internal_name, self.default)
         return result
 
     @instance_descriptor
@@ -1395,10 +1396,10 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             elif not obj._param__private.initialized:
-                _old = obj._param__private.values.get(self.name, self.default)
-                obj._param__private.values[self.name] = val
+                _old = obj._param__private.values.get(self._internal_name, self.default)
+                obj._param__private.values[self._internal_name] = val
             else:
-                _old = obj._param__private.values.get(self.name, self.default)
+                _old = obj._param__private.values.get(self._internal_name, self.default)
                 if val is not _old:
                     raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
         else:
@@ -1406,8 +1407,8 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             else:
-                _old = obj._param__private.values.get(self.name, self.default)
-                obj._param__private.values[self.name] = val
+                _old = obj._param__private.values.get(self._internal_name, self.default)
+                obj._param__private.values[self._internal_name] = val
 
         self._post_setter(obj, val)
 
@@ -1462,6 +1463,7 @@ class Parameter(_ParameterBase):
                                  'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
+        self._internal_name = "_%s_param_value" % attrib_name
 
     def __getstate__(self):
         """
@@ -1843,7 +1845,7 @@ class Parameters:
         # under the parameter's _internal_name (or key if supplied)
         self = self_.self
         dict_ = dict_ or self._param__private.values
-        key = key or param_obj.name
+        key = key or param_obj._internal_name
         if shared_parameters._share:
             param_key = (str(type(self)), param_obj.name)
             if param_key in shared_parameters._shared_cache:
@@ -2418,10 +2420,11 @@ class Parameters:
 
         # Dynamic Parameter...
         else:
+            internal_name = "_%s_param_value" % name
             # TODO: is this always an instance?
-            if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
+            if isinstance(cls_or_slf, Parameterized) and internal_name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
-                value = cls_or_slf._param__private.values[name]
+                value = cls_or_slf._param__private.values[internal_name]
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default

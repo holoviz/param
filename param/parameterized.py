@@ -387,8 +387,10 @@ def iscoroutinefunction(function):
 def instance_descriptor(f):
     # If parameter has an instance Parameter, delegate setting
     def _f(self, obj, val):
-        _param__private = getattr(obj, '_param__private', None)
-        instance_params = getattr(_param__private, 'instance_params', {})
+        if obj is None:
+            # obj is None when the metaclass is setting
+            return f(self, obj, val)
+        instance_params = obj._param__private.instance_params
         instance_param = None if instance_params is None else instance_params.get(self.name)
         if instance_param is not None and self is not instance_param:
             instance_param.__set__(obj, val)

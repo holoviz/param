@@ -2970,7 +2970,7 @@ class Event(Boolean):
         if obj is None:
             self.default = val
         else:
-            obj._param__private.values[self._internal_name] = val
+            obj._param__private.values[self.name] = val
         self._post_setter(obj, val)
 
     @instance_descriptor

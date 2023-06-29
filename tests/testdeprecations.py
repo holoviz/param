@@ -94,6 +94,10 @@ class TestDeprecateParameterizedModule:
             @param.parameterized.add_metaclass(MC)
             class Base: pass
 
+    def test_deprecate_recursive_repr(self):
+        with pytest.raises(param._utils.ParamDeprecationWarning):
+            param.parameterized.recursive_repr(lambda: '')
+
 
 class TestDeprecateParameters:
 

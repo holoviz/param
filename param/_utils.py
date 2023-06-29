@@ -2,6 +2,7 @@ import inspect
 import functools
 import warnings
 
+from textwrap import dedent
 from threading import get_ident
 
 
@@ -38,7 +39,9 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
         def inner(*args, **kwargs):
             msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
             if extra_msg:
-                msg = msg + ' ' + extra_msg
+                em = dedent(extra_msg)
+                em = em.strip().replace('\n', ' ')
+                msg = msg + ' ' + em
             warnings.warn(msg, category=warning_cat, stacklevel=2)
             return func(*args, **kwargs)
         return inner

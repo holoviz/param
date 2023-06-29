@@ -940,6 +940,16 @@ def test_misspelled_parameter_in_depends():
                 return True
 
 
+def test_misspelled_parameter_in_depends_non_Parameter():
+    with pytest.raises(AttributeError, match="Attribute 'foo' could not be resolved on"):
+        class Example(param.Parameterized):
+            foo = 1
+
+            @param.depends("foo")  # <- Not a Parameter
+            def test(self):
+                return True
+
+
 def test_misspelled_parameter_in_depends_watch():
     with pytest.raises(AttributeError, match="Attribute 'tlim' could not be resolved on"):
         class Example(param.Parameterized):

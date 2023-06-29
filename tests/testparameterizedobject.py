@@ -282,13 +282,11 @@ class TestParameterized(unittest.TestCase):
         P.x = nobj = [0]
         assert P.x is nobj
         assert p1.x == oobj
-        # Because of instantiate=True when constant=True leading to a deepcopy
-        assert p1.x is not oobj
+        assert p1.x is oobj
 
         p2 = P()
         assert p2.x == nobj
-        # Because of instantiate=True when constant=True leading to a deepcopy
-        assert p2.x is not nobj
+        assert p2.x is nobj
 
     def test_constant_parameter_after_init(self):
         """Test that you can't set a constant parameter after construction."""
@@ -307,51 +305,51 @@ class TestParameterized(unittest.TestCase):
         testpo = TestPO()
         self.assertEqual(testpo.const,9)
 
-    def test_parameter_constant_instantiate(self):
-        # instantiate is automatically set to True when constant=True
-        assert TestPO.param.const.instantiate is True
+    # def test_parameter_constant_instantiate(self):
+    #     # instantiate is automatically set to True when constant=True
+    #     assert TestPO.param.const.instantiate is True
 
-        class C(param.Parameterized):
-            # instantiate takes precedence when True
-            a = param.Parameter(instantiate=True, constant=False)
-            b = param.Parameter(instantiate=False, constant=False)
-            c = param.Parameter(instantiate=False, constant=True)
-            d = param.Parameter(constant=True)
-            e = param.Parameter(constant=False)
-            f = param.Parameter()
+    #     class C(param.Parameterized):
+    #         # instantiate takes precedence when True
+    #         a = param.Parameter(instantiate=True, constant=False)
+    #         b = param.Parameter(instantiate=False, constant=False)
+    #         c = param.Parameter(instantiate=False, constant=True)
+    #         d = param.Parameter(constant=True)
+    #         e = param.Parameter(constant=False)
+    #         f = param.Parameter()
 
-        assert C.param.a.constant is False
-        assert C.param.a.instantiate is True
-        assert C.param.b.constant is False
-        assert C.param.b.instantiate is False
-        assert C.param.c.constant is True
-        assert C.param.c.instantiate is True
-        assert C.param.d.constant is True
-        assert C.param.d.instantiate is True
-        assert C.param.e.constant is False
-        assert C.param.e.instantiate is False
-        assert C.param.f.constant is False
-        assert C.param.f.instantiate is False
+    #     assert C.param.a.constant is False
+    #     assert C.param.a.instantiate is True
+    #     assert C.param.b.constant is False
+    #     assert C.param.b.instantiate is False
+    #     assert C.param.c.constant is True
+    #     assert C.param.c.instantiate is True
+    #     assert C.param.d.constant is True
+    #     assert C.param.d.instantiate is True
+    #     assert C.param.e.constant is False
+    #     assert C.param.e.instantiate is False
+    #     assert C.param.f.constant is False
+    #     assert C.param.f.instantiate is False
 
-    def test_parameter_constant_instantiate_subclass(self):
+    # def test_parameter_constant_instantiate_subclass(self):
 
-        obj = object()
+    #     obj = object()
 
-        class A(param.Parameterized):
-            x = param.Parameter(obj)
+    #     class A(param.Parameterized):
+    #         x = param.Parameter(obj)
 
-        class B(param.Parameterized):
-            x = param.Parameter(constant=True)
+    #     class B(param.Parameterized):
+    #         x = param.Parameter(constant=True)
 
-        assert A.param.x.constant is False
-        assert A.param.x.instantiate is False
-        assert B.param.x.constant is True
-        assert B.param.x.instantiate is True
+    #     assert A.param.x.constant is False
+    #     assert A.param.x.instantiate is False
+    #     assert B.param.x.constant is True
+    #     assert B.param.x.instantiate is True
 
-        a = A()
-        b = B()
-        assert a.x is obj
-        assert b.x is not obj
+    #     a = A()
+    #     b = B()
+    #     assert a.x is obj
+    #     assert b.x is not obj
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""

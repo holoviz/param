@@ -263,6 +263,39 @@ class TestParameterized(unittest.TestCase):
 
         assert C.name == 'AA'
 
+    def test_constant_parameter_modify_class_before(self):
+        """Test you can set on class and the new default is picked up
+        by new instances"""
+        TestPO.const=9
+        testpo = TestPO()
+        self.assertEqual(testpo.const,9)
+
+    def test_constant_parameter_modify_class_after_init(self):
+        """Test that setting the value on the class doesn't update the instance value
+        even when the instance value hasn't yet been set"""
+        oobj = []
+        class P(param.Parameterized):
+            x = param.Parameter(default=oobj, constant=True)
+
+        p1 = P()
+
+        P.x = nobj = [0]
+        assert P.x is nobj
+        assert p1.x == oobj
+        # Because of instantiate=True when constant=True leading to a deepcopy
+        assert p1.x is not oobj
+
+        p2 = P()
+        assert p2.x == nobj
+        # Because of instantiate=True when constant=True leading to a deepcopy
+        assert p2.x is not nobj
+
+    def test_constant_parameter_after_init(self):
+        """Test that you can't set a constant parameter after construction."""
+        testpo = TestPO(const=17)
+        self.assertEqual(testpo.const,17)
+        self.assertRaises(TypeError,setattr,testpo,'const',10)
+
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""
         testpo = TestPO(const=17)

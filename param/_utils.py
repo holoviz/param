@@ -5,12 +5,30 @@ import warnings
 from threading import get_ident
 
 
-class ParamDeprecationWarning(DeprecationWarning):
-    """Param DeprecationWarning"""
+class ParamWarning(Warning):
+    """Base Param Warning"""
+
+class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
+    """Param PendingDeprecationWarning
+
+    This warning type is useful when the warning is not meant to be displayed
+    to REPL/notebooks users, as DeprecationWarning are displayed when triggered
+    by code in __main__ (__name__ == '__main__' in a REPL).
+    """
 
 
-class ParamFutureWarning(FutureWarning):
-    """Param FutureWarning"""
+class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
+    """Param DeprecationWarning
+
+    Ignored by default except when triggered by code in __main__
+    """
+
+
+class ParamFutureWarning(ParamWarning, FutureWarning):
+    """Param FutureWarning
+
+    Always displayed.
+    """
 
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
@@ -54,7 +72,7 @@ def _deprecate_positional_args(func):
                 f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
                 "has been deprecated since Param 2.0,0 and will raise an error in a future version, "
                 "please pass them as keyword arguments.",
-                PendingDeprecationWarning,
+                ParamPendingDeprecationWarning,
                 stacklevel=2,
             )
 

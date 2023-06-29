@@ -820,6 +820,27 @@ class TestParamDepends(unittest.TestCase):
         assert method1_count == 0
         assert method2_count == 1
 
+    def test_param_depends_class_with_len(self):
+        # https://github.com/holoviz/param/issues/747
+
+        count = 0
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+            @param.depends('x', watch=True)
+            def debug(self):
+                nonlocal count
+                count += 1
+
+            # bool(P()) evaluates to False
+            def __len__(self):
+                return 0
+
+        p = P()
+        p.x = 1
+        assert count == 1
+
 
 class TestParamDependsFunction(unittest.TestCase):
 

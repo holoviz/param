@@ -3382,8 +3382,8 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
-    elif hasattr(val,'_pprint'):
-        rep=val._pprint(imports=imports, prefix=prefix+"    ",
+    elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
+        rep=val.param.pprint(imports=imports, prefix=prefix+"    ",
                         qualify=qualify, unknown_value=unknown_value,
                         separator=separator)
     else:

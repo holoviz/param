@@ -2117,6 +2117,19 @@ class Parameters:
                                  (self_or_cls.name))
         return self_.update(kwargs)
 
+    @contextmanager
+    def set(self_, **kwargs):
+        """
+        Context manager that temporarily sets parameter values and then
+        restores the original values on exit.
+        """
+        values = self_.values()
+        restore = {k: values[k] for k, v in kwargs.items() if k in values}
+        try:
+            self_.update(kwargs)
+            yield
+        finally:
+            self_.update(restore)
 
     def objects(self_, instance=True):
         """

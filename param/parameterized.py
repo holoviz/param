@@ -2873,7 +2873,6 @@ class Parameters:
             elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
                 g.state_pop()
 
-    @_recursive_repr()
     def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
         """
@@ -2882,7 +2881,16 @@ class Parameters:
         """
         self = self_.self_or_cls
         if not isinstance(self, Parameterized):
-            raise NotImplementedError('_pprint is not implemented at the class level')
+            raise NotImplementedError('pprint is not implemented at the class level')
+        # Wrapping the staticmethod _pprint with partial to pass `self` as the `_recursive_repr`
+        # decorator expects `self`` to be the pprinted object (not `self_`).
+        return partial(self_._pprint, self, imports=imports, prefix=prefix,
+                       unknown_value=unknown_value, qualify=qualify, separator=separator)()
+
+    @staticmethod
+    @_recursive_repr()
+    def _pprint(self, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
         if imports is None:
             imports = [] # would have been simpler to use a set from the start
         imports[:] = list(set(imports))

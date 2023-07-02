@@ -131,6 +131,22 @@ class TestParameterizedRepr(unittest.TestCase):
         self.assertEqual(obj.param.pprint(),
                          "E(<?>, q=<?>, a=99)")
 
+    def testparameterizedscriptrepr_recursive(self):
+        class Q(param.Parameterized):
+            a = param.Number(default=39, bounds=(0,50), doc='Number a')
+            b = param.String(default="str", doc='A string')
+
+        class P(Q):
+            c = param.ClassSelector(default=Q(), class_=Q, doc='An instance of Q')
+            e = param.ClassSelector(default=param.Parameterized(), class_=param.Parameterized, doc='A Parameterized instance')
+            f = param.Range(default=(0,1), doc='A range')
+
+        p = P(f=(2,3), name="demo")
+        p.c = P(c=p)
+
+        assert p.param.pprint() == "P(c=P(c=...,     e=Parameterized()), e=Parameterized(), f=(2,3), name='demo')"
+
+
     def test_exceptions(self):
         obj = self.E(10,q='hi',a=99)
         try:

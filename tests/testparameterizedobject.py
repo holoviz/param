@@ -1036,3 +1036,52 @@ def test_inheritance_parameter_attribute_without_default():
     with pytest.raises(KeyError, match="Slot 'foo' of parameter 'c' has no default value defined in `_slot_defaults`"):
         class A(param.Parameterized):
             c = CustomParameter()
+
+
+def _dir(obj):
+    return [attr for attr in dir(obj) if not attr.startswith('__')]
+
+
+def test_namespace_class():
+
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        @param.depends('x', watch=True)
+        def foo(self): pass
+
+    P.x = 1
+    P.param.x
+
+    assert _dir(P) == [
+        '_param__parameters',
+        '_param__private',
+        '_repr_html_',
+        'foo',
+        'name',
+        'param',
+        'x'
+    ]
+
+
+def test_namespace_inst():
+
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        @param.depends('x', watch=True)
+        def foo(self): pass
+
+    p = P(x=2)
+    p.param.x
+
+    assert _dir(p) == [
+        '_param__parameters',
+        '_param__private',
+        '_param_watchers',
+        '_repr_html_',
+        'foo',
+        'name',
+        'param',
+        'x'
+    ]

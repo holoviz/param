@@ -1085,3 +1085,15 @@ def test_namespace_inst():
         'param',
         'x'
     ]
+
+
+def test_parameterized_access_param_before_super():
+    class P(param.Parameterized):
+        x = param.Parameter(1)
+
+        def __init__(self, **params):
+            # Reaching out to a Parameter default before calling super
+            assert self.x == 1
+            super().__init__(**params)
+
+    P()

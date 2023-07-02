@@ -1340,7 +1340,12 @@ class Parameter(_ParameterBase):
         if obj is None: # e.g. when __get__ called for a Parameterized class
             result = self.default
         else:
-            result = obj._param__private.values.get(self._internal_name, self.default)
+            # Attribute error when .values does not exist (_ClassPrivate)
+            # and KeyError when there's no cached value for this parameter.
+            try:
+                result = obj._param__private.values[self._internal_name]
+            except (AttributeError, KeyError):
+                result = self.default
         return result
 
     @instance_descriptor

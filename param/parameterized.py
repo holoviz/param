@@ -3719,11 +3719,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
 
-    @bothmethod
-    @_recursive_repr()
-    def _repr_html_(self_or_cls, open=True):
-        return _parameterized_repr_html(self_or_cls, open)
-
 
 def print_all_param_defaults():
     """Print the default values for all imported Parameters."""

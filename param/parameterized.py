@@ -1419,8 +1419,10 @@ class Parameter(_ParameterBase):
 
         if obj is None:
             watchers = self.watchers.get("value")
-        elif hasattr(obj, '_param__private') and hasattr(obj._param__private, 'watchers') and obj._param__private.watchers is not None and self.name in obj._param__private.watchers:
-            watchers = obj._param__private.watchers[self.name].get('value')
+        # elif hasattr(obj, '_param__private') and hasattr(obj._param__private, 'watchers') and obj._param__private.watchers is not None and self.name in obj._param__private.watchers:
+        elif hasattr(obj, '_param_watchers') and self.name in obj._param_watchers:
+            # watchers = obj._param__private.watchers[self.name].get('value')
+            watchers = obj._param_watchers[self.name].get('value')
             if watchers is None:
                 watchers = self.watchers.get("value")
         else:
@@ -2607,7 +2609,8 @@ class Parameters:
                                  "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
-                watchers = self_.self._param__private.watchers
+                # watchers = self_.self._param__private.watchers
+                watchers = self_.self._param_watchers
                 if parameter_name not in watchers:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
@@ -3484,10 +3487,10 @@ class _InstancePrivate:
         Dynamic watchers
     params: dict
         Dict of parameter_name:parameter
-    watchers: dict
-        Dict of dict:
-            parameter_name:
-                parameter_attribute (e.g. 'value'): list of `Watcher`s
+    # watchers: dict
+    #     Dict of dict:
+    #         parameter_name:
+    #             parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
         Dict of internal_name: value
     """
@@ -3497,7 +3500,7 @@ class _InstancePrivate:
         'parameters_state',
         'dynamic_watchers',
         'params',
-        'watchers',
+        # 'watchers',
         'values',
     ]
 
@@ -3507,7 +3510,7 @@ class _InstancePrivate:
         parameters_state=None,
         dynamic_watchers=None,
         params=None,
-        watchers=None,
+        # watchers=None,
         values=None,
     ):
         self.initialized = initialized
@@ -3521,7 +3524,7 @@ class _InstancePrivate:
         self.parameters_state = parameters_state
         self.dynamic_watchers = defaultdict(list) if dynamic_watchers is None else dynamic_watchers
         self.params = {} if params is None else params
-        self.watchers = {} if watchers is None else watchers
+        # self.watchers = {} if watchers is None else watchers
         self.values = {} if values is None else values
 
 
@@ -3575,6 +3578,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         global object_count
 
         self._param__private = _InstancePrivate()
+        self._param_watchers = {}
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.
@@ -3628,8 +3632,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # When making a copy the internal watchers have to be
         # recreated and point to the new instance
-        if _param__private.watchers:
-            param_watchers = _param__private.watchers
+        # if _param__private.watchers:
+        if '_param_watchers' in state:
+            # param_watchers = _param__private.watchers
+            param_watchers = state['_param_watchers']
             for p, attrs in param_watchers.items():
                 for attr, watchers in attrs.items():
                     new_watchers = []
@@ -3644,6 +3650,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                             watcher_args[2] = getattr(self, fn.__name__)
                         new_watchers.append(Watcher(*watcher_args))
                     param_watchers[p][attr] = new_watchers
+
+        if '_param_watchers' not in state:
+            state['_param_watchers'] = {}
 
         state.pop('param', None)
 

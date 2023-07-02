@@ -1,9 +1,10 @@
 """
-Unit test for the repr and pprint of parameterized objects.
+Unit test for the repr and pprint of parameterized objects, and for pprint/script_repr.
 """
 import unittest
 
 import param
+import pytest
 
 
 class TestParameterizedRepr(unittest.TestCase):
@@ -130,6 +131,22 @@ class TestParameterizedRepr(unittest.TestCase):
         self.assertEqual(obj.param.pprint(),
                          "E(<?>, q=<?>, a=99)")
 
+    def testparameterizedscriptrepr_recursive(self):
+        class Q(param.Parameterized):
+            a = param.Number(default=39, bounds=(0,50), doc='Number a')
+            b = param.String(default="str", doc='A string')
+
+        class P(Q):
+            c = param.ClassSelector(default=Q(), class_=Q, doc='An instance of Q')
+            e = param.ClassSelector(default=param.Parameterized(), class_=param.Parameterized, doc='A Parameterized instance')
+            f = param.Range(default=(0,1), doc='A range')
+
+        p = P(f=(2,3), name="demo")
+        p.c = P(c=p)
+
+        assert p.param.pprint() == "P(c=P(c=...,     e=Parameterized()), e=Parameterized(), f=(2,3), name='demo')"
+
+
     def test_exceptions(self):
         obj = self.E(10,q='hi',a=99)
         try:
@@ -159,3 +176,44 @@ class TestParameterizedRepr(unittest.TestCase):
 
         self.assertEqual(obj.param.pprint(qualify=True),
                          "tests.testparameterizedrepr."+r)
+
+
+@pytest.fixture
+def P():
+    class P(param.Parameterized):
+        x = param.Parameter()
+        y = param.Parameter()
+
+        def __init__(self, x, **params):
+            params['x'] = x
+            super().__init__(**params)
+
+    return P
+
+def test_pprint_type(P):
+    assert param.parameterized.pprint(P) == f'{__name__}.P'
+
+
+def test_pprint_parameterized_instance(P):
+    p = P(1, y=2)
+    assert param.parameterized.pprint(p) == 'P(1,\n        y=2)'
+
+
+def test_pprint_parameterized_other():
+    assert param.parameterized.pprint('2') == repr('2')
+
+
+def test_script_repr_type(P):
+    assert param.script_repr(P) == f'import {__name__}\n\n{__name__}.P'
+
+
+def test_script_repr_parameterized_instance(P):
+    p = P(1, y=2)
+    sr = param.script_repr(p)
+    assert f'import {__name__.split(".")[0]}' in sr
+    assert f'import {__name__}' in sr
+    assert f'{__name__}.P(1,\n\n        y=2)' in sr
+
+
+def test_script_repr_parameterized_other():
+    assert param.script_repr('2') == "\n\n'2'"

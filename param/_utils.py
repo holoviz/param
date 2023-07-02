@@ -2,6 +2,9 @@ import inspect
 import functools
 import warnings
 
+from textwrap import dedent
+from threading import get_ident
+
 
 class ParamWarning(Warning):
     """Base Param Warning"""
@@ -36,7 +39,9 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
         def inner(*args, **kwargs):
             msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
             if extra_msg:
-                msg = msg + ' ' + extra_msg
+                em = dedent(extra_msg)
+                em = em.strip().replace('\n', ' ')
+                msg = msg + ' ' + em
             warnings.warn(msg, category=warning_cat, stacklevel=2)
             return func(*args, **kwargs)
         return inner
@@ -82,3 +87,25 @@ def _deprecate_positional_args(func):
         return func(*args, **kwargs)
 
     return inner
+
+
+# Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
+def _recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
+
+    def decorating_function(user_function):
+        repr_running = set()
+
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
+
+    return decorating_function

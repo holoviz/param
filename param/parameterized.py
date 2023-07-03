@@ -698,6 +698,21 @@ def _skip_event(*events, **kwargs):
     return True
 
 
+# Two callers at the module top level to support pickling.
+async def _async_caller(*events, what='value', changed=None, callback=None, function=None):
+    if callback:
+        callback(*events)
+    if not _skip_event or not _skip_event(*events, what=what, changed=changed):
+        await function()
+
+
+def _sync_caller(*events, what='value', changed=None, callback=None, function=None):
+    if callback:
+        callback(*events)
+    if not _skip_event(*events, what=what, changed=changed):
+        return function()
+
+
 def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     Wraps a method call adding support for scheduling a callback
@@ -705,17 +720,8 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     changed but its values have not.
     """
     function = getattr(self, method_name)
-    if iscoroutinefunction(function):
-        async def caller(*events):
-            if callback:
-                callback(*events)
-            if not _skip_event or not _skip_event(*events, what=what, changed=changed):
-                await function()
-    else:
-        def caller(*events):
-            if callback: callback(*events)
-            if not _skip_event(*events, what=what, changed=changed):
-                return function()
+    _caller = _async_caller if iscoroutinefunction(function) else _sync_caller
+    caller = partial(_caller, what=what, changed=changed, callback=callback, function=function)
     caller._watcher_name = method_name
     return caller
 
@@ -1709,7 +1715,8 @@ class Parameters:
 
     def __setstate__(self, state):
         # Set old parameters state on Parameterized.parameters_state
-        self_or_cls = state.get('self', state.get('cls'))
+        self_, cls = state.get('self'), state.get('cls')
+        self_or_cls = self_ if self_ is not None else cls
         for k in self_or_cls._param__private.parameters_state:
             key = '_'+k
             if key in state:

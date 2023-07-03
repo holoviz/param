@@ -163,11 +163,26 @@ class TestRangeParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             q = param.Range((1, 2), bounds=(0, 10), step="1")
 
-    def test_validate_order_on_val(self):
-        msg = r"Range parameter 'q's end 1 is less than its start 2."
+    def test_validate_order_on_val_with_positive_step(self):
+        msg = r"Range parameter 'q's end 1 is less than its start 2 with positive step 1."
 
         class Q(param.Parameterized):
-            q = param.Range(bounds=(0, 10))
+            q = param.Range(bounds=(0, 10), step=1)
 
         with self.assertRaisesRegex(ValueError, msg):
             Q.q = (2, 1)
+
+    def test_validate_order_on_val_with_negative_step(self):
+        msg = r"Range parameter 'q's start -4 is less than its end -2 with negative step -1."
+
+        class Q(param.Parameterized):
+            q = param.Range(bounds=(-5, -1), step=-1)
+
+        with self.assertRaisesRegex(ValueError, msg):
+            Q.q = (-4, -2)
+
+    def test_validate_step_order_cannot_be_0(self):
+        msg = r"Step cannot be 0."
+
+        with self.assertRaisesRegex(ValueError, msg):
+            q = param.Range(bounds=(0, 10), step=0)

@@ -2379,24 +2379,31 @@ class Range(NumericTuple):
         super(Range, self)._validate(val)
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
         self._validate_step(val, self.step)
-        self._validate_order(val, allow_None=self.allow_None)
+        self._validate_order(val, self.step, allow_None=self.allow_None)
 
     def _validate_step(self, val, step):
-        if step is not None and not _is_number(step):
-            raise ValueError("Step can only be None or a "
-                             "numeric value, not type %r." % type(step))
+        if step is not None:
+            if not _is_number(step):
+                raise ValueError("Step can only be None or a "
+                                 "numeric value, not type %r." % type(step))
+            elif step == 0:
+                raise ValueError("Step cannot be 0.")
 
-    def _validate_order(self, val, allow_None):
+    def _validate_order(self, val, step, allow_None):
         if val is None and allow_None:
             return
         elif val is not None and (val[0] is None or val[1] is None):
             return
 
         start, end = val
-        if not start <= end:
+        if step is not None and step > 0 and not start <= end:
             name = "" if self.name is None else " %rs" % self.name
-            raise ValueError("Range parameter%s end %s is less than its start %s."
-                             % (name, end, start))
+            raise ValueError("Range parameter%s end %s is less than its start %s with positive step %s."
+                             % (name, end, start, step))
+        elif step is not None and step < 0 and not start >= end:
+            name = "" if self.name is None else " %rs" % self.name
+            raise ValueError("Range parameter%s start %s is less than its end %s with negative step %s."
+                             % (name, start, end, step))
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
         if bounds is None or (val is None and self.allow_None):

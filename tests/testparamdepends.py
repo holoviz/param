@@ -488,7 +488,6 @@ class TestParamDepends:
     @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
     def test_param_instance_depends_dynamic_single_nested(self, class_name):
         inst = getattr(self, class_name)()
-        # inst = self.P()
         pinfos = inst.param.method_dependencies('single_nested', intermediate=True)
         assert len(pinfos) == 0
 

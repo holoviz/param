@@ -68,6 +68,8 @@ tests-full = [
     "ipython",
     "jsonschema",
     "gmpy",
+    "cloudpickle",
+    "nest_asyncio",
 ]
 lint = [
     "flake8",
@@ -121,6 +123,8 @@ dependencies = [
     "jsonschema",
     "numpy",
     "pandas",
+    "cloudpickle",
+    "nest_asyncio",
     # To keep __version__ up-to-date in editable installs
     "setuptools_scm",
 ]
@@ -179,6 +183,8 @@ name."^(?!pypy).*".dependencies = [
     "odfpy",
     "feather-format",
     "pyarrow",
+    "cloudpickle",
+    "nest_asyncio",
 ]
 # Only install gmpy on Linux on these version
 # Only install tables (deser HDF5) on Linux on these version

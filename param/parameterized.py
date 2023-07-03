@@ -1704,7 +1704,8 @@ class Parameters:
 
     def __setstate__(self, state):
         # Set old parameters state on Parameterized._parameters_state
-        self_or_cls = state.get('self', state.get('cls'))
+        self_, cls = state.get('self'), state.get('cls')
+        self_or_cls = self_ if self_ is not None else cls
         for k in self_or_cls._parameters_state:
             key = '_'+k
             if key in state:

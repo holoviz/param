@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Make your Python code clearer and more reliable by declaring Parameters."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "HoloViz", email = "developers@holoviz.org" },
 ]
@@ -23,7 +23,6 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -159,7 +158,6 @@ dependencies = [
 
 [[tool.hatch.envs.tests.matrix]]
 python = [
-    "3.7",
     "3.8",
     "3.9",
     "3.10",
@@ -191,8 +189,8 @@ name."^(?!pypy).*".dependencies = [
 # Only install gmpy on Linux on these version
 # Only install tables (deser HDF5) on Linux on these version
 matrix.python.dependencies = [
-    { value = "gmpy", if = ["3.7", "3.8", "3.9", "3.10"], platform = ["linux"] },
-    { value = "tables", if = ["3.7", "3.8", "3.9", "3.10", "3.11"], platform = ["linux"] },
+    { value = "gmpy", if = ["3.8", "3.9", "3.10"], platform = ["linux"] },
+    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11"], platform = ["linux"] },
 ]
 
 [tool.hatch.envs.tests_examples]
@@ -205,7 +203,6 @@ dependencies = [
 
 [[tool.hatch.envs.tests_examples.matrix]]
 python = [
-    "3.7",
     "3.8",
     "3.9",
     "3.10",

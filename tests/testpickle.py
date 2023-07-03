@@ -27,19 +27,19 @@ def test_pickle_simple_class(pickler):
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle])
 def test_pickle_simple_instance(pickler):
-    p1 = P1()
-    s = pickler.dumps(p1)
+    p = P1()
+    s = pickler.dumps(p)
     inst = pickler.loads(s)
-    assert eq(p1, inst)
+    assert eq(p, inst)
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle])
 def test_pickle_simple_instance_modif_after(pickler):
-    p1 = P1()
-    s = pickler.dumps(p1)
-    p1.x = 'modified'
+    p = P1()
+    s = pickler.dumps(p)
+    p.x = 'modified'
     inst = pickler.loads(s)
-    assert not eq(p1, inst)
+    assert not eq(p, inst)
     assert inst.x is None
 
 
@@ -168,4 +168,15 @@ def test_pickle_complex_depends_instance(pickler):
     p = P4()
     s = pickler.dumps(p)
     inst = pickler.loads(s)
+    assert eq(p, inst)
+
+
+def test_issue_757():
+    # https://github.com/holoviz/param/issues/759
+    class P(param.Parameterized):
+        a = param.Parameter()
+
+    p = P()
+    s = cloudpickle.dumps(p)
+    inst = cloudpickle.loads(s)
     assert eq(p, inst)

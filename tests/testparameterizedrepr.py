@@ -225,16 +225,31 @@ def test_pprint_signature_overriden():
 
     class P(param.Parameterized): pass
     class T(param.Parameterized): pass
+    t = T()
 
     try:
         # This is actually setting the signature of param.Parameterized.__init__
         # as P doesn't define __init__
+
+        # bad
         P.__init__.__signature__ = inspect.Signature(
-            [inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY)]
+            [
+                inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
+            ]
         )
 
-        # So T inherits that change
-        t = T()
+        with pytest.raises(KeyError, match="'T.__init__.__signature__' must contain a 'self' Parameter."):
+            t.param.pprint()
+
+        # good
+        P.__init__.__signature__ = inspect.Signature(
+            [
+                inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+                inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
+            ]
+        )
+
         assert t.param.pprint() == 'T()'
+
     finally:
         del param.Parameterized.__init__.__signature__

@@ -2910,8 +2910,10 @@ class Parameters:
 
         changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
         values = self.param.values()
-        spec = getfullargspec(self.__init__)
-        args = spec.args[1:] if ('self' in spec.args and spec.args[0] == 'self') else spec.args
+        spec = getfullargspec(type(self).__init__)
+        if 'self' not in spec.args:
+            raise KeyError(f"'{type(self).__name__}.__init__.__signature__' must contain a 'self' Parameter.")
+        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
 
         if spec.defaults is not None:
             posargs = spec.args[:-len(spec.defaults)]

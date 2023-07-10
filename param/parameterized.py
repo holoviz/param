@@ -1648,13 +1648,9 @@ class ParametersUpdater:
     parameters on exit.
     """
 
-    def __init__(self, parameters):
+    def __init__(self, *, parameters, restore):
         self._parameters = parameters
-        self._restore = {}
-
-    def __call__(self, *args, **kwargs):
-        self._parameters._update(*args, **kwargs)
-        return self
+        self._restore = restore
 
     def __enter__(self):
         return self._restore
@@ -1685,7 +1681,6 @@ class Parameters:
         """
         self_.cls = cls
         self_.self = self
-        self_.update = ParametersUpdater(parameters=self_)
 
     @property
     def _BATCH_WATCH(self_):
@@ -2075,7 +2070,7 @@ class Parameters:
 
     # Bothmethods
 
-    def _update(self_, *args, **kwargs):
+    def update(self_, *args, **kwargs):
         """
         For the given dictionary or iterable or set of param=value
         keyword arguments, sets the corresponding parameter of this
@@ -2084,6 +2079,10 @@ class Parameters:
         May also be used as a context manager to temporarily set and
         then reset parameter values.
         """
+        restore = self_._update(*args, **kwargs)
+        return ParametersUpdater(parameters=self_, restore=restore)
+
+    def _update(self_, *args, **kwargs):
         BATCH_WATCH = self_._BATCH_WATCH
         self_._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
@@ -2107,7 +2106,7 @@ class Parameters:
             self_.self_or_cls.param[tp]._mode = 'set'
 
         values = self_.values()
-        self_.update._restore = {k: values[k] for k, v in kwargs.items() if k in values}
+        restore = {k: values[k] for k, v in kwargs.items() if k in values}
 
         for (k, v) in kwargs.items():
             if k not in self_:
@@ -2128,6 +2127,7 @@ class Parameters:
             p._mode = 'reset'
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
+        return restore
 
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.update`")

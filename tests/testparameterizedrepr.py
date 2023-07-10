@@ -223,33 +223,34 @@ def test_script_repr_parameterized_other():
 def test_pprint_signature_overriden():
     # https://github.com/holoviz/param/issues/785
 
-    class P(param.Parameterized): pass
-    class T(param.Parameterized): pass
+    class P(param.Parameterized):
+        def __init__(self, **params): pass
+
+    class T(P): pass
+
     t = T()
 
-    try:
-        # This is actually setting the signature of param.Parameterized.__init__
-        # as P doesn't define __init__
+    # This is actually setting the signature of param.Parameterized.__init__
+    # as P doesn't define __init__
 
-        # bad
-        P.__init__.__signature__ = inspect.Signature(
-            [
-                inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
-            ]
-        )
+    # bad
+    T.__init__.__signature__ = inspect.Signature(
+        [
+            inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
+        ]
+    )
 
-        with pytest.raises(KeyError, match="'T.__init__.__signature__' must contain a 'self' Parameter."):
-            t.param.pprint()
+    with pytest.raises(KeyError, match=r"'T\.__init__\.__signature__' must contain 'self' as its first Parameter"):
+        t.param.pprint()
 
-        # good
-        P.__init__.__signature__ = inspect.Signature(
-            [
-                inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
-            ]
-        )
+    # good
+    T.__init__.__signature__ = inspect.Signature(
+        [
+            inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+            inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
+        ]
+    )
 
-        assert t.param.pprint() == 'T()'
-
-    finally:
-        del param.Parameterized.__init__.__signature__
+    assert t.param.pprint() == 'T()'
+    # Make sure we haven't messed up with the signature of the base class
+    assert not hasattr(param.Parameterized, '__signature__')

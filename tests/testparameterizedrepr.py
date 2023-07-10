@@ -1,6 +1,7 @@
 """
 Unit test for the repr and pprint of parameterized objects, and for pprint/script_repr.
 """
+import inspect
 import unittest
 
 import param
@@ -217,3 +218,39 @@ def test_script_repr_parameterized_instance(P):
 
 def test_script_repr_parameterized_other():
     assert param.script_repr('2') == "\n\n'2'"
+
+
+def test_pprint_signature_overriden():
+    # https://github.com/holoviz/param/issues/785
+
+    class P(param.Parameterized):
+        def __init__(self, **params): pass
+
+    class T(P): pass
+
+    t = T()
+
+    # This is actually setting the signature of P.__init__
+    # as T doesn't define __init__
+
+    # bad
+    T.__init__.__signature__ = inspect.Signature(
+        [
+            inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
+        ]
+    )
+
+    with pytest.raises(KeyError, match=r"'T\.__init__\.__signature__' must contain 'self' as its first Parameter"):
+        t.param.pprint()
+
+    # good
+    T.__init__.__signature__ = inspect.Signature(
+        [
+            inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+            inspect.Parameter('test', inspect.Parameter.KEYWORD_ONLY),
+        ]
+    )
+
+    assert t.param.pprint() == 'T()'
+    # Make sure we haven't messed up with the signature of the base class
+    assert not hasattr(param.Parameterized, '__signature__')

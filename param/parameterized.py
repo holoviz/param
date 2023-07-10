@@ -1640,12 +1640,9 @@ class Comparator:
         return True
 
 
-class ParametersUpdater:
+class ParametersRestorer:
     """
-    Manages updates to a Parameterized serving both as a callable
-    object to apply permanent updates and a context-manager that
-    applies temporary updates and then restores the original
-    parameters on exit.
+    Context-manager to handle the reset of parameter values after an update.
     """
 
     def __init__(self, *, parameters, restore):
@@ -2078,7 +2075,7 @@ class Parameters:
         then reset parameter values.
         """
         restore = self_._update(*args, **kwargs)
-        return ParametersUpdater(parameters=self_, restore=restore)
+        return ParametersRestorer(parameters=self_, restore=restore)
 
     def _update(self_, *args, **kwargs):
         BATCH_WATCH = self_._BATCH_WATCH

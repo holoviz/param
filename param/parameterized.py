@@ -1658,8 +1658,6 @@ class ParametersUpdater:
     def __exit__(self, exc_type, exc_value, exc_tb):
         try:
             self._parameters._update(self._restore)
-        except Exception as e:
-            raise e
         finally:
             self._restore = {}
 

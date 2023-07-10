@@ -1066,11 +1066,11 @@ class Parameter(_ParameterBase):
     #   object (A.__dict__['p'].default).
     #
     # * If the value of p is set on a1 (e.g. a1.p=2), a1's value of p
-    #   is stored in a1 itself (a1.__dict__['_p_param_value'])
+    #   is stored in a1 itself (a1._param__private.values['p'])
     #
-    # * When a1.p is requested, a1.__dict__['_p_param_value'] is
-    #   returned. When a2.p is requested, '_p_param_value' is not
-    #   found in a2.__dict__, so A.__dict__['p'].default (i.e. A.p) is
+    # * When a1.p is requested, a1._param__private.values['p'] is
+    #   returned. When a2.p is requested, 'p' is not found in
+    #   a1._param__private.values, so A.__dict__['p'].default (i.e. A.p) is
     #   returned instead.
     #
     #
@@ -1078,12 +1078,11 @@ class Parameter(_ParameterBase):
     #
     # * A Parameterized class has a name for the attribute which is
     #   being represented by the Parameter ('p' in the example above);
-    #   in the code, this is called the 'attrib_name'.
+    #   in the code, this is called the 'name'.
     #
     # * When a Parameterized instance has its own local value for a
-    #   parameter, it is stored as '_X_param_value' (where X is the
-    #   attrib_name for the Parameter); in the code, this is called
-    #   the internal_name.
+    #   parameter, it is stored as 'p._param__private.values[X]' where X is the
+    #   name of the Parameter
 
 
     # So that the extra features of Parameters do not require a lot of
@@ -1364,7 +1363,8 @@ class Parameter(_ParameterBase):
 
         If called for a Parameterized instance, set the value of
         this Parameter on that instance (i.e. in the instance's
-        __dict__, under the parameter's internal_name).
+        `values` dictionary located in the private namespace `_param__private`,
+        under the parameter's name).
 
         If the Parameter's constant attribute is True, only allows
         the value to be set for a Parameterized class or on
@@ -1851,8 +1851,8 @@ class Parameters:
         return not Comparator.is_equal(event.old, event.new)
 
     def _instantiate_param(self_, param_obj, dict_=None, key=None):
-        # deepcopy param_obj.default into self.__dict__ (or dict_ if supplied)
-        # under the parameter's _internal_name (or key if supplied)
+        # deepcopy param_obj.default into self._param__private.values (or dict_ if supplied)
+        # under the parameter's name (or key if supplied)
         self = self_.self
         dict_ = dict_ or self._param__private.values
         key = key or param_obj.name
@@ -3629,7 +3629,7 @@ class _InstancePrivate:
     #         parameter_name:
     #             parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
-        Dict of internal_name: value
+        Dict of parameter name: value
     """
 
     __slots__ = [

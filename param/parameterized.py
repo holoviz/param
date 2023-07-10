@@ -1349,7 +1349,7 @@ class Parameter(_ParameterBase):
             # Attribute error when .values does not exist (_ClassPrivate)
             # and KeyError when there's no cached value for this parameter.
             try:
-                result = obj._param__private.values[self._internal_name]
+                result = obj._param__private.values[self.name]
             except (AttributeError, KeyError):
                 result = self.default
         return result
@@ -1403,10 +1403,10 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             elif not obj._param__private.initialized:
-                _old = obj._param__private.values.get(self._internal_name, self.default)
-                obj._param__private.values[self._internal_name] = val
+                _old = obj._param__private.values.get(self.name, self.default)
+                obj._param__private.values[self.name] = val
             else:
-                _old = obj._param__private.values.get(self._internal_name, self.default)
+                _old = obj._param__private.values.get(self.name, self.default)
                 if val is not _old:
                     raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
         else:
@@ -1414,8 +1414,8 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             else:
-                _old = obj._param__private.values.get(self._internal_name, self.default)
-                obj._param__private.values[self._internal_name] = val
+                _old = obj._param__private.values.get(self.name, self.default)
+                obj._param__private.values[self.name] = val
 
         self._post_setter(obj, val)
 
@@ -1855,7 +1855,7 @@ class Parameters:
         # under the parameter's _internal_name (or key if supplied)
         self = self_.self
         dict_ = dict_ or self._param__private.values
-        key = key or param_obj._internal_name
+        key = key or param_obj.name
         if shared_parameters._share:
             param_key = (str(type(self)), param_obj.name)
             if param_key in shared_parameters._shared_cache:
@@ -2430,11 +2430,10 @@ class Parameters:
 
         # Dynamic Parameter...
         else:
-            internal_name = "_%s_param_value" % name
             # TODO: is this always an instance?
-            if isinstance(cls_or_slf, Parameterized) and internal_name in cls_or_slf._param__private.values:
+            if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
-                value = cls_or_slf._param__private.values[internal_name]
+                value = cls_or_slf._param__private.values[name]
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default

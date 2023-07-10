@@ -535,24 +535,24 @@ class TestParameterized(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape(msg)):
             TestPO(not_a_param=2)
 
-    def test_set_context_single_parameter(self):
+    def test_update_context_single_parameter(self):
         t = TestPO(inst='foo')
-        with t.param.set(inst='bar'):
+        with t.param.update(inst='bar'):
             assert t.inst == 'bar'
         assert t.inst == 'foo'
 
-    def test_set_context_does_not_set_other_params(self):
+    def test_update_context_does_not_set_other_params(self):
         t = TestPO(inst='foo')
         events = []
         t.param.watch(events.append, list(t.param), onlychanged=False)
-        with t.param.set(inst='bar'):
+        with t.param.update(inst='bar'):
             pass
         assert len(events) == 2
         assert all(e.name == 'inst' for e in events)
 
-    def test_set_context_multi_parameter(self):
+    def test_update_context_multi_parameter(self):
         t = TestPO(inst='foo', notinst=1)
-        with t.param.set(inst='bar', notinst=2):
+        with t.param.update(inst='bar', notinst=2):
             assert t.inst == 'bar'
             assert t.notinst == 2
         assert t.inst == 'foo'

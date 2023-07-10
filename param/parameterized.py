@@ -1774,18 +1774,15 @@ class Parameters:
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
-
     @as_uninitialized
     def _set_name(self_, name):
         self = self_.param.self
         self.name=name
 
-
     @as_uninitialized
     def _generate_name(self_):
         self = self_.param.self
         self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
-
 
     @as_uninitialized
     def _setup_params(self_,**params):
@@ -1999,7 +1996,6 @@ class Parameters:
         cls = self_.cls
         setattr(cls,param_name,value)
 
-
     def add_parameter(self_, param_name, param_obj):
         """
         Add a new Parameter object into this object's class.
@@ -2050,48 +2046,68 @@ class Parameters:
 
     # Bothmethods
 
+    @contextmanager
     def update(self_, *args, **kwargs):
         """
-        For the given dictionary or iterable or set of param=value keyword arguments,
-        sets the corresponding parameter of this object or class to the given value.
+        For the given dictionary or iterable or set of param=value
+        keyword arguments, sets the corresponding parameter of this
+        object or class to the given value.
+
+        May also be used as a context manager to temporarily set and
+        then reset parameter values.
         """
-        BATCH_WATCH = self_.self_or_cls.param._BATCH_WATCH
-        self_.self_or_cls.param._BATCH_WATCH = True
+        BATCH_WATCH = self_._BATCH_WATCH
+        self_._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
+        inst_name = self_or_cls.name
         if args:
             if len(args) == 1 and not kwargs:
                 kwargs = args[0]
             else:
-                self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("%s.update accepts *either* an iterable or key=value pairs, not both" %
-                                 (self_or_cls.name))
+                self_._BATCH_WATCH = False
+                raise ValueError(
+                    f"{inst_name}.update accepts *either* an iterable "
+                    "or key=value pairs, not both."
+                )
 
-        trigger_params = [k for k in kwargs
-                          if ((k in self_.self_or_cls.param) and
-                              hasattr(self_.self_or_cls.param[k], '_autotrigger_value'))]
+        trigger_params = [
+            k for k in kwargs
+            if k in self_ and hasattr(self_[k], '_autotrigger_value')
+        ]
 
         for tp in trigger_params:
             self_.self_or_cls.param[tp]._mode = 'set'
 
+        values = self_.values()
+        restore = {k: values[k] for k, v in kwargs.items() if k in values}
+
         for (k, v) in kwargs.items():
-            if k not in self_or_cls.param:
-                self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError(f"'{k}' is not a parameter of {self_or_cls.name}")
+            if k not in self_:
+                self_._BATCH_WATCH = False
+                self_.update(restore)
+                raise ValueError(f"{k!r} is not a parameter of {inst_name}")
             try:
                 setattr(self_or_cls, k, v)
             except:
-                self_.self_or_cls.param._BATCH_WATCH = False
+                self_._BATCH_WATCH = False
+                self_.update(restore)
                 raise
 
-        self_.self_or_cls.param._BATCH_WATCH = BATCH_WATCH
+        self_._BATCH_WATCH = BATCH_WATCH
         if not BATCH_WATCH:
             self_._batch_call_watchers()
 
         for tp in trigger_params:
-            p = self_.self_or_cls.param[tp]
+            p = self_[tp]
             p._mode = 'reset'
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
+
+        yield
+
+        # Reset parameters if run as context manager
+        for (k, v) in restore.items():
+            setattr(self_or_cls, k, v)
 
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.update`")
@@ -2116,20 +2132,6 @@ class Parameters:
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
         return self_.update(kwargs)
-
-    @contextmanager
-    def set(self_, **kwargs):
-        """
-        Context manager that temporarily sets parameter values and then
-        restores the original values on exit.
-        """
-        values = self_.values()
-        restore = {k: values[k] for k, v in kwargs.items() if k in values}
-        try:
-            self_.update(kwargs)
-            yield
-        finally:
-            self_.update(restore)
 
     def objects(self_, instance=True):
         """

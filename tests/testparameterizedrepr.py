@@ -230,8 +230,8 @@ def test_pprint_signature_overriden():
 
     t = T()
 
-    # This is actually setting the signature of param.Parameterized.__init__
-    # as P doesn't define __init__
+    # This is actually setting the signature of P.__init__
+    # as T doesn't define __init__
 
     # bad
     T.__init__.__signature__ = inspect.Signature(

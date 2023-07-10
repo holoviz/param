@@ -1640,6 +1640,34 @@ class Comparator:
         return True
 
 
+class ParametersUpdater:
+    """
+    Manages updates to a Parameterized serving both as a callable
+    object to apply permanent updates and a context-manager that
+    applies temporary updates and then restores the original
+    parameters on exit.
+    """
+
+    def __init__(self, parameters):
+        self._parameters = parameters
+        self._restore = {}
+
+    def __call__(self, *args, **kwargs):
+        self._parameters._update(*args, **kwargs)
+        return self
+
+    def __enter__(self):
+        return self._restore
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        try:
+            self._parameters._update(self._restore)
+        except Exception as e:
+            raise e
+        finally:
+            self._restore = {}
+
+
 class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
@@ -1657,6 +1685,7 @@ class Parameters:
         """
         self_.cls = cls
         self_.self = self
+        self_.update = ParametersUpdater(parameters=self_)
 
     @property
     def _BATCH_WATCH(self_):
@@ -2046,8 +2075,7 @@ class Parameters:
 
     # Bothmethods
 
-    @contextmanager
-    def update(self_, *args, **kwargs):
+    def _update(self_, *args, **kwargs):
         """
         For the given dictionary or iterable or set of param=value
         keyword arguments, sets the corresponding parameter of this
@@ -2079,18 +2107,16 @@ class Parameters:
             self_.self_or_cls.param[tp]._mode = 'set'
 
         values = self_.values()
-        restore = {k: values[k] for k, v in kwargs.items() if k in values}
+        self_.update._restore = {k: values[k] for k, v in kwargs.items() if k in values}
 
         for (k, v) in kwargs.items():
             if k not in self_:
                 self_._BATCH_WATCH = False
-                self_.update(restore)
                 raise ValueError(f"{k!r} is not a parameter of {inst_name}")
             try:
                 setattr(self_or_cls, k, v)
             except:
                 self_._BATCH_WATCH = False
-                self_.update(restore)
                 raise
 
         self_._BATCH_WATCH = BATCH_WATCH
@@ -2102,12 +2128,6 @@ class Parameters:
             p._mode = 'reset'
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
-
-        yield
-
-        # Reset parameters if run as context manager
-        for (k, v) in restore.items():
-            setattr(self_or_cls, k, v)
 
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.update`")

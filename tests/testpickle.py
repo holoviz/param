@@ -1,9 +1,12 @@
 import pickle
 
-import cloudpickle
 import param
 import pytest
 
+try:
+    import cloudpickle
+except ImportError:
+    cloudpickle = None
 
 def eq(o1, o2):
     if not sorted(o1.param) == sorted(o2.param):
@@ -15,17 +18,24 @@ def eq(o1, o2):
     return True
 
 
+@pytest.fixture
+def pickler(request):
+    if request.param is None:
+        pytest.skip('cloudpickle not available')
+    return request.param
+
+
 class P1(param.Parameterized):
     x = param.Parameter()
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_simple_class(pickler):
     s = pickler.dumps(P1)
     cls = pickler.loads(s)
     assert cls is P1
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_simple_instance(pickler):
     p = P1()
     s = pickler.dumps(p)
@@ -33,7 +43,7 @@ def test_pickle_simple_instance(pickler):
     assert eq(p, inst)
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_simple_instance_modif_after(pickler):
     p = P1()
     s = pickler.dumps(p)
@@ -77,14 +87,14 @@ class P2(param.Parameterized):
     af = param.Array()
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_all_parameters_class(pickler):
     s = pickler.dumps(P2)
     cls = pickler.loads(s)
     assert cls is P2
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_all_parameters_instance(pickler):
     p = P2()
     s = pickler.dumps(p)
@@ -101,14 +111,14 @@ class P3(param.Parameterized):
         self.count += 1
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_depends_watch_class(pickler):
     s = pickler.dumps(P3)
     cls = pickler.loads(s)
     assert cls is P3
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_depends_watch_instance(pickler):
     # https://github.com/holoviz/param/issues/757
     p = P3()
@@ -156,14 +166,14 @@ class P4(param.Parameterized):
         self.nested_count += 1
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_complex_depends_class(pickler):
     s = pickler.dumps(P4)
     cls = pickler.loads(s)
     assert cls is P4
 
 
-@pytest.mark.parametrize('pickler', [cloudpickle, pickle])
+@pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
 def test_pickle_complex_depends_instance(pickler):
     p = P4()
     s = pickler.dumps(p)
@@ -171,6 +181,7 @@ def test_pickle_complex_depends_instance(pickler):
     assert eq(p, inst)
 
 
+@pytest.mark.skipif(cloudpickle is None, reason='cloudpickle not available')
 def test_issue_757():
     # https://github.com/holoviz/param/issues/759
     class P(param.Parameterized):

@@ -1160,6 +1160,32 @@ class TestParamDepends:
         p.x = 1
         assert count == 1
 
+    def test_param_depends_subobject_before_super_init(self):
+        count = 0
+
+        class X(param.Parameterized):
+            p = param.Parameter()
+
+        class Y(param.Parameterized):
+
+            def __init__(self, **params):
+                self.x = X()
+                super().__init__(**params)
+
+            # Check that creating this class doesn't error when resolving x.p
+            @param.depends('x.p')
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        y = Y()
+        pinfos = y.param.method_dependencies('cb')
+        assert len(pinfos) == 1
+        pinfo = pinfos[0]
+        assert pinfo.inst == y.x
+        assert pinfo.cls == X
+        assert pinfo.name == 'p'
+
 
 class TestParamDependsFunction:
 
@@ -1247,17 +1273,23 @@ class TestParamDependsFunction:
 
 
 def test_misspelled_parameter_in_depends():
-    class Example(param.Parameterized):
-        xlim = param.Range((0, 10), bounds=(0, 100))
-
-        @param.depends("tlim")  # <- Misspelled xlim
-        def test(self):
-            return True
-
-    example = Example()
     with pytest.raises(AttributeError, match="Attribute 'tlim' could not be resolved on"):
-        # Simulating: pn.panel(example.test)
-        example.param.method_dependencies(example.test.__name__)
+        class Example(param.Parameterized):
+            xlim = param.Range((0, 10), bounds=(0, 100))
+
+            @param.depends("tlim")  # <- Misspelled xlim
+            def test(self):
+                return True
+
+
+def test_misspelled_parameter_in_depends_non_Parameter():
+    with pytest.raises(AttributeError, match="Attribute 'foo' could not be resolved on"):
+        class Example(param.Parameterized):
+            foo = 1
+
+            @param.depends("foo")  # <- Not a Parameter
+            def test(self):
+                return True
 
 
 def test_misspelled_parameter_in_depends_watch():

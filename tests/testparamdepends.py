@@ -1160,6 +1160,32 @@ class TestParamDepends:
         p.x = 1
         assert count == 1
 
+    def test_param_depends_subobject_before_super_init(self):
+        count = 0
+
+        class X(param.Parameterized):
+            p = param.Parameter()
+
+        class Y(param.Parameterized):
+
+            def __init__(self, **params):
+                self.x = X()
+                super().__init__(**params)
+
+            # Check that creating this class doesn't error when resolving x.p
+            @param.depends('x.p')
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        y = Y()
+        pinfos = y.param.method_dependencies('cb')
+        assert len(pinfos) == 1
+        pinfo = pinfos[0]
+        assert pinfo.inst == y.x
+        assert pinfo.cls == X
+        assert pinfo.name == 'p'
+
 
 class TestParamDependsFunction:
 

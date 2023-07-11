@@ -4,6 +4,7 @@ import re
 import traceback
 import warnings
 
+from collections import defaultdict
 from textwrap import dedent
 from threading import get_ident
 from collections import abc
@@ -186,3 +187,65 @@ def _dict_update(dictionary, **kwargs):
     d = dictionary.copy()
     d.update(kwargs)
     return d
+
+
+def full_groupby(l, key=lambda x: x):
+    """
+    Groupby implementation which does not require a prior sort
+    """
+    d = defaultdict(list)
+    for item in l:
+        d[key(item)].append(item)
+    return d.items()
+
+
+def iscoroutinefunction(function):
+    """
+    Whether the function is an asynchronous coroutine function.
+    """
+    if not hasattr(inspect, 'iscoroutinefunction'):
+        return False
+    import asyncio
+    try:
+        return (
+            inspect.isasyncgenfunction(function) or
+            asyncio.iscoroutinefunction(function)
+        )
+    except AttributeError:
+        return False
+
+
+def flatten(line):
+    """
+    Flatten an arbitrarily nested sequence.
+
+    Inspired by: pd.core.common.flatten
+
+    Parameters
+    ----------
+    line : sequence
+        The sequence to flatten
+
+    Notes
+    -----
+    This only flattens list, tuple, and dict sequences.
+
+    Returns
+    -------
+    flattened : generator
+    """
+    for element in line:
+        if any(isinstance(element, tp) for tp in (list, tuple, dict)):
+            yield from flatten(element)
+        else:
+            yield element
+
+
+def accept_arguments(f):
+    """
+    Decorator for decorators that accept arguments
+    """
+    @functools.wraps(f)
+    def _f(*args, **kwargs):
+        return lambda actual_f: f(actual_f, *args, **kwargs)
+    return _f

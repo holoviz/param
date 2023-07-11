@@ -535,6 +535,83 @@ class TestParameterized(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape(msg)):
             TestPO(not_a_param=2)
 
+    def test_update_class(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        p = P()
+
+        P.param.update(x=10)
+
+        assert P.x == p.x == 10
+
+    def test_update_context_class(self):
+        class P(param.Parameterized):
+            x = param.Parameter(10)
+
+        p = P()
+
+        with P.param.update(x=20):
+            assert P.x == p.x == 20
+
+        assert P.x == p.x == 10
+
+    def test_update_class_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        events = []
+        P.param.watch(events.append, 'x')
+
+        P.param.update(x=10)
+
+        assert len(events) == 1
+        assert events[0].name == 'x' and events[0].new == 10
+
+    def test_update_context_class_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter(0)
+
+        events = []
+        P.param.watch(events.append, 'x')
+
+        with P.param.update(x=20):
+            pass
+
+        assert len(events) == 2
+        assert events[0].name == 'x' and events[0].new == 20
+        assert events[1].name == 'x' and events[1].new == 0
+
+    def test_update_instance_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        p = P()
+
+        events = []
+        p.param.watch(events.append, 'x')
+
+        p.param.update(x=10)
+
+        assert len(events) == 1
+        assert events[0].name == 'x' and events[0].new == 10
+
+    def test_update_context_instance_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter(0)
+
+        p = P()
+
+        events = []
+        p.param.watch(events.append, 'x')
+
+        with p.param.update(x=20):
+            pass
+
+        assert len(events) == 2
+        assert events[0].name == 'x' and events[0].new == 20
+        assert events[1].name == 'x' and events[1].new == 0
+
     def test_update_error_dict_and_kwargs_instance(self):
         t = TestPO(inst='foo')
         with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):

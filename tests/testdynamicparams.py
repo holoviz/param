@@ -110,7 +110,7 @@ class TestDynamicParameterBasics(TestDynamicParameters):
     def test_setting_y_param_numbergen(self):
         self.TestPO2.y=numbergen.UniformRandom()  # now the Parameter instantiate should be true
         t9 = self.TestPO2()
-        self.assertEqual('_y_param_value' in t9.__dict__, True)
+        self.assertEqual('y' in t9._param__private.values, True)
 
     def test_shared_numbergen(self):
         """

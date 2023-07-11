@@ -449,6 +449,32 @@ class TestParameterized(unittest.TestCase):
         with pytest.raises(TypeError, match="Read-only parameter 'x' cannot be modified"):
             P()
 
+    def test_parameter_constant_iadd_allowed(self):
+        # Testing https://github.com/holoviz/param/pull/400
+        class P(param.Parameterized):
+
+            list = param.List([], constant=True)
+
+        p = P()
+        p.list += [1, 2, 3]
+
+        # Just to make sure that normal setting is still forbidden
+        with pytest.raises(TypeError, match="Constant parameter 'list' cannot be modified"):
+            p.list = [0]
+
+    def test_parameter_constant_same_notallowed(self):
+        L = [0, 1]
+        class P(param.Parameterized):
+
+            list = param.List(L, constant=True)
+
+        p = P()
+
+        # instantiate is set to true internally so a deepcopy is made of L,
+        # it's no longer the same object
+        with pytest.raises(TypeError, match="Constant parameter 'list' cannot be modified"):
+            p.list = L
+
     def test_values(self):
         """Basic tests of params() method."""
 

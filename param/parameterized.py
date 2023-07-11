@@ -1643,7 +1643,7 @@ class Comparator:
         return True
 
 
-class ParametersRestorer:
+class _ParametersRestorer:
     """
     Context-manager to handle the reset of parameter values after an update.
     """
@@ -2079,7 +2079,7 @@ class Parameters:
         then reset parameter values.
         """
         restore = self_._update(*args, **kwargs)
-        return ParametersRestorer(parameters=self_, restore=restore)
+        return _ParametersRestorer(parameters=self_, restore=restore)
 
     def _update(self_, *args, **kwargs):
         BATCH_WATCH = self_._BATCH_WATCH

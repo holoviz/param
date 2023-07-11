@@ -3615,6 +3615,9 @@ class _ClassPrivate:
         Whethe the class has been renamed by a super class
     params: dict
         Dict of parameter_name:parameter
+    values: dict
+        Dict of parameter_name:value, populated when a Parameter is set before
+        super().__init__ is called.
     """
 
     __slots__ = [
@@ -3622,6 +3625,7 @@ class _ClassPrivate:
         'disable_instance_params',
         'renamed',
         'params',
+        'values',
     ]
 
     def __init__(
@@ -3630,6 +3634,7 @@ class _ClassPrivate:
         disable_instance_params=False,
         renamed=False,
         params=None,
+        values=None,
     ):
         if parameters_state is None:
             parameters_state = {
@@ -3642,6 +3647,7 @@ class _ClassPrivate:
         self.disable_instance_params = disable_instance_params
         self.renamed = renamed
         self.params = {} if params is None else params
+        self.values = {} if values is None else params
 
 
 class _InstancePrivate:
@@ -3744,7 +3750,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __init__(self, **params):
         global object_count
 
-        self._param__private = _InstancePrivate()
+        self._param__private = _InstancePrivate(
+            values=self._param__private.values.copy()
+        )
         self._param_watchers = {}
 
         # Skip generating a custom instance name when a class in the hierarchy

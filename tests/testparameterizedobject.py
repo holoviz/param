@@ -393,6 +393,62 @@ class TestParameterized(unittest.TestCase):
         with self.assertRaises(ValueError):
             TestPOValidation.value = 10
 
+    def test_instantiation_set_before_super(self):
+        count = 0
+        class P(param.Parameterized):
+
+            x = param.Parameter(0)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+            @param.depends('x', watch=True)
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        p = P()
+
+        assert p.x == 1
+        assert count == 0
+
+    @pytest.mark.xfail(
+        raises=AttributeError,
+        reason='Behavior not defined when setting a constant parameter before calling super()',
+    )
+    def test_instantiation_set_before_super_constant(self):
+        count = 0
+        class P(param.Parameterized):
+
+            x = param.Parameter(0, constant=True)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+            @param.depends('x', watch=True)
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        p = P()
+
+        assert p.x == 1
+        assert count == 0
+
+    def test_instantiation_set_before_super_readonly(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter(0, readonly=True)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+        with pytest.raises(TypeError, match="Read-only parameter 'x' cannot be modified"):
+            P()
+
     def test_values(self):
         """Basic tests of params() method."""
 

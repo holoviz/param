@@ -59,10 +59,10 @@ As you can see, the Parameters defined here work precisely like any other Python
 Once you've declared your parameters, a whole wealth of features and better behavior is now unlocked! For instance, what happens if a user tries to supply some inappropriate data? With Param, such errors will be caught immediately:
 
 ```{code-block} python
->>> ParamClass(a="four")
+>>> B(a="four")
 ValueError: Parameter 'a' must be an integer.
 
->>> o2 = ParamClass()
+>>> o2 = B()
 >>> o2.b = -5
 ValueError: Parameter 'b' must be at least 0
 ```
@@ -131,4 +131,4 @@ Panel and other GUI libraries can of course explicitly instantiate widgets, so w
 
 ## Learning more
 
-The [User Guide](user_guide/index) goes through the major features of Param and how to use them. If you are interested in GUI programming, also see the [Param guide](https://panel.holoviz.org/user_guide/Param.html) in Panel, and the rest of the [Panel](https://panel.holoviz.org) docs. Have fun making your life better with Param!
+The [User Guide](user_guide/index) goes through the major features of Param and how to use them. If you are interested in GUI programming, also see the [Param How-to guides](https://panel.holoviz.org/how_to/param/index.html) in Panel, and the rest of the [Panel](https://panel.holoviz.org) docs. Have fun making your life better with Param!

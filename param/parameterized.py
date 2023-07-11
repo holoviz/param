@@ -3751,7 +3751,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         global object_count
 
         self._param__private = _InstancePrivate(
-            values=self._param__private.values.copy()
+            values=type(self)._param__private.values.copy()
         )
         self._param_watchers = {}
 

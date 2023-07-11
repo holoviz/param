@@ -27,3 +27,7 @@ coverage.xml
 
 # Versionning
 param/_version.py
+
+# asv benchmark
+benchmarks/.asv
+benchmarks/param

@@ -1654,6 +1654,25 @@ class Comparator:
         return True
 
 
+class _ParametersRestorer:
+    """
+    Context-manager to handle the reset of parameter values after an update.
+    """
+
+    def __init__(self, *, parameters, restore):
+        self._parameters = parameters
+        self._restore = restore
+
+    def __enter__(self):
+        return self._restore
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        try:
+            self._parameters._update(self._restore)
+        finally:
+            self._restore = {}
+
+
 class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
@@ -1788,18 +1807,15 @@ class Parameters:
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
-
     @as_uninitialized
     def _set_name(self_, name):
         self = self_.param.self
         self.name=name
 
-
     @as_uninitialized
     def _generate_name(self_):
         self = self_.param.self
         self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
-
 
     @as_uninitialized
     def _setup_params(self_,**params):
@@ -2013,7 +2029,6 @@ class Parameters:
         cls = self_.cls
         setattr(cls,param_name,value)
 
-
     def add_parameter(self_, param_name, param_obj):
         """
         Add a new Parameter object into this object's class.
@@ -2063,46 +2078,61 @@ class Parameters:
 
     def update(self_, *args, **kwargs):
         """
-        For the given dictionary or iterable or set of param=value keyword arguments,
-        sets the corresponding parameter of this object or class to the given value.
+        For the given dictionary or iterable or set of param=value
+        keyword arguments, sets the corresponding parameter of this
+        object or class to the given value.
+
+        May also be used as a context manager to temporarily set and
+        then reset parameter values.
         """
-        BATCH_WATCH = self_.self_or_cls.param._BATCH_WATCH
-        self_.self_or_cls.param._BATCH_WATCH = True
+        restore = self_._update(*args, **kwargs)
+        return _ParametersRestorer(parameters=self_, restore=restore)
+
+    def _update(self_, *args, **kwargs):
+        BATCH_WATCH = self_._BATCH_WATCH
+        self_._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
             if len(args) == 1 and not kwargs:
                 kwargs = args[0]
             else:
-                self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("%s.update accepts *either* an iterable or key=value pairs, not both" %
-                                 (self_or_cls.name))
+                self_._BATCH_WATCH = False
+                raise ValueError(
+                    f"{self_.cls.__name__}.param.update accepts *either* an iterable "
+                    "or key=value pairs, not both."
+                )
 
-        trigger_params = [k for k in kwargs
-                          if ((k in self_.self_or_cls.param) and
-                              hasattr(self_.self_or_cls.param[k], '_autotrigger_value'))]
+        trigger_params = [
+            k for k in kwargs
+            if k in self_ and hasattr(self_[k], '_autotrigger_value')
+        ]
 
         for tp in trigger_params:
             self_.self_or_cls.param[tp]._mode = 'set'
 
+        values = self_.values()
+        restore = {k: values[k] for k, v in kwargs.items() if k in values}
+
         for (k, v) in kwargs.items():
-            if k not in self_or_cls.param:
-                self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError(f"'{k}' is not a parameter of {self_or_cls.name}")
+            if k not in self_:
+                self_._BATCH_WATCH = False
+                raise ValueError(f"{k!r} is not a parameter of {self_.cls.__name__}")
             try:
                 setattr(self_or_cls, k, v)
             except:
-                self_.self_or_cls.param._BATCH_WATCH = False
+                self_._BATCH_WATCH = False
                 raise
 
-        self_.self_or_cls.param._BATCH_WATCH = BATCH_WATCH
+        self_._BATCH_WATCH = BATCH_WATCH
         if not BATCH_WATCH:
             self_._batch_call_watchers()
 
         for tp in trigger_params:
-            p = self_.self_or_cls.param[tp]
+            p = self_[tp]
             p._mode = 'reset'
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
+        return restore
 
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.update`")
@@ -2127,7 +2157,6 @@ class Parameters:
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
         return self_.update(kwargs)
-
 
     def objects(self_, instance=True):
         """
@@ -2918,8 +2947,10 @@ class Parameters:
 
         changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
         values = self.param.values()
-        spec = getfullargspec(self.__init__)
-        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
+        spec = getfullargspec(type(self).__init__)
+        if 'self' not in spec.args or spec.args[0] != 'self':
+            raise KeyError(f"'{type(self).__name__}.__init__.__signature__' must contain 'self' as its first Parameter.")
+        args = spec.args[1:]
 
         if spec.defaults is not None:
             posargs = spec.args[:-len(spec.defaults)]
@@ -3034,12 +3065,11 @@ class ParameterizedMetaclass(type):
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            if not watch:
-                continue
             minfo = MInfo(cls=mcs, inst=None, name=name,
                           method=method)
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
-            _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
+            if watch:
+                _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
 
         # Resolve dependencies in class hierarchy
         _inherited = []
@@ -3816,11 +3846,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __str__(self):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
-
-    @bothmethod
-    @_recursive_repr()
-    def _repr_html_(self_or_cls, open=True):
-        return _parameterized_repr_html(self_or_cls, open)
 
 
 def print_all_param_defaults():

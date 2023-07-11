@@ -3,7 +3,6 @@ Unit test for param.depends.
 """
 
 import asyncio
-import unittest
 
 import param
 import pytest
@@ -12,10 +11,33 @@ from param.parameterized import _parse_dependency_spec
 
 
 def async_executor(func):
+    # Using nest_asyncio to simplify the async_executor implementation
+    import nest_asyncio
+    nest_asyncio.apply()
     asyncio.run(func())
 
 
-class TestDependencyParser(unittest.TestCase):
+@pytest.fixture
+def use_async_executor():
+    param.parameterized.async_executor = async_executor
+    try:
+        yield
+    finally:
+        param.parameterized.async_executor = None
+
+
+@pytest.fixture
+def class_name(request):
+    if request.param.startswith('AP'):
+        param.parameterized.async_executor = async_executor
+    try:
+        yield request.param
+    finally:
+        if request.param.startswith('AP'):
+            param.parameterized.async_executor = None
+
+
+class TestDependencyParser:
 
     def test_parameter_value(self):
         obj, attr, what = _parse_dependency_spec('parameter')
@@ -54,7 +76,7 @@ class TestDependencyParser(unittest.TestCase):
         assert what == 'constant'
 
 
-class TestParamDependsSubclassing(unittest.TestCase):
+class TestParamDependsSubclassing:
 
     def test_param_depends_override_depends_subset(self):
 
@@ -157,9 +179,9 @@ class TestParamDependsSubclassing(unittest.TestCase):
 
 
 
-class TestParamDepends(unittest.TestCase):
+class TestParamDepends:
 
-    def setUp(self):
+    def setup_method(self):
 
         class P(param.Parameterized):
             a = param.Parameter()
@@ -196,14 +218,59 @@ class TestParamDepends(unittest.TestCase):
             def nested(self):
                 self.nested_count += 1
 
+        class AP(param.Parameterized):
+            a = param.Parameter()
+            b = param.Parameter()
+
+            single_count = param.Integer()
+            attr_count = param.Integer()
+            single_nested_count = param.Integer()
+            double_nested_count = param.Integer()
+            nested_attr_count = param.Integer()
+            nested_count = param.Integer()
+
+            @param.depends('a', watch=True)
+            async def single_parameter(self):
+                self.single_count += 1
+
+            @param.depends('a:constant', watch=True)
+            async def constant(self):
+                self.attr_count += 1
+
+            @param.depends('b.a', watch=True)
+            async def single_nested(self):
+                self.single_nested_count += 1
+
+            @param.depends('b.b.a', watch=True)
+            async def double_nested(self):
+                self.double_nested_count += 1
+
+            @param.depends('b.a:constant', watch=True)
+            async def nested_attribute(self):
+                self.nested_attr_count += 1
+
+            @param.depends('b.param', watch=True)
+            async def nested(self):
+                self.nested_count += 1
+
+
         class P2(param.Parameterized):
 
             @param.depends(P.param.a)
             def external_param(self, a):
                 pass
 
+        class AP2(param.Parameterized):
+
+            @param.depends(AP.param.a)
+            async def external_param(self, a):
+                pass
+
+
         self.P = P
+        self.AP = AP
         self.P2 = P2
+        self.AP2 = AP2
 
     def test_param_depends_on_init(self):
         class A(param.Parameterized):
@@ -243,6 +310,28 @@ class TestParamDepends(unittest.TestCase):
         b.a = A(c=1)
         assert b.test_count == 0
 
+    @pytest.mark.usefixtures("use_async_executor")
+    def test_param_nested_depends_value_unchanged_async(self):
+        class A(param.Parameterized):
+
+            c = param.Parameter()
+
+            d = param.Parameter()
+
+        class B(param.Parameterized):
+
+            a = param.Parameter()
+
+            test_count = param.Integer()
+
+            @param.depends('a.c', 'a.d', watch=True)
+            async def test(self):
+                self.test_count += 1
+
+        b = B(a=A(c=1))
+        b.a = A(c=1)
+        assert b.test_count == 0
+
     def test_param_nested_at_class_definition(self):
 
         class A(param.Parameterized):
@@ -259,6 +348,39 @@ class TestParamDepends(unittest.TestCase):
 
             @param.depends('a.c', 'a.d', watch=True)
             def test(self):
+                self.test_count += 1
+
+        b = B()
+
+        b.a.c = 1
+        assert b.test_count == 1
+
+        b.a.param.update(c=2, d=1)
+        assert b.test_count == 2
+
+        b.a = A()
+        assert b.test_count == 3
+
+        B.a.c = 5
+        assert b.test_count == 3
+
+    @pytest.mark.usefixtures("use_async_executor")
+    def test_param_nested_at_class_definition_async(self):
+
+        class A(param.Parameterized):
+
+            c = param.Parameter()
+
+            d = param.Parameter()
+
+        class B(param.Parameterized):
+
+            a = param.Parameter(A())
+
+            test_count = param.Integer()
+
+            @param.depends('a.c', 'a.d', watch=True)
+            async def test(self):
                 self.test_count += 1
 
         b = B()
@@ -296,6 +418,28 @@ class TestParamDepends(unittest.TestCase):
         b.a = A(c=1, name='A')
         assert b.test_count == 0
 
+    @pytest.mark.usefixtures("use_async_executor")
+    def test_param_nested_depends_expands_async(self):
+        class A(param.Parameterized):
+
+            c = param.Parameter()
+
+            d = param.Parameter()
+
+        class B(param.Parameterized):
+
+            a = param.Parameter()
+
+            test_count = param.Integer()
+
+            @param.depends('a.param', watch=True)
+            async def test(self):
+                self.test_count += 1
+
+        b = B(a=A(c=1, name='A'))
+        b.a = A(c=1, name='A')
+        assert b.test_count == 0
+
     def test_param_depends_class_default_dynamic(self):
 
         class A(param.Parameterized):
@@ -318,77 +462,104 @@ class TestParamDepends(unittest.TestCase):
         b.a = A()
         assert b.nested_count == 2
 
-    def test_param_instance_depends_dynamic_single_nested(self):
-        inst = self.P()
-        pinfos = inst.param.method_dependencies('single_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 0)
+    @pytest.mark.usefixtures("use_async_executor")
+    def test_param_depends_class_default_dynamic_async(self):
 
-        inst.b = self.P()
+        class A(param.Parameterized):
+            c = param.Parameter()
+
+        class B(param.Parameterized):
+            a = param.Parameter(A())
+
+            nested_count = param.Integer()
+
+            @param.depends('a.c', watch=True)
+            async def nested(self):
+                self.nested_count += 1
+
+        b = B()
+
+        b.a.c = 1
+        assert b.nested_count == 1
+
+        b.a = A()
+        assert b.nested_count == 2
+
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_single_nested(self, class_name):
+        inst = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('single_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 0
+
+        inst.b = getattr(self, class_name)()
+        pinfos = inst.param.method_dependencies('single_nested', intermediate=True)
+        assert len(pinfos) == 2
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         pinfo2 = pinfos[(inst.b, 'a')]
-        self.assertIs(pinfo2.cls, self.P)
-        self.assertIs(pinfo2.inst, inst.b)
-        self.assertEqual(pinfo2.name, 'a')
-        self.assertEqual(pinfo2.what, 'value')
+        assert pinfo2.cls is getattr(self, class_name)
+        assert pinfo2.inst is inst.b
+        assert pinfo2.name == 'a'
+        assert pinfo2.what == 'value'
 
         assert inst.single_nested_count == 1
 
         inst.b.a = 1
         assert inst.single_nested_count == 2
 
-    def test_param_instance_depends_dynamic_single_nested_initialized_no_intermediates(self):
-        init_b = self.P()
-        inst = self.P(b=init_b)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_single_nested_initialized_no_intermediates(self, class_name):
+        init_b = getattr(self, class_name)()
+        inst = getattr(self, class_name)(b=init_b)
         pinfos = inst.param.method_dependencies('single_nested', intermediate=False)
-        self.assertEqual(len(pinfos), 1)
+        assert len(pinfos) == 1
 
         assert pinfos[0].inst is init_b
         assert pinfos[0].name == 'a'
 
-        new_b = self.P()
+        new_b = getattr(self, class_name)()
         inst.b = new_b
 
         pinfos = inst.param.method_dependencies('single_nested', intermediate=False)
-        self.assertEqual(len(pinfos), 1)
+        assert len(pinfos) == 1
         assert pinfos[0].inst is new_b
         assert pinfos[0].name == 'a'
 
-    def test_param_instance_depends_dynamic_single_nested_initialized_only_intermediates(self):
-        init_b = self.P()
-        inst = self.P(b=init_b)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_single_nested_initialized_only_intermediates(self, class_name):
+        init_b = getattr(self, class_name)()
+        inst = getattr(self, class_name)(b=init_b)
         pinfos = inst.param.method_dependencies('single_nested', intermediate='only')
-        self.assertEqual(len(pinfos), 1)
+        assert len(pinfos) == 1
 
         assert pinfos[0].inst is inst
         assert pinfos[0].name == 'b'
 
-    def test_param_instance_depends_dynamic_single_nested_initialized(self):
-        init_b = self.P()
-        inst = self.P(b=init_b)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_single_nested_initialized(self, class_name):
+        init_b = getattr(self, class_name)()
+        inst = getattr(self, class_name)(b=init_b)
         pinfos = inst.param.method_dependencies('single_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 2
 
-        inst.b = self.P()
+        inst.b = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('single_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 2
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        pinfo.cls is getattr(self, class_name)
+        pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         pinfo2 = pinfos[(inst.b, 'a')]
-        self.assertIs(pinfo2.cls, self.P)
-        self.assertIs(pinfo2.inst, inst.b)
-        self.assertEqual(pinfo2.name, 'a')
-        self.assertEqual(pinfo2.what, 'value')
+        pinfo2.cls is getattr(self, class_name)
+        pinfo2.inst is inst.b
+        assert pinfo2.name == 'a'
+        assert pinfo2.what == 'value'
 
         assert inst.single_nested_count == 0
 
@@ -399,30 +570,31 @@ class TestParamDepends(unittest.TestCase):
         init_b.a = 2
         assert inst.single_nested_count == 1
 
-    def test_param_instance_depends_dynamic_double_nested(self):
-        inst = self.P()
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_double_nested(self, class_name):
+        inst = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('double_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 0)
+        assert len(pinfos) == 0
 
-        inst.b = self.P(b=self.P())
+        inst.b = getattr(self, class_name)(b=getattr(self, class_name)())
         pinfos = inst.param.method_dependencies('double_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 3)
+        assert len(pinfos) == 3
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         pinfo2 = pinfos[(inst.b, 'b')]
-        self.assertIs(pinfo2.cls, self.P)
-        self.assertIs(pinfo2.inst, inst.b)
-        self.assertEqual(pinfo2.name, 'b')
-        self.assertEqual(pinfo2.what, 'value')
+        assert pinfo2.cls is getattr(self, class_name)
+        assert pinfo2.inst is inst.b
+        assert pinfo2.name == 'b'
+        assert pinfo2.what == 'value'
         pinfo3 = pinfos[(inst.b.b, 'a')]
-        self.assertIs(pinfo3.cls, self.P)
-        self.assertIs(pinfo3.inst, inst.b.b)
-        self.assertEqual(pinfo3.name, 'a')
-        self.assertEqual(pinfo3.what, 'value')
+        assert pinfo3.cls is getattr(self, class_name)
+        assert pinfo3.inst is inst.b.b
+        assert pinfo3.name == 'a'
+        assert pinfo3.what == 'value'
 
         assert inst.double_nested_count == 1
 
@@ -430,146 +602,151 @@ class TestParamDepends(unittest.TestCase):
         assert inst.double_nested_count == 2
 
         old_subobj = inst.b.b
-        inst.b.b = self.P(a=3)
+        inst.b.b = getattr(self, class_name)(a=3)
         assert inst.double_nested_count == 3
 
         old_subobj.a = 4
         assert inst.double_nested_count == 3
 
-        inst.b.b = self.P(a=3)
+        inst.b.b = getattr(self, class_name)(a=3)
         assert inst.double_nested_count == 3
 
         inst.b.b.a = 4
         assert inst.double_nested_count == 4
 
-        inst.b.b = self.P(a=3)
+        inst.b.b = getattr(self, class_name)(a=3)
         assert inst.double_nested_count == 5
 
-    def test_param_instance_depends_dynamic_double_nested_partially_initialized(self):
-        inst = self.P(b=self.P())
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_double_nested_partially_initialized(self, class_name):
+        inst = getattr(self, class_name)(b=getattr(self, class_name)())
         pinfos = inst.param.method_dependencies('double_nested', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 2
 
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls == getattr(self, class_name)
+        assert pinfo.inst == inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         pinfo = pinfos[(inst.b, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst.b)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls == getattr(self, class_name)
+        assert pinfo.inst == inst.b
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
 
-        inst.b.b = self.P()
+        inst.b.b = getattr(self, class_name)()
         assert inst.double_nested_count == 1
 
         inst.b.b.a = 1
         assert inst.double_nested_count == 2
 
-    def test_param_instance_depends_dynamic_nested_attribute(self):
-        inst = self.P()
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_nested_attribute(self, class_name):
+        inst = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('nested_attribute', intermediate=True)
-        self.assertEqual(len(pinfos), 0)
+        assert len(pinfos) == 0
 
-        inst.b = self.P()
+        inst.b = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('nested_attribute', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 2
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls == getattr(self, class_name)
+        assert pinfo.inst == inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         pinfo2 = pinfos[(inst.b, 'a')]
-        self.assertIs(pinfo2.cls, self.P)
-        self.assertIs(pinfo2.inst, inst.b)
-        self.assertEqual(pinfo2.name, 'a')
-        self.assertEqual(pinfo2.what, 'constant')
+        assert pinfo2.cls == getattr(self, class_name)
+        assert pinfo2.inst == inst.b
+        assert pinfo2.name == 'a'
+        assert pinfo2.what == 'constant'
 
         assert inst.nested_attr_count == 1
 
         inst.b.param.a.constant = True
         assert inst.nested_attr_count == 2
 
-        new_b = self.P()
+        new_b = getattr(self, class_name)()
         new_b.param.a.constant = True
         inst.b = new_b
         assert inst.nested_attr_count == 2
 
-    def test_param_instance_depends_dynamic_nested_attribute_initialized(self):
-        inst = self.P(b=self.P())
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_nested_attribute_initialized(self, class_name):
+        inst = getattr(self, class_name)(b=getattr(self, class_name)())
         pinfos = inst.param.method_dependencies('nested_attribute', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 2
 
-        inst.b = self.P()
+        inst.b = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('nested_attribute', intermediate=True)
-        self.assertEqual(len(pinfos), 2)
+        assert len(pinfos) == 2
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls == getattr(self, class_name)
+        assert pinfo.inst == inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         pinfo2 = pinfos[(inst.b, 'a')]
-        self.assertIs(pinfo2.cls, self.P)
-        self.assertIs(pinfo2.inst, inst.b)
-        self.assertEqual(pinfo2.name, 'a')
-        self.assertEqual(pinfo2.what, 'constant')
+        assert pinfo2.cls == getattr(self, class_name)
+        assert pinfo2.inst == inst.b
+        assert pinfo2.name == 'a'
+        assert pinfo2.what == 'constant'
 
         assert inst.nested_attr_count == 0
 
         inst.b.param.a.constant = True
         assert inst.nested_attr_count == 1
 
-    def test_param_instance_depends_dynamic_nested(self):
-        inst = self.P()
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_nested(self, class_name):
+        inst = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 0)
+        assert len(pinfos) == 0
 
-        inst.b = self.P()
+        inst.b = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 10)
+        assert len(pinfos) == 10
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         for p in ['a', 'b', 'name', 'nested_count', 'single_count', 'attr_count']:
             pinfo2 = pinfos[(inst.b, p)]
-            self.assertIs(pinfo2.cls, self.P)
-            self.assertIs(pinfo2.inst, inst.b)
-            self.assertEqual(pinfo2.name, p)
-            self.assertEqual(pinfo2.what, 'value')
+            assert pinfo2.cls is getattr(self, class_name)
+            assert pinfo2.inst is inst.b
+            assert pinfo2.name == p
+            assert pinfo2.what == 'value'
 
         assert inst.nested_count == 1
 
         inst.b.a = 1
         assert inst.nested_count == 3
 
-    def test_param_instance_depends_dynamic_nested_initialized(self):
-        init_b = self.P()
-        inst = self.P(b=init_b)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_nested_initialized(self, class_name):
+        init_b = getattr(self, class_name)()
+        inst = getattr(self, class_name)(b=init_b)
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 10)
+        assert len(pinfos) == 10
 
-        inst.b = self.P()
+        inst.b = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 10)
+        assert len(pinfos) == 10
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         for p in ['a', 'b', 'name', 'nested_count', 'single_count', 'attr_count']:
             pinfo2 = pinfos[(inst.b, p)]
-            self.assertIs(pinfo2.cls, self.P)
-            self.assertIs(pinfo2.inst, inst.b)
-            self.assertEqual(pinfo2.name, p)
-            self.assertEqual(pinfo2.what, 'value')
+            assert pinfo2.cls is getattr(self, class_name)
+            assert pinfo2.inst is inst.b
+            assert pinfo2.name == p
+            assert pinfo2.what == 'value'
 
         assert inst.single_nested_count == 0
 
@@ -580,27 +757,28 @@ class TestParamDepends(unittest.TestCase):
         init_b.a = 2
         assert inst.single_nested_count == 1
 
-    def test_param_instance_depends_dynamic_nested_changed_value(self):
-        init_b = self.P(a=1)
-        inst = self.P(b=init_b)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends_dynamic_nested_changed_value(self, class_name):
+        init_b = getattr(self, class_name)(a=1)
+        inst = getattr(self, class_name)(b=init_b)
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 10)
+        assert len(pinfos) == 10
 
-        inst.b = self.P(a=2)
+        inst.b = getattr(self, class_name)(a=2)
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 10)
+        assert len(pinfos) == 10
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         for p in ['a', 'b', 'name', 'nested_count', 'single_count', 'attr_count']:
             pinfo2 = pinfos[(inst.b, p)]
-            self.assertIs(pinfo2.cls, self.P)
-            self.assertIs(pinfo2.inst, inst.b)
-            self.assertEqual(pinfo2.name, p)
-            self.assertEqual(pinfo2.what, 'value')
+            assert pinfo2.cls is getattr(self, class_name)
+            assert pinfo2.inst is inst.b
+            assert pinfo2.name == p
+            assert pinfo2.what == 'value'
 
         assert inst.single_nested_count == 1
 
@@ -611,77 +789,79 @@ class TestParamDepends(unittest.TestCase):
         init_b.a = 2
         assert inst.single_nested_count == 2
 
-    def test_param_instance_depends(self):
-        p = self.P()
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_instance_depends(self, class_name):
+        p = getattr(self, class_name)()
         pinfos = p.param.method_dependencies('single_parameter')
-        self.assertEqual(len(pinfos), 1)
+        assert len(pinfos) == 1
         pinfo = pinfos[0]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, p)
-        self.assertEqual(pinfo.name, 'a')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is p
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
 
         p.a = 1
         assert p.single_count == 1
 
-    def test_param_class_depends(self):
-        pinfos = self.P.param.method_dependencies('single_parameter')
-        self.assertEqual(len(pinfos), 1)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_class_depends(self, class_name):
+        pinfos = getattr(self, class_name).param.method_dependencies('single_parameter')
+        assert len(pinfos) == 1
         pinfo = pinfos[0]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, None)
-        self.assertEqual(pinfo.name, 'a')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is None
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
 
-    def test_param_class_depends_constant(self):
-        pinfos = self.P.param.method_dependencies('constant')
-        self.assertEqual(len(pinfos), 1)
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_class_depends_constant(self, class_name):
+        pinfos = getattr(self, class_name).param.method_dependencies('constant')
+        assert len(pinfos) == 1
         pinfo = pinfos[0]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, None)
-        self.assertEqual(pinfo.name, 'a')
-        self.assertEqual(pinfo.what, 'constant')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is None
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'constant'
 
-    def test_param_inst_depends_nested(self):
-        inst = self.P(b=self.P())
+    @pytest.mark.parametrize('class_name', ['P', 'AP'], indirect=True)
+    def test_param_inst_depends_nested(self, class_name):
+        inst = getattr(self, class_name)(b=getattr(self, class_name)())
         pinfos = inst.param.method_dependencies('nested')
-        self.assertEqual(len(pinfos), 10)
+        assert len(pinfos) == 10
         pinfos = {(pi.inst, pi.name): pi for pi in pinfos}
         pinfo = pinfos[(inst, 'b')]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, inst)
-        self.assertEqual(pinfo.name, 'b')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name)
+        assert pinfo.inst is inst
+        assert pinfo.name == 'b'
+        assert pinfo.what == 'value'
         for p in ['name', 'a', 'b']:
             info = pinfos[(inst.b, p)]
-            self.assertEqual(info.name, p)
-            self.assertIs(info.inst, inst.b)
+            assert info.name == p
+            assert info.inst is inst.b
 
-    def test_param_external_param_instance(self):
-        inst = self.P2()
+    @pytest.mark.parametrize('class_name', ['P2', 'AP2'], indirect=True)
+    def test_param_external_param_instance(self, class_name):
+        inst = getattr(self, class_name)()
         pinfos = inst.param.method_dependencies('external_param')
         pinfo = pinfos[0]
-        self.assertIs(pinfo.cls, self.P)
-        self.assertIs(pinfo.inst, None)
-        self.assertEqual(pinfo.name, 'a')
-        self.assertEqual(pinfo.what, 'value')
+        assert pinfo.cls is getattr(self, class_name[:-1])
+        assert pinfo.inst is None
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
 
+    @pytest.mark.usefixtures('use_async_executor')
     def test_async(self):
-        try:
-            param.parameterized.async_executor = async_executor
-            class P(param.Parameterized):
-                a = param.Parameter()
-                single_count = param.Integer()
+        class P(param.Parameterized):
+            a = param.Parameter()
+            single_count = param.Integer()
 
-                @param.depends('a', watch=True)
-                async def single_parameter(self):
-                    self.single_count += 1
+            @param.depends('a', watch=True)
+            async def single_parameter(self):
+                self.single_count += 1
 
-            inst = P()
-            inst.a = 'test'
-            assert inst.single_count == 1
-        finally:
-            param.parameterized.async_executor = None
+        inst = P()
+        inst.a = 'test'
+        assert inst.single_count == 1
 
     def test_param_depends_on_parameterized_attribute(self):
         # Issue https://github.com/holoviz/param/issues/635
@@ -707,6 +887,31 @@ class TestParamDepends(unittest.TestCase):
 
         assert not called
 
+    @pytest.mark.usefixtures('use_async_executor')
+    def test_param_depends_on_parameterized_attribute_async(self):
+        # Issue https://github.com/holoviz/param/issues/635
+
+        called = []
+
+        class Sub(param.Parameterized):
+            s = param.String()
+
+        class P(param.Parameterized):
+            test_param = param.Parameter()
+
+            def __init__(self, **params):
+                self._sub = Sub()
+                super().__init__(**params)
+
+            @param.depends('_sub.s', watch=True)
+            async def cb(self):
+                called.append(1)
+
+        p = P()
+        p.test_param = 'modified'
+
+        assert not called
+
     def test_param_depends_on_method(self):
 
         method_count = 0
@@ -720,6 +925,36 @@ class TestParamDepends(unittest.TestCase):
 
             @param.depends('method1', watch=True)
             def method2(self):
+                nonlocal method_count
+                method_count += 1
+
+        inst = A()
+        pinfos = inst.param.method_dependencies('method2')
+        assert len(pinfos) == 1
+
+        pinfo = pinfos[0]
+        assert pinfo.cls is A
+        assert pinfo.inst is inst
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
+
+        inst.a = 2
+        assert method_count == 1
+
+    @pytest.mark.usefixtures('use_async_executor')
+    def test_param_depends_on_method_async(self):
+
+        method_count = 0
+
+        class A(param.Parameterized):
+            a = param.Integer()
+
+            @param.depends('a', watch=True)
+            async def method1(self):
+                pass
+
+            @param.depends('method1', watch=True)
+            async def method2(self):
                 nonlocal method_count
                 method_count += 1
 
@@ -772,6 +1007,42 @@ class TestParamDepends(unittest.TestCase):
         assert method1_count == 0
         assert method2_count == 1
 
+    @pytest.mark.usefixtures('use_async_executor')
+    def test_param_depends_on_method_subparameter_async(self):
+
+        method1_count = 0
+        method2_count = 0
+
+        class Sub(param.Parameterized):
+            a = param.Integer()
+
+            @param.depends('a')
+            async def method1(self):
+                nonlocal method1_count
+                method1_count += 1
+
+        class Main(param.Parameterized):
+            sub = param.Parameter()
+
+            @param.depends('sub.method1', watch=True)
+            async def method2(self):
+                nonlocal method2_count
+                method2_count += 1
+
+        sub = Sub()
+        main = Main(sub=sub)
+        pinfos = main.param.method_dependencies('method2')
+        assert len(pinfos) == 1
+
+        pinfo = pinfos[0]
+        assert pinfo.cls is Sub
+        assert pinfo.inst is sub
+        assert pinfo.name == 'a'
+        assert pinfo.what == 'value'
+
+        sub.a = 2
+        assert method1_count == 0
+        assert method2_count == 1
 
     def test_param_depends_on_method_subparameter_after_init(self):
         # Setup inspired from https://github.com/holoviz/param/issues/764
@@ -820,6 +1091,54 @@ class TestParamDepends(unittest.TestCase):
         assert method1_count == 0
         assert method2_count == 1
 
+    @pytest.mark.usefixtures('use_async_executor')
+    def test_param_depends_on_method_subparameter_after_init_async(self):
+        # Setup inspired from https://github.com/holoviz/param/issues/764
+
+        method1_count = 0
+        method2_count = 0
+
+        class Controls(param.Parameterized):
+
+            explorer = param.Parameter()
+
+            @param.depends('explorer.method1', watch=True)
+            async def method2(self):
+                nonlocal method2_count
+                method2_count += 1
+
+
+        class Explorer(param.Parameterized):
+
+            controls = param.Parameter()
+
+            x = param.Selector(objects=['a', 'b'])
+
+            def __init__(self, **params):
+                super().__init__(**params)
+                self.controls = Controls(explorer=self)
+
+            @param.depends('x')
+            async def method1(self):
+                nonlocal method1_count
+                method1_count += 1
+
+        explorer = Explorer()
+
+        pinfos = explorer.controls.param.method_dependencies('method2')
+        assert len(pinfos) == 1
+
+        pinfo = pinfos[0]
+        assert pinfo.cls is Explorer
+        assert pinfo.inst is explorer
+        assert pinfo.name == 'x'
+        assert pinfo.what == 'value'
+
+        explorer.x = 'b'
+
+        assert method1_count == 0
+        assert method2_count == 1
+
     def test_param_depends_class_with_len(self):
         # https://github.com/holoviz/param/issues/747
 
@@ -842,9 +1161,9 @@ class TestParamDepends(unittest.TestCase):
         assert count == 1
 
 
-class TestParamDependsFunction(unittest.TestCase):
+class TestParamDependsFunction:
 
-    def setUp(self):
+    def setup_method(self):
         class P(param.Parameterized):
             a = param.Parameter()
             b = param.Parameter()
@@ -865,7 +1184,7 @@ class TestParamDependsFunction(unittest.TestCase):
             'watch': False,
             'on_init': False
         }
-        self.assertEqual(function._dinfo, dependencies)
+        assert function._dinfo == dependencies
 
     def test_param_depends_function_class_params(self):
         p = self.P
@@ -880,7 +1199,7 @@ class TestParamDependsFunction(unittest.TestCase):
             'watch': False,
             'on_init': False
         }
-        self.assertEqual(function._dinfo, dependencies)
+        assert function._dinfo == dependencies
 
     def test_param_depends_function_instance_params_watch(self):
         p = self.P(a=1, b=2)
@@ -892,9 +1211,9 @@ class TestParamDependsFunction(unittest.TestCase):
             d.append(value+c)
 
         p.a = 2
-        self.assertEqual(d, [4])
+        assert d == [4]
         p.b = 3
-        self.assertEqual(d, [4, 5])
+        assert d == [4, 5]
 
     def test_param_depends_function_class_params_watch(self):
         p = self.P
@@ -908,26 +1227,23 @@ class TestParamDependsFunction(unittest.TestCase):
             d.append(value+c)
 
         p.a = 2
-        self.assertEqual(d, [4])
+        assert d == [4]
         p.b = 3
-        self.assertEqual(d, [4, 5])
+        assert d == [4, 5]
 
+    @pytest.mark.usefixtures('use_async_executor')
     def test_async(self):
-        try:
-            param.parameterized.async_executor = async_executor
-            p = self.P(a=1)
+        p = self.P(a=1)
 
-            d = []
+        d = []
 
-            @param.depends(p.param.a, watch=True)
-            async def function(value):
-                d.append(value)
+        @param.depends(p.param.a, watch=True)
+        async def function(value):
+            d.append(value)
 
-            p.a = 2
+        p.a = 2
 
-            assert d == [2]
-        finally:
-            param.parameterized.async_executor = None
+        assert d == [2]
 
 
 def test_misspelled_parameter_in_depends():

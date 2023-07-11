@@ -612,6 +612,54 @@ class TestParameterized(unittest.TestCase):
         assert events[0].name == 'x' and events[0].new == 20
         assert events[1].name == 'x' and events[1].new == 0
 
+    def test_update_error_not_param_class(self):
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            TestPO.param.update(not_a_param=1)
+
+    def test_update_error_not_param_instance(self):
+        t = TestPO(inst='foo')
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            t.param.update(not_a_param=1)
+
+    def test_update_context_error_not_param_class(self):
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            with TestPO.param.update(not_a_param=1):
+                pass
+
+    def test_update_context_error_not_param_instance(self):
+        t = TestPO(inst='foo')
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            with t.param.update(not_a_param=1):
+                pass
+
+    def test_update_error_while_updating(self):
+        class P(param.Parameterized):
+            x = param.Parameter(0, readonly=True)
+
+        with pytest.raises(TypeError):
+            P.param.update(x=1)
+
+        assert P.x == 0
+
+        with pytest.raises(TypeError):
+            with P.param.update(x=1):
+                pass
+
+        assert P.x == 0
+
+        p = P()
+
+        with pytest.raises(TypeError):
+            p.param.update(x=1)
+
+        assert p.x == 0
+
+        with pytest.raises(TypeError):
+            with p.param.update(x=1):
+                pass
+
+        assert p.x == 0
+
     def test_update_error_dict_and_kwargs_instance(self):
         t = TestPO(inst='foo')
         with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):

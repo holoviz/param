@@ -2085,14 +2085,13 @@ class Parameters:
         BATCH_WATCH = self_._BATCH_WATCH
         self_._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
-        inst_name = self_or_cls.name
         if args:
             if len(args) == 1 and not kwargs:
                 kwargs = args[0]
             else:
                 self_._BATCH_WATCH = False
                 raise ValueError(
-                    f"{inst_name}.update accepts *either* an iterable "
+                    f"{self_.cls.__name__}.param.update accepts *either* an iterable "
                     "or key=value pairs, not both."
                 )
 
@@ -2110,7 +2109,7 @@ class Parameters:
         for (k, v) in kwargs.items():
             if k not in self_:
                 self_._BATCH_WATCH = False
-                raise ValueError(f"{k!r} is not a parameter of {inst_name}")
+                raise ValueError(f"{k!r} is not a parameter of {self_.cls.__name__}")
             try:
                 setattr(self_or_cls, k, v)
             except:

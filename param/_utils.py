@@ -2,13 +2,34 @@ import inspect
 import functools
 import warnings
 
+from textwrap import dedent
+from threading import get_ident
 
-class ParamDeprecationWarning(DeprecationWarning):
-    """Param DeprecationWarning"""
+
+class ParamWarning(Warning):
+    """Base Param Warning"""
+
+class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
+    """Param PendingDeprecationWarning
+
+    This warning type is useful when the warning is not meant to be displayed
+    to REPL/notebooks users, as DeprecationWarning are displayed when triggered
+    by code in __main__ (__name__ == '__main__' in a REPL).
+    """
 
 
-class ParamFutureWarning(FutureWarning):
-    """Param FutureWarning"""
+class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
+    """Param DeprecationWarning
+
+    Ignored by default except when triggered by code in __main__
+    """
+
+
+class ParamFutureWarning(ParamWarning, FutureWarning):
+    """Param FutureWarning
+
+    Always displayed.
+    """
 
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
@@ -18,7 +39,9 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
         def inner(*args, **kwargs):
             msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
             if extra_msg:
-                msg = msg + ' ' + extra_msg
+                em = dedent(extra_msg)
+                em = em.strip().replace('\n', ' ')
+                msg = msg + ' ' + em
             warnings.warn(msg, category=warning_cat, stacklevel=2)
             return func(*args, **kwargs)
         return inner
@@ -52,7 +75,7 @@ def _deprecate_positional_args(func):
                 f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
                 "has been deprecated since Param 2.0,0 and will raise an error in a future version, "
                 "please pass them as keyword arguments.",
-                PendingDeprecationWarning,
+                ParamPendingDeprecationWarning,
                 stacklevel=2,
             )
 
@@ -64,3 +87,25 @@ def _deprecate_positional_args(func):
         return func(*args, **kwargs)
 
     return inner
+
+
+# Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
+def _recursive_repr(fillvalue='...'):
+    'Decorator to make a repr function return fillvalue for a recursive call'
+
+    def decorating_function(user_function):
+        repr_running = set()
+
+        def wrapper(self, *args, **kwargs):
+            key = id(self), get_ident()
+            if key in repr_running:
+                return fillvalue
+            repr_running.add(key)
+            try:
+                result = user_function(self, *args, **kwargs)
+            finally:
+                repr_running.discard(key)
+            return result
+        return wrapper
+
+    return decorating_function

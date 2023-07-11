@@ -8,7 +8,7 @@ import param
 
 from param.parameterized import discard_events
 
-from .utils import MockLoggingHandler
+from .utils import MockLoggingHandler, warnings_as_excepts
 
 
 class Accumulator:
@@ -234,9 +234,15 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         watcher = obj.param.watch(accumulator, 'a')
         obj.param.unwatch(watcher)
-        obj.param.unwatch(watcher)
-        self.log_handler.assertEndsWith('WARNING',
-                            ' to remove.')
+        with warnings_as_excepts(match='No such watcher'):
+            obj.param.unwatch(watcher)
+        try:
+            param.parameterized.warnings_as_exceptions = False
+            obj.param.unwatch(watcher)
+            self.log_handler.assertEndsWith('WARNING',
+                                ' to remove.')
+        finally:
+            param.parameterized.warnings_as_exceptions = True
 
     def test_simple_batched_watch_setattr(self):
 

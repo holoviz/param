@@ -498,10 +498,10 @@ class TestParameterized(unittest.TestCase):
         g._Dynamic_time_fn=None
         assert t.dyn!=t.dyn
         orig = t.dyn
-        t._state_push()
+        t.param._state_push()
         t.dyn
         assert t.param.inspect_value('dyn')!=orig
-        t.state_pop()
+        t.param._state_pop()
         assert t.param.inspect_value('dyn')==orig
 
     def test_label(self):

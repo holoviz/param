@@ -562,9 +562,6 @@ class Time(Parameterized):
             raise StopIteration
         return self._time
 
-    # PARAM2_DEPRECATION: For Python 2 compatibility; can be removed for Python 3.
-    next = __next__
-
     def __call__(self, val=None, time_type=None):
         """
         When called with no arguments, returns the current time value.

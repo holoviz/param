@@ -28,14 +28,18 @@ from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from html import escape
 from operator import itemgetter, attrgetter
-from threading import get_ident
 from types import FunctionType, MethodType
 
 import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-from ._utils import _deprecated, _deprecate_positional_args, ParamDeprecationWarning as _ParamDeprecationWarning
+from ._utils import (
+    _deprecated,
+    _deprecate_positional_args,
+    _recursive_repr,
+    ParamDeprecationWarning as _ParamDeprecationWarning,
+)
 
 try:
     # In case the optional ipython module is unavailable
@@ -406,27 +410,19 @@ def get_method_owner(method):
     return method.__self__
 
 
+# PARAM3_DEPRECATION
 def recursive_repr(fillvalue='...'):
-    'Decorator to make a repr function return fillvalue for a recursive call'
-    # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
+    """
+    Decorator to make a repr function return fillvalue for a recursive call
 
-    def decorating_function(user_function):
-        repr_running = set()
-
-        @wraps(user_function)
-        def wrapper(self, *args, **kwargs):
-            key = id(self), get_ident()
-            if key in repr_running:
-                return fillvalue
-            repr_running.add(key)
-            try:
-                result = user_function(self, *args, **kwargs)
-            finally:
-                repr_running.discard(key)
-            return result
-        return wrapper
-
-    return decorating_function
+    ..deprecated:: 1.12.0
+    """
+    warnings.warn(
+        'recursive_repr has been deprecated and will be removed in a future version.',
+        category=_ParamDeprecationWarning,
+        stacklevel=2,
+    )
+    return _recursive_repr(fillvalue=fillvalue)
 
 
 @accept_arguments
@@ -698,6 +694,21 @@ def _skip_event(*events, **kwargs):
     return True
 
 
+# Two callers at the module top level to support pickling.
+async def _async_caller(*events, what='value', changed=None, callback=None, function=None):
+    if callback:
+        callback(*events)
+    if not _skip_event or not _skip_event(*events, what=what, changed=changed):
+        await function()
+
+
+def _sync_caller(*events, what='value', changed=None, callback=None, function=None):
+    if callback:
+        callback(*events)
+    if not _skip_event(*events, what=what, changed=changed):
+        return function()
+
+
 def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
     Wraps a method call adding support for scheduling a callback
@@ -705,17 +716,8 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     changed but its values have not.
     """
     function = getattr(self, method_name)
-    if iscoroutinefunction(function):
-        async def caller(*events):
-            if callback:
-                callback(*events)
-            if not _skip_event or not _skip_event(*events, what=what, changed=changed):
-                await function()
-    else:
-        def caller(*events):
-            if callback: callback(*events)
-            if not _skip_event(*events, what=what, changed=changed):
-                return function()
+    _caller = _async_caller if iscoroutinefunction(function) else _sync_caller
+    caller = partial(_caller, what=what, changed=changed, callback=callback, function=function)
     caller._watcher_name = method_name
     return caller
 
@@ -1641,6 +1643,25 @@ class Comparator:
         return True
 
 
+class _ParametersRestorer:
+    """
+    Context-manager to handle the reset of parameter values after an update.
+    """
+
+    def __init__(self, *, parameters, restore):
+        self._parameters = parameters
+        self._restore = restore
+
+    def __enter__(self):
+        return self._restore
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        try:
+            self._parameters._update(self._restore)
+        finally:
+            self._restore = {}
+
+
 class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
@@ -1702,7 +1723,8 @@ class Parameters:
 
     def __setstate__(self, state):
         # Set old parameters state on Parameterized._parameters_state
-        self_or_cls = state.get('self', state.get('cls'))
+        self_, cls = state.get('self'), state.get('cls')
+        self_or_cls = self_ if self_ is not None else cls
         for k in self_or_cls._parameters_state:
             key = '_'+k
             if key in state:
@@ -1775,18 +1797,15 @@ class Parameters:
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
-
     @as_uninitialized
     def _set_name(self_, name):
         self = self_.param.self
         self.name=name
 
-
     @as_uninitialized
     def _generate_name(self_):
         self = self_.param.self
         self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
-
 
     @as_uninitialized
     def _setup_params(self_,**params):
@@ -1973,7 +1992,7 @@ class Parameters:
         return dep_obj.param._watch(
             mcaller, params, param_dep.what, queued=queued, precedence=-1)
 
-    @recursive_repr()
+    @_recursive_repr()
     def _repr_html_(self_, open=True):
         return _parameterized_repr_html(self_.self_or_cls, open)
 
@@ -2005,7 +2024,6 @@ class Parameters:
         """
         cls = self_.cls
         setattr(cls,param_name,value)
-
 
     def add_parameter(self_, param_name, param_obj):
         """
@@ -2059,46 +2077,61 @@ class Parameters:
 
     def update(self_, *args, **kwargs):
         """
-        For the given dictionary or iterable or set of param=value keyword arguments,
-        sets the corresponding parameter of this object or class to the given value.
+        For the given dictionary or iterable or set of param=value
+        keyword arguments, sets the corresponding parameter of this
+        object or class to the given value.
+
+        May also be used as a context manager to temporarily set and
+        then reset parameter values.
         """
-        BATCH_WATCH = self_.self_or_cls.param._BATCH_WATCH
-        self_.self_or_cls.param._BATCH_WATCH = True
+        restore = self_._update(*args, **kwargs)
+        return _ParametersRestorer(parameters=self_, restore=restore)
+
+    def _update(self_, *args, **kwargs):
+        BATCH_WATCH = self_._BATCH_WATCH
+        self_._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
         if args:
             if len(args) == 1 and not kwargs:
                 kwargs = args[0]
             else:
-                self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError("%s.update accepts *either* an iterable or key=value pairs, not both" %
-                                 (self_or_cls.name))
+                self_._BATCH_WATCH = False
+                raise ValueError(
+                    f"{self_.cls.__name__}.param.update accepts *either* an iterable "
+                    "or key=value pairs, not both."
+                )
 
-        trigger_params = [k for k in kwargs
-                          if ((k in self_.self_or_cls.param) and
-                              hasattr(self_.self_or_cls.param[k], '_autotrigger_value'))]
+        trigger_params = [
+            k for k in kwargs
+            if k in self_ and hasattr(self_[k], '_autotrigger_value')
+        ]
 
         for tp in trigger_params:
             self_.self_or_cls.param[tp]._mode = 'set'
 
+        values = self_.values()
+        restore = {k: values[k] for k, v in kwargs.items() if k in values}
+
         for (k, v) in kwargs.items():
-            if k not in self_or_cls.param:
-                self_.self_or_cls.param._BATCH_WATCH = False
-                raise ValueError(f"'{k}' is not a parameter of {self_or_cls.name}")
+            if k not in self_:
+                self_._BATCH_WATCH = False
+                raise ValueError(f"{k!r} is not a parameter of {self_.cls.__name__}")
             try:
                 setattr(self_or_cls, k, v)
             except:
-                self_.self_or_cls.param._BATCH_WATCH = False
+                self_._BATCH_WATCH = False
                 raise
 
-        self_.self_or_cls.param._BATCH_WATCH = BATCH_WATCH
+        self_._BATCH_WATCH = BATCH_WATCH
         if not BATCH_WATCH:
             self_._batch_call_watchers()
 
         for tp in trigger_params:
-            p = self_.self_or_cls.param[tp]
+            p = self_[tp]
             p._mode = 'reset'
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
+        return restore
 
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.update`")
@@ -2123,7 +2156,6 @@ class Parameters:
                 raise ValueError("Invalid positional arguments for %s.set_param" %
                                  (self_or_cls.name))
         return self_.update(kwargs)
-
 
     def objects(self_, instance=True):
         """
@@ -2832,13 +2864,145 @@ class Parameters:
                 warning_count+=1
         self_.__db_print(level, msg, *args, **kw)
 
+    # Note that there's no state_push method on the class, so
+    # dynamic parameters set on a class can't have state saved. This
+    # is because, to do this, state_push() would need to be a
+    # @bothmethod, but that complicates inheritance in cases where we
+    # already have a state_push() method.
+    # (isinstance(g,Parameterized) below is used to exclude classes.)
+
+    def _state_push(self_):
+        """
+        Save this instance's state.
+
+        For Parameterized instances, this includes the state of
+        dynamically generated values.
+
+        Subclasses that maintain short-term state should additionally
+        save and restore that state using state_push() and
+        state_pop().
+
+        Generally, this method is used by operations that need to test
+        something without permanently altering the objects' state.
+        """
+        self = self_.self_or_cls
+        if not isinstance(self, Parameterized):
+            raise NotImplementedError('_state_push is not implemented at the class level')
+        for pname, p in self.param.objects('existing').items():
+            g = self.param.get_value_generator(pname)
+            if hasattr(g,'_Dynamic_last'):
+                g._saved_Dynamic_last.append(g._Dynamic_last)
+                g._saved_Dynamic_time.append(g._Dynamic_time)
+                # CB: not storing the time_fn: assuming that doesn't
+                # change.
+            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
+                g.state_push()
+
+    def _state_pop(self_):
+        """
+        Restore the most recently saved state.
+
+        See state_push() for more details.
+        """
+        self = self_.self_or_cls
+        if not isinstance(self, Parameterized):
+            raise NotImplementedError('_state_pop is not implemented at the class level')
+        for pname, p in self.param.objects('existing').items():
+            g = self.param.get_value_generator(pname)
+            if hasattr(g,'_Dynamic_last'):
+                g._Dynamic_last = g._saved_Dynamic_last.pop()
+                g._Dynamic_time = g._saved_Dynamic_time.pop()
+            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
+                g.state_pop()
 
     def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):
-        """See Parameterized.pprint"""
-        self = self_.self
-        return self._pprint(imports, prefix, unknown_value, qualify, separator)
+        """
+        (Experimental) Pretty printed representation that may be
+        evaluated with eval. See pprint() function for more details.
+        """
+        self = self_.self_or_cls
+        if not isinstance(self, Parameterized):
+            raise NotImplementedError('pprint is not implemented at the class level')
+        # Wrapping the staticmethod _pprint with partial to pass `self` as the `_recursive_repr`
+        # decorator expects `self`` to be the pprinted object (not `self_`).
+        return partial(self_._pprint, self, imports=imports, prefix=prefix,
+                       unknown_value=unknown_value, qualify=qualify, separator=separator)()
 
+    @staticmethod
+    @_recursive_repr()
+    def _pprint(self, imports=None, prefix=" ", unknown_value='<?>',
+               qualify=False, separator=""):
+        if imports is None:
+            imports = [] # would have been simpler to use a set from the start
+        imports[:] = list(set(imports))
+
+        # Generate import statement
+        mod = self.__module__
+        bits = mod.split('.')
+        imports.append("import %s"%mod)
+        imports.append("import %s"%bits[0])
+
+        changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
+        values = self.param.values()
+        spec = getfullargspec(type(self).__init__)
+        if 'self' not in spec.args or spec.args[0] != 'self':
+            raise KeyError(f"'{type(self).__name__}.__init__.__signature__' must contain 'self' as its first Parameter.")
+        args = spec.args[1:]
+
+        if spec.defaults is not None:
+            posargs = spec.args[:-len(spec.defaults)]
+            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
+        else:
+            posargs, kwargs = args, []
+
+        parameters = self.param.objects('existing')
+        ordering = sorted(
+            sorted(changed_params), # alphanumeric tie-breaker
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+                           if parameters[k].precedence is None else
+                           parameters[k].precedence))
+
+        arglist, keywords, processed = [], [], []
+        for k in args + ordering:
+            if k in processed: continue
+
+            # Suppresses automatically generated names.
+            if k == 'name' and (values[k] is not None
+                                and re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
+                continue
+
+            value = pprint(values[k], imports, prefix=prefix,settings=[],
+                           unknown_value=unknown_value,
+                           qualify=qualify) if k in values else None
+
+            if value is None:
+                if unknown_value is False:
+                    raise Exception(f"{self.name}: unknown value of {k!r}")
+                elif unknown_value is None:
+                    # i.e. suppress repr
+                    continue
+                else:
+                    value = unknown_value
+
+            # Explicit kwarg (unchanged, known value)
+            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
+
+            if k in posargs:
+                # value will be unknown_value unless k is a parameter
+                arglist.append(value)
+            elif (k in kwargs or
+                  (hasattr(spec, 'varkw') and (spec.varkw is not None)) or
+                  (hasattr(spec, 'keywords') and (spec.keywords is not None))):
+                # Explicit modified keywords or parameters in
+                # precendence order (if **kwargs present)
+                keywords.append(f'{k}={value}')
+
+            processed.append(k)
+
+        qualifier = mod + '.'  if qualify else ''
+        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
+        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
 
 class ParameterizedMetaclass(type):
@@ -2904,12 +3068,11 @@ class ParameterizedMetaclass(type):
         for name, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            if not watch:
-                continue
             minfo = MInfo(cls=mcs, inst=None, name=name,
                           method=method)
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
-            _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
+            if watch:
+                _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
 
         # Resolve dependencies in class hierarchy
         _inherited = []
@@ -3270,8 +3433,8 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
-    elif hasattr(val,'_pprint'):
-        rep=val._pprint(imports=imports, prefix=prefix+"    ",
+    elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
+        rep=val.param.pprint(imports=imports, prefix=prefix+"    ",
                         qualify=qualify, unknown_value=unknown_value,
                         separator=separator)
     else:
@@ -3579,7 +3742,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             setattr(self,name,value)
         self.initialized=True
 
-    @recursive_repr()
+    @_recursive_repr()
     def __repr__(self):
         """
         Provide a nearly valid Python representation that could be used to recreate
@@ -3598,172 +3761,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __str__(self):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.pprint()`")
-    def script_repr(self,imports=[],prefix="    "):
-        """
-        Deprecated variant of __repr__ designed for generating a runnable script.
-
-        ..deprecated:: 1.12.0
-            Use instead `.param.pprint()`
-        """
-        return self.pprint(imports,prefix, unknown_value=None, qualify=True,
-                           separator="\n")
-
-    @recursive_repr()
-    def _pprint(self, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        """
-        (Experimental) Pretty printed representation that may be
-        evaluated with eval. See pprint() function for more details.
-        """
-        if imports is None:
-            imports = [] # would have been simpler to use a set from the start
-        imports[:] = list(set(imports))
-
-        # Generate import statement
-        mod = self.__module__
-        bits = mod.split('.')
-        imports.append("import %s"%mod)
-        imports.append("import %s"%bits[0])
-
-        changed_params = self.param.values(onlychanged=script_repr_suppress_defaults)
-        values = self.param.values()
-        spec = getfullargspec(self.__init__)
-        args = spec.args[1:] if spec.args[0] == 'self' else spec.args
-
-        if spec.defaults is not None:
-            posargs = spec.args[:-len(spec.defaults)]
-            kwargs = dict(zip(spec.args[-len(spec.defaults):], spec.defaults))
-        else:
-            posargs, kwargs = args, []
-
-        parameters = self.param.objects('existing')
-        ordering = sorted(
-            sorted(changed_params), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
-                           if parameters[k].precedence is None else
-                           parameters[k].precedence))
-
-        arglist, keywords, processed = [], [], []
-        for k in args + ordering:
-            if k in processed: continue
-
-            # Suppresses automatically generated names.
-            if k == 'name' and (values[k] is not None
-                                and re.match('^'+self.__class__.__name__+'[0-9]+$', values[k])):
-                continue
-
-            value = pprint(values[k], imports, prefix=prefix,settings=[],
-                           unknown_value=unknown_value,
-                           qualify=qualify) if k in values else None
-
-            if value is None:
-                if unknown_value is False:
-                    raise Exception(f"{self.name}: unknown value of {k!r}")
-                elif unknown_value is None:
-                    # i.e. suppress repr
-                    continue
-                else:
-                    value = unknown_value
-
-            # Explicit kwarg (unchanged, known value)
-            if (k in kwargs) and (k in values) and kwargs[k] == values[k]: continue
-
-            if k in posargs:
-                # value will be unknown_value unless k is a parameter
-                arglist.append(value)
-            elif (k in kwargs or
-                  (hasattr(spec, 'varkw') and (spec.varkw is not None)) or
-                  (hasattr(spec, 'keywords') and (spec.keywords is not None))):
-                # Explicit modified keywords or parameters in
-                # precendence order (if **kwargs present)
-                keywords.append(f'{k}={value}')
-
-            processed.append(k)
-
-        qualifier = mod + '.'  if qualify else ''
-        arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
-        return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
-
-    # PARAM3_DEPRECATION
-    def pprint(self, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
-        warnings.warn(
-            message="'pprint' is deprecated. Use instead `.param.pprint`",
-            category=_ParamDeprecationWarning,
-            stacklevel=2
-        )
-        return self._pprint(imports=imports, prefix=prefix, unknown_value=unknown_value,
-               qualify=qualify, separator=separator)
-
-    # Note that there's no state_push method on the class, so
-    # dynamic parameters set on a class can't have state saved. This
-    # is because, to do this, state_push() would need to be a
-    # @bothmethod, but that complicates inheritance in cases where we
-    # already have a state_push() method.
-    # (isinstance(g,Parameterized) below is used to exclude classes.)
-
-    # PARAM3_DEPRECATION
-    @_deprecated()
-    def state_push(self):
-        """Save this instance's state.
-
-        ..deprecated:: 2.0.0
-        """
-        return self._state_push()
-
-    def _state_push(self):
-        """
-        Save this instance's state.
-
-        For Parameterized instances, this includes the state of
-        dynamically generated values.
-
-        Subclasses that maintain short-term state should additionally
-        save and restore that state using state_push() and
-        state_pop().
-
-        Generally, this method is used by operations that need to test
-        something without permanently altering the objects' state.
-        """
-        for pname, p in self.param.objects('existing').items():
-            g = self.param.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
-                g._saved_Dynamic_last.append(g._Dynamic_last)
-                g._saved_Dynamic_time.append(g._Dynamic_time)
-                # CB: not storing the time_fn: assuming that doesn't
-                # change.
-            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
-                g.state_push()
-
-    def state_pop(self):
-        """
-        Restore the most recently saved state.
-
-        ..deprecated:: 2.0.0
-        """
-        return self._state_pop()
-
-    def _state_pop(self):
-        """
-        Restore the most recently saved state.
-
-        See state_push() for more details.
-        """
-        for pname, p in self.param.objects('existing').items():
-            g = self.param.get_value_generator(pname)
-            if hasattr(g,'_Dynamic_last'):
-                g._Dynamic_last = g._saved_Dynamic_last.pop()
-                g._Dynamic_time = g._saved_Dynamic_time.pop()
-            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
-                g.state_pop()
-
-    @bothmethod
-    @recursive_repr()
-    def _repr_html_(self_or_cls, open=True):
-        return _parameterized_repr_html(self_or_cls, open)
 
 
 def print_all_param_defaults():
@@ -3954,31 +3951,17 @@ class ParameterizedFunction(Parameterized):
         # __main__. Pretty obscure aspect of pickle.py...
         return (_new_parameterized,(self.__class__,),state)
 
-    # PARAM3_DEPRECATION: Remove this compatibility alias for param 2.0 and later; use self.param.pprint instead
-    @_deprecated()
-    def script_repr(self,imports=[],prefix="    "):
-        """
-        Same as Parameterized.script_repr, except that X.classname(Y
-        is replaced with X.classname.instance(Y
-
-        ..deprecated:: 2.0.0
-        """
-        return self.pprint(imports,prefix,unknown_value='',qualify=True,
-                           separator="\n")
-
-
     def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
                 qualify=False, separator=""):
         """
-        Same as Parameterized._pprint, except that X.classname(Y
+        Same as self.param.pprint, except that X.classname(Y
         is replaced with X.classname.instance(Y
         """
-        r = Parameterized._pprint(self,imports,prefix,
-                                  unknown_value=unknown_value,
-                                  qualify=qualify,separator=separator)
+        r = self.param.pprint(imports,prefix,
+                              unknown_value=unknown_value,
+                              qualify=qualify,separator=separator)
         classname=self.__class__.__name__
         return r.replace(".%s("%classname,".%s.instance("%classname)
-
 
 
 class default_label_formatter(ParameterizedFunction):

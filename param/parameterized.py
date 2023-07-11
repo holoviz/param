@@ -1263,8 +1263,6 @@ class Parameter(_ParameterBase):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
-        # elif self.constant is True:
-        #     self.instantiate = True
         elif instantiate is not Undefined:
             self.instantiate = instantiate
         else:
@@ -1822,14 +1820,14 @@ class Parameters:
         """
         Initialize default and keyword parameter values.
 
-        First, ensures that all Parameters with 'instantiate=True'
-        (typically used for mutable Parameters) are copied directly
-        into each object, to ensure that there is an independent copy
-        (to avoid surprising aliasing errors).  Then sets each of the
-        keyword arguments, warning when any of them are not defined as
-        parameters.
-
-        Constant Parameters can be set during calls to this method.
+        First, ensures that all Parameters with 'instantiate=True' (typically
+        used for mutable Parameters) are copied directly into each object, to
+        ensure that there is an independent copy (to avoid surprising aliasing
+        errors). Second, ensures that Parameters with 'constant=True' are
+        referenced on the instance, to make sure that setting a constant
+        Parameter on the class doesn't affect already created instances. Then
+        sets each of the keyword arguments, raising when any of them are not
+        defined as parameters.
         """
         self = self_.param.self
         ## Deepcopy all 'instantiate=True' parameters
@@ -1872,8 +1870,9 @@ class Parameters:
         return not Comparator.is_equal(event.old, event.new)
 
     def _instantiate_param(self_, param_obj, dict_=None, key=None, deepcopy=True):
-        # deepcopy param_obj.default into self._param__private.values (or dict_ if supplied)
-        # under the parameter's name (or key if supplied)
+        # deepcopy or store a reference to reference param_obj.default into
+        # self._param__private.values (or dict_ if supplied) under the
+        # parameter's name (or key if supplied)
         instantiator = copy.deepcopy if deepcopy else lambda o: o
         self = self_.self
         dict_ = dict_ or self._param__private.values

@@ -89,12 +89,12 @@ def test_add_parameter_cache_cleared():
     # Generate the cache
     P.param.objects(instance=True)
 
-    assert 'x' in P._P__params
+    assert 'x' in P._param__private.params
 
     P.param.add_parameter('y', param.Parameter())
 
     # Check the cache has been removed (not sure why)
-    assert not hasattr(P, '_P__params')
+    assert not P._param__private.params
 
 
 def test_add_parameter_subclass():

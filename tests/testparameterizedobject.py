@@ -412,6 +412,7 @@ class TestParameterized(unittest.TestCase):
 
         assert p.x == 1
         assert count == 0
+        assert not P._param__private.values
 
     @pytest.mark.xfail(
         raises=AttributeError,

@@ -3755,9 +3755,14 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __init__(self, **params):
         global object_count
 
-        self._param__private = _InstancePrivate(
-            values=type(self)._param__private.values.copy()
-        )
+        # Setting a Parameter in an __init__ block before calling super().__init__
+        # fills `values` on the class private namespace, that has to be passed
+        # to the instance private namespace. `values` on the class is cleared
+        # as it's only meant to be transient data.
+        values = type(self)._param__private.values
+        cvalues = values.copy()
+        values.clear()
+        self._param__private = _InstancePrivate(values=cvalues)
         self._param_watchers = {}
 
         # Skip generating a custom instance name when a class in the hierarchy

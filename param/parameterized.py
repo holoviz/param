@@ -845,15 +845,6 @@ class Watcher(_Watcher):
             values['precedence'] = 0
         return super().__new__(cls_, **values)
 
-    def __iter__(self):
-        """
-        Backward compatibility layer to allow tuple unpacking without
-        the precedence value. Important for Panel which creates a
-        custom Watcher and uses tuple unpacking. Will be dropped in
-        Param 3.x.
-        """
-        return iter(self[:-1])
-
     def __str__(self):
         cls = type(self)
         attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
@@ -3649,6 +3640,13 @@ class _ClassPrivate:
         self.params = {} if params is None else params
         self.values = {} if values is None else params
 
+    def __getstate__(self):
+        return {slot: getattr(self, slot) for slot in self.__slots__}
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
+
 
 class _InstancePrivate:
     """
@@ -3699,6 +3697,13 @@ class _InstancePrivate:
         self.params = {} if params is None else params
         # self.watchers = {} if watchers is None else watchers
         self.values = {} if values is None else values
+
+    def __getstate__(self):
+        return {slot: getattr(self, slot) for slot in self.__slots__}
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
 
 
 class Parameterized(metaclass=ParameterizedMetaclass):

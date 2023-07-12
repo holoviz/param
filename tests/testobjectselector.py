@@ -10,6 +10,7 @@ import unittest
 from collections import OrderedDict
 
 import param
+import pytest
 
 from .utils import check_defaults
 
@@ -103,6 +104,51 @@ class TestObjectSelectorParameters(unittest.TestCase):
         s = param.ObjectSelector(objects=[0, 1, 2])
 
         assert s.allow_None is None
+
+    def test_allow_None_set_and_behavior_class(self):
+        class P(param.Parameterized):
+            a = param.ObjectSelector(objects=dict(a=1), allow_None=True)
+            b = param.ObjectSelector(objects=dict(a=1), allow_None=False)
+            c = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=True)
+            d = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=False)
+
+        assert P.param.a.allow_None is True
+        assert P.param.b.allow_None is False
+        assert P.param.c.allow_None is True
+        assert P.param.d.allow_None is False
+
+        P.a = None
+        assert P.a is None
+        with pytest.raises(ValueError):
+            P.b = None
+        P.c = None
+        assert P.c is None
+        with pytest.raises(ValueError):
+            P.d = None
+
+    def test_allow_None_set_and_behavior_instance(self):
+        class P(param.Parameterized):
+            a = param.ObjectSelector(objects=dict(a=1), allow_None=True)
+            b = param.ObjectSelector(objects=dict(a=1), allow_None=False)
+            c = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=True)
+            d = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=False)
+
+        p = P()
+
+        assert p.param.a.allow_None is True
+        assert p.param.b.allow_None is False
+        assert p.param.c.allow_None is True
+        assert p.param.d.allow_None is False
+
+        p.a = None
+        assert p.a is None
+        with pytest.raises(ValueError):
+            p.b = None
+        p.c = None
+        assert p.c is None
+        with pytest.raises(ValueError):
+            p.d = None
+
 
     def test_set_object_constructor(self):
         p = self.P(e=6)

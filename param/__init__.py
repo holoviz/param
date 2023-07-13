@@ -45,6 +45,7 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 from .parameterized import _identity_hook
+from .reactive import reactive # noqa: api import
 from ._utils import (
     ParamDeprecationWarning as _ParamDeprecationWarning,
     _deprecate_positional_args,

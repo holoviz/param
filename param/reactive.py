@@ -152,11 +152,6 @@ class reactive:
           given the reactive object it is registered on.
         predicate: Callable[[Any], bool] | None
         """
-        if name in cls._accessors:
-            raise ValueError(
-                f'Cannot register {name!r} accessor as another accessor was already '
-                'registered under the same name.'
-            )
         cls._accessors[name] = (accessor, predicate)
 
     @classmethod
@@ -186,14 +181,6 @@ class reactive:
         """
         cls._method_handlers[method] = handler
 
-    @classmethod
-    def _applies(cls, obj):
-        """
-        Subclasses must implement applies and return a boolean to indicate
-        whether the subclass should apply or not to the obj.
-        """
-        return True
-
     def __new__(cls, obj, **kwargs):
         wrapper = None
         obj = transform_dependency(obj)
@@ -209,11 +196,7 @@ class reactive:
         else:
             wrapper = Wrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
-        clss = cls
-        for subcls in cls.__subclasses__():
-            if subcls._applies(obj):
-                clss = subcls
-        inst = super(reactive, cls).__new__(clss)
+        inst = super(reactive, cls).__new__(cls)
         inst._fn = fn
         inst._shared_obj = kwargs.get('_shared_obj', None if obj is None else [obj])
         inst._wrapper = wrapper
@@ -419,13 +402,8 @@ class reactive:
             'kwargs': {},
             'reverse': False
         }
-        try:
-            new = self._clone(operation)
-        finally:
-            # Reset _method for whatever happens after the accessor has been
-            # fully resolved, e.g. whatever happens `dfi.A > 1`.
-            self._method = None
-        return new
+        self._method = None
+        return self._clone(operation)
 
     def __getattribute__(self, name):
         self_dict = super().__getattribute__('__dict__')
@@ -466,23 +444,21 @@ class reactive:
     def __call__(self, *args, **kwargs):
         new = self._clone(copy=True)
         method = new._method or '__call__'
+        if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__'):
+            return self.set_display(*args, **kwargs)
+
         if method in reactive._method_handlers:
             handler = reactive._method_handlers[method]
             method = handler(self)
-        try:
-            kwargs = dict(kwargs)
-            operation = {
-                'fn': method,
-                'args': args,
-                'kwargs': kwargs,
-                'reverse': False
-            }
-            clone = new._clone(operation)
-        finally:
-            # If an error occurs reset _method anyway so that, e.g. the next
-            # attempt in a Notebook, is set appropriately.
-            new._method = None
-        return clone
+        new._method = None
+        kwargs = dict(kwargs)
+        operation = {
+            'fn': method,
+            'args': args,
+            'kwargs': kwargs,
+            'reverse': False
+        }
+        return new._clone(operation)
 
     #----------------------------------------------------------------
     # reactive pipeline APIs
@@ -656,20 +632,21 @@ class reactive:
         Returns the current state of the reactive by evaluating the
         pipeline.
         """
-        if not self._dirty:
-            return self._current_
-        obj = self._obj if self._prev is None else self._prev.eval()
-        operation = self._operation
-        if operation:
-            obj = self._eval_operation(obj, operation)
-        self._current_ = obj
+        if self._dirty:
+            obj = self._obj if self._prev is None else self._prev.eval()
+            operation = self._operation
+            if operation:
+                obj = self._eval_operation(obj, operation)
+            self._current_ = current = obj
+        else:
+            current = self._current_
         self._dirty = False
         if self._method:
             # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
-            obj = getattr(obj, self._method, obj)
-        if hasattr(obj, '__call__'):
-            self.__call__.__func__.__doc__ = obj.__call__.__doc__
-        return obj
+            current = getattr(current, self._method, current)
+        if hasattr(current, '__call__'):
+            self.__call__.__func__.__doc__ = current.__call__.__doc__
+        return current
 
     def set_display(self, **kwargs):
         """

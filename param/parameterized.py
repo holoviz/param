@@ -1163,6 +1163,10 @@ class Parameter(_ParameterBase):
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
                                                     safe=safe, subset=subset)
 
+    def reactive(self):
+        from .reactive import reactive
+        return reactive(self)
+
     @property
     def label(self):
         if self.name and self._label is None:

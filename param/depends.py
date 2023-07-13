@@ -210,6 +210,8 @@ def bind(function, *args, watch=False, **kwargs):
     Returns a new function with the args and kwargs bound to it and
     annotated with all dependencies.
     """
+    from .reactive import reactive
+
     args, kwargs = (
         tuple(transform_dependency(arg) for arg in args),
         {key: transform_dependency(arg) for key, arg in kwargs.items()}
@@ -304,4 +306,5 @@ def bind(function, *args, watch=False, **kwargs):
 
             return eval_fn()(*combined_args, **combined_kwargs)
     wrapped.__bound_function__ = function
+    wrapped.reactive = lambda: reactive(wrapped)
     return wrapped

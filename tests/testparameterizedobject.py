@@ -263,6 +263,37 @@ class TestParameterized(unittest.TestCase):
 
         assert C.name == 'AA'
 
+    def test_constant_parameter_modify_class_before(self):
+        """Test you can set on class and the new default is picked up
+        by new instances"""
+        TestPO.const=9
+        testpo = TestPO()
+        self.assertEqual(testpo.const,9)
+
+    def test_constant_parameter_modify_class_after_init(self):
+        """Test that setting the value on the class doesn't update the instance value
+        even when the instance value hasn't yet been set"""
+        oobj = []
+        class P(param.Parameterized):
+            x = param.Parameter(default=oobj, constant=True)
+
+        p1 = P()
+
+        P.x = nobj = [0]
+        assert P.x is nobj
+        assert p1.x == oobj
+        assert p1.x is oobj
+
+        p2 = P()
+        assert p2.x == nobj
+        assert p2.x is nobj
+
+    def test_constant_parameter_after_init(self):
+        """Test that you can't set a constant parameter after construction."""
+        testpo = TestPO(const=17)
+        self.assertEqual(testpo.const,17)
+        self.assertRaises(TypeError,setattr,testpo,'const',10)
+
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""
         testpo = TestPO(const=17)
@@ -273,52 +304,6 @@ class TestParameterized(unittest.TestCase):
         TestPO.const=9
         testpo = TestPO()
         self.assertEqual(testpo.const,9)
-
-    def test_parameter_constant_instantiate(self):
-        # instantiate is automatically set to True when constant=True
-        assert TestPO.param.const.instantiate is True
-
-        class C(param.Parameterized):
-            # instantiate takes precedence when True
-            a = param.Parameter(instantiate=True, constant=False)
-            b = param.Parameter(instantiate=False, constant=False)
-            c = param.Parameter(instantiate=False, constant=True)
-            d = param.Parameter(constant=True)
-            e = param.Parameter(constant=False)
-            f = param.Parameter()
-
-        assert C.param.a.constant is False
-        assert C.param.a.instantiate is True
-        assert C.param.b.constant is False
-        assert C.param.b.instantiate is False
-        assert C.param.c.constant is True
-        assert C.param.c.instantiate is True
-        assert C.param.d.constant is True
-        assert C.param.d.instantiate is True
-        assert C.param.e.constant is False
-        assert C.param.e.instantiate is False
-        assert C.param.f.constant is False
-        assert C.param.f.instantiate is False
-
-    def test_parameter_constant_instantiate_subclass(self):
-
-        obj = object()
-
-        class A(param.Parameterized):
-            x = param.Parameter(obj)
-
-        class B(param.Parameterized):
-            x = param.Parameter(constant=True)
-
-        assert A.param.x.constant is False
-        assert A.param.x.instantiate is False
-        assert B.param.x.constant is True
-        assert B.param.x.instantiate is True
-
-        a = A()
-        b = B()
-        assert a.x is obj
-        assert b.x is not obj
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""

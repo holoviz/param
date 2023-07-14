@@ -9,8 +9,9 @@ import unittest
 from collections import OrderedDict
 
 import param
+import pytest
 
-from.utils import check_defaults
+from .utils import check_defaults
 
 opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 
@@ -102,6 +103,50 @@ class TestSelectorParameters(unittest.TestCase):
         assert p.param.i.allow_None is None
         assert p.param.s.allow_None is None
         assert p.param.d.allow_None is None
+
+    def test_allow_None_set_and_behavior_class(self):
+        class P(param.Parameterized):
+            a = param.Selector(objects=dict(a=1), allow_None=True)
+            b = param.Selector(objects=dict(a=1), allow_None=False)
+            c = param.Selector(default=1, objects=dict(a=1), allow_None=True)
+            d = param.Selector(default=1, objects=dict(a=1), allow_None=False)
+
+        assert P.param.a.allow_None is True
+        assert P.param.b.allow_None is False
+        assert P.param.c.allow_None is True
+        assert P.param.d.allow_None is False
+
+        P.a = None
+        assert P.a is None
+        with pytest.raises(ValueError):
+            P.b = None
+        P.c = None
+        assert P.c is None
+        with pytest.raises(ValueError):
+            P.d = None
+
+    def test_allow_None_set_and_behavior_instance(self):
+        class P(param.Parameterized):
+            a = param.Selector(objects=dict(a=1), allow_None=True)
+            b = param.Selector(objects=dict(a=1), allow_None=False)
+            c = param.Selector(default=1, objects=dict(a=1), allow_None=True)
+            d = param.Selector(default=1, objects=dict(a=1), allow_None=False)
+
+        p = P()
+
+        assert p.param.a.allow_None is True
+        assert p.param.b.allow_None is False
+        assert p.param.c.allow_None is True
+        assert p.param.d.allow_None is False
+
+        p.a = None
+        assert p.a is None
+        with pytest.raises(ValueError):
+            p.b = None
+        p.c = None
+        assert p.c is None
+        with pytest.raises(ValueError):
+            p.d = None
 
     def test_autodefault(self):
         class P(param.Parameterized):
@@ -337,3 +382,13 @@ class TestSelectorParameters(unittest.TestCase):
         assert b.param.p.objects == [0, 1]
         assert b.param.p.default == 1
         assert b.param.p.check_on_set is True
+
+    def test_no_instantiate_when_constant(self):
+        # https://github.com/holoviz/param/issues/287
+        objs = [object(), object()]
+
+        class A(param.Parameterized):
+            p = param.Selector(default=objs[0], objects=objs, constant=True)
+
+        a = A()
+        assert a.p is objs[0]

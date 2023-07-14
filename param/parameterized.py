@@ -1254,8 +1254,6 @@ class Parameter(_ParameterBase):
         # having this code avoids needless instantiation.
         if self.readonly:
             self.instantiate = False
-        elif self.constant is True:
-            self.instantiate = True
         elif instantiate is not Undefined:
             self.instantiate = instantiate
         else:
@@ -1813,30 +1811,35 @@ class Parameters:
         """
         Initialize default and keyword parameter values.
 
-        First, ensures that all Parameters with 'instantiate=True'
-        (typically used for mutable Parameters) are copied directly
-        into each object, to ensure that there is an independent copy
-        (to avoid surprising aliasing errors).  Then sets each of the
-        keyword arguments, warning when any of them are not defined as
-        parameters.
-
-        Constant Parameters can be set during calls to this method.
+        First, ensures that all Parameters with 'instantiate=True' (typically
+        used for mutable Parameters) are copied directly into each object, to
+        ensure that there is an independent copy (to avoid surprising aliasing
+        errors). Second, ensures that Parameters with 'constant=True' are
+        referenced on the instance, to make sure that setting a constant
+        Parameter on the class doesn't affect already created instances. Then
+        sets each of the keyword arguments, raising when any of them are not
+        defined as parameters.
         """
         self = self_.param.self
         ## Deepcopy all 'instantiate=True' parameters
         # (building a set of names first to avoid redundantly
         # instantiating a later-overridden parent class's parameter)
-        params_to_instantiate = {}
+        params_to_deepcopy = {}
+        params_to_ref = {}
         for class_ in classlist(type(self)):
             if not issubclass(class_, Parameterized):
                 continue
             for (k, v) in class_.param._parameters.items():
                 # (avoid replacing name with the default of None)
                 if v.instantiate and k != "name":
-                    params_to_instantiate[k] = v
+                    params_to_deepcopy[k] = v
+                elif v.constant and k != 'name':
+                    params_to_ref[k] = v
 
-        for p in params_to_instantiate.values():
+        for p in params_to_deepcopy.values():
             self.param._instantiate_param(p)
+        for p in params_to_ref.values():
+            self.param._instantiate_param(p, deepcopy=False)
 
         ## keyword arg setting
         for name, val in params.items():
@@ -1857,9 +1860,11 @@ class Parameters:
         """
         return not Comparator.is_equal(event.old, event.new)
 
-    def _instantiate_param(self_, param_obj, dict_=None, key=None):
-        # deepcopy param_obj.default into self._param__private.values (or dict_ if supplied)
-        # under the parameter's name (or key if supplied)
+    def _instantiate_param(self_, param_obj, dict_=None, key=None, deepcopy=True):
+        # deepcopy or store a reference to reference param_obj.default into
+        # self._param__private.values (or dict_ if supplied) under the
+        # parameter's name (or key if supplied)
+        instantiator = copy.deepcopy if deepcopy else lambda o: o
         self = self_.self
         dict_ = dict_ or self._param__private.values
         key = key or param_obj.name
@@ -1868,10 +1873,10 @@ class Parameters:
             if param_key in shared_parameters._shared_cache:
                 new_object = shared_parameters._shared_cache[param_key]
             else:
-                new_object = copy.deepcopy(param_obj.default)
+                new_object = instantiator(param_obj.default)
                 shared_parameters._shared_cache[param_key] = new_object
         else:
-            new_object = copy.deepcopy(param_obj.default)
+            new_object = instantiator(param_obj.default)
 
         dict_[key] = new_object
 

@@ -12,7 +12,7 @@ from param.parameterized import _parse_dependency_spec
 
 def async_executor(func):
     # Using nest_asyncio to simplify the async_executor implementation
-    import nest_asyncio
+    nest_asyncio = pytest.importorskip("nest_asyncio")
     nest_asyncio.apply()
     asyncio.run(func())
 

@@ -93,7 +93,6 @@ class P2(param.Parameterized):
     ac = None if pd is None else param.Series()
     ad = param.Dict()
     ae = None if pd is None else param.DataFrame()
-    af = param.Array()
     af = None if np is None else param.Array()
 
 

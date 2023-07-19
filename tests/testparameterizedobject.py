@@ -438,6 +438,20 @@ class TestParameterized(unittest.TestCase):
         b = B()
         assert b.batched is True
 
+    def test_instantiation_param_objects_before_super_subclass(self):
+        # Testing https://github.com/holoviz/param/pull/420
+
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+            def __init__(self):
+                objs = self.param.objects(instance='existing')
+                assert isinstance(objs, dict)
+                super().__init__()
+
+        P()
+
     @pytest.mark.xfail(
         raises=AttributeError,
         reason='Behavior not defined when setting a constant parameter before calling super()',

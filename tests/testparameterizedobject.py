@@ -397,7 +397,46 @@ class TestParameterized(unittest.TestCase):
 
         assert p.x == 1
         assert count == 0
-        assert not P._param__private.values
+
+    def test_instantiation_set_before_super_contrived(self):
+        # https://github.com/holoviz/param/pull/790#discussion_r1263483293
+        class P(param.Parameterized):
+
+            value = param.String(default="A")
+
+            def __init__(self, depth=0):
+                self.value = 'B'
+                if depth < 2:
+                    self.sub = P(depth+1)
+                super().__init__()
+
+        p = P()
+
+        assert p.value == 'B'
+        assert p.sub.value == 'B'
+
+    def test_instantiation_set_before_super_subclass(self):
+        # Inspired by a HoloViews use case (GenericElementPlot, GenericOverlayPlot)
+        class A(param.Parameterized):
+
+            def __init__(self, batched=False, **params):
+                self.batched = batched
+                super().__init__(**params)
+
+        class B(A):
+
+            batched = param.Boolean()
+
+            def __init__(self, batched=True, **params):
+                super().__init__(batched=batched, **params)
+
+        a = A()
+        assert a.batched is False
+
+        # When b is instantiated the `batched` Parameter of B is set before
+        # Parameterized.__init__ is called.
+        b = B()
+        assert b.batched is True
 
     @pytest.mark.xfail(
         raises=AttributeError,

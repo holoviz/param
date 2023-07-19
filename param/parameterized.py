@@ -1403,6 +1403,9 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             else:
+                # When setting a Parameter before calling super.
+                if not isinstance(obj._param__private, _InstancePrivate):
+                    obj._param__private = _InstancePrivate()
                 _old = obj._param__private.values.get(self.name, self.default)
                 obj._param__private.values[self.name] = val
 
@@ -3611,9 +3614,6 @@ class _ClassPrivate:
         Whethe the class has been renamed by a super class
     params: dict
         Dict of parameter_name:parameter
-    values: dict
-        Dict of parameter_name:value, populated when a Parameter is set before
-        super().__init__ is called.
     """
 
     __slots__ = [
@@ -3621,7 +3621,7 @@ class _ClassPrivate:
         'disable_instance_params',
         'renamed',
         'params',
-        'values',
+        'initialized',
     ]
 
     def __init__(
@@ -3630,7 +3630,6 @@ class _ClassPrivate:
         disable_instance_params=False,
         renamed=False,
         params=None,
-        values=None,
     ):
         if parameters_state is None:
             parameters_state = {
@@ -3643,7 +3642,7 @@ class _ClassPrivate:
         self.disable_instance_params = disable_instance_params
         self.renamed = renamed
         self.params = {} if params is None else params
-        self.values = {} if values is None else params
+        self.initialized = False
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}
@@ -3760,14 +3759,12 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __init__(self, **params):
         global object_count
 
-        # Setting a Parameter in an __init__ block before calling super().__init__
-        # fills `values` on the class private namespace, that has to be passed
-        # to the instance private namespace. `values` on the class is cleared
-        # as it's only meant to be transient data.
-        values = type(self)._param__private.values
-        cvalues = values.copy()
-        values.clear()
-        self._param__private = _InstancePrivate(values=cvalues)
+        # Setting a Parameter value in an __init__ block before calling
+        # Parameterized.__init__ (via super() generally) already sets the
+        # _InstancePrivate namespace over the _ClassPrivate namespace
+        # (see Parameter.__set__) so we shouldn't override it here.
+        if not isinstance(self._param__private, _InstancePrivate):
+            self._param__private = _InstancePrivate()
         self._param_watchers = {}
 
         # Skip generating a custom instance name when a class in the hierarchy

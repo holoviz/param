@@ -7,6 +7,15 @@ try:
     import cloudpickle
 except ImportError:
     cloudpickle = None
+try:
+    import numpy as np
+except:
+    np = None
+try:
+    import pandas as pd
+except:
+    pd = None
+
 
 def eq(o1, o2):
     if not sorted(o1.param) == sorted(o2.param):
@@ -81,10 +90,11 @@ class P2(param.Parameterized):
     z = param.ListSelector()
     aa = param.MultiFileSelector()
     ab = param.ClassSelector(class_=type(None))
-    ac = param.Series()
+    ac = None if pd is None else param.Series()
     ad = param.Dict()
-    ae = param.DataFrame()
+    ae = None if pd is None else param.DataFrame()
     af = param.Array()
+    af = None if np is None else param.Array()
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)

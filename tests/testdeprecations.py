@@ -98,6 +98,9 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamDeprecationWarning):
             param.parameterized.recursive_repr(lambda: '')
 
+    def test_deprecate_all_equal(self):
+        with pytest.raises(param._utils.ParamDeprecationWarning):
+            param.parameterized.all_equal(1, 1)
 
 class TestDeprecateParameters:
 

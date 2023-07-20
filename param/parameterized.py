@@ -287,6 +287,8 @@ def get_occupied_slots(instance):
             if hasattr(instance,slot)]
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
 def all_equal(arg1,arg2):
     """
     Return a single boolean for arg1==arg2, even for numpy arrays

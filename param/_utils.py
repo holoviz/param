@@ -1,5 +1,6 @@
 import inspect
 import functools
+import re
 import warnings
 
 from textwrap import dedent
@@ -109,3 +110,7 @@ def _recursive_repr(fillvalue='...'):
         return wrapper
 
     return decorating_function
+
+
+def _is_auto_name(class_name, instance_name):
+    return re.match('^'+class_name+'[0-9]{5}$', instance_name)

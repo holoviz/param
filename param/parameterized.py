@@ -37,6 +37,7 @@ from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 from ._utils import (
     _deprecated,
     _deprecate_positional_args,
+    _is_auto_name,
     _recursive_repr,
     ParamDeprecationWarning as _ParamDeprecationWarning,
 )
@@ -1615,15 +1616,21 @@ class Comparator:
         str: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq,
+        lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
     }
     equalities.update({dtt: operator.eq for dtt in dt_types})
 
     @classmethod
     def is_equal(cls, obj1, obj2):
         for eq_type, eq in cls.equalities.items():
-            if ((isinstance(eq_type, FunctionType)
-                 and eq_type(obj1) and eq_type(obj2))
-                or (isinstance(obj1, eq_type) and isinstance(obj2, eq_type))):
+            try:
+                are_instances = isinstance(obj1, eq_type) and isinstance(obj2, eq_type)
+            except TypeError:
+                pass
+            else:
+                if are_instances:
+                    return eq(obj1, obj2)
+            if isinstance(eq_type, FunctionType) and eq_type(obj1) and eq_type(obj2):
                 return eq(obj1, obj2)
         if isinstance(obj2, (list, set, tuple)):
             return cls.compare_iterator(obj1, obj2)
@@ -2408,7 +2415,9 @@ class Parameters:
         vals = []
         for name, val in self_or_cls.param.objects('existing').items():
             value = self_or_cls.param.get_value_generator(name)
-            if not onlychanged or not all_equal(value, val.default):
+            if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
+                continue
+            if not onlychanged or not Comparator.is_equal(value, val.default):
                 vals.append((name, value))
 
         vals.sort(key=itemgetter(0))

@@ -1695,6 +1695,15 @@ class Selector(SelectorBase, _SignatureSelector):
             self.allow_None = allow_None
         if self.default is not None and self.check_on_set is True:
             self._validate(self.default)
+        self._update_state()
+
+    def _update_state(self):
+        if (
+            self.check_on_set is False
+            and self.default is not None
+            and self.default not in self.objects
+        ):
+            self.objects.append(self.default)
 
     @property
     def objects(self):

@@ -1328,6 +1328,12 @@ class Parameter(_ParameterBase):
         attribute is set.
         """
 
+    def _update_state(self):
+        """
+        Can be overridden on subclasses to update a Parameter state, i.e. slot
+        values, after the slot values have been set in the inheritance procedure.
+        """
+
     def __get__(self, obj, objtype): # pylint: disable-msg=W0613
         """
         Return the value for this Parameter.
@@ -3309,6 +3315,10 @@ class ParameterizedMetaclass(type):
         # (which are only allowed to use static values or results are undefined)
         for slot, fn in callables.items():
             setattr(param, slot, fn(param))
+
+        # Once all the slot values have been set, call _update_state for Parameters
+        # that need updates to make sure they're set up correctly after inheritance.
+        param._update_state()
 
     def get_param_descriptor(mcs,param_name):
         """

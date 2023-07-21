@@ -73,3 +73,10 @@ class TestNumpy(unittest.TestCase):
 
         z = Z(z=numpy.array([1,2]))
         _is_array_and_equal(z.z,[1,2])
+
+    def test_array_pprint(self):
+        class MatParam(param.Parameterized):
+            mat = param.Array(numpy.zeros((2, 2)))
+
+        mp = MatParam()
+        mp.param.pprint()

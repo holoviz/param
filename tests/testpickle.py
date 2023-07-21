@@ -38,24 +38,27 @@ class P1(param.Parameterized):
     x = param.Parameter()
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_simple_class(pickler):
-    s = pickler.dumps(P1)
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_simple_class(pickler, protocol):
+    s = pickler.dumps(P1, protocol=protocol)
     cls = pickler.loads(s)
     assert cls is P1
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_simple_instance(pickler):
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_simple_instance(pickler, protocol):
     p = P1()
-    s = pickler.dumps(p)
+    s = pickler.dumps(p, protocol=protocol)
     inst = pickler.loads(s)
     assert eq(p, inst)
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_simple_instance_modif_after(pickler):
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_simple_instance_modif_after(pickler, protocol):
     p = P1()
-    s = pickler.dumps(p)
+    s = pickler.dumps(p, protocol=protocol)
     p.x = 'modified'
     inst = pickler.loads(s)
     assert not eq(p, inst)
@@ -97,16 +100,18 @@ class P2(param.Parameterized):
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_all_parameters_class(pickler):
-    s = pickler.dumps(P2)
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_all_parameters_class(pickler, protocol):
+    s = pickler.dumps(P2, protocol=protocol)
     cls = pickler.loads(s)
     assert cls is P2
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_all_parameters_instance(pickler):
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_all_parameters_instance(pickler, protocol):
     p = P2()
-    s = pickler.dumps(p)
+    s = pickler.dumps(p, protocol=protocol)
     inst = pickler.loads(s)
     assert eq(p, inst)
 
@@ -121,17 +126,19 @@ class P3(param.Parameterized):
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_depends_watch_class(pickler):
-    s = pickler.dumps(P3)
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_depends_watch_class(pickler, protocol):
+    s = pickler.dumps(P3, protocol=protocol)
     cls = pickler.loads(s)
     assert cls is P3
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_depends_watch_instance(pickler):
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_depends_watch_instance(pickler, protocol):
     # https://github.com/holoviz/param/issues/757
     p = P3()
-    s = pickler.dumps(p)
+    s = pickler.dumps(p, protocol=protocol)
     inst = pickler.loads(s)
     assert eq(p, inst)
 
@@ -176,27 +183,30 @@ class P4(param.Parameterized):
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_complex_depends_class(pickler):
-    s = pickler.dumps(P4)
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_complex_depends_class(pickler, protocol):
+    s = pickler.dumps(P4, protocol=protocol)
     cls = pickler.loads(s)
     assert cls is P4
 
 
 @pytest.mark.parametrize('pickler', [cloudpickle, pickle], indirect=True)
-def test_pickle_complex_depends_instance(pickler):
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_pickle_complex_depends_instance(pickler, protocol):
     p = P4()
-    s = pickler.dumps(p)
+    s = pickler.dumps(p, protocol=protocol)
     inst = pickler.loads(s)
     assert eq(p, inst)
 
 
 @pytest.mark.skipif(cloudpickle is None, reason='cloudpickle not available')
-def test_issue_757():
+@pytest.mark.parametrize('protocol', [0, pickle.DEFAULT_PROTOCOL, pickle.HIGHEST_PROTOCOL])
+def test_issue_757(protocol):
     # https://github.com/holoviz/param/issues/759
     class P(param.Parameterized):
         a = param.Parameter()
 
     p = P()
-    s = cloudpickle.dumps(p)
+    s = cloudpickle.dumps(p, protocol=protocol)
     inst = cloudpickle.loads(s)
     assert eq(p, inst)

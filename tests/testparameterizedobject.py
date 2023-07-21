@@ -378,6 +378,142 @@ class TestParameterized(unittest.TestCase):
         with self.assertRaises(ValueError):
             TestPOValidation.value = 10
 
+    def test_instantiation_set_before_super(self):
+        count = 0
+        class P(param.Parameterized):
+
+            x = param.Parameter(0)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+            @param.depends('x', watch=True)
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        p = P()
+
+        assert p.x == 1
+        assert count == 0
+
+    def test_instantiation_set_before_super_contrived(self):
+        # https://github.com/holoviz/param/pull/790#discussion_r1263483293
+        class P(param.Parameterized):
+
+            value = param.String(default="A")
+
+            def __init__(self, depth=0):
+                self.value = 'B'
+                if depth < 2:
+                    self.sub = P(depth+1)
+                super().__init__()
+
+        p = P()
+
+        assert p.value == 'B'
+        assert p.sub.value == 'B'
+
+    def test_instantiation_set_before_super_subclass(self):
+        # Inspired by a HoloViews use case (GenericElementPlot, GenericOverlayPlot)
+        class A(param.Parameterized):
+
+            def __init__(self, batched=False, **params):
+                self.batched = batched
+                super().__init__(**params)
+
+        class B(A):
+
+            batched = param.Boolean()
+
+            def __init__(self, batched=True, **params):
+                super().__init__(batched=batched, **params)
+
+        a = A()
+        assert a.batched is False
+
+        # When b is instantiated the `batched` Parameter of B is set before
+        # Parameterized.__init__ is called.
+        b = B()
+        assert b.batched is True
+
+    def test_instantiation_param_objects_before_super_subclass(self):
+        # Testing https://github.com/holoviz/param/pull/420
+
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+            def __init__(self):
+                objs = self.param.objects(instance='existing')
+                assert isinstance(objs, dict)
+                super().__init__()
+
+        P()
+
+    @pytest.mark.xfail(
+        raises=AttributeError,
+        reason='Behavior not defined when setting a constant parameter before calling super()',
+    )
+    def test_instantiation_set_before_super_constant(self):
+        count = 0
+        class P(param.Parameterized):
+
+            x = param.Parameter(0, constant=True)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+            @param.depends('x', watch=True)
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        p = P()
+
+        assert p.x == 1
+        assert count == 0
+
+    def test_instantiation_set_before_super_readonly(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter(0, readonly=True)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+        with pytest.raises(TypeError, match="Read-only parameter 'x' cannot be modified"):
+            P()
+
+    def test_parameter_constant_iadd_allowed(self):
+        # Testing https://github.com/holoviz/param/pull/400
+        class P(param.Parameterized):
+
+            list = param.List([], constant=True)
+
+        p = P()
+        p.list += [1, 2, 3]
+
+        # Just to make sure that normal setting is still forbidden
+        with pytest.raises(TypeError, match="Constant parameter 'list' cannot be modified"):
+            p.list = [0]
+
+    def test_parameter_constant_same_notallowed(self):
+        L = [0, 1]
+        class P(param.Parameterized):
+
+            list = param.List(L, constant=True)
+
+        p = P()
+
+        # instantiate is set to true internally so a deepcopy is made of L,
+        # it's no longer the same object
+        with pytest.raises(TypeError, match="Constant parameter 'list' cannot be modified"):
+            p.list = L
+
     def test_values(self):
         """Basic tests of params() method."""
 

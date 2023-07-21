@@ -848,15 +848,6 @@ class Watcher(_Watcher):
             values['precedence'] = 0
         return super().__new__(cls_, **values)
 
-    def __iter__(self):
-        """
-        Backward compatibility layer to allow tuple unpacking without
-        the precedence value. Important for Panel which creates a
-        custom Watcher and uses tuple unpacking. Will be dropped in
-        Param 3.x.
-        """
-        return iter(self[:-1])
-
     def __str__(self):
         cls = type(self)
         attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
@@ -1415,6 +1406,9 @@ class Parameter(_ParameterBase):
                 _old = self.default
                 self.default = val
             else:
+                # When setting a Parameter before calling super.
+                if not isinstance(obj._param__private, _InstancePrivate):
+                    obj._param__private = _InstancePrivate()
                 _old = obj._param__private.values.get(self.name, self.default)
                 obj._param__private.values[self.name] = val
 
@@ -3638,6 +3632,7 @@ class _ClassPrivate:
         'disable_instance_params',
         'renamed',
         'params',
+        'initialized',
     ]
 
     def __init__(
@@ -3658,6 +3653,14 @@ class _ClassPrivate:
         self.disable_instance_params = disable_instance_params
         self.renamed = renamed
         self.params = {} if params is None else params
+        self.initialized = False
+
+    def __getstate__(self):
+        return {slot: getattr(self, slot) for slot in self.__slots__}
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
 
 
 class _InstancePrivate:
@@ -3710,6 +3713,13 @@ class _InstancePrivate:
         # self.watchers = {} if watchers is None else watchers
         self.values = {} if values is None else values
 
+    def __getstate__(self):
+        return {slot: getattr(self, slot) for slot in self.__slots__}
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
+
 
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
@@ -3760,7 +3770,12 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __init__(self, **params):
         global object_count
 
-        self._param__private = _InstancePrivate()
+        # Setting a Parameter value in an __init__ block before calling
+        # Parameterized.__init__ (via super() generally) already sets the
+        # _InstancePrivate namespace over the _ClassPrivate namespace
+        # (see Parameter.__set__) so we shouldn't override it here.
+        if not isinstance(self._param__private, _InstancePrivate):
+            self._param__private = _InstancePrivate()
         self._param_watchers = {}
 
         # Skip generating a custom instance name when a class in the hierarchy

@@ -391,7 +391,7 @@ class TestParameterized(unittest.TestCase):
         assert 'inst' in TestPO.param.values()
         assert 'notinst' in TestPO.param.values()
 
-    def test_values_name_ignored_for_intances_and_onlychanged(self):
+    def test_values_name_ignored_for_instances_and_onlychanged(self):
         default_inst = param.Parameterized()
         assert 'Parameterized' in default_inst.name
         # name ignored when automatically computed (behavior inherited from all_equal)

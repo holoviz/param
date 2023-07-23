@@ -16,6 +16,7 @@ parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
 
+import pathlib
 import os.path
 import sys
 import copy
@@ -2412,6 +2413,55 @@ class Foldername(Path):
     def _resolve(self, path):
         return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
 
+
+class Foldernames(Foldername):
+    r"""
+    Parameter that can be set to a list of paths, where each path can be a pathlib.Path object
+    or a string specifying the path of a folder. For convenience, if a single string or
+    path is provided, it is first inserted into a single-item list.
+
+    The string(s) should be specified in UNIX style, but they will be
+    returned in the format of the user's operating system.
+
+    The specified path(s) can be absolute, or relative to either:
+
+    * any of the paths specified in the search_paths attribute (if
+      search_paths is not None);
+
+    or
+
+    * any of the paths searched by resolve_dir_path() (if search_paths
+      is None).
+    """
+
+    @staticmethod
+    def _cast_to_list(obj):
+        """Insert a single folder name (str or pathlib.Path) into a one-item list."""
+        if isinstance(obj, (str, pathlib.Path)):
+            return [obj]
+        else:
+            return obj  # validation is deferred to _resolve()
+
+    def __init__(self, default=None, search_paths=None, **params):
+        super(Foldernames, self).__init__(self._cast_to_list(default), search_paths, **params)
+
+    def __set__(self, param_owner, obj):
+        super(Foldernames, self).__set__(param_owner, self._cast_to_list(obj))
+
+    def _resolve(self, paths):
+        """Resolve and validate each folder item.
+
+        Parameters
+        ----------
+        paths: list
+            list of folder paths, either as `str` or `pathlib.Path` objects
+
+        Returns
+        -------
+        list
+            If the object is valid, return the folder names a list of `str` objects
+        """
+        return [super(Foldernames, self)._resolve(p) for p in paths]
 
 
 def _abbreviate_paths(pathspec,named_paths):

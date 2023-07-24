@@ -1,4 +1,3 @@
-from __future__ import print_function
 """
 Parameters are a kind of class attribute allowing special behavior,
 including dynamically generated parameter values, documentation
@@ -24,39 +23,45 @@ import glob
 import re
 import datetime as dt
 import collections
+import typing
+import warnings
 
 from collections import OrderedDict
 from contextlib import contextmanager
 from numbers import Real
 
+from . import version  # noqa: api import
+
 from .parameterized import ( Undefined,
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, basestring, dt_types,
-    _dict_update)
+    descendents, get_logger, instance_descriptor, dt_types,
+    _dict_update, _int_types)
 
 from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
+from .parameterized import _identity_hook
+from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning, _deprecate_positional_args, _deprecated
 
-
-# Determine up-to-date version information, if possible, but with a
-# safe fallback to ensure that this file and parameterized.py are the
-# only two required files.
+# Define '__version__'
 try:
-    from .version import Version
-    __version__ = str(Version(fpath=__file__, archive_commit="$Format:%h$", reponame="param"))
-except:
-    __version__ = "0.0.0+unknown"
+    # If setuptools_scm is installed (e.g. in a development environment with
+    # an editable install), then use it to determine the version dynamically.
+    from setuptools_scm import get_version
 
-try:
-    import collections.abc as collections_abc
-except ImportError:
-    collections_abc = collections
-
-if sys.version_info[0] >= 3:
-    unicode = str
+    # This will fail with LookupError if the package is not installed in
+    # editable mode or if Git is not installed.
+    __version__ = get_version(root="..", relative_to=__file__)
+except (ImportError, LookupError):
+    # As a fallback, use the version that is hard-coded in the file.
+    try:
+        from ._version import __version__
+    except ModuleNotFoundError:
+        # The user is probably trying to run this without having installed
+        # the package.
+        __version__ = "0.0.0+unknown"
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
@@ -68,7 +73,7 @@ main=Parameterized(name="main")
 random_seed = 42
 
 
-def produce_value(value_obj):
+def _produce_value(value_obj):
     """
     A helper function that produces an actual parameter from a stored
     object: if the object is callable, call it, otherwise return the
@@ -80,27 +85,46 @@ def produce_value(value_obj):
         return value_obj
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
+def produce_value(value_obj):
+    """
+    A helper function that produces an actual parameter from a stored
+    object: if the object is callable, call it, otherwise return the
+    object.
+
+    ..deprecated:: 2.0.0
+    """
+    return _produce_value(value_obj)
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
 def as_unicode(obj):
     """
     Safely casts any object to unicode including regular string
     (i.e. bytes) types in python 2.
+
+    ..deprecated:: 2.0.0
     """
-    if sys.version_info.major < 3 and isinstance(obj, str):
-        obj = obj.decode('utf-8')
-    return unicode(obj)
+    return str(obj)
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
     ordered, and vanilla Python dictionaries are ordered for Python 3.6+
+
+    ..deprecated:: 2.0.0
     """
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
     vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
-    return isinstance(d, (OrderedDict))or (vanilla_odicts and isinstance(d, dict))
+    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
 
 
-def hashable(x):
+def _hashable(x):
     """
     Return a hashable version of the given object x, with lists and
     dictionaries converted to tuples.  Allows mutable objects to be
@@ -109,15 +133,31 @@ def hashable(x):
     part of the object has changed.  Does not (currently) recursively
     replace mutable subobjects.
     """
-    if isinstance(x, collections_abc.MutableSequence):
+    if isinstance(x, collections.abc.MutableSequence):
         return tuple(x)
-    elif isinstance(x, collections_abc.MutableMapping):
+    elif isinstance(x, collections.abc.MutableMapping):
         return tuple([(k,v) for k,v in x.items()])
     else:
         return x
 
 
-def named_objs(objlist, namesdict=None):
+# PARAM3_DEPRECATION
+@_deprecated()
+def hashable(x):
+    """
+    Return a hashable version of the given object x, with lists and
+    dictionaries converted to tuples.  Allows mutable objects to be
+    used as a lookup key in cases where the object has not actually
+    been mutated. Lookup will fail (appropriately) in cases where some
+    part of the object has changed.  Does not (currently) recursively
+    replace mutable subobjects.
+
+    ..deprecated:: 2.0.0
+    """
+    return _hashable(x)
+
+
+def _named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
     string name for the object to the object itself. Accepts
@@ -131,13 +171,13 @@ def named_objs(objlist, namesdict=None):
     if namesdict is not None:
         for k, v in namesdict.items():
             try:
-                objtoname[hashable(v)] = k
+                objtoname[_hashable(v)] = k
             except TypeError:
                 unhashables.append((k, v))
 
     for obj in objlist:
-        if objtoname and hashable(obj) in objtoname:
-            k = objtoname[hashable(obj)]
+        if objtoname and _hashable(obj) in objtoname:
+            k = objtoname[_hashable(obj)]
         elif any(obj is v for (_, v) in unhashables):
             k = [k for (k, v) in unhashables if v is obj][0]
         elif hasattr(obj, "name"):
@@ -145,29 +185,47 @@ def named_objs(objlist, namesdict=None):
         elif hasattr(obj, '__name__'):
             k = obj.__name__
         else:
-            k = as_unicode(obj)
+            k = str(obj)
         objs[k] = obj
     return objs
 
 
-def param_union(*parameterizeds, **kwargs):
+# PARAM3_DEPRECATION
+@_deprecated()
+def named_objs(objlist, namesdict=None):
+    """
+    Given a list of objects, returns a dictionary mapping from
+    string name for the object to the object itself. Accepts
+    an optional name,obj dictionary, which will override any other
+    name if that item is present in the dictionary.
+
+    ..deprecated:: 2.0.0
+    """
+    return _named_objs(objlist, namesdict=namesdict)
+
+
+def param_union(*parameterizeds, warn=True):
     """
     Given a set of Parameterized objects, returns a dictionary
     with the union of all param name,value pairs across them.
-    If warn is True (default), warns if the same parameter has
-    been given multiple values; otherwise uses the last value
+
+    Parameters
+    ----------
+    warn : bool, optional
+        Wether to warn if the same parameter have been given multiple values,
+        otherwise use the last value, by default True
+
+    Returns
+    -------
+    dict
+        Union of all param name,value pairs
     """
-    warn = kwargs.pop('warn', True)
-    if len(kwargs):
-        raise TypeError(
-            "param_union() got an unexpected keyword argument '{}'".format(
-                kwargs.popitem()[0]))
-    d = dict()
+    d = {}
     for o in parameterizeds:
         for k in o.param:
             if k != 'name':
                 if k in d and warn:
-                    get_logger().warning("overwriting parameter {}".format(k))
+                    get_logger().warning(f"overwriting parameter {k}")
                 d[k] = getattr(o, k)
     return d
 
@@ -260,8 +318,9 @@ def _get_min_max_value(min, max, value=None, step=None):
     # Either min and max need to be given, or value needs to be given
     if value is None:
         if min is None or max is None:
-            raise ValueError('unable to infer range, value '
-                             'from: ({0}, {1}, {2})'.format(min, max, value))
+            raise ValueError(
+                f'unable to infer range, value from: ({min}, {max}, {value})'
+            )
         diff = max - min
         value = min + (diff / 2)
         # Ensure that value has the same type as diff
@@ -287,11 +346,37 @@ def _get_min_max_value(min, max, value=None, step=None):
         tick = int((value - min) / step)
         value = min + tick * step
     if not min <= value <= max:
-        raise ValueError('value must be between min and max (min={0}, value={1}, max={2})'.format(min, value, max))
+        raise ValueError(f'value must be between min and max (min={min}, value={value}, max={max})')
     return min, max, value
 
 
-class Infinity(object):
+def _deserialize_from_path(ext_to_routine, path, type_name):
+    """
+    Call deserialization routine with path according to extension.
+    ext_to_routine should be a dictionary mapping each supported
+    file extension to a corresponding loading function.
+    """
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            "Could not parse file '{}' as {}: does not exist or is not a file"
+            "".format(path, type_name))
+    root, ext = os.path.splitext(path)
+    if ext in {'.gz', '.bz2', '.xz', '.zip'}:
+        # A compressed type. We'll assume the routines can handle such extensions
+        # transparently (if not, we'll fail later)
+        ext = os.path.splitext(root)[1]
+    # FIXME(sdrobert): try...except block below with "raise from" might be a good idea
+    # once py2.7 support is removed. Provides error + fact that failure occurred in
+    # deserialization
+    if ext in ext_to_routine:
+        return ext_to_routine[ext](path)
+    raise ValueError(
+        "Could not parse file '{}' as {}: no deserialization method for files with "
+        "'{}' extension. Supported extensions: {}"
+        "".format(path, type_name, ext, ', '.join(sorted(ext_to_routine))))
+
+
+class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
     Python's float('inf') value, this object can be safely compared
@@ -442,7 +527,7 @@ class Time(Parameterized):
 
 
     def __init__(self, **params):
-        super(Time, self).__init__(**params)
+        super().__init__(**params)
         self._time = self.time_type(0)
         self._exhausted = None
         self._pushed_state = []
@@ -476,9 +561,6 @@ class Time(Parameterized):
             self._exhausted = None
             raise StopIteration
         return self._time
-
-    # PARAM2_DEPRECATION: For Python 2 compatibility; can be removed for Python 3.
-    next = __next__
 
     def __call__(self, val=None, time_type=None):
         """
@@ -553,10 +635,6 @@ class Dynamic(Parameter):
     Note that at present, the callable object must allow attributes
     to be set on itself.
 
-    [Python 2.4 limitation: the callable object must be an instance of a
-    callable class, rather than a named function or a lambda function,
-    otherwise the object will not be picklable or deepcopyable.]
-
     If set as time_dependent, setting the Dynamic.time_fn allows the
     production of dynamic values to be controlled: a new value will be
     produced only if the current value of time_fn is different from
@@ -573,12 +651,20 @@ class Dynamic(Parameter):
     time_fn = Time()
     time_dependent = False
 
-    def __init__(self,**params):
+    @typing.overload
+    def __init__(
+        self, default=None, *,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=Undefined, **params):
         """
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
         """
-        super(Dynamic,self).__init__(**params)
+        super().__init__(default=default, **params)
 
         if callable(self.default):
             self._set_instantiate(True)
@@ -608,7 +694,7 @@ class Dynamic(Parameter):
         return that result, otherwise ask that result to produce a
         value and return it.
         """
-        gen = super(Dynamic,self).__get__(obj,objtype)
+        gen = super().__get__(obj,objtype)
 
         if not hasattr(gen,'_Dynamic_last'):
             return gen
@@ -625,7 +711,7 @@ class Dynamic(Parameter):
 
         If val is dynamic, initialize it as a generator.
         """
-        super(Dynamic,self).__set__(obj,val)
+        super().__set__(obj,val)
 
         dynamic = callable(val)
         if dynamic: self._initialize_generator(val,obj)
@@ -640,7 +726,7 @@ class Dynamic(Parameter):
         (i.e. gen will be asked to produce a new value).
 
         If force is True, or the value of time_fn() is different from
-        what it was was last time produce_value was called, a new
+        what it was was last time _produce_value was called, a new
         value will be produced and returned. Otherwise, the last value
         gen produced will be returned.
         """
@@ -651,14 +737,14 @@ class Dynamic(Parameter):
             time_fn = self.time_fn
 
         if (time_fn is None) or (not self.time_dependent):
-            value = produce_value(gen)
+            value = _produce_value(gen)
             gen._Dynamic_last = value
         else:
 
             time = time_fn()
 
             if force or time!=gen._Dynamic_time:
-                value = produce_value(gen)
+                value = _produce_value(gen)
                 gen._Dynamic_last = value
                 gen._Dynamic_time = time
             else:
@@ -672,12 +758,12 @@ class Dynamic(Parameter):
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
-        return hasattr(super(Dynamic,self).__get__(obj,objtype),'_Dynamic_last')
+        return hasattr(super().__get__(obj,objtype),'_Dynamic_last')
 
 
     def _inspect(self,obj,objtype=None):
         """Return the last generated value for this parameter."""
-        gen=super(Dynamic,self).__get__(obj,objtype)
+        gen=super().__get__(obj,objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return gen._Dynamic_last
@@ -687,7 +773,7 @@ class Dynamic(Parameter):
 
     def _force(self,obj,objtype=None):
         """Force a new value to be generated, and return it."""
-        gen=super(Dynamic,self).__get__(obj,objtype)
+        gen=super().__get__(obj,objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return self._produce_value(gen,force=True)
@@ -705,8 +791,6 @@ def _is_number(obj):
     elif hasattr(obj, 'qdiv'): return True
     else: return False
 
-
-def identity_hook(obj,val): return val
 
 def get_soft_bounds(bounds, softbounds):
     """
@@ -743,7 +827,7 @@ class Bytes(Parameter):
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
 
-    Similar to the String parameter, but instead of type basestring
+    Similar to the String parameter, but instead of type string
     this parameter only allows objects of type bytes (e.g. b'bytes').
     """
 
@@ -753,8 +837,19 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
-    def __init__(self, default=Undefined, regex=Undefined, allow_None=Undefined, **kwargs):
-        super(Bytes, self).__init__(default=default, **kwargs)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=b"", *, regex=None, allow_None=False,
+        doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)
 
@@ -762,19 +857,34 @@ class Bytes(Parameter):
         if (val is None and self.allow_None):
             return
         if regex is not None and re.match(regex, val) is None:
-            raise ValueError("Bytes parameter %r value %r does not match regex %r."
-                             % (self.name, val, regex))
+            raise ValueError(f"Bytes parameter {self.name!r} value {val!r} does not match regex {regex!r}.")
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
         if not isinstance(val, bytes):
-            raise ValueError("Bytes parameter %r only takes a byte string value, "
-                             "not value of type %s." % (self.name, type(val)))
+            raise ValueError("Bytes parameter {!r} only takes a byte string value, "
+                             "not value of type {}.".format(self.name, type(val)))
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
         self._validate_regex(val, self.regex)
+
+
+class __compute_set_hook:
+    """Remove when set_hook is removed"""
+    def __call__(self, p):
+        return _identity_hook
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return None
+
+
+_compute_set_hook = __compute_set_hook()
 
 
 class Number(Dynamic):
@@ -826,18 +936,28 @@ class Number(Dynamic):
 
     _slot_defaults = _dict_update(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
-        inclusive_bounds=(True,True), step=None
+        inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, **params):
+    @typing.overload
+    def __init__(
+        self,
+        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
-        super(Number,self).__init__(default=default, **params)
-        self.set_hook = identity_hook
+        super().__init__(default=default, **params)
+        self.set_hook = set_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -849,7 +969,7 @@ class Number(Dynamic):
         Same as the superclass's __get__, but if the value was
         dynamically generated, check the bounds.
         """
-        result = super(Number, self).__get__(obj, objtype)
+        result = super().__get__(obj, objtype)
 
         # Should be able to optimize this commonly used method by
         # avoiding extra lookups (e.g. _value_is_dynamic() is also
@@ -868,7 +988,7 @@ class Number(Dynamic):
             bounded_val = self.crop_to_bounds(val)
         else:
             bounded_val = val
-        super(Number, self).__set__(obj, bounded_val)
+        super().__set__(obj, bounded_val)
 
     def crop_to_bounds(self, val):
         """
@@ -918,30 +1038,30 @@ class Number(Dynamic):
         if vmax is not None:
             if incmax is True:
                 if not val <= vmax:
-                    raise ValueError("Parameter %r must be at most %s, "
-                                     "not %s." % (self.name, vmax, val))
+                    raise ValueError("Parameter {!r} must be at most {}, "
+                                     "not {}.".format(self.name, vmax, val))
             else:
                 if not val < vmax:
-                    raise ValueError("Parameter %r must be less than %s, "
-                                     "not %s." % (self.name, vmax, val))
+                    raise ValueError("Parameter {!r} must be less than {}, "
+                                     "not {}.".format(self.name, vmax, val))
 
         if vmin is not None:
             if incmin is True:
                 if not val >= vmin:
-                    raise ValueError("Parameter %r must be at least %s, "
-                                     "not %s." % (self.name, vmin, val))
+                    raise ValueError("Parameter {!r} must be at least {}, "
+                                     "not {}.".format(self.name, vmin, val))
             else:
                 if not val > vmin:
-                    raise ValueError("Parameter %r must be greater than %s, "
-                                     "not %s." % (self.name, vmin, val))
+                    raise ValueError("Parameter {!r} must be greater than {}, "
+                                     "not {}.".format(self.name, vmin, val))
 
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None) or callable(val):
             return
 
         if not _is_number(val):
-            raise ValueError("Parameter %r only takes numeric values, "
-                             "not type %r." % (self.name, type(val)))
+            raise ValueError("Parameter {!r} only takes numeric values, "
+                             "not type {!r}.".format(self.name, type(val)))
 
     def _validate_step(self, val, step):
         if step is not None and not _is_number(step):
@@ -964,7 +1084,7 @@ class Number(Dynamic):
         if 'step' not in state:
             state['step'] = None
 
-        super(Number, self).__setstate__(state)
+        super().__setstate__(state)
 
 
 
@@ -980,9 +1100,9 @@ class Integer(Number):
         if allow_None and val is None:
             return
 
-        if not isinstance(val, int):
-            raise ValueError("Integer parameter %r must be an integer, "
-                             "not type %r." % (self.name, type(val)))
+        if not isinstance(val, _int_types):
+            raise ValueError("Integer parameter {!r} must be an integer, "
+                             "not type {!r}.".format(self.name, type(val)))
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, int):
@@ -996,38 +1116,70 @@ class Magnitude(Number):
 
     _slot_defaults = _dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
+    @typing.overload
+    def __init__(
+        self,
+        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+        super().__init__(
+            default=default, bounds=bounds, softbounds=softbounds,
+            inclusive_bounds=inclusive_bounds, step=step, set_hook=set_hook, **params
+        )
 
 
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
-    __slots__ = ['bounds']
+    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
 
-    # Bounds are set for consistency and are arguably accurate, but have
-    # no effect since values are either False, True, or None (if allowed).
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False, bounds=(0,1))
+    @typing.overload
+    def __init__(
+        self,
+        default=False, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
-    def __init__(self, default=Undefined, bounds=Undefined, **params):
-        self.bounds = bounds
-        super(Boolean, self).__init__(default=default, **params)
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, **params):
+        super().__init__(default=default, **params)
         self._validate(self.default)
 
     def _validate_value(self, val, allow_None):
         if allow_None:
             if not isinstance(val, bool) and val is not None:
-                raise ValueError("Boolean parameter %r only takes a "
-                                 "Boolean value or None, not %s."
-                                 % (self.name, val))
+                raise ValueError("Boolean parameter {!r} only takes a "
+                                 "Boolean value or None, not {}.".format(self.name, val))
         elif not isinstance(val, bool):
             name = "" if self.name is None else " %r" % self.name
-            raise ValueError("Boolean parameter%s must be True or False, not %s." % (name, val))
+            raise ValueError(
+                f"Boolean parameter{name} must be True or False, not {val}."
+            )
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
 
 
-def _compute_length_of_default(p):
-    return len(p.default)
+class __compute_length_of_default:
+    def __call__(self, p):
+        return len(p.default)
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return None
+
+
+_compute_length_of_default = __compute_length_of_default()
 
 
 class Tuple(Parameter):
@@ -1037,14 +1189,24 @@ class Tuple(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
-    def __init__(self, default=Undefined, length=Undefined, **params):
+    @typing.overload
+    def __init__(
+        self,
+        default=(0,0), *, length=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
         value, if any, and must be supplied explicitly otherwise.  The
         length is not allowed to change after instantiation.
         """
-        super(Tuple,self).__init__(default=default, **params)
+        super().__init__(default=default, **params)
         if length is Undefined and self.default is None:
             raise ValueError("%s: length must be specified if no default is supplied." %
                              (self.name))
@@ -1059,8 +1221,8 @@ class Tuple(Parameter):
             return
 
         if not isinstance(val, tuple):
-            raise ValueError("Tuple parameter %r only takes a tuple value, "
-                             "not %r." % (self.name, type(val)))
+            raise ValueError("Tuple parameter {!r} only takes a tuple value, "
+                             "not {!r}.".format(self.name, type(val)))
 
     def _validate_length(self, val, length):
         if val is None and self.allow_None:
@@ -1092,14 +1254,14 @@ class NumericTuple(Tuple):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
     def _validate_value(self, val, allow_None):
-        super(NumericTuple, self)._validate_value(val, allow_None)
+        super()._validate_value(val, allow_None)
         if allow_None and val is None:
             return
         for n in val:
             if _is_number(n):
                 continue
-            raise ValueError("NumericTuple parameter %r only takes numeric "
-                             "values, not type %r." % (self.name, type(n)))
+            raise ValueError("NumericTuple parameter {!r} only takes numeric "
+                             "values, not type {!r}.".format(self.name, type(n)))
 
 
 class XYCoordinates(NumericTuple):
@@ -1107,8 +1269,17 @@ class XYCoordinates(NumericTuple):
 
     _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
+    @typing.overload
+    def __init__(
+        self,
+        default=(0.0, 0.0), *, length=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, **params):
-        super(XYCoordinates,self).__init__(default=default, length=2, **params)
+        super().__init__(default=default, length=2, **params)
 
 
 class Callable(Parameter):
@@ -1125,8 +1296,8 @@ class Callable(Parameter):
         if (allow_None and val is None) or callable(val):
             return
 
-        raise ValueError("Callable parameter %r only takes a callable object, "
-                         "not objects of type %r." % (self.name, type(val)))
+        raise ValueError("Callable parameter {!r} only takes a callable object, "
+                         "not objects of type {!r}.".format(self.name, type(val)))
 
 
 class Action(Callable):
@@ -1155,8 +1326,8 @@ def concrete_descendents(parentclass):
 
     Only non-abstract classes will be included.
     """
-    return dict((c.__name__,c) for c in descendents(parentclass)
-                if not _is_abstract(c))
+    return {c.__name__:c for c in descendents(parentclass)
+            if not _is_abstract(c)}
 
 
 class Composite(Parameter):
@@ -1176,10 +1347,20 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    def __init__(self, attribs=Undefined, **kw):
+    @typing.overload
+    def __init__(
+        self,
+        *, attribs=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
-        super(Composite, self).__init__(default=Undefined, **kw)
+        super().__init__(default=Undefined, **kw)
         self.attribs = attribs
 
     def __get__(self, obj, objtype):
@@ -1232,7 +1413,7 @@ class ListProxy(list):
     """
 
     def __init__(self, iterable, parameter=None):
-        super(ListProxy, self).__init__(iterable)
+        super().__init__(iterable)
         self._parameter = parameter
 
     def _warn(self, method):
@@ -1255,31 +1436,31 @@ class ListProxy(list):
     def __getitem__(self, index):
         if self._parameter.names:
             return self._parameter.names[index]
-        return super(ListProxy, self).__getitem__(index)
+        return super().__getitem__(index)
 
     def __setitem__(self, index, object, trigger=True):
         if isinstance(index, (int, slice)):
             if self._parameter.names:
                 self._warn('[index] = object')
             with self._trigger():
-                super(ListProxy, self).__setitem__(index, object)
+                super().__setitem__(index, object)
                 self._parameter._objects[index] = object
             return
         if self and not self._parameter.names:
-            self._parameter.names = named_objs(self)
+            self._parameter.names = _named_objs(self)
         with self._trigger(trigger):
             if index in self._parameter.names:
                 old = self._parameter.names[index]
                 idx = self.index(old)
-                super(ListProxy, self).__setitem__(idx, object)
+                super().__setitem__(idx, object)
                 self._parameter._objects[idx] = object
             else:
-                super(ListProxy, self).append(object)
+                super().append(object)
                 self._parameter._objects.append(object)
             self._parameter.names[index] = object
 
     def __eq__(self, other):
-        eq = super(ListProxy, self).__eq__(other)
+        eq = super().__eq__(other)
         if self._parameter.names and eq is NotImplemented:
             return dict(zip(self._parameter.names, self)) == other
         return eq
@@ -1291,7 +1472,7 @@ class ListProxy(list):
         if self._parameter.names:
             self._warn('.append')
         with self._trigger():
-            super(ListProxy, self).append(object)
+            super().append(object)
             self._parameter._objects.append(object)
 
     def copy(self):
@@ -1301,7 +1482,7 @@ class ListProxy(list):
 
     def clear(self):
         with self._trigger():
-            super(ListProxy, self).clear()
+            super().clear()
             self._parameter._objects.clear()
             self._parameter.names.clear()
 
@@ -1309,36 +1490,36 @@ class ListProxy(list):
         if self._parameter.names:
             self._warn('.append')
         with self._trigger():
-            super(ListProxy, self).extend(objects)
+            super().extend(objects)
             self._parameter._objects.extend(objects)
 
     def get(self, key, default=None):
         if self._parameter.names:
             return self._parameter.names.get(key, default)
-        return named_objs(self).get(key, default)
+        return _named_objs(self).get(key, default)
 
     def insert(self, index, object):
         if self._parameter.names:
             self._warn('.insert')
         with self._trigger():
-            super(ListProxy, self).insert(index, object)
+            super().insert(index, object)
             self._parameter._objects.insert(index, object)
 
     def items(self):
         if self._parameter.names:
             return self._parameter.names.items()
-        return named_objs(self).items()
+        return _named_objs(self).items()
 
     def keys(self):
         if self._parameter.names:
             return self._parameter.names.keys()
-        return named_objs(self).keys()
+        return _named_objs(self).keys()
 
     def pop(self, *args):
         index = args[0] if args else -1
         if isinstance(index, int):
             with self._trigger():
-                super(ListProxy, self).pop(index)
+                super().pop(index)
                 object = self._parameter._objects.pop(index)
                 if self._parameter.names:
                     self._parameter.names = {
@@ -1353,13 +1534,13 @@ class ListProxy(list):
             )
         with self._trigger():
             object = self._parameter.names.pop(*args)
-            super(ListProxy, self).remove(object)
+            super().remove(object)
             self._parameter._objects.remove(object)
         return object
 
     def remove(self, object):
         with self._trigger():
-            super(ListProxy, self).remove(object)
+            super().remove(object)
             self._parameter._objects.remove(object)
             if self._parameter.names:
                 copy = self._parameter.names.copy()
@@ -1370,19 +1551,19 @@ class ListProxy(list):
 
     def update(self, objects, **items):
         if not self._parameter.names:
-            self._parameter.names = named_objs(self)
+            self._parameter.names = _named_objs(self)
         objects = objects.items() if isinstance(objects, dict) else objects
         with self._trigger():
             for i, o in enumerate(objects):
-                if not isinstance(o, collections_abc.Sequence):
+                if not isinstance(o, collections.abc.Sequence):
                     raise TypeError(
-                        'cannot convert dictionary update sequence element #{i} to a sequence'.format(i=i)
+                        f'cannot convert dictionary update sequence element #{i} to a sequence'
                     )
                 o = tuple(o)
                 n = len(o)
                 if n != 2:
                     raise ValueError(
-                        'dictionary update sequence element #{i} has length {n}; 2 is required'.format(i=i, n=n)
+                        f'dictionary update sequence element #{i} has length {n}; 2 is required'
                     )
                 k, v = o
                 self.__setitem__(k, v, trigger=False)
@@ -1392,24 +1573,59 @@ class ListProxy(list):
     def values(self):
         if self._parameter.names:
             return self._parameter.names.values()
-        return named_objs(self).values()
+        return _named_objs(self).values()
 
 
-def _compute_selector_default(p):
+class __compute_selector_default:
     """
     Using a function instead of setting default to [] in _slot_defaults, as
     if it were modified in place later, which would happen with check_on_set set to False,
     then the object in _slot_defaults would itself be updated and the next Selector
     instance created wouldn't have [] as the default but a populated list.
     """
-    return []
+    def __call__(self, p):
+        return []
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return []
+
+_compute_selector_default = __compute_selector_default()
 
 
-def _compute_selector_checking_default(p):
-    return len(p.objects) != 0
+class __compute_selector_checking_default:
+    def __call__(self, p):
+        return len(p.objects) != 0
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return None
+
+_compute_selector_checking_default = __compute_selector_checking_default()
 
 
-class Selector(SelectorBase):
+class _SignatureSelector(Parameter):
+
+    _slot_defaults = _dict_update(
+        SelectorBase._slot_defaults, _objects=_compute_selector_default,
+        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
+        allow_None=None, instantiate=False, default=None,
+    )
+
+    @classmethod
+    def _modified_slots_defaults(cls):
+        defaults = super()._modified_slots_defaults()
+        defaults['objects'] = defaults.pop('_objects')
+        return defaults
+
+
+class Selector(SelectorBase, _SignatureSelector):
     """
     Parameter whose value must be one object from a list of possible objects.
 
@@ -1440,27 +1656,26 @@ class Selector(SelectorBase):
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    _slot_defaults = _dict_update(
-        SelectorBase._slot_defaults, _objects=_compute_selector_default,
-        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
-        allow_None=None, instantiate=False, default=None,
-    )
+    @typing.overload
+    def __init__(
+        self,
+        *, objects=[], default=None, instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, objects=Undefined, default=Undefined, instantiate=Undefined,
+    @_deprecate_positional_args
+    def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
         autodefault = Undefined
         if objects is not Undefined and objects:
-            if is_ordered_dict(objects):
-                autodefault = list(objects.values())[0]
-            elif isinstance(objects, dict):
-                main.param.warning("Parameter default value is arbitrary due to "
-                                   "dictionaries prior to Python 3.6 not being "
-                                   "ordered; should use an ordered dict or "
-                                   "supply an explicit default value.")
+            if isinstance(objects, dict):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, list):
                 autodefault = objects[0]
@@ -1471,11 +1686,13 @@ class Selector(SelectorBase):
         self.compute_default_fn = compute_default_fn
         self.check_on_set = check_on_set
 
-        super(Selector,self).__init__(
+        super().__init__(
             default=default, instantiate=instantiate, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:
             self.allow_None = self._slot_defaults['allow_None']
+        else:
+            self.allow_None = allow_None
         if self.default is not None and self.check_on_set is True:
             self._validate(self.default)
 
@@ -1485,7 +1702,7 @@ class Selector(SelectorBase):
 
     @objects.setter
     def objects(self, objects):
-        if isinstance(objects, collections_abc.Mapping):
+        if isinstance(objects, collections.abc.Mapping):
             self.names = objects
             self._objects = list(objects.values())
         else:
@@ -1536,8 +1753,8 @@ class Selector(SelectorBase):
                     limiter = ', ...]'
                     break
             items = '[' + ', '.join(items) + limiter
-            raise ValueError("%s not in parameter%s's list of possible objects, "
-                             "valid options include %s" % (val, attrib_name, items))
+            raise ValueError("{} not in parameter{}'s list of possible objects, "
+                             "valid options include {}".format(val, attrib_name, items))
 
     def _ensure_value_is_in_objects(self, val):
         """
@@ -1554,7 +1771,7 @@ class Selector(SelectorBase):
 
         (Returns the dictionary {object.name: object}.)
         """
-        return named_objs(self._objects, self.names)
+        return _named_objs(self._objects, self.names)
 
 
 class ObjectSelector(Selector):
@@ -1562,9 +1779,20 @@ class ObjectSelector(Selector):
     Deprecated. Same as Selector, but with a different constructor for
     historical reasons.
     """
-    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
-        super(ObjectSelector,self).__init__(objects=objects, default=default,
-                                            empty_default=True, **kwargs)
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
+        super().__init__(objects=objects, default=default,
+                         empty_default=True, **kwargs)
 
 
 class ClassSelector(SelectorBase):
@@ -1579,14 +1807,24 @@ class ClassSelector(SelectorBase):
 
     _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
-    def __init__(self, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+    @typing.overload
+    def __init__(
+        self,
+        *, class_, default=None, instantiate=True, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
-        super(ClassSelector,self).__init__(default=default,instantiate=instantiate,**params)
+        super().__init__(default=default,instantiate=instantiate,**params)
         self._validate(self.default)
 
     def _validate(self, val):
-        super(ClassSelector, self)._validate(val)
+        super()._validate(val)
         self._validate_class_(val, self.class_, self.is_instance)
 
     def _validate_class_(self, val, class_, is_instance):
@@ -1600,13 +1838,11 @@ class ClassSelector(SelectorBase):
         if is_instance:
             if not (isinstance(val, class_)):
                 raise ValueError(
-                    "%s parameter %r value must be an instance of %s, not %r." %
-                    (param_cls, self.name, class_name, val))
+                    f"{param_cls} parameter {self.name!r} value must be an instance of {class_name}, not {val!r}.")
         else:
             if not (issubclass(val, class_)):
                 raise ValueError(
-                    "%s parameter %r must be a subclass of %s, not %r." %
-                    (param_cls, self.name, class_name, val.__name__))
+                    f"{param_cls} parameter {self.name!r} must be a subclass of {class_name}, not {val.__name__!r}.")
 
     def get_range(self):
         """
@@ -1648,8 +1884,25 @@ class List(Parameter):
         instantiate=True, default=[],
     )
 
-    def __init__(self, default=Undefined, class_=Undefined, item_type=Undefined,
+    @typing.overload
+    def __init__(
+        self,
+        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
+        allow_None=False, doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, **params):
+        if class_ is not Undefined:
+            # PARAM3_DEPRECATION
+            warnings.warn(
+                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
+                category=_ParamDeprecationWarning,
+                stacklevel=3,
+            )
         if item_type is not Undefined and class_ is not Undefined:
             self.item_type = item_type
         elif item_type is Undefined or item_type is None:
@@ -1679,22 +1932,19 @@ class List(Parameter):
         l = len(val)
         if min_length is not None and max_length is not None:
             if not (min_length <= l <= max_length):
-                raise ValueError("%s: list length must be between %s and %s (inclusive)"%(self.name,min_length,max_length))
+                raise ValueError(f"{self.name}: list length must be between {min_length} and {max_length} (inclusive)")
         elif min_length is not None:
             if not min_length <= l:
-                raise ValueError("%s: list length must be at least %s."
-                                 % (self.name, min_length))
+                raise ValueError(f"{self.name}: list length must be at least {min_length}.")
         elif max_length is not None:
             if not l <= max_length:
-                raise ValueError("%s: list length must be at most %s."
-                                 % (self.name, max_length))
+                raise ValueError(f"{self.name}: list length must be at most {max_length}.")
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
         if not isinstance(val, list):
-            raise ValueError("List parameter %r must be a list, not an object of type %s."
-                             % (self.name, type(val)))
+            raise ValueError(f"List parameter {self.name!r} must be a list, not an object of type {type(val)}.")
 
     def _validate_item_type(self, val, item_type):
         if item_type is None or (self.allow_None and val is None):
@@ -1702,8 +1952,8 @@ class List(Parameter):
         for v in val:
             if isinstance(v, item_type):
                 continue
-            raise TypeError("List parameter %r items must be instances "
-                            "of type %r, not %r." % (self.name, item_type, val))
+            raise TypeError("List parameter {!r} items must be instances "
+                            "of type {!r}, not {!r}.".format(self.name, item_type, val))
 
 
 class HookList(List):
@@ -1717,14 +1967,14 @@ class HookList(List):
     __slots__ = ['class_', 'bounds']
 
     def _validate_value(self, val, allow_None):
-        super(HookList, self)._validate_value(val, allow_None)
+        super()._validate_value(val, allow_None)
         if allow_None and val is None:
             return
         for v in val:
             if callable(v):
                 continue
-            raise ValueError("HookList parameter %r items must be callable, "
-                             "not %r." % (self.name, v))
+            raise ValueError("HookList parameter {!r} items must be callable, "
+                             "not {!r}.".format(self.name, v))
 
 
 class Dict(ClassSelector):
@@ -1732,8 +1982,17 @@ class Dict(ClassSelector):
     Parameter whose value is a dictionary.
     """
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, **params):
-        super(Dict, self).__init__(dict, default=default, **params)
+        super().__init__(default=default, class_=dict, **params)
 
 
 class Array(ClassSelector):
@@ -1741,9 +2000,18 @@ class Array(ClassSelector):
     Parameter whose value is a numpy array.
     """
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
-        super(Array, self).__init__(ndarray, default=default, **params)
+        super().__init__(default=default, class_=ndarray, **params)
 
     @classmethod
     def serialize(cls, value):
@@ -1755,8 +2023,14 @@ class Array(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        from numpy import asarray
-        return asarray(value)
+        import numpy
+        if isinstance(value, str):
+            return _deserialize_from_path(
+                {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
+                value, 'Array'
+            )
+        else:
+            return numpy.asarray(value)
 
 
 class DataFrame(ClassSelector):
@@ -1784,12 +2058,22 @@ class DataFrame(ClassSelector):
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
-    def __init__(self, default=Undefined, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super(DataFrame,self).__init__(pdDFrame, default=default, **params)
+        super().__init__(default=default, class_=pdDFrame, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -1806,7 +2090,7 @@ class DataFrame(ClassSelector):
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def _validate(self, val):
-        super(DataFrame, self)._validate(val)
+        super()._validate(val)
 
         if isinstance(self.columns, set) and self.ordered is True:
             raise ValueError('Columns cannot be ordered when specified as a set')
@@ -1821,7 +2105,7 @@ class DataFrame(ClassSelector):
             self._length_bounds_check(self.columns, len(val.columns), 'Columns')
         elif isinstance(self.columns, (list, set)):
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
-            difference = set(self.columns) - set([str(el) for el in val.columns])
+            difference = set(self.columns) - {str(el) for el in val.columns}
             if difference:
                 msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
                 raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
@@ -1846,8 +2130,25 @@ class DataFrame(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        from pandas import DataFrame as pdDFrame
-        return pdDFrame(value)
+        import pandas
+        if isinstance(value, str):
+            return _deserialize_from_path(
+                {
+                    '.csv': pandas.read_csv,
+                    '.dta': pandas.read_stata,
+                    '.feather': pandas.read_feather,
+                    '.h5': pandas.read_hdf,
+                    '.hdf5': pandas.read_hdf,
+                    '.json': pandas.read_json,
+                    '.ods': pandas.read_excel,
+                    '.parquet': pandas.read_parquet,
+                    '.pkl': pandas.read_pickle,
+                    '.tsv': lambda x: pandas.read_csv(x, sep='\t'),
+                    '.xlsm': pandas.read_excel,
+                    '.xlsx': pandas.read_excel,
+                }, value, 'DataFrame')
+        else:
+            return pandas.DataFrame(value)
 
 
 class Series(ClassSelector):
@@ -1865,11 +2166,21 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    def __init__(self, default=Undefined, rows=Undefined, allow_None=Undefined, **params):
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, rows=None, allow_None=False, is_instance=True,
+        doc=None, label=None, precedence=None, instantiate=True,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super(Series,self).__init__(pdSeries, default=default, allow_None=allow_None,
-                                    **params)
+        super().__init__(default=default, class_=pdSeries, allow_None=allow_None,
+                         **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -1886,7 +2197,7 @@ class Series(ClassSelector):
             raise ValueError(message.format(name=name,length=length, bounds=bounds))
 
     def _validate(self, val):
-        super(Series, self)._validate(val)
+        super()._validate(val)
 
         if self.allow_None and val is None:
             return
@@ -1943,7 +2254,7 @@ class resolve_path(ParameterizedFunction):
                 (p.path_to_file is True  and os.path.isfile(path)) or
                 (p.path_to_file is False and os.path.isdir( path))):
                 return path
-            raise IOError("%s '%s' not found." % (ftype,path))
+            raise OSError(f"{ftype} '{path}' not found.")
 
         else:
             paths_tried = []
@@ -1957,9 +2268,11 @@ class resolve_path(ParameterizedFunction):
 
                 paths_tried.append(try_path)
 
-            raise IOError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
+            raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
 class normalize_path(ParameterizedFunction):
     """
     Convert a UNIX-style path to the current OS's format,
@@ -2008,12 +2321,22 @@ class Path(Parameter):
 
     __slots__ = ['search_paths']
 
-    def __init__(self, default=Undefined, search_paths=Undefined, **params):
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, search_paths=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, search_paths=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
 
         self.search_paths = search_paths
-        super(Path,self).__init__(default,**params)
+        super().__init__(default,**params)
 
     def _resolve(self, path):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
@@ -2021,23 +2344,23 @@ class Path(Parameter):
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('None is not allowed')
+                Parameterized(name=f"{self.owner.name}.{self.name}").param.warning('None is not allowed')
         else:
             try:
                 self._resolve(val)
-            except IOError as e:
-                Parameterized(name="%s.%s"%(self.owner.name,self.name)).param.warning('%s',e.args[0])
+            except OSError as e:
+                Parameterized(name=f"{self.owner.name}.{self.name}").param.warning('%s',e.args[0])
 
     def __get__(self, obj, objtype):
         """
         Return an absolute, normalized path (see resolve_path).
         """
-        raw_path = super(Path,self).__get__(obj,objtype)
+        raw_path = super().__get__(obj,objtype)
         return None if raw_path is None else self._resolve(raw_path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths
-        state = super(Path,self).__getstate__()
+        state = super().__getstate__()
 
         if 'search_paths' in state:
             state['search_paths'] = []
@@ -2091,7 +2414,7 @@ class Foldername(Path):
 
 
 
-def abbreviate_paths(pathspec,named_paths):
+def _abbreviate_paths(pathspec,named_paths):
     """
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
     Helps keep menu items short yet unambiguous.
@@ -2102,6 +2425,17 @@ def abbreviate_paths(pathspec,named_paths):
     return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
 
 
+# PARAM3_DEPRECATION
+@_deprecated()
+def abbreviate_paths(pathspec,named_paths):
+    """
+    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
+    Helps keep menu items short yet unambiguous.
+
+    ..deprecated:: 2.0.0
+    """
+    return _abbreviate_paths(pathspec, named_paths)
+
 
 class FileSelector(Selector):
     """
@@ -2109,15 +2443,26 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
-        super(FileSelector, self).__init__(default=default, objects=self.objects,
-                                           empty_default=True, **kwargs)
+        super().__init__(default=default, objects=self.objects,
+                         empty_default=True, **kwargs)
 
     def _on_set(self, attribute, old, new):
-        super(FileSelector, self)._on_set(attribute, new, old)
+        super()._on_set(attribute, new, old)
         if attribute == 'path':
             self.update()
 
@@ -2128,7 +2473,7 @@ class FileSelector(Selector):
         self.default = self.objects[0] if self.objects else None
 
     def get_range(self):
-        return abbreviate_paths(self.path,super(FileSelector, self).get_range())
+        return _abbreviate_paths(self.path,super().get_range())
 
 
 class ListSelector(Selector):
@@ -2137,8 +2482,19 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    def __init__(self, default=Undefined, objects=Undefined, **kwargs):
-        super(ListSelector,self).__init__(
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
+        super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
 
     def compute_default(self):
@@ -2152,10 +2508,10 @@ class ListSelector(Selector):
         if (val is None and self.allow_None):
             return
         if not isinstance(val, list):
-            raise ValueError("ListSelector parameter %r only takes list "
-                             "types, not %r." % (self.name, val))
+            raise ValueError("ListSelector parameter {!r} only takes list "
+                             "types, not {!r}.".format(self.name, val))
         for o in val:
-            super(ListSelector, self)._validate(o)
+            super()._validate(o)
 
 
 
@@ -2165,14 +2521,25 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
-    def __init__(self, default=Undefined, path="", **kwargs):
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, path="", objects=[], compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, path="", **kwargs):
         self.default = default
         self.path = path
         self.update()
-        super(MultiFileSelector, self).__init__(default=default, objects=self.objects, **kwargs)
+        super().__init__(default=default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
-        super(MultiFileSelector, self)._on_set(attribute, new, old)
+        super()._on_set(attribute, new, old)
         if attribute == 'path':
             self.update()
 
@@ -2183,7 +2550,7 @@ class MultiFileSelector(ListSelector):
         self.default = self.objects
 
     def get_range(self):
-        return abbreviate_paths(self.path,super(MultiFileSelector, self).get_range())
+        return _abbreviate_paths(self.path,super().get_range())
 
 
 def _to_datetime(x):
@@ -2203,6 +2570,18 @@ class Date(Number):
 
     _slot_defaults = _dict_update(Number._slot_defaults, default=None)
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
+
     def _validate_value(self, val, allow_None):
         """
         Checks that the value is numeric and that it is within the hard
@@ -2213,8 +2592,8 @@ class Date(Number):
 
         if not isinstance(val, dt_types) and not (allow_None and val is None):
             raise ValueError(
-                "Date parameter %r only takes datetime and date types, "
-                "not type %r." % (self.name, type(val))
+                "Date parameter {!r} only takes datetime and date types, "
+                "not type {!r}.".format(self.name, type(val))
             )
 
     def _validate_step(self, val, step):
@@ -2250,6 +2629,18 @@ class CalendarDate(Number):
     """
 
     _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    def __init__(self, default=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
         """
@@ -2326,8 +2717,18 @@ class Color(Parameter):
 
     _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
 
-    def __init__(self, default=Undefined, allow_named=Undefined, **kwargs):
-        super(Color, self).__init__(default=default, **kwargs)
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, allow_named=True,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
         self._validate(self.default)
 
@@ -2338,9 +2739,9 @@ class Color(Parameter):
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None):
             return
-        if not isinstance(val, basestring):
-            raise ValueError("Color parameter %r expects a string value, "
-                             "not an object of type %s." % (self.name, type(val)))
+        if not isinstance(val, str):
+            raise ValueError("Color parameter {!r} expects a string value, "
+                             "not an object of type {}.".format(self.name, type(val)))
 
     def _validate_allow_named(self, val, allow_named):
         if (val is None and self.allow_None):
@@ -2348,11 +2749,11 @@ class Color(Parameter):
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
             if not is_hex and val.lower() not in self._named_colors:
-                raise ValueError("Color '%s' only takes RGB hex codes "
-                                 "or named colors, received '%s'." % (self.name, val))
+                raise ValueError("Color '{}' only takes RGB hex codes "
+                                 "or named colors, received '{}'.".format(self.name, val))
         elif not is_hex:
-            raise ValueError("Color '%s' only accepts valid RGB hex "
-                             "codes, received '%s'." % (self.name, val))
+            raise ValueError("Color '{}' only accepts valid RGB hex "
+                             "codes, received '{}'.".format(self.name, val))
 
 
 class Range(NumericTuple):
@@ -2367,16 +2768,26 @@ class Range(NumericTuple):
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
 
-    def __init__(self, default=Undefined, bounds=Undefined, softbounds=Undefined,
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
         self.step = step
-        super(Range,self).__init__(default=default,length=2,**params)
+        super().__init__(default=default,length=2,**params)
 
     def _validate(self, val):
-        super(Range, self)._validate(val)
+        super()._validate(val)
         self._validate_bounds(val, self.bounds, self.inclusive_bounds)
         self._validate_step(val, self.step)
         self._validate_order(val, self.step, allow_None=self.allow_None)
@@ -2414,8 +2825,7 @@ class Range(NumericTuple):
             too_low = (vmin is not None) and (v < vmin if incmin else v <= vmin)
             too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
             if too_low or too_high:
-                raise ValueError("Range parameter %r's %s bound must be in range %s."
-                                 % (self.name, bound, self.rangestr()))
+                raise ValueError(f"Range parameter {self.name!r}'s {bound} bound must be in range {self.rangestr()}.")
 
 
     def get_soft_bounds(self):
@@ -2427,7 +2837,7 @@ class Range(NumericTuple):
         incmin, incmax = self.inclusive_bounds
         incmin = '[' if incmin else '('
         incmax = ']' if incmax else ')'
-        return '%s%s, %s%s' % (incmin, vmin, vmax, incmax)
+        return f'{incmin}{vmin}, {vmax}{incmax}'
 
 
 class DateRange(Range):
@@ -2450,19 +2860,18 @@ class DateRange(Range):
             return
 
         if not isinstance(val, tuple):
-            raise ValueError("DateRange parameter %r only takes a tuple value, "
-                             "not %s." % (self.name, type(val).__name__))
+            raise ValueError("DateRange parameter {!r} only takes a tuple value, "
+                             "not {}.".format(self.name, type(val).__name__))
         for n in val:
             if isinstance(n, dt_types):
                 continue
-            raise ValueError("DateRange parameter %r only takes date/datetime "
-                             "values, not type %s." % (self.name, type(n).__name__))
+            raise ValueError("DateRange parameter {!r} only takes date/datetime "
+                             "values, not type {}.".format(self.name, type(n).__name__))
 
         start, end = val
         if not end >= start:
-            raise ValueError("DateRange parameter %r's end datetime %s "
-                             "is before start datetime %s." %
-                             (self.name, val[1], val[0]))
+            raise ValueError("DateRange parameter {!r}'s end datetime {} "
+                             "is before start datetime {}.".format(self.name, val[1], val[0]))
 
     @classmethod
     def serialize(cls, value):
@@ -2506,14 +2915,13 @@ class CalendarDateRange(Range):
 
         for n in val:
             if not isinstance(n, dt.date):
-                raise ValueError("CalendarDateRange parameter %r only "
-                                 "takes date types, not %s." % (self.name, val))
+                raise ValueError("CalendarDateRange parameter {!r} only "
+                                 "takes date types, not {}.".format(self.name, val))
 
         start, end = val
         if not end >= start:
-            raise ValueError("CalendarDateRange parameter %r's end date "
-                             "%s is before start date %s." %
-                             (self.name, val[1], val[0]))
+            raise ValueError("CalendarDateRange parameter {!r}'s end date "
+                             "{} is before start date {}.".format(self.name, val[1], val[0]))
 
     @classmethod
     def serialize(cls, value):
@@ -2551,7 +2959,17 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
-    def __init__(self,default=False,bounds=(0,1),**params):
+    @typing.overload
+    def __init__(
+        self,
+        default=False, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'
@@ -2570,20 +2988,20 @@ class Event(Boolean):
         # parameterized.py. Specifically, the set_param method
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
-        super(Event, self).__init__(default=default,**params)
+        super().__init__(default=default,**params)
 
     def _reset_event(self, obj, val):
         val = False
         if obj is None:
             self.default = val
         else:
-            obj.__dict__[self._internal_name] = val
+            obj._param__private.values[self.name] = val
         self._post_setter(obj, val)
 
     @instance_descriptor
     def __set__(self, obj, val):
         if self._mode in ['set-reset', 'set']:
-            super(Event, self).__set__(obj, val)
+            super().__set__(obj, val)
         if self._mode in ['set-reset', 'reset']:
             self._reset_event(obj, val)
 
@@ -2598,4 +3016,4 @@ def exceptions_summarized():
     except Exception:
         import sys
         etype, value, tb = sys.exc_info()
-        print("{}: {}".format(etype.__name__,value), file=sys.stderr)
+        print(f"{etype.__name__}: {value}", file=sys.stderr)

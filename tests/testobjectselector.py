@@ -10,6 +10,7 @@ import unittest
 from collections import OrderedDict
 
 import param
+import pytest
 
 from .utils import check_defaults
 
@@ -19,7 +20,7 @@ opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 class TestObjectSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestObjectSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.ObjectSelector(default=5,objects=[5,6,7])
             f = param.ObjectSelector(default=10)
@@ -104,6 +105,51 @@ class TestObjectSelectorParameters(unittest.TestCase):
 
         assert s.allow_None is None
 
+    def test_allow_None_set_and_behavior_class(self):
+        class P(param.Parameterized):
+            a = param.ObjectSelector(objects=dict(a=1), allow_None=True)
+            b = param.ObjectSelector(objects=dict(a=1), allow_None=False)
+            c = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=True)
+            d = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=False)
+
+        assert P.param.a.allow_None is True
+        assert P.param.b.allow_None is False
+        assert P.param.c.allow_None is True
+        assert P.param.d.allow_None is False
+
+        P.a = None
+        assert P.a is None
+        with pytest.raises(ValueError):
+            P.b = None
+        P.c = None
+        assert P.c is None
+        with pytest.raises(ValueError):
+            P.d = None
+
+    def test_allow_None_set_and_behavior_instance(self):
+        class P(param.Parameterized):
+            a = param.ObjectSelector(objects=dict(a=1), allow_None=True)
+            b = param.ObjectSelector(objects=dict(a=1), allow_None=False)
+            c = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=True)
+            d = param.ObjectSelector(default=1, objects=dict(a=1), allow_None=False)
+
+        p = P()
+
+        assert p.param.a.allow_None is True
+        assert p.param.b.allow_None is False
+        assert p.param.c.allow_None is True
+        assert p.param.d.allow_None is False
+
+        p.a = None
+        assert p.a is None
+        with pytest.raises(ValueError):
+            p.b = None
+        p.c = None
+        assert p.c is None
+        with pytest.raises(ValueError):
+            p.d = None
+
+
     def test_set_object_constructor(self):
         p = self.P(e=6)
         self.assertEqual(p.e, 6)
@@ -119,17 +165,17 @@ class TestObjectSelectorParameters(unittest.TestCase):
         assert p.param.d.allow_None is None
 
     def test_get_range_list(self):
-        r = self.P.param.params("g").get_range()
+        r = self.P.param['g'].get_range()
         self.assertEqual(r['7'],7)
         self.assertEqual(r['8'],8)
 
     def test_get_range_dict(self):
-        r = self.P.param.params("s").get_range()
+        r = self.P.param['s'].get_range()
         self.assertEqual(r['one'],1)
         self.assertEqual(r['two'],2)
 
     def test_get_range_mutable(self):
-        r = self.P.param.params("d").get_range()
+        r = self.P.param['d'].get_range()
         self.assertEqual(r['A'],opts['A'])
         self.assertEqual(r['C'],opts['C'])
         self.d=opts['A']
@@ -302,7 +348,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
     def test_int_getitem_objects_list(self):
         p = self.P()
 
-        self.assertEqual(p.param.e.objects[0], 5) 
+        self.assertEqual(p.param.e.objects[0], 5)
 
     def test_slice_getitem_objects_list(self):
         p = self.P()

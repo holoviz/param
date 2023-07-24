@@ -14,7 +14,7 @@ from .utils import check_defaults
 class TestCompositeParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestCompositeParameters, self).setUp()
+        super().setUp()
         # initialize a class with a compound parameter
         class A(param.Parameterized):
             x = param.Number(default=0)
@@ -24,7 +24,7 @@ class TestCompositeParameters(unittest.TestCase):
         self.A = A
         self.a = self.A()
 
-        class SomeSequence(object):
+        class SomeSequence:
             "Can't use iter with Dynamic (doesn't pickle, doesn't copy)"
             def __init__(self,sequence):
                 self.sequence=sequence

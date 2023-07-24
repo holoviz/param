@@ -1,40 +1,49 @@
-{% set sdata = load_setup_py_data() %}
+{% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
+{% set buildsystem = pyproject['build-system'] %}
+{% set project = pyproject['project'] %}
+
+{% set name = project['name'] %}
+{% set version = VERSION %}
 
 package:
-  name: param
-  version: {{ sdata['version'] }}
+  name: {{ name|lower }}
+  version: {{ version }}
 
 source:
   path: ..
 
 build:
   noarch: python
-  script: python setup.py install --single-version-externally-managed --record=record.txt
+  script: {{ PYTHON }} -m pip install . -vv
 
 requirements:
   build:
-    - python
-    - setuptools
+    - python {{ project['requires-python'] }}
+    - pip
+    {% for dep in buildsystem['requires'] %}
+    - {{ dep }}
+    {% endfor %}
+
   run:
-    - python {{ sdata['python_requires'] }}  
+    - python {{ project['requires-python'] }}
 
 test:
   requires:
-    {% for dep in sdata['extras_require']['tests'] %}
+    {% for dep in project['optional-dependencies']['tests'] %}
     - {{ dep }}
     {% endfor %}
   source_files:
-    # for nose config
-    - setup.cfg
+    - pyproject.toml
     - tests
   imports:
     - param
     - numbergen
   commands:
-    # https://github.com/holoviz/param/issues/219  
+    - python -c "import param; ver = param.__version__; assert ver != '0.0.0' and ver != 'unknown'"
     - pytest tests
 
 about:
-  home: {{ sdata['url'] }}
-  summary: {{ sdata['description'] }}
-  license: {{ sdata['license'] }}
+  home: {{ project['urls']['Homepage'] }}
+  summary: {{ project['description'] }}
+  license: {{ project['license']['text'] }}
+  license_file: LICENSE.txt

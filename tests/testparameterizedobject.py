@@ -15,10 +15,11 @@ import pytest
 
 import random
 
+from param import parameterized
 from param.parameterized import ParamOverrides, shared_parameters
 from param.parameterized import default_label_formatter, no_instance_params
 
-class _SomeRandomNumbers(object):
+class _SomeRandomNumbers:
     def __call__(self):
         return random.random()
 
@@ -66,7 +67,7 @@ class TestParameterized(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestParameterized, cls).setUpClass()
+        super().setUpClass()
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
@@ -110,14 +111,188 @@ class TestParameterized(unittest.TestCase):
 
         p = P()
 
-        match = re.fullmatch(r'P\w{5}', p.name)
-        assert match is not None
+        assert p.name == 'Other'
 
     def test_parameter_name_fixed(self):
         testpo = TestPO()
 
         with pytest.raises(AttributeError):
             testpo.param.const.name = 'notconst'
+
+    def test_name_overriden(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        assert P.name == 'other'
+
+        p = P()
+
+        assert p.name == 'other'
+
+    def test_name_overriden_without_default(self):
+        class A(param.Parameterized):
+            pass
+        class B(param.Parameterized):
+            name = param.String(doc='some help')
+
+        class C(B):
+            pass
+
+        assert B.name == 'B'
+        assert B.param.name.doc == 'some help'
+        assert C.name == 'C'
+        assert C.param.name.doc == 'some help'
+
+    def test_name_overriden_constructor(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        p = P(name='another')
+
+        assert p.name == 'another'
+
+    def test_name_overriden_subclasses(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        class Q(P):
+            pass
+
+        class R(Q):
+            name = param.String(default='yetanother')
+
+        assert Q.name == 'other'
+
+        q1 = Q()
+
+        assert q1.name == 'other'
+
+        q2 = Q(name='another')
+
+        assert q2.name == 'another'
+
+        assert R.name == 'yetanother'
+
+        r1 = R()
+
+        assert r1.name == 'yetanother'
+
+        r2 = R(name='last')
+
+        assert r2.name == 'last'
+
+
+    def test_name_overriden_subclasses_name_set(self):
+        class P(param.Parameterized):
+            name = param.String(default='other')
+
+        class Q(P):
+            pass
+
+        P.name = 'another'
+
+        assert Q.name == 'another'
+
+        Q.name = 'yetanother'
+
+        assert Q.name == 'yetanother'
+
+        q = Q()
+
+        assert q.name == 'yetanother'
+
+    def test_name_overriden_error_not_String(self):
+
+        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+              "with type <class 'str'>. Overriding 'name' is only allowed with " \
+              "a 'String' Parameter."
+
+        with pytest.raises(TypeError, match=msg):
+            class P(param.Parameterized):
+                name = 'other'
+
+        msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
+              "with type <class 'param.parameterized.Parameter'>. Overriding 'name' " \
+              "is only allowed with a 'String' Parameter."
+
+        with pytest.raises(TypeError, match=msg):
+            class P(param.Parameterized):  # noqa
+                name = param.Parameter(default='other')
+
+    def test_name_complex_hierarchy(self):
+        class Mixin1: pass
+        class Mixin2: pass
+        class Mixin3(param.Parameterized): pass
+
+        class A(param.Parameterized, Mixin1): pass
+        class B(A): pass
+        class C(B, Mixin2): pass
+        class D(C, Mixin3): pass
+
+        assert A.name == 'A'
+        assert B.name == 'B'
+        assert C.name == 'C'
+        assert D.name == 'D'
+
+    def test_name_overriden_complex_hierarchy(self):
+        class Mixin1: pass
+        class Mixin2: pass
+        class Mixin3(param.Parameterized): pass
+
+        class A(param.Parameterized, Mixin1): pass
+        class B(A):
+            name = param.String(default='other')
+
+        class C(B, Mixin2):
+            name = param.String(default='another')
+
+        class D(C, Mixin3): pass
+
+        assert A.name == 'A'
+        assert B.name == 'other'
+        assert C.name == 'another'
+        assert D.name == 'another'
+
+    def test_name_overriden_multiple(self):
+        class A(param.Parameterized):
+            name = param.String(default='AA')
+        class B(param.Parameterized):
+            name = param.String(default='BB')
+
+        class C(A, B): pass
+
+        assert C.name == 'AA'
+
+    def test_constant_parameter_modify_class_before(self):
+        """Test you can set on class and the new default is picked up
+        by new instances"""
+        TestPO.const=9
+        testpo = TestPO()
+        self.assertEqual(testpo.const,9)
+
+    def test_constant_parameter_modify_class_after_init(self):
+        """Test that setting the value on the class doesn't update the instance value
+        even when the instance value hasn't yet been set"""
+        oobj = []
+        class P(param.Parameterized):
+            x = param.Parameter(default=oobj, constant=True)
+
+        p1 = P()
+
+        P.x = nobj = [0]
+        assert P.x is nobj
+        assert p1.x == oobj
+        assert p1.x is oobj
+
+        p2 = P()
+        assert p2.x == nobj
+        assert p2.x is nobj
+
+    def test_constant_parameter_after_init(self):
+        """Test that you can't set a constant parameter after construction."""
+        testpo = TestPO(const=17)
+        self.assertEqual(testpo.const,17)
+        self.assertRaises(TypeError,setattr,testpo,'const',10)
 
     def test_constant_parameter(self):
         """Test that you can't set a constant parameter after construction."""
@@ -144,10 +319,10 @@ class TestParameterized(unittest.TestCase):
         # check you cannot set on class
         self.assertRaises(TypeError,setattr,TestPO,'ro',5)
 
-        self.assertEqual(testpo.param.params()['ro'].constant,True)
+        self.assertEqual(testpo.param['ro'].constant,True)
 
         # check that instantiate was ignored for readonly
-        self.assertEqual(testpo.param.params()['ro2'].instantiate,False)
+        self.assertEqual(testpo.param['ro2'].instantiate,False)
 
     def test_basic_instantiation(self):
         """Check that instantiated parameters are copied into objects."""
@@ -180,7 +355,7 @@ class TestParameterized(unittest.TestCase):
     def test_instantiation_inheritance(self):
         """Check that instantiate=True is always inherited (SF.net #2483932)."""
         t = TestParamInstantiation()
-        assert t.param.params('instPO').instantiate is True
+        assert t.param['instPO'].instantiate is True
         assert isinstance(t.instPO,AnotherTestPO)
 
     def test_abstract_class(self):
@@ -203,21 +378,162 @@ class TestParameterized(unittest.TestCase):
         with self.assertRaises(ValueError):
             TestPOValidation.value = 10
 
-    def test_params(self):
+    def test_instantiation_set_before_super(self):
+        count = 0
+        class P(param.Parameterized):
+
+            x = param.Parameter(0)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+            @param.depends('x', watch=True)
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        p = P()
+
+        assert p.x == 1
+        assert count == 0
+
+    def test_instantiation_set_before_super_contrived(self):
+        # https://github.com/holoviz/param/pull/790#discussion_r1263483293
+        class P(param.Parameterized):
+
+            value = param.String(default="A")
+
+            def __init__(self, depth=0):
+                self.value = 'B'
+                if depth < 2:
+                    self.sub = P(depth+1)
+                super().__init__()
+
+        p = P()
+
+        assert p.value == 'B'
+        assert p.sub.value == 'B'
+
+    def test_instantiation_set_before_super_subclass(self):
+        # Inspired by a HoloViews use case (GenericElementPlot, GenericOverlayPlot)
+        class A(param.Parameterized):
+
+            def __init__(self, batched=False, **params):
+                self.batched = batched
+                super().__init__(**params)
+
+        class B(A):
+
+            batched = param.Boolean()
+
+            def __init__(self, batched=True, **params):
+                super().__init__(batched=batched, **params)
+
+        a = A()
+        assert a.batched is False
+
+        # When b is instantiated the `batched` Parameter of B is set before
+        # Parameterized.__init__ is called.
+        b = B()
+        assert b.batched is True
+
+    def test_instantiation_param_objects_before_super_subclass(self):
+        # Testing https://github.com/holoviz/param/pull/420
+
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+            def __init__(self):
+                objs = self.param.objects(instance='existing')
+                assert isinstance(objs, dict)
+                super().__init__()
+
+        P()
+
+    @pytest.mark.xfail(
+        raises=AttributeError,
+        reason='Behavior not defined when setting a constant parameter before calling super()',
+    )
+    def test_instantiation_set_before_super_constant(self):
+        count = 0
+        class P(param.Parameterized):
+
+            x = param.Parameter(0, constant=True)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+            @param.depends('x', watch=True)
+            def cb(self):
+                nonlocal count
+                count += 1
+
+        p = P()
+
+        assert p.x == 1
+        assert count == 0
+
+    def test_instantiation_set_before_super_readonly(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter(0, readonly=True)
+
+            def __init__(self, x=1):
+                self.x = x
+                super().__init__()
+
+        with pytest.raises(TypeError, match="Read-only parameter 'x' cannot be modified"):
+            P()
+
+    def test_parameter_constant_iadd_allowed(self):
+        # Testing https://github.com/holoviz/param/pull/400
+        class P(param.Parameterized):
+
+            list = param.List([], constant=True)
+
+        p = P()
+        p.list += [1, 2, 3]
+
+        # Just to make sure that normal setting is still forbidden
+        with pytest.raises(TypeError, match="Constant parameter 'list' cannot be modified"):
+            p.list = [0]
+
+    def test_parameter_constant_same_notallowed(self):
+        L = [0, 1]
+        class P(param.Parameterized):
+
+            list = param.List(L, constant=True)
+
+        p = P()
+
+        # instantiate is set to true internally so a deepcopy is made of L,
+        # it's no longer the same object
+        with pytest.raises(TypeError, match="Constant parameter 'list' cannot be modified"):
+            p.list = L
+
+    def test_values(self):
         """Basic tests of params() method."""
 
         # CB: test not so good because it requires changes if params
         # of PO are changed
-        assert 'name' in param.Parameterized.param.params()
-        assert len(param.Parameterized.param.params()) in [1,2]
+        assert 'name' in param.Parameterized.param.values()
+        assert len(param.Parameterized.param.values()) in [1,2]
 
         ## check for bug where subclass Parameters were not showing up
-        ## if params() already called on a super class.
-        assert 'inst' in TestPO.param.params()
-        assert 'notinst' in TestPO.param.params()
+        ## if values() already called on a super class.
+        assert 'inst' in TestPO.param.values()
+        assert 'notinst' in TestPO.param.values()
 
-        ## check caching
-        assert param.Parameterized.param.params() is param.Parameterized().param.params(), "Results of params() should be cached." # just for performance reasons
+    def test_values_name_ignored_for_instances_and_onlychanged(self):
+        default_inst = param.Parameterized()
+        assert 'Parameterized' in default_inst.name
+        # name ignored when automatically computed (behavior inherited from all_equal)
+        assert 'name' not in default_inst.param.values(onlychanged=True)
+        # name not ignored when set
+        assert param.Parameterized(name='foo').param.values(onlychanged=True)['name'] == 'foo'
 
     def test_param_iterator(self):
         self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn',
@@ -285,9 +601,9 @@ class TestParameterized(unittest.TestCase):
         assert test.param.inst.default is TestPO.param.inst.default
 
     def test_pprint_instance_params(self):
-        # Ensure pprint does not make instance parameter copies
+        # Ensure .param.pprint does not make instance parameter copies
         test = TestPO()
-        test.pprint()
+        test.param.pprint()
         for p, obj in TestPO.param.objects('current').items():
             assert obj is TestPO.param[p]
 
@@ -305,53 +621,217 @@ class TestParameterized(unittest.TestCase):
         for p, obj in TestPO.param.objects('current').items():
             assert obj is TestPO.param[p]
 
-    def test_defaults_instance_params(self):
-        # Ensure defaults does not make instance parameter copies
-        test = TestPO()
-        test.param.defaults()
-        for p, obj in TestPO.param.objects('current').items():
-            assert obj is TestPO.param[p]
-
     def test_state_saving(self):
         t = TestPO(dyn=_SomeRandomNumbers())
         g = t.param.get_value_generator('dyn')
         g._Dynamic_time_fn=None
         assert t.dyn!=t.dyn
         orig = t.dyn
-        t.state_push()
+        t.param._state_push()
         t.dyn
         assert t.param.inspect_value('dyn')!=orig
-        t.state_pop()
+        t.param._state_pop()
         assert t.param.inspect_value('dyn')==orig
 
     def test_label(self):
         t = TestPO()
-        assert t.param.params('ro_label').label == 'Ro Label'
+        assert t.param['ro_label'].label == 'Ro Label'
 
     def test_label_set(self):
         t = TestPO()
-        assert t.param.params('ro_label').label == 'Ro Label'
-        t.param.params('ro_label').label = 'Ro relabeled'
-        assert t.param.params('ro_label').label == 'Ro relabeled'
+        assert t.param['ro_label'].label == 'Ro Label'
+        t.param['ro_label'].label = 'Ro relabeled'
+        assert t.param['ro_label'].label == 'Ro relabeled'
 
     def test_label_default_format(self):
         t = TestPO()
-        assert t.param.params('ro_format').label == 'Ro format'
+        assert t.param['ro_format'].label == 'Ro format'
 
     def test_label_custom_format(self):
         param.parameterized.label_formatter = default_label_formatter.instance(capitalize=False)
         t = TestPO()
-        assert t.param.params('ro_format').label == 'ro format'
+        assert t.param['ro_format'].label == 'ro format'
         param.parameterized.label_formatter = default_label_formatter
 
     def test_label_constant_format(self):
         param.parameterized.label_formatter = lambda x: 'Foo'
         t = TestPO()
-        assert t.param.params('ro_format').label == 'Foo'
+        assert t.param['ro_format'].label == 'Foo'
         param.parameterized.label_formatter = default_label_formatter
 
+    def test_error_if_non_param_in_constructor(self):
+        msg = "TestPO.__init__() got an unexpected keyword argument 'not_a_param'"
+        with pytest.raises(TypeError, match=re.escape(msg)):
+            TestPO(not_a_param=2)
 
-from param import parameterized
+    def test_update_class(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        p = P()
+
+        P.param.update(x=10)
+
+        assert P.x == p.x == 10
+
+    def test_update_context_class(self):
+        class P(param.Parameterized):
+            x = param.Parameter(10)
+
+        p = P()
+
+        with P.param.update(x=20):
+            assert P.x == p.x == 20
+
+        assert P.x == p.x == 10
+
+    def test_update_class_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        events = []
+        P.param.watch(events.append, 'x')
+
+        P.param.update(x=10)
+
+        assert len(events) == 1
+        assert events[0].name == 'x' and events[0].new == 10
+
+    def test_update_context_class_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter(0)
+
+        events = []
+        P.param.watch(events.append, 'x')
+
+        with P.param.update(x=20):
+            pass
+
+        assert len(events) == 2
+        assert events[0].name == 'x' and events[0].new == 20
+        assert events[1].name == 'x' and events[1].new == 0
+
+    def test_update_instance_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        p = P()
+
+        events = []
+        p.param.watch(events.append, 'x')
+
+        p.param.update(x=10)
+
+        assert len(events) == 1
+        assert events[0].name == 'x' and events[0].new == 10
+
+    def test_update_context_instance_watcher(self):
+        class P(param.Parameterized):
+            x = param.Parameter(0)
+
+        p = P()
+
+        events = []
+        p.param.watch(events.append, 'x')
+
+        with p.param.update(x=20):
+            pass
+
+        assert len(events) == 2
+        assert events[0].name == 'x' and events[0].new == 20
+        assert events[1].name == 'x' and events[1].new == 0
+
+    def test_update_error_not_param_class(self):
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            TestPO.param.update(not_a_param=1)
+
+    def test_update_error_not_param_instance(self):
+        t = TestPO(inst='foo')
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            t.param.update(not_a_param=1)
+
+    def test_update_context_error_not_param_class(self):
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            with TestPO.param.update(not_a_param=1):
+                pass
+
+    def test_update_context_error_not_param_instance(self):
+        t = TestPO(inst='foo')
+        with pytest.raises(ValueError, match="'not_a_param' is not a parameter of TestPO"):
+            with t.param.update(not_a_param=1):
+                pass
+
+    def test_update_error_while_updating(self):
+        class P(param.Parameterized):
+            x = param.Parameter(0, readonly=True)
+
+        with pytest.raises(TypeError):
+            P.param.update(x=1)
+
+        assert P.x == 0
+
+        with pytest.raises(TypeError):
+            with P.param.update(x=1):
+                pass
+
+        assert P.x == 0
+
+        p = P()
+
+        with pytest.raises(TypeError):
+            p.param.update(x=1)
+
+        assert p.x == 0
+
+        with pytest.raises(TypeError):
+            with p.param.update(x=1):
+                pass
+
+        assert p.x == 0
+
+    def test_update_error_dict_and_kwargs_instance(self):
+        t = TestPO(inst='foo')
+        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
+            t.param.update(dict(a=1), a=1)
+
+    def test_update_context_error_dict_and_kwargs_instance(self):
+        t = TestPO(inst='foo')
+        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
+            with t.param.update(dict(a=1), a=1):
+                pass
+
+    def test_update_error_dict_and_kwargs_class(self):
+        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
+            TestPO.param.update(dict(a=1), a=1)
+
+    def test_update_context_error_dict_and_kwargs_class(self):
+        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
+            with TestPO.param.update(dict(a=1), a=1):
+                pass
+
+    def test_update_context_single_parameter(self):
+        t = TestPO(inst='foo')
+        with t.param.update(inst='bar'):
+            assert t.inst == 'bar'
+        assert t.inst == 'foo'
+
+    def test_update_context_does_not_set_other_params(self):
+        t = TestPO(inst='foo')
+        events = []
+        t.param.watch(events.append, list(t.param), onlychanged=False)
+        with t.param.update(inst='bar'):
+            pass
+        assert len(events) == 2
+        assert all(e.name == 'inst' for e in events)
+
+    def test_update_context_multi_parameter(self):
+        t = TestPO(inst='foo', notinst=1)
+        with t.param.update(inst='bar', notinst=2):
+            assert t.inst == 'bar'
+            assert t.notinst == 2
+        assert t.inst == 'foo'
+        assert t.notinst == 1
+
 
 class some_fn(param.ParameterizedFunction):
     __test__ = False
@@ -427,7 +907,7 @@ class TestNumberParameter(unittest.TestCase):
 class TestStringParameter(unittest.TestCase):
 
     def setUp(self):
-        super(TestStringParameter, self).setUp()
+        super().setUp()
 
         class TestString(param.Parameterized):
             a = param.String()
@@ -450,7 +930,7 @@ class TestStringParameter(unittest.TestCase):
 class TestParameterizedUtilities(unittest.TestCase):
 
     def setUp(self):
-        super(TestParameterizedUtilities, self).setUp()
+        super().setUp()
 
 
     def test_default_label_formatter(self):
@@ -469,8 +949,8 @@ class TestParameterizedUtilities(unittest.TestCase):
 class TestParamOverrides(unittest.TestCase):
 
     def setUp(self):
-        super(TestParamOverrides, self).setUp()
-        self.po = param.Parameterized(name='A',print_level=0)
+        super().setUp()
+        self.po = param.Parameterized(name='A')
 
     def test_init_name(self):
         self.assertEqual(self.po.name, 'A')
@@ -478,7 +958,6 @@ class TestParamOverrides(unittest.TestCase):
     def test_simple_override(self):
         overrides = ParamOverrides(self.po,{'name':'B'})
         self.assertEqual(overrides['name'], 'B')
-        self.assertEqual(overrides['print_level'], 0)
 
     # CEBALERT: missing test for allow_extra_keywords (e.g. getting a
     # warning on attempting to override non-existent parameter when
@@ -493,20 +972,20 @@ class TestParamOverrides(unittest.TestCase):
 class TestSharedParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestSharedParameters, self).setUp()
+        super().setUp()
         with shared_parameters():
-            self.p1 = TestPO(name='A', print_level=0)
-            self.p2 = TestPO(name='B', print_level=0)
-            self.ap1 = AnotherTestPO(name='A', print_level=0)
-            self.ap2 = AnotherTestPO(name='B', print_level=0)
+            self.p1 = TestPO(name='A')
+            self.p2 = TestPO(name='B')
+            self.ap1 = AnotherTestPO(name='A')
+            self.ap2 = AnotherTestPO(name='B')
 
     def test_shared_object(self):
         self.assertTrue(self.ap1.instPO is self.ap2.instPO)
-        self.assertTrue(self.ap1.param.params('instPO').default is not self.ap2.instPO)
+        self.assertTrue(self.ap1.param['instPO'].default is not self.ap2.instPO)
 
     def test_shared_list(self):
         self.assertTrue(self.p1.inst is self.p2.inst)
-        self.assertTrue(self.p1.param.params('inst').default is not self.p2.inst)
+        self.assertTrue(self.p1.param['inst'].default is not self.p2.inst)
 
 
 def test_inheritance_None_is_not_special_cased_default():
@@ -794,7 +1273,7 @@ def test_inheritance_allow_None_behavior():
 def test_inheritance_allow_None_behavior2():
     class A(param.Parameterized):
         p = param.Parameter(allow_None=False)
-        
+
     class B(A):
         p = param.Parameter(default=None)
 
@@ -811,7 +1290,7 @@ def test_inheritance_allow_None_behavior2():
 def test_inheritance_class_attribute_behavior():
     class A(param.Parameterized):
         p = param.Parameter(1)
-        
+
     class B(A):
         p = param.Parameter()
 
@@ -854,3 +1333,62 @@ def test_inheritance_parameter_attribute_without_default():
     with pytest.raises(KeyError, match="Slot 'foo' of parameter 'c' has no default value defined in `_slot_defaults`"):
         class A(param.Parameterized):
             c = CustomParameter()
+
+
+def _dir(obj):
+    return [attr for attr in dir(obj) if not attr.startswith('__')]
+
+
+def test_namespace_class():
+
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        @param.depends('x', watch=True)
+        def foo(self): pass
+
+    P.x = 1
+    P.param.x
+
+    assert _dir(P) == [
+        '_param__parameters',
+        '_param__private',
+        'foo',
+        'name',
+        'param',
+        'x'
+    ]
+
+
+def test_namespace_inst():
+
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        @param.depends('x', watch=True)
+        def foo(self): pass
+
+    p = P(x=2)
+    p.param.x
+
+    assert _dir(p) == [
+        '_param__parameters',
+        '_param__private',
+        '_param_watchers',
+        'foo',
+        'name',
+        'param',
+        'x'
+    ]
+
+
+def test_parameterized_access_param_before_super():
+    class P(param.Parameterized):
+        x = param.Parameter(1)
+
+        def __init__(self, **params):
+            # Reaching out to a Parameter default before calling super
+            assert self.x == 1
+            super().__init__(**params)
+
+    P()

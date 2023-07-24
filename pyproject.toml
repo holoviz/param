@@ -1,0 +1,223 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "param"
+dynamic = ["version"]
+description = "Make your Python code clearer and more reliable by declaring Parameters."
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.8"
+authors = [
+    { name = "HoloViz", email = "developers@holoviz.org" },
+]
+maintainers = [
+    { name = "HoloViz", email = "developers@holoviz.org" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = []
+
+[project.optional-dependencies]
+examples = [
+    "aiohttp",
+    "pandas",
+    "panel",
+]
+doc = [
+    "param[examples]",
+    "nbsite ==0.8.0",
+]
+tests = [
+    "coverage[toml]",
+    "pytest",
+]
+tests-deser = [
+    "xlrd",
+    "openpyxl",
+    "odfpy",
+    "feather-format",
+    "pyarrow",
+]
+tests-examples = [
+    "pytest",
+    "pytest-xdist",
+    "nbval",
+    "param[examples]",
+]
+tests-full = [
+    "param[tests]",
+    "param[tests-examples]",
+    "param[tests-deser]",
+    "numpy",
+    "pandas",
+    "ipython",
+    "jsonschema",
+    "gmpy",
+    "cloudpickle",
+    "nest_asyncio",
+]
+lint = [
+    "flake8",
+    "pre-commit",
+]
+all = [
+    "param[tests-full]",
+    "param[doc]",
+    "param[lint]",
+]
+
+[project.urls]
+Homepage = "https://param.holoviz.org/"
+Tracker = "https://github.com/holoviz/param/issues"
+Releases = "https://github.com/holoviz/param/releases"
+Source = "https://github.com/holoviz/param"
+HoloViz = "https://holoviz.org/"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "param",
+    "numbergen",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "param",
+    "numbergen",
+    "tests",
+]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "param/_version.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+    # Linters
+    "param[lint]",
+    # Base tests dependencies
+    "param[tests]",
+    # Examples tests dependencies
+    "param[tests-examples]",
+    # Deserializatoin dependencies
+    "param[tests-deser]",
+    # Additional tests dependencies, not including gmpy as
+    # it's tricky to install.
+    "ipython",
+    "jsonschema",
+    "numpy",
+    "pandas",
+    "cloudpickle",
+    "nest_asyncio",
+    # To keep __version__ up-to-date in editable installs
+    "setuptools_scm",
+]
+post-install-commands = [
+  "python -m pip install pre-commit",
+  "pre-commit install",
+]
+
+[tool.hatch.envs.default.scripts]
+tests = "pytest {args:tests}"
+examples = "pytest -n logical --dist loadscope --nbval-lax {args:examples}"
+
+[tool.hatch.envs.docs]
+template = "docs"
+features = ["doc"]
+python = "3.9"
+
+[tool.hatch.envs.docs.scripts]
+build = [
+    "cp examples/user_guide/*.ipynb doc/user_guide/",
+    "python -m nbsite build --org holoviz --project-name param",
+]
+
+[tool.hatch.envs.tests]
+template = "tests"
+dependencies = [
+    "param[tests]",
+    "ipython",
+    "jsonschema",
+]
+
+[[tool.hatch.envs.tests.matrix]]
+python = [
+    "3.8",
+    "3.9",
+    "3.10",
+    "3.11",
+    "pypy3.9",
+]
+
+[tool.hatch.envs.tests.scripts]
+tests = "pytest {args:tests}"
+with_coverage = [
+    "coverage run --source=numbergen,param -m pytest -v {args:tests}",
+    "coverage report",
+    "coverage xml",
+]
+
+[tool.hatch.envs.tests.overrides]
+# Only install these on non PyPy environments
+name."^(?!pypy).*".dependencies = [
+    "numpy",
+    "pandas",
+    "xlrd",
+    "openpyxl",
+    "odfpy",
+    "feather-format",
+    "pyarrow",
+    "cloudpickle",
+    "nest_asyncio",
+]
+# Only install gmpy on Linux on these version
+# Only install tables (deser HDF5) on Linux on these version
+matrix.python.dependencies = [
+    { value = "gmpy", if = ["3.8", "3.9", "3.10"], platform = ["linux"] },
+    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11"], platform = ["linux"] },
+]
+
+[tool.hatch.envs.tests_examples]
+template = "tests_examples"
+dependencies = [
+    "param[tests-examples]",
+    "ipython",
+    "jsonschema",
+]
+
+[[tool.hatch.envs.tests_examples.matrix]]
+python = [
+    "3.8",
+    "3.9",
+    "3.10",
+    "3.11",
+]
+
+[tool.hatch.envs.tests_examples.scripts]
+examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:examples}"
+
+[tool.pytest.ini_options]
+python_files = "test*.py"
+filterwarnings = [
+  "error",
+]
+xfail_strict = "true"
+
+[tool.coverage.report]
+omit = ["param/version.py"]

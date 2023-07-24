@@ -2,7 +2,7 @@
 
 This user guide provides detailed information about how to use Param, assuming you have worked through the Getting Started guide.
 
-- [Simplifying Codebases](./Simplifying_Codebases): How Param allows you to eliminate boilerplate and unsafe code 
+- [Simplifying Codebases](./Simplifying_Codebases): How Param allows you to eliminate boilerplate and unsafe code
 - [Parameters](./Parameters): Using parameters (Class vs. instance parameters, setting defaults, etc.)
 - [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use
 - [Dependencies and Watchers](./Dependencies_and_Watchers): Expressing relationships between parameters and parameters or code, and triggering events

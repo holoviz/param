@@ -15,7 +15,7 @@ except:
 class TestTupleParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestTupleParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.Tuple(default=(1, 1))
             f = param.Tuple(default=(0, 0, 0))
@@ -217,7 +217,7 @@ class TestTupleParameters(unittest.TestCase):
 class TestNumericTupleParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestNumericTupleParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.NumericTuple(default=(1, 1))
             f = param.NumericTuple(default=(0, 0, 0))
@@ -353,7 +353,7 @@ class TestNumericTupleParameters(unittest.TestCase):
 class TestXYCoordinatesParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestXYCoordinatesParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.XYCoordinates(default=(1, 1))
             f = param.XYCoordinates(default=(0, 1), allow_None=True)

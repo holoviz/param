@@ -12,7 +12,7 @@ from .utils import check_defaults
 class TestClassSelectorParameters(unittest.TestCase):
 
     def setUp(self):
-        super(TestClassSelectorParameters, self).setUp()
+        super().setUp()
         class P(param.Parameterized):
             e = param.ClassSelector(default=1,class_=int)
             f = param.ClassSelector(default=int,class_=Number, is_instance=False)
@@ -29,7 +29,7 @@ class TestClassSelectorParameters(unittest.TestCase):
 
     def test_defaults_class(self):
         class P(param.Parameterized):
-            s = param.ClassSelector(int)
+            s = param.ClassSelector(class_=int)
 
         check_defaults(P.param.s, label='S', skip=['instantiate'])
         self._check_defaults(P.param.s)
@@ -37,7 +37,7 @@ class TestClassSelectorParameters(unittest.TestCase):
 
     def test_defaults_inst(self):
         class P(param.Parameterized):
-            s = param.ClassSelector(int)
+            s = param.ClassSelector(class_=int)
 
         p = P()
 
@@ -46,7 +46,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         assert p.param.s.class_ is int
 
     def test_defaults_unbound(self):
-        s = param.ClassSelector(int)
+        s = param.ClassSelector(class_=int)
 
         check_defaults(s, label=None, skip=['instantiate'])
         self._check_defaults(s)

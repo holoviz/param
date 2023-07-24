@@ -8,10 +8,10 @@ import param
 
 from param.parameterized import discard_events
 
-from .utils import MockLoggingHandler
+from .utils import MockLoggingHandler, warnings_as_excepts
 
 
-class Accumulator(object):
+class Accumulator:
 
     def __init__(self):
         self.args = []
@@ -87,13 +87,13 @@ class TestWatch(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestWatch, cls).setUpClass()
+        super().setUpClass()
         log = param.parameterized.get_logger()
         cls.log_handler = MockLoggingHandler(level='DEBUG')
         log.addHandler(cls.log_handler)
 
     def setUp(self):
-        super(TestWatch, self).setUp()
+        super().setUp()
         self.accumulator = 0
         self.list_accumulator = []
 
@@ -154,7 +154,7 @@ class TestWatch(unittest.TestCase):
         obj.param.watch(accumulator, 'a')
         obj.a = []
         self.assertEqual(self.accumulator, [])
-        obj.a = tuple()
+        obj.a = ()
         self.assertEqual(self.accumulator, tuple())
 
     def test_triggered_when_changed_mapping_type(self):
@@ -234,9 +234,15 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         watcher = obj.param.watch(accumulator, 'a')
         obj.param.unwatch(watcher)
-        obj.param.unwatch(watcher)
-        self.log_handler.assertEndsWith('WARNING',
-                            ' to remove.')
+        with warnings_as_excepts(match='No such watcher'):
+            obj.param.unwatch(watcher)
+        try:
+            param.parameterized.warnings_as_exceptions = False
+            obj.param.unwatch(watcher)
+            self.log_handler.assertEndsWith('WARNING',
+                                ' to remove.')
+        finally:
+            param.parameterized.warnings_as_exceptions = True
 
     def test_simple_batched_watch_setattr(self):
 
@@ -272,7 +278,7 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         obj.param.watch(accumulator, ['a','b'])
 
-        with param.batch_watch(obj):
+        with param.parameterized.batch_call_watchers(obj):
             obj.a = 2
             obj.b = 3
 
@@ -366,7 +372,6 @@ class TestWatch(unittest.TestCase):
         obj.param.update(a=23, b=42, c=99)
 
         self.assertEqual(accumulator.call_count(), 2)
-        # Order may be undefined for Python <3.6
         for args in [accumulator.args_for_call(i) for i in [0,1]]:
             if len(args) == 1: # ['c']
                 self.assertEqual(args[0].name, 'c')
@@ -395,13 +400,12 @@ class TestWatch(unittest.TestCase):
         obj.param.watch(accumulator, ['a','b'])
         obj.param.watch(accumulator, ['c'])
 
-        with param.batch_watch(obj):
+        with param.parameterized.batch_call_watchers(obj):
             obj.a = 23
             obj.b = 42
             obj.c = 99
 
         self.assertEqual(accumulator.call_count(), 2)
-        # Order may be undefined for Python <3.6
         for args in [accumulator.args_for_call(i) for i in [0, 1]]:
             if len(args) == 1:  # ['c']
                 self.assertEqual(args[0].name, 'c')
@@ -610,7 +614,7 @@ class TestWatchMethod(unittest.TestCase):
 class TestWatchValues(unittest.TestCase):
 
     def setUp(self):
-        super(TestWatchValues, self).setUp()
+        super().setUp()
         self.accumulator = 0
         self.list_accumulator = []
 
@@ -716,7 +720,6 @@ class TestWatchValues(unittest.TestCase):
         obj.param.update(a=23, b=42, c=99)
 
         self.assertEqual(accumulator.call_count(), 2)
-        # Order may be undefined for Python <3.6
         for kwargs in [accumulator.kwargs_for_call(i) for i in [0,1]]:
             if len(kwargs) == 1: # ['c']
                 self.assertEqual(kwargs, {'c':99})
@@ -729,7 +732,7 @@ class TestWatchValues(unittest.TestCase):
 class TestWatchAttributes(unittest.TestCase):
 
     def setUp(self):
-        super(TestWatchAttributes, self).setUp()
+        super().setUp()
         self.accumulator = []
 
     def tearDown(self):
@@ -761,7 +764,7 @@ class TestWatchAttributes(unittest.TestCase):
 class TestTrigger(unittest.TestCase):
 
     def setUp(self):
-        super(TestTrigger, self).setUp()
+        super().setUp()
         self.accumulator = 0
 
     def test_simple_trigger_one_param(self):
@@ -781,7 +784,7 @@ class TestTrigger(unittest.TestCase):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
         obj.param.watch(accumulator, ['a'])
-        with param.batch_watch(obj):
+        with param.parameterized.batch_call_watchers(obj):
             obj.param.trigger('a')
         self.assertEqual(accumulator.call_count(), 1)
 

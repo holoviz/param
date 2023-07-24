@@ -43,11 +43,16 @@ from ._utils import (
 )
 
 try:
-    # In case the optional ipython module is unavailable
-    from .ipython import ParamPager
-    param_pager = ParamPager(metaclass=True)  # Generates param description
-except:
+    get_ipython()
+except NameError:
     param_pager = None
+else:
+    # In case the optional ipython module is unavailable
+    try:
+        from .ipython import ParamPager
+        param_pager = ParamPager(metaclass=True)  # Generates param description
+    except:
+        param_pager = None
 
 from inspect import getfullargspec
 

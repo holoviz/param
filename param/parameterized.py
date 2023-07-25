@@ -219,7 +219,7 @@ def discard_events(parameterized):
     """
     batch_watch = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
-    watchers, events = (list(parameterized.param._watchers),
+    watchers, events = (list(parameterized.param._state_watchers),
                         list(parameterized.param._events))
     try:
         yield
@@ -227,7 +227,7 @@ def discard_events(parameterized):
         raise
     finally:
         parameterized.param._BATCH_WATCH = batch_watch
-        parameterized.param._watchers = watchers
+        parameterized.param._state_watchers = watchers
         parameterized.param._events = events
 
 
@@ -1718,11 +1718,11 @@ class Parameters:
         self_.self_or_cls._param__private.parameters_state['events'] = value
 
     @property
-    def _watchers(self_):
+    def _state_watchers(self_):
         return self_.self_or_cls._param__private.parameters_state['watchers']
 
-    @_watchers.setter
-    def _watchers(self_, value):
+    @_state_watchers.setter
+    def _state_watchers(self_, value):
         self_.self_or_cls._param__private.parameters_state['watchers'] = value
 
     @property
@@ -2222,16 +2222,16 @@ class Parameters:
                     for p in trigger_params if p in param_names}
 
         events = self_.self_or_cls.param._events
-        watchers = self_.self_or_cls.param._watchers
+        watchers = self_.self_or_cls.param._state_watchers
         self_.self_or_cls.param._events  = []
-        self_.self_or_cls.param._watchers = []
+        self_.self_or_cls.param._state_watchers = []
         param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
         self_.update(dict(params, **triggers))
         self_.self_or_cls.param._TRIGGER = False
         self_.self_or_cls.param._events += events
-        self_.self_or_cls.param._watchers += watchers
+        self_.self_or_cls.param._state_watchers += watchers
 
 
     def _update_event_type(self_, watcher, event, triggered):
@@ -2273,8 +2273,8 @@ class Parameters:
 
         if self_.self_or_cls.param._BATCH_WATCH:
             self_._events.append(event)
-            if not any(watcher is w for w in self_._watchers):
-                self_._watchers.append(watcher)
+            if not any(watcher is w for w in self_._state_watchers):
+                self_._state_watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
             with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
@@ -2288,9 +2288,9 @@ class Parameters:
         while self_.self_or_cls.param._events:
             event_dict = OrderedDict([((event.name, event.what), event)
                                       for event in self_.self_or_cls.param._events])
-            watchers = self_.self_or_cls.param._watchers[:]
+            watchers = self_.self_or_cls.param._state_watchers[:]
             self_.self_or_cls.param._events = []
-            self_.self_or_cls.param._watchers = []
+            self_.self_or_cls.param._state_watchers = []
 
             for watcher in sorted(watchers, key=lambda w: w.precedence):
                 events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],

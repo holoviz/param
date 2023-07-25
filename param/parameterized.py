@@ -1837,19 +1837,13 @@ class Parameters:
         """
         self = self_.param.self
         ## Deepcopy all 'instantiate=True' parameters
-        # (building a set of names first to avoid redundantly
-        # instantiating a later-overridden parent class's parameter)
         params_to_deepcopy = {}
         params_to_ref = {}
-        for class_ in classlist(type(self)):
-            if not issubclass(class_, Parameterized):
-                continue
-            for (k, v) in class_.param._parameters.items():
-                # (avoid replacing name with the default of None)
-                if v.instantiate and k != "name":
-                    params_to_deepcopy[k] = v
-                elif v.constant and k != 'name':
-                    params_to_ref[k] = v
+        for pname, p in self.param.objects(instance=False).items():
+            if p.instantiate and pname != "name":
+                params_to_deepcopy[pname] = p
+            elif p.constant and pname != 'name':
+                params_to_ref[pname] = p
 
         for p in params_to_deepcopy.values():
             self.param._instantiate_param(p)

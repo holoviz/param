@@ -1726,9 +1726,17 @@ class Parameters:
         self_.self_or_cls._param__private.parameters_state['watchers'] = value
 
     @property
-    def watchers(self):
-        """Read-only list of watchers on this Parameterized"""
-        return self._watchers
+    def watchers(self_):
+        """Dictionary of instance watchers."""
+        if self_.self is None:
+            raise TypeError()
+        return self_.self._param__private.watchers
+
+    @watchers.setter
+    def watchers(self_, value):
+        if self_.self is None:
+            raise TypeError()
+        self_.self._param__private.watchers = value
 
     @property
     def self_or_cls(self_):
@@ -3792,11 +3800,15 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def param(self):
         return Parameters(self.__class__, self=self)
 
+    #PARAM3_DEPRECATION
     @property
+    @_deprecated(extra_msg="Use `inst.param.watchers` instead.", warning_cat=UserWarning)
     def _param_watchers(self):
         return self._param__private.watchers
 
+    #PARAM3_DEPRECATION
     @_param_watchers.setter
+    @_deprecated(extra_msg="Use `inst.param.watchers = ...` instead.", warning_cat=UserWarning)
     def _param_watchers(self, value):
         self._param__private.watchers = value
 

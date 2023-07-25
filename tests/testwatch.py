@@ -574,6 +574,47 @@ class TestWatch(unittest.TestCase):
         assert len(args) == 1
         assert args[0].name == 'b'
 
+    def test_watch_watchers_exposed_public(self):
+        obj = SimpleWatchExample()
+
+        obj.param.watch(lambda: '', ['a', 'b'])
+
+        pw = obj.param.watchers
+        assert isinstance(pw, dict)
+        for pname in ('a', 'b'):
+            assert pname in pw
+            assert 'value' in pw[pname]
+            assert isinstance(pw[pname]['value'], list) and len(pw[pname]['value']) == 1
+            assert isinstance(pw[pname]['value'][0], param.parameterized.Watcher)
+
+    def test_watch_watchers_modified_public(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+
+        obj.param.watch(accumulator, ['a', 'b'])
+
+        pw = obj.param.watchers
+        del pw['a']
+
+        obj.param.update(a=1, b=1)
+
+        assert accumulator.call_count() == 1
+        args = accumulator.args_for_call(0)
+        assert len(args) == 1
+        assert args[0].name == 'b'
+
+    def test_watch_watchers_setter_public(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+
+        obj.param.watch(accumulator, ['a', 'b'])
+
+        obj.param.watchers = {}
+
+        obj.param.update(a=1, b=1)
+
+        assert accumulator.call_count() == 0
+
 
 class TestWatchMethod(unittest.TestCase):
 

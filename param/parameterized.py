@@ -3058,8 +3058,6 @@ class ParameterizedMetaclass(type):
         parameters = [(n, o) for (n, o) in dict_.items()
                       if isinstance(o, Parameter)]
 
-        mcs._param__parameters._parameters = dict(parameters)
-
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name, param)
 

@@ -1093,7 +1093,7 @@ class Parameter(_ParameterBase):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['name', '_internal_name', 'default', 'doc',
+    __slots__ = ['name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
                  'watchers', 'owner', '_label']
@@ -1101,7 +1101,7 @@ class Parameter(_ParameterBase):
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
     # (attribute name, internal name). Once the owning Parameterized
-    # class is created, owner, name, and _internal_name are
+    # class is created, owner, and name are
     # set.
 
     _serializers = {'json': serializer.JSONSerialization}
@@ -1207,7 +1207,6 @@ class Parameter(_ParameterBase):
         self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
-        self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
@@ -1472,7 +1471,6 @@ class Parameter(_ParameterBase):
                                  'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
-        self._internal_name = "_%s_param_value" % attrib_name
 
     def __getstate__(self):
         """

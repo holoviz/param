@@ -5,6 +5,7 @@ import copy
 import unittest
 
 import param
+import pytest
 
 from param.parameterized import discard_events
 
@@ -550,7 +551,8 @@ class TestWatch(unittest.TestCase):
 
         obj.param.watch(lambda: '', ['a', 'b'])
 
-        pw = obj._param_watchers
+        with pytest.warns(FutureWarning):
+            pw = obj._param_watchers
         assert isinstance(pw, dict)
         for pname in ('a', 'b'):
             assert pname in pw
@@ -564,7 +566,8 @@ class TestWatch(unittest.TestCase):
 
         obj.param.watch(accumulator, ['a', 'b'])
 
-        pw = obj._param_watchers
+        with pytest.warns(FutureWarning):
+            pw = obj._param_watchers
         del pw['a']
 
         obj.param.update(a=1, b=1)

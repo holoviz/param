@@ -29,6 +29,7 @@ class TestPathParameters(unittest.TestCase):
             a = param.Path()
             b = param.Path(self.fb)
             c = param.Path('a.txt', search_paths=[tmpdir1])
+            d = param.Path(notfound_ok=True)
 
         self.P = P
 
@@ -39,6 +40,7 @@ class TestPathParameters(unittest.TestCase):
         assert p.default is None
         assert p.allow_None is True
         assert p.search_paths == []
+        assert p.notfound_ok is False
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -127,13 +129,37 @@ class TestPathParameters(unittest.TestCase):
         ):
             param.Path('non/existing/file')
 
-    def test_set_notfound(self):
+    def test_set_notfound_raises_error(self):
         p = self.P()
         with pytest.raises(
             OSError,
             match=r"Path file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
         ):
             p.a = 'non/existing/file'
+
+    def test_set_notfound_class_raises_error(self):
+        with pytest.raises(
+            OSError,
+            match=r"Path file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
+        ):
+            self.P.a = 'non/existing/file'
+
+    def test_notfoundok_unbound_no_error(self):
+        p = param.Path('non/existing/file', notfound_ok=True)
+        assert p.default == 'non/existing/file'
+
+    def test_notfoundok_class_no_error(self):
+        self.P.d = 'non/existing/file'
+        assert self.P.d == 'non/existing/file'
+
+    def test_notfoundok_instantiation_no_error(self):
+        p = self.P(d='non/existing/file')
+        assert p.d == 'non/existing/file'
+
+    def test_notfoundok_set_no_error(self):
+        p = self.P()
+        p.d = 'non/existing/file'
+        assert p.d == 'non/existing/file'
 
 
 class TestFilenameParameters(unittest.TestCase):
@@ -155,6 +181,7 @@ class TestFilenameParameters(unittest.TestCase):
             a = param.Filename()
             b = param.Filename(self.fb)
             c = param.Filename('a.txt', search_paths=[tmpdir1])
+            d = param.Filename(notfound_ok=True)
 
         self.P = P
 
@@ -165,6 +192,7 @@ class TestFilenameParameters(unittest.TestCase):
         assert p.default is None
         assert p.allow_None is True
         assert p.search_paths == []
+        assert p.notfound_ok is False
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -224,13 +252,37 @@ class TestFilenameParameters(unittest.TestCase):
         ):
             param.Filename('non/existing/file')
 
-    def test_set_notfound(self):
+    def test_set_notfound_class_raises_error(self):
+        with pytest.raises(
+            OSError,
+            match=r"File file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
+        ):
+            self.P.a = 'non/existing/file'
+
+    def test_set_notfound_raises_error(self):
         p = self.P()
         with pytest.raises(
             OSError,
             match=r"File file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
         ):
             p.a = 'non/existing/file'
+
+    def test_notfoundok_unbound_no_error(self):
+        p = param.Filename('non/existing/file', notfound_ok=True)
+        assert p.default == 'non/existing/file'
+
+    def test_notfoundok_class_no_error(self):
+        self.P.d = 'non/existing/file'
+        assert self.P.d == 'non/existing/file'
+
+    def test_notfoundok_instantiation_no_error(self):
+        p = self.P(d='non/existing/file')
+        assert p.d == 'non/existing/file'
+
+    def test_notfoundok_set_no_error(self):
+        p = self.P()
+        p.d = 'non/existing/file'
+        assert p.d == 'non/existing/file'
 
 
 class TestFoldernameParameters(unittest.TestCase):
@@ -248,7 +300,8 @@ class TestFoldernameParameters(unittest.TestCase):
         class P(param.Parameterized):
             a = param.Foldername()
             b = param.Foldername(tmpdir1)
-            c = param.Path('da', search_paths=[tmpdir1])
+            c = param.Foldername('da', search_paths=[tmpdir1])
+            d = param.Foldername(notfound_ok=True)
 
         self.P = P
 
@@ -259,6 +312,7 @@ class TestFoldernameParameters(unittest.TestCase):
         assert p.default is None
         assert p.allow_None is True
         assert p.search_paths == []
+        assert p.notfound_ok is False
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -319,10 +373,34 @@ class TestFoldernameParameters(unittest.TestCase):
         ):
             param.Foldername('non/existing/folder')
 
-    def test_set_notfound(self):
+    def test_set_notfound_raises_error(self):
         p = self.P()
         with pytest.raises(
             OSError,
             match=r"Folder folder was not found in the following place\(s\): \['\S+/non/existing/folder'\]"
         ):
             p.a = 'non/existing/folder'
+
+    def test_set_notfound_class_raises_error(self):
+        with pytest.raises(
+            OSError,
+            match=r"Folder folder was not found in the following place\(s\): \['\S+/non/existing/folder'\]"
+        ):
+            self.P.a = 'non/existing/folder'
+
+    def test_notfoundok_unbound_no_error(self):
+        p = param.Foldername('non/existing/folder', notfound_ok=True)
+        assert p.default == 'non/existing/folder'
+
+    def test_notfoundok_class_no_error(self):
+        self.P.d = 'non/existing/folder'
+        assert self.P.d == 'non/existing/folder'
+
+    def test_notfoundok_instantiation_no_error(self):
+        p = self.P(d='non/existing/folder')
+        assert p.d == 'non/existing/folder'
+
+    def test_notfoundok_set_no_error(self):
+        p = self.P()
+        p.d = 'non/existing/folder'
+        assert p.d == 'non/existing/folder'

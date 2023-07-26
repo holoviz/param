@@ -2342,6 +2342,7 @@ class Path(Parameter):
 
         self.search_paths = search_paths
         super().__init__(default,**params)
+        self._validate(self.default)
 
     def _resolve(self, path):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
@@ -2354,7 +2355,7 @@ class Path(Parameter):
             try:
                 self._resolve(val)
             except OSError as e:
-                Parameterized(name=f"{self.owner.name}.{self.name}").param.warning('%s',e.args[0])
+                raise OSError(e.args[0]) from None
 
     def __get__(self, obj, objtype):
         """

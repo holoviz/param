@@ -120,6 +120,13 @@ class TestPathParameters(unittest.TestCase):
         with pytest.raises(OSError, match='Path a.txt was not found'):
             assert b.c is None
 
+    def test_notfound_instantiation_raises_error(self):
+        with pytest.raises(
+            OSError,
+            match=r"Path file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
+        ):
+            param.Path('non/existing/file')
+
 
 class TestFilenameParameters(unittest.TestCase):
 
@@ -202,6 +209,13 @@ class TestFilenameParameters(unittest.TestCase):
         assert os.path.isabs(p.c)
         assert p.c == self.fa
 
+    def test_notfound_instantiation_raises_error(self):
+        with pytest.raises(
+            OSError,
+            match=r"File file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
+        ):
+            param.Filename('non/existing/file')
+
 
 class TestFoldernameParameters(unittest.TestCase):
 
@@ -281,3 +295,10 @@ class TestFoldernameParameters(unittest.TestCase):
         assert os.path.isdir(p.c)
         assert os.path.isabs(p.c)
         assert p.c == self.da
+
+    def test_notfound_instantiation_raises_error(self):
+        with pytest.raises(
+            OSError,
+            match=r"Folder folder was not found in the following place\(s\): \['\S+/non/existing/folder'\]"
+        ):
+            param.Foldername('non/existing/folder')

@@ -127,6 +127,14 @@ class TestPathParameters(unittest.TestCase):
         ):
             param.Path('non/existing/file')
 
+    def test_set_notfound(self):
+        p = self.P()
+        with pytest.raises(
+            OSError,
+            match=r"Path file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
+        ):
+            p.a = 'non/existing/file'
+
 
 class TestFilenameParameters(unittest.TestCase):
 
@@ -216,6 +224,14 @@ class TestFilenameParameters(unittest.TestCase):
         ):
             param.Filename('non/existing/file')
 
+    def test_set_notfound(self):
+        p = self.P()
+        with pytest.raises(
+            OSError,
+            match=r"File file was not found in the following place\(s\): \['\S+/non/existing/file'\]"
+        ):
+            p.a = 'non/existing/file'
+
 
 class TestFoldernameParameters(unittest.TestCase):
 
@@ -302,3 +318,11 @@ class TestFoldernameParameters(unittest.TestCase):
             match=r"Folder folder was not found in the following place\(s\): \['\S+/non/existing/folder'\]"
         ):
             param.Foldername('non/existing/folder')
+
+    def test_set_notfound(self):
+        p = self.P()
+        with pytest.raises(
+            OSError,
+            match=r"Folder folder was not found in the following place\(s\): \['\S+/non/existing/folder'\]"
+        ):
+            p.a = 'non/existing/folder'

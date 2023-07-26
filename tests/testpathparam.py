@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 import unittest
@@ -6,7 +7,7 @@ import unittest
 import param
 import pytest
 
-from .utils import warnings_as_excepts, check_defaults
+from .utils import check_defaults
 
 
 class TestPathParameters(unittest.TestCase):
@@ -80,7 +81,8 @@ class TestPathParameters(unittest.TestCase):
 
         assert p.param.b.allow_None is False
         # This should probably raise an error (#708)
-        with warnings_as_excepts(match='None is not allowed'):
+
+        with pytest.raises(ValueError, match=re.escape(r"'Path' Parameter 'b' does not accept None")):
             p.b = None
 
     def test_search_paths(self):
@@ -189,8 +191,7 @@ class TestFilenameParameters(unittest.TestCase):
         p = self.P()
 
         assert p.param.b.allow_None is False
-        # This should probably raise an error (#708)
-        with warnings_as_excepts(match='None is not allowed'):
+        with pytest.raises(ValueError, match=re.escape(r"'Filename' Parameter 'b' does not accept None")):
             p.b = None
 
     def test_search_paths(self):
@@ -269,8 +270,8 @@ class TestFoldernameParameters(unittest.TestCase):
         p = self.P()
 
         assert p.param.b.allow_None is False
-        # This should probably raise an error (#708)
-        with warnings_as_excepts(match='None is not allowed'):
+
+        with pytest.raises(ValueError, match=re.escape(r"'Foldername' Parameter 'b' does not accept None")):
             p.b = None
 
     def test_search_paths(self):

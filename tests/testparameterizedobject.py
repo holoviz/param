@@ -1252,6 +1252,25 @@ def test_inheritance_constant_behavior():
     assert b.param.p.constant is False
 
 
+def test_inheritance_set_Parameter_instantiate_constant_before_instantation():
+    # https://github.com/holoviz/param/issues/760
+    class A(param.Parameterized):
+        p0 = param.Parameter()
+        p1 = param.Parameter(instantiate=True)
+        p2 = param.Parameter(constant=True)
+
+    class B(A):
+        pass
+
+    B.p0 = B.p1 = B.p2 = 2
+
+    b = B()
+
+    assert b.p0 == 2
+    assert b.p1 == 2
+    assert b.p2 == 2
+
+
 def test_inheritance_allow_None_behavior():
     class A(param.Parameterized):
         p = param.Parameter(default=1)

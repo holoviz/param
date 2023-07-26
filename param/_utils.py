@@ -114,3 +114,9 @@ def _recursive_repr(fillvalue='...'):
 
 def _is_auto_name(class_name, instance_name):
     return re.match('^'+class_name+'[0-9]{5}$', instance_name)
+
+
+def _validate_error_prefix(parameter):
+    pclass = type(parameter).__name__
+    pname = '' if parameter.name is None else f' {parameter.name!r}'
+    return f'{pclass!r} Parameter{pname}'

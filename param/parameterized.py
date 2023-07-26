@@ -2556,6 +2556,8 @@ class Parameters:
         outputs = {}
         for cls in classlist(self_.cls):
             for name in dir(cls):
+                if name == '_param_watchers':
+                    continue
                 method = getattr(self_.self_or_cls, name)
                 dinfo = getattr(method, '_dinfo', {})
                 if 'outputs' not in dinfo:

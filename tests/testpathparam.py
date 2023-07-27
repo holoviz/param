@@ -29,7 +29,7 @@ class TestPathParameters(unittest.TestCase):
             a = param.Path()
             b = param.Path(self.fb)
             c = param.Path('a.txt', search_paths=[tmpdir1])
-            d = param.Path(notfound_ok=True)
+            d = param.Path(check_exists=False)
 
         self.P = P
 
@@ -40,7 +40,7 @@ class TestPathParameters(unittest.TestCase):
         assert p.default is None
         assert p.allow_None is True
         assert p.search_paths == []
-        assert p.notfound_ok is False
+        assert p.check_exists is True
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -145,7 +145,7 @@ class TestPathParameters(unittest.TestCase):
             self.P.a = 'non/existing/file'
 
     def test_notfoundok_unbound_no_error(self):
-        p = param.Path('non/existing/file', notfound_ok=True)
+        p = param.Path('non/existing/file', check_exists=False)
         assert p.default == 'non/existing/file'
 
     def test_notfoundok_class_no_error(self):
@@ -181,7 +181,7 @@ class TestFilenameParameters(unittest.TestCase):
             a = param.Filename()
             b = param.Filename(self.fb)
             c = param.Filename('a.txt', search_paths=[tmpdir1])
-            d = param.Filename(notfound_ok=True)
+            d = param.Filename(check_exists=False)
 
         self.P = P
 
@@ -192,7 +192,7 @@ class TestFilenameParameters(unittest.TestCase):
         assert p.default is None
         assert p.allow_None is True
         assert p.search_paths == []
-        assert p.notfound_ok is False
+        assert p.check_exists is True
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -268,7 +268,7 @@ class TestFilenameParameters(unittest.TestCase):
             p.a = 'non/existing/file'
 
     def test_notfoundok_unbound_no_error(self):
-        p = param.Filename('non/existing/file', notfound_ok=True)
+        p = param.Filename('non/existing/file', check_exists=False)
         assert p.default == 'non/existing/file'
 
     def test_notfoundok_class_no_error(self):
@@ -301,7 +301,7 @@ class TestFoldernameParameters(unittest.TestCase):
             a = param.Foldername()
             b = param.Foldername(tmpdir1)
             c = param.Foldername('da', search_paths=[tmpdir1])
-            d = param.Foldername(notfound_ok=True)
+            d = param.Foldername(check_exists=False)
 
         self.P = P
 
@@ -312,7 +312,7 @@ class TestFoldernameParameters(unittest.TestCase):
         assert p.default is None
         assert p.allow_None is True
         assert p.search_paths == []
-        assert p.notfound_ok is False
+        assert p.check_exists is True
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -389,7 +389,7 @@ class TestFoldernameParameters(unittest.TestCase):
             self.P.a = 'non/existing/folder'
 
     def test_notfoundok_unbound_no_error(self):
-        p = param.Foldername('non/existing/folder', notfound_ok=True)
+        p = param.Foldername('non/existing/folder', check_exists=False)
         assert p.default == 'non/existing/folder'
 
     def test_notfoundok_class_no_error(self):

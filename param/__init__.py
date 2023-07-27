@@ -2324,28 +2324,28 @@ class Path(Parameter):
       is None).
     """
 
-    __slots__ = ['search_paths', 'notfound_ok']
+    __slots__ = ['search_paths', 'check_exists']
 
     _slot_defaults = _dict_update(
-        Parameter._slot_defaults, notfound_ok=False,
+        Parameter._slot_defaults, check_exists=True,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=None, *, search_paths=None, notfound_ok=False,
+        default=None, *, search_paths=None, check_exists=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, search_paths=Undefined, notfound_ok=Undefined, **params):
+    def __init__(self, default=Undefined, *, search_paths=Undefined, check_exists=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
 
         self.search_paths = search_paths
-        self.notfound_ok = notfound_ok
+        self.check_exists = check_exists
         super().__init__(default,**params)
         self._validate(self.default)
 
@@ -2360,7 +2360,7 @@ class Path(Parameter):
             try:
                 self._resolve(val)
             except OSError as e:
-                if not self.notfound_ok:
+                if self.check_exists:
                     raise OSError(e.args[0]) from None
 
     def __get__(self, obj, objtype):
@@ -2374,7 +2374,7 @@ class Path(Parameter):
             try:
                 path = self._resolve(raw_path)
             except OSError:
-                if not self.notfound_ok:
+                if  self.check_exists:
                     raise
                 else:
                     path = raw_path

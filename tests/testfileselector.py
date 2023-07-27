@@ -76,10 +76,9 @@ class TestFileSelectorParameters(unittest.TestCase):
         check_defaults(s, label=None)
         self._check_defaults(s)
 
-    def test_default_is_None(self):
+    def test_default_to_first(self):
         p = self.P()
-        assert p.a is None
-        assert p.param.a.default is None
+        assert p.a == p.param.a.objects[0]
 
     def test_default_is_honored(self):
         p = self.P()

@@ -40,7 +40,6 @@ def test_add_parameter_class():
     assert 'y' in P.param
     # Check the name is set
     assert P.param.y.name == 'y'
-    assert P.param.y._internal_name == '_y_param_value'
 
 
 def test_add_parameter_instance():
@@ -53,7 +52,6 @@ def test_add_parameter_instance():
 
     assert 'y' in p.param
     assert p.param.y.name == 'y'
-    assert p.param.y._internal_name == '_y_param_value'
 
 
 def test_add_parameter_class_validation():

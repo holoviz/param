@@ -1093,7 +1093,7 @@ class Parameter(_ParameterBase):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['name', '_internal_name', 'default', 'doc',
+    __slots__ = ['name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
                  'watchers', 'owner', '_label']
@@ -1101,7 +1101,7 @@ class Parameter(_ParameterBase):
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
     # (attribute name, internal name). Once the owning Parameterized
-    # class is created, owner, name, and _internal_name are
+    # class is created, owner, and name are
     # set.
 
     _serializers = {'json': serializer.JSONSerialization}
@@ -1207,7 +1207,6 @@ class Parameter(_ParameterBase):
         self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
-        self._internal_name = None
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
@@ -1325,6 +1324,12 @@ class Parameter(_ParameterBase):
         """
         Can be overridden on subclasses to handle changes when parameter
         attribute is set.
+        """
+
+    def _update_state(self):
+        """
+        Can be overridden on subclasses to update a Parameter state, i.e. slot
+        values, after the slot values have been set in the inheritance procedure.
         """
 
     def __get__(self, obj, objtype): # pylint: disable-msg=W0613
@@ -1472,7 +1477,6 @@ class Parameter(_ParameterBase):
                                  'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
-        self._internal_name = "_%s_param_value" % attrib_name
 
     def __getstate__(self):
         """
@@ -1839,19 +1843,13 @@ class Parameters:
         """
         self = self_.param.self
         ## Deepcopy all 'instantiate=True' parameters
-        # (building a set of names first to avoid redundantly
-        # instantiating a later-overridden parent class's parameter)
         params_to_deepcopy = {}
         params_to_ref = {}
-        for class_ in classlist(type(self)):
-            if not issubclass(class_, Parameterized):
-                continue
-            for (k, v) in class_.param._parameters.items():
-                # (avoid replacing name with the default of None)
-                if v.instantiate and k != "name":
-                    params_to_deepcopy[k] = v
-                elif v.constant and k != 'name':
-                    params_to_ref[k] = v
+        for pname, p in self.param.objects(instance=False).items():
+            if p.instantiate and pname != "name":
+                params_to_deepcopy[pname] = p
+            elif p.constant and pname != 'name':
+                params_to_ref[pname] = p
 
         for p in params_to_deepcopy.values():
             self.param._instantiate_param(p)
@@ -3066,8 +3064,6 @@ class ParameterizedMetaclass(type):
         parameters = [(n, o) for (n, o) in dict_.items()
                       if isinstance(o, Parameter)]
 
-        mcs._param__parameters._parameters = dict(parameters)
-
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name, param)
 
@@ -3319,6 +3315,10 @@ class ParameterizedMetaclass(type):
         # (which are only allowed to use static values or results are undefined)
         for slot, fn in callables.items():
             setattr(param, slot, fn(param))
+
+        # Once all the slot values have been set, call _update_state for Parameters
+        # that need updates to make sure they're set up correctly after inheritance.
+        param._update_state()
 
     def get_param_descriptor(mcs,param_name):
         """

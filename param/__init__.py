@@ -43,7 +43,12 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 from .parameterized import _identity_hook
-from ._utils import ParamDeprecationWarning as _ParamDeprecationWarning, _deprecate_positional_args, _deprecated
+from ._utils import (
+    ParamDeprecationWarning as _ParamDeprecationWarning,
+    _deprecate_positional_args,
+    _deprecated,
+    _validate_error_prefix,
+)
 
 # Define '__version__'
 try:
@@ -1695,6 +1700,15 @@ class Selector(SelectorBase, _SignatureSelector):
             self.allow_None = allow_None
         if self.default is not None and self.check_on_set is True:
             self._validate(self.default)
+        self._update_state()
+
+    def _update_state(self):
+        if (
+            self.check_on_set is False
+            and self.default is not None
+            and self.default not in self.objects
+        ):
+            self.objects.append(self.default)
 
     @property
     def objects(self):
@@ -2344,7 +2358,7 @@ class Path(Parameter):
     def _validate(self, val):
         if val is None:
             if not self.allow_None:
-                Parameterized(name=f"{self.owner.name}.{self.name}").param.warning('None is not allowed')
+                raise ValueError(f'{_validate_error_prefix(self)} does not accept None')
         else:
             try:
                 self._resolve(val)

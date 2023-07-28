@@ -160,8 +160,10 @@ class TestRangeParameters(unittest.TestCase):
         msg = r"Step can only be None or a numeric value, not type <class 'str'>."
 
         p = param.Range((1, 2), bounds=(0, 10), step=1)
+        assert p.step == 1
+
         with self.assertRaisesRegex(ValueError, msg):
-            q = param.Range((1, 2), bounds=(0, 10), step="1")
+            param.Range((1, 2), bounds=(0, 10), step="1")
 
     def test_validate_order_on_val_with_positive_step(self):
         msg = r"Range parameter 'q's end 1 is less than its start 2 with positive step 1."
@@ -185,4 +187,4 @@ class TestRangeParameters(unittest.TestCase):
         msg = r"Step cannot be 0."
 
         with self.assertRaisesRegex(ValueError, msg):
-            q = param.Range(bounds=(0, 10), step=0)
+            param.Range(bounds=(0, 10), step=0)

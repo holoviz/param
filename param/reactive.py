@@ -90,8 +90,9 @@ from typing import Any, Callable, Optional
 import param
 
 from .depends import (
-    bind, depends, eval_function_with_deps, register_depends_transform,
-    resolve_ref, resolve_value, transform_dependency
+    _display_accessors, bind, depends, eval_function_with_deps,
+    register_depends_transform, resolve_ref, resolve_value,
+    transform_dependency
 )
 from .parameterized import Parameter, get_method_owner
 from ._utils import full_groupby
@@ -187,7 +188,7 @@ class reactive:
         if kwargs.get('fn'):
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif isinstance(obj, (FunctionType, MethodType)):
+        elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             fn = obj
             obj = eval_function_with_deps(obj)
         elif isinstance(obj, Parameter):
@@ -230,6 +231,8 @@ class reactive:
         self._dirty = True
         self._current_ = None
         self._setup_invalidations(depth)
+        for name, accessor in _display_accessors.items():
+            setattr(self, name, accessor(self))
         for name, (accessor, predicate) in reactive._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))

@@ -24,7 +24,7 @@ import uuid
 
 import param
 
-from param.depends import depends
+from param.depends import depends, register_display_accessor, resolve_ref
 from param.reactive import reactive
 
 
@@ -364,12 +364,20 @@ class IPythonDisplay:
         self._reactive = reactive
 
     def __call__(self):
-        cb = self._reactive.callback
-        @depends(*self._reactive._params, watch=True)
-        def update_handle(*args, **kwargs):
-            handle.update(cb())
-        handle = display(cb(), display_id=uuid.uuid4().hex) # noqa
+        if isinstance(self._reactive, reactive):
+            cb = self._reactive._callback
+            @depends(*self._reactive._params, watch=True)
+            def update_handle(*args, **kwargs):
+                handle.update(cb())
+        else:
+            cb = self._reactive
+            @depends(*resolve_ref(cb), watch=True)
+            def update_handle(*args, **kwargs):
+                handle.update(cb())
+        try:
+            handle = display(cb(), display_id=uuid.uuid4().hex) # noqa
+        except TypeError:
+            raise NotImplementedError
 
-reactive.register_accessor(
-    '_ipython_display_', IPythonDisplay, predicate=lambda _: IPythonDisplay.enabled
-)
+
+register_display_accessor('_ipython_display_', IPythonDisplay)

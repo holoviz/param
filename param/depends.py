@@ -1,4 +1,5 @@
 import inspect
+import weakref
 
 from collections import defaultdict
 from functools import wraps
@@ -10,7 +11,25 @@ from ._utils import accept_arguments, iscoroutinefunction
 
 # Hooks to apply to depends and bind arguments to turn them into valid parameters
 
+_reactive_display_objs = weakref.WeakSet()
+_display_accessors = {}
 _dependency_transforms = []
+
+def register_display_accessor(name, accessor, force=False):
+    if name in _display_accessors and not force:
+        raise KeyError(
+            'Display accessor {name!r} already registered. Override it '
+            'by setting force=True or unregister the existing accessor first.')
+    _display_accessors[name] = accessor
+    for fn in _reactive_display_objs:
+        setattr(fn, name, accessor(fn))
+
+def unregister_display_accessor(name):
+    if name not in _display_accessors:
+        raise KeyError('No such display accessor: {name!r}')
+    del _display_accessors[name]
+    for fn in _reactive_display_objs:
+        delattr(fn, name)
 
 def register_depends_transform(transform):
     """
@@ -88,7 +107,10 @@ def resolve_ref(reference):
         dinfo = getattr(reference, '_dinfo', {})
         args = list(dinfo.get('dependencies', []))
         kwargs = list(dinfo.get('kw', {}).values())
-        return args + kwargs
+        refs = []
+        for arg in (args + kwargs):
+            refs.extend(resolve_ref(arg))
+        return refs
     elif isinstance(reference, Parameter):
         return [reference]
     return []
@@ -307,4 +329,7 @@ def bind(function, *args, watch=False, **kwargs):
             return eval_fn()(*combined_args, **combined_kwargs)
     wrapped.__bound_function__ = function
     wrapped.reactive = lambda: reactive(wrapped)
+    _reactive_display_objs.add(wrapped)
+    for name, accessor in _display_accessors.items():
+        setattr(wrapped, name, accessor(wrapped))
     return wrapped

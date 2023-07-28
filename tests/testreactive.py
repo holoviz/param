@@ -188,3 +188,33 @@ def test_reactive_dataframe_param_value_method_chain(dataframe):
     pd.testing.assert_frame_equal(dfi.eval(), dataframe.groupby('str')[['float']].mean().reset_index())
     P.string = 'int'
     pd.testing.assert_frame_equal(dfi.eval(), dataframe.groupby('int')[['float']].mean().reset_index())
+
+def test_reactive_len():
+    i = reactive([1, 2, 3])
+    l = i.len()
+    assert l.eval() == 3
+    i.set([1, 2])
+    assert l == 2
+
+def test_reactive_bool():
+    i = reactive(1)
+    b = i.bool_()
+    assert b.eval() is True
+    i.set(0)
+    assert b.eval() is False
+
+def test_reactive_iter():
+    i = reactive(('a', 'b'))
+    a, b = i
+    assert a.eval() == 'a'
+    assert b.eval() == 'b'
+    i.set(('b', 'a'))
+    assert a.eval() == 'b'
+    assert b.eval() == 'a'
+
+def test_reactive_is():
+    i = reactive(None)
+    is_ = i.is_(None)
+    assert is_.eval()
+    i.set(False)
+    assert not is_.eval()

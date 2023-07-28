@@ -84,6 +84,7 @@ from __future__ import annotations
 import math
 import operator
 
+from collections.abc import Iterable, Iterator
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
 
@@ -589,11 +590,50 @@ class reactive:
     def __getitem__(self, other):
         return self._apply_operator(operator.getitem, other)
 
+    def bool_(self):
+        """
+        __bool__ cannot be implemented so it is provided as a method.
+        """
+        return self._apply_operator(bool)
+
     def len(self):
         """
-        __len__ cannot be implemented so we alternative helper.
+        __len__ cannot be implemented so it is provided as a method.
         """
         return self._apply_operator(len)
+
+    def is_(self, other):
+        """
+        Replacement for the ``is`` statement.
+        """
+        return self._apply_operator(operator.is_, other)
+
+    def __iter__(self):
+        if isinstance(self._current, Iterator):
+            while True:
+                try:
+                    new = self._apply_operator(next)
+                    new.eval()
+                except RuntimeError:
+                    break
+                yield new
+            return
+        elif not isinstance(self._current, Iterable):
+            raise TypeError('cannot unpack non-iterable {type(self._current).__name__} object.')
+        iterator = []
+        def iterate(value):
+            if iterator:
+                iterate = iterator[0]
+            else:
+                iterate = iter(value)
+                iterator.append(iterate)
+            try:
+                yield next(iterate)
+            except StopIteration as e:
+                iterator.clear()
+                raise e
+        for item in self._apply_operator(iterate):
+            yield item
 
     def pipe(self, func, *args, **kwargs):
         """

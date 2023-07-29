@@ -1,6 +1,7 @@
 """
 Unit test for Parameterized.
 """
+import inspect
 import re
 import unittest
 
@@ -1411,3 +1412,144 @@ def test_parameterized_access_param_before_super():
             super().__init__(**params)
 
     P()
+
+
+def test_parameterized_docstring():
+    # TODO
+    pass
+
+
+def check_signature(parameterized_obj, parameters):
+    assert parameterized_obj.__signature__ is not None
+    sig = inspect.signature(parameterized_obj)
+    assert len(parameters) == len(sig.parameters)
+    for sparam, pname in zip(sig.parameters.values(), parameters):
+        assert sparam.name == pname
+        assert sparam.kind == inspect.Parameter.KEYWORD_ONLY
+
+
+def test_parameterized_signature_base():
+    check_signature(param.Parameterized, ['name'])
+
+
+def test_parameterized_signature_simple():
+    class P(param.Parameterized):
+        x = param.Parameter()
+    check_signature(P, ['x', 'name'])
+
+
+def test_parameterized_signature_subclass_noparams():
+    class A(param.Parameterized):
+        x = param.Parameter()
+
+    class B(A): pass
+
+    check_signature(B, ['x', 'name'])
+
+
+def test_parameterized_signature_subclass_with_params():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(A):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+    class C(B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+    check_signature(A, ['a1', 'a2', 'name'])
+    check_signature(B, ['b1', 'b2', 'a1', 'a2', 'name'])
+    check_signature(C, ['c1', 'c2', 'b1', 'b2', 'a1', 'a2', 'name'])
+
+
+def test_parameterized_signature_subclass_multiple_inheritance():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(param.Parameterized):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+    class C(A, B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+    check_signature(C, ['c1', 'c2', 'a1', 'a2', 'b1', 'b2', 'name'])
+
+
+def test_parameterized_signature_simple_init_same_as_parameterized():
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        def __init__(self, **params):
+            super().__init__(**params)
+
+    check_signature(P, ['x', 'name'])
+
+
+def test_parameterized_signature_simple_init_different():
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        def __init__(self, x=1, **params):
+            super().__init__(x=x, **params)
+
+    assert P.__signature__ is None
+
+
+def test_parameterized_signature_subclass_noparams_init_different():
+    class A(param.Parameterized):
+        x = param.Parameter()
+
+    class B(A):
+        def __init__(self, x=1, **params):
+            super().__init__(x=x, **params)
+
+    check_signature(A, ['x', 'name'])
+    assert B.__signature__ is None
+
+
+def test_parameterized_signature_subclass_with_params_init_different():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(A):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+    class C(B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+        def __init__(self, c1=1, **params):
+            super().__init__(c1=1, **params)
+
+    check_signature(A, ['a1', 'a2', 'name'])
+    check_signature(B, ['b1', 'b2', 'a1', 'a2', 'name'])
+    assert C.__signature__ is None
+
+
+def test_parameterized_signature_subclass_multiple_inheritance_init_different():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(param.Parameterized):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+        def __init__(self, b1=1, **params):
+            super().__init__(b1=1, **params)
+
+    class C(A, B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+    check_signature(A, ['a1', 'a2', 'name'])
+    assert B.__signature__ is None
+    assert C.__signature__ is None

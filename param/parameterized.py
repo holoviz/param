@@ -3171,6 +3171,42 @@ class ParameterizedMetaclass(type):
         except AttributeError:
             return False
 
+    def __get_signature(mcs):
+        """
+        When a class doesn't implement an __init__ method with a signature
+        different than Parameterized.__init__, calling its `__signature__`
+        property will return a custom signature built by this method, None
+        otherwise.
+        """
+        # allowed_signature must be the signature of Parameterized.__init__
+        allowed_signature = inspect.Signature([
+            inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+            inspect.Parameter('params', inspect.Parameter.VAR_KEYWORD),
+        ])
+        # Inspecting `mcs.__init__` instead of `mcs` to avoid a recursion error
+        if inspect.signature(mcs.__init__).parameters != allowed_signature.parameters:
+            return
+        processed_kws, keyword_groups = set(), []
+        for cls in reversed(mcs.mro()):
+            keyword_group = []
+            for k, v in sorted(cls.__dict__.items()):
+                if isinstance(v, Parameter) and k not in processed_kws and not v.readonly:
+                    keyword_group.append(k)
+                    processed_kws.add(k)
+            keyword_groups.append(keyword_group)
+
+        keywords = [el for grp in reversed(keyword_groups) for el in grp]
+        # if mcs.name == 'C':
+        #     import pdb; pdb.set_trace()
+        # keywords = [el for grp in keyword_groups for el in grp]
+        signature = inspect.Signature([
+            inspect.Parameter(k, inspect.Parameter.KEYWORD_ONLY)
+            for k in keywords
+        ])
+        return signature
+
+    __signature__ = property(__get_signature)
+
     abstract = property(__is_abstract)
 
     def _get_param(mcs):

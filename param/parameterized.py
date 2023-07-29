@@ -3097,7 +3097,7 @@ class ParameterizedMetaclass(type):
         mcs.param._depends = {'watch': _inherited+_watch}
 
         if docstring_signature:
-            mcs.__class_docstring_signature()
+            mcs.__class_docstring()
 
     def __set_name(mcs, name, dict_):
         """
@@ -3129,30 +3129,16 @@ class ParameterizedMetaclass(type):
             if not found_renamed:
                 mcs.name = name
 
-    def __class_docstring_signature(mcs, max_repr_len=15):
+    def __class_docstring(mcs):
         """
-        Autogenerate a keyword signature in the class docstring for
-        all available parameters. This is particularly useful in the
-        IPython Notebook as IPython will parse this signature to allow
-        tab-completion of keywords.
-
-        max_repr_len: Maximum length (in characters) of value reprs.
+        Customize the class docstring with a Parameter table if
+        `docstring_describe_params` and the `param_pager` is available.
         """
-        processed_kws, keyword_groups = set(), []
-        for cls in reversed(mcs.mro()):
-            keyword_group = []
-            for (k,v) in sorted(cls.__dict__.items()):
-                if isinstance(v, Parameter) and k not in processed_kws:
-                    param_type = v.__class__.__name__
-                    keyword_group.append(f"{k}={param_type}")
-                    processed_kws.add(k)
-            keyword_groups.append(keyword_group)
-
-        keywords = [el for grp in reversed(keyword_groups) for el in grp]
-        class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-        signature = "params(%s)" % (", ".join(keywords))
-        description = param_pager(mcs) if (docstring_describe_params and param_pager) else ''
-        mcs.__doc__ = signature + class_docstr + '\n' + description
+        if not docstring_describe_params or not param_pager:
+            return
+        class_docstr = mcs.__doc__ if mcs.__doc__ else ''
+        description = param_pager(mcs)
+        mcs.__doc__ = class_docstr + '\n' + description
 
 
     def _initialize_parameter(mcs,param_name,param):

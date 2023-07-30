@@ -23,6 +23,7 @@ import glob
 import re
 import datetime as dt
 import collections
+import pathlib
 import typing
 import warnings
 
@@ -2483,7 +2484,13 @@ class FileSelector(Selector):
             self.update()
 
     def update(self, default=True):
-        self.objects = sorted(glob.glob(self.path))
+        if self.path == "":
+            self.objects = []
+        else:
+            # Convert using os.fspath and pathlib.Path to handle ensure
+            # the path separators are consistent (on Windows in particular)
+            pathpattern = os.fspath(pathlib.Path(self.path))
+            self.objects = sorted(glob.glob(pathpattern))
         if self.default in self.objects:
             return
         if default:

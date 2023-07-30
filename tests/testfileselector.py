@@ -135,3 +135,27 @@ class TestFileSelectorParameters(unittest.TestCase):
         p.param.b.update()
         assert p.param.b.objects == [self.fb]
         assert p.param.b.default == self.fb
+
+
+def test_fileselector_glob_parent(tmpdir):
+    # https://github.com/holoviz/param/issues/139
+
+    ncwd = tmpdir / 'folder'
+    data = tmpdir / 'data'
+    data.mkdir()
+    (data / 'foo.txt').write_text('foo', encoding='utf-8')
+    ncwd.mkdir()
+    cwd = os.getcwd()
+    os.chdir(ncwd)
+    try:
+        if os.name == 'nt':
+            default = r'..\data\foo.txt'
+        else:
+            default = '../data/foo.txt'
+        class P(param.Parameterized):
+            fs = param.FileSelector(default, path='../data/*.txt')
+
+        assert len(P.param.fs.objects) == 1
+        assert P.fs == default
+    finally:
+        os.chdir(cwd)

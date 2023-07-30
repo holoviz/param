@@ -2345,6 +2345,8 @@ class Path(Parameter):
             search_paths = []
 
         self.search_paths = search_paths
+        if check_exists is not Undefined and not isinstance(check_exists, bool):
+            raise ValueError("'check_exists' attribute value must be a boolean")
         self.check_exists = check_exists
         super().__init__(default,**params)
         self._validate(self.default)

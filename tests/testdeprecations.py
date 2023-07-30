@@ -102,6 +102,15 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamDeprecationWarning):
             param.parameterized.all_equal(1, 1)
 
+    def test_deprecate_param_watchers(self):
+        with pytest.raises(FutureWarning):
+            param.parameterized.Parameterized()._param_watchers
+
+    def test_deprecate_param_watchers_setter(self):
+        with pytest.raises(FutureWarning):
+            param.parameterized.Parameterized()._param_watchers = {}
+
+
 class TestDeprecateParameters:
 
     def test_deprecate_print_param_defaults(self):

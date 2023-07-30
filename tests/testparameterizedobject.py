@@ -1372,6 +1372,7 @@ def test_namespace_class():
     assert _dir(P) == [
         '_param__parameters',
         '_param__private',
+        '_param_watchers',
         'foo',
         'name',
         'param',

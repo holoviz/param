@@ -5,6 +5,7 @@ import copy
 import unittest
 
 import param
+import pytest
 
 from param.parameterized import discard_events
 
@@ -544,6 +545,93 @@ class TestWatch(unittest.TestCase):
         self.b = 420
         self.assertEqual(obj.e, False)
         self.assertEqual(obj.f, False)
+
+    def test_watch_watchers_exposed(self):
+        obj = SimpleWatchExample()
+
+        obj.param.watch(lambda: '', ['a', 'b'])
+
+        with pytest.warns(FutureWarning):
+            pw = obj._param_watchers
+        assert isinstance(pw, dict)
+        for pname in ('a', 'b'):
+            assert pname in pw
+            assert 'value' in pw[pname]
+            assert isinstance(pw[pname]['value'], list) and len(pw[pname]['value']) == 1
+            assert isinstance(pw[pname]['value'][0], param.parameterized.Watcher)
+
+    def test_watch_watchers_modified(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+
+        obj.param.watch(accumulator, ['a', 'b'])
+
+        with pytest.warns(FutureWarning):
+            pw = obj._param_watchers
+        del pw['a']
+
+        obj.param.update(a=1, b=1)
+
+        assert accumulator.call_count() == 1
+        args = accumulator.args_for_call(0)
+        assert len(args) == 1
+        assert args[0].name == 'b'
+
+    def test_watch_watchers_exposed_public(self):
+        obj = SimpleWatchExample()
+
+        obj.param.watch(lambda: '', ['a', 'b'])
+
+        pw = obj.param.watchers
+        assert isinstance(pw, dict)
+        for pname in ('a', 'b'):
+            assert pname in pw
+            assert 'value' in pw[pname]
+            assert isinstance(pw[pname]['value'], list) and len(pw[pname]['value']) == 1
+            assert isinstance(pw[pname]['value'][0], param.parameterized.Watcher)
+
+    def test_watch_watchers_modified_public(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+
+        obj.param.watch(accumulator, ['a', 'b'])
+
+        pw = obj.param.watchers
+        del pw['a']
+
+        obj.param.update(a=1, b=1)
+
+        assert accumulator.call_count() == 1
+        args = accumulator.args_for_call(0)
+        assert len(args) == 1
+        assert args[0].name == 'b'
+
+    def test_watch_watchers_setter_public(self):
+        accumulator = Accumulator()
+        obj = SimpleWatchExample()
+
+        obj.param.watch(accumulator, ['a', 'b'])
+
+        obj.param.watchers = {}
+
+        obj.param.update(a=1, b=1)
+
+        assert accumulator.call_count() == 0
+
+    def test_watch_watchers_class_error(self):
+        with pytest.raises(
+            TypeError,
+            match=r"Accessing `\.param\.watchers` is only supported on a Parameterized instance, not class\."
+        ):
+            SimpleWatchExample.param.watchers
+
+    def test_watch_watchers_class_set_error(self):
+        with pytest.raises(
+            TypeError,
+            match=r"Setting `\.param\.watchers` is only supported on a Parameterized instance, not class\."
+        ):
+            SimpleWatchExample.param.watchers = {}
+
 
 class TestWatchMethod(unittest.TestCase):
 

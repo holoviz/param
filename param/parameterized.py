@@ -1729,13 +1729,13 @@ class Parameters:
     def watchers(self_):
         """Dictionary of instance watchers."""
         if self_.self is None:
-            raise TypeError()
+            raise TypeError('Accessing `.param.watchers` is only supported on a Parameterized instance, not class.')
         return self_.self._param__private.watchers
 
     @watchers.setter
     def watchers(self_, value):
         if self_.self is None:
-            raise TypeError()
+            raise TypeError('Setting `.param.watchers` is only supported on a Parameterized instance, not class.')
         self_.self._param__private.watchers = value
 
     @property

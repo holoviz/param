@@ -618,6 +618,20 @@ class TestWatch(unittest.TestCase):
 
         assert accumulator.call_count() == 0
 
+    def test_watch_watchers_class_error(self):
+        with pytest.raises(
+            TypeError,
+            match=r"Accessing `\.param\.watchers` is only supported on a Parameterized instance, not class\."
+        ):
+            SimpleWatchExample.param.watchers
+
+    def test_watch_watchers_class_set_error(self):
+        with pytest.raises(
+            TypeError,
+            match=r"Setting `\.param\.watchers` is only supported on a Parameterized instance, not class\."
+        ):
+            SimpleWatchExample.param.watchers = {}
+
 
 class TestWatchMethod(unittest.TestCase):
 

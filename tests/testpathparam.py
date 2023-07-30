@@ -45,7 +45,6 @@ class TestPathParameters(unittest.TestCase):
         self.P = P
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir1)
         os.chdir(self.curdir)
 
     def _check_defaults(self, p):

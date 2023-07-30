@@ -23,6 +23,7 @@ import glob
 import re
 import datetime as dt
 import collections
+import pathlib
 import typing
 import warnings
 
@@ -2366,6 +2367,8 @@ class Path(Parameter):
             if not self.allow_None:
                 raise ValueError(f'{_validate_error_prefix(self)} does not accept None')
         else:
+            if not isinstance(val, (str, pathlib.Path)):
+                raise ValueError(f'{_validate_error_prefix(self)} only take str or pathlib.Path types')
             try:
                 self._resolve(val)
             except OSError as e:

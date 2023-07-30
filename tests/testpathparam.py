@@ -82,6 +82,10 @@ class TestPathParameters(unittest.TestCase):
         p = self.P()
         assert p.a is None
 
+    def test_unsupported_type(self):
+        with pytest.raises(ValueError):
+            param.Path(1)
+
     def test_inst_with_path(self):
         p = self.P(a=self.fa)
         assert isinstance(p.a, str)

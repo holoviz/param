@@ -2305,12 +2305,11 @@ class normalize_path(ParameterizedFunction):
 
 
 class Path(Parameter):
-    """
-    Parameter that can be set to a string specifying the path of a file or folder.
+    """Parameter that can be set to a string specifying the path of a file or folder.
 
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
-    the Filename or Foldername classes if you require discrimination
+    the Filename or Foldername Parameters if you require discrimination
     between the two possibilities.
 
     The specified path can be absolute, or relative to either:
@@ -2322,6 +2321,14 @@ class Path(Parameter):
 
     * any of the paths searched by resolve_path() (if search_paths
       is None).
+
+    Parameters
+    ----------
+    search_paths : list, default=[os.getcwd()]
+        List of paths to search the path from
+    check_exists: boolean, default=True
+        If True (default) the path must exist on instantiation and set,
+        otherwise the path can optionally exist.
     """
 
     __slots__ = ['search_paths', 'check_exists']

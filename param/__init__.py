@@ -2315,12 +2315,11 @@ class normalize_path(ParameterizedFunction):
 
 
 class Path(Parameter):
-    """
-    Parameter that can be set to a string specifying the path of a file or folder.
+    """Parameter that can be set to a string specifying the path of a file or folder.
 
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
-    the Filename or Foldername classes if you require discrimination
+    the Filename or Foldername Parameters if you require discrimination
     between the two possibilities.
 
     The specified path can be absolute, or relative to either:
@@ -2332,26 +2331,42 @@ class Path(Parameter):
 
     * any of the paths searched by resolve_path() (if search_paths
       is None).
+
+    Parameters
+    ----------
+    search_paths : list, default=[os.getcwd()]
+        List of paths to search the path from
+    check_exists: boolean, default=True
+        If True (default) the path must exist on instantiation and set,
+        otherwise the path can optionally exist.
     """
 
-    __slots__ = ['search_paths']
+    __slots__ = ['search_paths', 'check_exists']
+
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, check_exists=True,
+    )
 
     @typing.overload
     def __init__(
         self,
-        default=None, *, search_paths=None,
+        default=None, *, search_paths=None, check_exists=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, search_paths=Undefined, **params):
+    def __init__(self, default=Undefined, *, search_paths=Undefined, check_exists=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
 
         self.search_paths = search_paths
+        if check_exists is not Undefined and not isinstance(check_exists, bool):
+            raise ValueError("'check_exists' attribute value must be a boolean")
+        self.check_exists = check_exists
         super().__init__(default,**params)
+        self._validate(self.default)
 
     def _resolve(self, path):
         return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
@@ -2361,17 +2376,30 @@ class Path(Parameter):
             if not self.allow_None:
                 raise ValueError(f'{_validate_error_prefix(self)} does not accept None')
         else:
+            if not isinstance(val, (str, pathlib.Path)):
+                raise ValueError(f'{_validate_error_prefix(self)} only take str or pathlib.Path types')
             try:
                 self._resolve(val)
             except OSError as e:
-                Parameterized(name=f"{self.owner.name}.{self.name}").param.warning('%s',e.args[0])
+                if self.check_exists:
+                    raise OSError(e.args[0]) from None
 
     def __get__(self, obj, objtype):
         """
         Return an absolute, normalized path (see resolve_path).
         """
         raw_path = super().__get__(obj,objtype)
-        return None if raw_path is None else self._resolve(raw_path)
+        if raw_path is None:
+            path = None
+        else:
+            try:
+                path = self._resolve(raw_path)
+            except OSError:
+                if self.check_exists:
+                    raise
+                else:
+                    path = raw_path
+        return path
 
     def __getstate__(self):
         # don't want to pickle the search_paths

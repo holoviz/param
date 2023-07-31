@@ -1,6 +1,7 @@
 import inspect
 import functools
 import re
+import traceback
 import warnings
 
 from textwrap import dedent
@@ -116,7 +117,50 @@ def _is_auto_name(class_name, instance_name):
     return re.match('^'+class_name+'[0-9]{5}$', instance_name)
 
 
+def _find_pname(pclass):
+    """
+    Go up the stack and attempt to find a Parameter declaration of the form
+    `pname = param.Parameter(` or `pname = pm.Parameter(`.
+    """
+    stack = traceback.extract_stack()
+    for frame in stack:
+        match = re.match(r"^(\S+)\s*=\s*(param|pm)\." + pclass + r"\(", frame.line)
+        if match:
+            return match.group(1)
+
+
 def _validate_error_prefix(parameter):
+    """
+    Generate an error prefix suitable for Parameters when they raise a validation
+    error.
+
+    - unbound and name can't be found: "Number parameter"
+    - unbound and name can be found: "Number parameter 'x'"
+    - bound parameter: "Number parameter 'P.x'"
+    """
+    from param.parameterized import ParameterizedMetaclass
+
     pclass = type(parameter).__name__
-    pname = '' if parameter.name is None else f' {parameter.name!r}'
-    return f'{pclass!r} Parameter{pname}'
+    if parameter.owner is not None:
+        if type(parameter.owner) is ParameterizedMetaclass:
+            powner = parameter.owner.__name__
+        else:
+            powner = type(parameter.owner).__name__
+    else:
+        powner = None
+    pname = parameter.name
+    out = [f'{pclass} parameter']
+    if pname:
+        if powner:
+            desc = f'{powner}.{pname}'
+        else:
+            desc = pname
+        out.append(f'{desc!r}')
+    else:
+        try:
+            pname = _find_pname(pclass)
+            if pname:
+                out.append(f'{pname!r}')
+        except Exception:
+            pass
+    return ' '.join(out)

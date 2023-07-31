@@ -1065,8 +1065,10 @@ class Number(Dynamic):
             return
 
         if not _is_number(val):
-            raise ValueError("Parameter {!r} only takes numeric values, "
-                             "not type {!r}.".format(self.name, type(val)))
+            raise ValueError(
+                f'{_validate_error_prefix(self)} only takes numeric values, '
+                f'not type {type(val)!r}.'
+            )
 
     def _validate_step(self, val, step):
         if step is not None and not _is_number(step):

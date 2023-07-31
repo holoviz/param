@@ -2386,7 +2386,7 @@ class Path(Parameter):
             try:
                 path = self._resolve(raw_path)
             except OSError:
-                if  self.check_exists:
+                if self.check_exists:
                     raise
                 else:
                     path = raw_path

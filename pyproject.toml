@@ -144,7 +144,7 @@ python = "3.9"
 
 [tool.hatch.envs.docs.scripts]
 build = [
-    "python -m sphinx-build -b html doc builtdocs",
+    "sphinx-build -b html doc builtdocs",
 ]
 
 [tool.hatch.envs.tests]

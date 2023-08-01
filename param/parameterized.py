@@ -3196,9 +3196,6 @@ class ParameterizedMetaclass(type):
             keyword_groups.append(keyword_group)
 
         keywords = [el for grp in reversed(keyword_groups) for el in grp]
-        # if mcs.name == 'C':
-        #     import pdb; pdb.set_trace()
-        # keywords = [el for grp in keyword_groups for el in grp]
         signature = inspect.Signature([
             inspect.Parameter(k, inspect.Parameter.KEYWORD_ONLY)
             for k in keywords

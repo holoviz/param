@@ -23,13 +23,12 @@ To quickly see how Param works and can be used, jump straight into the [Getting 
 ---
 hidden: true
 ---
-Introduction <self>
 Getting Started <getting_started>
 User Guide <user_guide/index>
 Comparisons <comparisons>
-Roadmap <roadmap>
+API <reference/index>
 Releases <releases>
-API <reference>
+Roadmap <roadmap>
 Developer Guide <developer_guide>
 About <about>
 ```

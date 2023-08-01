@@ -11,15 +11,16 @@
 *.lock
 .ipynb_checkpoints
 .vscode
-data.pickle
 dist/
 .venv/
 
 # Docs
 builtdocs/
 jupyter_execute/
-doc/user_guide/*.ipynb
 doc/Reference_Manual/
+doc/user_guide/data.pickle
+doc/user_guide/output.csv
+doc/reference/generated
 
 # Unit test / Coverage report
 .coverage

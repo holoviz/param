@@ -429,7 +429,7 @@ def recursive_repr(fillvalue='...'):
     """
     Decorator to make a repr function return fillvalue for a recursive call
 
-    ..deprecated:: 1.12.0
+    .. deprecated:: 1.12.0
     """
     warnings.warn(
         'recursive_repr has been deprecated and will be removed in a future version.',
@@ -2031,7 +2031,7 @@ class Parameters:
     def print_param_defaults(self_):
         """Print the default values of all cls's Parameters.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
         """
         cls = self_.cls
@@ -2047,7 +2047,7 @@ class Parameters:
 
         Equivalent to setting param_name on the class.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
              Use instead `p.param.default =`
         """
         cls = self_.cls
@@ -2075,7 +2075,7 @@ class Parameters:
     def _add_parameter(self_,param_name, param_obj):
         """Add a new Parameter object into this object's class.
 
-        ..deprecated :: 1.12.0
+        .. deprecated :: 1.12.0
         """
         return self_.add_parameter(param_name, param_obj)
 
@@ -2089,7 +2089,7 @@ class Parameters:
         Includes Parameters from this class and its
         superclasses.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `.param.values()` or `.param['param']`
         """
         pdict = self_.objects(instance='existing')
@@ -2170,7 +2170,7 @@ class Parameters:
         positional arguments, but the keyword interface is preferred
         because it is more compact and can set multiple values.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `.param.update`
         """
         self_or_cls = self_.self_or_cls
@@ -2407,7 +2407,7 @@ class Parameters:
         only return values that are not equal to the default value
         (onlychanged has no effect when called on a class).
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use `.param.values().items()` instead (or `.param.values()` for the
             common case of `dict(....param.get_param_values())`)
         """
@@ -2549,7 +2549,7 @@ class Parameters:
         returned as these are primarily useful for internal use to
         determine when a sub-object dependency has to be updated.
 
-        ..deprecated: 2.0.0
+        .. deprecated: 2.0.0
             Use instead `.param.method_dependencies`
         """
         return self_.method_dependencies(*args, **kwargs)
@@ -2788,7 +2788,7 @@ class Parameters:
         Note that a Parameter for which instantiate==True has its default
         instantiated.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `{k:v.default for k,v in p.param.objects().items()}`
         """
         self = self_.self
@@ -2824,7 +2824,7 @@ class Parameters:
     def print_param_values(self_):
         """Print the values of all this object's Parameters.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
         """
         self = self_.self
@@ -2849,7 +2849,7 @@ class Parameters:
 
         See Python's logging module for details of message formatting.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `.param.log(param.MESSAGE, ...)`
         """
         self_.__db_print(INFO,msg,*args,**kw)
@@ -2862,7 +2862,7 @@ class Parameters:
 
         See Python's logging module for details of message formatting.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `.param.log(param.VERBOSE, ...)`
         """
         self_.__db_print(VERBOSE,msg,*args,**kw)
@@ -2875,7 +2875,7 @@ class Parameters:
 
         See Python's logging module for details of message formatting.
 
-        ..deprecated:: 1.12.0
+        .. deprecated:: 1.12.0
             Use instead `.param.log(param.DEBUG, ...)`
         """
         self_.__db_print(DEBUG,msg,*args,**kw)
@@ -4181,7 +4181,7 @@ class overridable_property:
     The same as Python's "property" attribute, but allows the accessor
     methods to be overridden in subclasses.
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     # Delays looking up the accessors until they're needed, rather
     # than finding them when the class is first created.

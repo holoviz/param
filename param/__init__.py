@@ -99,7 +99,7 @@ def produce_value(value_obj):
     object: if the object is callable, call it, otherwise return the
     object.
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     return _produce_value(value_obj)
 
@@ -111,7 +111,7 @@ def as_unicode(obj):
     Safely casts any object to unicode including regular string
     (i.e. bytes) types in python 2.
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     return str(obj)
 
@@ -123,7 +123,7 @@ def is_ordered_dict(d):
     Predicate checking for ordered dictionaries. OrderedDict is always
     ordered, and vanilla Python dictionaries are ordered for Python 3.6+
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
     vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
@@ -158,7 +158,7 @@ def hashable(x):
     part of the object has changed.  Does not (currently) recursively
     replace mutable subobjects.
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     return _hashable(x)
 
@@ -205,7 +205,7 @@ def named_objs(objlist, namesdict=None):
     an optional name,obj dictionary, which will override any other
     name if that item is present in the dictionary.
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     return _named_objs(objlist, namesdict=namesdict)
 
@@ -2536,7 +2536,7 @@ def abbreviate_paths(pathspec,named_paths):
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
     Helps keep menu items short yet unambiguous.
 
-    ..deprecated:: 2.0.0
+    .. deprecated:: 2.0.0
     """
     return _abbreviate_paths(pathspec, named_paths)
 

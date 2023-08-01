@@ -12,7 +12,7 @@ This user guide provides detailed information about how to use Param, assuming y
 - [ParameterizedFunctions](./ParameterizedFunctions): Parameterized function objects, for configurable callables
 - [Dynamic Parameters](./Dynamic_Parameters): Using dynamic parameter values with and without Numbergen
 - [How Param Works](./How_Param_Works): Internal details, for Param developers and power users
-- [Using Param in GUIs](https://panel.holoviz.org/user_guide/Param.html): (external site) Using Param with Panel to make GUIs
+- [Using Param in GUIs](https://panel.holoviz.org/how_to/param/index.html): (external site) Using Param with Panel to make GUIs
 
 ```{toctree}
 ---

@@ -4,7 +4,7 @@
 
 Param has no required dependencies outside of Python's standard library, and so it is very easy to install.
 
-Official releases of Param are available from conda (![defaults version](https://img.shields.io/conda/v/anaconda/param.svg?label=defaults&style=flat&colorB=4488ff) [![conda-forge version](https://img.shields.io/conda/v/conda-forge/param.svg?label=conda-forge&colorB=4488ff)](https://anaconda.org/conda-forge/param)) and PyPI (![PyPI version](https://img.shields.io/pypi/v/param.svg?colorB=cc77dd)), and can be installed via:
+Official releases of Param are available from conda ([![defaults version](https://img.shields.io/conda/v/anaconda/param.svg?label=defaults&style=flat&colorB=4488ff)](https://anaconda.org/defaults/param) [![conda-forge version](https://img.shields.io/conda/v/conda-forge/param.svg?label=conda-forge&colorB=4488ff)](https://anaconda.org/conda-forge/param)) and PyPI ([![PyPI version](https://img.shields.io/pypi/v/param.svg?colorB=cc77dd)](https://pypi.org/project/param/)), and can be installed via:
 
 ```
 conda install param

@@ -1414,10 +1414,6 @@ def test_parameterized_access_param_before_super():
     P()
 
 
-def test_parameterized_docstring():
-    # TODO
-    pass
-
 def check_signature(parameterized_obj, parameters):
     assert parameterized_obj.__signature__ is not None
     sig = inspect.signature(parameterized_obj)

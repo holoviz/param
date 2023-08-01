@@ -18,6 +18,9 @@
 
 ## `.param` namespace
 
+These methods and properties are available under the `.param` namespace
+of {py:class}`Parameterized` classes and instances.
+
 ```{eval-rst}
 .. currentmodule:: param.parameterized
 ```

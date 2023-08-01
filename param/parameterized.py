@@ -35,6 +35,7 @@ from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 from ._utils import (
+    DEFAULT_SIGNATURE,
     _deprecated,
     _deprecate_positional_args,
     _is_auto_name,
@@ -3104,7 +3105,7 @@ class ParameterizedMetaclass(type):
         mcs.param._depends = {'watch': _inherited+_watch}
 
         if docstring_signature:
-            mcs.__class_docstring_signature()
+            mcs.__class_docstring()
 
     def __set_name(mcs, name, dict_):
         """
@@ -3136,30 +3137,16 @@ class ParameterizedMetaclass(type):
             if not found_renamed:
                 mcs.name = name
 
-    def __class_docstring_signature(mcs, max_repr_len=15):
+    def __class_docstring(mcs):
         """
-        Autogenerate a keyword signature in the class docstring for
-        all available parameters. This is particularly useful in the
-        IPython Notebook as IPython will parse this signature to allow
-        tab-completion of keywords.
-
-        max_repr_len: Maximum length (in characters) of value reprs.
+        Customize the class docstring with a Parameter table if
+        `docstring_describe_params` and the `param_pager` is available.
         """
-        processed_kws, keyword_groups = set(), []
-        for cls in reversed(mcs.mro()):
-            keyword_group = []
-            for (k,v) in sorted(cls.__dict__.items()):
-                if isinstance(v, Parameter) and k not in processed_kws:
-                    param_type = v.__class__.__name__
-                    keyword_group.append(f"{k}={param_type}")
-                    processed_kws.add(k)
-            keyword_groups.append(keyword_group)
-
-        keywords = [el for grp in reversed(keyword_groups) for el in grp]
-        class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-        signature = "params(%s)" % (", ".join(keywords))
-        description = param_pager(mcs) if (docstring_describe_params and param_pager) else ''
-        mcs.__doc__ = signature + class_docstr + '\n' + description
+        if not docstring_describe_params or not param_pager:
+            return
+        class_docstr = mcs.__doc__ if mcs.__doc__ else ''
+        description = param_pager(mcs)
+        mcs.__doc__ = class_docstr + '\n' + description
 
 
     def _initialize_parameter(mcs,param_name,param):
@@ -3191,6 +3178,38 @@ class ParameterizedMetaclass(type):
             return getattr(mcs,'_%s__abstract'%mcs.__name__.lstrip("_"))
         except AttributeError:
             return False
+
+    def __get_signature(mcs):
+        """
+        For classes with a constructor signature that matches the default
+        Parameterized.__init__ signature (i.e. ``__init__(self, **params)``)
+        this method will generate a new signature that expands the
+        parameters. If the signature differs from the default the
+        custom signature is returned.
+        """
+        if mcs._param__private.signature:
+            return mcs._param__private.signature
+        # allowed_signature must be the signature of Parameterized.__init__
+        # Inspecting `mcs.__init__` instead of `mcs` to avoid a recursion error
+        if inspect.signature(mcs.__init__) != DEFAULT_SIGNATURE:
+            return None
+        processed_kws, keyword_groups = set(), []
+        for cls in reversed(mcs.mro()):
+            keyword_group = []
+            for k, v in sorted(cls.__dict__.items()):
+                if isinstance(v, Parameter) and k not in processed_kws and not v.readonly:
+                    keyword_group.append(k)
+                    processed_kws.add(k)
+            keyword_groups.append(keyword_group)
+
+        keywords = [el for grp in reversed(keyword_groups) for el in grp]
+        mcs._param__private.signature = signature = inspect.Signature([
+            inspect.Parameter(k, inspect.Parameter.KEYWORD_ONLY)
+            for k in keywords
+        ])
+        return signature
+
+    __signature__ = property(__get_signature)
 
     abstract = property(__is_abstract)
 
@@ -3645,6 +3664,7 @@ class _ClassPrivate:
         'renamed',
         'params',
         'initialized',
+        'signature'
     ]
 
     def __init__(
@@ -3666,6 +3686,7 @@ class _ClassPrivate:
         self.renamed = renamed
         self.params = {} if params is None else params
         self.initialized = False
+        self.signature = None
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}

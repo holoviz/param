@@ -252,5 +252,3 @@ def test_pprint_signature_overriden():
     )
 
     assert t.param.pprint() == 'T()'
-    # Make sure we haven't messed up with the signature of the base class
-    assert not hasattr(param.Parameterized, '__signature__')

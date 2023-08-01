@@ -35,6 +35,7 @@ from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 from ._utils import (
+    DEFAULT_SIGNATURE,
     _deprecated,
     _deprecate_positional_args,
     _is_auto_name,
@@ -3173,19 +3174,18 @@ class ParameterizedMetaclass(type):
 
     def __get_signature(mcs):
         """
-        When a class doesn't implement an __init__ method with a signature
-        different than Parameterized.__init__, calling its `__signature__`
-        property will return a custom signature built by this method, None
-        otherwise.
+        For classes with a constructor signature that matches the default
+        Parameterized.__init__ signature (i.e. ``__init__(self, **params)``)
+        this method will generate a new signature that expands the
+        parameters. If the signature differs from the default the
+        custom signature is returned.
         """
+        if mcs._param__private.signature:
+            return mcs._param__private.signature
         # allowed_signature must be the signature of Parameterized.__init__
-        allowed_signature = inspect.Signature([
-            inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
-            inspect.Parameter('params', inspect.Parameter.VAR_KEYWORD),
-        ])
         # Inspecting `mcs.__init__` instead of `mcs` to avoid a recursion error
-        if inspect.signature(mcs.__init__).parameters != allowed_signature.parameters:
-            return
+        if inspect.signature(mcs.__init__) != DEFAULT_SIGNATURE:
+            return None
         processed_kws, keyword_groups = set(), []
         for cls in reversed(mcs.mro()):
             keyword_group = []
@@ -3196,7 +3196,7 @@ class ParameterizedMetaclass(type):
             keyword_groups.append(keyword_group)
 
         keywords = [el for grp in reversed(keyword_groups) for el in grp]
-        signature = inspect.Signature([
+        mcs._param__private.signature = signature = inspect.Signature([
             inspect.Parameter(k, inspect.Parameter.KEYWORD_ONLY)
             for k in keywords
         ])
@@ -3657,6 +3657,7 @@ class _ClassPrivate:
         'renamed',
         'params',
         'initialized',
+        'signature'
     ]
 
     def __init__(
@@ -3678,6 +3679,7 @@ class _ClassPrivate:
         self.renamed = renamed
         self.params = {} if params is None else params
         self.initialized = False
+        self.signature = None
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}

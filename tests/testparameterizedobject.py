@@ -1418,7 +1418,6 @@ def test_parameterized_docstring():
     # TODO
     pass
 
-
 def check_signature(parameterized_obj, parameters):
     assert parameterized_obj.__signature__ is not None
     sig = inspect.signature(parameterized_obj)

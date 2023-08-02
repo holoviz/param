@@ -3281,7 +3281,7 @@ class ParameterizedMetaclass(type):
         # superclasses of this parameter)
         slots = {}
         p_type = type(param)
-        for i, p_class in enumerate(classlist(p_type)[1::]):
+        for p_class in classlist(p_type)[1::]:
             slots.update(dict.fromkeys(p_class.__slots__))
 
         # note for some eventual future: python 3.6+ descriptors grew

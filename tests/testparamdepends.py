@@ -1300,3 +1300,22 @@ def test_misspelled_parameter_in_depends_watch():
             @param.depends("tlim", watch=True)  # <- Misspelled xlim
             def test(self):
                 return True
+
+def test_param_depends_on_undefined_attribute():
+    class P2(param.Parameterized):
+        value = param.String()
+
+    class P1(param.Parameterized):
+
+        def __init__(self, **params):
+            super().__init__(**params)
+            self.p2 = P2()
+
+        @param.depends('p2.value', watch=True)
+        def cb(self):
+            print('fired')
+
+    with pytest.raises(AttributeError) as excinfo:
+        P1()
+
+    assert "Dependency 'p2' could not be resolved" in str(excinfo.value)

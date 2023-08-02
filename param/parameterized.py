@@ -2607,6 +2607,14 @@ class Parameters:
         elif not dynamic:
             return [], [DInfo(spec=spec)]
         else:
+            if not hasattr(self_.self_or_cls, obj.split('.')[1]):
+                raise AttributeError(
+                    f'Dependency {obj[1:]!r} could not be resolved, {self_.self_or_cls} '
+                    f'has no parameter or attribute {obj.split(".")[1]!r}. Ensure '
+                    'the object being depended on is declared before calling the '
+                    'Parameterized constructor.'
+                )
+
             src = _getattrr(self_.self_or_cls, obj[1::], None)
             if src is None:
                 path = obj[1:].split('.')

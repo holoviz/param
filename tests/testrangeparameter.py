@@ -157,7 +157,7 @@ class TestRangeParameters(unittest.TestCase):
         self.assertEqual(q.get_soft_bounds(), (1, 9))
 
     def test_validate_step(self):
-        msg = r"Step can only be None or a numeric value, not type <class 'str'>."
+        msg = re.escape("Attribute 'step' of Range parameter can only be None or a numeric value, not type <class 'str'>.")
 
         p = param.Range((1, 2), bounds=(0, 10), step=1)
         assert p.step == 1
@@ -166,7 +166,7 @@ class TestRangeParameters(unittest.TestCase):
             param.Range((1, 2), bounds=(0, 10), step="1")
 
     def test_validate_order_on_val_with_positive_step(self):
-        msg = r"Range parameter 'q's end 1 is less than its start 2 with positive step 1."
+        msg = re.escape("Range parameter 'Q.q' end 1 is less than its start 2 with positive step 1.")
 
         class Q(param.Parameterized):
             q = param.Range(bounds=(0, 10), step=1)
@@ -175,7 +175,7 @@ class TestRangeParameters(unittest.TestCase):
             Q.q = (2, 1)
 
     def test_validate_order_on_val_with_negative_step(self):
-        msg = r"Range parameter 'q's start -4 is less than its end -2 with negative step -1."
+        msg = re.escape("Range parameter 'Q.q' start -4 is less than its start -2 with negative step -1.")
 
         class Q(param.Parameterized):
             q = param.Range(bounds=(-5, -1), step=-1)
@@ -184,7 +184,7 @@ class TestRangeParameters(unittest.TestCase):
             Q.q = (-4, -2)
 
     def test_validate_step_order_cannot_be_0(self):
-        msg = r"Step cannot be 0."
+        msg = re.escape("Attribute 'step' of Range parameter cannot be 0.")
 
         with self.assertRaisesRegex(ValueError, msg):
             param.Range(bounds=(0, 10), step=0)

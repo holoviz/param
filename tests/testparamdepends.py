@@ -1318,4 +1318,4 @@ def test_param_depends_on_undefined_attribute():
     with pytest.raises(AttributeError) as excinfo:
         P1()
 
-    assert "Dependency '.p2' could not be resolved" in str(excinfo.value)
+    assert "Dependency 'p2' could not be resolved" in str(excinfo.value)

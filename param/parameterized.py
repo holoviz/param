@@ -40,6 +40,7 @@ from ._utils import (
     _deprecate_positional_args,
     _is_auto_name,
     _recursive_repr,
+    _validate_error_prefix,
     ParamDeprecationWarning as _ParamDeprecationWarning,
 )
 
@@ -1544,14 +1545,19 @@ class String(Parameter):
         if (val is None and self.allow_None):
             return
         if regex is not None and re.match(regex, val) is None:
-            raise ValueError(f"String parameter {self.name!r} value {val!r} does not match regex {regex!r}.")
+            raise ValueError(
+                f'{_validate_error_prefix(self)} value {val!r} does not '
+                f'match regex {regex!r}.'
+            )
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
         if not isinstance(val, str):
-            raise ValueError("String parameter {!r} only takes a string value, "
-                             "not value of type {}.".format(self.name, type(val)))
+            raise ValueError(
+                f'{_validate_error_prefix(self)} only takes a string value, '
+                f'not value of type {type(val)}.'
+            )
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)

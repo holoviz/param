@@ -1,6 +1,8 @@
+import re
 import unittest
 
 import param
+import pytest
 
 from .utils import check_defaults
 # TODO: I copied the tests from testobjectselector, although I
@@ -151,12 +153,18 @@ class TestListSelectorParameters(unittest.TestCase):
     ### new tests (not copied from testobjectselector)
 
     def test_bad_default(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("ListSelector parameter 'r' only takes list types, not 6."),
+        ):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=6,check_on_set=True)
 
     def test_implied_check_on_set(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("ListSelector parameter 'r' only takes list types, not 7."),
+        ):
             class Q(param.Parameterized):
                 r = param.ListSelector(default=7,objects=[7,8])
 

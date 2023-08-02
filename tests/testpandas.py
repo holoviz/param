@@ -2,9 +2,11 @@
 Test Parameters based on pandas
 """
 import os
+import re
 import unittest
 
 import param
+import pytest
 
 from .utils import check_defaults
 
@@ -85,7 +87,7 @@ class TestDataFrame(unittest.TestCase):
             df = param.DataFrame(default=empty)
 
         test = Test()
-        exception = "DataFrame parameter 'df' value must be an instance of DataFrame, not 3."
+        exception = "DataFrame parameter 'Test.df' value must be an instance of DataFrame, not 3."
         with self.assertRaisesRegex(ValueError, exception):
             test.df = 3
 
@@ -105,7 +107,7 @@ class TestDataFrame(unittest.TestCase):
 
         test = Test()
         self.assertEqual(test.param['df'].ordered, False)
-        exception = r"Provided DataFrame columns \['b', 'a', 'c'\] does not contain required columns \['a', 'd'\]"
+        exception = re.escape("DataFrame parameter 'Test.df': provided columns ['b', 'a', 'c'] does not contain required columns ['a', 'd']")
         with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
@@ -125,7 +127,7 @@ class TestDataFrame(unittest.TestCase):
         test = Test()
         self.assertEqual(test.param['df'].ordered, True)
 
-        exception = r"Provided DataFrame columns \['a', 'b', 'd'\] must exactly match \['b', 'a', 'd'\]"
+        exception = re.escape("DataFrame parameter 'Test.df': provided columns ['a', 'b', 'd'] must exactly match ['b', 'a', 'd']")
         with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
@@ -144,10 +146,9 @@ class TestDataFrame(unittest.TestCase):
         test = Test()
         self.assertEqual(test.param['df'].ordered, None)
 
-        exception = "Column length 2 does not match declared bounds of 3"
+        exception = "column length 2 does not match declared bounds of 3"
         with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
-
 
     def test_dataframe_unordered_column_tuple_valid(self):
         valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
@@ -158,7 +159,7 @@ class TestDataFrame(unittest.TestCase):
 
         invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
 
-        exception = r"Columns length 3 does not match declared bounds of \(None, 2\)"
+        exception = re.escape("DataFrame parameter 'df': columns length 3 does not match declared bounds of (None, 2)")
         with self.assertRaisesRegex(ValueError, exception):
             class Test(param.Parameterized):
                 df = param.DataFrame(default=invalid_df, columns=(None,2))
@@ -175,7 +176,7 @@ class TestDataFrame(unittest.TestCase):
             df = param.DataFrame(default=valid_df, rows=2)
 
         test = Test()
-        exception = "Row length 3 does not match declared bounds of 2"
+        exception = re.escape("DataFrame parameter 'Test.df': row length 3 does not match declared bounds of 2")
         with self.assertRaisesRegex(ValueError, exception):
             test.df = invalid_df
 
@@ -188,11 +189,18 @@ class TestDataFrame(unittest.TestCase):
 
         invalid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
 
-        exception = r"Row length 2 does not match declared bounds of \(5, 7\)"
+        exception = r"row length 2 does not match declared bounds of \(5, 7\)"
         with self.assertRaisesRegex(ValueError, exception):
             class Test(param.Parameterized):
                 df = param.DataFrame(default=invalid_df, rows=(5,7))
 
+    def test_dataframe_unordered_columns_as_set_error(self):
+        valid_df = pandas.DataFrame({'a':[1,2], 'b':[2,3], 'c':[4,5]}, columns=['b', 'a', 'c'])
+        with pytest.raises(
+            ValueError,
+            match=re.escape("DataFrame parameter 'df': columns cannot be ordered when specified as a set"),
+        ):
+            df = param.DataFrame(default=valid_df, columns=set(['a', 'b']), ordered=True)  # noqa
 
 class TestSeries(unittest.TestCase):
 
@@ -243,7 +251,7 @@ class TestSeries(unittest.TestCase):
             series = param.Series(default=valid_series, rows=2)
 
         test = Test()
-        exception = "Row length 3 does not match declared bounds of 2"
+        exception = re.escape("Series parameter 'Test.series': row length 3 does not match declared bounds of 2")
         with self.assertRaisesRegex(ValueError, exception):
             test.series = invalid_series
 
@@ -256,7 +264,7 @@ class TestSeries(unittest.TestCase):
 
         invalid_series = pandas.Series([1,2])
 
-        exception = r"Row length 2 does not match declared bounds of \(5, 7\)"
+        exception = re.escape("Series parameter 'series': row length 2 does not match declared bounds of (5, 7)")
         with self.assertRaisesRegex(ValueError, exception):
             class Test(param.Parameterized):
                 series = param.Series(default=invalid_series, rows=(5,7))

@@ -133,7 +133,7 @@ def _find_pname(pclass):
             return match.group(1)
 
 
-def _validate_error_prefix(parameter):
+def _validate_error_prefix(parameter, attribute=None):
     """
     Generate an error prefix suitable for Parameters when they raise a validation
     error.
@@ -153,7 +153,10 @@ def _validate_error_prefix(parameter):
     else:
         powner = None
     pname = parameter.name
-    out = [f'{pclass} parameter']
+    out = []
+    if attribute:
+        out.append(f'Attribute {attribute!r} of')
+    out.append(f'{pclass} parameter')
     if pname:
         if powner:
             desc = f'{powner}.{pname}'

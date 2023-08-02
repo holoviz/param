@@ -99,7 +99,7 @@ class TestPathParameters(unittest.TestCase):
         assert p.param.b.allow_None is False
         # This should probably raise an error (#708)
 
-        with pytest.raises(ValueError, match=re.escape(r"'Path' Parameter 'b' does not accept None")):
+        with pytest.raises(ValueError, match=re.escape(r"Path parameter 'P.b' does not accept None")):
             p.b = None
 
     def test_relative_cwd_class(self):
@@ -300,7 +300,7 @@ class TestFilenameParameters(unittest.TestCase):
         p = self.P()
 
         assert p.param.b.allow_None is False
-        with pytest.raises(ValueError, match=re.escape(r"'Filename' Parameter 'b' does not accept None")):
+        with pytest.raises(ValueError, match=re.escape(r"Filename parameter 'P.b' does not accept None")):
             p.b = None
 
     def test_search_paths(self):
@@ -421,7 +421,7 @@ class TestFoldernameParameters(unittest.TestCase):
 
         assert p.param.b.allow_None is False
 
-        with pytest.raises(ValueError, match=re.escape(r"'Foldername' Parameter 'b' does not accept None")):
+        with pytest.raises(ValueError, match=re.escape(r"Foldername parameter 'P.b' does not accept None")):
             p.b = None
 
     def test_search_paths(self):

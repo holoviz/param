@@ -56,7 +56,7 @@ class TestBooleanParameters(unittest.TestCase):
     def test_raise_None_when_not_allowed(self):
         p = self.P()
 
-        msg = r"Boolean parameter 'e' must be True or False, not None"
+        msg = r"Boolean parameter 'P.e' must be True or False, not None"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = None
 
@@ -64,7 +64,7 @@ class TestBooleanParameters(unittest.TestCase):
             self.P.e = None
 
     def test_bad_type(self):
-        msg = r"Boolean parameter 'e' must be True or False, not test"
+        msg = r"Boolean parameter 'P.e' must be True or False, not 'test'"
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -78,7 +78,7 @@ class TestBooleanParameters(unittest.TestCase):
             p.e = 'test'
 
     def test_bad_default_type(self):
-        msg = r"Boolean parameter must be True or False, not test."
+        msg = r"Boolean parameter 'b' must be True or False, not 'test'\."
 
         with self.assertRaisesRegex(ValueError, msg):
             class A(param.Parameterized):
@@ -137,7 +137,7 @@ class TestEventParameters(unittest.TestCase):
     def test_raise_None_when_not_allowed(self):
         p = self.P()
 
-        msg = r"Boolean parameter 'e' must be True or False, not None"
+        msg = r"Event parameter 'P.e' must be True or False, not None"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = None
 
@@ -145,7 +145,7 @@ class TestEventParameters(unittest.TestCase):
             self.P.e = None
 
     def test_bad_type(self):
-        msg = r"Boolean parameter 'e' must be True or False, not test"
+        msg = r"Event parameter 'P.e' must be True or False, not 'test'"
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'

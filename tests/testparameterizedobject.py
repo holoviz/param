@@ -1141,6 +1141,26 @@ def test_inheritance_diamond_not_supported():
     assert d.param.p.doc == '11'
 
 
+def test_inheritance_with_incompatible_defaults():
+    class A(param.Parameterized):
+        p = param.String()
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number()
+    assert "Parameter 'p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+
+
+def test_inheritance_default_validation_with_more_specific_type():
+    class A(param.Parameterized):
+        p = param.Tuple(default=('a', 'b'))
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.NumericTuple()
+    assert "NumericTuple parameter 'p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+
+
 def test_inheritance_from_multiple_params_class():
     class A(param.Parameterized):
         p = param.Parameter(doc='foo')

@@ -35,6 +35,7 @@ from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 from ._utils import (
+    DEFAULT_SIGNATURE,
     _deprecated,
     _deprecate_positional_args,
     _is_auto_name,
@@ -219,7 +220,7 @@ def discard_events(parameterized):
     """
     batch_watch = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
-    watchers, events = (list(parameterized.param._watchers),
+    watchers, events = (list(parameterized.param._state_watchers),
                         list(parameterized.param._events))
     try:
         yield
@@ -227,7 +228,7 @@ def discard_events(parameterized):
         raise
     finally:
         parameterized.param._BATCH_WATCH = batch_watch
-        parameterized.param._watchers = watchers
+        parameterized.param._state_watchers = watchers
         parameterized.param._events = events
 
 
@@ -1431,10 +1432,8 @@ class Parameter(_ParameterBase):
 
         if obj is None:
             watchers = self.watchers.get("value")
-        # elif hasattr(obj, '_param__private') and hasattr(obj._param__private, 'watchers') and obj._param__private.watchers is not None and self.name in obj._param__private.watchers:
-        elif hasattr(obj, '_param_watchers') and self.name in obj._param_watchers:
-            # watchers = obj._param__private.watchers[self.name].get('value')
-            watchers = obj._param_watchers[self.name].get('value')
+        elif self.name in obj._param__private.watchers:
+            watchers = obj._param__private.watchers[self.name].get('value')
             if watchers is None:
                 watchers = self.watchers.get("value")
         else:
@@ -1726,17 +1725,25 @@ class Parameters:
         self_.self_or_cls._param__private.parameters_state['events'] = value
 
     @property
-    def _watchers(self_):
+    def _state_watchers(self_):
         return self_.self_or_cls._param__private.parameters_state['watchers']
 
-    @_watchers.setter
-    def _watchers(self_, value):
+    @_state_watchers.setter
+    def _state_watchers(self_, value):
         self_.self_or_cls._param__private.parameters_state['watchers'] = value
 
     @property
-    def watchers(self):
-        """Read-only list of watchers on this Parameterized"""
-        return self._watchers
+    def watchers(self_):
+        """Dictionary of instance watchers."""
+        if self_.self is None:
+            raise TypeError('Accessing `.param.watchers` is only supported on a Parameterized instance, not class.')
+        return self_.self._param__private.watchers
+
+    @watchers.setter
+    def watchers(self_, value):
+        if self_.self is None:
+            raise TypeError('Setting `.param.watchers` is only supported on a Parameterized instance, not class.')
+        self_.self._param__private.watchers = value
 
     @property
     def self_or_cls(self_):
@@ -2224,16 +2231,16 @@ class Parameters:
                     for p in trigger_params if p in param_names}
 
         events = self_.self_or_cls.param._events
-        watchers = self_.self_or_cls.param._watchers
+        watchers = self_.self_or_cls.param._state_watchers
         self_.self_or_cls.param._events  = []
-        self_.self_or_cls.param._watchers = []
+        self_.self_or_cls.param._state_watchers = []
         param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
         self_.self_or_cls.param._TRIGGER = True
         self_.update(dict(params, **triggers))
         self_.self_or_cls.param._TRIGGER = False
         self_.self_or_cls.param._events += events
-        self_.self_or_cls.param._watchers += watchers
+        self_.self_or_cls.param._state_watchers += watchers
 
 
     def _update_event_type(self_, watcher, event, triggered):
@@ -2275,8 +2282,8 @@ class Parameters:
 
         if self_.self_or_cls.param._BATCH_WATCH:
             self_._events.append(event)
-            if not any(watcher is w for w in self_._watchers):
-                self_._watchers.append(watcher)
+            if not any(watcher is w for w in self_._state_watchers):
+                self_._state_watchers.append(watcher)
         else:
             event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
             with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
@@ -2290,9 +2297,9 @@ class Parameters:
         while self_.self_or_cls.param._events:
             event_dict = OrderedDict([((event.name, event.what), event)
                                       for event in self_.self_or_cls.param._events])
-            watchers = self_.self_or_cls.param._watchers[:]
+            watchers = self_.self_or_cls.param._state_watchers[:]
             self_.self_or_cls.param._events = []
-            self_.self_or_cls.param._watchers = []
+            self_.self_or_cls.param._state_watchers = []
 
             for watcher in sorted(watchers, key=lambda w: w.precedence):
                 events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],
@@ -2550,6 +2557,8 @@ class Parameters:
         outputs = {}
         for cls in classlist(self_.cls):
             for name in dir(cls):
+                if name == '_param_watchers':
+                    continue
                 method = getattr(self_.self_or_cls, name)
                 dinfo = getattr(method, '_dinfo', {})
                 if 'outputs' not in dinfo:
@@ -2598,6 +2607,14 @@ class Parameters:
         elif not dynamic:
             return [], [DInfo(spec=spec)]
         else:
+            if not hasattr(self_.self_or_cls, obj.split('.')[1]):
+                raise AttributeError(
+                    f'Dependency {obj[1:]!r} could not be resolved, {self_.self_or_cls} '
+                    f'has no parameter or attribute {obj.split(".")[1]!r}. Ensure '
+                    'the object being depended on is declared before calling the '
+                    'Parameterized constructor.'
+                )
+
             src = _getattrr(self_.self_or_cls, obj[1::], None)
             if src is None:
                 path = obj[1:].split('.')
@@ -2658,8 +2675,7 @@ class Parameters:
                                  "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
-                # watchers = self_.self._param__private.watchers
-                watchers = self_.self._param_watchers
+                watchers = self_.self._param__private.watchers
                 if parameter_name not in watchers:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
@@ -3097,7 +3113,7 @@ class ParameterizedMetaclass(type):
         mcs.param._depends = {'watch': _inherited+_watch}
 
         if docstring_signature:
-            mcs.__class_docstring_signature()
+            mcs.__class_docstring()
 
     def __set_name(mcs, name, dict_):
         """
@@ -3129,38 +3145,23 @@ class ParameterizedMetaclass(type):
             if not found_renamed:
                 mcs.name = name
 
-    def __class_docstring_signature(mcs, max_repr_len=15):
+    def __class_docstring(mcs):
         """
-        Autogenerate a keyword signature in the class docstring for
-        all available parameters. This is particularly useful in the
-        IPython Notebook as IPython will parse this signature to allow
-        tab-completion of keywords.
-
-        max_repr_len: Maximum length (in characters) of value reprs.
+        Customize the class docstring with a Parameter table if
+        `docstring_describe_params` and the `param_pager` is available.
         """
-        processed_kws, keyword_groups = set(), []
-        for cls in reversed(mcs.mro()):
-            keyword_group = []
-            for (k,v) in sorted(cls.__dict__.items()):
-                if isinstance(v, Parameter) and k not in processed_kws:
-                    param_type = v.__class__.__name__
-                    keyword_group.append(f"{k}={param_type}")
-                    processed_kws.add(k)
-            keyword_groups.append(keyword_group)
-
-        keywords = [el for grp in reversed(keyword_groups) for el in grp]
-        class_docstr = "\n"+mcs.__doc__ if mcs.__doc__ else ''
-        signature = "params(%s)" % (", ".join(keywords))
-        description = param_pager(mcs) if (docstring_describe_params and param_pager) else ''
-        mcs.__doc__ = signature + class_docstr + '\n' + description
+        if not docstring_describe_params or not param_pager:
+            return
+        class_docstr = mcs.__doc__ if mcs.__doc__ else ''
+        description = param_pager(mcs)
+        mcs.__doc__ = class_docstr + '\n' + description
 
 
     def _initialize_parameter(mcs,param_name,param):
         # A Parameter has no way to find out the name a
         # Parameterized class has for it
         param._set_names(param_name)
-        mcs.__param_inheritance(param_name,param)
-
+        mcs.__param_inheritance(param_name, param)
 
     # Should use the official Python 2.6+ abstract base classes; see
     # https://github.com/holoviz/param/issues/84
@@ -3184,6 +3185,38 @@ class ParameterizedMetaclass(type):
             return getattr(mcs,'_%s__abstract'%mcs.__name__.lstrip("_"))
         except AttributeError:
             return False
+
+    def __get_signature(mcs):
+        """
+        For classes with a constructor signature that matches the default
+        Parameterized.__init__ signature (i.e. ``__init__(self, **params)``)
+        this method will generate a new signature that expands the
+        parameters. If the signature differs from the default the
+        custom signature is returned.
+        """
+        if mcs._param__private.signature:
+            return mcs._param__private.signature
+        # allowed_signature must be the signature of Parameterized.__init__
+        # Inspecting `mcs.__init__` instead of `mcs` to avoid a recursion error
+        if inspect.signature(mcs.__init__) != DEFAULT_SIGNATURE:
+            return None
+        processed_kws, keyword_groups = set(), []
+        for cls in reversed(mcs.mro()):
+            keyword_group = []
+            for k, v in sorted(cls.__dict__.items()):
+                if isinstance(v, Parameter) and k not in processed_kws and not v.readonly:
+                    keyword_group.append(k)
+                    processed_kws.add(k)
+            keyword_groups.append(keyword_group)
+
+        keywords = [el for grp in reversed(keyword_groups) for el in grp]
+        mcs._param__private.signature = signature = inspect.Signature([
+            inspect.Parameter(k, inspect.Parameter.KEYWORD_ONLY)
+            for k in keywords
+        ])
+        return signature
+
+    __signature__ = property(__get_signature)
 
     abstract = property(__is_abstract)
 
@@ -3223,7 +3256,7 @@ class ParameterizedMetaclass(type):
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
 
-    def __param_inheritance(mcs,param_name,param):
+    def __param_inheritance(mcs, param_name, param):
         """
         Look for Parameter values in superclasses of this
         Parameterized class.
@@ -3255,27 +3288,35 @@ class ParameterizedMetaclass(type):
         # get all relevant slots (i.e. slots defined in all
         # superclasses of this parameter)
         slots = {}
-        for p_class in classlist(type(param))[1::]:
+        p_type = type(param)
+        for p_class in classlist(p_type)[1::]:
             slots.update(dict.fromkeys(p_class.__slots__))
-
 
         # note for some eventual future: python 3.6+ descriptors grew
         # __set_name__, which could replace this and _set_names
-        setattr(param,'owner',mcs)
+        setattr(param, 'owner', mcs)
         del slots['owner']
 
         # backwards compatibility (see Composite parameter)
         if 'objtype' in slots:
-            setattr(param,'objtype',mcs)
+            setattr(param, 'objtype', mcs)
             del slots['objtype']
 
         supers = classlist(mcs)[::-1]
 
-        # instantiate is handled specially
+        # Explicitly inherit instantiate from super class and
+        # check if type has changed to a more specific or different
+        # Parameter type, requiring extra validation
+        type_change = False
         for superclass in supers:
             super_param = superclass.__dict__.get(param_name)
-            if isinstance(super_param, Parameter) and super_param.instantiate is True:
-                param.instantiate=True
+            if not isinstance(super_param, Parameter):
+                continue
+            if super_param.instantiate is True:
+                param.instantiate = True
+            super_type = type(super_param)
+            if not issubclass(super_type, p_type):
+                type_change = True
         del slots['instantiate']
 
         callables = {}
@@ -3320,6 +3361,11 @@ class ParameterizedMetaclass(type):
         # that need updates to make sure they're set up correctly after inheritance.
         param._update_state()
 
+        # If the type has changed to a more specific or different type
+        # validate the default again.
+        if type_change:
+            param._validate(param.default)
+
     def get_param_descriptor(mcs,param_name):
         """
         Goes up the class hierarchy (starting from the current class)
@@ -3333,7 +3379,6 @@ class ParameterizedMetaclass(type):
             if isinstance(attribute,Parameter):
                 return attribute,c
         return None,None
-
 
 
 
@@ -3638,6 +3683,7 @@ class _ClassPrivate:
         'renamed',
         'params',
         'initialized',
+        'signature'
     ]
 
     def __init__(
@@ -3659,6 +3705,7 @@ class _ClassPrivate:
         self.renamed = renamed
         self.params = {} if params is None else params
         self.initialized = False
+        self.signature = None
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}
@@ -3678,10 +3725,10 @@ class _InstancePrivate:
         Dynamic watchers
     params: dict
         Dict of parameter_name:parameter
-    # watchers: dict
-    #     Dict of dict:
-    #         parameter_name:
-    #             parameter_attribute (e.g. 'value'): list of `Watcher`s
+    watchers: dict
+        Dict of dict:
+            parameter_name:
+                parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
         Dict of parameter name: value
     """
@@ -3691,7 +3738,7 @@ class _InstancePrivate:
         'parameters_state',
         'dynamic_watchers',
         'params',
-        # 'watchers',
+        'watchers',
         'values',
     ]
 
@@ -3701,7 +3748,7 @@ class _InstancePrivate:
         parameters_state=None,
         dynamic_watchers=None,
         params=None,
-        # watchers=None,
+        watchers=None,
         values=None,
     ):
         self.initialized = initialized
@@ -3715,7 +3762,7 @@ class _InstancePrivate:
         self.parameters_state = parameters_state
         self.dynamic_watchers = defaultdict(list) if dynamic_watchers is None else dynamic_watchers
         self.params = {} if params is None else params
-        # self.watchers = {} if watchers is None else watchers
+        self.watchers = {} if watchers is None else watchers
         self.values = {} if values is None else values
 
     def __getstate__(self):
@@ -3781,7 +3828,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # (see Parameter.__set__) so we shouldn't override it here.
         if not isinstance(self._param__private, _InstancePrivate):
             self._param__private = _InstancePrivate()
-        self._param_watchers = {}
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.
@@ -3797,6 +3843,18 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     @property
     def param(self):
         return Parameters(self.__class__, self=self)
+
+    #PARAM3_DEPRECATION
+    @property
+    @_deprecated(extra_msg="Use `inst.param.watchers` instead.", warning_cat=FutureWarning)
+    def _param_watchers(self):
+        return self._param__private.watchers
+
+    #PARAM3_DEPRECATION
+    @_param_watchers.setter
+    @_deprecated(extra_msg="Use `inst.param.watchers = ...` instead.", warning_cat=FutureWarning)
+    def _param_watchers(self, value):
+        self._param__private.watchers = value
 
     # 'Special' methods
 
@@ -3835,10 +3893,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # When making a copy the internal watchers have to be
         # recreated and point to the new instance
-        # if _param__private.watchers:
-        if '_param_watchers' in state:
-            # param_watchers = _param__private.watchers
-            param_watchers = state['_param_watchers']
+        if _param__private.watchers:
+            param_watchers = _param__private.watchers
             for p, attrs in param_watchers.items():
                 for attr, watchers in attrs.items():
                     new_watchers = []
@@ -3853,9 +3909,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                             watcher_args[2] = getattr(self, fn.__name__)
                         new_watchers.append(Watcher(*watcher_args))
                     param_watchers[p][attr] = new_watchers
-
-        if '_param_watchers' not in state:
-            state['_param_watchers'] = {}
 
         state.pop('param', None)
 

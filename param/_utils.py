@@ -7,6 +7,10 @@ import warnings
 from textwrap import dedent
 from threading import get_ident
 
+DEFAULT_SIGNATURE = inspect.Signature([
+    inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+    inspect.Parameter('params', inspect.Parameter.VAR_KEYWORD),
+])
 
 class ParamWarning(Warning):
     """Base Param Warning"""

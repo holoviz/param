@@ -1,6 +1,7 @@
 """
 Unit test for Parameterized.
 """
+import inspect
 import re
 import unittest
 
@@ -1050,7 +1051,7 @@ def test_inheritance_attribute_from_non_subclass_not_inherited():
         p = param.String(doc='1')
 
     class B(A):
-        p = param.Number()
+        p = param.Number(default=0.1)
 
     b = B()
 
@@ -1074,24 +1075,23 @@ def test_inheritance_default_is_not_None_in_sub():
         p = param.String(default='1')
 
     class B(A):
-        p = param.Number()
+        p = param.Number(default=0.1)
 
     b = B()
 
-    # Could argue this should not be allowed.
-    assert b.p == '1'
+    assert b.p == 0.1
 
 
 def test_inheritance_default_is_None_in_sub():
     class A(param.Parameterized):
-        p = param.String(default='1')
+        p = param.Tuple(default=(0, 1))
 
     class B(A):
-        p = param.Action()
+        p = param.NumericTuple()
 
     b = B()
 
-    assert b.p == '1'
+    assert b.p == (0, 1)
 
 
 def test_inheritance_diamond_not_supported():
@@ -1141,6 +1141,26 @@ def test_inheritance_diamond_not_supported():
     assert d.param.p.doc == '11'
 
 
+def test_inheritance_with_incompatible_defaults():
+    class A(param.Parameterized):
+        p = param.String()
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number()
+    assert "Parameter 'p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+
+
+def test_inheritance_default_validation_with_more_specific_type():
+    class A(param.Parameterized):
+        p = param.Tuple(default=('a', 'b'))
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.NumericTuple()
+    assert "NumericTuple parameter 'p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+
+
 def test_inheritance_from_multiple_params_class():
     class A(param.Parameterized):
         p = param.Parameter(doc='foo')
@@ -1170,25 +1190,25 @@ def test_inheritance_from_multiple_params_inst():
         p = param.Parameter(doc='foo')
 
     class B(A):
-        p = param.Action(default=2)
+        p = param.Dict(default={'foo': 'bar'})
 
     class C(B):
-        p = param.Date(instantiate=True)
+        p = param.ClassSelector(class_=object, allow_None=True)
 
     a = A()
     b = B()
     c = C()
 
-    assert a.param.p.instantiate is False
+    assert a.param.p.allow_None is True
     assert a.param.p.default is None
     assert a.param.p.doc == 'foo'
 
-    assert b.param.p.instantiate is False
-    assert b.param.p.default == 2
+    assert b.param.p.allow_None is False
+    assert b.param.p.default == {'foo': 'bar'}
     assert b.param.p.doc == 'foo'
 
-    assert c.param.p.instantiate is True
-    assert c.param.p.default == 2
+    assert c.param.p.allow_None is True
+    assert c.param.p.default == {'foo': 'bar'}
     assert c.param.p.doc == 'foo'
 
 
@@ -1200,12 +1220,12 @@ def test_inheritance_from_multiple_params_intermediate_setting():
     A.param.p.doc = 'bar'
 
     class B(A):
-        p = param.Action(default=2)
+        p = param.Dict(default={'foo': 'bar'})
 
     assert A.param.p.default == 1
     assert A.param.p.doc == 'bar'
 
-    assert B.param.p.default == 2
+    assert B.param.p.default == {'foo': 'bar'}
     assert B.param.p.doc == 'bar'
 
     a = A()
@@ -1214,7 +1234,7 @@ def test_inheritance_from_multiple_params_intermediate_setting():
     assert a.param.p.default == 1
     assert a.param.p.doc == 'bar'
 
-    assert b.param.p.default == 2
+    assert b.param.p.default == {'foo': 'bar'}
     assert b.param.p.doc == 'bar'
 
 
@@ -1372,6 +1392,7 @@ def test_namespace_class():
     assert _dir(P) == [
         '_param__parameters',
         '_param__private',
+        '_param_watchers',
         'foo',
         'name',
         'param',
@@ -1411,3 +1432,139 @@ def test_parameterized_access_param_before_super():
             super().__init__(**params)
 
     P()
+
+
+def check_signature(parameterized_obj, parameters):
+    assert parameterized_obj.__signature__ is not None
+    sig = inspect.signature(parameterized_obj)
+    assert len(parameters) == len(sig.parameters)
+    for sparam, pname in zip(sig.parameters.values(), parameters):
+        assert sparam.name == pname
+        assert sparam.kind == inspect.Parameter.KEYWORD_ONLY
+
+
+def test_parameterized_signature_base():
+    check_signature(param.Parameterized, ['name'])
+
+
+def test_parameterized_signature_simple():
+    class P(param.Parameterized):
+        x = param.Parameter()
+    check_signature(P, ['x', 'name'])
+
+
+def test_parameterized_signature_subclass_noparams():
+    class A(param.Parameterized):
+        x = param.Parameter()
+
+    class B(A): pass
+
+    check_signature(B, ['x', 'name'])
+
+
+def test_parameterized_signature_subclass_with_params():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(A):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+    class C(B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+    check_signature(A, ['a1', 'a2', 'name'])
+    check_signature(B, ['b1', 'b2', 'a1', 'a2', 'name'])
+    check_signature(C, ['c1', 'c2', 'b1', 'b2', 'a1', 'a2', 'name'])
+
+
+def test_parameterized_signature_subclass_multiple_inheritance():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(param.Parameterized):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+    class C(A, B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+    check_signature(C, ['c1', 'c2', 'a1', 'a2', 'b1', 'b2', 'name'])
+
+
+def test_parameterized_signature_simple_init_same_as_parameterized():
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        def __init__(self, **params):
+            super().__init__(**params)
+
+    check_signature(P, ['x', 'name'])
+
+
+def test_parameterized_signature_simple_init_different():
+    class P(param.Parameterized):
+        x = param.Parameter()
+
+        def __init__(self, x=1, **params):
+            super().__init__(x=x, **params)
+
+    assert P.__signature__ is None
+
+
+def test_parameterized_signature_subclass_noparams_init_different():
+    class A(param.Parameterized):
+        x = param.Parameter()
+
+    class B(A):
+        def __init__(self, x=1, **params):
+            super().__init__(x=x, **params)
+
+    check_signature(A, ['x', 'name'])
+    assert B.__signature__ is None
+
+
+def test_parameterized_signature_subclass_with_params_init_different():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(A):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+    class C(B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+        def __init__(self, c1=1, **params):
+            super().__init__(c1=1, **params)
+
+    check_signature(A, ['a1', 'a2', 'name'])
+    check_signature(B, ['b1', 'b2', 'a1', 'a2', 'name'])
+    assert C.__signature__ is None
+
+
+def test_parameterized_signature_subclass_multiple_inheritance_init_different():
+    class A(param.Parameterized):
+        a1 = param.Parameter()
+        a2 = param.Parameter()
+
+    class B(param.Parameterized):
+        b1 = param.Parameter()
+        b2 = param.Parameter()
+
+        def __init__(self, b1=1, **params):
+            super().__init__(b1=1, **params)
+
+    class C(A, B):
+        c1 = param.Parameter()
+        c2 = param.Parameter()
+
+    check_signature(A, ['a1', 'a2', 'name'])
+    assert B.__signature__ is None
+    assert C.__signature__ is None

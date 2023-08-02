@@ -1051,7 +1051,7 @@ def test_inheritance_attribute_from_non_subclass_not_inherited():
         p = param.String(doc='1')
 
     class B(A):
-        p = param.Number()
+        p = param.Number(default=0.1)
 
     b = B()
 
@@ -1075,24 +1075,23 @@ def test_inheritance_default_is_not_None_in_sub():
         p = param.String(default='1')
 
     class B(A):
-        p = param.Number()
+        p = param.Number(default=0.1)
 
     b = B()
 
-    # Could argue this should not be allowed.
-    assert b.p == '1'
+    assert b.p == 0.1
 
 
 def test_inheritance_default_is_None_in_sub():
     class A(param.Parameterized):
-        p = param.String(default='1')
+        p = param.Tuple(default=(0, 1))
 
     class B(A):
-        p = param.Action()
+        p = param.NumericTuple()
 
     b = B()
 
-    assert b.p == '1'
+    assert b.p == (0, 1)
 
 
 def test_inheritance_diamond_not_supported():
@@ -1142,6 +1141,26 @@ def test_inheritance_diamond_not_supported():
     assert d.param.p.doc == '11'
 
 
+def test_inheritance_with_incompatible_defaults():
+    class A(param.Parameterized):
+        p = param.String()
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number()
+    assert "Parameter 'p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+
+
+def test_inheritance_default_validation_with_more_specific_type():
+    class A(param.Parameterized):
+        p = param.Tuple(default=('a', 'b'))
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.NumericTuple()
+    assert "NumericTuple parameter 'p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+
+
 def test_inheritance_from_multiple_params_class():
     class A(param.Parameterized):
         p = param.Parameter(doc='foo')
@@ -1171,25 +1190,25 @@ def test_inheritance_from_multiple_params_inst():
         p = param.Parameter(doc='foo')
 
     class B(A):
-        p = param.Action(default=2)
+        p = param.Dict(default={'foo': 'bar'})
 
     class C(B):
-        p = param.Date(instantiate=True)
+        p = param.ClassSelector(class_=object, allow_None=True)
 
     a = A()
     b = B()
     c = C()
 
-    assert a.param.p.instantiate is False
+    assert a.param.p.allow_None is True
     assert a.param.p.default is None
     assert a.param.p.doc == 'foo'
 
-    assert b.param.p.instantiate is False
-    assert b.param.p.default == 2
+    assert b.param.p.allow_None is False
+    assert b.param.p.default == {'foo': 'bar'}
     assert b.param.p.doc == 'foo'
 
-    assert c.param.p.instantiate is True
-    assert c.param.p.default == 2
+    assert c.param.p.allow_None is True
+    assert c.param.p.default == {'foo': 'bar'}
     assert c.param.p.doc == 'foo'
 
 
@@ -1201,12 +1220,12 @@ def test_inheritance_from_multiple_params_intermediate_setting():
     A.param.p.doc = 'bar'
 
     class B(A):
-        p = param.Action(default=2)
+        p = param.Dict(default={'foo': 'bar'})
 
     assert A.param.p.default == 1
     assert A.param.p.doc == 'bar'
 
-    assert B.param.p.default == 2
+    assert B.param.p.default == {'foo': 'bar'}
     assert B.param.p.doc == 'bar'
 
     a = A()
@@ -1215,7 +1234,7 @@ def test_inheritance_from_multiple_params_intermediate_setting():
     assert a.param.p.default == 1
     assert a.param.p.doc == 'bar'
 
-    assert b.param.p.default == 2
+    assert b.param.p.default == {'foo': 'bar'}
     assert b.param.p.doc == 'bar'
 
 

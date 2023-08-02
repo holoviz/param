@@ -3153,8 +3153,7 @@ class ParameterizedMetaclass(type):
         # A Parameter has no way to find out the name a
         # Parameterized class has for it
         param._set_names(param_name)
-        mcs.__param_inheritance(param_name,param)
-
+        mcs.__param_inheritance(param_name, param)
 
     # Should use the official Python 2.6+ abstract base classes; see
     # https://github.com/holoviz/param/issues/84
@@ -3249,7 +3248,7 @@ class ParameterizedMetaclass(type):
             if isinstance(value,Parameter):
                 mcs.__param_inheritance(attribute_name,value)
 
-    def __param_inheritance(mcs,param_name,param):
+    def __param_inheritance(mcs, param_name, param):
         """
         Look for Parameter values in superclasses of this
         Parameterized class.
@@ -3281,27 +3280,35 @@ class ParameterizedMetaclass(type):
         # get all relevant slots (i.e. slots defined in all
         # superclasses of this parameter)
         slots = {}
-        for p_class in classlist(type(param))[1::]:
+        p_type = type(param)
+        for p_class in classlist(p_type)[1::]:
             slots.update(dict.fromkeys(p_class.__slots__))
-
 
         # note for some eventual future: python 3.6+ descriptors grew
         # __set_name__, which could replace this and _set_names
-        setattr(param,'owner',mcs)
+        setattr(param, 'owner', mcs)
         del slots['owner']
 
         # backwards compatibility (see Composite parameter)
         if 'objtype' in slots:
-            setattr(param,'objtype',mcs)
+            setattr(param, 'objtype', mcs)
             del slots['objtype']
 
         supers = classlist(mcs)[::-1]
 
-        # instantiate is handled specially
+        # Explicitly inherit instantiate from super class and
+        # check if type has changed to a more specific or different
+        # Parameter type, requiring extra validation
+        type_change = False
         for superclass in supers:
             super_param = superclass.__dict__.get(param_name)
-            if isinstance(super_param, Parameter) and super_param.instantiate is True:
-                param.instantiate=True
+            if not isinstance(super_param, Parameter):
+                continue
+            if super_param.instantiate is True:
+                param.instantiate = True
+            super_type = type(super_param)
+            if not issubclass(super_type, p_type):
+                type_change = True
         del slots['instantiate']
 
         callables = {}
@@ -3346,6 +3353,11 @@ class ParameterizedMetaclass(type):
         # that need updates to make sure they're set up correctly after inheritance.
         param._update_state()
 
+        # If the type has changed to a more specific or different type
+        # validate the default again.
+        if type_change:
+            param._validate(param.default)
+
     def get_param_descriptor(mcs,param_name):
         """
         Goes up the class hierarchy (starting from the current class)
@@ -3359,7 +3371,6 @@ class ParameterizedMetaclass(type):
             if isinstance(attribute,Parameter):
                 return attribute,c
         return None,None
-
 
 
 

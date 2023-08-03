@@ -53,168 +53,175 @@ class Parameters(param.Parameterized):
 
 @pytest.mark.parametrize('op', NUMERIC_BINARY_OPERATORS)
 def test_reactive_numeric_binary_ops(op):
-    assert op(reactive(1), 2).eval() == op(1, 2)
-    assert op(reactive(2), 2).eval() == op(2, 2)
+    assert op(reactive(1), 2).rx.resolve() == op(1, 2)
+    assert op(reactive(2), 2).rx.resolve() == op(2, 2)
 
 @pytest.mark.parametrize('op', COMPARISON_OPERATORS)
 def test_reactive_numeric_comparison_ops(op):
-    assert op(reactive(1), 2).eval() == op(1, 2)
-    assert op(reactive(2), 1).eval() == op(2, 1)
+    assert op(reactive(1), 2).rx.resolve() == op(1, 2)
+    assert op(reactive(2), 1).rx.resolve() == op(2, 1)
 
 @pytest.mark.parametrize('op', NUMERIC_UNARY_OPERATORS)
 def test_reactive_numeric_unary_ops(op):
-    assert op(reactive(1)).eval() == op(1)
-    assert op(reactive(-1)).eval() == op(-1)
-    assert op(reactive(3.142)).eval() == op(3.142)
+    assert op(reactive(1)).rx.resolve() == op(1)
+    assert op(reactive(-1)).rx.resolve() == op(-1)
+    assert op(reactive(3.142)).rx.resolve() == op(3.142)
 
 @pytest.mark.parametrize('op', NUMERIC_BINARY_OPERATORS)
 def test_reactive_numeric_binary_ops_reverse(op):
-    assert op(2, reactive(1)).eval() == op(2, 1)
-    assert op(2, reactive(2)).eval() == op(2, 2)
+    assert op(2, reactive(1)).rx.resolve() == op(2, 1)
+    assert op(2, reactive(2)).rx.resolve() == op(2, 2)
 
 @pytest.mark.parametrize('op', LOGIC_BINARY_OPERATORS)
 def test_reactive_logic_binary_ops(op):
-    assert op(reactive(True), True).eval() == op(True, True)
-    assert op(reactive(True), False).eval() == op(True, False)
-    assert op(reactive(False), True).eval() == op(False, True)
-    assert op(reactive(False), False).eval() == op(False, False)
+    assert op(reactive(True), True).rx.resolve() == op(True, True)
+    assert op(reactive(True), False).rx.resolve() == op(True, False)
+    assert op(reactive(False), True).rx.resolve() == op(False, True)
+    assert op(reactive(False), False).rx.resolve() == op(False, False)
 
 @pytest.mark.parametrize('op', LOGIC_UNARY_OPERATORS)
 def test_reactive_logic_unary_ops(op):
-    assert op(reactive(True)).eval() == op(True)
-    assert op(reactive(False)).eval() == op(False)
+    assert op(reactive(True)).rx.resolve() == op(True)
+    assert op(reactive(False)).rx.resolve() == op(False)
 
 @pytest.mark.parametrize('op', LOGIC_BINARY_OPERATORS)
 def test_reactive_logic_binary_ops_reverse(op):
-    assert op(True, reactive(True)).eval() == op(True, True)
-    assert op(True, reactive(False)).eval() == op(True, False)
-    assert op(False, reactive(True)).eval() == op(False, True)
-    assert op(False, reactive(False)).eval() == op(False, False)
+    assert op(True, reactive(True)).rx.resolve() == op(True, True)
+    assert op(True, reactive(False)).rx.resolve() == op(True, False)
+    assert op(False, reactive(True)).rx.resolve() == op(False, True)
+    assert op(False, reactive(False)).rx.resolve() == op(False, False)
 
 def test_reactive_getitem_dict():
-    assert reactive({'A': 1})['A'].eval() == 1
-    assert reactive({'A': 1, 'B': 2})['B'].eval() == 2
+    assert reactive({'A': 1})['A'].rx.resolve() == 1
+    assert reactive({'A': 1, 'B': 2})['B'].rx.resolve() == 2
 
 def test_reactive_getitem_list():
-    assert reactive([1, 2, 3])[1].eval() == 2
-    assert reactive([1, 2, 3])[2].eval() == 3
+    assert reactive([1, 2, 3])[1].rx.resolve() == 2
+    assert reactive([1, 2, 3])[2].rx.resolve() == 3
 
 @pytest.mark.parametrize('ufunc', NUMPY_UFUNCS)
 def test_numpy_ufunc(ufunc):
     l = [1, 2, 3]
-    assert ufunc(reactive(l)).eval() == ufunc(l)
+    assert ufunc(reactive(l)).rx.resolve() == ufunc(l)
     array = np.ndarray([1, 2, 3])
-    assert ufunc(reactive(array)).eval() == ufunc(array)
+    assert ufunc(reactive(array)).rx.resolve() == ufunc(array)
 
 def test_reactive_set_new_value():
     i = reactive(1)
-    assert i.eval() == 1
-    i.set(2)
-    assert i.eval() == 2
+    assert i.rx.resolve() == 1
+    i.rx.set(2)
+    assert i.rx.resolve() == 2
 
 def test_reactive_pipeline_set_new_value():
     i = reactive(1) + 2
-    assert i.eval() == 3
-    i.set(2)
-    assert i.eval() == 4
+    assert i.rx.resolve() == 3
+    i.rx.set(2)
+    assert i.rx.resolve() == 4
 
 def test_reactive_reactivelect_param_value():
     P = Parameters(integer=1)
     i = reactive(P.param.integer)
-    assert i.eval() == 1
+    assert i.rx.resolve() == 1
     P.integer = 2
-    assert i.eval() == 2
+    assert i.rx.resolve() == 2
 
 def test_reactive_pipeline_reactivelect_param_value():
     P = Parameters(integer=1)
     i = reactive(P.param.integer) + 2
-    assert i.eval() == 3
+    assert i.rx.resolve() == 3
     P.integer = 2
-    assert i.eval() == 4
+    assert i.rx.resolve() == 4
 
 def test_reactive_reactivelect_other_reactive():
     i = reactive(1)
     j = reactive(i)
-    assert j.eval() == 1
-    i.set(2)
-    assert j.eval() == 2
+    assert j.rx.resolve() == 1
+    i.rx.set(2)
+    assert j.rx.resolve() == 2
 
 def test_reactive_pipeline_reactivelect_other_reactive():
     i = reactive(1) + 2
     j = reactive(i)
-    assert j.eval() == 3
-    i.set(2)
-    assert i.eval() == 4
+    assert j.rx.resolve() == 3
+    i.rx.set(2)
+    assert i.rx.resolve() == 4
 
 def test_reactive_reactivelect_bound_method():
     P = Parameters(integer=1)
     i = reactive(P.multiply_integer)
-    assert i.eval() == 2
+    assert i.rx.resolve() == 2
     P.integer = 2
-    assert i.eval() == 4
+    assert i.rx.resolve() == 4
 
 def test_reactive_pipeline_reactivelect_bound_method():
     P = Parameters(integer=1)
     i = reactive(P.multiply_integer) + 2
-    assert i.eval() == 4
+    assert i.rx.resolve() == 4
     P.integer = 2
-    assert i.eval() == 6
+    assert i.rx.resolve() == 6
 
 def test_reactive_reactivelect_bound_function():
     P = Parameters(integer=1)
     i = reactive(bind(lambda v: v * 2, P.param.integer))
-    assert i.eval() == 2
+    assert i.rx.resolve() == 2
     P.integer = 2
-    assert i.eval() == 4
+    assert i.rx.resolve() == 4
 
 def test_reactive_pipeline_reactivelect_bound_function():
     P = Parameters(integer=1)
     i = reactive(bind(lambda v: v * 2, P.param.integer)) + 2
-    assert i.eval() == 4
+    assert i.rx.resolve() == 4
     P.integer = 2
-    assert i.eval() == 6
+    assert i.rx.resolve() == 6
 
 def test_reactive_dataframe_method_chain(dataframe):
     dfi = reactive(dataframe).groupby('str')[['float']].mean().reset_index()
-    pd.testing.assert_frame_equal(dfi.eval(), dataframe.groupby('str')[['float']].mean().reset_index())
+    pd.testing.assert_frame_equal(dfi.rx.resolve(), dataframe.groupby('str')[['float']].mean().reset_index())
 
 def test_reactive_dataframe_attribute_chain(dataframe):
-    array = reactive(dataframe).str.values.eval()
+    array = reactive(dataframe).str.values.rx.resolve()
     np.testing.assert_array_equal(array, dataframe.str.values)
 
 def test_reactive_dataframe_param_value_method_chain(dataframe):
     P = Parameters(string='str')
     dfi = reactive(dataframe).groupby(P.param.string)[['float']].mean().reset_index()
-    pd.testing.assert_frame_equal(dfi.eval(), dataframe.groupby('str')[['float']].mean().reset_index())
+    pd.testing.assert_frame_equal(dfi.rx.resolve(), dataframe.groupby('str')[['float']].mean().reset_index())
     P.string = 'int'
-    pd.testing.assert_frame_equal(dfi.eval(), dataframe.groupby('int')[['float']].mean().reset_index())
+    pd.testing.assert_frame_equal(dfi.rx.resolve(), dataframe.groupby('int')[['float']].mean().reset_index())
 
 def test_reactive_len():
     i = reactive([1, 2, 3])
-    l = i.len()
-    assert l.eval() == 3
-    i.set([1, 2])
+    l = i.rx.len()
+    assert l.rx.resolve() == 3
+    i.rx.set([1, 2])
     assert l == 2
 
 def test_reactive_bool():
     i = reactive(1)
-    b = i.bool_()
-    assert b.eval() is True
-    i.set(0)
-    assert b.eval() is False
+    b = i.rx.bool()
+    assert b.rx.resolve() is True
+    i.rx.set(0)
+    assert b.rx.resolve() is False
 
 def test_reactive_iter():
     i = reactive(('a', 'b'))
     a, b = i
-    assert a.eval() == 'a'
-    assert b.eval() == 'b'
-    i.set(('b', 'a'))
-    assert a.eval() == 'b'
-    assert b.eval() == 'a'
+    assert a.rx.resolve() == 'a'
+    assert b.rx.resolve() == 'b'
+    i.rx.set(('b', 'a'))
+    assert a.rx.resolve() == 'b'
+    assert b.rx.resolve() == 'a'
 
 def test_reactive_is():
     i = reactive(None)
-    is_ = i.is_(None)
-    assert is_.eval()
-    i.set(False)
-    assert not is_.eval()
+    is_ = i.rx.is_(None)
+    assert is_.rx.resolve()
+    i.rx.set(False)
+    assert not is_.rx.resolve()
+
+def test_reactive_is_not():
+    i = reactive(None)
+    is_ = i.rx.is_not(None)
+    assert not is_.rx.resolve()
+    i.rx.set(False)
+    assert is_.rx.resolve()

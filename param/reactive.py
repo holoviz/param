@@ -37,7 +37,7 @@ The `reactive` object evaluates operations lazily but whenever the
 current value is needed the operations are automatically
 evaluated. Note that even attribute access or tab-completion
 operations can result in evaluation of the pipeline. This is very
-useful in Notebook sessions, as this allows to inspect the transformed
+useful in a REPL, as this allows to inspect the transformed
 object at any point of the pipeline, and as such provide correct
 auto-completion and docstrings. E.g. executing `dfi.A.max?` in an
 interactive REPL or notebook where it allows returning the docstring
@@ -100,8 +100,129 @@ from ._utils import full_groupby
 
 
 class Wrapper(param.Parameterized):
+    """
+    Simple wrapper to allow updating literal values easily.
+    """
 
     object = param.Parameter()
+
+
+class reactive_ops:
+    """
+    Namespace for reactive operators.
+
+    Implements operators that cannot be implemented using regular
+    Python syntax.
+    """
+
+    def __init__(self, reactive):
+        self._reactive = reactive
+
+    def bool(self):
+        """
+        __bool__ cannot be implemented so it is provided as a method.
+        """
+        return self._reactive._apply_operator(bool)
+
+    def is_(self, other):
+        """
+        Replacement for the ``is`` statement.
+        """
+        return self._reactive._apply_operator(operator.is_, other)
+
+    def is_not(self, other):
+        """
+        Replacement for the ``is not`` statement.
+        """
+        return self._reactive._apply_operator(operator.is_not, other)
+
+    def len(self):
+        """
+        __len__ cannot be implemented so it is provided as a method.
+        """
+        return self._reactive._apply_operator(len)
+
+    def pipe(self, func, *args, **kwargs):
+        """
+        Apply chainable functions.
+
+        Arguments
+        ---------
+        func: function
+          Function to apply.
+        args: iterable, optional
+          Positional arguments to pass to `func`.
+        kwargs: mapping, optional
+          A dictionary of keywords to pass to `func`.
+        """
+        return self._apply_operator(func, *args, **kwargs)
+
+    def when(self, *dependencies):
+        """
+        Returns a reactive object that emits the contents of this
+        expression only when the condition changes.
+
+        Arguments
+        ---------
+        dependencies: param.Parameter | reactive
+          A dependency that will trigger an update in the output.
+        """
+        return bind(lambda *_: self.rx.resolve(), *dependencies).reactive()
+
+    def where(self, condition, either, other):
+        def where(out, condition):
+            value = (either if condition else other)
+            if isinstance(value, FunctionType):
+                return value(out)
+            return value
+        return self._reactive._apply_operator(where, condition)
+
+    # Operations to get the output and set the input of an expression
+
+    def resolve(self):
+        """
+        Returns the current state of the reactive by evaluating the
+        pipeline.
+        """
+        reactive = self._reactive
+        if reactive._dirty:
+            obj = reactive._obj if reactive._prev is None else reactive._prev.rx.resolve()
+            operation = reactive._operation
+            if operation:
+                obj = reactive._eval_operation(obj, operation)
+            reactive._current_ = current = obj
+        else:
+            current = reactive._current_
+        reactive._dirty = False
+        if reactive._method:
+            # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
+            current = getattr(current, reactive._method, current)
+        if hasattr(current, '__call__'):
+            reactive.__call__.__func__.__doc__ = current.__call__.__doc__
+        return current
+
+    def set(self, new):
+        """
+        Allows overriding the original input to the pipeline.
+        """
+        prev = self._reactive
+        while prev is not None:
+            prev._dirty = True
+            if prev._prev is not None:
+                prev = prev._prev
+                continue
+
+            if prev._wrapper is None:
+                raise ValueError(
+                    f'{type(self).__name__}.set is only supported if the '
+                    'root object is a constant value. If the root is a '
+                    'Parameter or another dynamic value it must reflect '
+                    'the source and cannot be set.'
+                )
+            prev._wrapper.object = new
+            prev = None
+        return self
+
 
 
 class reactive:
@@ -223,14 +344,15 @@ class reactive:
         self._method = method
         self._operation = operation
         self._depth = depth
+        self._dirty = True
+        self._current_ = None
         if isinstance(obj, reactive) and not prev:
             self._prev = obj
         else:
             self._prev = prev
         self._kwargs = kwargs
+        self.rx = reactive_ops(self)
         self._init = True
-        self._dirty = True
-        self._current_ = None
         self._setup_invalidations(depth)
         for name, accessor in _display_accessors.items():
             setattr(self, name, accessor(self))
@@ -254,7 +376,7 @@ class reactive:
     @property
     def _current(self):
         if self._dirty:
-            self.eval()
+            self.rx.resolve()
         return self._current_
 
     @property
@@ -316,7 +438,7 @@ class reactive:
            if any parameter changes we have to notify the pipeline that
            it has to re-evaluate the pipeline. This is done by marking
            the pipeline as `_dirty`. The next time the `_current` value
-           is requested we then run and `.eval()` pass that re-executes
+           is requested we then run and `.resolve()` pass that re-executes
            the pipeline.
         """
         if self._fn is not None and depth == 0:
@@ -354,8 +476,7 @@ class reactive:
     @property
     def _callback(self):
         def evaluate_inner():
-            obj = self.eval()
-            return self._transform_output(obj)
+            return self._transform_output(self._current)
         params = self._params
         if params:
             @depends(*params)
@@ -412,7 +533,7 @@ class reactive:
     def __getattribute__(self, name):
         self_dict = super().__getattribute__('__dict__')
         no_lookup = (
-            'eval', '_dirty', '_prev', '_operation', '_obj', '_shared_obj',
+            'rx', '_dirty', '_prev', '_operation', '_obj', '_shared_obj',
             '_method', '_eval_operation', '_display_opts', '_fn', '_resolve_accessor',
             '_clone', '_setup_invalidations', '_params', '_fn_params',
             '_invalidate_current', '_depth', '_current', '_kwargs',
@@ -424,7 +545,7 @@ class reactive:
         current = self_dict['_current_']
         dirty = self_dict['_dirty']
         if dirty:
-            self.eval()
+            self.rx.resolve()
             current = self_dict['_current_']
 
         method = self_dict['_method']
@@ -590,30 +711,12 @@ class reactive:
     def __getitem__(self, other):
         return self._apply_operator(operator.getitem, other)
 
-    def bool_(self):
-        """
-        __bool__ cannot be implemented so it is provided as a method.
-        """
-        return self._apply_operator(bool)
-
-    def len(self):
-        """
-        __len__ cannot be implemented so it is provided as a method.
-        """
-        return self._apply_operator(len)
-
-    def is_(self, other):
-        """
-        Replacement for the ``is`` statement.
-        """
-        return self._apply_operator(operator.is_, other)
-
     def __iter__(self):
         if isinstance(self._current, Iterator):
             while True:
                 try:
                     new = self._apply_operator(next)
-                    new.eval()
+                    new.rx.resolve()
                 except RuntimeError:
                     break
                 yield new
@@ -635,21 +738,6 @@ class reactive:
         for item in self._apply_operator(iterate):
             yield item
 
-    def pipe(self, func, *args, **kwargs):
-        """
-        Apply chainable functions.
-
-        Arguments
-        ---------
-        func: function
-          Function to apply.
-        args: iterable, optional
-          Positional arguments to pass to `func`.
-        kwargs: mapping, optional
-          A dictionary of keywords to pass to `func`.
-        """
-        return self._apply_operator(func, *args, **kwargs)
-
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
@@ -666,64 +754,10 @@ class reactive:
             obj = fn(obj, *resolved_args, **resolved_kwargs)
         return obj
 
-    #----------------------------------------------------------------
-    # Public API
-    #----------------------------------------------------------------
-
-    def eval(self):
-        """
-        Returns the current state of the reactive by evaluating the
-        pipeline.
-        """
-        if self._dirty:
-            obj = self._obj if self._prev is None else self._prev.eval()
-            operation = self._operation
-            if operation:
-                obj = self._eval_operation(obj, operation)
-            self._current_ = current = obj
-        else:
-            current = self._current_
-        self._dirty = False
-        if self._method:
-            # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
-            current = getattr(current, self._method, current)
-        if hasattr(current, '__call__'):
-            self.__call__.__func__.__doc__ = current.__call__.__doc__
-        return current
-
-    def set_display(self, **kwargs):
-        """
-        Overrides the display options for this reactive object.
-        """
-        self._display_opts = dict(self._display_opts, **kwargs)
-        return self
-
-    def set(self, new):
-        """
-        Allows overriding the original input to the pipeline.
-        """
-        prev = self
-        while prev is not None:
-            prev._dirty = True
-            if prev._prev is not None:
-                prev = prev._prev
-                continue
-
-            if prev._wrapper is None:
-                raise ValueError(
-                    f'{type(self).__name__}.set is only supported if the '
-                    'root object is a constant value. If the root is a '
-                    'Parameter or another dynamic value it must reflect '
-                    'the source and cannot be set.'
-                )
-            prev._wrapper.object = new
-            prev = None
-        return self
-
 
 def _reactive_transform(obj):
     if not isinstance(obj, reactive):
         return obj
-    return bind(lambda *_: obj.eval(), *obj._params)
+    return bind(lambda *_: obj.rx.resolve(), *obj._params)
 
 register_depends_transform(_reactive_transform)

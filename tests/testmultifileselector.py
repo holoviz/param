@@ -121,6 +121,14 @@ class TestMultiFileSelectorParameters(unittest.TestCase):
         # Default updated but not the value itself
         assert p.b == [self.fa]
 
+    def test_path_autoupdate(self):
+        p = self.P()
+        p.param.b.path = self.glob2
+        assert sorted(p.param.b.objects) == sorted([self.fc, self.fd])
+        assert sorted(p.param.b.default) == sorted([self.fc, self.fd])
+        # Default updated but not the value itself
+        assert p.b == [self.fa]
+
     def test_get_range(self):
         p = self.P()
         r = p.param.a.get_range()

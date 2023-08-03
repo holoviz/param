@@ -2577,6 +2577,10 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
+    _slot_defaults = _dict_update(
+        Selector._slot_defaults, path="",
+    )
+
     @typing.overload
     def __init__(
         self,
@@ -2588,20 +2592,24 @@ class MultiFileSelector(ListSelector):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, path="", **kwargs):
+    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
-        self.update()
+        self.update(path=path)
         super().__init__(default=default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super()._on_set(attribute, new, old)
         if attribute == 'path':
-            self.update()
+            self.update(path=new)
 
-    def update(self):
-        self.objects = sorted(glob.glob(self.path))
+    def update(self, path=Undefined):
+        if path is Undefined:
+            path = self.path
+        self.objects = sorted(glob.glob(path))
         if self.default and all([o in self.objects for o in self.default]):
+            return
+        elif not self.default:
             return
         self.default = self.objects
 

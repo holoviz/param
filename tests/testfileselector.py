@@ -116,6 +116,14 @@ class TestFileSelectorParameters(unittest.TestCase):
         # Default updated but not the value itself
         assert p.b == self.fa
 
+    def test_path_autoupdate(self):
+        p = self.P()
+        p.param.b.path = self.glob2
+        assert p.param.b.objects == [self.fc, self.fd]
+        assert p.param.b.default in [self.fc, self.fd]
+        # Default updated but not the value itself
+        assert p.b == self.fa
+
     def test_get_range(self):
         p = self.P()
         r = p.param.a.get_range()

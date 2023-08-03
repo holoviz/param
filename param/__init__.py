@@ -2486,6 +2486,10 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
+    _slot_defaults = _dict_update(
+        Selector._slot_defaults, path="",
+    )
+
     @typing.overload
     def __init__(
         self,
@@ -2497,32 +2501,32 @@ class FileSelector(Selector):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, path="", **kwargs):
+    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
-        if default is Undefined:
-            self.update()
-        else:
-            self.update(default=False)
+        self.update(path=path)
+        if default is not Undefined:
+            self.default = default
         super().__init__(default=self.default, objects=self.objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super()._on_set(attribute, new, old)
         if attribute == 'path':
-            self.update()
+            self.update(path=new)
 
-    def update(self, default=True):
-        if self.path == "":
+    def update(self, path=Undefined):
+        if path is Undefined:
+            path = self.path
+        if path == "":
             self.objects = []
         else:
             # Convert using os.fspath and pathlib.Path to handle ensure
             # the path separators are consistent (on Windows in particular)
-            pathpattern = os.fspath(pathlib.Path(self.path))
+            pathpattern = os.fspath(pathlib.Path(path))
             self.objects = sorted(glob.glob(pathpattern))
         if self.default in self.objects:
             return
-        if default:
-            self.default = self.objects[0] if self.objects else None
+        self.default = self.objects[0] if self.objects else None
 
     def get_range(self):
         return _abbreviate_paths(self.path,super().get_range())

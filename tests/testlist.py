@@ -90,7 +90,7 @@ class TestListParameters(unittest.TestCase):
         p = self.P()
         with pytest.raises(
             TypeError,
-            match=re.escape("List parameter 'P.e' items must be instances of <class 'int'>, not ['s'].")
+            match=re.escape("List parameter 'P.e' items must be instances of <class 'int'>, not <class 'str'>.")
         ):
             p.e=['s']
 

@@ -81,6 +81,6 @@ class TestDateTimeParameters(unittest.TestCase):
     def test_step_invalid_type_parameter(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("Attribute 'step' of CalendarDate parameter can only be None or a date type.")
+            match=re.escape("Attribute 'step' of CalendarDate parameter can only be None or a date type, not <class 'float'>.")
         ):
             param.CalendarDate(dt.date(2017,2,27), step=3.2)

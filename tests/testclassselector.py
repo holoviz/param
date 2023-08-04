@@ -66,7 +66,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertEqual(p.f, float)
 
     def test_single_class_type_error(self):
-        exception = "ClassSelector parameter 'P.f' value must be a subclass of Number, not 'str'."
+        exception = "ClassSelector parameter 'P.f' value must be a subclass of Number, not <class 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P(f=str)
 
@@ -98,7 +98,7 @@ class TestClassSelectorParameters(unittest.TestCase):
         self.assertIn('str', classes)
 
     def test_multiple_class_type_error(self):
-        exception = r"ClassSelector parameter 'P.h' value must be a subclass of \(int, str\), not 'float'."
+        exception = r"ClassSelector parameter 'P.h' value must be a subclass of \(int, str\), not <class 'float'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P(h=float)
 

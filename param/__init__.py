@@ -1811,7 +1811,7 @@ class Selector(SelectorBase, _SignatureSelector):
                     break
             items = '[' + ', '.join(items) + limiter
             raise ValueError(
-                f"{_validate_error_prefix(self)} does not accept {val!r}, "
+                f"{_validate_error_prefix(self)} does not accept {val!r}; "
                 f"valid options include: {items!r}"
             )
 
@@ -1900,7 +1900,7 @@ class ClassSelector(SelectorBase):
         else:
             if not (issubclass(val, class_)):
                 raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val.__name__!r}.")
+                    f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val}.")
 
     def get_range(self):
         """
@@ -2024,7 +2024,7 @@ class List(Parameter):
                 continue
             raise TypeError(
                 f"{_validate_error_prefix(self)} items must be instances "
-                f"of {item_type!r}, not {val!r}."
+                f"of {item_type!r}, not {type(v)}."
             )
 
 
@@ -2720,7 +2720,7 @@ class Date(Number):
         if step is not None and not isinstance(step, dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
-                f"a datetime or datetime type, not {type(val)}."
+                f"a datetime or datetime type, not {type(step)}."
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
@@ -2779,7 +2779,7 @@ class CalendarDate(Number):
         if step is not None and not isinstance(step, dt.date):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None or "
-                "a date type."
+                f"a date type, not {type(step)}."
             )
 
     @classmethod

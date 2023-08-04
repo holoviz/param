@@ -234,7 +234,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
 
         with pytest.raises(
             ValueError,
-            match=re.escape(r"ObjectSelector parameter 'P.e' does not accept 7, valid options include: '[8, 9]'")
+            match=re.escape(r"ObjectSelector parameter 'P.e' does not accept 7; valid options include: '[8, 9]'")
         ):
             p.e = 7
 
@@ -380,7 +380,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
 
         with pytest.raises(
             ValueError,
-            match=re.escape(r"ObjectSelector parameter 'P.s' does not accept 1, valid options include: '[7, 8]'")
+            match=re.escape(r"ObjectSelector parameter 'P.s' does not accept 1; valid options include: '[7, 8]'")
         ):
             p.s = 1
 

@@ -97,7 +97,7 @@ class TestDateParameters(unittest.TestCase):
             q = param.Date('wrong')  # noqa
 
     def test_step_invalid_type_datetime_parameter(self):
-        exception = re.escape("Attribute 'step' of Date parameter can only be None, a datetime or datetime type, not <class 'float'>.")
+        exception = re.escape("Attribute 'step' of Date parameter can only be None, a datetime or date type, not <class 'float'>.")
         with pytest.raises(ValueError, match=exception):
             param.Date(dt.datetime(2017,2,27), step=3.2)
 

@@ -4,6 +4,7 @@ Unit test for object selector parameters.
 Originally implemented as doctests in Topographica in the file
 testEnumerationParameter.txt
 """
+import re
 import unittest
 
 from collections import OrderedDict
@@ -118,7 +119,10 @@ class TestSelectorParameters(unittest.TestCase):
 
         P.a = None
         assert P.a is None
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(r"Selector parameter 'P.b' does not accept None; valid options include: '[1]'")
+        ):
             P.b = None
         P.c = None
         assert P.c is None

@@ -70,7 +70,7 @@ class TestNumberParameters(unittest.TestCase):
         self.P.d = None
         assert self.P.d is None
 
-        exception = "Parameter 'b' only takes numeric values, not type <(class|type) 'NoneType'>."
+        exception = "Number parameter 'P.b' only takes numeric values, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.b = None
 
@@ -81,7 +81,7 @@ class TestNumberParameters(unittest.TestCase):
         p.d = None
         assert p.d is None
 
-        exception = "Parameter 'b' only takes numeric values, not type <(class|type) 'NoneType'>."
+        exception = "Number parameter 'P.b' only takes numeric values, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             p.b = None
 
@@ -100,12 +100,12 @@ class TestNumberParameters(unittest.TestCase):
         self.assertEqual(p.param['f'].step, 0.5)
 
     def test_step_invalid_type_number_parameter(self):
-        exception = "Step can only be None or a numeric value"
+        exception = "Attribute 'step' of Number parameter can only be None or a numeric value"
         with self.assertRaisesRegex(ValueError, exception):
             param.Number(step='invalid value')
 
     def test_outside_bounds(self):
-        exception = "Parameter 'h' must be at most 2, not 10."
+        exception = "Number parameter 'P.h' must be at most 2, not 10."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.h = 10
 
@@ -118,14 +118,14 @@ class TestNumberParameters(unittest.TestCase):
         self.P.m = 10
         assert self.P.m == 10
 
-        exception = "Parameter 'm' must be at least -1, not -10."
+        exception = "Number parameter 'P.m' must be at least -1, not -10."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.m = -10
 
         self.P.n = -10
         assert self.P.n == -10
 
-        exception = "Parameter 'n' must be at most 1, not 10."
+        exception = "Number parameter 'P.n' must be at most 1, not 10."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.n = 10
 
@@ -135,14 +135,14 @@ class TestNumberParameters(unittest.TestCase):
         p.m = 10
         assert p.m == 10
 
-        exception = "Parameter 'm' must be at least -1, not -10."
+        exception = "Number parameter 'P.m' must be at least -1, not -10."
         with self.assertRaisesRegex(ValueError, exception):
             p.m = -10
 
         p.n = -10
         assert p.n == -10
 
-        exception = "Parameter 'n' must be at most 1, not 10."
+        exception = "Number parameter 'P.n' must be at most 1, not 10."
         with self.assertRaisesRegex(ValueError, exception):
             p.n = 10
 
@@ -173,52 +173,52 @@ class TestNumberParameters(unittest.TestCase):
 
     def test_inclusive_bounds_error_on_bounds(self):
         p = self.P()
-        exception = "Parameter 'j' must be greater than -1, not -1."
+        exception = "Number parameter 'P.j' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.j = -1
         with self.assertRaisesRegex(ValueError, exception):
             p.j = -1
 
-        exception = "Parameter 'k' must be less than 1, not 1."
+        exception = "Number parameter 'P.k' must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.k = 1
         with self.assertRaisesRegex(ValueError, exception):
             p.k = 1
 
-        exception = "Parameter 'l' must be greater than -1, not -1."
+        exception = "Number parameter 'P.l' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.l = -1
         with self.assertRaisesRegex(ValueError, exception):
             p.l = -1
-        exception = "Parameter 'l' must be less than 1, not 1."
+        exception = "Number parameter 'P.l' must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.l = 1
         with self.assertRaisesRegex(ValueError, exception):
             p.l = 1
 
     def test_inclusive_bounds_error_on_bounds_post(self):
-        exception = "Parameter None must be greater than -1, not -1."
+        exception = "Number parameter 'j' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             class P(param.Parameterized):
                 j = param.Number(default=-1, bounds=(-1, 1), inclusive_bounds=(False, True))
 
-        exception = "Parameter None must be less than 1, not 1"
+        exception = "Number parameter 'j' must be less than 1, not 1"
         with self.assertRaisesRegex(ValueError, exception):
             class Q(param.Parameterized):
                 j = param.Number(default=1, bounds=(-1, 1), inclusive_bounds=(True, False))
 
-        exception = "Parameter None must be greater than -1, not -1."
+        exception = "Number parameter 'j' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             class R(param.Parameterized):
                 j = param.Number(default=-1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
-        exception = "Parameter None must be less than 1, not 1."
+        exception = "Number parameter 'j' must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
             class S(param.Parameterized):
                 j = param.Number(default=1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
     def test_invalid_default_for_bounds(self):
-        exception = "Parameter None must be at least 10, not 0.0."
+        exception = "Number parameter 'n' must be at least 10, not 0.0."
         with self.assertRaisesRegex(ValueError, exception):
             class P(param.Parameterized):
                 n = param.Number(bounds=(10, 20))
@@ -232,7 +232,7 @@ class TestNumberParameters(unittest.TestCase):
         class Q(param.Parameterized):
             q = param.Number(default=lambda: 'test')
 
-        exception = "Parameter 'q' only takes numeric values, not type <(class|type) 'str'>."
+        exception = "Number parameter 'Q.q' only takes numeric values, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 
@@ -245,7 +245,7 @@ class TestNumberParameters(unittest.TestCase):
         class Q(param.Parameterized):
             q = param.Number(default=lambda: 2, bounds=(0, 1))
 
-        exception = "Parameter 'q' must be at most 1, not 2."
+        exception = "Number parameter 'Q.q' must be at most 1, not 2."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 
@@ -405,7 +405,7 @@ class TestIntegerParameters(unittest.TestCase):
         self.P.d = None
         assert self.P.d is None
 
-        exception = "Integer parameter 'b' must be an integer, not type <(class|type) 'NoneType'>."
+        exception = "Integer parameter 'P.b' must be an integer, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.b = None
 
@@ -416,7 +416,7 @@ class TestIntegerParameters(unittest.TestCase):
         p.d = None
         assert p.d is None
 
-        exception = "Integer parameter 'b' must be an integer, not type <(class|type) 'NoneType'>."
+        exception = "Integer parameter 'P.b' must be an integer, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             p.b = None
 
@@ -442,17 +442,17 @@ class TestIntegerParameters(unittest.TestCase):
         self.assertEqual(p.param['f'].step, 1)
 
     def test_step_invalid_type_number_parameter(self):
-        exception = "Step can only be None or an integer value"
+        exception = "Attribute 'step' of Integer parameter can only be None or an integer value"
         with self.assertRaisesRegex(ValueError, exception):
             param.Integer(step='invalid value')
 
     def test_step_invalid_type_integer_parameter(self):
-        exception = "Step can only be None or an integer value"
+        exception = "Attribute 'step' of Integer parameter can only be None or an integer value"
         with self.assertRaisesRegex(ValueError, exception):
             param.Integer(step=3.4)
 
     def test_outside_bounds(self):
-        exception = "Parameter 'h' must be at most 2, not 10."
+        exception = "Integer parameter 'P.h' must be at most 2, not 10."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.h = 10
 
@@ -465,14 +465,14 @@ class TestIntegerParameters(unittest.TestCase):
         self.P.m = 10
         assert self.P.m == 10
 
-        exception = "Parameter 'm' must be at least -1, not -10."
+        exception = "Integer parameter 'P.m' must be at least -1, not -10."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.m = -10
 
         self.P.n = -10
         assert self.P.n == -10
 
-        exception = "Parameter 'n' must be at most 1, not 10."
+        exception = "Integer parameter 'P.n' must be at most 1, not 10."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.n = 10
 
@@ -482,14 +482,14 @@ class TestIntegerParameters(unittest.TestCase):
         p.m = 10
         assert p.m == 10
 
-        exception = "Parameter 'm' must be at least -1, not -10."
+        exception = "Integer parameter 'P.m' must be at least -1, not -10."
         with self.assertRaisesRegex(ValueError, exception):
             p.m = -10
 
         p.n = -10
         assert p.n == -10
 
-        exception = "Parameter 'n' must be at most 1, not 10."
+        exception = "Integer parameter 'P.n' must be at most 1, not 10."
         with self.assertRaisesRegex(ValueError, exception):
             p.n = 10
 
@@ -520,52 +520,52 @@ class TestIntegerParameters(unittest.TestCase):
 
     def test_inclusive_bounds_error_on_bounds(self):
         p = self.P()
-        exception = "Parameter 'j' must be greater than -1, not -1."
+        exception = "Integer parameter 'P.j' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.j = -1
         with self.assertRaisesRegex(ValueError, exception):
             p.j = -1
 
-        exception = "Parameter 'k' must be less than 1, not 1."
+        exception = "Integer parameter 'P.k' must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.k = 1
         with self.assertRaisesRegex(ValueError, exception):
             p.k = 1
 
-        exception = "Parameter 'l' must be greater than -1, not -1."
+        exception = "Integer parameter 'P.l' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.l = -1
         with self.assertRaisesRegex(ValueError, exception):
             p.l = -1
-        exception = "Parameter 'l' must be less than 1, not 1."
+        exception = "Integer parameter 'P.l' must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.l = 1
         with self.assertRaisesRegex(ValueError, exception):
             p.l = 1
 
     def test_inclusive_bounds_error_on_bounds_post(self):
-        exception = "Parameter None must be greater than -1, not -1."
+        exception = "Integer parameter 'j' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             class P(param.Parameterized):
                 j = param.Integer(default=-1, bounds=(-1, 1), inclusive_bounds=(False, True))
 
-        exception = "Parameter None must be less than 1, not 1"
+        exception = "Integer parameter 'j' must be less than 1, not 1"
         with self.assertRaisesRegex(ValueError, exception):
             class Q(param.Parameterized):
                 j = param.Integer(default=1, bounds=(-1, 1), inclusive_bounds=(True, False))
 
-        exception = "Parameter None must be greater than -1, not -1."
+        exception = "Integer parameter 'j' must be greater than -1, not -1."
         with self.assertRaisesRegex(ValueError, exception):
             class R(param.Parameterized):
                 j = param.Integer(default=-1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
-        exception = "Parameter None must be less than 1, not 1."
+        exception = "Integer parameter 'j' must be less than 1, not 1."
         with self.assertRaisesRegex(ValueError, exception):
             class S(param.Parameterized):
                 j = param.Integer(default=1, bounds=(-1, 1), inclusive_bounds=(False, False))
 
     def test_invalid_default_for_bounds(self):
-        exception = "Parameter None must be at least 10, not 0."
+        exception = "Integer parameter 'n' must be at least 10, not 0."
         with self.assertRaisesRegex(ValueError, exception):
             class P(param.Parameterized):
                 n = param.Integer(bounds=(10, 20))
@@ -579,7 +579,7 @@ class TestIntegerParameters(unittest.TestCase):
         class Q(param.Parameterized):
             q = param.Integer(default=lambda: 'test')
 
-        exception = "Integer parameter 'q' must be an integer, not type <(class|type) 'str'>."
+        exception = "Integer parameter 'Q.q' must be an integer, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 
@@ -592,7 +592,7 @@ class TestIntegerParameters(unittest.TestCase):
         class Q(param.Parameterized):
             q = param.Integer(default=lambda: 2, bounds=(0, 1))
 
-        exception = "Parameter 'q' must be at most 1, not 2."
+        exception = "Integer parameter 'Q.q' must be at most 1, not 2."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 

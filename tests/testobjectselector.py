@@ -5,6 +5,7 @@ Originally implemented as doctests in Topographica in the file
 testEnumerationParameter.txt
 """
 
+import re
 import unittest
 
 from collections import OrderedDict
@@ -231,7 +232,10 @@ class TestObjectSelectorParameters(unittest.TestCase):
         p = self.P()
         p.param.e.objects = [8, 9]
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(r"ObjectSelector parameter 'P.e' does not accept 7; valid options include: '[8, 9]'")
+        ):
             p.e = 7
 
         self.assertEqual(p.param.e.objects, [8, 9])
@@ -374,7 +378,10 @@ class TestObjectSelectorParameters(unittest.TestCase):
         p = self.P()
         p.param.s.objects = {'seven': 7, 'eight': 8}
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(r"ObjectSelector parameter 'P.s' does not accept 1; valid options include: '[7, 8]'")
+        ):
             p.s = 1
 
         self.assertEqual(p.param.s.objects, [7, 8])

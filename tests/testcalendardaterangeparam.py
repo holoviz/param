@@ -2,9 +2,11 @@
 Unit tests for CalendarDateRange parameter.
 """
 import datetime as dt
+import re
 import unittest
 
 import param
+import pytest
 
 # Assuming tests of range parameter cover most of what's needed to
 # test date range.
@@ -42,65 +44,59 @@ class TestDateTimeRange(unittest.TestCase):
     bad_range = (dt.date(2017,2,27),dt.date(2017,2,26))
 
     def test_wrong_type_default(self):
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("CalendarDateRange parameter 'a' only takes date types, not (1.0, 2.0).")
+        ):
             class Q(param.Parameterized):
                 a = param.CalendarDateRange(default=(1.0,2.0))
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Bad date type was accepted.")
 
     def test_wrong_type_init(self):
         class Q(param.Parameterized):
             a = param.CalendarDateRange()
 
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("CalendarDateRange parameter 'Q.a' end date 2017-02-26 is before start date 2017-02-27.")
+        ):
             Q(a=self.bad_range)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Bad date type was accepted.")
 
     def test_wrong_type_set(self):
         class Q(param.Parameterized):
             a = param.CalendarDateRange()
         q = Q()
 
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("CalendarDateRange parameter 'Q.a' end date 2017-02-26 is before start date 2017-02-27.")
+        ):
             q.a = self.bad_range
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Bad date type was accepted.")
 
     def test_start_before_end_default(self):
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("CalendarDateRange parameter 'a' end date 2017-02-26 is before start date 2017-02-27.")
+        ):
             class Q(param.Parameterized):
                 a = param.CalendarDateRange(default=self.bad_range)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Bad date range was accepted.")
 
     def test_start_before_end_init(self):
         class Q(param.Parameterized):
             a = param.CalendarDateRange()
 
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("CalendarDateRange parameter 'Q.a' end date 2017-02-26 is before start date 2017-02-27.")
+        ):
             Q(a=self.bad_range)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Bad date range was accepted.")
 
     def test_start_before_end_set(self):
         class Q(param.Parameterized):
             a = param.CalendarDateRange()
 
         q = Q()
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("CalendarDateRange parameter 'Q.a' end date 2017-02-26 is before start date 2017-02-27.")
+        ):
             q.a = self.bad_range
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Bad date range was accepted.")

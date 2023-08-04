@@ -863,14 +863,19 @@ class Bytes(Parameter):
         if (val is None and self.allow_None):
             return
         if regex is not None and re.match(regex, val) is None:
-            raise ValueError(f"Bytes parameter {self.name!r} value {val!r} does not match regex {regex!r}.")
+            raise ValueError(
+                f"{_validate_error_prefix(self)} value {val!r} "
+                f"does not match regex {regex!r}."
+            )
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
         if not isinstance(val, bytes):
-            raise ValueError("Bytes parameter {!r} only takes a byte string value, "
-                             "not value of type {}.".format(self.name, type(val)))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes a byte string value, "
+                f"not value of {type(val)}."
+            )
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
@@ -1044,35 +1049,47 @@ class Number(Dynamic):
         if vmax is not None:
             if incmax is True:
                 if not val <= vmax:
-                    raise ValueError("Parameter {!r} must be at most {}, "
-                                     "not {}.".format(self.name, vmax, val))
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)} must be at most "
+                        f"{vmax}, not {val}."
+                    )
             else:
                 if not val < vmax:
-                    raise ValueError("Parameter {!r} must be less than {}, "
-                                     "not {}.".format(self.name, vmax, val))
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)} must be less than "
+                        f"{vmax}, not {val}."
+                    )
 
         if vmin is not None:
             if incmin is True:
                 if not val >= vmin:
-                    raise ValueError("Parameter {!r} must be at least {}, "
-                                     "not {}.".format(self.name, vmin, val))
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)} must be at least "
+                        f"{vmin}, not {val}."
+                    )
             else:
                 if not val > vmin:
-                    raise ValueError("Parameter {!r} must be greater than {}, "
-                                     "not {}.".format(self.name, vmin, val))
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)} must be greater than "
+                        f"{vmin}, not {val}."
+                    )
 
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None) or callable(val):
             return
 
         if not _is_number(val):
-            raise ValueError("Parameter {!r} only takes numeric values, "
-                             "not type {!r}.".format(self.name, type(val)))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes numeric values, "
+                f"not {type(val)}."
+            )
 
     def _validate_step(self, val, step):
         if step is not None and not _is_number(step):
-            raise ValueError("Step can only be None or a "
-                             "numeric value, not type %r." % type(step))
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'step')} can only be "
+                f"None or a numeric value, not {type(step)}."
+            )
 
     def _validate(self, val):
         """
@@ -1107,13 +1124,17 @@ class Integer(Number):
             return
 
         if not isinstance(val, _int_types):
-            raise ValueError("Integer parameter {!r} must be an integer, "
-                             "not type {!r}.".format(self.name, type(val)))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} must be an integer, "
+                f"not {type(val)}."
+            )
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, int):
-            raise ValueError("Step can only be None or an "
-                             "integer value, not type %r" % type(step))
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'step')} can only be "
+                f"None or an integer value, not {type(step)}."
+            )
 
 
 
@@ -1161,12 +1182,14 @@ class Boolean(Parameter):
     def _validate_value(self, val, allow_None):
         if allow_None:
             if not isinstance(val, bool) and val is not None:
-                raise ValueError("Boolean parameter {!r} only takes a "
-                                 "Boolean value or None, not {}.".format(self.name, val))
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} only takes a "
+                    f"boolean value or None, not {val!r}."
+                )
         elif not isinstance(val, bool):
-            name = "" if self.name is None else " %r" % self.name
             raise ValueError(
-                f"Boolean parameter{name} must be True or False, not {val}."
+                f"{_validate_error_prefix(self)} must be True or False, "
+                f"not {val!r}."
             )
 
     def _validate(self, val):
@@ -1214,8 +1237,10 @@ class Tuple(Parameter):
         """
         super().__init__(default=default, **params)
         if length is Undefined and self.default is None:
-            raise ValueError("%s: length must be specified if no default is supplied." %
-                             (self.name))
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'length')} must be "
+                "specified if no default is supplied."
+            )
         elif default is not Undefined and default:
             self.length = len(default)
         else:
@@ -1227,17 +1252,20 @@ class Tuple(Parameter):
             return
 
         if not isinstance(val, tuple):
-            raise ValueError("Tuple parameter {!r} only takes a tuple value, "
-                             "not {!r}.".format(self.name, type(val)))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes a tuple value, "
+                f"not {type(val)}."
+            )
 
     def _validate_length(self, val, length):
         if val is None and self.allow_None:
             return
 
         if not len(val) == length:
-            raise ValueError("Tuple parameter %r is not of the correct "
-                             "length (%d instead of %d)." %
-                             (self.name, len(val), length))
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'length')} is not "
+                f"of the correct length ({len(val)} instead of {length})."
+            )
 
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
@@ -1266,8 +1294,10 @@ class NumericTuple(Tuple):
         for n in val:
             if _is_number(n):
                 continue
-            raise ValueError("NumericTuple parameter {!r} only takes numeric "
-                             "values, not type {!r}.".format(self.name, type(n)))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes numeric "
+                f"values, not {type(n)}."
+            )
 
 
 class XYCoordinates(NumericTuple):
@@ -1298,12 +1328,30 @@ class Callable(Parameter):
     2.4, so instantiate must be False for those values.
     """
 
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, **params):
+        super().__init__(default=default, **params)
+        self._validate(self.default)
+
     def _validate_value(self, val, allow_None):
         if (allow_None and val is None) or callable(val):
             return
+        raise ValueError(
+            f"{_validate_error_prefix(self)} only takes a callable object, "
+            f"not objects of {type(val)}."
+        )
 
-        raise ValueError("Callable parameter {!r} only takes a callable object, "
-                         "not objects of type {!r}.".format(self.name, type(val)))
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
 
 
 class Action(Callable):
@@ -1381,9 +1429,10 @@ class Composite(Parameter):
     def _validate_attribs(self, val, attribs):
         if len(val) == len(attribs):
             return
-        raise ValueError("Compound parameter %r got the wrong number "
-                         "of values (needed %d, but got %d)." %
-                         (self.name, len(attribs), len(val)))
+        raise ValueError(
+            f"{_validate_error_prefix(self)} got the wrong number "
+            f"of values (needed {len(attribs)}, but got {len(val)})."
+        )
 
     def _validate(self, val):
         self._validate_attribs(val, self.attribs)
@@ -1749,13 +1798,6 @@ class Selector(SelectorBase, _SignatureSelector):
             return
 
         if not (val in self.objects or (self.allow_None and val is None)):
-            # This method can be called before __init__ has called
-            # super's __init__, so there may not be any name set yet.
-            if (hasattr(self, "name") and self.name):
-                attrib_name = " " + self.name
-            else:
-                attrib_name = ""
-
             items = []
             limiter = ']'
             length = 0
@@ -1768,8 +1810,10 @@ class Selector(SelectorBase, _SignatureSelector):
                     limiter = ', ...]'
                     break
             items = '[' + ', '.join(items) + limiter
-            raise ValueError("{} not in parameter{}'s list of possible objects, "
-                             "valid options include {}".format(val, attrib_name, items))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} does not accept {val!r}; "
+                f"valid options include: {items!r}"
+            )
 
     def _ensure_value_is_in_objects(self, val):
         """
@@ -1849,15 +1893,14 @@ class ClassSelector(SelectorBase):
             class_name = ('(%s)' % ', '.join(cl.__name__ for cl in class_))
         else:
             class_name = class_.__name__
-        param_cls = self.__class__.__name__
         if is_instance:
             if not (isinstance(val, class_)):
                 raise ValueError(
-                    f"{param_cls} parameter {self.name!r} value must be an instance of {class_name}, not {val!r}.")
+                    f"{_validate_error_prefix(self)} value must be an instance of {class_name}, not {val!r}.")
         else:
             if not (issubclass(val, class_)):
                 raise ValueError(
-                    f"{param_cls} parameter {self.name!r} must be a subclass of {class_name}, not {val.__name__!r}.")
+                    f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val}.")
 
     def get_range(self):
         """
@@ -1947,19 +1990,31 @@ class List(Parameter):
         l = len(val)
         if min_length is not None and max_length is not None:
             if not (min_length <= l <= max_length):
-                raise ValueError(f"{self.name}: list length must be between {min_length} and {max_length} (inclusive)")
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} length must be between "
+                    f"{min_length} and {max_length} (inclusive), not {l}."
+                )
         elif min_length is not None:
             if not min_length <= l:
-                raise ValueError(f"{self.name}: list length must be at least {min_length}.")
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} length must be at "
+                    f"least {min_length}, not {l}."
+                )
         elif max_length is not None:
             if not l <= max_length:
-                raise ValueError(f"{self.name}: list length must be at most {max_length}.")
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} length must be at "
+                    f"most {max_length}, not {l}."
+                )
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
         if not isinstance(val, list):
-            raise ValueError(f"List parameter {self.name!r} must be a list, not an object of type {type(val)}.")
+            raise ValueError(
+                f"{_validate_error_prefix(self)} must be a list, not an "
+                f"object of {type(val)}."
+            )
 
     def _validate_item_type(self, val, item_type):
         if item_type is None or (self.allow_None and val is None):
@@ -1967,8 +2022,10 @@ class List(Parameter):
         for v in val:
             if isinstance(v, item_type):
                 continue
-            raise TypeError("List parameter {!r} items must be instances "
-                            "of type {!r}, not {!r}.".format(self.name, item_type, val))
+            raise TypeError(
+                f"{_validate_error_prefix(self)} items must be instances "
+                f"of {item_type!r}, not {type(v)}."
+            )
 
 
 class HookList(List):
@@ -1988,8 +2045,10 @@ class HookList(List):
         for v in val:
             if callable(v):
                 continue
-            raise ValueError("HookList parameter {!r} items must be callable, "
-                             "not {!r}.".format(self.name, v))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} items must be callable, "
+                f"not {v!r}."
+            )
 
 
 class Dict(ClassSelector):
@@ -2092,23 +2151,26 @@ class DataFrame(ClassSelector):
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
-        message = '{name} length {length} does not match declared bounds of {bounds}'
+        message = f'{name} length {length} does not match declared bounds of {bounds}'
         if not isinstance(bounds, tuple):
             if (bounds != length):
-                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+                raise ValueError(f"{_validate_error_prefix(self)}: {message}")
             else:
                 return
         (lower, upper) = bounds
         failure = ((lower is not None and (length < lower))
                    or (upper is not None and length > upper))
         if failure:
-            raise ValueError(message.format(name=name,length=length, bounds=bounds))
+            raise ValueError(f"{_validate_error_prefix(self)}: {message}")
 
     def _validate(self, val):
         super()._validate(val)
 
         if isinstance(self.columns, set) and self.ordered is True:
-            raise ValueError('Columns cannot be ordered when specified as a set')
+            raise ValueError(
+                f'{_validate_error_prefix(self)}: columns cannot be ordered '
+                f'when specified as a set'
+            )
 
         if self.allow_None and val is None:
             return
@@ -2117,23 +2179,27 @@ class DataFrame(ClassSelector):
             pass
         elif (isinstance(self.columns, tuple) and len(self.columns)==2
               and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
-            self._length_bounds_check(self.columns, len(val.columns), 'Columns')
+            self._length_bounds_check(self.columns, len(val.columns), 'columns')
         elif isinstance(self.columns, (list, set)):
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
             difference = set(self.columns) - {str(el) for el in val.columns}
             if difference:
-                msg = 'Provided DataFrame columns {found} does not contain required columns {expected}'
-                raise ValueError(msg.format(found=list(val.columns), expected=sorted(self.columns)))
+                raise ValueError(
+                    f"{_validate_error_prefix(self)}: provided columns "
+                    f"{list(val.columns)} does not contain required "
+                    f"columns {sorted(self.columns)}"
+                )
         else:
-            self._length_bounds_check(self.columns, len(val.columns), 'Column')
+            self._length_bounds_check(self.columns, len(val.columns), 'column')
 
         if self.ordered:
             if list(val.columns) != list(self.columns):
-                msg = 'Provided DataFrame columns {found} must exactly match {expected}'
-                raise ValueError(msg.format(found=list(val.columns), expected=self.columns))
-
+                raise ValueError(
+                    f"{_validate_error_prefix(self)}: provided columns "
+                    f"{list(val.columns)} must exactly match {self.columns}"
+                )
         if self.rows is not None:
-            self._length_bounds_check(self.rows, len(val), 'Row')
+            self._length_bounds_check(self.rows, len(val), 'row')
 
     @classmethod
     def serialize(cls, value):
@@ -2199,17 +2265,17 @@ class Series(ClassSelector):
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
-        message = '{name} length {length} does not match declared bounds of {bounds}'
+        message = f'{name} length {length} does not match declared bounds of {bounds}'
         if not isinstance(bounds, tuple):
             if (bounds != length):
-                raise ValueError(message.format(name=name, length=length, bounds=bounds))
+                raise ValueError(f"{_validate_error_prefix(self)}: {message}")
             else:
                 return
         (lower, upper) = bounds
         failure = ((lower is not None and (length < lower))
                    or (upper is not None and length > upper))
         if failure:
-            raise ValueError(message.format(name=name,length=length, bounds=bounds))
+            raise ValueError(f"{_validate_error_prefix(self)}: {message}")
 
     def _validate(self, val):
         super()._validate(val)
@@ -2218,7 +2284,7 @@ class Series(ClassSelector):
             return
 
         if self.rows is not None:
-            self._length_bounds_check(self.rows, len(val), 'Row')
+            self._length_bounds_check(self.rows, len(val), 'row')
 
 
 
@@ -2560,8 +2626,10 @@ class ListSelector(Selector):
         if (val is None and self.allow_None):
             return
         if not isinstance(val, list):
-            raise ValueError("ListSelector parameter {!r} only takes list "
-                             "types, not {!r}.".format(self.name, val))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes list types, "
+                f"not {val!r}."
+            )
         for o in val:
             super()._validate(o)
 
@@ -2644,15 +2712,15 @@ class Date(Number):
 
         if not isinstance(val, dt_types) and not (allow_None and val is None):
             raise ValueError(
-                "Date parameter {!r} only takes datetime and date types, "
-                "not type {!r}.".format(self.name, type(val))
+                f"{_validate_error_prefix(self)} only takes datetime and "
+                f"date types, not {type(val)}."
             )
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt_types):
             raise ValueError(
-                "Step can only be None, a datetime "
-                "or datetime type, not type %r." % type(val)
+                f"{_validate_error_prefix(self, 'step')} can only be None, "
+                f"a datetime or date type, not {type(step)}."
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
@@ -2703,11 +2771,16 @@ class CalendarDate(Number):
             return
 
         if (not isinstance(val, dt.date) or isinstance(val, dt.datetime)) and not (allow_None and val is None):
-            raise ValueError("CalendarDate parameter %r only takes date types." % self.name)
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes date types."
+            )
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt.date):
-            raise ValueError("Step can only be None or a date type.")
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'step')} can only be None or "
+                f"a date type, not {type(step)}."
+            )
 
     @classmethod
     def serialize(cls, value):
@@ -2792,8 +2865,10 @@ class Color(Parameter):
         if (allow_None and val is None):
             return
         if not isinstance(val, str):
-            raise ValueError("Color parameter {!r} expects a string value, "
-                             "not an object of type {}.".format(self.name, type(val)))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} expects a string value, "
+                f"not an object of {type(val)}."
+            )
 
     def _validate_allow_named(self, val, allow_named):
         if (val is None and self.allow_None):
@@ -2801,11 +2876,15 @@ class Color(Parameter):
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
             if not is_hex and val.lower() not in self._named_colors:
-                raise ValueError("Color '{}' only takes RGB hex codes "
-                                 "or named colors, received '{}'.".format(self.name, val))
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} only takes RGB hex codes "
+                    f"or named colors, received '{val}'."
+                )
         elif not is_hex:
-            raise ValueError("Color '{}' only accepts valid RGB hex "
-                             "codes, received '{}'.".format(self.name, val))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only accepts valid RGB hex "
+                f"codes, received {val!r}."
+            )
 
 
 class Range(NumericTuple):
@@ -2847,10 +2926,14 @@ class Range(NumericTuple):
     def _validate_step(self, val, step):
         if step is not None:
             if not _is_number(step):
-                raise ValueError("Step can only be None or a "
-                                 "numeric value, not type %r." % type(step))
+                raise ValueError(
+                    f"{_validate_error_prefix(self, 'step')} can only be None "
+                    f"or a numeric value, not {type(step)}."
+                )
             elif step == 0:
-                raise ValueError("Step cannot be 0.")
+                raise ValueError(
+                    f"{_validate_error_prefix(self, 'step')} cannot be 0."
+                )
 
     def _validate_order(self, val, step, allow_None):
         if val is None and allow_None:
@@ -2860,13 +2943,15 @@ class Range(NumericTuple):
 
         start, end = val
         if step is not None and step > 0 and not start <= end:
-            name = "" if self.name is None else " %rs" % self.name
-            raise ValueError("Range parameter%s end %s is less than its start %s with positive step %s."
-                             % (name, end, start, step))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} end {end} is less than its "
+                f"start {start} with positive step {step}."
+            )
         elif step is not None and step < 0 and not start >= end:
-            name = "" if self.name is None else " %rs" % self.name
-            raise ValueError("Range parameter%s start %s is less than its end %s with negative step %s."
-                             % (name, start, end, step))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} start {start} is less than its "
+                f"start {end} with negative step {step}."
+            )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
         if bounds is None or (val is None and self.allow_None):
@@ -2877,12 +2962,13 @@ class Range(NumericTuple):
             too_low = (vmin is not None) and (v < vmin if incmin else v <= vmin)
             too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
             if too_low or too_high:
-                raise ValueError(f"Range parameter {self.name!r}'s {bound} bound must be in range {self.rangestr()}.")
-
+                raise ValueError(
+                    f"{_validate_error_prefix(self, 'bound')} must be in "
+                    f"range {self.rangestr()!r}."
+                )
 
     def get_soft_bounds(self):
         return get_soft_bounds(self.bounds, self.softbounds)
-
 
     def rangestr(self):
         vmin, vmax = self.bounds
@@ -2912,18 +2998,24 @@ class DateRange(Range):
             return
 
         if not isinstance(val, tuple):
-            raise ValueError("DateRange parameter {!r} only takes a tuple value, "
-                             "not {}.".format(self.name, type(val).__name__))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes a tuple value, "
+                f"not {type(val)}."
+            )
         for n in val:
             if isinstance(n, dt_types):
                 continue
-            raise ValueError("DateRange parameter {!r} only takes date/datetime "
-                             "values, not type {}.".format(self.name, type(n).__name__))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes date/datetime "
+                f"values, not {type(n)}."
+            )
 
         start, end = val
         if not end >= start:
-            raise ValueError("DateRange parameter {!r}'s end datetime {} "
-                             "is before start datetime {}.".format(self.name, val[1], val[0]))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} end datetime {val[1]} "
+                f"is before start datetime {val[0]}."
+            )
 
     @classmethod
     def serialize(cls, value):
@@ -2967,13 +3059,17 @@ class CalendarDateRange(Range):
 
         for n in val:
             if not isinstance(n, dt.date):
-                raise ValueError("CalendarDateRange parameter {!r} only "
-                                 "takes date types, not {}.".format(self.name, val))
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} only takes date types, "
+                    f"not {val}."
+                )
 
         start, end = val
         if not end >= start:
-            raise ValueError("CalendarDateRange parameter {!r}'s end date "
-                             "{} is before start date {}.".format(self.name, val[1], val[0]))
+            raise ValueError(
+                f"{_validate_error_prefix(self)} end date {val[1]} is before "
+                f"start date {val[0]}."
+            )
 
     @classmethod
     def serialize(cls, value):

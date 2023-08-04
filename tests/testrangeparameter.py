@@ -1,9 +1,11 @@
 """
 Unit test for Range parameters.
 """
+import re
 import unittest
 
 import param
+import pytest
 
 
 class TestRangeParameters(unittest.TestCase):
@@ -51,29 +53,29 @@ class TestRangeParameters(unittest.TestCase):
 
     def test_raise_not_2_tuple(self):
         p = self.P()
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of Range parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = (1, 2, 3)
 
     def test_raise_if_value_bad_length_constructor(self):
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of Range parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             self.P(e=(1, 1, 1))
 
     def test_raise_if_value_bad_length_setattr(self):
         p = self.P()
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of Range parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = (1, 1, 1)
 
     def test_raise_if_default_is_None_and_no_length(self):
-        msg = "length must be specified if no default is supplied"
+        msg = "Attribute 'length' of NumericTuple parameter 't' must be specified if no default is supplied"
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 t = param.NumericTuple(default=None)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"Range parameter 'P.e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -86,10 +88,10 @@ class TestRangeParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"Range parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
-                e = param.NumericTuple(default='test')
+                e = param.Range(default='test')
 
     def test_support_allow_None_True(self):
         p = self.P()
@@ -105,22 +107,20 @@ class TestRangeParameters(unittest.TestCase):
 
     def test_support_allow_None_False(self):
         p = self.P()
-        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
+        msg = "Range parameter 'P.g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             p.g = None
 
-        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             self.P.g = None
 
     def test_initialization_out_of_bounds(self):
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Attribute 'bound' of Range parameter 'q' must be in range '[0, 1]'.")
+        ):
             class Q(param.Parameterized):
                 q = param.Range((0, 2), bounds=(0, 1))
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_exclusive_out_of_bounds_upper(self):
         class Q(param.Parameterized):
@@ -157,7 +157,7 @@ class TestRangeParameters(unittest.TestCase):
         self.assertEqual(q.get_soft_bounds(), (1, 9))
 
     def test_validate_step(self):
-        msg = r"Step can only be None or a numeric value, not type <class 'str'>."
+        msg = re.escape("Attribute 'step' of Range parameter can only be None or a numeric value, not <class 'str'>.")
 
         p = param.Range((1, 2), bounds=(0, 10), step=1)
         assert p.step == 1
@@ -166,7 +166,7 @@ class TestRangeParameters(unittest.TestCase):
             param.Range((1, 2), bounds=(0, 10), step="1")
 
     def test_validate_order_on_val_with_positive_step(self):
-        msg = r"Range parameter 'q's end 1 is less than its start 2 with positive step 1."
+        msg = re.escape("Range parameter 'Q.q' end 1 is less than its start 2 with positive step 1.")
 
         class Q(param.Parameterized):
             q = param.Range(bounds=(0, 10), step=1)
@@ -175,7 +175,7 @@ class TestRangeParameters(unittest.TestCase):
             Q.q = (2, 1)
 
     def test_validate_order_on_val_with_negative_step(self):
-        msg = r"Range parameter 'q's start -4 is less than its end -2 with negative step -1."
+        msg = re.escape("Range parameter 'Q.q' start -4 is less than its start -2 with negative step -1.")
 
         class Q(param.Parameterized):
             q = param.Range(bounds=(-5, -1), step=-1)
@@ -184,7 +184,7 @@ class TestRangeParameters(unittest.TestCase):
             Q.q = (-4, -2)
 
     def test_validate_step_order_cannot_be_0(self):
-        msg = r"Step cannot be 0."
+        msg = re.escape("Attribute 'step' of Range parameter cannot be 0.")
 
         with self.assertRaisesRegex(ValueError, msg):
             param.Range(bounds=(0, 10), step=0)

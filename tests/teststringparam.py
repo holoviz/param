@@ -52,7 +52,7 @@ class TestStringParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "String parameter 's' only takes a string value, not value of type <class 'NoneType'>."
+        exception = "String parameter 'A.s' only takes a string value, not value of <class 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 
@@ -70,13 +70,13 @@ class TestStringParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "String parameter 's' value '123.123.0.256' does not match regex '%s'."  % ip_regex
+        exception = "String parameter 'A.s' value '123.123.0.256' does not match regex '%s'."  % ip_regex
         with self.assertRaises(ValueError) as e:
             a.s = '123.123.0.256'
         self.assertEqual(str(e.exception), exception.replace('\\', '\\\\'))
 
     def test_regex_incorrect_default(self):
-        exception = "String parameter None value '' does not match regex '%s'." % ip_regex
+        exception = "String parameter 's' value '' does not match regex '%s'." % ip_regex
         with self.assertRaises(ValueError) as e:
             class A(param.Parameterized):
                 s = param.String(regex=ip_regex)  # default value '' does not match regular expression

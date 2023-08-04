@@ -335,3 +335,44 @@ def test_both_method():
     a = A()
 
     assert a.method() is a
+
+
+def test_error_prefix_unbound_defined():
+    with pytest.raises(ValueError, match="Number parameter 'x' only"):
+        x = param.Number('wrong')  # noqa
+
+
+def test_error_prefix_unbound_unexpected_pattern():
+    from param import Number
+    with pytest.raises(ValueError, match="Number parameter only"):
+        Number('wrong')
+
+
+def test_error_prefix_before_class_creation():
+    with pytest.raises(ValueError, match="Number parameter 'x' only"):
+        class P(param.Parameterized):
+            x = param.Number('wrong')
+
+
+def test_error_prefix_set_class():
+    class P(param.Parameterized):
+        x = param.Number()
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P.x = 'wrong'
+
+
+def test_error_prefix_instantiate():
+    class P(param.Parameterized):
+        x = param.Number()
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P(x='wrong')
+
+
+def test_error_prefix_set_instance():
+    class P(param.Parameterized):
+        x = param.Number()
+
+    p = P()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        p.x = 'wrong'

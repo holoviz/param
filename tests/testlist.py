@@ -1,6 +1,8 @@
+import re
 import unittest
 
 import param
+import pytest
 
 from .utils import check_defaults
 # TODO: I copied the tests from testobjectselector, although I
@@ -17,6 +19,8 @@ class TestListParameters(unittest.TestCase):
         class P(param.Parameterized):
             e = param.List([5,6,7], item_type=int)
             l = param.List(["red","green","blue"], item_type=str, bounds=(0,10))
+            m = param.List([1, 2, 3], bounds=(3, None))
+            n = param.List([1], bounds=(None, 3))
 
         self.P = P
 
@@ -60,30 +64,43 @@ class TestListParameters(unittest.TestCase):
 
     def test_set_object_outside_bounds(self):
         p = self.P()
-        try:
-            p.l=[6]*11
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object set outside range.")
+        with pytest.raises(
+            ValueError,
+            match=re.escape("List parameter 'P.l' length must be between 0 and 10 (inclusive), not 11.")
+        ):
+            p.l = [6] * 11
+
+    def test_set_object_outside_lower_bounds(self):
+        p = self.P()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("List parameter 'P.m' length must be at least 3, not 2.")
+        ):
+            p.m = [6, 7]
+
+    def test_set_object_outside_upper_bounds(self):
+        p = self.P()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("List parameter 'P.n' length must be at most 3, not 4.")
+        ):
+            p.n = [6] * 4
 
     def test_set_object_wrong_type(self):
         p = self.P()
-        try:
+        with pytest.raises(
+            TypeError,
+            match=re.escape("List parameter 'P.e' items must be instances of <class 'int'>, not <class 'str'>.")
+        ):
             p.e=['s']
-        except TypeError:
-            pass
-        else:
-            raise AssertionError("Object allowed of wrong type.")
 
     def test_set_object_not_None(self):
         p = self.P(e=[6])
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("List parameter 'P.e' must be a list, not an object of <class 'NoneType'>.")
+        ):
             p.e = None
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object set outside range.")
 
     def test_inheritance_behavior1(self):
         class A(param.Parameterized):
@@ -246,27 +263,18 @@ class TestHookListParameters(unittest.TestCase):
 
     def test_set_object_outside_bounds(self):
         p = self.P()
-        try:
-            p.l = [abs]*11
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object set outside range.")
+        with pytest.raises(ValueError):
+            p.l = [abs] * 11
 
     def test_set_object_wrong_type_foo(self):
         p = self.P()
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("HookList parameter 'P.e' items must be callable, not 's'.")
+        ):
             p.e = ['s']
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object allowed of wrong type.")
 
     def test_set_object_not_None(self):
         p = self.P()
-        try:
+        with pytest.raises(ValueError):
             p.e = None
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("Object set outside range.")

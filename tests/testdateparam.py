@@ -3,6 +3,7 @@ Unit test for Date parameters.
 """
 import datetime as dt
 import json
+import re
 import unittest
 
 import param
@@ -49,38 +50,35 @@ class TestDateParameters(unittest.TestCase):
         self._check_defaults(d)
 
     def test_initialization_out_of_bounds(self):
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Date parameter 'q' must be at most 2017-02-26 00:00:00, not 2017-02-27 00:00:00.")
+        ):
             class Q(param.Parameterized):
                 q = param.Date(dt.datetime(2017,2,27),
                                bounds=(dt.datetime(2017,2,1),
                                        dt.datetime(2017,2,26)))
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_out_of_bounds(self):
         class Q(param.Parameterized):
             q = param.Date(bounds=(dt.datetime(2017,2,1),
                                    dt.datetime(2017,2,26)))
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Date parameter 'Q.q' must be at most 2017-02-26 00:00:00, not 2017-02-27 00:00:00.")
+        ):
             Q.q = dt.datetime(2017,2,27)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_exclusive_out_of_bounds(self):
         class Q(param.Parameterized):
             q = param.Date(bounds=(dt.datetime(2017,2,1),
                                    dt.datetime(2017,2,26)),
                            inclusive_bounds=(True, False))
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Date parameter 'Q.q' must be less than 2017-02-26 00:00:00, not 2017-02-26 00:00:00.")
+        ):
             Q.q = dt.datetime(2017,2,26)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_get_soft_bounds(self):
         q = param.Date(dt.datetime(2017,2,25),
@@ -91,9 +89,16 @@ class TestDateParameters(unittest.TestCase):
         self.assertEqual(q.get_soft_bounds(), (dt.datetime(2017,2,1),
                                                dt.datetime(2017,2,25)))
 
+    def test_wrong_type(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Date parameter 'q' only takes datetime and date types, not <class 'str'>.")
+        ):
+            q = param.Date('wrong')  # noqa
+
     def test_step_invalid_type_datetime_parameter(self):
-        exception = "Step can only be None, a datetime or datetime type"
-        with self.assertRaisesRegex(ValueError, exception):
+        exception = re.escape("Attribute 'step' of Date parameter can only be None, a datetime or date type, not <class 'float'>.")
+        with pytest.raises(ValueError, match=exception):
             param.Date(dt.datetime(2017,2,27), step=3.2)
 
     @pytest.mark.skipif(np is None, reason='NumPy is not available')

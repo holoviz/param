@@ -2,6 +2,7 @@
 Unit tests for DateRange parameter.
 """
 import datetime as dt
+import re
 import unittest
 
 import param
@@ -55,7 +56,7 @@ class TestDateRange(unittest.TestCase):
     def test_wrong_type_default(self):
         with pytest.raises(
             ValueError,
-            match="DateRange parameter None only takes a tuple value, not str."
+            match=re.escape("DateRange parameter 'a' only takes a tuple value, not <class 'str'>.")
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default='wrong')
@@ -63,7 +64,7 @@ class TestDateRange(unittest.TestCase):
     def test_wrong_inner_type_default(self):
         with pytest.raises(
             ValueError,
-            match='DateRange parameter None only takes date/datetime values, not type float.'
+            match=re.escape("DateRange parameter 'a' only takes date/datetime values, not <class 'float'>.")
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default=(1.0,2.0))
@@ -73,7 +74,7 @@ class TestDateRange(unittest.TestCase):
             a = param.DateRange()
         with pytest.raises(
             ValueError,
-            match="DateRange parameter 'a' only takes date/datetime values, not type float."
+            match=re.escape("DateRange parameter 'Q.a' only takes date/datetime values, not <class 'float'>.")
         ):
             Q(a=(1.0, 2.0))
 
@@ -83,7 +84,7 @@ class TestDateRange(unittest.TestCase):
         q = Q()
         with pytest.raises(
             ValueError,
-            match="DateRange parameter 'a' only takes date/datetime values, not type float."
+            match=re.escape("DateRange parameter 'Q.a' only takes date/datetime values, not <class 'float'>.")
         ):
             q.a = (1.0, 2.0)
 
@@ -92,7 +93,7 @@ class TestDateRange(unittest.TestCase):
             a = param.DateRange()
         with pytest.raises(
             ValueError,
-            match="DateRange parameter 'a' only takes a tuple value, not str."
+            match=re.escape("DateRange parameter 'Q.a' only takes a tuple value, not <class 'str'>.")
         ):
             Q(a='wrong')
 
@@ -102,14 +103,14 @@ class TestDateRange(unittest.TestCase):
         q = Q()
         with pytest.raises(
             ValueError,
-            match="DateRange parameter 'a' only takes a tuple value, not str."
+            match=re.escape("DateRange parameter 'Q.a' only takes a tuple value, not <class 'str'>.")
         ):
             q.a = 'wrong'
 
     def test_start_before_end_default(self):
         with pytest.raises(
             ValueError,
-            match="DateRange parameter None's end datetime 2017-02-26 00:00:00 is before start datetime 2017-02-27 00:00:00."
+            match=re.escape("DateRange parameter 'a' end datetime 2017-02-26 00:00:00 is before start datetime 2017-02-27 00:00:00.")
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default=self.bad_range)
@@ -119,7 +120,7 @@ class TestDateRange(unittest.TestCase):
             a = param.DateRange()
         with pytest.raises(
             ValueError,
-            match="DateRange parameter 'a''s end datetime 2017-02-26 00:00:00 is before start datetime 2017-02-27 00:00:00."
+            match=re.escape("DateRange parameter 'Q.a' end datetime 2017-02-26 00:00:00 is before start datetime 2017-02-27 00:00:00.")
         ):
             Q(a=self.bad_range)
 
@@ -129,7 +130,7 @@ class TestDateRange(unittest.TestCase):
         q = Q()
         with pytest.raises(
             ValueError,
-            match="DateRange parameter 'a''s end datetime 2017-02-26 00:00:00 is before start datetime 2017-02-27 00:00:00."
+            match=re.escape("DateRange parameter 'Q.a' end datetime 2017-02-26 00:00:00 is before start datetime 2017-02-27 00:00:00.")
         ):
             q.a = self.bad_range
 
@@ -191,7 +192,7 @@ class TestDateRange(unittest.TestCase):
     def test_numpy_start_before_end_default(self):
         with pytest.raises(
             ValueError,
-            match="DateRange parameter None's end datetime 2022-01-01T00:00 is before start datetime 2022-10-01T00:00."
+            match=re.escape("DateRange parameter 'a' end datetime 2022-01-01T00:00 is before start datetime 2022-10-01T00:00.")
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default=(np.datetime64('2022-10-01T00:00'), np.datetime64('2022-01-01T00:00')))

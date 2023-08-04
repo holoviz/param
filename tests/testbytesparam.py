@@ -67,7 +67,7 @@ class TestBytesParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "Bytes parameter 's' only takes a byte string value, not value of type <class 'NoneType'>."
+        exception = "Bytes parameter 'A.s' only takes a byte string value, not value of <class 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 
@@ -85,13 +85,13 @@ class TestBytesParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "Bytes parameter 's' value b'123.123.0.256' does not match regex %r."  % ip_regex
+        exception = "Bytes parameter 'A.s' value b'123.123.0.256' does not match regex %r."  % ip_regex
         with self.assertRaises(ValueError) as e:
             a.s = b'123.123.0.256'
         self.assertEqual(str(e.exception), exception)
 
     def test_regex_incorrect_default(self):
-        exception = f"Bytes parameter None value b'' does not match regex {ip_regex!r}."
+        exception = f"Bytes parameter 's' value b'' does not match regex {ip_regex!r}."
         with self.assertRaises(ValueError) as e:
             class A(param.Parameterized):
                 s = param.Bytes(regex=ip_regex)  # default value '' does not match regular expression

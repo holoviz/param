@@ -2,6 +2,7 @@
 Unit test for CalendarDate parameters.
 """
 import datetime as dt
+import re
 import unittest
 
 import pytest
@@ -43,38 +44,26 @@ class TestDateTimeParameters(unittest.TestCase):
         self._check_defaults(d)
 
     def test_initialization_out_of_bounds(self):
-        try:
+        with pytest.raises(ValueError):
             class Q(param.Parameterized):
                 q = param.CalendarDate(dt.date(2017,2,27),
                                        bounds=(dt.date(2017,2,1),
                                                dt.date(2017,2,26)))
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_out_of_bounds(self):
         class Q(param.Parameterized):
             q = param.CalendarDate(bounds=(dt.date(2017,2,1),
                                            dt.date(2017,2,26)))
-        try:
+        with pytest.raises(ValueError):
             Q.q = dt.date(2017,2,27)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_exclusive_out_of_bounds(self):
         class Q(param.Parameterized):
             q = param.CalendarDate(bounds=(dt.date(2017,2,1),
                                            dt.date(2017,2,26)),
                                    inclusive_bounds=(True, False))
-        try:
+        with pytest.raises(ValueError):
             Q.q = dt.date(2017,2,26)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_get_soft_bounds(self):
         q = param.CalendarDate(dt.date(2017,2,25),
@@ -86,10 +75,12 @@ class TestDateTimeParameters(unittest.TestCase):
                                                dt.date(2017,2,25)))
 
     def test_datetime_not_accepted(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=re.escape('CalendarDate parameter only takes date types.')):
             param.CalendarDate(dt.datetime(2021, 8, 16, 10))
 
     def test_step_invalid_type_parameter(self):
-        exception = "Step can only be None or a date type"
-        with self.assertRaisesRegex(ValueError, exception):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Attribute 'step' of CalendarDate parameter can only be None or a date type, not <class 'float'>.")
+        ):
             param.CalendarDate(dt.date(2017,2,27), step=3.2)

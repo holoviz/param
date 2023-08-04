@@ -70,18 +70,18 @@ class TestTupleParameters(unittest.TestCase):
         assert p.param.f.length == 3
 
     def test_raise_if_value_bad_length_constructor(self):
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of Tuple parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             self.P(e=(1, 1, 'extra'))
 
     def test_raise_if_value_bad_length_setattr(self):
         p = self.P()
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of Tuple parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = (1, 1, 'extra')
 
     def test_raise_if_default_is_None_and_no_length(self):
-        msg = "length must be specified if no default is supplied"
+        msg = "Attribute 'length' of Tuple parameter 't' must be specified if no default is supplied"
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 t = param.Tuple(default=None)
@@ -93,7 +93,7 @@ class TestTupleParameters(unittest.TestCase):
         assert p.param.g.allow_None
 
     def test_raise_if_default_is_None_and_bad_length(self):
-        msg = r"Tuple parameter 'g' is not of the correct length \(2 instead of 3\)."
+        msg = r"Attribute 'length' of Tuple parameter 'P.g' is not of the correct length \(2 instead of 3\)."
         with self.assertRaisesRegex(ValueError, msg):
             p = self.P(g=(0, 0))
 
@@ -102,7 +102,7 @@ class TestTupleParameters(unittest.TestCase):
             p.g = (0, 0)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"Tuple parameter 'P.e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -115,7 +115,7 @@ class TestTupleParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.Tuple(default='test')
@@ -262,18 +262,18 @@ class TestNumericTupleParameters(unittest.TestCase):
         assert p.param.f.length == 3
 
     def test_raise_if_value_bad_length_constructor(self):
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of NumericTuple parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             self.P(e=(1, 1, 1))
 
     def test_raise_if_value_bad_length_setattr(self):
         p = self.P()
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of NumericTuple parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = (1, 1, 1)
 
     def test_raise_if_default_is_None_and_no_length(self):
-        msg = "length must be specified if no default is supplied"
+        msg = "Attribute 'length' of NumericTuple parameter 't' must be specified if no default is supplied"
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 t = param.NumericTuple(default=None)
@@ -285,7 +285,7 @@ class TestNumericTupleParameters(unittest.TestCase):
         assert p.param.g.allow_None
 
     def test_raise_if_default_is_None_and_bad_length(self):
-        msg = r"Tuple parameter 'g' is not of the correct length \(2 instead of 3\)."
+        msg = r"Attribute 'length' of NumericTuple parameter 'P.g' is not of the correct length \(2 instead of 3\)."
         with self.assertRaisesRegex(ValueError, msg):
             p = self.P(g=(0, 0))
 
@@ -294,7 +294,7 @@ class TestNumericTupleParameters(unittest.TestCase):
             p.g = (0, 0)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"NumericTuple parameter 'P.e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -307,7 +307,7 @@ class TestNumericTupleParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"NumericTuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default='test')
@@ -327,7 +327,7 @@ class TestNumericTupleParameters(unittest.TestCase):
         assert P.h == (1, 1)
 
     def test_raise_on_non_numeric_values(self):
-        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"NumericTuple parameter 'P.e' only takes numeric values, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = ('bad', 1)
@@ -340,7 +340,7 @@ class TestNumericTupleParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = ('bad', 1)
 
-        msg = r"NumericTuple parameter None only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"NumericTuple parameter 'e' only takes numeric values, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default=('bad', 1))
@@ -390,18 +390,18 @@ class TestXYCoordinatesParameters(unittest.TestCase):
         self.assertEqual(p.e, (2, 2))
 
     def test_raise_if_value_bad_length_constructor(self):
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of XYCoordinates parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             self.P(e=(1, 1, 1))
 
     def test_raise_if_value_bad_length_setattr(self):
         p = self.P()
-        msg = r"Tuple parameter 'e' is not of the correct length \(3 instead of 2\)"
+        msg = r"Attribute 'length' of XYCoordinates parameter 'P.e' is not of the correct length \(3 instead of 2\)"
         with self.assertRaisesRegex(ValueError, msg):
             p.e = (1, 1, 1)
 
     def test_bad_type(self):
-        msg = r"Tuple parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"XYCoordinates parameter 'P.e' only takes a tuple value, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = 'test'
@@ -414,10 +414,10 @@ class TestXYCoordinatesParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = 'test'
 
-        msg = r"Tuple parameter None only takes a tuple value, not <(class|type) 'str'>."
+        msg = r"XYCoordinates parameter 'e' only takes a tuple value, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
-                e = param.NumericTuple(default='test')
+                e = param.XYCoordinates(default='test')
 
     def test_support_allow_None_True(self):
         p = self.P()
@@ -433,16 +433,16 @@ class TestXYCoordinatesParameters(unittest.TestCase):
 
     def test_support_allow_None_False(self):
         p = self.P()
-        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
+        msg = "XYCoordinates parameter 'P.g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             p.g = None
 
-        msg = "Tuple parameter 'g' only takes a tuple value, not <(class|type) 'NoneType'>."
+        msg = "XYCoordinates parameter 'P.g' only takes a tuple value, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, msg):
             self.P.g = None
 
     def test_raise_on_non_numeric_values(self):
-        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"XYCoordinates parameter 'P.e' only takes numeric values, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = ('bad', 1)
@@ -455,10 +455,10 @@ class TestXYCoordinatesParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = ('bad', 1)
 
-        msg = r"NumericTuple parameter None only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"XYCoordinates parameter 'e' only takes numeric values, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
-                e = param.NumericTuple(default=('bad', 1))
+                e = param.XYCoordinates(default=('bad', 1))
 
     @pytest.mark.skipif(np is None, reason='NumPy is not available')
     def test_support_numpy_values(self):

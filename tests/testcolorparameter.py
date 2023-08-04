@@ -1,11 +1,13 @@
 """
 Unit test for Color parameters.
 """
+import re
 import unittest
 
 from .utils import check_defaults
 
 import param
+import pytest
 
 
 class TestColorParameters(unittest.TestCase):
@@ -37,44 +39,48 @@ class TestColorParameters(unittest.TestCase):
         check_defaults(c, label=None)
         self._check_defaults(c)
 
+    def test_wrong_type(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Color parameter 'q' expects a string value, not an object of <class 'int'>.")
+        ):
+            q = param.Color(1)  # noqa
+
     def test_initialization_invalid_string(self):
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Color parameter 'q' only accepts valid RGB hex codes, received 'red'."),
+        ):
             class Q(param.Parameterized):
                 q = param.Color('red', allow_named=False)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on invalid color")
 
     def test_set_invalid_string(self):
         class Q(param.Parameterized):
             q = param.Color(allow_named=False)
-        try:
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Color parameter 'Q.q' only accepts valid RGB hex codes, received 'red'."),
+        ):
             Q.q = 'red'
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on invalid color")
 
     def test_set_invalid_named_color(self):
         class Q(param.Parameterized):
             q = param.Color(allow_named=True)
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Color parameter 'Q.q' only takes RGB hex codes or named colors, received 'razzmatazz'."),
+        ):
             Q.q = 'razzmatazz'
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on invalid color")
 
     def test_invalid_long_hex(self):
         class Q(param.Parameterized):
             q = param.Color()
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Color parameter 'Q.q' only takes RGB hex codes or named colors, received '#gfffff'.")
+        ):
             Q.q = '#gfffff'
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on invalid color")
 
     def test_valid_long_hex(self):
         class Q(param.Parameterized):

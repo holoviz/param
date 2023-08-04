@@ -61,7 +61,7 @@ def test_add_parameter_class_validation():
 
     P.param.add_parameter('y', param.Number())
 
-    with pytest.raises(ValueError, match=r"Parameter 'y' only takes numeric values, not type <class 'str'>."):
+    with pytest.raises(ValueError, match=r"Number parameter 'P.y' only takes numeric values, not <class 'str'>."):
         P.y = 'test'
 
 
@@ -74,7 +74,7 @@ def test_add_parameter_instance_validation():
 
     p = P()
 
-    with pytest.raises(ValueError, match=r"Parameter 'y' only takes numeric values, not type <class 'str'>."):
+    with pytest.raises(ValueError, match=r"Number parameter 'P.y' only takes numeric values, not <class 'str'>."):
         p.y = 'test'
 
 

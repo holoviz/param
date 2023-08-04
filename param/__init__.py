@@ -2720,7 +2720,7 @@ class Date(Number):
         if step is not None and not isinstance(step, dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
-                f"a datetime or datetime type, not {type(step)}."
+                f"a datetime or date type, not {type(step)}."
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):

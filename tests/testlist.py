@@ -90,7 +90,7 @@ class TestListParameters(unittest.TestCase):
         p = self.P()
         with pytest.raises(
             TypeError,
-            match=re.escape("List parameter 'P.e' items must be instances of type <class 'int'>, not ['s'].")
+            match=re.escape("List parameter 'P.e' items must be instances of <class 'int'>, not ['s'].")
         ):
             p.e=['s']
 
@@ -98,7 +98,7 @@ class TestListParameters(unittest.TestCase):
         p = self.P(e=[6])
         with pytest.raises(
             ValueError,
-            match=re.escape("List parameter 'P.e' must be a list, not an object of type <class 'NoneType'>.")
+            match=re.escape("List parameter 'P.e' must be a list, not an object of <class 'NoneType'>.")
         ):
             p.e = None
 

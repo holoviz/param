@@ -157,7 +157,7 @@ class TestRangeParameters(unittest.TestCase):
         self.assertEqual(q.get_soft_bounds(), (1, 9))
 
     def test_validate_step(self):
-        msg = re.escape("Attribute 'step' of Range parameter can only be None or a numeric value, not type <class 'str'>.")
+        msg = re.escape("Attribute 'step' of Range parameter can only be None or a numeric value, not <class 'str'>.")
 
         p = param.Range((1, 2), bounds=(0, 10), step=1)
         assert p.step == 1

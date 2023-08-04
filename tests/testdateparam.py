@@ -92,12 +92,12 @@ class TestDateParameters(unittest.TestCase):
     def test_wrong_type(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("Date parameter 'q' only takes datetime and date types, not type <class 'str'>.")
+            match=re.escape("Date parameter 'q' only takes datetime and date types, not <class 'str'>.")
         ):
             q = param.Date('wrong')  # noqa
 
     def test_step_invalid_type_datetime_parameter(self):
-        exception = re.escape("Attribute 'step' of Date parameter can only be None, a datetime or datetime type, not type <class 'datetime.datetime'>.")
+        exception = re.escape("Attribute 'step' of Date parameter can only be None, a datetime or datetime type, not <class 'datetime.datetime'>.")
         with pytest.raises(ValueError, match=exception):
             param.Date(dt.datetime(2017,2,27), step=3.2)
 

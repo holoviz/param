@@ -70,7 +70,7 @@ class TestNumberParameters(unittest.TestCase):
         self.P.d = None
         assert self.P.d is None
 
-        exception = "Number parameter 'P.b' only takes numeric values, not type <(class|type) 'NoneType'>."
+        exception = "Number parameter 'P.b' only takes numeric values, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.b = None
 
@@ -81,7 +81,7 @@ class TestNumberParameters(unittest.TestCase):
         p.d = None
         assert p.d is None
 
-        exception = "Number parameter 'P.b' only takes numeric values, not type <(class|type) 'NoneType'>."
+        exception = "Number parameter 'P.b' only takes numeric values, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             p.b = None
 
@@ -232,7 +232,7 @@ class TestNumberParameters(unittest.TestCase):
         class Q(param.Parameterized):
             q = param.Number(default=lambda: 'test')
 
-        exception = "Number parameter 'Q.q' only takes numeric values, not type <(class|type) 'str'>."
+        exception = "Number parameter 'Q.q' only takes numeric values, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 
@@ -405,7 +405,7 @@ class TestIntegerParameters(unittest.TestCase):
         self.P.d = None
         assert self.P.d is None
 
-        exception = "Integer parameter 'P.b' must be an integer, not type <(class|type) 'NoneType'>."
+        exception = "Integer parameter 'P.b' must be an integer, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             self.P.b = None
 
@@ -416,7 +416,7 @@ class TestIntegerParameters(unittest.TestCase):
         p.d = None
         assert p.d is None
 
-        exception = "Integer parameter 'P.b' must be an integer, not type <(class|type) 'NoneType'>."
+        exception = "Integer parameter 'P.b' must be an integer, not <(class|type) 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             p.b = None
 
@@ -579,7 +579,7 @@ class TestIntegerParameters(unittest.TestCase):
         class Q(param.Parameterized):
             q = param.Integer(default=lambda: 'test')
 
-        exception = "Integer parameter 'Q.q' must be an integer, not type <(class|type) 'str'>."
+        exception = "Integer parameter 'Q.q' must be an integer, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, exception):
             Q.q
 

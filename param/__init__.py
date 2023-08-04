@@ -874,7 +874,7 @@ class Bytes(Parameter):
         if not isinstance(val, bytes):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes a byte string value, "
-                f"not value of type {type(val)}."
+                f"not value of {type(val)}."
             )
 
     def _validate(self, val):
@@ -1081,14 +1081,14 @@ class Number(Dynamic):
         if not _is_number(val):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes numeric values, "
-                f"not type {type(val)!r}."
+                f"not {type(val)}."
             )
 
     def _validate_step(self, val, step):
         if step is not None and not _is_number(step):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be "
-                f"None or a numeric value, not type {type(step)!r}."
+                f"None or a numeric value, not {type(step)}."
             )
 
     def _validate(self, val):
@@ -1126,14 +1126,14 @@ class Integer(Number):
         if not isinstance(val, _int_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be an integer, "
-                f"not type {type(val)}."
+                f"not {type(val)}."
             )
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, int):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be "
-                f"None or an integer value, not type {type(step)!r}."
+                f"None or an integer value, not {type(step)}."
             )
 
 
@@ -1254,7 +1254,7 @@ class Tuple(Parameter):
         if not isinstance(val, tuple):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes a tuple value, "
-                f"not {type(val)!r}."
+                f"not {type(val)}."
             )
 
     def _validate_length(self, val, length):
@@ -1296,7 +1296,7 @@ class NumericTuple(Tuple):
                 continue
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes numeric "
-                f"values, not type {type(n)!r}."
+                f"values, not {type(n)}."
             )
 
 
@@ -2013,7 +2013,7 @@ class List(Parameter):
         if not isinstance(val, list):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be a list, not an "
-                f"object of type {type(val)}."
+                f"object of {type(val)}."
             )
 
     def _validate_item_type(self, val, item_type):
@@ -2713,14 +2713,14 @@ class Date(Number):
         if not isinstance(val, dt_types) and not (allow_None and val is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
-                f"date types, not type {type(val)!r}."
+                f"date types, not {type(val)}."
             )
 
     def _validate_step(self, val, step):
         if step is not None and not isinstance(step, dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
-                f"a datetime or datetime type, not type {type(val)!r}."
+                f"a datetime or datetime type, not {type(val)}."
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds):
@@ -2867,7 +2867,7 @@ class Color(Parameter):
         if not isinstance(val, str):
             raise ValueError(
                 f"{_validate_error_prefix(self)} expects a string value, "
-                f"not an object of type {type(val)}."
+                f"not an object of {type(val)}."
             )
 
     def _validate_allow_named(self, val, allow_named):
@@ -2883,7 +2883,7 @@ class Color(Parameter):
         elif not is_hex:
             raise ValueError(
                 f"{_validate_error_prefix(self)} only accepts valid RGB hex "
-                f"codes, received '{val}'."
+                f"codes, received {val!r}."
             )
 
 
@@ -2928,7 +2928,7 @@ class Range(NumericTuple):
             if not _is_number(step):
                 raise ValueError(
                     f"{_validate_error_prefix(self, 'step')} can only be None "
-                    f"or a numeric value, not type {type(step)}."
+                    f"or a numeric value, not {type(step)}."
                 )
             elif step == 0:
                 raise ValueError(
@@ -3000,14 +3000,14 @@ class DateRange(Range):
         if not isinstance(val, tuple):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes a tuple value, "
-                f"not {type(val).__name__!r}."
+                f"not {type(val)}."
             )
         for n in val:
             if isinstance(n, dt_types):
                 continue
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes date/datetime "
-                f"values, not type {type(n).__name__!r}."
+                f"values, not {type(n)}."
             )
 
         start, end = val

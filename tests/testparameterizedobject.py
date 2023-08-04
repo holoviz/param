@@ -1148,7 +1148,7 @@ def test_inheritance_with_incompatible_defaults():
     with pytest.raises(ValueError) as excinfo:
         class B(A):
             p = param.Number()
-    assert "Number parameter 'B.p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+    assert "Number parameter 'B.p' only takes numeric values, not <class 'str'>" in str(excinfo.value)
 
 
 def test_inheritance_default_validation_with_more_specific_type():
@@ -1158,7 +1158,7 @@ def test_inheritance_default_validation_with_more_specific_type():
     with pytest.raises(ValueError) as excinfo:
         class B(A):
             p = param.NumericTuple()
-    assert "NumericTuple parameter 'B.p' only takes numeric values, not type <class 'str'>" in str(excinfo.value)
+    assert "NumericTuple parameter 'B.p' only takes numeric values, not <class 'str'>" in str(excinfo.value)
 
 
 def test_inheritance_from_multiple_params_class():

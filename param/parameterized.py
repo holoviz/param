@@ -1556,7 +1556,7 @@ class String(Parameter):
         if not isinstance(val, str):
             raise ValueError(
                 f'{_validate_error_prefix(self)} only takes a string value, '
-                f'not value of type {type(val)}.'
+                f'not value of {type(val)}.'
             )
 
     def _validate(self, val):

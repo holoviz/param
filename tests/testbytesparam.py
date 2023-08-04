@@ -67,7 +67,7 @@ class TestBytesParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "Bytes parameter 'A.s' only takes a byte string value, not value of type <class 'NoneType'>."
+        exception = "Bytes parameter 'A.s' only takes a byte string value, not value of <class 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 

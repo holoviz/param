@@ -327,7 +327,7 @@ class TestNumericTupleParameters(unittest.TestCase):
         assert P.h == (1, 1)
 
     def test_raise_on_non_numeric_values(self):
-        msg = r"NumericTuple parameter 'P.e' only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"NumericTuple parameter 'P.e' only takes numeric values, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = ('bad', 1)
@@ -340,7 +340,7 @@ class TestNumericTupleParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = ('bad', 1)
 
-        msg = r"NumericTuple parameter 'e' only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"NumericTuple parameter 'e' only takes numeric values, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.NumericTuple(default=('bad', 1))
@@ -442,7 +442,7 @@ class TestXYCoordinatesParameters(unittest.TestCase):
             self.P.g = None
 
     def test_raise_on_non_numeric_values(self):
-        msg = r"XYCoordinates parameter 'P.e' only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"XYCoordinates parameter 'P.e' only takes numeric values, not <(class|type) 'str'>."
 
         with self.assertRaisesRegex(ValueError, msg):
             self.P.e = ('bad', 1)
@@ -455,7 +455,7 @@ class TestXYCoordinatesParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             p.e = ('bad', 1)
 
-        msg = r"XYCoordinates parameter 'e' only takes numeric values, not type <(class|type) 'str'>."
+        msg = r"XYCoordinates parameter 'e' only takes numeric values, not <(class|type) 'str'>."
         with self.assertRaisesRegex(ValueError, msg):
             class P(param.Parameterized):
                 e = param.XYCoordinates(default=('bad', 1))

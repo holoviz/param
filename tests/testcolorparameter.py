@@ -42,7 +42,7 @@ class TestColorParameters(unittest.TestCase):
     def test_wrong_type(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("Color parameter 'q' expects a string value, not an object of type <class 'int'>.")
+            match=re.escape("Color parameter 'q' expects a string value, not an object of <class 'int'>.")
         ):
             q = param.Color(1)  # noqa
 

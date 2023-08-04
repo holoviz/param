@@ -52,7 +52,7 @@ class TestStringParameters(unittest.TestCase):
 
         a = A()
 
-        exception = "String parameter 'A.s' only takes a string value, not value of type <class 'NoneType'>."
+        exception = "String parameter 'A.s' only takes a string value, not value of <class 'NoneType'>."
         with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 

@@ -56,7 +56,7 @@ class TestDateRange(unittest.TestCase):
     def test_wrong_type_default(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("DateRange parameter 'a' only takes a tuple value, not 'str'.")
+            match=re.escape("DateRange parameter 'a' only takes a tuple value, not <class 'str'>.")
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default='wrong')
@@ -64,7 +64,7 @@ class TestDateRange(unittest.TestCase):
     def test_wrong_inner_type_default(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("DateRange parameter 'a' only takes date/datetime values, not type 'float'.")
+            match=re.escape("DateRange parameter 'a' only takes date/datetime values, not <class 'float'>.")
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default=(1.0,2.0))
@@ -74,7 +74,7 @@ class TestDateRange(unittest.TestCase):
             a = param.DateRange()
         with pytest.raises(
             ValueError,
-            match=re.escape("DateRange parameter 'Q.a' only takes date/datetime values, not type 'float'.")
+            match=re.escape("DateRange parameter 'Q.a' only takes date/datetime values, not <class 'float'>.")
         ):
             Q(a=(1.0, 2.0))
 
@@ -84,7 +84,7 @@ class TestDateRange(unittest.TestCase):
         q = Q()
         with pytest.raises(
             ValueError,
-            match=re.escape("DateRange parameter 'Q.a' only takes date/datetime values, not type 'float'.")
+            match=re.escape("DateRange parameter 'Q.a' only takes date/datetime values, not <class 'float'>.")
         ):
             q.a = (1.0, 2.0)
 
@@ -93,7 +93,7 @@ class TestDateRange(unittest.TestCase):
             a = param.DateRange()
         with pytest.raises(
             ValueError,
-            match=re.escape("DateRange parameter 'Q.a' only takes a tuple value, not 'str'.")
+            match=re.escape("DateRange parameter 'Q.a' only takes a tuple value, not <class 'str'>.")
         ):
             Q(a='wrong')
 
@@ -103,7 +103,7 @@ class TestDateRange(unittest.TestCase):
         q = Q()
         with pytest.raises(
             ValueError,
-            match=re.escape("DateRange parameter 'Q.a' only takes a tuple value, not 'str'.")
+            match=re.escape("DateRange parameter 'Q.a' only takes a tuple value, not <class 'str'>.")
         ):
             q.a = 'wrong'
 

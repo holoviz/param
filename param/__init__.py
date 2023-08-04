@@ -1347,7 +1347,7 @@ class Callable(Parameter):
             return
         raise ValueError(
             f"{_validate_error_prefix(self)} only takes a callable object, "
-            f"not objects of type {type(val)!r}."
+            f"not objects of {type(val)}."
         )
 
     def _validate(self, val):
@@ -2024,7 +2024,7 @@ class List(Parameter):
                 continue
             raise TypeError(
                 f"{_validate_error_prefix(self)} items must be instances "
-                f"of type {item_type!r}, not {val!r}."
+                f"of {item_type!r}, not {val!r}."
             )
 
 

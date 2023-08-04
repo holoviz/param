@@ -121,7 +121,7 @@ class TestSelectorParameters(unittest.TestCase):
         assert P.a is None
         with pytest.raises(
             ValueError,
-            match=re.escape(r"Selector parameter 'P.b' does not accept None, valid options include: '[1]'")
+            match=re.escape(r"Selector parameter 'P.b' does not accept None; valid options include: '[1]'")
         ):
             P.b = None
         P.c = None

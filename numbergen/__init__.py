@@ -320,7 +320,7 @@ class TimeAwareRandomState(TimeAware):
     random_generator = param.Parameter(
         default=random.Random(c_size_t(hash((500,500))).value), doc=
         """
-        Random state used by the object. This may may be an instance
+        Random state used by the object. This may be an instance
         of random.Random from the Python standard library or an
         instance of numpy.random.RandomState.
 
@@ -458,9 +458,9 @@ class UniformRandom(RandomDistribution):
     See the random module for further details.
     """
 
-    lbound = param.Number(default=0.0,doc="inclusive lower bound")
+    lbound = param.Number(default=0.0,doc="Inclusive lower bound.")
 
-    ubound = param.Number(default=1.0,doc="exclusive upper bound")
+    ubound = param.Number(default=1.0,doc="Exclusive upper bound.")
 
 
     def __call__(self):
@@ -500,8 +500,8 @@ class UniformRandomInt(RandomDistribution):
     See the randint function in the random module for further details.
     """
 
-    lbound = param.Number(default=0,doc="inclusive lower bound")
-    ubound = param.Number(default=1000,doc="inclusive upper bound")
+    lbound = param.Number(default=0,doc="Inclusive lower bound.")
+    ubound = param.Number(default=1000,doc="Inclusive upper bound.")
 
 
     def __call__(self):

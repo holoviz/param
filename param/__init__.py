@@ -1822,8 +1822,7 @@ class Selector(SelectorBase, _SignatureSelector):
         to check each item instead.
         """
         if not (val in self.objects):
-            # self._objects.append(val) doesn't work when _objects is []
-            self._objects = self._objects + [val]
+            self._objects.append(val)
 
     def get_range(self):
         """

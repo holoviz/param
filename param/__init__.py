@@ -1666,7 +1666,7 @@ _compute_selector_checking_default = __compute_selector_checking_default()
 
 
 class _SignatureSelector(Parameter):
-
+    # Needs docstring; why is this a separate mixin?
     _slot_defaults = _dict_update(
         SelectorBase._slot_defaults, _objects=_compute_selector_default,
         compute_default_fn=None, check_on_set=_compute_selector_checking_default,
@@ -1748,17 +1748,13 @@ class Selector(SelectorBase, _SignatureSelector):
             self.allow_None = self._slot_defaults['allow_None']
         else:
             self.allow_None = allow_None
-        if self.default is not None and self.check_on_set is True:
-            self._validate(self.default)
+        if self.default is not None:
+            self._validate_value(self.default)
         self._update_state()
 
     def _update_state(self):
-        if (
-            self.check_on_set is False
-            and self.default is not None
-            and self.default not in self.objects
-        ):
-            self.objects.append(self.default)
+        if self.check_on_set is False and self.default is not None:
+            self._ensure_value_is_in_objects(self.default)
 
     @property
     def objects(self):
@@ -1786,18 +1782,17 @@ class Selector(SelectorBase, _SignatureSelector):
         """
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
-            if self.default not in self.objects:
-                self.objects.append(self.default)
+            self._ensure_value_is_in_objects(self.default)
 
     def _validate(self, val):
-        """
-        val must be None or one of the objects in self.objects.
-        """
         if not self.check_on_set:
             self._ensure_value_is_in_objects(val)
             return
 
-        if not (val in self.objects or (self.allow_None and val is None)):
+        self._validate_value(val)
+
+    def _validate_value(self, val):
+        if self.check_on_set and not (self.allow_None and val is None) and val not in self.objects:
             items = []
             limiter = ']'
             length = 0
@@ -2623,16 +2618,34 @@ class ListSelector(Selector):
                     self.objects.append(o)
 
     def _validate(self, val):
+        self._validate_type(val)
+
+        if self.check_on_set:
+            self._validate_value(val)
+        else:
+            self._ensure_value_is_in_objects(val)
+
+
+    def _validate_type(self, val):
         if (val is None and self.allow_None):
             return
+
         if not isinstance(val, list):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes list types, "
                 f"not {val!r}."
             )
-        for o in val:
-            super()._validate(o)
 
+    def _validate_value(self, val):
+        self._validate_type(val)
+        if val is not None:
+            for o in val:
+                super()._validate_value(o)
+
+    def _update_state(self):
+        if self.check_on_set is False and self.default is not None:
+            for o in self.default:
+                self._ensure_value_is_in_objects(o)
 
 
 class MultiFileSelector(ListSelector):

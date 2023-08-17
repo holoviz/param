@@ -7,7 +7,6 @@ under the same names. This section documents their public API.
 ---
 maxdepth: 2
 ---
-Overview <self>
 param
 numbergen
 ```

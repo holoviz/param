@@ -1753,12 +1753,8 @@ class Selector(SelectorBase, _SignatureSelector):
         self._update_state()
 
     def _update_state(self):
-        if (
-            self.check_on_set is False
-            and self.default is not None
-            and self.default not in self.objects
-        ):
-            self.objects.append(self.default)
+        if self.check_on_set is False and self.default is not None:
+            self._ensure_value_is_in_objects(self.default)
 
     @property
     def objects(self):
@@ -1786,8 +1782,7 @@ class Selector(SelectorBase, _SignatureSelector):
         """
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
-            if self.default not in self.objects:
-                self.objects.append(self.default)
+            self._ensure_value_is_in_objects(self.default)
 
     def _validate(self, val):
         if not self.check_on_set:

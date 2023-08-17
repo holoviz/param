@@ -18,7 +18,7 @@ class TestListSelectorParameters(unittest.TestCase):
         super().setUp()
         class P(param.Parameterized):
             e = param.ListSelector(default=[5],objects=[5,6,7])
-            f = param.ListSelector(default=10)
+            f = param.ListSelector(default=[10])
             h = param.ListSelector(default=None)
             g = param.ListSelector(default=None,objects=[7,8])
             i = param.ListSelector(default=[7],objects=[9],check_on_set=False)
@@ -173,16 +173,17 @@ class TestListSelectorParameters(unittest.TestCase):
             r = param.ListSelector(default=[6])
 
     ##########################
-    # CEBALERT: not sure it makes sense for ListSelector to be set to
-    # a non-iterable value (except None). I.e. I think this first test
-    # should fail.
     def test_default_not_checked_to_be_iterable(self):
-        class Q(param.Parameterized):
-            r = param.ListSelector(default=6)
+        with pytest.raises(
+            ValueError,
+            match=re.escape("ListSelector parameter 'r' only takes list types, not 6."),
+        ):
+            class Q(param.Parameterized):
+                r = param.ListSelector(default=6)
 
     def test_set_checked_to_be_iterable(self):
         class Q(param.Parameterized):
-            r = param.ListSelector(default=6,check_on_set=False)
+            r = param.ListSelector(default=[6],check_on_set=False)
 
         with self.assertRaises(ValueError):
             Q.r = 6

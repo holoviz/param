@@ -2645,8 +2645,7 @@ class ListSelector(Selector):
     def _update_state(self):
         if self.check_on_set is False and self.default is not None:
             for o in self.default:
-                if o not in self.objects:
-                    self.objects.append(o)
+                self._ensure_value_is_in_objects(o)
 
 
 class MultiFileSelector(ListSelector):

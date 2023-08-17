@@ -1792,7 +1792,7 @@ class Selector(SelectorBase, _SignatureSelector):
         self._validate_value(val)
 
     def _validate_value(self, val):
-        if self.check_on_set and not (self.allow_None and val is None) and not val in self.objects:
+        if self.check_on_set and not (self.allow_None and val is None) and val not in self.objects:
             items = []
             limiter = ']'
             length = 0

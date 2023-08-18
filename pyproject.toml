@@ -41,6 +41,7 @@ examples = [
 doc = [
     "param[examples]",
     "nbsite ==0.8.2",
+    "sphinx-remove-toctrees",
 ]
 tests = [
     "coverage[toml]",

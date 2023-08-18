@@ -48,7 +48,7 @@ maxdepth: 2
 hidden: true
 ---
 Parameterized objects <parameterized_objects>
-Parameterized helpers <parameterized_helpers.md>
+Parameterized helpers <parameterized_helpers>
 Parameters <parameters>
 Parameter helpers <parameter_helpers>
 Param namespace <param_namespace>

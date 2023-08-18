@@ -1,6 +1,10 @@
 # Parameter helpers
 
 ```{eval-rst}
+.. currentmodule:: param
+```
+
+```{eval-rst}
 .. autosummary::
   :toctree: generated/
 

@@ -40,7 +40,8 @@ examples = [
 ]
 doc = [
     "param[examples]",
-    "nbsite ==0.8.0",
+    "nbsite ==0.8.2",
+    "sphinx-remove-toctrees",
 ]
 tests = [
     "coverage[toml]",
@@ -135,7 +136,7 @@ post-install-commands = [
 
 [tool.hatch.envs.default.scripts]
 tests = "pytest {args:tests}"
-examples = "pytest -n logical --dist loadscope --nbval-lax {args:examples}"
+examples = "pytest -n logical --dist loadscope --nbval-lax {args:doc}"
 
 [tool.hatch.envs.docs]
 template = "docs"
@@ -144,8 +145,7 @@ python = "3.9"
 
 [tool.hatch.envs.docs.scripts]
 build = [
-    "cp examples/user_guide/*.ipynb doc/user_guide/",
-    "python -m nbsite build --org holoviz --project-name param",
+    "sphinx-build -b html doc builtdocs",
 ]
 
 [tool.hatch.envs.tests]
@@ -210,7 +210,7 @@ python = [
 ]
 
 [tool.hatch.envs.tests_examples.scripts]
-examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:examples}"
+examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:doc}"
 
 [tool.pytest.ini_options]
 python_files = "test*.py"

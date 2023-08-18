@@ -1,8 +1,8 @@
 # Comparison to other approaches
 
-Param was first developed in 2003 for Python 2.1 as part of a long-running brain simulation [project](https://topographica.org), and was made into a separate package on [Github](https://github.com/holoviz/param/graphs/contributors) in 2012.  In the interim a variety of other libraries solving some of the same problems have been developed, including:
+Param was first developed in 2003 for Python 2.1 as part of a long-running brain simulation [project](http://ioam.github.io/topographica), and was made into a separate package on [Github](https://github.com/holoviz/param/graphs/contributors) in 2012.  In the interim a variety of other libraries solving some of the same problems have been developed, including:
 
-- [Traits](http://code.enthought.com/projects/traits)
+- [Traits](https://github.com/enthought/traits)
 - [Traitlets](https://github.com/ipython/traitlets)
 - [attrs](https://github.com/python-attrs/attrs) (with optional [attrs-strict](https://github.com/bloomberg/attrs-strict))
 - [Django models](https://docs.djangoproject.com/en/3.1/topics/db/models)

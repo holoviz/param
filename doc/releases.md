@@ -304,7 +304,7 @@ Notable changes, fixes, and additions since the previous release (1.5.1) are lis
 
 Changes:
 * `param.__version__` is now a string
-* `param.version.Version` now supports a tag-based versioning workflow; if using the `Version` class, you will need to update your workflow (see [autover](https://github.com/holoviz/autover) for more details).
+* `param.version.Version` now supports a tag-based versioning workflow; if using the `Version` class, you will need to update your workflow (see [autover](https://github.com/holoviz-dev/autover) for more details).
 * Dropped support for python 2.6 ([#175](https://github.com/holoviz/param/pull/175)).
 * No longer attempt to cythonize param during installation via pip ([#166](https://github.com/holoviz/param/pull/166), [#194](https://github.com/holoviz/param/pull/194)).
 

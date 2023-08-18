@@ -4,16 +4,10 @@
 
 Param has no required dependencies outside of Python's standard library, and so it is very easy to install.
 
-Official releases of Param are available from [conda](https://anaconda.org/ioam/param) and [PyPI](http://pypi.python.org/pypi/param), and can be installed via:
+Official releases of Param are available from conda ([![defaults version](https://img.shields.io/conda/v/anaconda/param.svg?label=defaults&style=flat&colorB=4488ff)](https://anaconda.org/main/param) [![conda-forge version](https://img.shields.io/conda/v/conda-forge/param.svg?label=conda-forge&colorB=4488ff)](https://anaconda.org/conda-forge/param)) and PyPI ([![PyPI version](https://img.shields.io/pypi/v/param.svg?colorB=cc77dd)](https://pypi.org/project/param/)), and can be installed via:
 
 ```
-conda install -c pyviz param
-```
-
-or
-
-```
-pip install --user param
+conda install param
 ```
 
 or
@@ -35,8 +29,8 @@ class A(param.Parameterized):
     title = param.String(default="sum", doc="Title for the result")
 
 class B(A):
-    a = param.Integer(2, bounds=(0,10), doc="First addend")
-    b = param.Integer(3, bounds=(0,10), doc="Second addend")
+    a = param.Integer(2, bounds=(0, 10), doc="First addend")
+    b = param.Integer(3, bounds=(0, 10), doc="Second addend")
 
     def __call__(self):
         return self.title + ": " + str(self.a + self.b)
@@ -94,7 +88,7 @@ Param is valuable for _any_ Python codebase, but it offers features that are par
 
 ```{code-block} python
 >>> import random
->>> o2 = B(a = lambda: random.randint(0,5))
+>>> o2 = B(a=lambda: random.randint(0,5))
 
 >>> o2(), o2(), o2(), o2()
 ('The sum is: 6', 'The sum is: 7', 'The sum is: 3', 'The sum is: 3')
@@ -114,8 +108,8 @@ Param includes a separate and optional module `numbergen` that makes it simple t
 ```{code-block} python
 >>> import numbergen as ng
 
->>> o3 = B(a = ng.Choice(choices=[2,4,6]),
->>>       b = 1+2*ng.UniformRandomInt(ubound=3))
+>>> o3 = B(a=ng.Choice(choices= [2, 4, 6]),
+>>>       b = 1 + 2 * ng.UniformRandomInt(ubound=3))
 
 >>> o3(), o3(), o3(), o3()
 ('The sum is: 11', 'The sum is: 3', 'The sum is: 13', 'The sum is: 7')

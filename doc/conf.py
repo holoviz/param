@@ -55,7 +55,9 @@ extensions += [  # noqa
     'sphinx_copybutton',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
+    'sphinx_remove_toctrees'
 ]
+remove_from_toctrees = ["reference/param/generated/*"]
 
 # Override the Sphinx default title that appends `documentation`
 html_title = f'{project} v{version}'

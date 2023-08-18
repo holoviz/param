@@ -1,4 +1,4 @@
-# Base objects
+# Parameterized objects
 
 ```{eval-rst}
 .. currentmodule:: param
@@ -11,5 +11,4 @@
 
   Parameterized
   ParameterizedFunction
-  ParamOverrides
 ```

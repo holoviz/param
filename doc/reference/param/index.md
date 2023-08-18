@@ -1,26 +1,14 @@
 # Param API reference
 
-## Base objects
+## Parameterized objects
 
-```{include} base_objects.md
-:start-line: 2
-```
-
-## `.param` namespace
-
-```{include} param_namespace.md
+```{include} parameterized_objects.md
 :start-line: 2
 ```
 
 ## Parameterized helpers
 
 ```{include} parameterized_helpers.md
-:start-line: 2
-```
-
-## Logging
-
-```{include} logging.md
 :start-line: 2
 ```
 
@@ -36,6 +24,18 @@
 :start-line: 2
 ```
 
+## `.param` namespace
+
+```{include} param_namespace.md
+:start-line: 2
+```
+
+## Logging
+
+```{include} logging.md
+:start-line: 2
+```
+
 ## Serialization
 
 ```{include} serialization.md
@@ -47,10 +47,11 @@
 maxdepth: 2
 hidden: true
 ---
-Base objects <base_objects>
-Param Namespace <param_namespace>
+Parameterized objects <parameterized_objects>
+Parameterized helpers <parameterized_helpers.md>
+Parameters <parameters>
+Parameter helpers <parameter_helpers>
+Param namespace <param_namespace>
 Logging <logging>
-Parameters <./parameters>
-Parameter Helpers <./parameter_helpers>
 Serialization <serialization>
 ```

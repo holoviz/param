@@ -40,7 +40,7 @@
 
 ```{include} serialization.md
 :start-line: 2
-```  
+```
 
 ```{toctree}
 ---

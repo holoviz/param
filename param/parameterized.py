@@ -3388,7 +3388,7 @@ class ParameterizedMetaclass(type):
 
         # If the type has changed to a more specific or different type
         # or a slot value has been changed validate the default again.
-        if type_change or slot_overridden:
+        if type_change or slot_overridden and param.default is not None:
             param._validate(param.default)
 
     def get_param_descriptor(mcs,param_name):

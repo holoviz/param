@@ -17,6 +17,7 @@ import numbers
 import operator
 import typing
 import warnings
+import html
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -3573,7 +3574,13 @@ def _name_if_set(parameterized):
     return '' if default_name else parameterized.name
 
 
-def _get_param_repr(key, val, p, truncate=40):
+def truncate(str_, maxlen = 30):
+    """Return HTML-safe truncated version of given string"""
+    rep = (str_[:(maxlen-2)] + '..') if (len(str_) > (maxlen-2)) else str_
+    return html.escape(rep)
+
+
+def _get_param_repr(key, val, p, vallen=30, doclen=40):
     """HTML representation for a single Parameter object and its value"""
     if hasattr(val, "_repr_html_"):
         try:
@@ -3581,31 +3588,48 @@ def _get_param_repr(key, val, p, truncate=40):
         except:
             value = val._repr_html_()
     else:
-        rep = repr(val)
-        value = (rep[:truncate] + '..') if len(rep) > truncate else rep
+        value = truncate(repr(val), vallen)
 
-    modes = []
-    if p.constant:
-        modes.append('constant')
-    if p.readonly:
-        modes.append('read-only')
-    if getattr(p, 'allow_None', False):
-        modes.append('nullable')
-    mode = ' | '.join(modes)
     if hasattr(p, 'bounds'):
-        bounds = p.bounds
+        if p.bounds is None:
+            range_ = '(-&infin;,&infin;)'
+        elif hasattr(p,'inclusive_bounds'):
+            # Numeric bounds use ( and [ to indicate exclusive and inclusive
+            bl,bu = p.bounds
+            il,iu = p.inclusive_bounds
+            lb = ('[' if il else '(') + ('-&infin;' if bl is None else str(bl))
+            ub = ('&infin;' if bu is None else str(bu)) + (']' if iu else ')')
+            range_ = lb + ', ' + ub
+        else:
+            range_ = repr(p.bounds)
     elif hasattr(p, 'objects') and p.objects:
-        bounds = ', '.join(list(map(repr, p.objects)))
+        range_ = ', '.join(list(map(repr, p.objects)))
+    elif hasattr(p, 'class_'):
+        range_ = p.class_.__name__
+    elif hasattr(p, 'regex'):
+        range_ = '.*' if p.regex is None else str(p.regex)
     else:
-        bounds = ''
+        range_ = ''
+
+    if p.readonly:
+        range_ = ' '.join(['<i>read-only</i>', range_])
+    elif p.constant:
+        range_ = ' '.join(['<i>constant</i>', range_])
+
+    if getattr(p, 'allow_None', False):
+        range_ = ' | '.join(['None', range_])
+
     tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
+
+    doc = "" if p.doc is None else truncate(p.doc.strip(), doclen)
+
     return (
         f'<tr>'
-        f'  <td><tt{tooltip}>{key}</tt></td>'
+        f'  <td><p{tooltip}>{key}</p></td>'
+        f'  <td style="max-width: 200px;">{value}</td>'
         f'  <td>{p.__class__.__name__}</td>'
-        f'  <td>{value}</td>'
-        f'  <td style="max-width: 300px;">{bounds}</td>'
-        f'  <td>{mode}</td>'
+        f'  <td style="max-width: 300px;">{range_}</td>'
+        f'  <td style="max-width: 500px;"><p{tooltip}>{doc}</p></td>'
         f'</tr>\n'
     )
 
@@ -3652,8 +3676,9 @@ def _parameterized_repr_html(p, open):
 }
 """
     openstr = " open" if open else ""
+    param_values = p.param.get_param_values()
     contents = "".join(_get_param_repr(key, val, p.param.params(key))
-                       for key, val in p.param.get_param_values())
+                       for key, val in param_values)
     return (
         f'<style>{tooltip_css}</style>\n'
         f'<details {openstr}>\n'
@@ -3662,7 +3687,7 @@ def _parameterized_repr_html(p, open):
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        f'   <tr><th>Name</th><th>Type</th><th>{value_field}</th><th>Bounds/Objects</th><th>Mode</th></tr>\n'
+        f'   <tr><th>Name</th><th>{value_field}</th><th>Type</th><th>Range</th><th>Doc</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

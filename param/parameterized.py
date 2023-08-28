@@ -3605,7 +3605,10 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
     elif hasattr(p, 'objects') and p.objects:
         range_ = ', '.join(list(map(repr, p.objects)))
     elif hasattr(p, 'class_'):
-        range_ = p.class_.__name__
+        if isinstance(p.class_, tuple):
+            range_ = ' | '.join(kls.__name__ for kls in p.class_)
+        else:
+            range_ = p.class_.__name__
     elif hasattr(p, 'regex'):
         range_ = '.*' if p.regex is None else str(p.regex)
     else:

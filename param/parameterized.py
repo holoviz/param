@@ -3354,7 +3354,7 @@ class ParameterizedMetaclass(type):
                     # If we already know we have to re-validate abort
                     # early to avoid costly lookups
                     if slot_overridden or type_change:
-                        continue
+                        break
                 else:
                     if slot not in param._non_validated_slots:
                         slot_overridden = True

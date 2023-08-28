@@ -114,10 +114,18 @@ class TestRangeParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             self.P.g = None
 
-    def test_initialization_out_of_bounds(self):
+    def test_initialization_out_of_bounds_lower(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("Attribute 'bound' of Range parameter 'q' must be in range '[0, 1]'.")
+            match=re.escape("Range parameter 'q' lower bound must be in range [0, 1], not -1.")
+        ):
+            class Q(param.Parameterized):
+                q = param.Range((-1, 1), bounds=(0, 1))
+
+    def test_initialization_out_of_bounds_upper(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Range parameter 'q' upper bound must be in range [0, 1], not 2.")
         ):
             class Q(param.Parameterized):
                 q = param.Range((0, 2), bounds=(0, 1))

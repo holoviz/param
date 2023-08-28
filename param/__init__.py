@@ -2988,8 +2988,8 @@ class Range(NumericTuple):
             too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
             if too_low or too_high:
                 raise ValueError(
-                    f"{_validate_error_prefix(self, 'bound')} must be in "
-                    f"range {self.rangestr()!r}."
+                    f"{_validate_error_prefix(self)} {bound} bound must be in "
+                    f"range {self.rangestr()}, not {v}."
                 )
 
     def get_soft_bounds(self):

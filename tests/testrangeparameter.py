@@ -195,21 +195,21 @@ class TestRangeParameters(unittest.TestCase):
             param.Range(bounds=(0, 10), step=0)
 
     def test_validate_bounds_wrong_type_lower(self):
-        msg = re.escape("Range parameter lower bound must be a number, not <class 'str'>.")
+        msg = re.escape("Range parameter lower bound can only be None or a numerical value, not <class 'str'>.")
         with pytest.raises(ValueError, match=msg):
             param.Range(bounds=('a', 1))
 
     def test_validate_bounds_wrong_type_upper(self):
-        msg = re.escape("Range parameter upper bound must be a number, not <class 'str'>.")
+        msg = re.escape("Range parameter upper bound can only be None or a numerical value, not <class 'str'>.")
         with pytest.raises(ValueError, match=msg):
             param.Range(bounds=(0, 'b'))
 
     def test_validate_softbounds_wrong_type_lower(self):
-        msg = re.escape("Range parameter lower softbound must be a number, not <class 'str'>.")
+        msg = re.escape("Range parameter lower softbound can only be None or a numerical value, not <class 'str'>.")
         with pytest.raises(ValueError, match=msg):
             param.Range(softbounds=('a', 1))
 
     def test_validate_softbounds_wrong_type_upper(self):
-        msg = re.escape("Range parameter upper softbound must be a number, not <class 'str'>.")
+        msg = re.escape("Range parameter upper softbound can only be None or a numerical value, not <class 'str'>.")
         with pytest.raises(ValueError, match=msg):
             param.Range(softbounds=(0, 'b'))

@@ -2981,8 +2981,8 @@ class Range(NumericTuple):
     def _validate_bound_type(self, value, position, kind):
         if not _is_number(value):
             raise ValueError(
-                f"{_validate_error_prefix(self)} {position} {kind} must be "
-                f"a number, not {type(value)}."
+                f"{_validate_error_prefix(self)} {position} {kind} can only be "
+                f"None or a numerical value, not {type(value)}."
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds, softbounds):
@@ -3031,8 +3031,8 @@ class DateRange(Range):
     def _validate_bound_type(self, value, position, kind):
         if not isinstance(value, dt_types):
             raise ValueError(
-                f"{_validate_error_prefix(self)} {position} {kind} must be "
-                f"a date/datetime, not {type(value)}."
+                f"{_validate_error_prefix(self)} {position} {kind} can only be "
+                f"None or a date/datetime value, not {type(value)}."
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds, softbounds):

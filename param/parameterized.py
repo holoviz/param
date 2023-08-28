@@ -3676,8 +3676,8 @@ def _parameterized_repr_html(p, open):
 }
 """
     openstr = " open" if open else ""
-    param_values = p.param.get_param_values()
-    contents = "".join(_get_param_repr(key, val, p.param.params(key))
+    param_values = p.param.values().items()
+    contents = "".join(_get_param_repr(key, val, p.param[key])
                        for key, val in param_values)
     return (
         f'<style>{tooltip_css}</style>\n'

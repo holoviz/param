@@ -2944,7 +2944,7 @@ class Range(NumericTuple):
 
     def _validate(self, val):
         super()._validate(val)
-        self._validate_bounds(val, self.bounds, self.inclusive_bounds)
+        self._validate_bounds(val, self.bounds, self.inclusive_bounds, self.softbounds)
         self._validate_step(val, self.step)
         self._validate_order(val, self.step, allow_None=self.allow_None)
 
@@ -2978,7 +2978,25 @@ class Range(NumericTuple):
                 f"start {end} with negative step {step}."
             )
 
-    def _validate_bounds(self, val, bounds, inclusive_bounds):
+    def _validate_bound_type(self, value, position, kind):
+        if not _is_number(value):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} {position} {kind} must be "
+                f"a number, not {type(value)}."
+            )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds, softbounds):
+        if bounds is not None:
+            for pos, v in zip(['lower', 'upper'], bounds):
+                if v is None:
+                    continue
+                self._validate_bound_type(v, pos, 'bound')
+        if softbounds is not None:
+            for spos, sv in zip(['lower', 'upper'], softbounds):
+                if sv is None:
+                    continue
+                self._validate_bound_type(sv, spos, 'softbound')
+
         if bounds is None or (val is None and self.allow_None):
             return
         vmin, vmax = bounds
@@ -3010,10 +3028,17 @@ class DateRange(Range):
     Bounds must be specified as datetime or date types (see param.dt_types).
     """
 
-    def _validate_bounds(self, val, bounds, inclusive_bounds):
-        val = None if val is None else map(_to_datetime, val)
-        bounds = None if bounds is None else map(_to_datetime, bounds)
-        super()._validate_bounds(val, bounds, inclusive_bounds)
+    def _validate_bound_type(self, value, position, kind):
+        if not isinstance(value, dt_types):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} {position} {kind} must be "
+                f"a date/datetime, not {type(value)}."
+            )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds, softbounds):
+        val = None if val is None else tuple(map(_to_datetime, val))
+        bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
+        super()._validate_bounds(val, bounds, inclusive_bounds, softbounds)
 
     def _validate_value(self, val, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from

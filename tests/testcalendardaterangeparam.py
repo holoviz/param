@@ -100,3 +100,23 @@ class TestDateTimeRange(unittest.TestCase):
             match=re.escape("CalendarDateRange parameter 'Q.a' end date 2017-02-26 is before start date 2017-02-27.")
         ):
             q.a = self.bad_range
+
+    def test_validate_bounds_wrong_type_lower(self):
+        msg = re.escape("CalendarDateRange parameter lower bound can only be None or a date value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.CalendarDateRange(bounds=('a', dt.date(2017,2,27)))
+
+    def test_validate_bounds_wrong_type_upper(self):
+        msg = re.escape("CalendarDateRange parameter upper bound can only be None or a date value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.CalendarDateRange(bounds=(dt.date(2017,2,27), 'b'))
+
+    def test_validate_softbounds_wrong_type_lower(self):
+        msg = re.escape("CalendarDateRange parameter lower softbound can only be None or a date value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.CalendarDateRange(softbounds=('a', dt.date(2017,2,27)))
+
+    def test_validate_softbounds_wrong_type_upper(self):
+        msg = re.escape("CalendarDateRange parameter upper softbound can only be None or a date value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.CalendarDateRange(softbounds=(dt.date(2017,2,27), 'b'))

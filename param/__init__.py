@@ -3121,6 +3121,13 @@ class CalendarDateRange(Range):
                 f"start date {val[0]}."
             )
 
+    def _validate_bound_type(self, value, position, kind):
+        if not isinstance(value, dt.date):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} {position} {kind} can only be "
+                f"None or a date value, not {type(value)}."
+            )
+
     @classmethod
     def serialize(cls, value):
         if value is None:

@@ -96,7 +96,7 @@ def resolve_ref(reference):
     """
     Resolves all parameters a dynamic reference depends on.
     """
-    if isinstance(reference, (list, tuple)):
+    if isinstance(reference, (list, tuple, set)):
         return [r for v in reference for r in resolve_ref(v)]
     elif isinstance(reference, dict):
         return [r for v in reference.values() for r in resolve_ref(v)]

@@ -45,7 +45,6 @@ from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
 from .parameterized import _identity_hook
-from .reactive import reactive # noqa: api import
 from ._utils import (
     ParamDeprecationWarning as _ParamDeprecationWarning,
     _deprecate_positional_args,
@@ -3223,3 +3222,5 @@ def exceptions_summarized():
         import sys
         etype, value, tb = sys.exc_info()
         print(f"{etype.__name__}: {value}", file=sys.stderr)
+
+from .reactive import reactive # noqa: api import

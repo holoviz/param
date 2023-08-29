@@ -47,6 +47,10 @@ class Parameters(param.Parameterized):
 
     function = param.Callable()
 
+    boolean = param.Boolean(default=False)
+
+    event = param.Event()
+
     @param.depends('integer')
     def multiply_integer(self):
         return self.integer * 2
@@ -118,56 +122,56 @@ def test_reactive_pipeline_set_new_value():
     i.rx.set(2)
     assert i.rx.resolve() == 4
 
-def test_reactive_reactivelect_param_value():
+def test_reactive_reflect_param_value():
     P = Parameters(integer=1)
     i = reactive(P.param.integer)
     assert i.rx.resolve() == 1
     P.integer = 2
     assert i.rx.resolve() == 2
 
-def test_reactive_pipeline_reactivelect_param_value():
+def test_reactive_pipeline_reflect_param_value():
     P = Parameters(integer=1)
     i = reactive(P.param.integer) + 2
     assert i.rx.resolve() == 3
     P.integer = 2
     assert i.rx.resolve() == 4
 
-def test_reactive_reactivelect_other_reactive():
+def test_reactive_reactive_reflect_other_reactive():
     i = reactive(1)
     j = reactive(i)
     assert j.rx.resolve() == 1
     i.rx.set(2)
     assert j.rx.resolve() == 2
 
-def test_reactive_pipeline_reactivelect_other_reactive():
+def test_reactive_pipeline_reflect_other_reactive_expr():
     i = reactive(1) + 2
     j = reactive(i)
     assert j.rx.resolve() == 3
     i.rx.set(2)
     assert i.rx.resolve() == 4
 
-def test_reactive_reactivelect_bound_method():
+def test_reactive_reflect_bound_method():
     P = Parameters(integer=1)
     i = reactive(P.multiply_integer)
     assert i.rx.resolve() == 2
     P.integer = 2
     assert i.rx.resolve() == 4
 
-def test_reactive_pipeline_reactivelect_bound_method():
+def test_reactive_pipeline_reflect_bound_method():
     P = Parameters(integer=1)
     i = reactive(P.multiply_integer) + 2
     assert i.rx.resolve() == 4
     P.integer = 2
     assert i.rx.resolve() == 6
 
-def test_reactive_reactivelect_bound_function():
+def test_reactive_reflect_bound_function():
     P = Parameters(integer=1)
     i = reactive(bind(lambda v: v * 2, P.param.integer))
     assert i.rx.resolve() == 2
     P.integer = 2
     assert i.rx.resolve() == 4
 
-def test_reactive_pipeline_reactivelect_bound_function():
+def test_reactive_pipeline_reflect_bound_function():
     P = Parameters(integer=1)
     i = reactive(bind(lambda v: v * 2, P.param.integer)) + 2
     assert i.rx.resolve() == 4
@@ -225,3 +229,25 @@ def test_reactive_is_not():
     assert not is_.rx.resolve()
     i.rx.set(False)
     assert is_.rx.resolve()
+
+def test_reactive_where_expr():
+    p = Parameters()
+    r = p.param.boolean.reactive().rx.where('A', 'B')
+    assert r.rx.resolve() == 'B'
+    p.boolean = True
+    assert r.rx.resolve() == 'A'
+
+def test_reactive_where_expr_refs():
+    p = Parameters()
+    results = []
+    r = p.param.boolean.reactive().rx.where(p.param.string, p.param.number)
+    r.rx.observe(results.append)
+    assert r.rx.resolve() == 3.14
+    p.boolean = True
+    assert results == ['string']
+    p.string = 'foo'
+    assert results == ['string', 'foo']
+    p.number = 2.1
+    assert results == ['string', 'foo']
+    p.boolean = False
+    assert results == ['string', 'foo', 2.1]

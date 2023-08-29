@@ -84,27 +84,34 @@ from __future__ import annotations
 import math
 import operator
 
+from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
 
-import param
-
+from . import Event
 from .depends import (
-    _display_accessors, bind, depends, eval_function_with_deps,
+    _display_accessors, bind, eval_function_with_deps,
     register_depends_transform, resolve_ref, resolve_value,
     transform_dependency
 )
-from .parameterized import Parameter, get_method_owner
+from .parameterized import (
+    Parameter, Parameterized, get_method_owner
+)
 from ._utils import full_groupby
 
 
-class Wrapper(param.Parameterized):
+class Wrapper(Parameterized):
     """
     Simple wrapper to allow updating literal values easily.
     """
 
-    object = param.Parameter()
+    object = Parameter()
+
+
+class Trigger(Parameterized):
+
+    value = Event()
 
 
 class reactive_ops:
@@ -155,7 +162,7 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        return self._apply_operator(func, *args, **kwargs)
+        return self._reactive._apply_operator(func, *args, **kwargs)
 
     def when(self, *dependencies):
         """
@@ -167,39 +174,58 @@ class reactive_ops:
         dependencies: param.Parameter | reactive
           A dependency that will trigger an update in the output.
         """
-        return bind(lambda *_: self.rx.resolve(), *dependencies).reactive()
+        return bind(lambda *_: self.resolve(), *dependencies).reactive()
 
-    def where(self, condition, either, other):
-        def where(out, condition):
-            value = (either if condition else other)
-            if isinstance(value, FunctionType):
-                return value(out)
-            return value
-        return self._reactive._apply_operator(where, condition)
+    def where(self, x, y):
+        """
+        Returns either x or y depending on the current state of the
+        expression, i.e. replaces a ternary if statement.
+
+        Arguments
+        ---------
+        x: object
+          The value to return if the expression evaluates to True.
+        y: object
+          The value to return if the expressione evaluates to False.
+        """
+        xrefs = resolve_ref(x)
+        yrefs = resolve_ref(y)
+        trigger = Trigger()
+        if xrefs:
+            def trigger_x(*args):
+                if self.resolve():
+                    trigger.param.trigger('value')
+            bind(trigger_x, *xrefs, watch=True)
+        if yrefs:
+            def trigger_y(*args):
+                if not self.resolve():
+                    trigger.param.trigger('value')
+            bind(trigger_y, *yrefs, watch=True)
+
+        def ternary(condition, event):
+            return resolve_value(x) if condition else resolve_value(y)
+        return self.pipe(ternary, trigger.param.value)
 
     # Operations to get the output and set the input of an expression
+
+    def observe(self, fn):
+        """
+        Adds a callback that observes the output of the pipeline.
+        """
+        def cb(*args):
+            fn(self.resolve())
+        grouped = defaultdict(list)
+        for dep in self._reactive._params:
+            grouped[id(dep.owner)].append(dep)
+        for group in grouped.values():
+            group[0].owner.param.watch(cb, [dep.name for dep in group])
 
     def resolve(self):
         """
         Returns the current state of the reactive by evaluating the
         pipeline.
         """
-        reactive = self._reactive
-        if reactive._dirty:
-            obj = reactive._obj if reactive._prev is None else reactive._prev.rx.resolve()
-            operation = reactive._operation
-            if operation:
-                obj = reactive._eval_operation(obj, operation)
-            reactive._current_ = current = obj
-        else:
-            current = reactive._current_
-        reactive._dirty = False
-        if reactive._method:
-            # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
-            current = getattr(current, reactive._method, current)
-        if hasattr(current, '__call__'):
-            reactive.__call__.__func__.__doc__ = current.__call__.__doc__
-        return current
+        return self._reactive._resolve()
 
     def set(self, new):
         """
@@ -219,6 +245,7 @@ class reactive_ops:
                     'Parameter or another dynamic value it must reflect '
                     'the source and cannot be set.'
                 )
+            prev._invalidate_obj()
             prev._wrapper.object = new
             prev = None
         return self
@@ -345,15 +372,16 @@ class reactive:
         self._operation = operation
         self._depth = depth
         self._dirty = True
+        self._dirty_obj = False
         self._current_ = None
         if isinstance(obj, reactive) and not prev:
             self._prev = obj
         else:
             self._prev = prev
+        self._setup_invalidations(depth)
         self._kwargs = kwargs
         self.rx = reactive_ops(self)
         self._init = True
-        self._setup_invalidations(depth)
         for name, accessor in _display_accessors.items():
             setattr(self, name, accessor(self))
         for name, (accessor, predicate) in reactive._accessors.items():
@@ -364,6 +392,10 @@ class reactive:
     def _obj(self):
         if self._shared_obj is None:
             self._obj = eval_function_with_deps(self._fn)
+        elif self._root._dirty_obj:
+            root = self._root
+            root._shared_obj[0] = eval_function_with_deps(root._fn)
+            root._dirty_obj = False
         return self._shared_obj[0]
 
     @_obj.setter
@@ -375,12 +407,12 @@ class reactive:
 
     @property
     def _current(self):
-        if self._dirty:
+        if self._dirty or self._root._dirty_obj:
             self.rx.resolve()
         return self._current_
 
     @property
-    def _fn_params(self) -> list[param.Parameter]:
+    def _fn_params(self) -> list[Parameter]:
         if self._fn is None:
             return []
 
@@ -397,7 +429,16 @@ class reactive:
         return args + kwargs
 
     @property
-    def _params(self) -> list[param.Parameter]:
+    def _root(self):
+        if self._prev is None:
+            return self
+        root = self
+        while root._prev is not None:
+            root = root._prev
+        return root
+
+    @property
+    def _params(self) -> list[Parameter]:
         ps = self._fn_params
 
         # Collect parameters on previous objects in chain
@@ -441,17 +482,34 @@ class reactive:
            is requested we then run and `.resolve()` pass that re-executes
            the pipeline.
         """
-        if self._fn is not None and depth == 0:
+        if self._fn is not None:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
-                params[0].owner.param.watch(self._update_obj, [p.name for p in params])
+                params[0].owner.param.watch(self._invalidate_obj, [p.name for p in params])
         for _, params in full_groupby(self._params, lambda x: id(x.owner)):
             params[0].owner.param.watch(self._invalidate_current, [p.name for p in params])
 
     def _invalidate_current(self, *events):
         self._dirty = True
 
-    def _update_obj(self, *args):
-        self._obj = eval_function_with_deps(self._fn)
+    def _invalidate_obj(self, *events):
+        self._root._dirty_obj = True
+
+    def _resolve(self):
+        if self._dirty or self._root._dirty_obj:
+            obj = self._obj if self._prev is None else self._prev._resolve()
+            operation = self._operation
+            if operation:
+                obj = self._eval_operation(obj, operation)
+            self._current_ = current = obj
+        else:
+            current = self._current_
+        self._dirty = False
+        if self._method:
+            # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
+            current = getattr(current, self._method, current)
+        if hasattr(current, '__call__'):
+            self.__call__.__func__.__doc__ = self.__call__.__doc__
+        return current
 
     def _transform_output(self, obj):
         """
@@ -475,16 +533,11 @@ class reactive:
 
     @property
     def _callback(self):
-        def evaluate_inner():
-            return self._transform_output(self._current)
         params = self._params
+        def evaluate(*args, **kwargs):
+            return self._transform_output(self._current)
         if params:
-            @depends(*params)
-            def evaluate(*args, **kwargs):
-                return evaluate_inner()
-        else:
-            def evaluate():
-                return evaluate_inner()
+            return bind(evaluate, *params)
         return evaluate
 
     def _clone(self, operation=None, copy=False, **kwargs):
@@ -537,7 +590,8 @@ class reactive:
             '_method', '_eval_operation', '_display_opts', '_fn', '_resolve_accessor',
             '_clone', '_setup_invalidations', '_params', '_fn_params',
             '_invalidate_current', '_depth', '_current', '_kwargs',
-            '_wrapper',
+            '_wrapper', '_dirty_obj', '_root', '_invalidate_obj',
+            '_transform_output', '_resolve'
         )
         if not self_dict.get('_init') or name in no_lookup:
             return super().__getattribute__(name)

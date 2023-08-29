@@ -2568,7 +2568,7 @@ class FileSelector(Selector):
         self.update(path=path)
         if default is not Undefined:
             self.default = default
-        super().__init__(default=self.default, objects=self.objects, **kwargs)
+        super().__init__(default=self.default, objects=self._objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super()._on_set(attribute, new, old)
@@ -2677,7 +2677,7 @@ class MultiFileSelector(ListSelector):
         self.default = default
         self.path = path
         self.update(path=path)
-        super().__init__(default=default, objects=self.objects, **kwargs)
+        super().__init__(default=default, objects=self._objects, **kwargs)
 
     def _on_set(self, attribute, old, new):
         super()._on_set(attribute, new, old)

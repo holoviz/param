@@ -84,7 +84,6 @@ from __future__ import annotations
 import math
 import operator
 
-from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
@@ -214,10 +213,7 @@ class reactive_ops:
         """
         def cb(*args):
             fn(self.resolve())
-        grouped = defaultdict(list)
-        for dep in self._reactive._params:
-            grouped[id(dep.owner)].append(dep)
-        for group in grouped.values():
+        for _, group in full_groupby(self._reactive._params, lambda x: id(x.owner)):
             group[0].owner.param.watch(cb, [dep.name for dep in group])
 
     def resolve(self):
@@ -373,6 +369,7 @@ class reactive:
         self._depth = depth
         self._dirty = True
         self._dirty_obj = False
+        self._error_state = None
         self._current_ = None
         if isinstance(obj, reactive) and not prev:
             self._prev = obj
@@ -407,7 +404,9 @@ class reactive:
 
     @property
     def _current(self):
-        if self._dirty or self._root._dirty_obj:
+        if self._error_state:
+            raise self._error_state
+        elif self._dirty or self._root._dirty_obj:
             self.rx.resolve()
         return self._current_
 
@@ -490,16 +489,24 @@ class reactive:
 
     def _invalidate_current(self, *events):
         self._dirty = True
+        self._error_state = None
 
     def _invalidate_obj(self, *events):
         self._root._dirty_obj = True
+        self._error_state = None
 
     def _resolve(self):
-        if self._dirty or self._root._dirty_obj:
-            obj = self._obj if self._prev is None else self._prev._resolve()
-            operation = self._operation
-            if operation:
-                obj = self._eval_operation(obj, operation)
+        if self._error_state:
+            raise self._error_state
+        elif self._dirty or self._root._dirty_obj:
+            try:
+                obj = self._obj if self._prev is None else self._prev._resolve()
+                operation = self._operation
+                if operation:
+                    obj = self._eval_operation(obj, operation)
+            except Exception as e:
+                self._error_state = e
+                raise e
             self._current_ = current = obj
         else:
             current = self._current_
@@ -585,15 +592,7 @@ class reactive:
 
     def __getattribute__(self, name):
         self_dict = super().__getattribute__('__dict__')
-        no_lookup = (
-            'rx', '_dirty', '_prev', '_operation', '_obj', '_shared_obj',
-            '_method', '_eval_operation', '_display_opts', '_fn', '_resolve_accessor',
-            '_clone', '_setup_invalidations', '_params', '_fn_params',
-            '_invalidate_current', '_depth', '_current', '_kwargs',
-            '_wrapper', '_dirty_obj', '_root', '_invalidate_obj',
-            '_transform_output', '_resolve'
-        )
-        if not self_dict.get('_init') or name in no_lookup:
+        if not self_dict.get('_init') or name == 'rx' or name.startswith('_'):
             return super().__getattribute__(name)
 
         current = self_dict['_current_']

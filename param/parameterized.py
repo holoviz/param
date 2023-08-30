@@ -24,7 +24,7 @@ try:
 except ImportError:
     serializer = None
 
-from collections import defaultdict, namedtuple, OrderedDict, abc
+from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from html import escape
 from operator import itemgetter, attrgetter

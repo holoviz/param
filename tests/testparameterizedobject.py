@@ -276,7 +276,7 @@ class TestParameterized(unittest.TestCase):
         even when the instance value hasn't yet been set"""
         oobj = []
         class P(param.Parameterized):
-            x = param.Parameter(default=oobj, constant=True, per_instance=False)
+            x = param.Parameter(default=oobj, constant=True)
 
         p1 = P()
 

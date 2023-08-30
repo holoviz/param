@@ -24,7 +24,7 @@ try:
 except ImportError:
     serializer = None
 
-from collections import defaultdict, namedtuple, OrderedDict
+from collections import defaultdict, namedtuple, OrderedDict, abc
 from functools import partial, wraps, reduce
 from html import escape
 from operator import itemgetter, attrgetter
@@ -963,6 +963,10 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig
 
 
+def is_mutable(value):
+    """True if the given object is known to be mutable"""
+    return issubclass(type(value), (abc.MutableSequence, abc.MutableSet, abc.MutableMapping))
+
 class Parameter(_ParameterBase):
     """
     An attribute descriptor for declaring parameters.
@@ -1688,6 +1692,27 @@ class _ParametersRestorer:
             self._restore = {}
 
 
+def _instantiate_param_obj(paramobj, owner=None):
+    """Return a Parameter object suitable for instantiation given the class's Parameter object"""
+
+    # Shallow-copy Parameter object, with special handling for watchers
+    # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
+    p = paramobj
+    watchers = p.watchers
+    p.watchers = {}
+    p = copy.copy(p)
+
+    p.watchers = copy.copy(watchers)
+    p.owner = owner
+
+    # shallow-copy any mutable slot values other than the actual default
+    for s in p.__class__.__slots__:
+        v = getattr(p, s)
+        if is_mutable(v) and s != "default":
+            setattr(p, s, copy.copy(v))
+    return p
+
+
 class Parameters:
     """Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
@@ -1775,20 +1800,12 @@ class Parameters:
         p = parameters[key]
         if (inst is not None and getattr(inst._param__private, 'initialized', False) and p.per_instance and
             not getattr(self_.cls._param__private, 'disable_instance_params', False)):
+
             if key not in inst._param__private.params:
-                try:
-                    # Do not copy watchers on class parameter
-                    watchers = p.watchers
-                    p.watchers = {}
-                    p = copy.copy(p)
-                except:
-                    raise
-                finally:
-                    p.watchers = {k: list(v) for k, v in watchers.items()}
-                p.owner = inst
-                inst._param__private.params[key] = p
-            else:
-                p = inst._param__private.params[key]
+                inst._param__private.params[key] = _instantiate_param_obj(p, inst)
+
+            p = inst._param__private.params[key]
+
         return p
 
 
@@ -1845,10 +1862,10 @@ class Parameters:
         """
         Initialize default and keyword parameter values.
 
-        First, ensures that all Parameters with 'instantiate=True' (typically
-        used for mutable Parameters) are copied directly into each object, to
-        ensure that there is an independent copy (to avoid surprising aliasing
-        errors). Second, ensures that Parameters with 'constant=True' are
+        First, ensures that values for all Parameters with 'instantiate=True'
+        (typically used for mutable Parameters) are copied directly into each object,
+        to ensure that there is an independent copy of the value (to avoid surprising
+        aliasing errors). Second, ensures that Parameters with 'constant=True' are
         referenced on the instance, to make sure that setting a constant
         Parameter on the class doesn't affect already created instances. Then
         sets each of the keyword arguments, raising when any of them are not
@@ -3357,6 +3374,11 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     setattr(param, slot, default_val)
+
+            # Avoid crosstalk between mutable slot values in different Parameter objects
+            v = getattr(param, slot)
+            if (not getattr(param, "constant", False) and is_mutable(v)):
+                setattr(param, slot, copy.copy(v))
 
         # Once all the static slots have been filled in, fill in the dynamic ones
         # (which are only allowed to use static values or results are undefined)

@@ -46,16 +46,16 @@ jobs:
           python -m pip install hatch
       - name: build docs
         run: hatch -v run docs:build
-      - name: Deploy dev
-        uses: peaceiris/actions-gh-pages@v3
+      - name: upload dev
         if: |
           (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dev') ||
           (github.event_name == 'push' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
-        with:
-          personal_token: ${{ secrets.ACCESS_TOKEN }}
-          external_repository: holoviz-dev/param
-          publish_dir: ./builtdocs
-          force_orphan: true
+        env:
+          TAG_VAR: ${{ steps.vars.outputs.tag }}
+        run: |
+          pipx install awscli
+          aws s3 sync --quiet ./builtdocs s3://param.holoviz.org/en/latest
+          aws s3 sync --quiet ./builtdocs s3://param.holoviz.org/en/$TAG_VAR
       - name: Deploy main
         if: |
           (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'main') ||

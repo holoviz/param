@@ -3373,9 +3373,10 @@ class ParameterizedMetaclass(type):
                     setattr(param, slot, default_val)
 
             # Avoid crosstalk between mutable slot values in different Parameter objects
-            v = getattr(param, slot)
-            if (not getattr(param, "constant", False) and _is_mutable_container(v)):
-                setattr(param, slot, copy.copy(v))
+            if slot != "default":
+                v = getattr(param, slot)
+                if _is_mutable_container(v):
+                    setattr(param, slot, copy.copy(v))
 
         # Once all the static slots have been filled in, fill in the dynamic ones
         # (which are only allowed to use static values or results are undefined)

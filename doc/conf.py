@@ -8,7 +8,7 @@ param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
 from nbsite.shared_conf import *  # noqa
-from nbsite.shared_conf import nbsite_setup
+from nbsite.shared_conf import setup as nbsite_setup
 
 project = 'param'
 authors = 'HoloViz developers'

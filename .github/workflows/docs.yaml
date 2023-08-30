@@ -25,10 +25,6 @@ jobs:
     name: Documentation
     runs-on: 'ubuntu-latest'
     timeout-minutes: 120
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east1
     defaults:
       run:
         shell: bash -l {0}
@@ -41,7 +37,9 @@ jobs:
           python-version: '3.9'
       - name: Set output
         id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        run: |
+          echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          echo "path=en/${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: graphviz
         run: sudo apt install graphviz graphviz-dev
       - name: env setup
@@ -50,16 +48,18 @@ jobs:
           python -m pip install hatch
       - name: build docs
         run: hatch -v run docs:build
-      - name: upload dev
+
+      - uses: shallwefootball/s3-upload-action@1.3.3
         if: |
           (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dev') ||
           (github.event_name == 'push' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
-        env:
-          TAG_VAR: ${{ steps.vars.outputs.tag }}
-        run: |
-          pipx install awscli
-          aws s3 sync --quiet ./builtdocs s3://param.holoviz.org/en/latest
-          aws s3 sync --quiet ./builtdocs s3://param.holoviz.org/en/$TAG_VAR
+        name: Upload Dev Docs to S3
+        with:
+          aws_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_bucket: param.holoviz.org
+          source_dir: ./builtdocs
+          destination_dir: ${{ steps.vars.outputs.path }}
       - name: Deploy main
         if: |
           (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'main') ||

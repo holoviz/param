@@ -76,7 +76,7 @@ myst_heading_anchors = 3
 
 napoleon_numpy_docstring = True
 
-def add_version():
+def add_version(app):
     with open('./switcher.json', 'r') as f:
         versions = json.load(f)
     found = False

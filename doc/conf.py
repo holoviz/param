@@ -58,6 +58,7 @@ html_theme_options = {
     "analytics": {"google_analytics_id": 'G-KD5GGLCB54'},
     "switcher": {
         "json_url": "http://param.holoviz.org.s3-website-us-east-1.amazonaws.com/en/latest/_static/switcher.json",
+        "version_match": version
     }
 
 }

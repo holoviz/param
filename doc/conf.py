@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import pathlib
 
 import param
 
@@ -9,6 +10,8 @@ param.parameterized.docstring_describe_params = False
 
 from nbsite.shared_conf import *  # noqa
 from nbsite.shared_conf import setup as nbsite_setup
+
+DOC_PATH = pathlib.Path(__file__).parent
 
 project = 'param'
 authors = 'HoloViz developers'
@@ -77,7 +80,7 @@ myst_heading_anchors = 3
 napoleon_numpy_docstring = True
 
 def add_version(app):
-    with open('./switcher.json', 'r') as f:
+    with open(DOC_PATH / 'switcher.json', 'r') as f:
         versions = json.load(f)
     found = False
     for v in versions:
@@ -90,7 +93,7 @@ def add_version(app):
             'url': "http://param.holoviz.org.s3-website-us-east-1.amazonaws.com/en/{version}/"
         })
 
-    with open('./_static/switcher.json', 'w') as f:
+    with open(DOC_PATH / '_static' / 'switcher.json', 'w') as f:
         json.dump(versions, f)
 
 def setup(app):

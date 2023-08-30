@@ -1699,7 +1699,7 @@ def _instantiate_param_obj(paramobj, owner=None):
     p.watchers = {}
     p = copy.copy(p)
 
-    p.watchers = copy.copy(watchers)
+    p.watchers = {k: list(v) for k, v in watchers.items()}
     p.owner = owner
 
     # shallow-copy any mutable slot values other than the actual default

@@ -2944,7 +2944,8 @@ class Range(NumericTuple):
 
     def _validate(self, val):
         super()._validate(val)
-        self._validate_bounds(val, self.bounds, self.inclusive_bounds, self.softbounds)
+        self._validate_bounds(val, self.bounds, self.inclusive_bounds, 'bound')
+        self._validate_bounds(val, self.softbounds, self.inclusive_bounds, 'softbound')
         self._validate_step(val, self.step)
         self._validate_order(val, self.step, allow_None=self.allow_None)
 
@@ -2985,17 +2986,14 @@ class Range(NumericTuple):
                 f"None or a numerical value, not {type(value)}."
             )
 
-    def _validate_bounds(self, val, bounds, inclusive_bounds, softbounds):
+    def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
         if bounds is not None:
             for pos, v in zip(['lower', 'upper'], bounds):
                 if v is None:
                     continue
-                self._validate_bound_type(v, pos, 'bound')
-        if softbounds is not None:
-            for spos, sv in zip(['lower', 'upper'], softbounds):
-                if sv is None:
-                    continue
-                self._validate_bound_type(sv, spos, 'softbound')
+                self._validate_bound_type(v, pos, kind)
+        if kind == 'softbound':
+            return
 
         if bounds is None or (val is None and self.allow_None):
             return
@@ -3035,10 +3033,10 @@ class DateRange(Range):
                 f"None or a date/datetime value, not {type(value)}."
             )
 
-    def _validate_bounds(self, val, bounds, inclusive_bounds, softbounds):
+    def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
         val = None if val is None else tuple(map(_to_datetime, val))
         bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
-        super()._validate_bounds(val, bounds, inclusive_bounds, softbounds)
+        super()._validate_bounds(val, bounds, inclusive_bounds, kind)
 
     def _validate_value(self, val, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from

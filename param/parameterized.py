@@ -42,6 +42,7 @@ from ._utils import (
     _recursive_repr,
     _validate_error_prefix,
     ParamDeprecationWarning as _ParamDeprecationWarning,
+    _is_mutable_container,
 )
 
 try:
@@ -963,10 +964,6 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig
 
 
-def is_mutable(value):
-    """True if the given object is known to be mutable"""
-    return issubclass(type(value), (abc.MutableSequence, abc.MutableSet, abc.MutableMapping))
-
 class Parameter(_ParameterBase):
     """
     An attribute descriptor for declaring parameters.
@@ -1708,7 +1705,7 @@ def _instantiate_param_obj(paramobj, owner=None):
     # shallow-copy any mutable slot values other than the actual default
     for s in p.__class__.__slots__:
         v = getattr(p, s)
-        if is_mutable(v) and s != "default":
+        if _is_mutable_container(v) and s != "default":
             setattr(p, s, copy.copy(v))
     return p
 
@@ -3377,7 +3374,7 @@ class ParameterizedMetaclass(type):
 
             # Avoid crosstalk between mutable slot values in different Parameter objects
             v = getattr(param, slot)
-            if (not getattr(param, "constant", False) and is_mutable(v)):
+            if (not getattr(param, "constant", False) and _is_mutable_container(v)):
                 setattr(param, slot, copy.copy(v))
 
         # Once all the static slots have been filled in, fill in the dynamic ones

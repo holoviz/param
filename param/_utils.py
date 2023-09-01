@@ -177,3 +177,12 @@ def _validate_error_prefix(parameter, attribute=None):
 def _is_mutable_container(value):
     """True for mutable containers, which typically need special handling when being copied"""
     return issubclass(type(value), (abc.MutableSequence, abc.MutableSet, abc.MutableMapping))
+
+
+def _dict_update(dictionary, **kwargs):
+    """
+    Small utility to update a copy of a dict with the provided keyword args.
+    """
+    d = dictionary.copy()
+    d.update(kwargs)
+    return d

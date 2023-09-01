@@ -16,9 +16,15 @@ import pytest
 
 import random
 
-from param import parameterized
-from param.parameterized import ParamOverrides, shared_parameters
-from param.parameterized import default_label_formatter, no_instance_params
+from param import parameterized, Parameter
+from param._utils import _dict_update
+from param.parameterized import (
+    ParamOverrides,
+    Undefined,
+    default_label_formatter,
+    no_instance_params,
+    shared_parameters,
+)
 
 class _SomeRandomNumbers:
     def __call__(self):
@@ -1340,6 +1346,38 @@ def test_inheritance_class_attribute_behavior():
     # Should be 2?
     # https://github.com/holoviz/param/issues/718
     assert B.p == 1
+
+
+class CustomParameter(Parameter):
+
+    __slots__ = ['container']
+
+    _slot_defaults = _dict_update(Parameter._slot_defaults, container=None)
+
+    def __init__(self, default=Undefined, *, container=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
+        self.container = container
+
+
+def test_inheritance_container_slot_shallow_copied():
+
+    clist = [1, 2]
+
+    class A(param.Parameterized):
+        p = CustomParameter(container=clist)
+
+    class B(A):
+        p = CustomParameter(default=1)
+
+    clist.append(3)
+
+    assert A.param.p.container == [1, 2]
+    assert B.param.p.container == [1, 2]
+
+    B.param.p.container.append(4)
+
+    assert A.param.p.container == [1, 2]
+    assert B.param.p.container == [1, 2, 4]
 
 
 @pytest.fixture

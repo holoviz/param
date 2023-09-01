@@ -436,7 +436,6 @@ class TestSelectorParameters(unittest.TestCase):
         assert b.param.p.default == 1
         assert b.param.p.check_on_set is False
 
-
     def test_no_instantiate_when_constant(self):
         # https://github.com/holoviz/param/issues/287
         objs = [object(), object()]
@@ -446,3 +445,19 @@ class TestSelectorParameters(unittest.TestCase):
 
         a = A()
         assert a.p is objs[0]
+
+    def test_objects_not_shared_in_class_hierarchy(self):
+
+        class A(param.Parameterized):
+            p = param.Selector(objects=[1, 2], check_on_set=False)
+
+        class B(A):
+            p = param.Selector(default=2)
+
+
+        b = B()
+        b.p = 3
+
+        assert A.param.p.objects == [1, 2]
+        assert B.param.p.objects == [1, 2, 3]
+        assert b.param.p.objects == [1, 2, 3]

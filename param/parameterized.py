@@ -38,6 +38,7 @@ from ._utils import (
     DEFAULT_SIGNATURE,
     _deprecated,
     _deprecate_positional_args,
+    _dict_update,
     _is_auto_name,
     _recursive_repr,
     _validate_error_prefix,
@@ -735,15 +736,6 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     caller = partial(_caller, what=what, changed=changed, callback=callback, function=function)
     caller._watcher_name = method_name
     return caller
-
-
-def _dict_update(dictionary, **kwargs):
-    """
-    Small utility to update a copy of a dict with the provided keyword args.
-    """
-    d = dictionary.copy()
-    d.update(kwargs)
-    return d
 
 
 def _add_doc(obj, docstring):

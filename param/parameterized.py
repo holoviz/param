@@ -400,17 +400,35 @@ def iscoroutinefunction(function):
         return False
 
 
+def _instantiated_parameter(parameterized, param):
+    """
+    Given a Parameterized object and one of its class Parameter objects,
+    return the appropriate Parameter object for this instance, instantiating
+    it if need be.
+    """
+    if (getattr(parameterized._param__private, 'initialized', False) and param.per_instance and
+        not getattr(type(parameterized)._param__private, 'disable_instance_params', False)):
+        key = param.name
+
+        if key not in parameterized._param__private.params:
+            parameterized._param__private.params[key] = _instantiate_param_obj(param, parameterized)
+
+        param = parameterized._param__private.params[key]
+
+    return param
+
+
 def instance_descriptor(f):
     # If parameter has an instance Parameter, delegate setting
     def _f(self, obj, val):
-        if obj is None:
-            # obj is None when the metaclass is setting
-            return f(self, obj, val)
-        params = obj._param__private.params
-        instance_param = None if params is None else params.get(self.name)
-        if instance_param is not None and self is not instance_param:
-            instance_param.__set__(obj, val)
-            return
+        # obj is None when the metaclass is setting
+        if obj is not None:
+            params = obj._param__private.params
+            instance_param = None if params is None else params.get(self.name)
+
+            if instance_param is not None and self is not instance_param:
+                instance_param.__set__(obj, val)
+                return
         return f(self, obj, val)
     return _f
 
@@ -1785,17 +1803,10 @@ class Parameters:
         Returns the class or instance parameter
         """
         inst = self_.self
-        parameters = self_.objects(False) if inst is None else inst.param.objects(False)
-        p = parameters[key]
-        if (inst is not None and getattr(inst._param__private, 'initialized', False) and p.per_instance and
-            not getattr(self_.cls._param__private, 'disable_instance_params', False)):
+        params = self_ if inst is None else inst.param
 
-            if key not in inst._param__private.params:
-                inst._param__private.params[key] = _instantiate_param_obj(p, inst)
-
-            p = inst._param__private.params[key]
-
-        return p
+        p = params.objects(False)[key]
+        return p if inst is None else _instantiated_parameter(inst,p)
 
 
     def __dir__(self_):

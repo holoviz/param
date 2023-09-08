@@ -426,6 +426,9 @@ def instance_descriptor(f):
             params = obj._param__private.params
             instance_param = None if params is None else params.get(self.name)
 
+            if (params is not None and instance_param is None):
+                instance_param = _instantiated_parameter(obj, self)
+
             if instance_param is not None and self is not instance_param:
                 instance_param.__set__(obj, val)
                 return
@@ -1404,7 +1407,7 @@ class Parameter(_ParameterBase):
                 warnings.warn(
                     'Number.set_hook has been deprecated.',
                     category=_ParamDeprecationWarning,
-                    stacklevel=5,
+                    stacklevel=6,
                 )
 
         self._validate(val)

@@ -459,5 +459,4 @@ class TestSelectorParameters(unittest.TestCase):
         b.p = 3
 
         assert A.param.p.objects == [1, 2]
-        assert B.param.p.objects == [1, 2, 3]
         assert b.param.p.objects == [1, 2, 3]

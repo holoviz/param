@@ -1708,11 +1708,16 @@ def _instantiate_param_obj(paramobj, owner=None):
     # Shallow-copy Parameter object, with special handling for watchers
     # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
     p = paramobj
-    watchers = p.watchers
-    p.watchers = {}
-    p = copy.copy(p)
+    try:
+        # Do not copy watchers on class parameter
+        watchers = p.watchers
+        p.watchers = {}
+        p = copy.copy(p)
+    except:
+        raise
+    finally:
+        p.watchers = {k: list(v) for k, v in watchers.items()}
 
-    p.watchers = {k: list(v) for k, v in watchers.items()}
     p.owner = owner
 
     # shallow-copy any mutable slot values other than the actual default

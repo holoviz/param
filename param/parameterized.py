@@ -400,6 +400,32 @@ def iscoroutinefunction(function):
         return False
 
 
+def _instantiate_param_obj(paramobj, owner=None):
+    """Return a Parameter object suitable for instantiation given the class's Parameter object"""
+
+    # Shallow-copy Parameter object, with special handling for watchers
+    # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
+    p = paramobj
+    try:
+        # Do not copy watchers on class parameter
+        watchers = p.watchers
+        p.watchers = {}
+        p = copy.copy(p)
+    except:
+        raise
+    finally:
+        p.watchers = {k: list(v) for k, v in watchers.items()}
+
+    p.owner = owner
+
+    # shallow-copy any mutable slot values other than the actual default
+    for s in p.__class__.__slots__:
+        v = getattr(p, s)
+        if _is_mutable_container(v) and s != "default":
+            setattr(p, s, copy.copy(v))
+    return p
+
+
 def _instantiated_parameter(parameterized, param):
     """
     Given a Parameterized object and one of its class Parameter objects,
@@ -1700,32 +1726,6 @@ class _ParametersRestorer:
             self._parameters._update(self._restore)
         finally:
             self._restore = {}
-
-
-def _instantiate_param_obj(paramobj, owner=None):
-    """Return a Parameter object suitable for instantiation given the class's Parameter object"""
-
-    # Shallow-copy Parameter object, with special handling for watchers
-    # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
-    p = paramobj
-    try:
-        # Do not copy watchers on class parameter
-        watchers = p.watchers
-        p.watchers = {}
-        p = copy.copy(p)
-    except:
-        raise
-    finally:
-        p.watchers = {k: list(v) for k, v in watchers.items()}
-
-    p.owner = owner
-
-    # shallow-copy any mutable slot values other than the actual default
-    for s in p.__class__.__slots__:
-        v = getattr(p, s)
-        if _is_mutable_container(v) and s != "default":
-            setattr(p, s, copy.copy(v))
-    return p
 
 
 class Parameters:

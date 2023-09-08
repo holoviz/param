@@ -436,6 +436,7 @@ class TestSelectorParameters(unittest.TestCase):
         assert b.param.p.default == 1
         assert b.param.p.check_on_set is False
 
+
     def test_no_instantiate_when_constant(self):
         # https://github.com/holoviz/param/issues/287
         objs = [object(), object()]

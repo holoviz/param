@@ -16,10 +16,10 @@ hold a shared reference that can be updated, e.g. via the `.set`
 method or because the input was itself a reference to some object that
 can potentially be updated.
 
-When an operation is applied to an `reactive` instance, it will
+When an operation is applied to a `reactive` instance, it will
 record the operation and create a new instance using `_clone` method,
 e.g. `dfi.head()` first records that the `'head'` attribute is
-accessed, this is achieved by overriding `__getattribute__`. A new
+accessed, which is achieved by overriding `__getattribute__`. A new
 reactive object is returned, which will then record that it is
 being called, and that new object will be itself called as
 `reactive` implements `__call__`. `__call__` returns another
@@ -37,7 +37,7 @@ The `reactive` object evaluates operations lazily but whenever the
 current value is needed the operations are automatically
 evaluated. Note that even attribute access or tab-completion
 operations can result in evaluation of the pipeline. This is very
-useful in a REPL, as this allows to inspect the transformed
+useful in a REPL, as this allows inspecting the transformed
 object at any point of the pipeline, and as such provide correct
 auto-completion and docstrings. E.g. executing `dfi.A.max?` in an
 interactive REPL or notebook where it allows returning the docstring
@@ -64,7 +64,7 @@ creations of a pipeline, it is the count of instances created in the
 outer chain. In the example, that would be `dfi[]`. Each `reactive`
 instance keeps a reference to the previous instance in the chain and
 each instance tracks whether its current value is up-to-date via the
-`_dirty` attribute which is set to False if any dependency changes.
+`_dirty` attribute, which is set to False if any dependency changes.
 
 The `_method` attribute is a string that temporarily stores the
 method/attr accessed on the object, e.g. `_method` is 'head' in
@@ -185,7 +185,7 @@ class reactive_ops:
         x: object
           The value to return if the expression evaluates to True.
         y: object
-          The value to return if the expressione evaluates to False.
+          The value to return if the expression evaluates to False.
         """
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)

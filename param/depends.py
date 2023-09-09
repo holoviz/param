@@ -46,7 +46,7 @@ def transform_dependency(arg):
     """
     Transforms arguments for depends and bind functions applying any
     registered dependency transforms. This is useful for adding
-    handling for depending on object that are not simple Parameters or
+    handling for depending on objects that are not simple Parameters or
     functions with dependency definitions.
     """
     for transform in _dependency_transforms:
@@ -73,7 +73,7 @@ def eval_function_with_deps(function):
 
 def resolve_value(value):
     """
-    Resolves the value current value of a dynamic reference.
+    Resolves the current value of a dynamic reference.
     """
     if isinstance(value, (list, tuple)):
         return type(value)(resolve_value(v) for v in value)
@@ -128,7 +128,7 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
     Parameters
     ----------
     watch : bool, optional
-        Wether to invoke the function/method when the dependency is updated,
+        Whether to invoke the function/method when the dependency is updated,
         by default False
     on_init : bool, optional
         Whether to invoke the function/method when the instance is created,
@@ -163,7 +163,7 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
             owner = 'None' if dep.owner is None else '%s class' % type(dep.owner).__name__
             raise ValueError('Parameters supplied to the depends decorator, '
                              'must be bound to a Parameterized class or '
-                             'instance not %s.' % owner)
+                             'instance, not %s.' % owner)
 
     if (any(isinstance(dep, Parameter) for dep in deps) and
         any(isinstance(dep, str) for dep in deps)):

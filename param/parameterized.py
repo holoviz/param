@@ -449,12 +449,9 @@ def instance_descriptor(f):
     def _f(self, obj, val):
         # obj is None when the metaclass is setting
         if obj is not None:
-            params = obj._param__private.params
-            instance_param = None if params is None else params.get(self.name)
-
-            if (params is not None and instance_param is None):
+            instance_param = obj._param__private.params.get(self.name)
+            if instance_param is None:
                 instance_param = _instantiated_parameter(obj, self)
-
             if instance_param is not None and self is not instance_param:
                 instance_param.__set__(obj, val)
                 return
@@ -1812,10 +1809,8 @@ class Parameters:
         """
         inst = self_.self
         params = self_ if inst is None else inst.param
-
         p = params.objects(False)[key]
-        return p if inst is None else _instantiated_parameter(inst,p)
-
+        return p if inst is None else _instantiated_parameter(inst, p)
 
     def __dir__(self_):
         """

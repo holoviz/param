@@ -3575,11 +3575,10 @@ def _name_if_set(parameterized):
 
 def _get_param_repr(key, val, p, truncate=40):
     """HTML representation for a single Parameter object and its value"""
-    if hasattr(val, "_repr_html_"):
-        try:
-            value = val._repr_html_(open=False)
-        except:
-            value = val._repr_html_()
+    if isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
+        value = val.param._repr_html_(open=False)
+    elif hasattr(val, "_repr_html_"):
+        value = val._repr_html_()
     else:
         rep = repr(val)
         value = (rep[:truncate] + '..') if len(rep) > truncate else rep

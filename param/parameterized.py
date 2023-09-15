@@ -419,13 +419,13 @@ def _instantiate_param_obj(paramobj, owner=None):
     return p
 
 
-def _instantiated_parameter(parameterized, param, force=False):
+def _instantiated_parameter(parameterized, param):
     """
     Given a Parameterized object and one of its class Parameter objects,
     return the appropriate Parameter object for this instance, instantiating
     it if need be.
     """
-    if ((getattr(parameterized._param__private, 'initialized', False) or force) and param.per_instance and
+    if (getattr(parameterized._param__private, 'initialized', False) and param.per_instance and
         not getattr(type(parameterized)._param__private, 'disable_instance_params', False)):
         key = param.name
 
@@ -2702,11 +2702,7 @@ class Parameters:
                     watchers[parameter_name][what] = []
                 getattr(watchers[parameter_name][what], action)(watcher)
             else:
-                # If watcher is registered before instance is set up
-                # we must force instance parameter creation
                 param_obj = self_[parameter_name]
-                if action == 'append' and inst is not None and not inst._param__private.initialized:
-                    param_obj = _instantiated_parameter(inst, param_obj, force=True)
                 watchers = param_obj.watchers
                 if what not in watchers:
                     watchers[what] = []
@@ -3867,9 +3863,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_params(**params)
         object_count += 1
 
-        self.param._update_deps(init=True)
-
         self._param__private.initialized = True
+
+        self.param._update_deps(init=True)
 
     @property
     def param(self):

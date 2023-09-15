@@ -2693,17 +2693,15 @@ class Parameters:
                 raise ValueError("{} parameter was not found in list of "
                                  "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
-            inst = self_.self
-            if inst is not None and what == "value":
-                watchers = inst._param__private.watchers
+            if self_.self is not None and what == "value":
+                watchers = self_.self._param__private.watchers
                 if parameter_name not in watchers:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
                     watchers[parameter_name][what] = []
                 getattr(watchers[parameter_name][what], action)(watcher)
             else:
-                param_obj = self_[parameter_name]
-                watchers = param_obj.watchers
+                watchers = self_[parameter_name].watchers
                 if what not in watchers:
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)

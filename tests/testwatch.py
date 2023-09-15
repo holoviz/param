@@ -98,6 +98,9 @@ class TestWatch(unittest.TestCase):
         self.accumulator = 0
         self.list_accumulator = []
 
+    def tearDown(self):
+        SimpleWatchExample.param.d.bounds = None
+
     def test_triggered_when_changed(self):
         def accumulator(change):
             self.accumulator += change.new
@@ -512,6 +515,30 @@ class TestWatch(unittest.TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'set')
+
+    def test_watch_param_slot(self):
+        obj = SimpleWatchExample()
+
+        cls_events = []
+        SimpleWatchExample.param.watch(cls_events.append, 'd', what='bounds')
+
+        obj.param.objects('existing')['d'].bounds = (1, 2)
+
+        assert len(cls_events) == 1
+        assert cls_events[0].name == 'd'
+        assert cls_events[0].what == 'bounds'
+        assert cls_events[0].new == (1, 2)
+
+        inst_events = []
+        obj.param.watch(inst_events.append, 'd', what='bounds')
+
+        obj.param.objects('existing')['d'].bounds = (3, 4)
+
+        assert len(cls_events) == 1
+        assert len(inst_events) == 1
+        assert inst_events[0].name == 'd'
+        assert inst_events[0].what == 'bounds'
+        assert inst_events[0].new == (3, 4)
 
     def test_watch_deepcopy(self):
         obj = SimpleWatchExample()

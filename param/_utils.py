@@ -6,6 +6,7 @@ import warnings
 
 from textwrap import dedent
 from threading import get_ident
+from collections import abc
 
 DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
@@ -171,3 +172,17 @@ def _validate_error_prefix(parameter, attribute=None):
         except Exception:
             pass
     return ' '.join(out)
+
+
+def _is_mutable_container(value):
+    """True for mutable containers, which typically need special handling when being copied"""
+    return issubclass(type(value), (abc.MutableSequence, abc.MutableSet, abc.MutableMapping))
+
+
+def _dict_update(dictionary, **kwargs):
+    """
+    Small utility to update a copy of a dict with the provided keyword args.
+    """
+    d = dictionary.copy()
+    d.update(kwargs)
+    return d

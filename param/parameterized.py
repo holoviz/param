@@ -38,10 +38,12 @@ from ._utils import (
     DEFAULT_SIGNATURE,
     _deprecated,
     _deprecate_positional_args,
+    _dict_update,
     _is_auto_name,
     _recursive_repr,
     _validate_error_prefix,
     ParamDeprecationWarning as _ParamDeprecationWarning,
+    _is_mutable_container,
 )
 
 try:
@@ -398,17 +400,61 @@ def iscoroutinefunction(function):
         return False
 
 
+def _instantiate_param_obj(paramobj, owner=None):
+    """Return a Parameter object suitable for instantiation given the class's Parameter object"""
+
+    # Shallow-copy Parameter object, with special handling for watchers
+    # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
+    p = paramobj
+    try:
+        # Do not copy watchers on class parameter
+        watchers = p.watchers
+        p.watchers = {}
+        p = copy.copy(p)
+    except:
+        raise
+    finally:
+        p.watchers = {k: list(v) for k, v in watchers.items()}
+
+    p.owner = owner
+
+    # shallow-copy any mutable slot values other than the actual default
+    for s in p.__class__.__slots__:
+        v = getattr(p, s)
+        if _is_mutable_container(v) and s != "default":
+            setattr(p, s, copy.copy(v))
+    return p
+
+
+def _instantiated_parameter(parameterized, param):
+    """
+    Given a Parameterized object and one of its class Parameter objects,
+    return the appropriate Parameter object for this instance, instantiating
+    it if need be.
+    """
+    if (getattr(parameterized._param__private, 'initialized', False) and param.per_instance and
+        not getattr(type(parameterized)._param__private, 'disable_instance_params', False)):
+        key = param.name
+
+        if key not in parameterized._param__private.params:
+            parameterized._param__private.params[key] = _instantiate_param_obj(param, parameterized)
+
+        param = parameterized._param__private.params[key]
+
+    return param
+
+
 def instance_descriptor(f):
     # If parameter has an instance Parameter, delegate setting
     def _f(self, obj, val):
-        if obj is None:
-            # obj is None when the metaclass is setting
-            return f(self, obj, val)
-        params = obj._param__private.params
-        instance_param = None if params is None else params.get(self.name)
-        if instance_param is not None and self is not instance_param:
-            instance_param.__set__(obj, val)
-            return
+        # obj is None when the metaclass is setting
+        if obj is not None:
+            instance_param = obj._param__private.params.get(self.name)
+            if instance_param is None:
+                instance_param = _instantiated_parameter(obj, self)
+            if instance_param is not None and self is not instance_param:
+                instance_param.__set__(obj, val)
+                return
         return f(self, obj, val)
     return _f
 
@@ -734,15 +780,6 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
     caller = partial(_caller, what=what, changed=changed, callback=callback, function=function)
     caller._watcher_name = method_name
     return caller
-
-
-def _dict_update(dictionary, **kwargs):
-    """
-    Small utility to update a copy of a dict with the provided keyword args.
-    """
-    d = dictionary.copy()
-    d.update(kwargs)
-    return d
 
 
 def _add_doc(obj, docstring):
@@ -1393,7 +1430,7 @@ class Parameter(_ParameterBase):
                 warnings.warn(
                     'Number.set_hook has been deprecated.',
                     category=_ParamDeprecationWarning,
-                    stacklevel=5,
+                    stacklevel=6,
                 )
 
         self._validate(val)
@@ -1771,26 +1808,9 @@ class Parameters:
         Returns the class or instance parameter
         """
         inst = self_.self
-        parameters = self_.objects(False) if inst is None else inst.param.objects(False)
-        p = parameters[key]
-        if (inst is not None and getattr(inst._param__private, 'initialized', False) and p.per_instance and
-            not getattr(self_.cls._param__private, 'disable_instance_params', False)):
-            if key not in inst._param__private.params:
-                try:
-                    # Do not copy watchers on class parameter
-                    watchers = p.watchers
-                    p.watchers = {}
-                    p = copy.copy(p)
-                except:
-                    raise
-                finally:
-                    p.watchers = {k: list(v) for k, v in watchers.items()}
-                p.owner = inst
-                inst._param__private.params[key] = p
-            else:
-                p = inst._param__private.params[key]
-        return p
-
+        params = self_ if inst is None else inst.param
+        p = params.objects(False)[key]
+        return p if inst is None else _instantiated_parameter(inst, p)
 
     def __dir__(self_):
         """
@@ -1845,10 +1865,10 @@ class Parameters:
         """
         Initialize default and keyword parameter values.
 
-        First, ensures that all Parameters with 'instantiate=True' (typically
-        used for mutable Parameters) are copied directly into each object, to
-        ensure that there is an independent copy (to avoid surprising aliasing
-        errors). Second, ensures that Parameters with 'constant=True' are
+        First, ensures that values for all Parameters with 'instantiate=True'
+        (typically used for mutable Parameters) are copied directly into each object,
+        to ensure that there is an independent copy of the value (to avoid surprising
+        aliasing errors). Second, ensures that Parameters with 'constant=True' are
         referenced on the instance, to make sure that setting a constant
         Parameter on the class doesn't affect already created instances. Then
         sets each of the keyword arguments, raising when any of them are not
@@ -3357,6 +3377,12 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     setattr(param, slot, default_val)
+
+            # Avoid crosstalk between mutable slot values in different Parameter objects
+            if slot != "default":
+                v = getattr(param, slot)
+                if _is_mutable_container(v):
+                    setattr(param, slot, copy.copy(v))
 
         # Once all the static slots have been filled in, fill in the dynamic ones
         # (which are only allowed to use static values or results are undefined)

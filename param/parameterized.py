@@ -419,13 +419,13 @@ def _instantiate_param_obj(paramobj, owner=None):
     return p
 
 
-def _instantiated_parameter(parameterized, param):
+def _instantiated_parameter(parameterized, param, force=False):
     """
     Given a Parameterized object and one of its class Parameter objects,
     return the appropriate Parameter object for this instance, instantiating
     it if need be.
     """
-    if (getattr(parameterized._param__private, 'initialized', False) and param.per_instance and
+    if ((getattr(parameterized._param__private, 'initialized', False) or force) and param.per_instance and
         not getattr(type(parameterized)._param__private, 'disable_instance_params', False)):
         key = param.name
 
@@ -2693,15 +2693,21 @@ class Parameters:
                 raise ValueError("{} parameter was not found in list of "
                                  "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
-            if self_.self is not None and what == "value":
-                watchers = self_.self._param__private.watchers
+            inst = self_.self
+            if inst is not None and what == "value":
+                watchers = inst._param__private.watchers
                 if parameter_name not in watchers:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
                     watchers[parameter_name][what] = []
                 getattr(watchers[parameter_name][what], action)(watcher)
             else:
-                watchers = self_[parameter_name].watchers
+                # If watcher is registered before instance is set up
+                # we must force instance parameter creation
+                param_obj = self_[parameter_name]
+                if action == 'append' and inst is not None and not inst._param__private.initialized:
+                    param_obj = _instantiated_parameter(inst, param_obj, force=True)
+                watchers = param_obj.watchers
                 if what not in watchers:
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)

@@ -18,7 +18,7 @@ class TestPathParameters(unittest.TestCase):
         tmpdir1 = tempfile.mkdtemp()
 
         self.curdir = os.getcwd()
-        # Chanding the directory to tmpdir1 to test that Path resolves relative
+        # Changing the directory to tmpdir1 to test that Path resolves relative
         # paths to absolute paths automatically.
         os.chdir(tmpdir1)
 
@@ -135,7 +135,6 @@ class TestPathParameters(unittest.TestCase):
         # isn't designed to be run from the tmpdir directory.
         startd = os.getcwd()
         try:
-            os.chdir(self.curdir)
             # a = param.Path()
             # b = param.Path(self.fb)
             # c = param.Path('a.txt', search_paths=[tmpdir1])
@@ -144,6 +143,8 @@ class TestPathParameters(unittest.TestCase):
                 a = param.Path()
                 b = param.Path()
                 c = param.Path()
+
+            os.chdir(self.curdir)
 
             assert B.a is None
             assert B.b == self.fb

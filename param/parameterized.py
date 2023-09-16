@@ -1151,9 +1151,10 @@ class Parameter(_ParameterBase):
         per_instance=True
     )
 
-    # During parameter instantiation we have to record which slots
-    # require the default value to be re-validated. Any slots in this
-    # list do not have to trigger such re-validation.
+    # Parameters can be updated during Parameterized class creation when they
+    # are defined multiple times in a class hierarchy. We have to record which
+    # Parameter slots require the default value to be re-validated. Any slots
+    # in this list do not have to trigger such re-validation.
     _non_validated_slots = ['_label', 'doc', 'name', 'precedence',
                             'constant', 'pickle_default_value',
                             'watchers', 'owner']
@@ -3356,8 +3357,9 @@ class ParameterizedMetaclass(type):
         slot_overridden = False
         for slot in slots.keys():
             # Search up the hierarchy until param.slot (which has to
-            # be obtained using getattr(param,slot)) is not Undefined, or
-            # we run out of classes to search.
+            # be obtained using getattr(param,slot)) is not Undefined,
+            # is a new value (using identity) or we run out of classes
+            # to search.
             for scls in supers:
                 # Class may not define parameter or slot might not be
                 # there because could be a more general type of Parameter
@@ -3367,7 +3369,9 @@ class ParameterizedMetaclass(type):
 
                 new_value = getattr(new_param, slot)
                 old_value = slot_values.get(slot, Undefined)
-                if new_value is Undefined or new_value is old_value:
+                if new_value is Undefined:
+                    continue
+                elif new_value is old_value:
                     continue
                 elif old_value is Undefined:
                     slot_values[slot] = new_value
@@ -3414,6 +3418,10 @@ class ParameterizedMetaclass(type):
 
         # If the type has changed to a more specific or different type
         # or a slot value has been changed validate the default again.
+
+        # Hack: Had to disable re-validation of None values because the
+        # automatic appending of an unknown value on Selector opens a whole
+        # rabbit hole in regard to the validation.
         if type_change or slot_overridden and param.default is not None:
             param._validate(param.default)
 

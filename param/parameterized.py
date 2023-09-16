@@ -2217,9 +2217,9 @@ class Parameters:
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
             raise RuntimeError(
-                'Cannot look up instance Parameter objects before the instance '
-                'has been fully initialized. Ensure you have called super().__init__() '
-                'in the instance constructor before trying to access instance '
+                'Cannot look up instantiated Parameter objects until the Parameterized instance '
+                'has been fully initialized. Ensure you have called super().__init__(**params) '
+                'in your Parameterized constructor before trying to access instance '
                 'parameter objects.'
             )
 
@@ -2262,9 +2262,9 @@ class Parameters:
         """
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
-                'Triggering watchers on a partially initialized instance '
-                'is not supported. Ensure you have called super().__init__() in '
-                'the instance constructor before trying to set up a watcher.'
+                'Triggering watchers on a partially initialized Parameterized instance '
+                'is not supported. Ensure you have called super().__init__(**params) in '
+                'the Parameterized instance constructor before trying to set up a watcher.'
             )
 
         trigger_params = [p for p in self_.self_or_cls.param
@@ -2712,9 +2712,9 @@ class Parameters:
     def _register_watcher(self_, action, watcher, what='value'):
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
-                '(Un)registering a watcher on a partially initialized instance '
-                'is not supported. Ensure you have called super().__init__() in '
-                'the instance constructor before trying to set up a watcher.'
+                '(Un)registering a watcher on a partially initialized Parameterized instance '
+                'is not supported. Ensure you have called super().__init__(**) in '
+                'the Parameterized instance constructor before trying to set up a watcher.'
             )
 
         parameter_names = watcher.parameter_names

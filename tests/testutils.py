@@ -6,6 +6,8 @@ import pytest
 
 from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod
+from param._utils import _is_mutable_container
+
 
 try:
     import numpy as np
@@ -376,3 +378,18 @@ def test_error_prefix_set_instance():
 
     with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
         p.x = 'wrong'
+
+
+@pytest.mark.parametrize(
+        ('obj,ismutable'),
+        [
+            ([1, 2], True),
+            ({1, 2}, True),
+            ({'a': 1, 'b': 2}, True),
+            ((1, 2), False),
+            ('string', False),
+            (frozenset([1, 2]), False)
+        ]
+)
+def test__is_mutable_container(obj, ismutable):
+    assert _is_mutable_container(obj) is ismutable

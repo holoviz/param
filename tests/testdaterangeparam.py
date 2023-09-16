@@ -196,3 +196,23 @@ class TestDateRange(unittest.TestCase):
         ):
             class Q(param.Parameterized):
                 a = param.DateRange(default=(np.datetime64('2022-10-01T00:00'), np.datetime64('2022-01-01T00:00')))
+
+    def test_validate_bounds_wrong_type_lower(self):
+        msg = re.escape("DateRange parameter lower bound can only be None or a date/datetime value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.DateRange(bounds=('a', dt.datetime(2017,2,27)))
+
+    def test_validate_bounds_wrong_type_upper(self):
+        msg = re.escape("DateRange parameter upper bound can only be None or a date/datetime value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.DateRange(bounds=(dt.datetime(2017,2,27), 'b'))
+
+    def test_validate_softbounds_wrong_type_lower(self):
+        msg = re.escape("DateRange parameter lower softbound can only be None or a date/datetime value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.DateRange(softbounds=('a', dt.datetime(2017,2,27)))
+
+    def test_validate_softbounds_wrong_type_upper(self):
+        msg = re.escape("DateRange parameter upper softbound can only be None or a date/datetime value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.DateRange(softbounds=(dt.datetime(2017,2,27), 'b'))

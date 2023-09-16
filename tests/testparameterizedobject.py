@@ -1167,6 +1167,36 @@ def test_inheritance_default_validation_with_more_specific_type():
     assert "NumericTuple parameter 'B.p' only takes numeric values, not <class 'str'>" in str(excinfo.value)
 
 
+def test_inheritance_with_changing_bounds():
+    class A(param.Parameterized):
+        p = param.Number(default=5)
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number(bounds=(1, 3))
+    assert "Number parameter 'p' must be at least 1, not 0.0." in str(excinfo.value)
+
+
+def test_inheritance_with_changing_default():
+    class A(param.Parameterized):
+        p = param.Number(default=5, bounds=(3, 10))
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number(default=1)
+    assert "Number parameter 'B.p' must be at least 3, not 1." in str(excinfo.value)
+
+
+def test_inheritance_with_changing_class_():
+    class A(param.Parameterized):
+        p = param.ClassSelector(class_=int, default=5)
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.ClassSelector(class_=str)
+    assert "ClassSelector parameter 'B.p' value must be an instance of str, not 5." in str(excinfo.value)
+
+
 def test_inheritance_from_multiple_params_class():
     class A(param.Parameterized):
         p = param.Parameter(doc='foo')

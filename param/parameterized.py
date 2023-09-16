@@ -403,20 +403,13 @@ def iscoroutinefunction(function):
 def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
 
-    # Shallow-copy Parameter object, with special handling for watchers
-    # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
-    p = paramobj
-    try:
-        # Do not copy watchers on class parameter
-        watchers = p.watchers
-        p.watchers = {}
-        p = copy.copy(p)
-    except:
-        raise
-    finally:
-        p.watchers = {k: list(v) for k, v in watchers.items()}
-
+    # Shallow-copy Parameter object
+    p = copy.copy(paramobj)
     p.owner = owner
+
+    # Reset watchers since class parameter watcher should not execute
+    # on instance parameters
+    p.watchers = {}
 
     # shallow-copy any mutable slot values other than the actual default
     for s in p.__class__.__slots__:
@@ -1150,6 +1143,14 @@ class Parameter(_ParameterBase):
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
         per_instance=True
     )
+
+    # Parameters can be updated during Parameterized class creation when they
+    # are defined multiple times in a class hierarchy. We have to record which
+    # Parameter slots require the default value to be re-validated. Any slots
+    # in this list do not have to trigger such re-validation.
+    _non_validated_slots = ['_label', 'doc', 'name', 'precedence',
+                            'constant', 'pickle_default_value',
+                            'watchers', 'owner']
 
     @typing.overload
     def __init__(
@@ -3367,27 +3368,38 @@ class ParameterizedMetaclass(type):
                 type_change = True
         del slots['instantiate']
 
-        callables = {}
+        callables, slot_values = {}, {}
+        slot_overridden = False
         for slot in slots.keys():
-            superclasses = iter(supers)
-
             # Search up the hierarchy until param.slot (which has to
-            # be obtained using getattr(param,slot)) is not Undefined, or
-            # we run out of classes to search.
-            while getattr(param,slot) is Undefined:
-                try:
-                    param_super_class = next(superclasses)
-                except StopIteration:
+            # be obtained using getattr(param,slot)) is not Undefined,
+            # is a new value (using identity) or we run out of classes
+            # to search.
+            for scls in supers:
+                # Class may not define parameter or slot might not be
+                # there because could be a more general type of Parameter
+                new_param = scls.__dict__.get(param_name)
+                if new_param is None or not hasattr(new_param, slot):
+                    continue
+
+                new_value = getattr(new_param, slot)
+                old_value = slot_values.get(slot, Undefined)
+                if new_value is Undefined:
+                    continue
+                elif new_value is old_value:
+                    continue
+                elif old_value is Undefined:
+                    slot_values[slot] = new_value
+                    # If we already know we have to re-validate abort
+                    # early to avoid costly lookups
+                    if slot_overridden or type_change:
+                        break
+                else:
+                    if slot not in param._non_validated_slots:
+                        slot_overridden = True
                     break
 
-                new_param = param_super_class.__dict__.get(param_name)
-                if new_param is not None and hasattr(new_param,slot):
-                    # (slot might not be there because could be a more
-                    # general type of Parameter)
-                    new_value = getattr(new_param,slot)
-                    if new_value is not Undefined:
-                        setattr(param, slot, new_value)
-            if getattr(param, slot) is Undefined:
+            if slot_values.get(slot, Undefined) is Undefined:
                 try:
                     default_val = param._slot_defaults[slot]
                 except KeyError as e:
@@ -3398,7 +3410,11 @@ class ParameterizedMetaclass(type):
                 if callable(default_val):
                     callables[slot] = default_val
                 else:
-                    setattr(param, slot, default_val)
+                    slot_values[slot] = default_val
+
+        # Now set the actual slot values
+        for slot, value in slot_values.items():
+            setattr(param, slot, value)
 
             # Avoid crosstalk between mutable slot values in different Parameter objects
             if slot != "default":
@@ -3416,8 +3432,12 @@ class ParameterizedMetaclass(type):
         param._update_state()
 
         # If the type has changed to a more specific or different type
-        # validate the default again.
-        if type_change:
+        # or a slot value has been changed validate the default again.
+
+        # Hack: Had to disable re-validation of None values because the
+        # automatic appending of an unknown value on Selector opens a whole
+        # rabbit hole in regard to the validation.
+        if type_change or slot_overridden and param.default is not None:
             param._validate(param.default)
 
     def get_param_descriptor(mcs,param_name):
@@ -3890,9 +3910,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_params(**params)
         object_count += 1
 
-        self.param._update_deps(init=True)
-
         self._param__private.initialized = True
+
+        self.param._update_deps(init=True)
 
     @property
     def param(self):

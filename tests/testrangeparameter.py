@@ -114,10 +114,18 @@ class TestRangeParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             self.P.g = None
 
-    def test_initialization_out_of_bounds(self):
+    def test_initialization_out_of_bounds_lower(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("Attribute 'bound' of Range parameter 'q' must be in range '[0, 1]'.")
+            match=re.escape("Range parameter 'q' lower bound must be in range [0, 1], not -1.")
+        ):
+            class Q(param.Parameterized):
+                q = param.Range((-1, 1), bounds=(0, 1))
+
+    def test_initialization_out_of_bounds_upper(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Range parameter 'q' upper bound must be in range [0, 1], not 2.")
         ):
             class Q(param.Parameterized):
                 q = param.Range((0, 2), bounds=(0, 1))
@@ -125,32 +133,29 @@ class TestRangeParameters(unittest.TestCase):
     def test_set_exclusive_out_of_bounds_upper(self):
         class Q(param.Parameterized):
             q = param.Range(bounds=(0, 10), inclusive_bounds=(True, False))
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Range parameter 'Q.q' upper bound must be in range [0, 10), not 10.")
+        ):
             Q.q = (0, 10)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_exclusive_out_of_bounds_lower(self):
         class Q(param.Parameterized):
             q = param.Range(bounds=(0, 10), inclusive_bounds=(False, True))
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Range parameter 'Q.q' lower bound must be in range (0, 10], not 0.")
+        ):
             Q.q = (0, 10)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_set_out_of_bounds(self):
         class Q(param.Parameterized):
             q = param.Range(bounds=(0, 10))
-        try:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Range parameter 'Q.q' upper bound must be in range [0, 10], not 11.")
+        ):
             Q.q = (5, 11)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("No exception raised on out-of-bounds date")
 
     def test_get_soft_bounds(self):
         q = param.Range((1,3), bounds=(0, 10), softbounds=(1, 9))
@@ -188,3 +193,23 @@ class TestRangeParameters(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, msg):
             param.Range(bounds=(0, 10), step=0)
+
+    def test_validate_bounds_wrong_type_lower(self):
+        msg = re.escape("Range parameter lower bound can only be None or a numerical value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.Range(bounds=('a', 1))
+
+    def test_validate_bounds_wrong_type_upper(self):
+        msg = re.escape("Range parameter upper bound can only be None or a numerical value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.Range(bounds=(0, 'b'))
+
+    def test_validate_softbounds_wrong_type_lower(self):
+        msg = re.escape("Range parameter lower softbound can only be None or a numerical value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.Range(softbounds=('a', 1))
+
+    def test_validate_softbounds_wrong_type_upper(self):
+        msg = re.escape("Range parameter upper softbound can only be None or a numerical value, not <class 'str'>.")
+        with pytest.raises(ValueError, match=msg):
+            param.Range(softbounds=(0, 'b'))

@@ -403,20 +403,13 @@ def iscoroutinefunction(function):
 def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
 
-    # Shallow-copy Parameter object, with special handling for watchers
-    # (from try/except/finally in Parameters.__getitem__ in https://github.com/holoviz/param/pull/306)
-    p = paramobj
-    try:
-        # Do not copy watchers on class parameter
-        watchers = p.watchers
-        p.watchers = {}
-        p = copy.copy(p)
-    except:
-        raise
-    finally:
-        p.watchers = {k: list(v) for k, v in watchers.items()}
-
+    # Shallow-copy Parameter object
+    p = copy.copy(paramobj)
     p.owner = owner
+
+    # Reset watchers since class parameter watcher should not execute
+    # on instance parameters
+    p.watchers = {}
 
     # shallow-copy any mutable slot values other than the actual default
     for s in p.__class__.__slots__:
@@ -3895,9 +3888,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_params(**params)
         object_count += 1
 
-        self.param._update_deps(init=True)
-
         self._param__private.initialized = True
+
+        self.param._update_deps(init=True)
 
     @property
     def param(self):

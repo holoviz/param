@@ -98,6 +98,9 @@ class TestWatch(unittest.TestCase):
         self.accumulator = 0
         self.list_accumulator = []
 
+    def tearDown(self):
+        SimpleWatchExample.param.d.bounds = None
+
     def test_triggered_when_changed(self):
         def accumulator(change):
             self.accumulator += change.new
@@ -512,6 +515,91 @@ class TestWatch(unittest.TestCase):
         self.assertEqual(args[1].old, 0)
         self.assertEqual(args[1].new, 0)
         self.assertEqual(args[1].type, 'set')
+
+    def test_watch_param_slot(self):
+        obj = SimpleWatchExample()
+
+        cls_events = []
+        SimpleWatchExample.param.watch(cls_events.append, 'd', what='bounds')
+
+        obj.param.objects('existing')['d'].bounds = (1, 2)
+
+        assert len(cls_events) == 1
+        assert cls_events[0].name == 'd'
+        assert cls_events[0].what == 'bounds'
+        assert cls_events[0].new == (1, 2)
+
+        inst_events = []
+        obj.param.watch(inst_events.append, 'd', what='bounds')
+
+        obj.param.objects('existing')['d'].bounds = (3, 4)
+
+        assert len(cls_events) == 1
+        assert len(inst_events) == 1
+        assert inst_events[0].name == 'd'
+        assert inst_events[0].what == 'bounds'
+        assert inst_events[0].new == (3, 4)
+
+    def test_param_watch_no_side_effect(self):
+        # Example 1 of https://github.com/holoviz/param/issues/829
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        store = []
+        P.param.watch(store.append, 'x')
+
+        P.x = 10
+
+        assert len(store) == 1
+        assert 'value' in P.param.x.watchers
+
+        p = P()
+
+        assert 'value' in P.param.x.watchers
+
+        # Checking this does not have bad side-effects
+        p.param.x
+
+        # Watcher still on the class Parameter
+        assert 'value' in P.param.x.watchers
+        # Watcher not on the instance
+        assert p.param.x.watchers == {}
+
+        P.x = 20
+        # Watcher still triggered
+        assert len(store) == 2
+
+        p.x = 30
+        # Watcher not triggerd on instance update
+        assert len(store) == 2
+
+    def test_param_watch_multiple_instances(self):
+        # Example 4 of https://github.com/holoviz/param/issues/829
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+            l = param.List([])
+
+            @param.depends('x:constant', watch=True)
+            def cb(self):
+                self.l.append(self.param.x.constant)
+
+        assert P.param.x.watchers == {}
+
+        p = P()
+
+        # Creating the instance ???
+        assert P.param.x.watchers == {}
+
+        p2 = P()
+
+        # Modify constant on p2.param.x
+        p2.param.x.constant = True
+
+        # The event should only trigger on p2, not p
+        assert p2.l == [True]
+        assert p.l == []
 
     def test_watch_deepcopy(self):
         obj = SimpleWatchExample()

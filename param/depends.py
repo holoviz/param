@@ -153,6 +153,8 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
     for dep in deps:
         if isinstance(dep, str):
             string_specs = True
+        elif hasattr(dep, '_dinfo'):
+            pass
         elif not isinstance(dep, Parameter):
             raise ValueError('The depends decorator only accepts string '
                              'types referencing a parameter or parameter '
@@ -325,7 +327,6 @@ def bind(function, *args, watch=False, **kwargs):
         @depends(**dependencies, watch=watch)
         def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
-
             return eval_fn()(*combined_args, **combined_kwargs)
     wrapped.__bound_function__ = function
     wrapped.reactive = lambda: reactive(wrapped)

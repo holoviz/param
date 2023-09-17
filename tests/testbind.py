@@ -39,6 +39,12 @@ def test_bind_constant_args_and_kwargs():
 def test_bind_constant_args_and_kwargs_partial():
     assert bind(identity, 1, bar=3)(2, baz=4) == ((1, 2), {'bar': 3, 'baz': 4})
 
+def test_curry_bind_args():
+    assert bind(bind(identity, 1), 2)() == ((1, 2), {})
+
+def test_curry_bind_kwargs():
+    assert bind(bind(identity, foo=1), bar=2)() == ((), {'foo': 1, 'bar': 2})
+
 def test_bind_class_param_as_arg():
     bound_fn = bind(identity, Parameters.param.string)
     assert bound_fn() == (('string',), {})
@@ -138,6 +144,18 @@ def test_bind_instance_params_and_constants_as_args_and_kwargs():
     assert bound_fn() == (('foo', 'baz',), {'num': 3.14, 'bar': 6})
     P.number = 6.28
     assert bound_fn() == (('foo', 'baz',), {'num': 6.28, 'bar': 6})
+
+def test_bind_curry_function_with_deps():
+    P = Parameters()
+    bound_fn = bind(
+        identity, P.param.string, num=P.param.number
+    )
+    curried_fn = bind(bound_fn, const=3)
+    assert curried_fn() == (('string',), {'num': 3.14, 'const': 3})
+    P.string = 'baz'
+    assert curried_fn() == (('baz',), {'num': 3.14, 'const': 3})
+    P.number = 6.28
+    assert curried_fn() == (('baz',), {'num': 6.28, 'const': 3})
 
 def test_bind_bound_function_to_arg():
     P = Parameters(integer=1)

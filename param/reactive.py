@@ -56,9 +56,9 @@ attribute of each instance. They contain 4 keys:
 
 The `_depth` attribute starts at 0 and is incremented by 1 every time
 a new `reactive` instance is created part of a chain.  The root
-instance in an reactive has a `_depth` of 0. An reactive can
-consist of multiple chains, such as `dfi[dfi.A > 1]`, as the
-`reactive` instance is referenced twice in the reactive. As a
+instance in a reactive reactive has a `_depth` of 0. A reactive
+expression can consist of multiple chains, such as `dfi[dfi.A > 1]`,
+as the `reactive` instance is referenced twice in the reactive. As a
 consequence `_depth` is not the total count of `reactive` instance
 creations of a pipeline, it is the count of instances created in the
 outer chain. In the example, that would be `dfi[]`. Each `reactive`

@@ -1,8 +1,22 @@
 import math
 import operator
 
-import numpy as np
-import pandas as pd
+try:
+    import numpy as np
+except ImportError:
+    if os.getenv('PARAM_TEST_NUMPY','0') == '1':
+        raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
+    else:
+        raise unittest.SkipTest("numpy not available")
+
+try:
+    import pandas as pd
+except ImportError:
+    if os.getenv('PARAM_TEST_PANDAS','0') == '1':
+        raise ImportError("PARAM_TEST_PANDAS=1 but pandas not available.")
+    else:
+        raise unittest.SkipTest("pandas not available")
+
 import param
 import pytest
 

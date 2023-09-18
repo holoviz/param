@@ -2215,6 +2215,14 @@ class Parameters:
         instance parameters to be returned by setting
         instance='existing'.
         """
+        if self_.self is not None and not self_.self._param__private.initialized and instance is True:
+            raise RuntimeError(
+                'Cannot look up instantiated Parameter objects until the Parameterized instance '
+                'has been fully initialized. Ensure you have called super().__init__(**params) '
+                'in your Parameterized constructor before trying to access instance '
+                'parameter objects.'
+            )
+
         cls = self_.cls
         # We cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
@@ -2252,6 +2260,13 @@ class Parameters:
         changed for a Parameter of type Event, setting it to True so
         that it is clear which Event parameter has been triggered.
         """
+        if self_.self is not None and not self_.self._param__private.initialized:
+            raise RuntimeError(
+                'Triggering watchers on a partially initialized Parameterized instance '
+                'is not supported. Ensure you have called super().__init__(**params) in '
+                'the Parameterized instance constructor before trying to set up a watcher.'
+            )
+
         trigger_params = [p for p in self_.self_or_cls.param
                           if hasattr(self_.self_or_cls.param[p], '_autotrigger_value')]
         triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
@@ -2695,6 +2710,13 @@ class Parameters:
         return deps, dynamic_deps
 
     def _register_watcher(self_, action, watcher, what='value'):
+        if self_.self is not None and not self_.self._param__private.initialized:
+            raise RuntimeError(
+                '(Un)registering a watcher on a partially initialized Parameterized instance '
+                'is not supported. Ensure you have called super().__init__(**) in '
+                'the Parameterized instance constructor before trying to set up a watcher.'
+            )
+
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:

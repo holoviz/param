@@ -51,7 +51,7 @@ class TestHTMLRepr:
             c = param.ClassSelector(class_=(str, int))
 
         rhtml = _parameterized_repr_html(P, True)
-        assert 'None | str | int' in rhtml
+        assert 'str | int' in rhtml
 
     def test_html_repr_title_class(self, P):
         html = P.param._repr_html_()

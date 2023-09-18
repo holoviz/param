@@ -3662,15 +3662,12 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
 
     tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
 
-    doc = "" if p.doc is None else truncate(p.doc.strip(), doclen)
-
     return (
         f'<tr>'
         f'  <td><p{tooltip}>{key}</p></td>'
         f'  <td style="max-width: 200px;">{value}</td>'
         f'  <td>{p.__class__.__name__}</td>'
         f'  <td style="max-width: 300px;">{range_}</td>'
-        f'  <td style="max-width: 500px;"><p{tooltip}>{doc}</p></td>'
         f'</tr>\n'
     )
 
@@ -3728,7 +3725,7 @@ def _parameterized_repr_html(p, open):
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        f'   <tr><th>Name</th><th>{value_field}</th><th>Type</th><th>Range</th><th>Doc</th></tr>\n'
+        f'   <tr><th>Name</th><th>{value_field}</th><th>Type</th><th>Range</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

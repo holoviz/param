@@ -3725,7 +3725,7 @@ def _parameterized_repr_html(p, open):
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        f'   <tr><th>Name</th><th>{value_field}</th><th>Type</th><th>Range</th></tr>\n'
+        f'   <tr><th style="text-align:left">Name</th><th>{value_field}</th><th>Type</th><th>Range</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

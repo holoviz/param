@@ -3692,15 +3692,14 @@ def _parameterized_repr_html(p, open):
   background-color: black;
   color: #fff;
   text-align: center;
-  border-radius: 3px;
+    border-radius: 3px;
   padding: 10px;
   position: absolute;
   z-index: 1;
   top: -5px;
   left: 100%;
   margin-left: 10px;
-  min-width: 100px;
-  min-width: 150px;
+  min-width: 250px;
 }
 .param-doc-tooltip:hover:before {
   content: "";

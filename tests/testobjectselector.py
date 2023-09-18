@@ -24,7 +24,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
         super().setUp()
         class P(param.Parameterized):
             e = param.ObjectSelector(default=5,objects=[5,6,7])
-            f = param.ObjectSelector(default=10)
+            f = param.ObjectSelector(default=10, check_on_set=False)
             h = param.ObjectSelector(default=None)
             g = param.ObjectSelector(default=None,objects=[7,8])
             i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
@@ -48,7 +48,7 @@ class TestObjectSelectorParameters(unittest.TestCase):
         assert p.allow_None is None
         assert p.objects == []
         assert p.compute_default_fn is None
-        assert p.check_on_set is False
+        assert p.check_on_set is True
         assert p.names == {}
 
     def test_defaults_class(self):
@@ -82,17 +82,6 @@ class TestObjectSelectorParameters(unittest.TestCase):
         s = param.ObjectSelector(default=1, objects=[0, 1, 2])
 
         assert s.default == 1
-
-    def test_unbound_default_check_on_set_inferred(self):
-        s1 = param.ObjectSelector(objects=[0, 1, 2])
-        s2 = param.ObjectSelector(objects=[])
-        s3 = param.ObjectSelector(objects={})
-        s4 = param.ObjectSelector()
-
-        assert s1.check_on_set is True
-        assert s2.check_on_set is False
-        assert s3.check_on_set is False
-        assert s4.check_on_set is False
 
     def test_unbound_default_check_on_set_explicit(self):
         s1 = param.ObjectSelector(check_on_set=True)
@@ -587,13 +576,13 @@ class TestObjectSelectorParameters(unittest.TestCase):
 
         assert B.param.p.default is None
         assert B.param.p.objects == []
-        assert B.param.p.check_on_set is False
+        assert B.param.p.check_on_set is True
 
         b = B()
 
         assert b.param.p.default is None
         assert b.param.p.objects == []
-        assert b.param.p.check_on_set is False
+        assert b.param.p.check_on_set is True
 
     def test_inheritance_behavior2(self):
         class A(param.Parameterized):

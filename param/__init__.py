@@ -1652,25 +1652,11 @@ class __compute_selector_default:
 _compute_selector_default = __compute_selector_default()
 
 
-class __compute_selector_checking_default:
-    def __call__(self, p):
-        return len(p.objects) != 0
-
-    def __repr__(self):
-        return repr(self.sig)
-
-    @property
-    def sig(self):
-        return None
-
-_compute_selector_checking_default = __compute_selector_checking_default()
-
-
 class _SignatureSelector(Parameter):
     # Needs docstring; why is this a separate mixin?
     _slot_defaults = _dict_update(
         SelectorBase._slot_defaults, _objects=_compute_selector_default,
-        compute_default_fn=None, check_on_set=_compute_selector_checking_default,
+        compute_default_fn=None, check_on_set=True,
         allow_None=None, instantiate=False, default=None,
     )
 
@@ -1716,7 +1702,7 @@ class Selector(SelectorBase, _SignatureSelector):
     def __init__(
         self,
         *, objects=[], default=None, instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
+        check_on_set=True, allow_None=None, empty_default=False,
         doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True
     ):
@@ -1749,9 +1735,8 @@ class Selector(SelectorBase, _SignatureSelector):
             self.allow_None = self._slot_defaults['allow_None']
         else:
             self.allow_None = allow_None
-        if self.default is not None:
-            self._validate_value(self.default)
-        self._update_state()
+        if self.default is not None and self.objects:
+            self._validate(self.default)
 
     def _update_state(self):
         if self.check_on_set is False and self.default is not None:
@@ -2614,6 +2599,8 @@ class ListSelector(Selector):
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
+        if self.default is not None:
+            self._validate_type(self.default)
 
     def compute_default(self):
         if self.default is None and callable(self.compute_default_fn):

@@ -50,7 +50,7 @@ class TestMultiFileSelectorParameters(unittest.TestCase):
         assert p.allow_None is None
         assert p.objects == []
         assert p.compute_default_fn is None
-        assert p.check_on_set is False
+        assert p.check_on_set is True
         assert p.names == {}
         assert p.path == ''
 

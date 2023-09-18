@@ -18,7 +18,7 @@ class TestListSelectorParameters(unittest.TestCase):
         super().setUp()
         class P(param.Parameterized):
             e = param.ListSelector(default=[5],objects=[5,6,7])
-            f = param.ListSelector(default=[10])
+            f = param.ListSelector(default=[10], check_on_set=False)
             h = param.ListSelector(default=None)
             g = param.ListSelector(default=None,objects=[7,8])
             i = param.ListSelector(default=[7],objects=[9],check_on_set=False)
@@ -30,7 +30,7 @@ class TestListSelectorParameters(unittest.TestCase):
         assert p.allow_None is None
         assert p.objects == []
         assert p.compute_default_fn is None
-        assert p.check_on_set is False
+        assert p.check_on_set is True
         assert p.names == {}
 
     def test_defaults_class(self):

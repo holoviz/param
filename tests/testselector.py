@@ -23,7 +23,7 @@ class TestSelectorParameters(unittest.TestCase):
         super().setUp()
         class P(param.Parameterized):
             e = param.Selector(objects=[5,6,7])
-            f = param.Selector(default=10)
+            f = param.Selector(default=10, check_on_set=False)
             h = param.Selector(default=None)
             g = param.Selector(objects=[7,8])
             i = param.Selector(default=7, objects=[9], check_on_set=False)
@@ -38,7 +38,7 @@ class TestSelectorParameters(unittest.TestCase):
         assert p.allow_None is None
         assert p.objects == []
         assert p.compute_default_fn is None
-        assert p.check_on_set is False
+        assert p.check_on_set is True
         assert p.names == {}
 
     def test_defaults_class(self):
@@ -72,17 +72,6 @@ class TestSelectorParameters(unittest.TestCase):
         s = param.Selector(default=1, objects=[0, 1, 2])
 
         assert s.default == 1
-
-    def test_unbound_default_check_on_set_inferred(self):
-        s1 = param.Selector(objects=[0, 1, 2])
-        s2 = param.Selector(objects=[])
-        s3 = param.Selector(objects={})
-        s4 = param.Selector()
-
-        assert s1.check_on_set is True
-        assert s2.check_on_set is False
-        assert s3.check_on_set is False
-        assert s4.check_on_set is False
 
     def test_unbound_default_check_on_set_explicit(self):
         s1 = param.Selector(check_on_set=True)
@@ -301,11 +290,11 @@ class TestSelectorParameters(unittest.TestCase):
         class P(param.Parameterized):
             o = param.Selector()
 
-        assert P.param.o.check_on_set is False
+        assert P.param.o.check_on_set is True
 
         p = P()
 
-        assert p.param.o.check_on_set is False
+        assert p.param.o.check_on_set is True
 
     def test_check_on_set_else(self):
         class P(param.Parameterized):
@@ -326,13 +315,13 @@ class TestSelectorParameters(unittest.TestCase):
 
         assert B.param.p.default is None
         assert B.param.p.objects == []
-        assert B.param.p.check_on_set is False
+        assert B.param.p.check_on_set is True
 
         b = B()
 
         assert b.param.p.default is None
         assert b.param.p.objects == []
-        assert b.param.p.check_on_set is False
+        assert b.param.p.check_on_set is True
 
     def test_inheritance_behavior2(self):
         class A(param.Parameterized):
@@ -421,7 +410,7 @@ class TestSelectorParameters(unittest.TestCase):
 
     def test_inheritance_behavior7(self):
         class A(param.Parameterized):
-            p = param.Selector(default=0)
+            p = param.Selector(default=0, check_on_set=False)
 
         class B(A):
             p = param.Selector(default=1)
@@ -468,7 +457,7 @@ class TestSelectorParameters(unittest.TestCase):
         # https://github.com/holoviz/param/issues/793
 
         class A(param.Parameterized):
-            p = param.Selector()
+            p = param.Selector(check_on_set=False)
 
         class B(A):
             p = param.Selector()

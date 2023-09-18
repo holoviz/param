@@ -3653,12 +3653,12 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
         range_ = ''
 
     if p.readonly:
-        range_ = ' '.join(['<i>read-only</i>', range_])
+        range_ = ' '.join(s for s in ['<i>read-only</i>', range_] if s)
     elif p.constant:
-        range_ = ' '.join(['<i>constant</i>', range_])
+        range_ = ' '.join(s for s in ['<i>constant</i>', range_] if s)
 
     if getattr(p, 'allow_None', False):
-        range_ = ' | '.join(['None', range_])
+        range_ = ' | '.join(s for s in ['None', range_] if s)
 
     tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
 

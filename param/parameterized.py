@@ -3664,7 +3664,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
 
     return (
         f'<tr>'
-        f'  <td><p{tooltip}>{key}</p></td>'
+        f'  <td><p style="margin-bottom: 0px;"{tooltip}>{key}</p></td>'
         f'  <td style="max-width: 200px;">{value}</td>'
         f'  <td>{p.__class__.__name__}</td>'
         f'  <td style="max-width: 300px;">{range_}</td>'
@@ -3724,7 +3724,7 @@ def _parameterized_repr_html(p, open):
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        f'   <tr><th style="text-align:left">Name</th><th>{value_field}</th><th>Type</th><th>Range</th></tr>\n'
+        f'   <tr><th style="text-align:left;">Name</th><th>{value_field}</th><th>Type</th><th>Range</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

@@ -16,9 +16,15 @@ import pytest
 
 import random
 
-from param import parameterized
-from param.parameterized import ParamOverrides, shared_parameters
-from param.parameterized import default_label_formatter, no_instance_params
+from param import parameterized, Parameter
+from param._utils import _dict_update
+from param.parameterized import (
+    ParamOverrides,
+    Undefined,
+    default_label_formatter,
+    no_instance_params,
+    shared_parameters,
+)
 
 class _SomeRandomNumbers:
     def __call__(self):
@@ -1161,6 +1167,36 @@ def test_inheritance_default_validation_with_more_specific_type():
     assert "NumericTuple parameter 'B.p' only takes numeric values, not <class 'str'>" in str(excinfo.value)
 
 
+def test_inheritance_with_changing_bounds():
+    class A(param.Parameterized):
+        p = param.Number(default=5)
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number(bounds=(1, 3))
+    assert "Number parameter 'p' must be at least 1, not 0.0." in str(excinfo.value)
+
+
+def test_inheritance_with_changing_default():
+    class A(param.Parameterized):
+        p = param.Number(default=5, bounds=(3, 10))
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.Number(default=1)
+    assert "Number parameter 'B.p' must be at least 3, not 1." in str(excinfo.value)
+
+
+def test_inheritance_with_changing_class_():
+    class A(param.Parameterized):
+        p = param.ClassSelector(class_=int, default=5)
+
+    with pytest.raises(ValueError) as excinfo:
+        class B(A):
+            p = param.ClassSelector(class_=str)
+    assert "ClassSelector parameter 'B.p' value must be an instance of str, not 5." in str(excinfo.value)
+
+
 def test_inheritance_from_multiple_params_class():
     class A(param.Parameterized):
         p = param.Parameter(doc='foo')
@@ -1340,6 +1376,114 @@ def test_inheritance_class_attribute_behavior():
     # Should be 2?
     # https://github.com/holoviz/param/issues/718
     assert B.p == 1
+
+class TestShallowCopyMutableAttributes:
+
+    @pytest.fixture
+    def foo(self):
+        class Foo:
+            def __init__(self, val):
+                self.val = val
+
+        return Foo
+
+    @pytest.fixture
+    def custom_param(self):
+        class CustomParameter(Parameter):
+
+            __slots__ = ['container']
+
+            _slot_defaults = _dict_update(Parameter._slot_defaults, container=None)
+
+            def __init__(self, default=Undefined, *, container=Undefined, **kwargs):
+                super().__init__(default=default, **kwargs)
+                self.container = container
+
+        return CustomParameter
+
+    def test_shallow_copy_on_class_creation(self, custom_param, foo):
+        clist = [foo(1), foo(2)]
+
+        class P(param.Parameterized):
+            cp = custom_param(container=clist)
+
+
+        # the mutable container has been shallow-copied
+        assert P.param.cp.container is not clist
+        assert all(cval is val for cval, val in zip(P.param.cp.container, clist))
+
+    def test_shallow_copy_inheritance_each_level(self, custom_param):
+
+        clist = [1, 2]
+
+        class A(param.Parameterized):
+            p = custom_param(container=clist)
+
+        class B(A):
+            p = custom_param(default=1)
+
+        clist.append(3)
+
+        assert A.param.p.container == [1, 2]
+        assert B.param.p.container == [1, 2]
+
+        B.param.p.container.append(4)
+
+        assert A.param.p.container == [1, 2]
+        assert B.param.p.container == [1, 2, 4]
+
+    def test_shallow_copy_on_instance_getitem(self, custom_param, foo):
+        clist = [foo(1), foo(2)]
+
+        class P(param.Parameterized):
+            cp = custom_param(container=clist)
+
+        p = P()
+
+        assert 'cp' not in p._param__private.params
+
+        p.param['cp']
+
+        # the mutable container has been shallow-copied
+        assert 'cp' in p._param__private.params
+        assert P.param.cp.container == p._param__private.params['cp'].container
+        assert P.param.cp.container is not p._param__private.params['cp'].container
+        assert all(cval is val for cval, val in zip(p.param.cp.container, clist))
+
+    def test_shallow_copy_on_instance_set(self, custom_param, foo):
+        clist = [foo(1), foo(2)]
+
+        class P(param.Parameterized):
+            cp = custom_param(container=clist)
+
+        p = P()
+
+        assert 'cp' not in p._param__private.params
+
+        p.cp = 'value'
+
+        # the mutable container has been shallow-copied
+        assert 'cp' in p._param__private.params
+        assert P.param.cp.container == p._param__private.params['cp'].container
+        assert P.param.cp.container is not p._param__private.params['cp'].container
+        assert all(cval is val for cval, val in zip(p.param.cp.container, clist))
+
+    def test_modify_class_container_before_shallow_copy(self, custom_param, foo):
+        clist = [foo(1), foo(2)]
+        clist2 = [foo(3), foo(4)]
+
+        class P(param.Parameterized):
+            cp = custom_param(container=clist)
+
+        p1 = P()
+        p2 = P()
+
+        # Setting the class container will affect instances are the shallow copy
+        # is lazy and has not yet been made.
+        P.param.cp.container = clist2
+
+        assert p1.param.cp.container == clist2
+        assert p2.param.cp.container == clist2
 
 
 @pytest.fixture

@@ -446,3 +446,51 @@ class TestSelectorParameters(unittest.TestCase):
 
         a = A()
         assert a.p is objs[0]
+
+    def test_objects_not_shared_in_class_hierarchy_1(self):
+        # https://github.com/holoviz/param/issues/793
+
+        class A(param.Parameterized):
+            p = param.Selector(objects=[1, 2], check_on_set=False)
+
+        class B(A):
+            p = param.Selector(default=2)
+
+
+        b = B()
+        b.p = 3
+
+        assert A.param.p.objects == [1, 2]
+        assert B.param.p.objects == [1, 2]
+        assert b.param.p.objects == [1, 2, 3]
+
+    def test_objects_not_shared_in_class_hierarchy_2(self):
+        # https://github.com/holoviz/param/issues/793
+
+        class A(param.Parameterized):
+            p = param.Selector()
+
+        class B(A):
+            p = param.Selector()
+
+
+        b = B()
+        b.p = 2
+
+        assert A.param.p.objects == []
+
+    def test_objects_not_shared_across_instance_class(self):
+        # https://github.com/holoviz/param/issues/746
+
+        class P(param.Parameterized):
+            s = param.Selector(objects=[1, 2], check_on_set=False)
+
+        p = P()
+
+        p.s = 3
+        assert P.param.s.objects == [1, 2]
+        assert p.param.s.objects == [1, 2, 3]
+
+        P.s = 4
+        assert P.param.s.objects == [1, 2, 4]
+        assert p.param.s.objects == [1, 2 ,3]

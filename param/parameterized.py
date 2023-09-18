@@ -3691,8 +3691,7 @@ def _parameterized_repr_html(p, open):
   content: attr(data-tooltip);
   background-color: black;
   color: #fff;
-  text-align: center;
-    border-radius: 3px;
+  border-radius: 3px;
   padding: 10px;
   position: absolute;
   z-index: 1;

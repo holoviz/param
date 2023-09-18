@@ -3686,6 +3686,7 @@ def _parameterized_repr_html(p, open):
     tooltip_css = """
 .param-doc-tooltip{
   position: relative;
+  cursor: help;
 }
 .param-doc-tooltip:hover:after{
   content: attr(data-tooltip);

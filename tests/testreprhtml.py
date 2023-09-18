@@ -46,9 +46,17 @@ class TestHTMLRepr:
         html = P().param._repr_html_()
         assert '<details >\n <summary style="display:list-item; outline:none;">\n  <tt>Sub' in html
 
-    def test_repr_html_ClassSelector_tuple(self):
+    def test_html_repr_ClassSelector_tuple(self):
         class P(param.Parameterized):
             c = param.ClassSelector(class_=(str, int))
 
         rhtml = _parameterized_repr_html(P, True)
         assert 'None | str | int' in rhtml
+
+    def test_html_repr_title_class(self, P):
+        html = P.param._repr_html_()
+        assert '<tt>P</tt>' in html
+
+    def test_html_repr_title_instance(self, P):
+        html = P().param._repr_html_()
+        assert '<tt>P()</tt>' in html

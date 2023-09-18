@@ -3679,7 +3679,7 @@ def _parameterized_repr_html(p, open):
     """HTML representation for a Parameterized object"""
     if isinstance(p, Parameterized):
         cls = p.__class__
-        title = cls.name + "() "
+        title = cls.name + "()"
         value_field = 'Value'
     else:
         cls = p

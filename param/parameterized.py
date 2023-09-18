@@ -3648,7 +3648,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
         else:
             range_ = p.class_.__name__
     elif hasattr(p, 'regex'):
-        range_ = '.*' if p.regex is None else str(p.regex)
+        range_ = 'regex(.*)' if p.regex is None else f'regex({p.regex})'
     else:
         range_ = ''
 

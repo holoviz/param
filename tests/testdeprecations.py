@@ -1,7 +1,7 @@
 """
 Test deprecation warnings.
 """
-
+import re
 import warnings
 
 import param
@@ -109,6 +109,52 @@ class TestDeprecateParameterizedModule:
     def test_deprecate_param_watchers_setter(self):
         with pytest.raises(FutureWarning):
             param.parameterized.Parameterized()._param_watchers = {}
+
+    def test_param_error_unsafe_ops_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    param._utils.ParamFutureWarning,
+                    match=re.escape(
+                        'Looking up instance Parameter objects (`.param.objects()`) until '
+                        'the Parameterized instance has been fully initialized is deprecated and will raise an error in a future version. '
+                        'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                        'constructor before trying to access instance Parameter objects, or '
+                        'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                        'may be enough for your use case.',
+                    )
+                ):
+                    self.param.objects()
+
+                with pytest.raises(
+                    param._utils.ParamFutureWarning,
+                    match=re.escape(
+                        'Triggering watchers on a partially initialized Parameterized instance '
+                        'is deprecated and will raise an error in a future version. '
+                        'Ensure you have called super().__init__(**params) in '
+                        'the Parameterized instance constructor before trying to set up a watcher.',
+                    )
+                ):
+                    self.param.trigger('x')
+
+                with pytest.raises(
+                    param._utils.ParamFutureWarning,
+                    match=re.escape(
+                        '(Un)registering a watcher on a partially initialized Parameterized instance '
+                        'is deprecated and will raise an error in a future version. Ensure '
+                        'you have called super().__init__(**) in the Parameterized instance '
+                        'constructor before trying to set up a watcher.',
+                    )
+                ):
+                    self.param.watch(print, 'x')
+
+                self.param.objects(instance=False)
+                super().__init__(**params)
+
+        P()
 
 
 class TestDeprecateParameters:

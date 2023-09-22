@@ -37,6 +37,7 @@ from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 from ._utils import (
     DEFAULT_SIGNATURE,
     ParamDeprecationWarning as _ParamDeprecationWarning,
+    ParamFutureWarning as _ParamFutureWarning,
     _deprecated,
     _deprecate_positional_args,
     _dict_update,
@@ -44,6 +45,7 @@ from ._utils import (
     _is_mutable_container,
     _recursive_repr,
     _validate_error_prefix,
+    _is_mutable_container,
     accept_arguments,
     iscoroutinefunction
 )
@@ -2111,6 +2113,18 @@ class Parameters:
         instance parameters to be returned by setting
         instance='existing'.
         """
+        if self_.self is not None and not self_.self._param__private.initialized and instance is True:
+            warnings.warn(
+                'Looking up instance Parameter objects (`.param.objects()`) until '
+                'the Parameterized instance has been fully initialized is deprecated and will raise an error in a future version. '
+                'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                'constructor before trying to access instance Parameter objects, or '
+                'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                'may be enough for your use case.',
+                category=_ParamFutureWarning,
+                stacklevel=2,
+            )
+
         cls = self_.cls
         # We cache the parameters because this method is called often,
         # and parameters are rarely added (and cannot be deleted)
@@ -2148,6 +2162,16 @@ class Parameters:
         changed for a Parameter of type Event, setting it to True so
         that it is clear which Event parameter has been triggered.
         """
+        if self_.self is not None and not self_.self._param__private.initialized:
+            warnings.warn(
+                'Triggering watchers on a partially initialized Parameterized instance '
+                'is deprecated and will raise an error in a future version. '
+                'Ensure you have called super().__init__(**params) in '
+                'the Parameterized instance constructor before trying to set up a watcher.',
+                category=_ParamFutureWarning,
+                stacklevel=2,
+            )
+
         trigger_params = [p for p in self_.self_or_cls.param
                           if hasattr(self_.self_or_cls.param[p], '_autotrigger_value')]
         triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
@@ -2591,6 +2615,16 @@ class Parameters:
         return deps, dynamic_deps
 
     def _register_watcher(self_, action, watcher, what='value'):
+        if self_.self is not None and not self_.self._param__private.initialized:
+            warnings.warn(
+                '(Un)registering a watcher on a partially initialized Parameterized instance '
+                'is deprecated and will raise an error in a future version. Ensure '
+                'you have called super().__init__(**) in the Parameterized instance '
+                'constructor before trying to set up a watcher.',
+                category=_ParamFutureWarning,
+                stacklevel=4,
+            )
+
         parameter_names = watcher.parameter_names
         for parameter_name in parameter_names:
             if parameter_name not in self_.cls.param:

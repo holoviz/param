@@ -1318,29 +1318,29 @@ class Parameter(_ParameterBase):
             self.instantiate = self._slot_defaults['instantiate']
 
     def __setattr__(self, attribute, value):
-        if attribute == 'name' and getattr(self, 'name', None) and value != self.name:
-            raise AttributeError("Parameter name cannot be modified after "
-                                 "it has been bound to a Parameterized.")
+        if attribute == 'name':
+            name = getattr(self, 'name', None)
+            if name is not None and value != name:
+                raise AttributeError("Parameter name cannot be modified after "
+                                     "it has been bound to a Parameterized.")
 
-        implemented = (attribute != "default" and attribute in getattr(self, 'watchers', []))
-        slot_attribute = attribute in self.__class__._all_slots_
-        try:
-            old = getattr(self, attribute) if implemented else NotImplemented
-            if slot_attribute:
+        is_slot = attribute in self.__class__._all_slots_
+        has_watcher = attribute != "default" and attribute in getattr(self, 'watchers', [])
+        if not (is_slot or has_watcher):
+            # Return early if attribute is not a slot
+            return super().__setattr__(attribute, value)
+
+        # Otherwise get the old value so we can call watcher/on_set
+        old = getattr(self, attribute, NotImplemented)
+        if is_slot:
+            try:
                 self._on_set(attribute, old, value)
-        except AttributeError as e:
-            if slot_attribute:
-                # If Parameter slot is defined but an AttributeError was raised
-                # we are in __setstate__ and watchers should not be triggered
-                old = NotImplemented
-            else:
-                raise e
+            except AttributeError:
+                pass
 
-        super(Parameter, self).__setattr__(attribute, value)
-
-        if old is NotImplemented:
-            return
-        self._trigger_event(attribute, old, value)
+        super().__setattr__(attribute, value)
+        if has_watcher and old is not NotImplemented:
+            self._trigger_event(attribute, old, value)
 
     def _trigger_event(self, attribute, old, new):
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner,

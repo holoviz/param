@@ -405,13 +405,12 @@ def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
 
     # Shallow-copy Parameter object without the watchers
-    try:
-        watchers = paramobj.watchers
-        paramobj.watchers = {}
-        p = copy.copy(paramobj)
-    finally:
-        paramobj.watchers = watchers
+    p = copy.copy(paramobj)
     p.owner = owner
+
+    # Reset watchers since class parameter watcher should not execute
+    # on instance parameters
+    p.watchers = {}
 
     # shallow-copy any mutable slot values other than the actual default
     for s in p.__class__.__slots__:

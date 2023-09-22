@@ -27,6 +27,7 @@ except ImportError:
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from html import escape
+from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 
@@ -909,10 +910,8 @@ class ParameterMetaclass(type):
 
         # Compute all slots
         all_slots = set()
-        for base in bases:
-            for bcls in base.__mro__:
-                for slot in getattr(bcls, '__slots__', []):
-                    all_slots.add(slot)
+        for bcls in set(chain(*(base.__mro__ for base in bases))):
+            all_slots |= set(getattr(bcls, '__slots__', set()))
 
         # To get the benefit of slots, subclasses must themselves define
         # __slots__, whether or not they define attributes not present in

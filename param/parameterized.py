@@ -43,6 +43,7 @@ from ._utils import (
     _recursive_repr,
     _validate_error_prefix,
     ParamDeprecationWarning as _ParamDeprecationWarning,
+    ParamFutureWarning as _ParamFutureWarning,
     _is_mutable_container,
 )
 
@@ -2216,11 +2217,15 @@ class Parameters:
         instance='existing'.
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
-            raise RuntimeError(
-                'Cannot look up instantiated Parameter objects until the Parameterized instance '
-                'has been fully initialized. Ensure you have called super().__init__(**params) '
-                'in your Parameterized constructor before trying to access instance '
-                'parameter objects.'
+            warnings.warn(
+                'Looking up instance Parameter objects (`.param.objects()`) until '
+                'the Parameterized instance has been fully initialized is deprecated and will raise an error in a future version. '
+                'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                'constructor before trying to access instance Parameter objects, or '
+                'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                'may be enough for your use case.',
+                category=_ParamFutureWarning,
+                stacklevel=2,
             )
 
         cls = self_.cls
@@ -2261,10 +2266,13 @@ class Parameters:
         that it is clear which Event parameter has been triggered.
         """
         if self_.self is not None and not self_.self._param__private.initialized:
-            raise RuntimeError(
+            warnings.warn(
                 'Triggering watchers on a partially initialized Parameterized instance '
-                'is not supported. Ensure you have called super().__init__(**params) in '
-                'the Parameterized instance constructor before trying to set up a watcher.'
+                'is deprecated and will raise an error in a future version. '
+                'Ensure you have called super().__init__(**params) in '
+                'the Parameterized instance constructor before trying to set up a watcher.',
+                category=_ParamFutureWarning,
+                stacklevel=2,
             )
 
         trigger_params = [p for p in self_.self_or_cls.param
@@ -2711,10 +2719,13 @@ class Parameters:
 
     def _register_watcher(self_, action, watcher, what='value'):
         if self_.self is not None and not self_.self._param__private.initialized:
-            raise RuntimeError(
+            warnings.warn(
                 '(Un)registering a watcher on a partially initialized Parameterized instance '
-                'is not supported. Ensure you have called super().__init__(**) in '
-                'the Parameterized instance constructor before trying to set up a watcher.'
+                'is deprecated and will raise an error in a future version. Ensure '
+                'you have called super().__init__(**) in the Parameterized instance '
+                'constructor before trying to set up a watcher.',
+                category=_ParamFutureWarning,
+                stacklevel=4,
             )
 
         parameter_names = watcher.parameter_names

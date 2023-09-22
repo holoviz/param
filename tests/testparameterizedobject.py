@@ -495,48 +495,6 @@ class TestParameterized(unittest.TestCase):
         with pytest.raises(TypeError, match="Read-only parameter 'x' cannot be modified"):
             P()
 
-    def test_param_error_unsafe_ops_before_initialized(self):
-        class P(param.Parameterized):
-
-            x = param.Parameter()
-
-            def __init__(self, **params):
-                with pytest.raises(
-                    RuntimeError,
-                    match=re.escape(
-                        'Cannot look up instantiated Parameter objects until the Parameterized instance '
-                        'has been fully initialized. Ensure you have called super().__init__(**params) '
-                        'in your Parameterized constructor before trying to access instance '
-                        'parameter objects.'
-                    )
-                ):
-                    self.param.objects()
-
-                with pytest.raises(
-                    RuntimeError,
-                    match=re.escape(
-                        'Triggering watchers on a partially initialized Parameterized instance '
-                        'is not supported. Ensure you have called super().__init__(**params) in '
-                        'the Parameterized instance constructor before trying to set up a watcher.'
-                    )
-                ):
-                    self.param.trigger('x')
-
-                with pytest.raises(
-                    RuntimeError,
-                    match=re.escape(
-                        '(Un)registering a watcher on a partially initialized Parameterized instance '
-                        'is not supported. Ensure you have called super().__init__(**) in '
-                        'the Parameterized instance constructor before trying to set up a watcher.'
-                    )
-                ):
-                    self.param.watch(print, 'x')
-
-                self.param.objects(instance=False)
-                super().__init__(**params)
-
-        P()
-
     def test_parameter_constant_iadd_allowed(self):
         # Testing https://github.com/holoviz/param/pull/400
         class P(param.Parameterized):

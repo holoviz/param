@@ -908,10 +908,10 @@ class ParameterMetaclass(type):
         # when asking for help on Parameter *object*, return the doc slot
         classdict['__doc__'] = property(attrgetter('doc'))
 
-        # Compute all slots
-        all_slots = set()
-        for bcls in set(chain(*(base.__mro__ for base in bases))):
-            all_slots |= set(getattr(bcls, '__slots__', set()))
+        # Compute all slots in order
+        all_slots = {}
+        for bcls in set(chain(*(base.__mro__[::-1] for base in bases))):
+            all_slots.update(dict.fromkeys(getattr(bcls, '__slots__', [])))
 
         # To get the benefit of slots, subclasses must themselves define
         # __slots__, whether or not they define attributes not present in
@@ -920,7 +920,7 @@ class ParameterMetaclass(type):
         if '__slots__' not in classdict:
             classdict['__slots__'] = []
         else:
-            all_slots |= set(classdict['__slots__'])
+            all_slots.update(dict.fromkeys(classdict['__slots__']))
 
         classdict['_all_slots_'] = list(all_slots)
 
@@ -3347,10 +3347,8 @@ class ParameterizedMetaclass(type):
         """
         # get all relevant slots (i.e. slots defined in all
         # superclasses of this parameter)
-        slots = {}
         p_type = type(param)
-        for p_class in classlist(p_type)[1::]:
-            slots.update(dict.fromkeys(p_class.__slots__))
+        slots = dict.fromkeys(p_type._all_slots_)
 
         # note for some eventual future: python 3.6+ descriptors grew
         # __set_name__, which could replace this and _set_names

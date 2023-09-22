@@ -403,13 +403,14 @@ def iscoroutinefunction(function):
 def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
 
-    # Shallow-copy Parameter object
-    p = copy.copy(paramobj)
+    # Shallow-copy Parameter object without the watchers
+    try:
+        watchers = paramobj.watchers
+        paramobj.watchers = {}
+        p = copy.copy(paramobj)
+    finally:
+        paramobj.watchers = watchers
     p.owner = owner
-
-    # Reset watchers since class parameter watcher should not execute
-    # on instance parameters
-    p.watchers = {}
 
     # shallow-copy any mutable slot values other than the actual default
     for s in p.__class__.__slots__:
@@ -897,25 +898,35 @@ class ParameterMetaclass(type):
     """
     Metaclass allowing control over creation of Parameter classes.
     """
-    def __new__(mcs,classname,bases,classdict):
+    def __new__(mcs, classname, bases, classdict):
 
         # store the class's docstring in __classdoc
         if '__doc__' in classdict:
             classdict['__classdoc']=classdict['__doc__']
 
         # when asking for help on Parameter *object*, return the doc slot
-        classdict['__doc__']=property(attrgetter('doc'))
+        classdict['__doc__'] = property(attrgetter('doc'))
+
+        # Compute all slots
+        all_slots = set()
+        for base in bases:
+            for bcls in base.__mro__:
+                for slot in getattr(bcls, '__slots__', []):
+                    all_slots.add(slot)
 
         # To get the benefit of slots, subclasses must themselves define
         # __slots__, whether or not they define attributes not present in
         # the base Parameter class.  That's because a subclass will have
         # a __dict__ unless it also defines __slots__.
         if '__slots__' not in classdict:
-            classdict['__slots__']=[]
+            classdict['__slots__'] = []
+        else:
+            all_slots |= set(classdict['__slots__'])
+
+        classdict['_all_slots_'] = list(all_slots)
 
         # No special handling for a __dict__ slot; should there be?
-
-        return type.__new__(mcs,classname,bases,classdict)
+        return type.__new__(mcs, classname, bases, classdict)
 
     def __getattribute__(mcs,name):
         if name=='__doc__':
@@ -1313,7 +1324,7 @@ class Parameter(_ParameterBase):
                                  "it has been bound to a Parameterized.")
 
         implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
-        slot_attribute = attribute in get_all_slots(type(self))
+        slot_attribute = attribute in self.__class__._all_slots_
         try:
             old = getattr(self, attribute) if implemented else NotImplemented
             if slot_attribute:
@@ -1522,8 +1533,9 @@ class Parameter(_ParameterBase):
         pickle and deepcopy ourselves.
         """
         state = {}
-        for slot in get_occupied_slots(self):
-            state[slot] = getattr(self,slot)
+        for slot in self.__class__._all_slots_:
+            if hasattr(self, slot):
+                state[slot] = getattr(self, slot)
         return state
 
     def __setstate__(self,state):

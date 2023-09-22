@@ -1322,7 +1322,7 @@ class Parameter(_ParameterBase):
             raise AttributeError("Parameter name cannot be modified after "
                                  "it has been bound to a Parameterized.")
 
-        implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
+        implemented = (attribute != "default" and attribute in getattr(self, 'watchers', []))
         slot_attribute = attribute in self.__class__._all_slots_
         try:
             old = getattr(self, attribute) if implemented else NotImplemented

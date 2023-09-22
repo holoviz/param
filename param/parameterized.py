@@ -1138,7 +1138,7 @@ class Parameter(_ParameterBase):
     __slots__ = ['name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
-                 'watchers', 'owner', '_label', '_unbound']
+                 'watchers', 'owner', '_label']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -1160,7 +1160,7 @@ class Parameter(_ParameterBase):
     # in this list do not have to trigger such re-validation.
     _non_validated_slots = ['_label', 'doc', 'name', 'precedence',
                             'constant', 'pickle_default_value',
-                            'watchers', 'owner', '_unbound']
+                            'watchers', 'owner']
 
     @typing.overload
     def __init__(
@@ -1257,7 +1257,6 @@ class Parameter(_ParameterBase):
         self.constant = constant is True or readonly is True # readonly => constant
         self.readonly = readonly
         self._label = label
-        self._unbound = True
         self._set_instantiate(instantiate)
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
@@ -1359,7 +1358,7 @@ class Parameter(_ParameterBase):
         """
         v = object.__getattribute__(self, key)
         # Safely checks for name (avoiding recursion) to decide if this object is unbound
-        if key != '_unbound' and self._unbound:
+        if v is Undefined and key != "name" and getattr(self, "name", None) is None:
             try:
                 v = self._slot_defaults[key]
             except KeyError as e:
@@ -1526,32 +1525,18 @@ class Parameter(_ParameterBase):
                                  'instance for each new class.'.format(type(self).__name__, self.name,
                                     self.owner.name, attrib_name))
         self.name = attrib_name
-        self._unbound = False
 
     def __getstate__(self):
         """
         All Parameters have slots, not a dict, so we have to support
         pickle and deepcopy ourselves.
         """
-        return {slot: getattr(self, slot) for slot in self.__class__._all_slots_ if hasattr(self, slot)}
+        return {slot: getattr(self, slot) for slot in self.__class__._all_slots_}
 
     def __setstate__(self,state):
         # set values of __slots__ (instead of in non-existent __dict__)
-
-        # Handle renamed slots introduced for instance params
-        if '_attrib_name' in state:
-            state['name'] = state.pop('_attrib_name')
-        if '_owner' in state:
-            state['owner'] = state.pop('_owner')
-        if 'watchers' not in state:
-            state['watchers'] = {}
-        if 'per_instance' not in state:
-            state['per_instance'] = False
-        if '_label' not in state:
-            state['_label'] = None
-
-        for (k,v) in state.items():
-            setattr(self,k,v)
+        for k, v in state.items():
+            setattr(self, k, v)
 
 
 # Define one particular type of Parameter that is used in this file

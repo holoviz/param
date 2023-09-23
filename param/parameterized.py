@@ -28,6 +28,7 @@ except ImportError:
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from html import escape
+from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 
@@ -405,7 +406,7 @@ def iscoroutinefunction(function):
 def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
 
-    # Shallow-copy Parameter object
+    # Shallow-copy Parameter object without the watchers
     p = copy.copy(paramobj)
     p.owner = owner
 
@@ -899,25 +900,34 @@ class ParameterMetaclass(type):
     """
     Metaclass allowing control over creation of Parameter classes.
     """
-    def __new__(mcs,classname,bases,classdict):
+    def __new__(mcs, classname, bases, classdict):
 
         # store the class's docstring in __classdoc
         if '__doc__' in classdict:
             classdict['__classdoc']=classdict['__doc__']
 
         # when asking for help on Parameter *object*, return the doc slot
-        classdict['__doc__']=property(attrgetter('doc'))
+        classdict['__doc__'] = property(attrgetter('doc'))
+
+        # Compute all slots in order, using a dict later turned into a list
+        # as it's the fastest way to get an ordered set in Python
+        all_slots = {}
+        for bcls in set(chain(*(base.__mro__[::-1] for base in bases))):
+            all_slots.update(dict.fromkeys(getattr(bcls, '__slots__', [])))
 
         # To get the benefit of slots, subclasses must themselves define
         # __slots__, whether or not they define attributes not present in
         # the base Parameter class.  That's because a subclass will have
         # a __dict__ unless it also defines __slots__.
         if '__slots__' not in classdict:
-            classdict['__slots__']=[]
+            classdict['__slots__'] = []
+        else:
+            all_slots.update(dict.fromkeys(classdict['__slots__']))
+
+        classdict['_all_slots_'] = list(all_slots)
 
         # No special handling for a __dict__ slot; should there be?
-
-        return type.__new__(mcs,classname,bases,classdict)
+        return type.__new__(mcs, classname, bases, classdict)
 
     def __getattribute__(mcs,name):
         if name=='__doc__':
@@ -1310,29 +1320,29 @@ class Parameter(_ParameterBase):
             self.instantiate = self._slot_defaults['instantiate']
 
     def __setattr__(self, attribute, value):
-        if attribute == 'name' and getattr(self, 'name', None) and value != self.name:
-            raise AttributeError("Parameter name cannot be modified after "
-                                 "it has been bound to a Parameterized.")
+        if attribute == 'name':
+            name = getattr(self, 'name', None)
+            if name is not None and value != name:
+                raise AttributeError("Parameter name cannot be modified after "
+                                     "it has been bound to a Parameterized.")
 
-        implemented = (attribute != "default" and hasattr(self, 'watchers') and attribute in self.watchers)
-        slot_attribute = attribute in get_all_slots(type(self))
-        try:
-            old = getattr(self, attribute) if implemented else NotImplemented
-            if slot_attribute:
+        is_slot = attribute in self.__class__._all_slots_
+        has_watcher = attribute != "default" and attribute in getattr(self, 'watchers', [])
+        if not (is_slot or has_watcher):
+            # Return early if attribute is not a slot
+            return super().__setattr__(attribute, value)
+
+        # Otherwise get the old value so we can call watcher/on_set
+        old = getattr(self, attribute, NotImplemented)
+        if is_slot:
+            try:
                 self._on_set(attribute, old, value)
-        except AttributeError as e:
-            if slot_attribute:
-                # If Parameter slot is defined but an AttributeError was raised
-                # we are in __setstate__ and watchers should not be triggered
-                old = NotImplemented
-            else:
-                raise e
+            except AttributeError:
+                pass
 
-        super(Parameter, self).__setattr__(attribute, value)
-
-        if old is NotImplemented:
-            return
-        self._trigger_event(attribute, old, value)
+        super().__setattr__(attribute, value)
+        if has_watcher and old is not NotImplemented:
+            self._trigger_event(attribute, old, value)
 
     def _trigger_event(self, attribute, old, new):
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner,
@@ -1523,28 +1533,12 @@ class Parameter(_ParameterBase):
         All Parameters have slots, not a dict, so we have to support
         pickle and deepcopy ourselves.
         """
-        state = {}
-        for slot in get_occupied_slots(self):
-            state[slot] = getattr(self,slot)
-        return state
+        return {slot: getattr(self, slot) for slot in self.__class__._all_slots_}
 
     def __setstate__(self,state):
         # set values of __slots__ (instead of in non-existent __dict__)
-
-        # Handle renamed slots introduced for instance params
-        if '_attrib_name' in state:
-            state['name'] = state.pop('_attrib_name')
-        if '_owner' in state:
-            state['owner'] = state.pop('_owner')
-        if 'watchers' not in state:
-            state['watchers'] = {}
-        if 'per_instance' not in state:
-            state['per_instance'] = False
-        if '_label' not in state:
-            state['_label'] = None
-
-        for (k,v) in state.items():
-            setattr(self,k,v)
+        for k, v in state.items():
+            setattr(self, k, v)
 
 
 # Define one particular type of Parameter that is used in this file
@@ -3348,10 +3342,8 @@ class ParameterizedMetaclass(type):
         """
         # get all relevant slots (i.e. slots defined in all
         # superclasses of this parameter)
-        slots = {}
         p_type = type(param)
-        for p_class in classlist(p_type)[1::]:
-            slots.update(dict.fromkeys(p_class.__slots__))
+        slots = dict.fromkeys(p_type._all_slots_)
 
         # note for some eventual future: python 3.6+ descriptors grew
         # __set_name__, which could replace this and _set_names

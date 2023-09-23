@@ -17,12 +17,15 @@ docstrings. Note that the class or object to be inspected must already
 exist in the active namespace.
 """
 
-__author__ = "Jean-Luc Stevens"
-
 import re
 import itertools
 import textwrap
+import uuid
+
 import param
+
+from param.depends import depends, register_display_accessor, resolve_ref
+from param.reactive import reactive
 
 
 # Whether to generate warnings when misformatted docstrings are found
@@ -348,3 +351,33 @@ def load_ipython_extension(ip, verbose=True):
     if not _loaded:
         _loaded = True
         ip.register_magics(ParamMagics)
+
+
+class IPythonDisplay:
+    """
+    Reactive display handler that updates the output.
+    """
+
+    enabled = True
+
+    def __init__(self, reactive):
+        self._reactive = reactive
+
+    def __call__(self):
+        if isinstance(self._reactive, reactive):
+            cb = self._reactive._callback
+            @depends(*self._reactive._params, watch=True)
+            def update_handle(*args, **kwargs):
+                handle.update(cb())
+        else:
+            cb = self._reactive
+            @depends(*resolve_ref(cb), watch=True)
+            def update_handle(*args, **kwargs):
+                handle.update(cb())
+        try:
+            handle = display(cb(), display_id=uuid.uuid4().hex) # noqa
+        except TypeError:
+            raise NotImplementedError
+
+
+register_display_accessor('_ipython_display_', IPythonDisplay)

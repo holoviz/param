@@ -33,12 +33,13 @@ from numbers import Real
 
 from . import version  # noqa: api import
 
-from .parameterized import ( Undefined,
+from .depends import depends # noqa: api import
+from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    descendents, get_logger, instance_descriptor, dt_types,
-    _int_types)
-
-from .parameterized import (batch_watch, depends, output, script_repr, # noqa: api import
+    Undefined, descendents, get_logger, instance_descriptor, dt_types,
+    _int_types
+)
+from .parameterized import (batch_watch, output, script_repr, # noqa: api import
                             discard_events, edit_constant, instance_descriptor)
 from .parameterized import shared_parameters # noqa: api import
 from .parameterized import logging_level     # noqa: api import
@@ -3221,3 +3222,5 @@ def exceptions_summarized():
         import sys
         etype, value, tb = sys.exc_info()
         print(f"{etype.__name__}: {value}", file=sys.stderr)
+
+from .reactive import bind, reactive # noqa: api import

@@ -136,6 +136,13 @@ class reactive_ops:
         rx = self._reactive if isinstance(self._reactive, reactive) else self()
         return rx._apply_operator(bool)
 
+    def in_(self, other):
+        """
+        Replacement for the ``in`` statement.
+        """
+        rx = self._reactive if isinstance(self._reactive, reactive) else self()
+        return rx._apply_operator(operator.contains, other, reverse=True)
+
     def is_(self, other):
         """
         Replacement for the ``is`` statement.
@@ -262,7 +269,7 @@ class reactive_ops:
             prev._invalidate_obj()
             prev._wrapper.object = new
             prev = None
-        return self
+        return self._reactive
 
     def watch(self, fn):
         """

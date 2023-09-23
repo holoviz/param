@@ -238,6 +238,13 @@ def test_reactive_is():
     i.rx.set_input(False)
     assert not is_.rx.resolve()
 
+def test_reactive_in():
+    i = reactive(2)
+    in_ = i.rx.in_([1, 2, 3])
+    assert in_.rx.resolve()
+    i.rx.set_input(4)
+    assert not in_.rx.resolve()
+
 def test_reactive_is_not():
     i = reactive(None)
     is_ = i.rx.is_not(None)

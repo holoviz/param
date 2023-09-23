@@ -17,6 +17,7 @@ import numbers
 import operator
 import typing
 import warnings
+import html
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -3645,45 +3646,62 @@ script_repr_reg[FunctionType] = function_script_repr
 dbprint_prefix=None
 
 
-def _name_if_set(parameterized):
-    """Return the name of this Parameterized if explicitly set to other than the default"""
-    class_name = parameterized.__class__.__name__
-    default_name = re.match('^'+class_name+'[0-9]+$', parameterized.name)
-    return '' if default_name else parameterized.name
+def truncate(str_, maxlen = 30):
+    """Return HTML-safe truncated version of given string"""
+    rep = (str_[:(maxlen-2)] + '..') if (len(str_) > (maxlen-2)) else str_
+    return html.escape(rep)
 
 
-def _get_param_repr(key, val, p, truncate=40):
+def _get_param_repr(key, val, p, vallen=30, doclen=40):
     """HTML representation for a single Parameter object and its value"""
     if isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         value = val.param._repr_html_(open=False)
     elif hasattr(val, "_repr_html_"):
         value = val._repr_html_()
     else:
-        rep = repr(val)
-        value = (rep[:truncate] + '..') if len(rep) > truncate else rep
+        value = truncate(repr(val), vallen)
 
-    modes = []
-    if p.constant:
-        modes.append('constant')
-    if p.readonly:
-        modes.append('read-only')
-    if getattr(p, 'allow_None', False):
-        modes.append('nullable')
-    mode = ' | '.join(modes)
     if hasattr(p, 'bounds'):
-        bounds = p.bounds
+        if p.bounds is None:
+            range_ = ''
+        elif hasattr(p,'inclusive_bounds'):
+            # Numeric bounds use ( and [ to indicate exclusive and inclusive
+            bl,bu = p.bounds
+            il,iu = p.inclusive_bounds
+
+            lb = '' if bl is None else ('>=' if il else '>') + str(bl)
+            ub = '' if bu is None else ('<=' if iu else '<') + str(bu)
+            range_ = lb + (', ' if lb and bu else '') + ub
+        else:
+            range_ = repr(p.bounds)
     elif hasattr(p, 'objects') and p.objects:
-        bounds = ', '.join(list(map(repr, p.objects)))
+        range_ = ', '.join(list(map(repr, p.objects)))
+    elif hasattr(p, 'class_'):
+        if isinstance(p.class_, tuple):
+            range_ = ' | '.join(kls.__name__ for kls in p.class_)
+        else:
+            range_ = p.class_.__name__
+    elif hasattr(p, 'regex') and p.regex is not None:
+        range_ = f'regex({p.regex})'
     else:
-        bounds = ''
+        range_ = ''
+
+    if p.readonly:
+        range_ = ' '.join(s for s in ['<i>read-only</i>', range_] if s)
+    elif p.constant:
+        range_ = ' '.join(s for s in ['<i>constant</i>', range_] if s)
+
+    if getattr(p, 'allow_None', False):
+        range_ = ' '.join(s for s in ['<i>nullable</i>', range_] if s)
+
     tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
+
     return (
         f'<tr>'
-        f'  <td><tt{tooltip}>{key}</tt></td>'
-        f'  <td>{p.__class__.__name__}</td>'
-        f'  <td>{value}</td>'
-        f'  <td style="max-width: 300px;">{bounds}</td>'
-        f'  <td>{mode}</td>'
+        f'  <td><p style="margin-bottom: 0px;"{tooltip}>{key}</p></td>'
+        f'  <td style="max-width: 200px; text-align:left;">{value}</td>'
+        f'  <td style="text-align:left;">{p.__class__.__name__}</td>'
+        f'  <td style="max-width: 300px;">{range_}</td>'
         f'</tr>\n'
     )
 
@@ -3692,7 +3710,7 @@ def _parameterized_repr_html(p, open):
     """HTML representation for a Parameterized object"""
     if isinstance(p, Parameterized):
         cls = p.__class__
-        title = cls.name + "() " + _name_if_set(p)
+        title = cls.name + "()"
         value_field = 'Value'
     else:
         cls = p
@@ -3702,12 +3720,12 @@ def _parameterized_repr_html(p, open):
     tooltip_css = """
 .param-doc-tooltip{
   position: relative;
+  cursor: help;
 }
 .param-doc-tooltip:hover:after{
   content: attr(data-tooltip);
   background-color: black;
   color: #fff;
-  text-align: center;
   border-radius: 3px;
   padding: 10px;
   position: absolute;
@@ -3715,8 +3733,7 @@ def _parameterized_repr_html(p, open):
   top: -5px;
   left: 100%;
   margin-left: 10px;
-  min-width: 100px;
-  min-width: 150px;
+  min-width: 250px;
 }
 .param-doc-tooltip:hover:before {
   content: "";
@@ -3741,7 +3758,7 @@ def _parameterized_repr_html(p, open):
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        f'   <tr><th>Name</th><th>Type</th><th>{value_field}</th><th>Bounds/Objects</th><th>Mode</th></tr>\n'
+        f'   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">{value_field}</th><th style="text-align:left;">Type</th><th>Range</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

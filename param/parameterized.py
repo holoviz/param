@@ -907,7 +907,8 @@ class ParameterMetaclass(type):
         # when asking for help on Parameter *object*, return the doc slot
         classdict['__doc__'] = property(attrgetter('doc'))
 
-        # Compute all slots in order
+        # Compute all slots in order, using a dict later turned into a list
+        # as it's the fastest way to get an ordered set in Python
         all_slots = {}
         for bcls in set(chain(*(base.__mro__[::-1] for base in bases))):
             all_slots.update(dict.fromkeys(getattr(bcls, '__slots__', [])))

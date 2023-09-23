@@ -3635,9 +3635,10 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
             # Numeric bounds use ( and [ to indicate exclusive and inclusive
             bl,bu = p.bounds
             il,iu = p.inclusive_bounds
-            lb = ('[' if il else '(') + ('-&infin;' if bl is None else str(bl))
-            ub = ('&infin;' if bu is None else str(bu)) + (']' if iu else ')')
-            range_ = lb + ', ' + ub
+
+            lb = '' if bl is None else ('>=' if il else '>') + str(bl)
+            ub = '' if bu is None else ('<=' if iu else '<') + str(bu)
+            range_ = lb + (', ' if lb and bu else '') + ub
         else:
             range_ = repr(p.bounds)
     elif hasattr(p, 'objects') and p.objects:

@@ -1529,7 +1529,7 @@ def as_uninitialized(fn):
         parameterized_instance = self_.self
         original_initialized = parameterized_instance._param__private.initialized
         parameterized_instance._param__private.initialized = False
-        fn(parameterized_instance, *args, **kw)
+        fn(self_, *args, **kw)
         parameterized_instance._param__private.initialized = original_initialized
     return override_initialization
 
@@ -1712,17 +1712,14 @@ class Parameters:
         """
         return super().__dir__() + list(self_)
 
-
     def __iter__(self_):
         """
         Iterates over the parameters on this object.
         """
         yield from self_.objects(instance=False)
 
-
     def __contains__(self_, param):
         return param in list(self_)
-
 
     def __getattr__(self_, attr):
         """
@@ -1746,16 +1743,14 @@ class Parameters:
 
     @as_uninitialized
     def _set_name(self_, name):
-        self = self_.param.self
-        self.name=name
+        self_.self.name = name
 
     @as_uninitialized
     def _generate_name(self_):
-        self = self_.param.self
-        self.param._set_name('%s%05d' % (self.__class__.__name__ ,object_count))
+        self_._set_name('%s%05d' % (self_.cls.__name__, object_count))
 
     @as_uninitialized
-    def _setup_params(self_,**params):
+    def _setup_params(self_, **params):
         """
         Initialize default and keyword parameter values.
 
@@ -1768,24 +1763,24 @@ class Parameters:
         sets each of the keyword arguments, raising when any of them are not
         defined as parameters.
         """
-        self = self_.param.self
+        self = self_.self
         ## Deepcopy all 'instantiate=True' parameters
         params_to_deepcopy = {}
         params_to_ref = {}
-        for pname, p in self.param.objects(instance=False).items():
+        for pname, p in self_.objects(instance=False).items():
             if p.instantiate and pname != "name":
                 params_to_deepcopy[pname] = p
             elif p.constant and pname != 'name':
                 params_to_ref[pname] = p
 
         for p in params_to_deepcopy.values():
-            self.param._instantiate_param(p)
+            self_._instantiate_param(p)
         for p in params_to_ref.values():
-            self.param._instantiate_param(p, deepcopy=False)
+            self_._instantiate_param(p, deepcopy=False)
 
         ## keyword arg setting
         for name, val in params.items():
-            desc = self.__class__.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
+            desc = self_.cls.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
                 raise TypeError(
                     f"{self.__class__.__name__}.__init__() got an unexpected "
@@ -2046,7 +2041,7 @@ class Parameters:
         ]
 
         for tp in trigger_params:
-            self_.self_or_cls.param[tp]._mode = 'set'
+            self_[tp]._mode = 'set'
 
         values = self_.values()
         restore = {k: values[k] for k, v in kwargs.items() if k in values}
@@ -2148,7 +2143,6 @@ class Parameters:
                 return {k: self_.self.param[k] for k in pdict}
         return pdict
 
-
     def trigger(self_, *param_names):
         """
         Trigger watchers for the given set of parameter names. Watchers
@@ -2167,23 +2161,22 @@ class Parameters:
                 stacklevel=2,
             )
 
-        trigger_params = [p for p in self_.self_or_cls.param
-                          if hasattr(self_.self_or_cls.param[p], '_autotrigger_value')]
-        triggers = {p:self_.self_or_cls.param[p]._autotrigger_value
+        trigger_params = [p for p in self_
+                          if hasattr(self_[p], '_autotrigger_value')]
+        triggers = {p:self_[p]._autotrigger_value
                     for p in trigger_params if p in param_names}
 
-        events = self_.self_or_cls.param._events
-        watchers = self_.self_or_cls.param._state_watchers
-        self_.self_or_cls.param._events  = []
-        self_.self_or_cls.param._state_watchers = []
+        events = self_._events
+        watchers = self_._state_watchers
+        self_._events  = []
+        self_._state_watchers = []
         param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
-        self_.self_or_cls.param._TRIGGER = True
+        self_._TRIGGER = True
         self_.update(dict(params, **triggers))
-        self_.self_or_cls.param._TRIGGER = False
-        self_.self_or_cls.param._events += events
-        self_.self_or_cls.param._state_watchers += watchers
-
+        self_._TRIGGER = False
+        self_._events += events
+        self_._state_watchers += watchers
 
     def _update_event_type(self_, watcher, event, triggered):
         """
@@ -2217,17 +2210,17 @@ class Parameters:
         """
         Invoke the given watcher appropriately given an Event object.
         """
-        if self_.self_or_cls.param._TRIGGER:
+        if self_._TRIGGER:
             pass
         elif watcher.onlychanged and (not self_._changed(event)):
             return
 
-        if self_.self_or_cls.param._BATCH_WATCH:
+        if self_._BATCH_WATCH:
             self_._events.append(event)
             if not any(watcher is w for w in self_._state_watchers):
                 self_._state_watchers.append(watcher)
         else:
-            event = self_._update_event_type(watcher, event, self_.self_or_cls.param._TRIGGER)
+            event = self_._update_event_type(watcher, event, self_._TRIGGER)
             with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                 self_._execute_watcher(watcher, (event,))
 
@@ -2236,16 +2229,16 @@ class Parameters:
         Batch call a set of watchers based on the parameter value
         settings in kwargs using the queued Event and watcher objects.
         """
-        while self_.self_or_cls.param._events:
+        while self_._events:
             event_dict = OrderedDict([((event.name, event.what), event)
-                                      for event in self_.self_or_cls.param._events])
-            watchers = self_.self_or_cls.param._state_watchers[:]
-            self_.self_or_cls.param._events = []
-            self_.self_or_cls.param._state_watchers = []
+                                      for event in self_._events])
+            watchers = self_._state_watchers[:]
+            self_._events = []
+            self_._state_watchers = []
 
             for watcher in sorted(watchers, key=lambda w: w.precedence):
                 events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],
-                                                   self_.self_or_cls.param._TRIGGER)
+                                                   self_._TRIGGER)
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
                 with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):

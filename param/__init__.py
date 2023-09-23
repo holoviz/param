@@ -33,7 +33,7 @@ from numbers import Real
 
 from . import version  # noqa: api import
 
-from .depends import bind, depends # noqa: api import
+from .depends import depends # noqa: api import
 from .parameterized import (
     Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
     Undefined, descendents, get_logger, instance_descriptor, dt_types,
@@ -3223,4 +3223,4 @@ def exceptions_summarized():
         etype, value, tb = sys.exc_info()
         print(f"{etype.__name__}: {value}", file=sys.stderr)
 
-from .reactive import reactive # noqa: api import
+from .reactive import bind, reactive # noqa: api import

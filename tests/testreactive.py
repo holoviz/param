@@ -22,8 +22,7 @@ except ImportError:
 import param
 import pytest
 
-from param.depends import bind
-from param.reactive import reactive
+from param.reactive import bind, reactive
 
 NUMERIC_BINARY_OPERATORS = (
     operator.add, divmod, operator.floordiv, operator.mod, operator.mul,
@@ -129,13 +128,13 @@ def test_numpy_ufunc(ufunc):
 def test_reactive_set_new_value():
     i = reactive(1)
     assert i.rx.resolve() == 1
-    i.rx.set(2)
+    i.rx.set_input(2)
     assert i.rx.resolve() == 2
 
 def test_reactive_pipeline_set_new_value():
     i = reactive(1) + 2
     assert i.rx.resolve() == 3
-    i.rx.set(2)
+    i.rx.set_input(2)
     assert i.rx.resolve() == 4
 
 def test_reactive_reflect_param_value():
@@ -156,14 +155,14 @@ def test_reactive_reactive_reflect_other_reactive():
     i = reactive(1)
     j = reactive(i)
     assert j.rx.resolve() == 1
-    i.rx.set(2)
+    i.rx.set_input(2)
     assert j.rx.resolve() == 2
 
 def test_reactive_pipeline_reflect_other_reactive_expr():
     i = reactive(1) + 2
     j = reactive(i)
     assert j.rx.resolve() == 3
-    i.rx.set(2)
+    i.rx.set_input(2)
     assert i.rx.resolve() == 4
 
 def test_reactive_reflect_bound_method():
@@ -213,14 +212,14 @@ def test_reactive_len():
     i = reactive([1, 2, 3])
     l = i.rx.len()
     assert l.rx.resolve() == 3
-    i.rx.set([1, 2])
+    i.rx.set_input([1, 2])
     assert l == 2
 
 def test_reactive_bool():
     i = reactive(1)
     b = i.rx.bool()
     assert b.rx.resolve() is True
-    i.rx.set(0)
+    i.rx.set_input(0)
     assert b.rx.resolve() is False
 
 def test_reactive_iter():
@@ -228,7 +227,7 @@ def test_reactive_iter():
     a, b = i
     assert a.rx.resolve() == 'a'
     assert b.rx.resolve() == 'b'
-    i.rx.set(('b', 'a'))
+    i.rx.set_input(('b', 'a'))
     assert a.rx.resolve() == 'b'
     assert b.rx.resolve() == 'a'
 
@@ -236,19 +235,19 @@ def test_reactive_is():
     i = reactive(None)
     is_ = i.rx.is_(None)
     assert is_.rx.resolve()
-    i.rx.set(False)
+    i.rx.set_input(False)
     assert not is_.rx.resolve()
 
 def test_reactive_is_not():
     i = reactive(None)
     is_ = i.rx.is_not(None)
     assert not is_.rx.resolve()
-    i.rx.set(False)
+    i.rx.set_input(False)
     assert is_.rx.resolve()
 
 def test_reactive_where_expr():
     p = Parameters()
-    r = p.param.boolean.reactive().rx.where('A', 'B')
+    r = p.param.boolean.rx.where('A', 'B')
     assert r.rx.resolve() == 'B'
     p.boolean = True
     assert r.rx.resolve() == 'A'
@@ -256,8 +255,8 @@ def test_reactive_where_expr():
 def test_reactive_where_expr_refs():
     p = Parameters()
     results = []
-    r = p.param.boolean.reactive().rx.where(p.param.string, p.param.number)
-    r.rx.observe(results.append)
+    r = p.param.boolean.rx.where(p.param.string, p.param.number)
+    r.rx.watch(results.append)
     assert r.rx.resolve() == 3.14
     p.boolean = True
     assert results == ['string']

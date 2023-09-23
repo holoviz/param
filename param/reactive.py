@@ -81,6 +81,7 @@ display its repr.
 """
 from __future__ import annotations
 
+import inspect
 import math
 import operator
 
@@ -90,14 +91,14 @@ from typing import Any, Callable, Optional
 
 from . import Event
 from .depends import (
-    _display_accessors, bind, eval_function_with_deps,
-    register_depends_transform, resolve_ref, resolve_value,
+    _display_accessors, _reactive_display_objs, eval_function_with_deps,
+    register_depends_transform, depends, resolve_ref, resolve_value,
     transform_dependency
 )
 from .parameterized import (
     Parameter, Parameterized, get_method_owner
 )
-from ._utils import full_groupby
+from ._utils import iscoroutinefunction, full_groupby
 
 
 class Wrapper(Parameterized):
@@ -124,29 +125,37 @@ class reactive_ops:
     def __init__(self, reactive):
         self._reactive = reactive
 
+    def __call__(self):
+        rx = self._reactive
+        return rx if isinstance(rx, reactive) else reactive(rx)
+
     def bool(self):
         """
         __bool__ cannot be implemented so it is provided as a method.
         """
-        return self._reactive._apply_operator(bool)
+        rx = self._reactive if isinstance(self._reactive, reactive) else self()
+        return rx._apply_operator(bool)
 
     def is_(self, other):
         """
         Replacement for the ``is`` statement.
         """
-        return self._reactive._apply_operator(operator.is_, other)
+        rx = self._reactive if isinstance(self._reactive, reactive) else self()
+        return rx._apply_operator(operator.is_, other)
 
     def is_not(self, other):
         """
         Replacement for the ``is not`` statement.
         """
-        return self._reactive._apply_operator(operator.is_not, other)
+        rx = self._reactive if isinstance(self._reactive, reactive) else self()
+        return rx._apply_operator(operator.is_not, other)
 
     def len(self):
         """
         __len__ cannot be implemented so it is provided as a method.
         """
-        return self._reactive._apply_operator(len)
+        rx = self._reactive if isinstance(self._reactive, reactive) else self()
+        return rx._apply_operator(len)
 
     def pipe(self, func, *args, **kwargs):
         """
@@ -161,7 +170,8 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        return self._reactive._apply_operator(func, *args, **kwargs)
+        rx = self._reactive if isinstance(self._reactive, reactive) else self()
+        return rx._apply_operator(func, *args, **kwargs)
 
     def when(self, *dependencies):
         """
@@ -173,7 +183,7 @@ class reactive_ops:
         dependencies: param.Parameter | reactive
           A dependency that will trigger an update in the output.
         """
-        return bind(lambda *_: self.resolve(), *dependencies).reactive()
+        return bind(lambda *_: self.resolve(), *dependencies).rx()
 
     def where(self, x, y):
         """
@@ -207,26 +217,34 @@ class reactive_ops:
 
     # Operations to get the output and set the input of an expression
 
-    def observe(self, fn):
-        """
-        Adds a callback that observes the output of the pipeline.
-        """
-        def cb(*args):
-            fn(self.resolve())
-        for _, group in full_groupby(self._reactive._params, lambda x: id(x.owner)):
-            group[0].owner.param.watch(cb, [dep.name for dep in group])
-
     def resolve(self):
         """
         Returns the current state of the reactive by evaluating the
         pipeline.
         """
-        return self._reactive._resolve()
+        if isinstance(self._reactive, reactive):
+            return self._reactive._resolve()
+        elif isinstance(self._reactive, Parameter):
+            return getattr(self._reactive.owner, self._reactive.name)
+        else:
+            return self._reactive()
 
-    def set(self, new):
+    def set_input(self, new):
         """
         Allows overriding the original input to the pipeline.
         """
+        if isinstance(self._reactive, Parameter):
+            raise ValueError(
+                "Parameter.rx.set_input() is not supported. Cannot override "
+                "parameter value."
+            )
+        elif not isinstance(self._reactive, reactive):
+            raise ValueError(
+                "bind(...).rx.set_input() is not supported. Cannot override "
+                "the output of a function."
+            )
+        if isinstance(new, reactive):
+            new = new.resolve()
         prev = self._reactive
         while prev is not None:
             prev._dirty = True
@@ -236,7 +254,7 @@ class reactive_ops:
 
             if prev._wrapper is None:
                 raise ValueError(
-                    f'{type(self).__name__}.set is only supported if the '
+                    'reactive.rx.set_input() is only supported if the '
                     'root object is a constant value. If the root is a '
                     'Parameter or another dynamic value it must reflect '
                     'the source and cannot be set.'
@@ -246,6 +264,148 @@ class reactive_ops:
             prev = None
         return self
 
+    def watch(self, fn):
+        """
+        Adds a callback that observes the output of the pipeline.
+        """
+        def cb(*args):
+            fn(self.resolve())
+
+        if isinstance(self._reactive, reactive):
+            params = self._reactive._params
+        else:
+            params = resolve_ref(self._reactive)
+        for _, group in full_groupby(params, lambda x: id(x.owner)):
+            group[0].owner.param.watch(cb, [dep.name for dep in group])
+
+
+def bind(function, *args, watch=False, **kwargs):
+    """
+    Given a function, returns a wrapper function that binds the values
+    of some or all arguments to Parameter values and expresses Param
+    dependencies on those values, so that the function can be invoked
+    whenever the underlying values change and the output will reflect
+    those updated values.
+
+    As for functools.partial, arguments can also be bound to constants,
+    which allows all of the arguments to be bound, leaving a simple
+    callable object.
+
+    Arguments
+    ---------
+    function: callable
+        The function to bind constant or dynamic args and kwargs to.
+    args: object, param.Parameter
+        Positional arguments to bind to the function.
+    watch: boolean
+        Whether to evaluate the function automatically whenever one of
+        the bound parameters changes.
+    kwargs: object, param.Parameter
+        Keyword arguments to bind to the function.
+
+    Returns
+    -------
+    Returns a new function with the args and kwargs bound to it and
+    annotated with all dependencies.
+    """
+    args, kwargs = (
+        tuple(transform_dependency(arg) for arg in args),
+        {key: transform_dependency(arg) for key, arg in kwargs.items()}
+    )
+    dependencies = {}
+
+    # If the wrapped function has a dependency add it
+    fn_dep = transform_dependency(function)
+    if isinstance(fn_dep, Parameter) or hasattr(fn_dep, '_dinfo'):
+        dependencies['__fn'] = fn_dep
+
+    # Extract dependencies from args and kwargs
+    for i, p in enumerate(args):
+        if hasattr(p, '_dinfo'):
+            for j, arg in enumerate(p._dinfo['dependencies']):
+                dependencies[f'__arg{i}_arg{j}'] = arg
+            for kw, kwarg in p._dinfo['kw'].items():
+                dependencies[f'__arg{i}_arg_{kw}'] = kwarg
+        elif isinstance(p, Parameter):
+            dependencies[f'__arg{i}'] = p
+    for kw, v in kwargs.items():
+        if hasattr(v, '_dinfo'):
+            for j, arg in enumerate(v._dinfo['dependencies']):
+                dependencies[f'__kwarg_{kw}_arg{j}'] = arg
+            for pkw, kwarg in v._dinfo['kw'].items():
+                dependencies[f'__kwarg_{kw}_{pkw}'] = kwarg
+        elif isinstance(v, Parameter):
+            dependencies[kw] = v
+
+    def combine_arguments(wargs, wkwargs, asynchronous=False):
+        combined_args = []
+        for arg in args:
+            if hasattr(arg, '_dinfo'):
+                arg = eval_function_with_deps(arg)
+            elif isinstance(arg, Parameter):
+                arg = getattr(arg.owner, arg.name)
+            combined_args.append(arg)
+        combined_args += list(wargs)
+
+        combined_kwargs = {}
+        for kw, arg in kwargs.items():
+            if hasattr(arg, '_dinfo'):
+                arg = eval_function_with_deps(arg)
+            elif isinstance(arg, Parameter):
+                arg = getattr(arg.owner, arg.name)
+            combined_kwargs[kw] = arg
+        for kw, arg in wkwargs.items():
+            if asynchronous:
+                if kw.startswith('__arg'):
+                    combined_args[int(kw[5:])] = arg
+                elif kw.startswith('__kwarg'):
+                    combined_kwargs[kw[8:]] = arg
+                continue
+            elif kw.startswith('__arg') or kw.startswith('__kwarg') or kw.startswith('__fn'):
+                continue
+            combined_kwargs[kw] = arg
+        return combined_args, combined_kwargs
+
+    def eval_fn():
+        if callable(function):
+            fn = function
+        else:
+            p = transform_dependency(function)
+            if isinstance(p, Parameter):
+                fn = getattr(p.owner, p.name)
+            else:
+                fn = eval_function_with_deps(p)
+        return fn
+
+    if inspect.isasyncgenfunction(function):
+        async def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(
+                wargs, wkwargs, asynchronous=True
+            )
+            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            async for val in evaled:
+                yield val
+        wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
+        wrapped._dinfo = wrapper_fn._dinfo
+    elif iscoroutinefunction(function):
+        @depends(**dependencies, watch=watch)
+        async def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(
+                wargs, wkwargs, asynchronous=True
+            )
+            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            return await evaled
+    else:
+        @depends(**dependencies, watch=watch)
+        def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
+            return eval_fn()(*combined_args, **combined_kwargs)
+    wrapped.__bound_function__ = function
+    wrapped.rx = reactive_ops(wrapped)
+    _reactive_display_objs.add(wrapped)
+    for name, accessor in _display_accessors.items():
+        setattr(wrapped, name, accessor(wrapped))
+    return wrapped
 
 
 class reactive:

@@ -45,7 +45,6 @@ from ._utils import (
     _is_mutable_container,
     _recursive_repr,
     _validate_error_prefix,
-    _is_mutable_container,
     accept_arguments,
     iscoroutinefunction
 )
@@ -1165,9 +1164,10 @@ class Parameter(_ParameterBase):
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
                                                     safe=safe, subset=subset)
 
-    def reactive(self):
-        from .reactive import reactive
-        return reactive(self)
+    @property
+    def rx(self):
+        from .reactive import reactive_ops
+        return reactive_ops(self)
 
     @property
     def label(self):

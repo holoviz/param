@@ -3630,7 +3630,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
 
     if hasattr(p, 'bounds'):
         if p.bounds is None:
-            range_ = '(-&infin;,&infin;)'
+            range_ = ''
         elif hasattr(p,'inclusive_bounds'):
             # Numeric bounds use ( and [ to indicate exclusive and inclusive
             bl,bu = p.bounds
@@ -3647,8 +3647,8 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
             range_ = ' | '.join(kls.__name__ for kls in p.class_)
         else:
             range_ = p.class_.__name__
-    elif hasattr(p, 'regex'):
-        range_ = 'regex(.*)' if p.regex is None else f'regex({p.regex})'
+    elif hasattr(p, 'regex') and p.regex is not None:
+        range_ = f'regex({p.regex})'
     else:
         range_ = ''
 
@@ -3658,15 +3658,15 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
         range_ = ' '.join(s for s in ['<i>constant</i>', range_] if s)
 
     if getattr(p, 'allow_None', False):
-        range_ = ' '.join(s for s in ['<i>allow_None</i>', range_] if s)
+        range_ = ' '.join(s for s in ['<i>nullable</i>', range_] if s)
 
     tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
 
     return (
         f'<tr>'
         f'  <td><p style="margin-bottom: 0px;"{tooltip}>{key}</p></td>'
-        f'  <td style="max-width: 200px;">{value}</td>'
-        f'  <td>{p.__class__.__name__}</td>'
+        f'  <td style="max-width: 200px; text-align:left;">{value}</td>'
+        f'  <td style="text-align:left;">{p.__class__.__name__}</td>'
         f'  <td style="max-width: 300px;">{range_}</td>'
         f'</tr>\n'
     )
@@ -3724,7 +3724,7 @@ def _parameterized_repr_html(p, open):
         ' </summary>\n'
         ' <div style="padding-left:10px; padding-bottom:5px;">\n'
         '  <table style="max-width:100%; border:1px solid #AAAAAA;">\n'
-        f'   <tr><th style="text-align:left;">Name</th><th>{value_field}</th><th>Type</th><th>Range</th></tr>\n'
+        f'   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">{value_field}</th><th style="text-align:left;">Type</th><th>Range</th></tr>\n'
         f'{contents}\n'
         '  </table>\n </div>\n</details>\n'
     )

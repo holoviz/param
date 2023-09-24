@@ -19,7 +19,7 @@ def test_parameterized_warns_explicit_no_ref():
     p = Parameters()
     with pytest.raises(Exception) as e:
         ImplicitRefsParameters(parameter=p.param.string)
-    assert "Parameter 'parameter' is being given a valid parameter reference <param.parameterized.String" in str(e)
+    assert f"Parameter 'parameter' on class {p} is being given a valid parameter reference <param.parameterized.String" in str(e)
 
 def test_parameter_ref():
     p = Parameters()

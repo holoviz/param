@@ -1511,7 +1511,8 @@ class String(Parameter):
         self,
         default="", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
+        allow_refs=False, nested_refs=False
     ):
         ...
 

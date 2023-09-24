@@ -1,30 +1,30 @@
 """
 reactive API
 
-`reactive` is a wrapper around a Python object that lets users create
-reactive pipelines by calling existing APIs on an object with dynamic
+`rx` is a wrapper around a Python object that lets users create
+reactive expression pipelines by calling existing APIs on an object with dynamic
 parameters or widgets.
 
-A `reactive` instance watches what operations are applied to the object
+An `rx` instance watches what operations are applied to the object
 and records these on each instance, which are then strung together
 into a chain.
 
-The original input to a `reactive` is stored in a mutable list and can be
+The original input to an `rx` object is stored in a mutable list and can be
 accessed via the `_obj` property. The shared mutable data structure
-ensures that all `reactive` instances created from the same object can
+ensures that all `rx` instances created from the same object can
 hold a shared reference that can be updated, e.g. via the `.set`
 method or because the input was itself a reference to some object that
 can potentially be updated.
 
-When an operation is applied to a `reactive` instance, it will
+When an operation is applied to an `rx` instance, it will
 record the operation and create a new instance using `_clone` method,
 e.g. `dfi.head()` first records that the `'head'` attribute is
 accessed, which is achieved by overriding `__getattribute__`. A new
 reactive object is returned, which will then record that it is
-being called, and that new object will be itself called as
-`reactive` implements `__call__`. `__call__` returns another
-`reactive` instance. To be able to watch all the potential
-operations that may be applied to an object, `reactive` implements:
+being called, and that new object will be itself called, as
+`rx` implements `__call__`. `__call__` returns another
+`rx` instance. To be able to watch all the potential
+operations that may be applied to an object, `rx` implements:
 
 - `__getattribute__`: Watching for attribute accesses
 - `__call__`: Intercepting both actual calls or method calls if an
@@ -33,7 +33,7 @@ operations that may be applied to an object, `reactive` implements:
 - Operators: Implementing all valid operators `__gt__`, `__add__`, etc.
 - `__array_ufunc__`: Intercepting numpy universal function calls
 
-The `reactive` object evaluates operations lazily but whenever the
+The `rx` object evaluates operations lazily but whenever the
 current value is needed the operations are automatically
 evaluated. Note that even attribute access or tab-completion
 operations can result in evaluation of the pipeline. This is very
@@ -55,23 +55,23 @@ attribute of each instance. They contain 4 keys:
              reverse order.
 
 The `_depth` attribute starts at 0 and is incremented by 1 every time
-a new `reactive` instance is created part of a chain.  The root
-instance in a reactive reactive has a `_depth` of 0. A reactive
+a new `rx` instance is created part of a chain. The root
+instance in a reactive expression  has a `_depth` of 0. A reactive
 expression can consist of multiple chains, such as `dfi[dfi.A > 1]`,
-as the `reactive` instance is referenced twice in the reactive. As a
-consequence `_depth` is not the total count of `reactive` instance
+as the `rx` instance is referenced twice in the expression. As a
+consequence `_depth` is not the total count of `rx` instance
 creations of a pipeline, it is the count of instances created in the
-outer chain. In the example, that would be `dfi[]`. Each `reactive`
+outer chain. In the example, that would be `dfi[]`. Each `rx`
 instance keeps a reference to the previous instance in the chain and
 each instance tracks whether its current value is up-to-date via the
 `_dirty` attribute, which is set to False if any dependency changes.
 
 The `_method` attribute is a string that temporarily stores the
 method/attr accessed on the object, e.g. `_method` is 'head' in
-`dfi.head()`, until the `reactive` instance created in the pipeline
+`dfi.head()`, until the `rx` instance created in the pipeline
 is called at which point `_method` is reset to None. In cases such as
 `dfi.head` or `dfi.A`, `_method` is not (yet) reset to None. At this
-stage the reactive instance returned has its `_current` attribute
+stage the `rx` instance returned has its `_current` attribute
 not updated, e.g. `dfi.A._current` is still the original dataframe,
 not the 'A' series. Keeping `_method` is thus useful for instance to
 display `dfi.A`, as the evaluation of the object will check whether
@@ -125,43 +125,43 @@ class reactive_ops:
         self._reactive = reactive
 
     def __call__(self):
-        rx = self._reactive
-        return rx if isinstance(rx, reactive) else reactive(rx)
+        rxi = self._reactive
+        return rxi if isinstance(rx, rx) else rx(rxi)
 
     def bool(self):
         """
         __bool__ cannot be implemented so it is provided as a method.
         """
-        rx = self._reactive if isinstance(self._reactive, reactive) else self()
-        return rx._apply_operator(bool)
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(bool)
 
     def in_(self, other):
         """
         Replacement for the ``in`` statement.
         """
-        rx = self._reactive if isinstance(self._reactive, reactive) else self()
-        return rx._apply_operator(operator.contains, other, reverse=True)
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(operator.contains, other, reverse=True)
 
     def is_(self, other):
         """
         Replacement for the ``is`` statement.
         """
-        rx = self._reactive if isinstance(self._reactive, reactive) else self()
-        return rx._apply_operator(operator.is_, other)
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(operator.is_, other)
 
     def is_not(self, other):
         """
         Replacement for the ``is not`` statement.
         """
-        rx = self._reactive if isinstance(self._reactive, reactive) else self()
-        return rx._apply_operator(operator.is_not, other)
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(operator.is_not, other)
 
     def len(self):
         """
         __len__ cannot be implemented so it is provided as a method.
         """
-        rx = self._reactive if isinstance(self._reactive, reactive) else self()
-        return rx._apply_operator(len)
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(len)
 
     def pipe(self, func, *args, **kwargs):
         """
@@ -176,17 +176,17 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        rx = self._reactive if isinstance(self._reactive, reactive) else self()
-        return rx._apply_operator(func, *args, **kwargs)
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(func, *args, **kwargs)
 
     def when(self, *dependencies):
         """
-        Returns a reactive object that emits the contents of this
+        Returns a reactive expression that emits the contents of this
         expression only when the condition changes.
 
         Arguments
         ---------
-        dependencies: param.Parameter | reactive
+        dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
         """
         return bind(lambda *_: self.resolve(), *dependencies).rx()
@@ -225,10 +225,10 @@ class reactive_ops:
 
     def resolve(self):
         """
-        Returns the current state of the reactive by evaluating the
-        pipeline.
+        Returns the current state of the reactive expression by
+        evaluating the pipeline.
         """
-        if isinstance(self._reactive, reactive):
+        if isinstance(self._reactive, rx):
             return self._reactive._resolve()
         elif isinstance(self._reactive, Parameter):
             return getattr(self._reactive.owner, self._reactive.name)
@@ -244,12 +244,12 @@ class reactive_ops:
                 "Parameter.rx.set_input() is not supported. Cannot override "
                 "parameter value."
             )
-        elif not isinstance(self._reactive, reactive):
+        elif not isinstance(self._reactive, rx):
             raise ValueError(
                 "bind(...).rx.set_input() is not supported. Cannot override "
                 "the output of a function."
             )
-        if isinstance(new, reactive):
+        if isinstance(new, rx):
             new = new.resolve()
         prev = self._reactive
         while prev is not None:
@@ -260,7 +260,7 @@ class reactive_ops:
 
             if prev._wrapper is None:
                 raise ValueError(
-                    'reactive.rx.set_input() is only supported if the '
+                    'rx.rx.set_input() is only supported if the '
                     'root object is a constant value. If the root is a '
                     'Parameter or another dynamic value it must reflect '
                     'the source and cannot be set.'
@@ -276,7 +276,7 @@ class reactive_ops:
         def cb(*args):
             fn(self.resolve())
 
-        if isinstance(self._reactive, reactive):
+        if isinstance(self._reactive, rx):
             params = self._reactive._params
         else:
             params = resolve_ref(self._reactive)
@@ -413,9 +413,9 @@ def bind(function, *args, watch=False, **kwargs):
     return wrapped
 
 
-class reactive:
+class rx:
     """
-    `reactive` allows wrapping objects and then operating on them
+    `rx` allows wrapping objects and then operating on them
     interactively while recording any operations applied to them. By
     recording all arguments or operands in the operations the recorded
     pipeline can be replayed if an operand represents a dynamic value.
@@ -429,7 +429,7 @@ class reactive:
     --------
     Instantiate it from an object:
 
-    >>> ifloat = reactive(3.14)
+    >>> ifloat = rx(3.14)
     >>> ifloat * 2
     6.28
 
@@ -438,7 +438,7 @@ class reactive:
     2
     """
 
-    _accessors: dict[str, Callable[[reactive], Any]] = {}
+    _accessors: dict[str, Callable[[rx], Any]] = {}
 
     _display_options: tuple[str] = ()
 
@@ -448,19 +448,19 @@ class reactive:
 
     @classmethod
     def register_accessor(
-        cls, name: str, accessor: Callable[[reactive], Any],
+        cls, name: str, accessor: Callable[[rx], Any],
         predicate: Optional[Callable[[Any], bool]] = None
     ):
         """
-        Registers an accessor that extends reactive with custom behavior.
+        Registers an accessor that extends rx with custom behavior.
 
         Arguments
         ---------
         name: str
           The name of the accessor will be attribute-accessible under.
-        accessor: Callable[[reactive], any]
+        accessor: Callable[[rx], any]
           A callable that will return the accessor namespace object
-          given the reactive object it is registered on.
+          given the rx object it is registered on.
         predicate: Callable[[Any], bool] | None
         """
         cls._accessors[name] = (accessor, predicate)
@@ -507,7 +507,7 @@ class reactive:
         else:
             wrapper = Wrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
-        inst = super(reactive, cls).__new__(cls)
+        inst = super(rx, cls).__new__(cls)
         inst._fn = fn
         inst._shared_obj = kwargs.get('_shared_obj', None if obj is None else [obj])
         inst._wrapper = wrapper
@@ -536,7 +536,7 @@ class reactive:
         self._dirty_obj = False
         self._error_state = None
         self._current_ = None
-        if isinstance(obj, reactive) and not prev:
+        if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
             self._prev = prev
@@ -546,7 +546,7 @@ class reactive:
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, accessor(self))
-        for name, (accessor, predicate) in reactive._accessors.items():
+        for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))
 
@@ -790,8 +790,8 @@ class reactive:
         if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__'):
             return self.set_display(*args, **kwargs)
 
-        if method in reactive._method_handlers:
-            handler = reactive._method_handlers[method]
+        if method in rx._method_handlers:
+            handler = rx._method_handlers[method]
             method = handler(self)
         new._method = None
         kwargs = dict(kwargs)
@@ -804,7 +804,7 @@ class reactive:
         return new._clone(operation)
 
     #----------------------------------------------------------------
-    # reactive pipeline APIs
+    # rx pipeline APIs
     #----------------------------------------------------------------
 
     def __array_ufunc__(self, ufunc, method, *args, **kwargs):
@@ -973,9 +973,9 @@ class reactive:
         return obj
 
 
-def _reactive_transform(obj):
-    if not isinstance(obj, reactive):
+def _rx_transform(obj):
+    if not isinstance(obj, rx):
         return obj
     return bind(lambda *_: obj.rx.resolve(), *obj._params)
 
-register_reference_transform(_reactive_transform)
+register_reference_transform(_rx_transform)

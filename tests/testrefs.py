@@ -1,7 +1,7 @@
 import param
 import pytest
 
-from param.reactive import bind, reactive
+from param.reactive import bind, rx
 
 class Parameters(param.Parameterized):
 
@@ -49,7 +49,7 @@ def test_bind_ref():
     assert p2.string == 'new string!'
 
 def test_reactive_ref():
-    string = reactive('string')
+    string = rx('string')
     rx_string = string+'!'
     p = Parameters(string=rx_string)
     assert p.string == 'string!'

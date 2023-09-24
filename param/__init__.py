@@ -3246,4 +3246,4 @@ def exceptions_summarized():
         etype, value, tb = sys.exc_info()
         print(f"{etype.__name__}: {value}", file=sys.stderr)
 
-from .reactive import bind, reactive # noqa: api import
+from .reactive import bind, rx # noqa: api import

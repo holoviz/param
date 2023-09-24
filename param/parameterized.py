@@ -1887,7 +1887,7 @@ class Parameters:
         updates, generators = {}, {}
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
-            deps = resolve_ref(ref)
+            deps = resolve_ref(ref, self_[pname].nested_refs)
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events):
                 continue
 

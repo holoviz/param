@@ -1896,11 +1896,10 @@ class Parameters:
     def _sync_refs(self_, *events):
         from .depends import resolve_ref, resolve_value
         updates, generators = {}, {}
-        print(self_.self, self_.self._param__private.refs)
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
             deps = resolve_ref(ref, self_[pname].nested_refs)
-            is_async = inspect.isasyncgenfunction(ref)
+            is_async = iscoroutinefunction(ref)
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
@@ -1927,7 +1926,7 @@ class Parameters:
 
     def _resolve_ref(self_, pobj, value):
         from .depends import resolve_ref, resolve_value
-        is_async = inspect.isasyncgenfunction(value)
+        is_async = iscoroutinefunction(value)
         deps = resolve_ref(value, recursive=pobj.nested_refs)
         if not deps and not is_async:
             return None, None, value, False

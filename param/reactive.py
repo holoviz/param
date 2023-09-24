@@ -91,12 +91,11 @@ from typing import Any, Callable, Optional
 
 from . import Event
 from .depends import (
-    _display_accessors, _reactive_display_objs, eval_function_with_deps,
-    register_depends_transform, depends, resolve_ref, resolve_value,
-    transform_dependency
+    _display_accessors, _reactive_display_objs, depends,
 )
 from .parameterized import (
-    Parameter, Parameterized, get_method_owner
+    Parameter, Parameterized, eval_function_with_deps, get_method_owner,
+    register_depends_transform, resolve_ref, resolve_value, transform_dependency
 )
 from ._utils import iscoroutinefunction, full_groupby
 

@@ -115,6 +115,95 @@ object_count = 0
 warning_count = 0
 
 
+# Hooks to apply to depends and bind arguments to turn them into valid parameters
+
+_dependency_transforms = []
+
+def register_depends_transform(transform):
+    """
+    Appends a transform to extract potential parameter dependencies
+    from an object.
+
+    Arguments
+    ---------
+    transform: Callable[Any, Any]
+    """
+    return _dependency_transforms.append(transform)
+
+def transform_dependency(arg):
+    """
+    Transforms arguments for depends and bind functions applying any
+    registered dependency transforms. This is useful for adding
+    handling for depending on objects that are not simple Parameters or
+    functions with dependency definitions.
+    """
+    for transform in _dependency_transforms:
+        if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
+            break
+        arg = transform(arg)
+    return arg
+
+def eval_function_with_deps(function):
+    """Evaluates a function after resolving its dependencies.
+
+    Calls and returns a function after resolving any dependencies
+    stored on the _dinfo attribute and passing the resolved values
+    as arguments.
+    """
+    args, kwargs = (), {}
+    if hasattr(function, '_dinfo'):
+        arg_deps = function._dinfo['dependencies']
+        kw_deps = function._dinfo.get('kw', {})
+        if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
+            args = (getattr(dep.owner, dep.name) for dep in arg_deps)
+            kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
+    return function(*args, **kwargs)
+
+def resolve_value(value):
+    """
+    Resolves the current value of a dynamic reference.
+    """
+    if isinstance(value, (list, tuple)):
+        return type(value)(resolve_value(v) for v in value)
+    elif isinstance(value, dict):
+        return type(value)((resolve_value(k), resolve_value(v)) for k, v in value.items())
+    elif isinstance(value, slice):
+        return slice(
+            resolve_value(value.start),
+            resolve_value(value.stop),
+            resolve_value(value.step)
+        )
+    value = transform_dependency(value)
+    if hasattr(value, '_dinfo'):
+        value = eval_function_with_deps(value)
+    elif isinstance(value, Parameter):
+        value = getattr(value.owner, value.name)
+    return value
+
+def resolve_ref(reference, recursive=False):
+    """
+    Resolves all parameters a dynamic reference depends on.
+    """
+    if recursive:
+        if isinstance(reference, (list, tuple, set)):
+            return [r for v in reference for r in resolve_ref(v)]
+        elif isinstance(reference, dict):
+            return [r for kv in reference.items() for o in kv for r in resolve_ref(o)]
+        elif isinstance(reference, slice):
+            return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
+    reference = transform_dependency(reference)
+    if hasattr(reference, '_dinfo'):
+        dinfo = getattr(reference, '_dinfo', {})
+        args = list(dinfo.get('dependencies', []))
+        kwargs = list(dinfo.get('kw', {}).values())
+        refs = []
+        for arg in (args + kwargs):
+            refs.extend(resolve_ref(arg))
+        return refs
+    elif isinstance(reference, Parameter):
+        return [reference]
+    return []
+
 def _identity_hook(obj, val):
     """To be removed when set_hook is removed"""
     return val
@@ -1903,7 +1992,6 @@ class Parameters:
             ))
 
     def _update_ref(self_, name, ref):
-        from .depends import resolve_ref
         for _, watcher in self_.self._param__private.ref_watchers:
             dep_obj = watcher.cls if watcher.inst is None else watcher.inst
             dep_obj.param.unwatch(watcher)
@@ -1914,7 +2002,6 @@ class Parameters:
         self_.self._param__private.refs = refs
 
     def _sync_refs(self_, *events):
-        from .depends import resolve_ref, resolve_value
         updates, generators = {}, {}
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
@@ -1945,7 +2032,6 @@ class Parameters:
                         self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
-        from .depends import resolve_ref, resolve_value
         is_async = iscoroutinefunction(value)
         deps = resolve_ref(value, recursive=pobj.nested_refs)
         if not deps and not is_async:

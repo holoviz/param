@@ -2,26 +2,26 @@
 reactive API
 
 `rx` is a wrapper around a Python object that lets users create
-reactive pipelines by calling existing APIs on an object with dynamic
+reactive expression pipelines by calling existing APIs on an object with dynamic
 parameters or widgets.
 
-A `rx` instance watches what operations are applied to the object
+An `rx` instance watches what operations are applied to the object
 and records these on each instance, which are then strung together
 into a chain.
 
-The original input to a `rx` object is stored in a mutable list and can be
+The original input to an `rx` object is stored in a mutable list and can be
 accessed via the `_obj` property. The shared mutable data structure
 ensures that all `rx` instances created from the same object can
 hold a shared reference that can be updated, e.g. via the `.set`
 method or because the input was itself a reference to some object that
 can potentially be updated.
 
-When an operation is applied to a `rx` instance, it will
+When an operation is applied to an `rx` instance, it will
 record the operation and create a new instance using `_clone` method,
 e.g. `dfi.head()` first records that the `'head'` attribute is
 accessed, which is achieved by overriding `__getattribute__`. A new
 reactive object is returned, which will then record that it is
-being called, and that new object will be itself called as
+being called, and that new object will be itself called, as
 `rx` implements `__call__`. `__call__` returns another
 `rx` instance. To be able to watch all the potential
 operations that may be applied to an object, `rx` implements:

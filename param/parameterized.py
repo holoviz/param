@@ -205,6 +205,16 @@ def batch_call_watchers(parameterized):
 
 
 @contextmanager
+def _syncing(parameterized, parameters):
+    old = parameterized._param__private.syncing
+    parameterized._param__private.syncing = set(old) | set(parameters)
+    try:
+        yield
+    finally:
+        parameterized._param__private.syncing = old
+
+
+@contextmanager
 def edit_constant(parameterized):
     """
     Temporarily set parameters on Parameterized object to constant=False
@@ -1374,8 +1384,8 @@ class Parameter(_ParameterBase):
         item in a list).
         """
         name = self.name
-        if obj is not None and self.allow_refs and obj._param__private.initialized:
-            ref, deps, val = obj.param._resolve_ref(self, val)
+        if obj is not None and self.allow_refs and obj._param__private.initialized and name not in obj._param__private.syncing:
+            ref, deps, val, _ = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)
@@ -1847,11 +1857,12 @@ class Parameters:
                 continue
 
             # Resolve references
-            ref, ref_deps, val = self_._resolve_ref(pobj, val)
+            ref, ref_deps, val, is_async = self_._resolve_ref(pobj, val)
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
-            setattr(self, name, val)
+            if not is_async:
+                setattr(self, name, val)
         return refs, deps
 
     def _setup_refs(self_, refs):
@@ -1885,14 +1896,16 @@ class Parameters:
     def _sync_refs(self_, *events):
         from .depends import resolve_ref, resolve_value
         updates, generators = {}, {}
+        print(self_.self, self_.self._param__private.refs)
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
             deps = resolve_ref(ref, self_[pname].nested_refs)
-            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events):
+            is_async = inspect.isasyncgenfunction(ref)
+            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
             new_val = resolve_value(ref)
-            if inspect.isawaitable(new_val) or isinstance(new_val, types.AsyncGeneratorType):
+            if is_async:
                 async_executor(partial(self_._async_ref, pname, new_val))
                 continue
 
@@ -1903,34 +1916,43 @@ class Parameters:
             updates[pname] = new_val
 
         with edit_constant(self_.self):
-            self_.update(updates)
+            with _syncing(self_.self, updates):
+                self_.update(updates)
         for pname, gen in generators.items():
             for v in gen:
                 updates[pname] = v
                 with edit_constant(self_.self):
-                    self_.update(updates)
+                    with _syncing(self_.self, updates):
+                        self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
         from .depends import resolve_ref, resolve_value
+        is_async = inspect.isasyncgenfunction(value)
         deps = resolve_ref(value, recursive=pobj.nested_refs)
-        if not deps:
-            return None, None, value
+        if not deps and not is_async:
+            return None, None, value, False
         ref = value
         value = resolve_value(value)
-        if inspect.isawaitable(value) or isinstance(value, types.AsyncGeneratorType):
+        if is_async:
             async_executor(partial(self_._async_ref, pobj.name, value))
             value = None
-        return ref, deps, value
+        return ref, deps, value, is_async
 
     async def _async_ref(self_, pname, awaitable):
+        if not self_.self._param__private.initialized:
+            async_executor(partial(self_._async_ref, pname, awaitable))
+            return
         if pname in self_.self._param__private.async_refs:
             self_.self._param__private.async_refs[pname].cancel()
         self_.self._param__private.async_refs[pname] = asyncio.current_task()
         try:
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
-                    self_.update({pname: new_obj})
-            self_.update({pname: await awaitable})
+                    with _syncing(self_.self, (pname,)):
+                        self_.update({pname: new_obj})
+            else:
+                with _syncing(self_.self, (pname,)):
+                    self_.update({pname: await awaitable})
         except Exception as e:
             raise e
         finally:
@@ -3876,6 +3898,7 @@ class _InstancePrivate:
         'async_refs',
         'refs',
         'ref_watchers',
+        'syncing',
         'watchers',
         'values',
     ]
@@ -3891,6 +3914,7 @@ class _InstancePrivate:
         values=None,
     ):
         self.initialized = initialized
+        self.syncing = set()
         if parameters_state is None:
             parameters_state = {
                 "BATCH_WATCH": False, # If true, Event and watcher objects are queued.

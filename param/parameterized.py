@@ -114,12 +114,10 @@ docstring_describe_params = True  # Add parameter description to class
 object_count = 0
 warning_count = 0
 
+# Hook to apply to depends and bind arguments to turn them into valid parameters
+_reference_transforms = []
 
-# Hooks to apply to depends and bind arguments to turn them into valid parameters
-
-_dependency_transforms = []
-
-def register_depends_transform(transform):
+def register_reference_transform(transform):
     """
     Appends a transform to extract potential parameter dependencies
     from an object.
@@ -128,16 +126,17 @@ def register_depends_transform(transform):
     ---------
     transform: Callable[Any, Any]
     """
-    return _dependency_transforms.append(transform)
+    return _reference_transforms.append(transform)
 
-def transform_dependency(arg):
+def transform_reference(arg):
     """
-    Transforms arguments for depends and bind functions applying any
-    registered dependency transforms. This is useful for adding
-    handling for depending on objects that are not simple Parameters or
-    functions with dependency definitions.
+    Applies transforms to turn objects which should be treated like
+    a parameter reference into a valid reference that can be resolved
+    by Param. This is useful for adding handling for depending on objects
+    that are not simple Parameters or functions with dependency
+    definitions.
     """
-    for transform in _dependency_transforms:
+    for transform in _reference_transforms:
         if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
             break
         arg = transform(arg)
@@ -173,7 +172,7 @@ def resolve_value(value):
             resolve_value(value.stop),
             resolve_value(value.step)
         )
-    value = transform_dependency(value)
+    value = transform_reference(value)
     if hasattr(value, '_dinfo'):
         value = eval_function_with_deps(value)
     elif isinstance(value, Parameter):
@@ -191,7 +190,7 @@ def resolve_ref(reference, recursive=False):
             return [r for kv in reference.items() for o in kv for r in resolve_ref(o)]
         elif isinstance(reference, slice):
             return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
-    reference = transform_dependency(reference)
+    reference = transform_reference(reference)
     if hasattr(reference, '_dinfo'):
         dinfo = getattr(reference, '_dinfo', {})
         args = list(dinfo.get('dependencies', []))

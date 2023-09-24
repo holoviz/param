@@ -1951,7 +1951,7 @@ class Parameters:
                         ref = None
                     if ref:
                         warnings.warn(
-                            f"Parameter {name!r} is being given a valid parameter "
+                            f"Parameter {name!r} on {pobj.owner} is being given a valid parameter "
                             f"reference {val} but is implicitly allow_refs=False. "
                             "In future allow_refs will be enabled by default and "
                             f"the reference {val} will be resolved to its underlying "
@@ -3288,7 +3288,14 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-        _param__private = _ClassPrivate()
+        # Compute which parameters explicitly do not support references
+        # This can be removed when Parameter.allow_refs=True by default.
+        explicit_no_refs = set()
+        for base in bases:
+            if issubclass(base, Parameterized):
+                explicit_no_refs |= set(base._param__private.explicit_no_refs)
+
+        _param__private = _ClassPrivate(explicit_no_refs=list(explicit_no_refs))
         mcs._param__private = _param__private
         mcs.__set_name(name, dict_)
         mcs._param__parameters = Parameters(mcs)
@@ -3374,8 +3381,7 @@ class ParameterizedMetaclass(type):
         description = param_pager(mcs)
         mcs.__doc__ = class_docstr + '\n' + description
 
-
-    def _initialize_parameter(mcs,param_name,param):
+    def _initialize_parameter(mcs, param_name, param):
         # A Parameter has no way to find out the name a
         # Parameterized class has for it
         param._set_names(param_name)
@@ -3951,6 +3957,7 @@ class _ClassPrivate:
         self,
         parameters_state=None,
         disable_instance_params=False,
+        explicit_no_refs=None,
         renamed=False,
         params=None,
     ):
@@ -3967,7 +3974,7 @@ class _ClassPrivate:
         self.params = {} if params is None else params
         self.initialized = False
         self.signature = None
-        self.explicit_no_refs = []
+        self.explicit_no_refs = [] if explicit_no_refs is None else explicit_no_refs
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}

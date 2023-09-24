@@ -95,7 +95,7 @@ from .depends import (
 )
 from .parameterized import (
     Parameter, Parameterized, eval_function_with_deps, get_method_owner,
-    register_depends_transform, resolve_ref, resolve_value, transform_dependency
+    register_reference_transform, resolve_ref, resolve_value, transform_reference
 )
 from ._utils import iscoroutinefunction, full_groupby
 
@@ -314,13 +314,13 @@ def bind(function, *args, watch=False, **kwargs):
     annotated with all dependencies.
     """
     args, kwargs = (
-        tuple(transform_dependency(arg) for arg in args),
-        {key: transform_dependency(arg) for key, arg in kwargs.items()}
+        tuple(transform_reference(arg) for arg in args),
+        {key: transform_reference(arg) for key, arg in kwargs.items()}
     )
     dependencies = {}
 
     # If the wrapped function has a dependency add it
-    fn_dep = transform_dependency(function)
+    fn_dep = transform_reference(function)
     if isinstance(fn_dep, Parameter) or hasattr(fn_dep, '_dinfo'):
         dependencies['__fn'] = fn_dep
 
@@ -375,7 +375,7 @@ def bind(function, *args, watch=False, **kwargs):
         if callable(function):
             fn = function
         else:
-            p = transform_dependency(function)
+            p = transform_reference(function)
             if isinstance(p, Parameter):
                 fn = getattr(p.owner, p.name)
             else:
@@ -494,7 +494,7 @@ class reactive:
 
     def __new__(cls, obj, **kwargs):
         wrapper = None
-        obj = transform_dependency(obj)
+        obj = transform_reference(obj)
         if kwargs.get('fn'):
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
@@ -978,4 +978,4 @@ def _reactive_transform(obj):
         return obj
     return bind(lambda *_: obj.rx.resolve(), *obj._params)
 
-register_depends_transform(_reactive_transform)
+register_reference_transform(_reactive_transform)

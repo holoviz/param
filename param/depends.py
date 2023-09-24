@@ -4,7 +4,7 @@ from collections import defaultdict
 from functools import wraps
 
 from .parameterized import (
-    Parameter, Parameterized, ParameterizedMetaclass, transform_dependency,
+    Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
 )
 from ._utils import accept_arguments, iscoroutinefunction
 
@@ -48,8 +48,8 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
         by default False
     """
     dependencies, kw = (
-        tuple(transform_dependency(arg) for arg in dependencies),
-        {key: transform_dependency(arg) for key, arg in kw.items()}
+        tuple(transform_reference(arg) for arg in dependencies),
+        {key: transform_reference(arg) for key, arg in kw.items()}
     )
 
     if iscoroutinefunction(func):

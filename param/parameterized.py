@@ -13,6 +13,7 @@ import copy
 import datetime as dt
 import html
 import inspect
+import logging
 import numbers
 import operator
 import random
@@ -33,9 +34,7 @@ from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
-from typing import Generator
 
-import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -2001,7 +2000,7 @@ class Parameters:
         self_.self._param__private.refs = refs
 
     def _sync_refs(self_, *events):
-        updates, generators = {}, {}
+        updates = {}
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
             deps = resolve_ref(ref, self_[pname].nested_refs)
@@ -2014,21 +2013,11 @@ class Parameters:
                 async_executor(partial(self_._async_ref, pname, new_val))
                 continue
 
-            if isinstance(new_val, Generator):
-                generators[pname] = new_val
-                new_val = next(new_val)
-
             updates[pname] = new_val
 
         with edit_constant(self_.self):
             with _syncing(self_.self, updates):
                 self_.update(updates)
-        for pname, gen in generators.items():
-            for v in gen:
-                updates[pname] = v
-                with edit_constant(self_.self):
-                    with _syncing(self_.self, updates):
-                        self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
         is_async = iscoroutinefunction(value)

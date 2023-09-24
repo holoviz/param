@@ -1850,19 +1850,39 @@ class Parameters:
                     f"keyword argument {name!r}"
                 )
 
-            pobj = objects[name]
-            if name not in objects or not pobj.allow_refs:
-                # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
+            pobj = objects.get(name)
+            if pobj is None or not pobj.allow_refs:
+                # Until Parameter.allow_refs=True by default we have to
+                # speculatively evaluate a values to check whether they
+                # contain a reference and warn the user that the
+                # behavior may change in future.
+                if name not in self_.cls._param__private.explicit_no_refs:
+                    try:
+                        ref, _, _, _ = self_._resolve_ref(pobj, val)
+                    except Exception:
+                        ref = None
+                    if ref:
+                        warnings.warn(
+                            f"Parameter {name!r} is being given a valid parameter "
+                            f"reference {val} but is implicitly allow_ref=False. "
+                            "In future references like these will be resolved to "
+                            "their underlying value unless allow_ref=False. "
+                            "Please explicitly set allow_ref on the Parameter "
+                            "definition to declare whethe references should be "
+                            "resolved or not.",
+                            category=_ParamFutureWarning,
+                            stacklevel=2,
+                        )
                 setattr(self, name, val)
                 continue
 
             # Resolve references
-            ref, ref_deps, val, is_async = self_._resolve_ref(pobj, val)
+            ref, ref_deps, resolved, is_async = self_._resolve_ref(pobj, val)
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
             if not is_async:
-                setattr(self, name, val)
+                setattr(self, name, resolved)
         return refs, deps
 
     def _setup_refs(self_, refs):
@@ -3473,6 +3493,9 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
+            elif slot == 'allow_refs' and not slot_values[slot]:
+                # Track Parameters that explicitly declared no refs
+                mcs._param__private.explicit_no_refs.append(param.name)
 
         # Now set the actual slot values
         for slot, value in slot_values.items():
@@ -3835,7 +3858,8 @@ class _ClassPrivate:
         'renamed',
         'params',
         'initialized',
-        'signature'
+        'signature',
+        'explicit_no_refs',
     ]
 
     def __init__(
@@ -3858,6 +3882,7 @@ class _ClassPrivate:
         self.params = {} if params is None else params
         self.initialized = False
         self.signature = None
+        self.explicit_no_refs = []
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}

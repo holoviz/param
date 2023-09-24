@@ -106,7 +106,7 @@ class Wrapper(Parameterized):
     Simple wrapper to allow updating literal values easily.
     """
 
-    object = Parameter()
+    object = Parameter(allow_refs=False)
 
 
 class Trigger(Parameterized):

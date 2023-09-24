@@ -77,7 +77,7 @@ def resolve_value(value):
     if isinstance(value, (list, tuple)):
         return type(value)(resolve_value(v) for v in value)
     elif isinstance(value, dict):
-        return type(value)((k, resolve_value(v)) for k, v in value)
+        return type(value)((resolve_value(k), resolve_value(v)) for k, v in value.items())
     elif isinstance(value, slice):
         return slice(
             resolve_value(value.start),
@@ -91,16 +91,17 @@ def resolve_value(value):
         value = getattr(value.owner, value.name)
     return value
 
-def resolve_ref(reference):
+def resolve_ref(reference, recursive=False):
     """
     Resolves all parameters a dynamic reference depends on.
     """
-    if isinstance(reference, (list, tuple, set)):
-        return [r for v in reference for r in resolve_ref(v)]
-    elif isinstance(reference, dict):
-        return [r for v in reference.values() for r in resolve_ref(v)]
-    elif isinstance(reference, slice):
-        return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
+    if recursive:
+        if isinstance(reference, (list, tuple, set)):
+            return [r for v in reference for r in resolve_ref(v)]
+        elif isinstance(reference, dict):
+            return [r for kv in reference.items() for o in kv for r in resolve_ref(o)]
+        elif isinstance(reference, slice):
+            return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
     reference = transform_dependency(reference)
     if hasattr(reference, '_dinfo'):
         dinfo = getattr(reference, '_dinfo', {})

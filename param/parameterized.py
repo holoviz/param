@@ -1958,7 +1958,7 @@ class Parameters:
                             "Parameter definition to declare whether references "
                             "should be resolved or not.",
                             category=_ParamFutureWarning,
-                            stacklevel=2,
+                            stacklevel=4,
                         )
                 setattr(self, name, val)
                 continue

@@ -273,3 +273,11 @@ def test_reactive_where_expr_refs():
     assert results == ['string', 'foo']
     p.boolean = False
     assert results == ['string', 'foo', 2.1]
+
+def test_reactive_watch_on_set_input():
+    string = reactive('string')
+    new_string = string + '!'
+    items = []
+    new_string.rx.watch(items.append)
+    string.rx.set_input('new string')
+    assert items == ['new string!']

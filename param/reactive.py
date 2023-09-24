@@ -266,7 +266,6 @@ class reactive_ops:
                     'Parameter or another dynamic value it must reflect '
                     'the source and cannot be set.'
                 )
-            prev._invalidate_obj()
             prev._wrapper.object = new
             prev = None
         return self._reactive
@@ -650,9 +649,9 @@ class reactive:
         """
         if self._fn is not None:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
-                params[0].owner.param.watch(self._invalidate_obj, [p.name for p in params])
+                params[0].owner.param._watch(self._invalidate_obj, [p.name for p in params], precedence=-1)
         for _, params in full_groupby(self._params, lambda x: id(x.owner)):
-            params[0].owner.param.watch(self._invalidate_current, [p.name for p in params])
+            params[0].owner.param._watch(self._invalidate_current, [p.name for p in params], precedence=-1)
 
     def _invalidate_current(self, *events):
         self._dirty = True
@@ -942,7 +941,7 @@ class reactive:
                 yield new
             return
         elif not isinstance(self._current, Iterable):
-            raise TypeError('cannot unpack non-iterable {type(self._current).__name__} object.')
+            raise TypeError(f'cannot unpack non-iterable {type(self._current).__name__} object.')
         iterator = []
         def iterate(value):
             if iterator:

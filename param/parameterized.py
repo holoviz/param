@@ -1857,7 +1857,6 @@ class Parameters:
     def _setup_refs(self_, refs):
         groups = defaultdict(list)
         for pname, subrefs in refs.items():
-            print(pname, subrefs)
             for p in subrefs:
 
                 if isinstance(p, Parameter):

@@ -1924,8 +1924,8 @@ class Parameters:
 
     async def _async_ref(self_, pname, awaitable):
         if pname in self_.self._param__private.async_refs:
-            self_.self._param__private._async_refs[pname].cancel()
-        self_.self._param__private._async_refs[pname] = asyncio.current_task()
+            self_.self._param__private.async_refs[pname].cancel()
+        self_.self._param__private.async_refs[pname] = asyncio.current_task()
         try:
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
@@ -1934,7 +1934,7 @@ class Parameters:
         except Exception as e:
             raise e
         finally:
-            del self_.self._param__private._async_refs[pname]
+            del self_.self._param__private.async_refs[pname]
 
     @classmethod
     def _changed(cls, event):
@@ -3873,6 +3873,7 @@ class _InstancePrivate:
         'parameters_state',
         'dynamic_watchers',
         'params',
+        'async_refs',
         'refs',
         'ref_watchers',
         'watchers',
@@ -3898,6 +3899,7 @@ class _InstancePrivate:
                 "watchers": [] # Queue of batched watchers
             }
         self.ref_watchers = []
+        self.async_refs = {}
         self.parameters_state = parameters_state
         self.dynamic_watchers = defaultdict(list) if dynamic_watchers is None else dynamic_watchers
         self.params = {} if params is None else params

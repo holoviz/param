@@ -1858,18 +1858,18 @@ class Parameters:
                 # behavior may change in future.
                 if name not in self_.cls._param__private.explicit_no_refs:
                     try:
-                        ref, _, _, _ = self_._resolve_ref(pobj, val)
+                        ref, _, resolved, _ = self_._resolve_ref(pobj, val)
                     except Exception:
                         ref = None
                     if ref:
                         warnings.warn(
                             f"Parameter {name!r} is being given a valid parameter "
-                            f"reference {val} but is implicitly allow_ref=False. "
-                            "In future references like these will be resolved to "
-                            "their underlying value unless allow_ref=False. "
-                            "Please explicitly set allow_ref on the Parameter "
-                            "definition to declare whethe references should be "
-                            "resolved or not.",
+                            f"reference {val} but is implicitly allow_refs=False. "
+                            "In future allow_refs will be enabled by default and "
+                            f"the reference {val} will be resolved to its underlying "
+                            f"value {resolved}. Please explicitly set allow_ref on the "
+                            "Parameter definition to declare whether references "
+                            "should be resolved or not.",
                             category=_ParamFutureWarning,
                             stacklevel=2,
                         )

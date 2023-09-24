@@ -1374,8 +1374,8 @@ class Parameter(_ParameterBase):
         item in a list).
         """
         name = self.name
-        if obj is not None and self.allow_refs:
-            ref, deps, val = self.owner.param._resolve_ref(self, val)
+        if obj is not None and self.allow_refs and obj._param__private.initialized:
+            ref, deps, val = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)

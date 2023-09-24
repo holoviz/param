@@ -196,6 +196,12 @@ def resolve_ref(reference, recursive=False):
         kwargs = list(dinfo.get('kw', {}).values())
         refs = []
         for arg in (args + kwargs):
+            if isinstance(arg, str):
+                owner = get_method_owner(reference)
+                if arg in owner.param:
+                    arg = owner.param[arg]
+                else:
+                    arg = getattr(owner, arg)
             refs.extend(resolve_ref(arg))
         return refs
     elif isinstance(reference, Parameter):

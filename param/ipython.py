@@ -24,7 +24,8 @@ import uuid
 
 import param
 
-from param.depends import depends, register_display_accessor, resolve_ref
+from param.depends import depends, register_display_accessor
+from param.parameterized import resolve_ref
 from param.reactive import reactive
 
 

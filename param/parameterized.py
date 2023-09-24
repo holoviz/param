@@ -8,16 +8,19 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
+import asyncio
 import copy
 import datetime as dt
-import re
+import html
 import inspect
-import random
+import logging
 import numbers
 import operator
+import random
+import re
+import types
 import typing
 import warnings
-import html
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -32,7 +35,6 @@ from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 
-import logging
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -111,6 +113,94 @@ docstring_describe_params = True  # Add parameter description to class
 object_count = 0
 warning_count = 0
 
+# Hook to apply to depends and bind arguments to turn them into valid parameters
+_reference_transforms = []
+
+def register_reference_transform(transform):
+    """
+    Appends a transform to extract potential parameter dependencies
+    from an object.
+
+    Arguments
+    ---------
+    transform: Callable[Any, Any]
+    """
+    return _reference_transforms.append(transform)
+
+def transform_reference(arg):
+    """
+    Applies transforms to turn objects which should be treated like
+    a parameter reference into a valid reference that can be resolved
+    by Param. This is useful for adding handling for depending on objects
+    that are not simple Parameters or functions with dependency
+    definitions.
+    """
+    for transform in _reference_transforms:
+        if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
+            break
+        arg = transform(arg)
+    return arg
+
+def eval_function_with_deps(function):
+    """Evaluates a function after resolving its dependencies.
+
+    Calls and returns a function after resolving any dependencies
+    stored on the _dinfo attribute and passing the resolved values
+    as arguments.
+    """
+    args, kwargs = (), {}
+    if hasattr(function, '_dinfo'):
+        arg_deps = function._dinfo['dependencies']
+        kw_deps = function._dinfo.get('kw', {})
+        if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
+            args = (getattr(dep.owner, dep.name) for dep in arg_deps)
+            kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
+    return function(*args, **kwargs)
+
+def resolve_value(value):
+    """
+    Resolves the current value of a dynamic reference.
+    """
+    if isinstance(value, (list, tuple)):
+        return type(value)(resolve_value(v) for v in value)
+    elif isinstance(value, dict):
+        return type(value)((resolve_value(k), resolve_value(v)) for k, v in value.items())
+    elif isinstance(value, slice):
+        return slice(
+            resolve_value(value.start),
+            resolve_value(value.stop),
+            resolve_value(value.step)
+        )
+    value = transform_reference(value)
+    if hasattr(value, '_dinfo'):
+        value = eval_function_with_deps(value)
+    elif isinstance(value, Parameter):
+        value = getattr(value.owner, value.name)
+    return value
+
+def resolve_ref(reference, recursive=False):
+    """
+    Resolves all parameters a dynamic reference depends on.
+    """
+    if recursive:
+        if isinstance(reference, (list, tuple, set)):
+            return [r for v in reference for r in resolve_ref(v)]
+        elif isinstance(reference, dict):
+            return [r for kv in reference.items() for o in kv for r in resolve_ref(o)]
+        elif isinstance(reference, slice):
+            return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
+    reference = transform_reference(reference)
+    if hasattr(reference, '_dinfo'):
+        dinfo = getattr(reference, '_dinfo', {})
+        args = list(dinfo.get('dependencies', []))
+        kwargs = list(dinfo.get('kw', {}).values())
+        refs = []
+        for arg in (args + kwargs):
+            refs.extend(resolve_ref(arg))
+        return refs
+    elif isinstance(reference, Parameter):
+        return [reference]
+    return []
 
 def _identity_hook(obj, val):
     """To be removed when set_hook is removed"""
@@ -199,6 +289,16 @@ def batch_call_watchers(parameterized):
         parameterized.param._BATCH_WATCH = BATCH_WATCH
         if not BATCH_WATCH:
             parameterized.param._batch_call_watchers()
+
+
+@contextmanager
+def _syncing(parameterized, parameters):
+    old = parameterized._param__private.syncing
+    parameterized._param__private.syncing = set(old) | set(parameters)
+    try:
+        yield
+    finally:
+        parameterized._param__private.syncing = old
 
 
 @contextmanager
@@ -642,6 +742,33 @@ def _skip_event(*events, **kwargs):
     return True
 
 
+def extract_dependencies(function):
+    """
+    Extract references from a method or function that declares the references.
+    """
+    subparameters = list(function._dinfo['dependencies'])+list(function._dinfo['kw'].values())
+    params = []
+    for p in subparameters:
+        if isinstance(p, str):
+            owner = get_method_owner(function)
+            *subps, p = p.split('.')
+            for subp in subps:
+                owner = getattr(owner, subp, None)
+                if owner is None:
+                    raise ValueError('Cannot depend on undefined sub-parameter {p!r}.')
+            if p in owner.param:
+                pobj = owner.param[p]
+                if pobj not in params:
+                    params.append(pobj)
+            else:
+                for sp in extract_dependencies(getattr(owner, p)):
+                    if sp not in params:
+                        params.append(sp)
+        elif p not in params:
+            params.append(p)
+    return params
+
+
 # Two callers at the module top level to support pickling.
 async def _async_caller(*events, what='value', changed=None, callback=None, function=None):
     if callback:
@@ -1032,7 +1159,7 @@ class Parameter(_ParameterBase):
     __slots__ = ['name', 'default', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
-                 'watchers', 'owner', '_label']
+                 'watchers', 'owner', 'allow_refs', 'nested_refs', '_label']
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -1045,7 +1172,7 @@ class Parameter(_ParameterBase):
     _slot_defaults = dict(
         default=None, precedence=None, doc=None, _label=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
-        per_instance=True
+        per_instance=True, allow_refs=False, nested_refs=False
     )
 
     # Parameters can be updated during Parameterized class creation when they
@@ -1061,7 +1188,8 @@ class Parameter(_ParameterBase):
         self,
         default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
+        allow_refs=False, nested_refs=False
     ):
         ...
 
@@ -1070,7 +1198,7 @@ class Parameter(_ParameterBase):
                  label=Undefined, precedence=Undefined,
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
-                 per_instance=Undefined):
+                 per_instance=Undefined, allow_refs=Undefined, nested_refs=Undefined):
 
         """Initialize a new Parameter object and store the supplied attributes:
 
@@ -1138,6 +1266,15 @@ class Parameter(_ParameterBase):
         allowed. If the default value is defined as None, allow_None
         is set to True automatically.
 
+        allow_refs: if True allows automatically linking parameter
+        references to this Parameter, i.e. the parameter value will
+        automatically reflect the current value of the reference that
+        is passed in.
+
+        nested_refs: if True and allow_refs=True then even nested objects
+        such as dictionaries, lists, slices, tuples and sets will be
+        inspected for references and will be automatically resolved.
+
         default, doc, and precedence all default to None, which allows
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
@@ -1145,6 +1282,8 @@ class Parameter(_ParameterBase):
 
         self.name = None
         self.owner = None
+        self.allow_refs = allow_refs
+        self.nested_refs = nested_refs
         self.precedence = precedence
         self.default = default
         self.doc = doc
@@ -1331,6 +1470,14 @@ class Parameter(_ParameterBase):
         object stored in a constant or read-only Parameter (e.g. one
         item in a list).
         """
+        name = self.name
+        if obj is not None and self.allow_refs and obj._param__private.initialized and name not in obj._param__private.syncing:
+            ref, deps, val, _ = obj.param._resolve_ref(self, val)
+            refs = obj._param__private.refs
+            if ref is not None:
+                self.owner.param._update_ref(name, ref)
+            elif name in refs:
+                del refs[name]
 
         # Deprecated Number set_hook called here to avoid duplicating setter
         if hasattr(self, 'set_hook'):
@@ -1349,7 +1496,7 @@ class Parameter(_ParameterBase):
         # obj can be None if __set__ is called for a Parameterized class
         if self.constant or self.readonly:
             if self.readonly:
-                raise TypeError("Read-only parameter '%s' cannot be modified" % self.name)
+                raise TypeError("Read-only parameter '%s' cannot be modified" % name)
             elif obj is None:
                 _old = self.default
                 self.default = val
@@ -1359,7 +1506,7 @@ class Parameter(_ParameterBase):
             else:
                 _old = obj._param__private.values.get(self.name, self.default)
                 if val is not _old:
-                    raise TypeError("Constant parameter '%s' cannot be modified"%self.name)
+                    raise TypeError("Constant parameter '%s' cannot be modified" % name)
         else:
             if obj is None:
                 _old = self.default
@@ -1368,20 +1515,19 @@ class Parameter(_ParameterBase):
                 # When setting a Parameter before calling super.
                 if not isinstance(obj._param__private, _InstancePrivate):
                     obj._param__private = _InstancePrivate()
-                _old = obj._param__private.values.get(self.name, self.default)
-                obj._param__private.values[self.name] = val
-
+                _old = obj._param__private.values.get(name, self.default)
+                obj._param__private.values[name] = val
         self._post_setter(obj, val)
 
         if obj is not None:
             if not hasattr(obj, '_param__private') or not getattr(obj._param__private, 'initialized', False):
                 return
-            obj.param._update_deps(self.name)
+            obj.param._update_deps(name)
 
         if obj is None:
             watchers = self.watchers.get("value")
-        elif self.name in obj._param__private.watchers:
-            watchers = obj._param__private.watchers[self.name].get('value')
+        elif name in obj._param__private.watchers:
+            watchers = obj._param__private.watchers[name].get('value')
             if watchers is None:
                 watchers = self.watchers.get("value")
         else:
@@ -1392,7 +1538,7 @@ class Parameter(_ParameterBase):
         if obj is None or not watchers:
             return
 
-        event = Event(what='value', name=self.name, obj=obj, cls=self.owner,
+        event = Event(what='value', name=name, obj=obj, cls=self.owner,
                       old=_old, new=val, type=None)
 
         # Copy watchers here since they may be modified inplace during iteration
@@ -1462,7 +1608,8 @@ class String(Parameter):
         self,
         default="", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
+        allow_refs=False, nested_refs=False
     ):
         ...
 
@@ -1529,8 +1676,9 @@ def as_uninitialized(fn):
         parameterized_instance = self_.self
         original_initialized = parameterized_instance._param__private.initialized
         parameterized_instance._param__private.initialized = False
-        fn(self_, *args, **kw)
+        ret = fn(self_, *args, **kw)
         parameterized_instance._param__private.initialized = original_initialized
+        return ret
     return override_initialization
 
 
@@ -1779,6 +1927,8 @@ class Parameters:
             self_._instantiate_param(p, deepcopy=False)
 
         ## keyword arg setting
+        deps, refs = {}, {}
+        objects = self.param.objects(instance=False)
         for name, val in params.items():
             desc = self_.cls.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:
@@ -1786,8 +1936,120 @@ class Parameters:
                     f"{self.__class__.__name__}.__init__() got an unexpected "
                     f"keyword argument {name!r}"
                 )
-            # i.e. if not desc it's setting an attribute in __dict__, not a Parameter
-            setattr(self, name, val)
+
+            pobj = objects.get(name)
+            if pobj is None or not pobj.allow_refs:
+                # Until Parameter.allow_refs=True by default we have to
+                # speculatively evaluate a values to check whether they
+                # contain a reference and warn the user that the
+                # behavior may change in future.
+                if name not in self_.cls._param__private.explicit_no_refs:
+                    try:
+                        ref, _, resolved, _ = self_._resolve_ref(pobj, val)
+                    except Exception:
+                        ref = None
+                    if ref:
+                        warnings.warn(
+                            f"Parameter {name!r} on {pobj.owner} is being given a valid parameter "
+                            f"reference {val} but is implicitly allow_refs=False. "
+                            "In future allow_refs will be enabled by default and "
+                            f"the reference {val} will be resolved to its underlying "
+                            f"value {resolved}. Please explicitly set allow_ref on the "
+                            "Parameter definition to declare whether references "
+                            "should be resolved or not.",
+                            category=_ParamFutureWarning,
+                            stacklevel=4,
+                        )
+                setattr(self, name, val)
+                continue
+
+            # Resolve references
+            ref, ref_deps, resolved, is_async = self_._resolve_ref(pobj, val)
+            if ref is not None:
+                refs[name] = ref
+                deps[name] = ref_deps
+            if not is_async:
+                setattr(self, name, resolved)
+        return refs, deps
+
+    def _setup_refs(self_, refs):
+        groups = defaultdict(list)
+        for pname, subrefs in refs.items():
+            for p in subrefs:
+
+                if isinstance(p, Parameter):
+                    groups[p.owner].append((pname, p.name))
+                else:
+                    for sp in extract_dependencies(p):
+                        groups[sp.owner].append((pname, sp.name))
+        for owner, pnames in groups.items():
+            refnames, pnames = zip(*pnames)
+            self_.self._param__private.ref_watchers.append((
+                refnames,
+                owner.param._watch(self_._sync_refs, list(set(pnames)), precedence=-1)
+            ))
+
+    def _update_ref(self_, name, ref):
+        for _, watcher in self_.self._param__private.ref_watchers:
+            dep_obj = watcher.cls if watcher.inst is None else watcher.inst
+            dep_obj.param.unwatch(watcher)
+        self_.self._param__private.ref_watchers = []
+        refs = dict(self_.self._param__private.refs, **{name: ref})
+        deps = {name: resolve_ref(ref) for name, ref in refs.items()}
+        self_._setup_refs(deps)
+        self_.self._param__private.refs = refs
+
+    def _sync_refs(self_, *events):
+        updates = {}
+        for pname, ref in self_.self._param__private.refs.items():
+            # Skip updating value if dependency has not changed
+            deps = resolve_ref(ref, self_[pname].nested_refs)
+            is_async = iscoroutinefunction(ref)
+            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
+                continue
+
+            new_val = resolve_value(ref)
+            if is_async:
+                async_executor(partial(self_._async_ref, pname, new_val))
+                continue
+
+            updates[pname] = new_val
+
+        with edit_constant(self_.self):
+            with _syncing(self_.self, updates):
+                self_.update(updates)
+
+    def _resolve_ref(self_, pobj, value):
+        is_async = iscoroutinefunction(value)
+        deps = resolve_ref(value, recursive=pobj.nested_refs)
+        if not deps and not is_async:
+            return None, None, value, False
+        ref = value
+        value = resolve_value(value)
+        if is_async:
+            async_executor(partial(self_._async_ref, pobj.name, value))
+            value = None
+        return ref, deps, value, is_async
+
+    async def _async_ref(self_, pname, awaitable):
+        if not self_.self._param__private.initialized:
+            async_executor(partial(self_._async_ref, pname, awaitable))
+            return
+        if pname in self_.self._param__private.async_refs:
+            self_.self._param__private.async_refs[pname].cancel()
+        self_.self._param__private.async_refs[pname] = asyncio.current_task()
+        try:
+            if isinstance(awaitable, types.AsyncGeneratorType):
+                async for new_obj in awaitable:
+                    with _syncing(self_.self, (pname,)):
+                        self_.update({pname: new_obj})
+            else:
+                with _syncing(self_.self, (pname,)):
+                    self_.update({pname: await awaitable})
+        except Exception as e:
+            raise e
+        finally:
+            del self_.self._param__private.async_refs[pname]
 
     @classmethod
     def _changed(cls, event):
@@ -3015,7 +3277,14 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-        _param__private = _ClassPrivate()
+        # Compute which parameters explicitly do not support references
+        # This can be removed when Parameter.allow_refs=True by default.
+        explicit_no_refs = set()
+        for base in bases:
+            if issubclass(base, Parameterized):
+                explicit_no_refs |= set(base._param__private.explicit_no_refs)
+
+        _param__private = _ClassPrivate(explicit_no_refs=list(explicit_no_refs))
         mcs._param__private = _param__private
         mcs.__set_name(name, dict_)
         mcs._param__parameters = Parameters(mcs)
@@ -3101,8 +3370,7 @@ class ParameterizedMetaclass(type):
         description = param_pager(mcs)
         mcs.__doc__ = class_docstr + '\n' + description
 
-
-    def _initialize_parameter(mcs,param_name,param):
+    def _initialize_parameter(mcs, param_name, param):
         # A Parameter has no way to find out the name a
         # Parameterized class has for it
         param._set_names(param_name)
@@ -3305,6 +3573,9 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
+            elif slot == 'allow_refs' and not slot_values[slot]:
+                # Track Parameters that explicitly declared no refs
+                mcs._param__private.explicit_no_refs.append(param.name)
 
         # Now set the actual slot values
         for slot, value in slot_values.items():
@@ -3667,13 +3938,15 @@ class _ClassPrivate:
         'renamed',
         'params',
         'initialized',
-        'signature'
+        'signature',
+        'explicit_no_refs',
     ]
 
     def __init__(
         self,
         parameters_state=None,
         disable_instance_params=False,
+        explicit_no_refs=None,
         renamed=False,
         params=None,
     ):
@@ -3690,6 +3963,7 @@ class _ClassPrivate:
         self.params = {} if params is None else params
         self.initialized = False
         self.signature = None
+        self.explicit_no_refs = [] if explicit_no_refs is None else explicit_no_refs
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}
@@ -3707,8 +3981,12 @@ class _InstancePrivate:
         Dict holding some transient states
     dynamic_watchers: defaultdict
         Dynamic watchers
+    ref_watchers: list[Watcher]
+        Watchers used for internal references
     params: dict
         Dict of parameter_name:parameter
+    refs: dict
+        Dict of parameter name:reference
     watchers: dict
         Dict of dict:
             parameter_name:
@@ -3722,6 +4000,10 @@ class _InstancePrivate:
         'parameters_state',
         'dynamic_watchers',
         'params',
+        'async_refs',
+        'refs',
+        'ref_watchers',
+        'syncing',
         'watchers',
         'values',
     ]
@@ -3731,11 +4013,13 @@ class _InstancePrivate:
         initialized=False,
         parameters_state=None,
         dynamic_watchers=None,
+        refs=None,
         params=None,
         watchers=None,
         values=None,
     ):
         self.initialized = initialized
+        self.syncing = set()
         if parameters_state is None:
             parameters_state = {
                 "BATCH_WATCH": False, # If true, Event and watcher objects are queued.
@@ -3743,9 +4027,12 @@ class _InstancePrivate:
                 "events": [], # Queue of batched events
                 "watchers": [] # Queue of batched watchers
             }
+        self.ref_watchers = []
+        self.async_refs = {}
         self.parameters_state = parameters_state
         self.dynamic_watchers = defaultdict(list) if dynamic_watchers is None else dynamic_watchers
         self.params = {} if params is None else params
+        self.refs = {} if refs is None else refs
         self.watchers = {} if watchers is None else watchers
         self.values = {} if values is None else values
 
@@ -3817,12 +4104,14 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # has overriden the default of the `name` Parameter.
         if self.param.name.default == self.__class__.__name__:
             self.param._generate_name()
-        self.param._setup_params(**params)
+        refs, deps = self.param._setup_params(**params)
         object_count += 1
 
         self._param__private.initialized = True
 
+        self.param._setup_refs(deps)
         self.param._update_deps(init=True)
+        self._param__private.refs = refs
 
     @property
     def param(self):

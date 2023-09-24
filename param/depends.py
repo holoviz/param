@@ -4,15 +4,12 @@ from collections import defaultdict
 from functools import wraps
 
 from .parameterized import (
-    Parameter, Parameterized, ParameterizedMetaclass
+    Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
 )
 from ._utils import accept_arguments, iscoroutinefunction
 
-# Hooks to apply to depends and bind arguments to turn them into valid parameters
-
-_reactive_display_objs = weakref.WeakSet()
 _display_accessors = {}
-_dependency_transforms = []
+_reactive_display_objs = weakref.WeakSet()
 
 def register_display_accessor(name, accessor, force=False):
     if name in _display_accessors and not force:
@@ -30,89 +27,6 @@ def unregister_display_accessor(name):
     for fn in _reactive_display_objs:
         delattr(fn, name)
 
-def register_depends_transform(transform):
-    """
-    Appends a transform to extract potential parameter dependencies
-    from an object.
-
-    Arguments
-    ---------
-    transform: Callable[Any, Any]
-    """
-    return _dependency_transforms.append(transform)
-
-def transform_dependency(arg):
-    """
-    Transforms arguments for depends and bind functions applying any
-    registered dependency transforms. This is useful for adding
-    handling for depending on objects that are not simple Parameters or
-    functions with dependency definitions.
-    """
-    for transform in _dependency_transforms:
-        if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
-            break
-        arg = transform(arg)
-    return arg
-
-def eval_function_with_deps(function):
-    """Evaluates a function after resolving its dependencies.
-
-    Calls and returns a function after resolving any dependencies
-    stored on the _dinfo attribute and passing the resolved values
-    as arguments.
-    """
-    args, kwargs = (), {}
-    if hasattr(function, '_dinfo'):
-        arg_deps = function._dinfo['dependencies']
-        kw_deps = function._dinfo.get('kw', {})
-        if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
-            args = (getattr(dep.owner, dep.name) for dep in arg_deps)
-            kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
-    return function(*args, **kwargs)
-
-def resolve_value(value):
-    """
-    Resolves the current value of a dynamic reference.
-    """
-    if isinstance(value, (list, tuple)):
-        return type(value)(resolve_value(v) for v in value)
-    elif isinstance(value, dict):
-        return type(value)((k, resolve_value(v)) for k, v in value)
-    elif isinstance(value, slice):
-        return slice(
-            resolve_value(value.start),
-            resolve_value(value.stop),
-            resolve_value(value.step)
-        )
-    value = transform_dependency(value)
-    if hasattr(value, '_dinfo'):
-        value = eval_function_with_deps(value)
-    elif isinstance(value, Parameter):
-        value = getattr(value.owner, value.name)
-    return value
-
-def resolve_ref(reference):
-    """
-    Resolves all parameters a dynamic reference depends on.
-    """
-    if isinstance(reference, (list, tuple, set)):
-        return [r for v in reference for r in resolve_ref(v)]
-    elif isinstance(reference, dict):
-        return [r for v in reference.values() for r in resolve_ref(v)]
-    elif isinstance(reference, slice):
-        return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
-    reference = transform_dependency(reference)
-    if hasattr(reference, '_dinfo'):
-        dinfo = getattr(reference, '_dinfo', {})
-        args = list(dinfo.get('dependencies', []))
-        kwargs = list(dinfo.get('kw', {}).values())
-        refs = []
-        for arg in (args + kwargs):
-            refs.extend(resolve_ref(arg))
-        return refs
-    elif isinstance(reference, Parameter):
-        return [reference]
-    return []
 
 @accept_arguments
 def depends(func, *dependencies, watch=False, on_init=False, **kw):
@@ -134,8 +48,8 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
         by default False
     """
     dependencies, kw = (
-        tuple(transform_dependency(arg) for arg in dependencies),
-        {key: transform_dependency(arg) for key, arg in kw.items()}
+        tuple(transform_reference(arg) for arg in dependencies),
+        {key: transform_reference(arg) for key, arg in kw.items()}
     )
 
     if iscoroutinefunction(func):

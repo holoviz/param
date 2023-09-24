@@ -1444,8 +1444,6 @@ class Parameter(_ParameterBase):
         event = Event(what='value', name=name, obj=obj, cls=self.owner,
                       old=_old, new=val, type=None)
 
-        print(watchers)
-
         # Copy watchers here since they may be modified inplace during iteration
         for watcher in sorted(watchers, key=lambda w: w.precedence):
             obj.param._call_watcher(watcher, event)

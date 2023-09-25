@@ -555,7 +555,7 @@ class rx:
         # that Trigger parameters do not cause double execution
         self._params = [
             p for p in self._internal_params if not isinstance(p.owner, Trigger)
-            or any (p in self._internal_params for p in p.owner.parameters)
+            or any (p not in self._internal_params for p in p.owner.parameters)
         ]
         self._setup_invalidations(depth)
         self._kwargs = kwargs

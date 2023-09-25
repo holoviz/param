@@ -540,6 +540,9 @@ class rx:
             self._prev = obj
         else:
             self._prev = prev
+        self._root = self._compute_root()
+        self._fn_params = self._compute_fn_params()
+        self._params = self._compute_params()
         self._setup_invalidations(depth)
         self._kwargs = kwargs
         self.rx = reactive_ops(self)
@@ -575,8 +578,15 @@ class rx:
             self.rx.resolve()
         return self._current_
 
-    @property
-    def _fn_params(self) -> list[Parameter]:
+    def _compute_root(self):
+        if self._prev is None:
+            return self
+        root = self
+        while root._prev is not None:
+            root = root._prev
+        return root
+
+    def _compute_fn_params(self) -> list[Parameter]:
         if self._fn is None:
             return []
 
@@ -592,17 +602,7 @@ class rx:
         kwargs = list(dinfo.get('kw', {}).values())
         return args + kwargs
 
-    @property
-    def _root(self):
-        if self._prev is None:
-            return self
-        root = self
-        while root._prev is not None:
-            root = root._prev
-        return root
-
-    @property
-    def _params(self) -> list[Parameter]:
+    def _compute_params(self) -> list[Parameter]:
         ps = self._fn_params
 
         # Collect parameters on previous objects in chain

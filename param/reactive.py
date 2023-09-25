@@ -941,20 +941,9 @@ class rx:
             return
         elif not isinstance(self._current, Iterable):
             raise TypeError(f'cannot unpack non-iterable {type(self._current).__name__} object.')
-        iterator = []
-        def iterate(value):
-            if iterator:
-                iterate = iterator[0]
-            else:
-                iterate = iter(value)
-                iterator.append(iterate)
-            try:
-                yield next(iterate)
-            except StopIteration as e:
-                iterator.clear()
-                raise e
-        for item in self._apply_operator(iterate):
-            yield item
+        items = self._apply_operator(list)
+        for i in range(len(self._current)):
+            yield items[i]
 
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']

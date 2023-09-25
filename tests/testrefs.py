@@ -1,5 +1,4 @@
 import param
-import pytest
 
 from param.reactive import bind, rx
 
@@ -11,15 +10,6 @@ class Parameters(param.Parameterized):
 
     string_list = param.List(default=[], item_type=str, allow_refs=True, nested_refs=True)
 
-
-def test_parameterized_warns_explicit_no_ref():
-    class ImplicitRefsParameters(param.Parameterized):
-        parameter = param.Parameter(default="string")
-
-    p = Parameters()
-    with pytest.raises(Exception) as e:
-        ImplicitRefsParameters(parameter=p.param.string)
-    assert f"Parameter 'parameter' on {ImplicitRefsParameters} is being given a valid parameter reference <param.parameterized.String" in str(e.value)
 
 def test_parameter_ref():
     p = Parameters()

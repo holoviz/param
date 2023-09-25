@@ -1945,27 +1945,6 @@ class Parameters:
 
             pobj = objects.get(name)
             if pobj is None or not pobj.allow_refs:
-                # Until Parameter.allow_refs=True by default we have to
-                # speculatively evaluate a values to check whether they
-                # contain a reference and warn the user that the
-                # behavior may change in future.
-                if name not in self_.cls._param__private.explicit_no_refs:
-                    try:
-                        ref, _, resolved, _ = self_._resolve_ref(pobj, val)
-                    except Exception:
-                        ref = None
-                    if ref:
-                        warnings.warn(
-                            f"Parameter {name!r} on {pobj.owner} is being given a valid parameter "
-                            f"reference {val} but is implicitly allow_refs=False. "
-                            "In future allow_refs will be enabled by default and "
-                            f"the reference {val} will be resolved to its underlying "
-                            f"value {resolved}. Please explicitly set allow_ref on the "
-                            "Parameter definition to declare whether references "
-                            "should be resolved or not.",
-                            category=_ParamFutureWarning,
-                            stacklevel=4,
-                        )
                 setattr(self, name, val)
                 continue
 
@@ -3283,14 +3262,7 @@ class ParameterizedMetaclass(type):
         """
         type.__init__(mcs, name, bases, dict_)
 
-        # Compute which parameters explicitly do not support references
-        # This can be removed when Parameter.allow_refs=True by default.
-        explicit_no_refs = set()
-        for base in bases:
-            if issubclass(base, Parameterized):
-                explicit_no_refs |= set(base._param__private.explicit_no_refs)
-
-        _param__private = _ClassPrivate(explicit_no_refs=list(explicit_no_refs))
+        _param__private = _ClassPrivate()
         mcs._param__private = _param__private
         mcs.__set_name(name, dict_)
         mcs._param__parameters = Parameters(mcs)
@@ -3579,9 +3551,6 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
-            elif slot == 'allow_refs' and not slot_values[slot]:
-                # Track Parameters that explicitly declared no refs
-                mcs._param__private.explicit_no_refs.append(param.name)
 
         # Now set the actual slot values
         for slot, value in slot_values.items():
@@ -3945,14 +3914,12 @@ class _ClassPrivate:
         'params',
         'initialized',
         'signature',
-        'explicit_no_refs',
     ]
 
     def __init__(
         self,
         parameters_state=None,
         disable_instance_params=False,
-        explicit_no_refs=None,
         renamed=False,
         params=None,
     ):
@@ -3969,7 +3936,6 @@ class _ClassPrivate:
         self.params = {} if params is None else params
         self.initialized = False
         self.signature = None
-        self.explicit_no_refs = [] if explicit_no_refs is None else explicit_no_refs
 
     def __getstate__(self):
         return {slot: getattr(self, slot) for slot in self.__slots__}

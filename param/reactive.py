@@ -183,6 +183,15 @@ class reactive_ops:
         rxi = self._reactive if isinstance(self._reactive, rx) else self()
         return rxi._apply_operator(func, *args, **kwargs)
 
+    def updating(self):
+        """
+        Returns a new expression that is True while the expression is updating.
+        """
+        wrapper = Wrapper(object=False)
+        self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
+        self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
+        return wrapper.param.object.rx()
+
     def when(self, *dependencies):
         """
         Returns a reactive expression that emits the contents of this
@@ -277,10 +286,17 @@ class reactive_ops:
             prev = None
         return self._reactive
 
-    def watch(self, fn):
+    def watch(self, fn, onlychanged=True, queued=False, precedence=0):
         """
         Adds a callback that observes the output of the pipeline.
         """
+        if precedence < 0:
+            raise ValueError("User-defined watch callbacks must declare "
+                             "a positive precedence. Negative precedences "
+                             "are reserved for internal Watchers.")
+        self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
+
+    def _watch(self, fn, onlychanged=True, queued=False, precedence=0):
         def cb(*args):
             fn(self.resolve())
 
@@ -289,7 +305,10 @@ class reactive_ops:
         else:
             params = resolve_ref(self._reactive)
         for _, group in full_groupby(params, lambda x: id(x.owner)):
-            group[0].owner.param.watch(cb, [dep.name for dep in group])
+            group[0].owner.param._watch(
+                cb, [dep.name for dep in group], onlychanged=onlychanged,
+                queued=queued, precedence=precedence
+            )
 
 
 def bind(function, *args, watch=False, **kwargs):

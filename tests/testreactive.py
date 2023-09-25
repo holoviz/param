@@ -231,6 +231,20 @@ def test_reactive_iter():
     assert a.rx.resolve() == 'b'
     assert b.rx.resolve() == 'a'
 
+def test_reactive_multi_iter():
+    i = rx(('a', 'b'))
+    a1, b1 = i
+    a2, b2 = i
+    assert a1.rx.resolve() == 'a'
+    assert b1.rx.resolve() == 'b'
+    assert a2.rx.resolve() == 'a'
+    assert b2.rx.resolve() == 'b'
+    i.rx.set_input(('b', 'a'))
+    assert a1.rx.resolve() == 'b'
+    assert b1.rx.resolve() == 'a'
+    assert a2.rx.resolve() == 'b'
+    assert b2.rx.resolve() == 'a'
+
 def test_reactive_is():
     i = rx(None)
     is_ = i.rx.is_(None)

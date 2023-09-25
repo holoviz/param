@@ -225,9 +225,9 @@ class reactive_ops:
                     trigger.param.trigger('value')
             bind(trigger_y, *yrefs, watch=True)
 
-        def ternary(condition, event):
+        def ternary(condition, _):
             return resolve_value(x) if condition else resolve_value(y)
-        return self.pipe(ternary, trigger.param.value)
+        return bind(ternary, self._reactive, trigger.param.value)
 
     # Operations to get the output and set the input of an expression
 

@@ -200,6 +200,12 @@ def resolve_ref(reference, recursive=False):
                 owner = get_method_owner(reference)
                 if arg in owner.param:
                     arg = owner.param[arg]
+                elif '.' in arg:
+                    path = arg.split('.')
+                    arg = owner
+                    for attr in path[:-1]:
+                        arg = getattr(arg, attr)
+                    arg = arg.param[path[-1]]
                 else:
                     arg = getattr(owner, arg)
             refs.extend(resolve_ref(arg))

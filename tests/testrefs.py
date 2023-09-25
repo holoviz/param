@@ -12,6 +12,15 @@ class Parameters(param.Parameterized):
     string_list = param.List(default=[], item_type=str, allow_refs=True, nested_refs=True)
 
 
+class Nested(param.Parameterized):
+
+    subobject = param.ClassSelector(class_=Parameters)
+
+    @param.depends('subobject.string')
+    def string(self):
+        return self.subobject.string + '!'
+
+
 def test_parameterized_warns_explicit_no_ref():
     class ImplicitRefsParameters(param.Parameterized):
         parameter = param.Parameter(default="string")
@@ -82,3 +91,12 @@ def test_nested_dict_value_parameter_ref():
     assert p2.dictionary == {'key': 'string'}
     p2.dictionary = {'new key': p3.param.string}
     assert p2.dictionary == {'new key': 'foo'}
+
+def test_nested_param_method_ref():
+    p = Parameters()
+    nested = Nested(subobject=p)
+    p2 = Parameters(string=nested.string)
+
+    assert p2.string == 'string!'
+    p.string = 'new string'
+    assert p2.string == 'new string!'

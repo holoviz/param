@@ -112,6 +112,10 @@ class Trigger(Parameterized):
 
     value = Event()
 
+    def __init__(self, parameters, **params):
+        super().__init__(**params)
+        self.parameters = parameters
+
 
 class reactive_ops:
     """
@@ -205,7 +209,11 @@ class reactive_ops:
         """
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
-        trigger = Trigger()
+        if isinstance(self._reactive, rx):
+            params = self._reactive._params
+        else:
+            params = resolve_ref(self._reactive)
+        trigger = Trigger(parameters=params)
         if xrefs:
             def trigger_x(*args):
                 if self.resolve():
@@ -542,7 +550,13 @@ class rx:
             self._prev = prev
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
-        self._params = self._compute_params()
+        self._internal_params = self._compute_params()
+        # Filter params that external objects depend on, ensuring
+        # that Trigger parameters do not cause double execution
+        self._params = [
+            p for p in self._internal_params if not isinstance(p.owner, Trigger)
+            or any (p in self._internal_params for p in p.owner.parameters)
+        ]
         self._setup_invalidations(depth)
         self._kwargs = kwargs
         self.rx = reactive_ops(self)
@@ -617,14 +631,11 @@ class rx:
             return ps
 
         # Accumulate dependencies in args and/or kwargs
-        ps += [
-            ref for arg in self._operation['args']
-            for ref in resolve_ref(arg)
-        ]
-        ps += [
-            ref for arg in self._operation['kwargs'].values()
-            for ref in resolve_ref(arg)
-        ]
+        for arg in list(self._operation['args'])+list(self._operation['kwargs'].values()):
+            for ref in resolve_ref(arg):
+                if ref not in ps:
+                    ps.append(ref)
+
         return ps
 
     def _setup_invalidations(self, depth: int = 0):
@@ -649,7 +660,7 @@ class rx:
         if self._fn is not None:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
                 params[0].owner.param._watch(self._invalidate_obj, [p.name for p in params], precedence=-1)
-        for _, params in full_groupby(self._params, lambda x: id(x.owner)):
+        for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
             params[0].owner.param._watch(self._invalidate_current, [p.name for p in params], precedence=-1)
 
     def _invalidate_current(self, *events):

@@ -1,10 +1,17 @@
+import collections
+import datetime as dt
 import inspect
 import functools
+import numbers
+import os
 import re
+import sys
 import traceback
 import warnings
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
+from contextlib import contextmanager
+from numbers import Real
 from textwrap import dedent
 from threading import get_ident
 from collections import abc
@@ -249,3 +256,293 @@ def accept_arguments(f):
     def _f(*args, **kwargs):
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
+
+
+def _produce_value(value_obj):
+    """
+    A helper function that produces an actual parameter from a stored
+    object: if the object is callable, call it, otherwise return the
+    object.
+    """
+    if callable(value_obj):
+        return value_obj()
+    else:
+        return value_obj
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def produce_value(value_obj):
+    """
+    A helper function that produces an actual parameter from a stored
+    object: if the object is callable, call it, otherwise return the
+    object.
+
+    .. deprecated:: 2.0.0
+    """
+    return _produce_value(value_obj)
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def as_unicode(obj):
+    """
+    Safely casts any object to unicode including regular string
+    (i.e. bytes) types in python 2.
+
+    .. deprecated:: 2.0.0
+    """
+    return str(obj)
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def is_ordered_dict(d):
+    """
+    Predicate checking for ordered dictionaries. OrderedDict is always
+    ordered, and vanilla Python dictionaries are ordered for Python 3.6+
+
+    .. deprecated:: 2.0.0
+    """
+    py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
+    vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
+    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
+
+
+def _hashable(x):
+    """
+    Return a hashable version of the given object x, with lists and
+    dictionaries converted to tuples.  Allows mutable objects to be
+    used as a lookup key in cases where the object has not actually
+    been mutated. Lookup will fail (appropriately) in cases where some
+    part of the object has changed.  Does not (currently) recursively
+    replace mutable subobjects.
+    """
+    if isinstance(x, collections.abc.MutableSequence):
+        return tuple(x)
+    elif isinstance(x, collections.abc.MutableMapping):
+        return tuple([(k,v) for k,v in x.items()])
+    else:
+        return x
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def hashable(x):
+    """
+    Return a hashable version of the given object x, with lists and
+    dictionaries converted to tuples.  Allows mutable objects to be
+    used as a lookup key in cases where the object has not actually
+    been mutated. Lookup will fail (appropriately) in cases where some
+    part of the object has changed.  Does not (currently) recursively
+    replace mutable subobjects.
+
+    .. deprecated:: 2.0.0
+    """
+    return _hashable(x)
+
+
+def _named_objs(objlist, namesdict=None):
+    """
+    Given a list of objects, returns a dictionary mapping from
+    string name for the object to the object itself. Accepts
+    an optional name,obj dictionary, which will override any other
+    name if that item is present in the dictionary.
+    """
+    objs = OrderedDict()
+
+    objtoname = {}
+    unhashables = []
+    if namesdict is not None:
+        for k, v in namesdict.items():
+            try:
+                objtoname[_hashable(v)] = k
+            except TypeError:
+                unhashables.append((k, v))
+
+    for obj in objlist:
+        if objtoname and _hashable(obj) in objtoname:
+            k = objtoname[_hashable(obj)]
+        elif any(obj is v for (_, v) in unhashables):
+            k = [k for (k, v) in unhashables if v is obj][0]
+        elif hasattr(obj, "name"):
+            k = obj.name
+        elif hasattr(obj, '__name__'):
+            k = obj.__name__
+        else:
+            k = str(obj)
+        objs[k] = obj
+    return objs
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def named_objs(objlist, namesdict=None):
+    """
+    Given a list of objects, returns a dictionary mapping from
+    string name for the object to the object itself. Accepts
+    an optional name,obj dictionary, which will override any other
+    name if that item is present in the dictionary.
+
+    .. deprecated:: 2.0.0
+    """
+    return _named_objs(objlist, namesdict=namesdict)
+
+
+def _get_min_max_value(min, max, value=None, step=None):
+    """Return min, max, value given input values with possible None."""
+    # Either min and max need to be given, or value needs to be given
+    if value is None:
+        if min is None or max is None:
+            raise ValueError(
+                f'unable to infer range, value from: ({min}, {max}, {value})'
+            )
+        diff = max - min
+        value = min + (diff / 2)
+        # Ensure that value has the same type as diff
+        if not isinstance(value, type(diff)):
+            value = min + (diff // 2)
+    else:  # value is not None
+        if not isinstance(value, Real):
+            raise TypeError('expected a real number, got: %r' % value)
+        # Infer min/max from value
+        if value == 0:
+            # This gives (0, 1) of the correct type
+            vrange = (value, value + 1)
+        elif value > 0:
+            vrange = (-value, 3*value)
+        else:
+            vrange = (3*value, -value)
+        if min is None:
+            min = vrange[0]
+        if max is None:
+            max = vrange[1]
+    if step is not None:
+        # ensure value is on a step
+        tick = int((value - min) / step)
+        value = min + tick * step
+    if not min <= value <= max:
+        raise ValueError(f'value must be between min and max (min={min}, value={value}, max={max})')
+    return min, max, value
+
+
+def _deserialize_from_path(ext_to_routine, path, type_name):
+    """
+    Call deserialization routine with path according to extension.
+    ext_to_routine should be a dictionary mapping each supported
+    file extension to a corresponding loading function.
+    """
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            "Could not parse file '{}' as {}: does not exist or is not a file"
+            "".format(path, type_name))
+    root, ext = os.path.splitext(path)
+    if ext in {'.gz', '.bz2', '.xz', '.zip'}:
+        # A compressed type. We'll assume the routines can handle such extensions
+        # transparently (if not, we'll fail later)
+        ext = os.path.splitext(root)[1]
+    # FIXME(sdrobert): try...except block below with "raise from" might be a good idea
+    # once py2.7 support is removed. Provides error + fact that failure occurred in
+    # deserialization
+    if ext in ext_to_routine:
+        return ext_to_routine[ext](path)
+    raise ValueError(
+        "Could not parse file '{}' as {}: no deserialization method for files with "
+        "'{}' extension. Supported extensions: {}"
+        "".format(path, type_name, ext, ', '.join(sorted(ext_to_routine))))
+
+
+def _is_number(obj):
+    if isinstance(obj, numbers.Number): return True
+    # The extra check is for classes that behave like numbers, such as those
+    # found in numpy, gmpy, etc.
+    elif (hasattr(obj, '__int__') and hasattr(obj, '__add__')): return True
+    # This is for older versions of gmpy
+    elif hasattr(obj, 'qdiv'): return True
+    else: return False
+
+
+def _is_abstract(class_):
+    try:
+        return class_.abstract
+    except AttributeError:
+        return False
+
+
+def descendents(class_):
+    """
+    Return a list of the class hierarchy below (and including) the given class.
+
+    The list is ordered from least- to most-specific.  Can be useful for
+    printing the contents of an entire class hierarchy.
+    """
+    assert isinstance(class_,type)
+    q = [class_]
+    out = []
+    while len(q):
+        x = q.pop(0)
+        out.insert(0,x)
+        for b in x.__subclasses__():
+            if b not in q and b not in out:
+                q.append(b)
+    return out[::-1]
+
+
+# Could be a method of ClassSelector.
+def concrete_descendents(parentclass):
+    """
+    Return a dictionary containing all subclasses of the specified
+    parentclass, including the parentclass.  Only classes that are
+    defined in scripts that have been run or modules that have been
+    imported are included, so the caller will usually first do ``from
+    package import *``.
+
+    Only non-abstract classes will be included.
+    """
+    return {c.__name__:c for c in descendents(parentclass)
+            if not _is_abstract(c)}
+
+def _abbreviate_paths(pathspec,named_paths):
+    """
+    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
+    Helps keep menu items short yet unambiguous.
+    """
+    from os.path import commonprefix, dirname, sep
+
+    prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
+    return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
+
+
+# PARAM3_DEPRECATION
+@_deprecated()
+def abbreviate_paths(pathspec,named_paths):
+    """
+    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
+    Helps keep menu items short yet unambiguous.
+
+    .. deprecated:: 2.0.0
+    """
+    return _abbreviate_paths(pathspec, named_paths)
+
+
+def _to_datetime(x):
+    """
+    Internal function that will convert date objs to datetime objs, used
+    for comparing date and datetime objects without error.
+    """
+    if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
+        return dt.datetime(*x.timetuple()[:6])
+    return x
+
+
+@contextmanager
+def exceptions_summarized():
+    """Useful utility for writing docs that need to show expected errors.
+    Shows exception only, concisely, without a traceback.
+    """
+    try:
+        yield
+    except Exception:
+        import sys
+        etype, value, tb = sys.exc_info()
+        print(f"{etype.__name__}: {value}", file=sys.stderr)

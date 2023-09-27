@@ -16,6 +16,7 @@ parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
 
+import numbers
 import os.path
 import sys
 import copy
@@ -29,187 +30,31 @@ import warnings
 
 from collections import OrderedDict
 from contextlib import contextmanager
-from numbers import Real
 
-from . import version  # noqa: api import
-
-from .depends import depends # noqa: api import
 from .parameterized import (
-    Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    Undefined, descendents, get_logger, instance_descriptor, dt_types,
-    _int_types
+    Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
+    Undefined, get_logger, instance_descriptor, dt_types,
+    _int_types, _identity_hook
 )
-from .parameterized import (batch_watch, output, script_repr, # noqa: api import
-                            discard_events, edit_constant, instance_descriptor)
-from .parameterized import shared_parameters # noqa: api import
-from .parameterized import logging_level     # noqa: api import
-from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL # noqa: api import
-from .parameterized import _identity_hook
 from ._utils import (
     ParamDeprecationWarning as _ParamDeprecationWarning,
     _deprecate_positional_args,
     _deprecated,
     _dict_update,
     _validate_error_prefix,
+    _deserialize_from_path,
+    _named_objs,
+    _produce_value,
+    _get_min_max_value,
+    _is_number,
+    concrete_descendents,
+    _abbreviate_paths,
+    _to_datetime,
 )
 
-# Define '__version__'
-try:
-    # If setuptools_scm is installed (e.g. in a development environment with
-    # an editable install), then use it to determine the version dynamically.
-    from setuptools_scm import get_version
-
-    # This will fail with LookupError if the package is not installed in
-    # editable mode or if Git is not installed.
-    __version__ = get_version(root="..", relative_to=__file__)
-except (ImportError, LookupError):
-    # As a fallback, use the version that is hard-coded in the file.
-    try:
-        from ._version import __version__
-    except ModuleNotFoundError:
-        # The user is probably trying to run this without having installed
-        # the package.
-        __version__ = "0.0.0+unknown"
-
-#: Top-level object to allow messaging not tied to a particular
-#: Parameterized object, as in 'param.main.warning("Invalid option")'.
-main=Parameterized(name="main")
-
-
-# A global random seed (integer or rational) available for controlling
-# the behaviour of Parameterized objects with random state.
-random_seed = 42
-
-
-def _produce_value(value_obj):
-    """
-    A helper function that produces an actual parameter from a stored
-    object: if the object is callable, call it, otherwise return the
-    object.
-    """
-    if callable(value_obj):
-        return value_obj()
-    else:
-        return value_obj
-
-
-# PARAM3_DEPRECATION
-@_deprecated()
-def produce_value(value_obj):
-    """
-    A helper function that produces an actual parameter from a stored
-    object: if the object is callable, call it, otherwise return the
-    object.
-
-    .. deprecated:: 2.0.0
-    """
-    return _produce_value(value_obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated()
-def as_unicode(obj):
-    """
-    Safely casts any object to unicode including regular string
-    (i.e. bytes) types in python 2.
-
-    .. deprecated:: 2.0.0
-    """
-    return str(obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated()
-def is_ordered_dict(d):
-    """
-    Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, and vanilla Python dictionaries are ordered for Python 3.6+
-
-    .. deprecated:: 2.0.0
-    """
-    py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
-    vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
-    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
-
-
-def _hashable(x):
-    """
-    Return a hashable version of the given object x, with lists and
-    dictionaries converted to tuples.  Allows mutable objects to be
-    used as a lookup key in cases where the object has not actually
-    been mutated. Lookup will fail (appropriately) in cases where some
-    part of the object has changed.  Does not (currently) recursively
-    replace mutable subobjects.
-    """
-    if isinstance(x, collections.abc.MutableSequence):
-        return tuple(x)
-    elif isinstance(x, collections.abc.MutableMapping):
-        return tuple([(k,v) for k,v in x.items()])
-    else:
-        return x
-
-
-# PARAM3_DEPRECATION
-@_deprecated()
-def hashable(x):
-    """
-    Return a hashable version of the given object x, with lists and
-    dictionaries converted to tuples.  Allows mutable objects to be
-    used as a lookup key in cases where the object has not actually
-    been mutated. Lookup will fail (appropriately) in cases where some
-    part of the object has changed.  Does not (currently) recursively
-    replace mutable subobjects.
-
-    .. deprecated:: 2.0.0
-    """
-    return _hashable(x)
-
-
-def _named_objs(objlist, namesdict=None):
-    """
-    Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself. Accepts
-    an optional name,obj dictionary, which will override any other
-    name if that item is present in the dictionary.
-    """
-    objs = OrderedDict()
-
-    objtoname = {}
-    unhashables = []
-    if namesdict is not None:
-        for k, v in namesdict.items():
-            try:
-                objtoname[_hashable(v)] = k
-            except TypeError:
-                unhashables.append((k, v))
-
-    for obj in objlist:
-        if objtoname and _hashable(obj) in objtoname:
-            k = objtoname[_hashable(obj)]
-        elif any(obj is v for (_, v) in unhashables):
-            k = [k for (k, v) in unhashables if v is obj][0]
-        elif hasattr(obj, "name"):
-            k = obj.name
-        elif hasattr(obj, '__name__'):
-            k = obj.__name__
-        else:
-            k = str(obj)
-        objs[k] = obj
-    return objs
-
-
-# PARAM3_DEPRECATION
-@_deprecated()
-def named_objs(objlist, namesdict=None):
-    """
-    Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself. Accepts
-    an optional name,obj dictionary, which will override any other
-    name if that item is present in the dictionary.
-
-    .. deprecated:: 2.0.0
-    """
-    return _named_objs(objlist, namesdict=namesdict)
+#-----------------------------------------------------------------------------
+# Utilities
+#-----------------------------------------------------------------------------
 
 
 def param_union(*parameterizeds, warn=True):
@@ -321,67 +166,34 @@ def guess_bounds(params, **overrides):
     return guessed
 
 
-def _get_min_max_value(min, max, value=None, step=None):
-    """Return min, max, value given input values with possible None."""
-    # Either min and max need to be given, or value needs to be given
-    if value is None:
-        if min is None or max is None:
-            raise ValueError(
-                f'unable to infer range, value from: ({min}, {max}, {value})'
-            )
-        diff = max - min
-        value = min + (diff / 2)
-        # Ensure that value has the same type as diff
-        if not isinstance(value, type(diff)):
-            value = min + (diff // 2)
-    else:  # value is not None
-        if not isinstance(value, Real):
-            raise TypeError('expected a real number, got: %r' % value)
-        # Infer min/max from value
-        if value == 0:
-            # This gives (0, 1) of the correct type
-            vrange = (value, value + 1)
-        elif value > 0:
-            vrange = (-value, 3*value)
-        else:
-            vrange = (3*value, -value)
-        if min is None:
-            min = vrange[0]
-        if max is None:
-            max = vrange[1]
-    if step is not None:
-        # ensure value is on a step
-        tick = int((value - min) / step)
-        value = min + tick * step
-    if not min <= value <= max:
-        raise ValueError(f'value must be between min and max (min={min}, value={value}, max={max})')
-    return min, max, value
-
-
-def _deserialize_from_path(ext_to_routine, path, type_name):
+def get_soft_bounds(bounds, softbounds):
     """
-    Call deserialization routine with path according to extension.
-    ext_to_routine should be a dictionary mapping each supported
-    file extension to a corresponding loading function.
+    For each soft bound (upper and lower), if there is a defined bound
+    (not equal to None) and does not exceed the hard bound, then it is
+    returned. Otherwise it defaults to the hard bound. The hard bound
+    could still be None.
     """
-    if not os.path.isfile(path):
-        raise FileNotFoundError(
-            "Could not parse file '{}' as {}: does not exist or is not a file"
-            "".format(path, type_name))
-    root, ext = os.path.splitext(path)
-    if ext in {'.gz', '.bz2', '.xz', '.zip'}:
-        # A compressed type. We'll assume the routines can handle such extensions
-        # transparently (if not, we'll fail later)
-        ext = os.path.splitext(root)[1]
-    # FIXME(sdrobert): try...except block below with "raise from" might be a good idea
-    # once py2.7 support is removed. Provides error + fact that failure occurred in
-    # deserialization
-    if ext in ext_to_routine:
-        return ext_to_routine[ext](path)
-    raise ValueError(
-        "Could not parse file '{}' as {}: no deserialization method for files with "
-        "'{}' extension. Supported extensions: {}"
-        "".format(path, type_name, ext, ', '.join(sorted(ext_to_routine))))
+    if bounds is None:
+        hl, hu = (None, None)
+    else:
+        hl, hu = bounds
+
+    if softbounds is None:
+        sl, su = (None, None)
+    else:
+        sl, su = softbounds
+
+    if sl is None or (hl is not None and sl<hl):
+        l = hl
+    else:
+        l = sl
+
+    if su is None or (hu is not None and su>hu):
+        u = hu
+    else:
+        u = su
+
+    return (l, u)
 
 
 class Infinity:
@@ -405,7 +217,7 @@ class Infinity:
     def __radd__(self,other): return self
     def __ladd__(self,other): return self
     def __sub__ (self,other): return self
-    def __iadd_ (self,other): return self
+    def __iadd__ (self,other): return self
     def __isub__(self,other): return self
     def __repr__(self):       return "Infinity()"
     def __str__ (self):       return repr(self)
@@ -629,6 +441,13 @@ class Time(Parameterized):
         if exc is StopIteration:
             return True
 
+#-----------------------------------------------------------------------------
+# Parameters
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Dynamic/Number
+#-----------------------------------------------------------------------------
 
 
 class Dynamic(Parameter):
@@ -788,102 +607,6 @@ class Dynamic(Parameter):
             return self._produce_value(gen,force=True)
         else:
             return gen
-
-
-import numbers
-def _is_number(obj):
-    if isinstance(obj, numbers.Number): return True
-    # The extra check is for classes that behave like numbers, such as those
-    # found in numpy, gmpy, etc.
-    elif (hasattr(obj, '__int__') and hasattr(obj, '__add__')): return True
-    # This is for older versions of gmpy
-    elif hasattr(obj, 'qdiv'): return True
-    else: return False
-
-
-def get_soft_bounds(bounds, softbounds):
-    """
-    For each soft bound (upper and lower), if there is a defined bound
-    (not equal to None) and does not exceed the hard bound, then it is
-    returned. Otherwise it defaults to the hard bound. The hard bound
-    could still be None.
-    """
-    if bounds is None:
-        hl, hu = (None, None)
-    else:
-        hl, hu = bounds
-
-    if softbounds is None:
-        sl, su = (None, None)
-    else:
-        sl, su = softbounds
-
-    if sl is None or (hl is not None and sl<hl):
-        l = hl
-    else:
-        l = sl
-
-    if su is None or (hu is not None and su>hu):
-        u = hu
-    else:
-        u = su
-
-    return (l, u)
-
-
-class Bytes(Parameter):
-    """
-    A Bytes Parameter, with a default value and optional regular
-    expression (regex) matching.
-
-    Similar to the String parameter, but instead of type string
-    this parameter only allows objects of type bytes (e.g. b'bytes').
-    """
-
-    __slots__ = ['regex']
-
-    _slot_defaults = _dict_update(
-        Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
-    )
-
-
-    @typing.overload
-    def __init__(
-        self,
-        default=b"", *, regex=None, allow_None=False,
-        doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
-        super().__init__(default=default, **kwargs)
-        self.regex = regex
-        self._validate(self.default)
-
-    def _validate_regex(self, val, regex):
-        if (val is None and self.allow_None):
-            return
-        if regex is not None and re.match(regex, val) is None:
-            raise ValueError(
-                f"{_validate_error_prefix(self)} value {val!r} "
-                f"does not match regex {regex!r}."
-            )
-
-    def _validate_value(self, val, allow_None):
-        if allow_None and val is None:
-            return
-        if not isinstance(val, bytes):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} only takes a byte string value, "
-                f"not value of {type(val)}."
-            )
-
-    def _validate(self, val):
-        self._validate_value(val, self.allow_None)
-        self._validate_regex(val, self.regex)
 
 
 class __compute_set_hook:
@@ -1142,7 +865,6 @@ class Integer(Number):
             )
 
 
-
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
@@ -1165,6 +887,123 @@ class Magnitude(Number):
             inclusive_bounds=inclusive_bounds, step=step, set_hook=set_hook, **params
         )
 
+
+class Date(Number):
+    """
+    Date parameter of datetime or date type.
+    """
+
+    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
+        allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    def __init__(self, default=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
+
+    def _validate_value(self, val, allow_None):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        if self.allow_None and val is None:
+            return
+
+        if not isinstance(val, dt_types) and not (allow_None and val is None):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes datetime and "
+                f"date types, not {type(val)}."
+            )
+
+    def _validate_step(self, val, step):
+        if step is not None and not isinstance(step, dt_types):
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'step')} can only be None, "
+                f"a datetime or date type, not {type(step)}."
+            )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds):
+        val = _to_datetime(val)
+        bounds = None if bounds is None else map(_to_datetime, bounds)
+        return super()._validate_bounds(val, bounds, inclusive_bounds)
+
+    @classmethod
+    def serialize(cls, value):
+        if value is None:
+            return None
+        if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
+            value = value.astype(dt.datetime)
+        return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+    @classmethod
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+
+
+class CalendarDate(Number):
+    """
+    Parameter specifically allowing dates (not datetimes).
+    """
+
+    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
+        allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    def __init__(self, default=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
+
+    def _validate_value(self, val, allow_None):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        if self.allow_None and val is None:
+            return
+
+        if (not isinstance(val, dt.date) or isinstance(val, dt.datetime)) and not (allow_None and val is None):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes date types."
+            )
+
+    def _validate_step(self, val, step):
+        if step is not None and not isinstance(step, dt.date):
+            raise ValueError(
+                f"{_validate_error_prefix(self, 'step')} can only be None or "
+                f"a date type, not {type(step)}."
+            )
+
+    @classmethod
+    def serialize(cls, value):
+        if value is None:
+            return None
+        return value.strftime("%Y-%m-%d")
+
+    @classmethod
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        return dt.datetime.strptime(value, "%Y-%m-%d").date()
+
+#-----------------------------------------------------------------------------
+# Boolean
+#-----------------------------------------------------------------------------
 
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
@@ -1202,6 +1041,78 @@ class Boolean(Parameter):
     def _validate(self, val):
         self._validate_value(val, self.allow_None)
 
+
+class Event(Boolean):
+    """
+    An Event Parameter is one whose value is intimately linked to the
+    triggering of events for watchers to consume. Event has a Boolean
+    value, which when set to True triggers the associated watchers (as
+    any Parameter does) and then is automatically set back to
+    False. Conversely, if events are triggered directly via `.trigger`,
+    the value is transiently set to True (so that it's clear which of
+    many parameters being watched may have changed), then restored to
+    False when the triggering completes. An Event parameter is thus like
+    a momentary switch or pushbutton with a transient True value that
+    serves only to launch some other action (e.g. via a param.depends
+    decorator), rather than encapsulating the action itself as
+    param.Action does.
+    """
+
+    # _autotrigger_value specifies the value used to set the parameter
+    # to when the parameter is supplied to the trigger method. This
+    # value change is then what triggers the watcher callbacks.
+    __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
+
+    @typing.overload
+    def __init__(
+        self,
+        default=False, *,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
+        allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self,default=False,**params):
+        self._autotrigger_value = True
+        self._autotrigger_reset_value = False
+        self._mode = 'set-reset'
+        # Mode can be one of 'set', 'set-reset' or 'reset'
+
+        # 'set' is normal Boolean parameter behavior when set with a value.
+        # 'set-reset' temporarily sets the parameter (which triggers
+        # watching callbacks) but immediately resets the value back to
+        # False.
+        # 'reset' applies the reset from True to False without
+        # triggering watched callbacks
+
+        # This _mode attribute is one of the few places where a specific
+        # parameter has a special behavior that is relied upon by the
+        # core functionality implemented in
+        # parameterized.py. Specifically, the set_param method
+        # temporarily sets this attribute in order to disable resetting
+        # back to False while triggered callbacks are executing
+        super().__init__(default=default,**params)
+
+    def _reset_event(self, obj, val):
+        val = False
+        if obj is None:
+            self.default = val
+        else:
+            obj._param__private.values[self.name] = val
+        self._post_setter(obj, val)
+
+    @instance_descriptor
+    def __set__(self, obj, val):
+        if self._mode in ['set-reset', 'set']:
+            super().__set__(obj, val)
+        if self._mode in ['set-reset', 'reset']:
+            self._reset_event(obj, val)
+
+#-----------------------------------------------------------------------------
+# Tuple
+#-----------------------------------------------------------------------------
 
 class __compute_length_of_default:
     def __call__(self, p):
@@ -1327,6 +1238,240 @@ class XYCoordinates(NumericTuple):
         super().__init__(default=default, length=2, **params)
 
 
+class Range(NumericTuple):
+    """
+    A numeric range with optional bounds and softbounds.
+    """
+
+    __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
+
+    _slot_defaults = _dict_update(
+        NumericTuple._slot_defaults, default=None, bounds=None,
+        inclusive_bounds=(True,True), softbounds=None, step=None
+    )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
+        allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
+                 inclusive_bounds=Undefined, step=Undefined, **params):
+        self.bounds = bounds
+        self.inclusive_bounds = inclusive_bounds
+        self.softbounds = softbounds
+        self.step = step
+        super().__init__(default=default,length=2,**params)
+
+    def _validate(self, val):
+        super()._validate(val)
+        self._validate_bounds(val, self.bounds, self.inclusive_bounds, 'bound')
+        self._validate_bounds(val, self.softbounds, self.inclusive_bounds, 'softbound')
+        self._validate_step(val, self.step)
+        self._validate_order(val, self.step, allow_None=self.allow_None)
+
+    def _validate_step(self, val, step):
+        if step is not None:
+            if not _is_number(step):
+                raise ValueError(
+                    f"{_validate_error_prefix(self, 'step')} can only be None "
+                    f"or a numeric value, not {type(step)}."
+                )
+            elif step == 0:
+                raise ValueError(
+                    f"{_validate_error_prefix(self, 'step')} cannot be 0."
+                )
+
+    def _validate_order(self, val, step, allow_None):
+        if val is None and allow_None:
+            return
+        elif val is not None and (val[0] is None or val[1] is None):
+            return
+
+        start, end = val
+        if step is not None and step > 0 and not start <= end:
+            raise ValueError(
+                f"{_validate_error_prefix(self)} end {end} is less than its "
+                f"start {start} with positive step {step}."
+            )
+        elif step is not None and step < 0 and not start >= end:
+            raise ValueError(
+                f"{_validate_error_prefix(self)} start {start} is less than its "
+                f"start {end} with negative step {step}."
+            )
+
+    def _validate_bound_type(self, value, position, kind):
+        if not _is_number(value):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} {position} {kind} can only be "
+                f"None or a numerical value, not {type(value)}."
+            )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
+        if bounds is not None:
+            for pos, v in zip(['lower', 'upper'], bounds):
+                if v is None:
+                    continue
+                self._validate_bound_type(v, pos, kind)
+        if kind == 'softbound':
+            return
+
+        if bounds is None or (val is None and self.allow_None):
+            return
+        vmin, vmax = bounds
+        incmin, incmax = inclusive_bounds
+        for bound, v in zip(['lower', 'upper'], val):
+            too_low = (vmin is not None) and (v < vmin if incmin else v <= vmin)
+            too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
+            if too_low or too_high:
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} {bound} bound must be in "
+                    f"range {self.rangestr()}, not {v}."
+                )
+
+    def get_soft_bounds(self):
+        return get_soft_bounds(self.bounds, self.softbounds)
+
+    def rangestr(self):
+        vmin, vmax = self.bounds
+        incmin, incmax = self.inclusive_bounds
+        incmin = '[' if incmin else '('
+        incmax = ']' if incmax else ')'
+        return f'{incmin}{vmin}, {vmax}{incmax}'
+
+
+class DateRange(Range):
+    """
+    A datetime or date range specified as (start, end).
+
+    Bounds must be specified as datetime or date types (see param.dt_types).
+    """
+
+    def _validate_bound_type(self, value, position, kind):
+        if not isinstance(value, dt_types):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} {position} {kind} can only be "
+                f"None or a date/datetime value, not {type(value)}."
+            )
+
+    def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
+        val = None if val is None else tuple(map(_to_datetime, val))
+        bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
+        super()._validate_bounds(val, bounds, inclusive_bounds, kind)
+
+    def _validate_value(self, val, allow_None):
+        # Cannot use super()._validate_value as DateRange inherits from
+        # NumericTuple which check that the tuple values are numbers and
+        # datetime objects aren't numbers.
+        if allow_None and val is None:
+            return
+
+        if not isinstance(val, tuple):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes a tuple value, "
+                f"not {type(val)}."
+            )
+        for n in val:
+            if isinstance(n, dt_types):
+                continue
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes date/datetime "
+                f"values, not {type(n)}."
+            )
+
+        start, end = val
+        if not end >= start:
+            raise ValueError(
+                f"{_validate_error_prefix(self)} end datetime {val[1]} "
+                f"is before start datetime {val[0]}."
+            )
+
+    @classmethod
+    def serialize(cls, value):
+        if value is None:
+            return None
+        # List as JSON has no tuple representation
+        serialized = []
+        for v in value:
+            if not isinstance(v, (dt.datetime, dt.date)): # i.e np.datetime64
+                v = v.astype(dt.datetime)
+            # Separate date and datetime to deserialize to the right type.
+            if type(v) == dt.date:
+                v = v.strftime("%Y-%m-%d")
+            else:
+                v = v.strftime("%Y-%m-%dT%H:%M:%S.%f")
+            serialized.append(v)
+        return serialized
+
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        deserialized = []
+        for v in value:
+            # Date
+            if len(v) == 10:
+                v = dt.datetime.strptime(v, "%Y-%m-%d").date()
+            # Datetime
+            else:
+                v = dt.datetime.strptime(v, "%Y-%m-%dT%H:%M:%S.%f")
+            deserialized.append(v)
+        # As JSON has no tuple representation
+        return tuple(deserialized)
+
+
+class CalendarDateRange(Range):
+    """
+    A date range specified as (start_date, end_date).
+    """
+    def _validate_value(self, val, allow_None):
+        if allow_None and val is None:
+            return
+
+        for n in val:
+            if not isinstance(n, dt.date):
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} only takes date types, "
+                    f"not {val}."
+                )
+
+        start, end = val
+        if not end >= start:
+            raise ValueError(
+                f"{_validate_error_prefix(self)} end date {val[1]} is before "
+                f"start date {val[0]}."
+            )
+
+    def _validate_bound_type(self, value, position, kind):
+        if not isinstance(value, dt.date):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} {position} {kind} can only be "
+                f"None or a date value, not {type(value)}."
+            )
+
+    @classmethod
+    def serialize(cls, value):
+        if value is None:
+            return None
+        # As JSON has no tuple representation
+        return [v.strftime("%Y-%m-%d") for v in value]
+
+    @classmethod
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        # As JSON has no tuple representation
+        return tuple([dt.datetime.strptime(v, "%Y-%m-%d").date() for v in value])
+
+#-----------------------------------------------------------------------------
+# Callable
+#-----------------------------------------------------------------------------
+
 class Callable(Parameter):
     """
     Parameter holding a value that is a callable object, such as a function.
@@ -1371,28 +1516,9 @@ class Action(Callable):
     """
 # Currently same implementation as Callable, but kept separate to allow different handling in GUIs
 
-
-def _is_abstract(class_):
-    try:
-        return class_.abstract
-    except AttributeError:
-        return False
-
-
-# Could be a method of ClassSelector.
-def concrete_descendents(parentclass):
-    """
-    Return a dictionary containing all subclasses of the specified
-    parentclass, including the parentclass.  Only classes that are
-    defined in scripts that have been run or modules that have been
-    imported are included, so the caller will usually first do ``from
-    package import *``.
-
-    Only non-abstract classes will be included.
-    """
-    return {c.__name__:c for c in descendents(parentclass)
-            if not _is_abstract(c)}
-
+#-----------------------------------------------------------------------------
+# Composite
+#-----------------------------------------------------------------------------
 
 class Composite(Parameter):
     """
@@ -1456,6 +1582,9 @@ class Composite(Parameter):
             for a, v in zip(self.attribs, val):
                 setattr(obj, a, v)
 
+#-----------------------------------------------------------------------------
+# Selector
+#-----------------------------------------------------------------------------
 
 class SelectorBase(Parameter):
     """
@@ -1861,6 +1990,164 @@ class ObjectSelector(Selector):
                          empty_default=True, **kwargs)
 
 
+class FileSelector(Selector):
+    """
+    Given a path glob, allows one file to be selected from those matching.
+    """
+    __slots__ = ['path']
+
+    _slot_defaults = _dict_update(
+        Selector._slot_defaults, path="",
+    )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None, constant=False, readonly=False,
+        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
+        self.default = default
+        self.path = path
+        self.update(path=path)
+        if default is not Undefined:
+            self.default = default
+        super().__init__(default=self.default, objects=self._objects, **kwargs)
+
+    def _on_set(self, attribute, old, new):
+        super()._on_set(attribute, new, old)
+        if attribute == 'path':
+            self.update(path=new)
+
+    def update(self, path=Undefined):
+        if path is Undefined:
+            path = self.path
+        if path == "":
+            self.objects = []
+        else:
+            # Convert using os.fspath and pathlib.Path to handle ensure
+            # the path separators are consistent (on Windows in particular)
+            pathpattern = os.fspath(pathlib.Path(path))
+            self.objects = sorted(glob.glob(pathpattern))
+        if self.default in self.objects:
+            return
+        self.default = self.objects[0] if self.objects else None
+
+    def get_range(self):
+        return _abbreviate_paths(self.path,super().get_range())
+
+
+class ListSelector(Selector):
+    """
+    Variant of Selector where the value can be multiple objects from
+    a list of possible objects.
+    """
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None, constant=False, readonly=False,
+        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
+        super().__init__(
+            objects=objects, default=default, empty_default=True, **kwargs)
+
+    def compute_default(self):
+        if self.default is None and callable(self.compute_default_fn):
+            self.default = self.compute_default_fn()
+            for o in self.default:
+                if o not in self.objects:
+                    self.objects.append(o)
+
+    def _validate(self, val):
+        self._validate_type(val)
+
+        if self.check_on_set:
+            self._validate_value(val)
+        else:
+            self._ensure_value_is_in_objects(val)
+
+
+    def _validate_type(self, val):
+        if (val is None and self.allow_None):
+            return
+
+        if not isinstance(val, list):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes list types, "
+                f"not {val!r}."
+            )
+
+    def _validate_value(self, val):
+        self._validate_type(val)
+        if val is not None:
+            for o in val:
+                super()._validate_value(o)
+
+    def _update_state(self):
+        if self.check_on_set is False and self.default is not None:
+            for o in self.default:
+                self._ensure_value_is_in_objects(o)
+
+
+class MultiFileSelector(ListSelector):
+    """
+    Given a path glob, allows multiple files to be selected from the list of matches.
+    """
+    __slots__ = ['path']
+
+    _slot_defaults = _dict_update(
+        Selector._slot_defaults, path="",
+    )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=None, *, path="", objects=[], compute_default_fn=None,
+        check_on_set=None, allow_None=None, empty_default=False,
+        doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True,
+        per_instance=True, allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
+        self.default = default
+        self.path = path
+        self.update(path=path)
+        super().__init__(default=default, objects=self._objects, **kwargs)
+
+    def _on_set(self, attribute, old, new):
+        super()._on_set(attribute, new, old)
+        if attribute == 'path':
+            self.update(path=new)
+
+    def update(self, path=Undefined):
+        if path is Undefined:
+            path = self.path
+        self.objects = sorted(glob.glob(path))
+        if self.default and all([o in self.objects for o in self.default]):
+            return
+        elif not self.default:
+            return
+        self.default = self.objects
+
+    def get_range(self):
+        return _abbreviate_paths(self.path,super().get_range())
+
+
 class ClassSelector(SelectorBase):
     """
     Parameter allowing selection of either a subclass or an instance of a given set of classes.
@@ -1928,136 +2215,6 @@ class ClassSelector(SelectorBase):
         if self.allow_None:
             d['None'] = None
         return d
-
-
-class List(Parameter):
-    """
-    Parameter whose value is a list of objects, usually of a specified type.
-
-    The bounds allow a minimum and/or maximum length of
-    list to be enforced.  If the item_type is non-None, all
-    items in the list are checked to be of that type.
-
-    `class_` is accepted as an alias for `item_type`, but is
-    deprecated due to conflict with how the `class_` slot is
-    used in Selector classes.
-    """
-
-    __slots__ = ['bounds', 'item_type', 'class_']
-
-    _slot_defaults = _dict_update(
-        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
-        instantiate=True, default=[],
-    )
-
-    @typing.overload
-    def __init__(
-        self,
-        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
-        allow_None=False, doc=None, label=None, precedence=None,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
-                 instantiate=Undefined, bounds=Undefined, **params):
-        if class_ is not Undefined:
-            # PARAM3_DEPRECATION
-            warnings.warn(
-                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamDeprecationWarning,
-                stacklevel=3,
-            )
-        if item_type is not Undefined and class_ is not Undefined:
-            self.item_type = item_type
-        elif item_type is Undefined or item_type is None:
-            self.item_type = class_
-        else:
-            self.item_type = item_type
-        self.class_ = self.item_type
-        self.bounds = bounds
-        Parameter.__init__(self, default=default, instantiate=instantiate,
-                           **params)
-        self._validate(self.default)
-
-    def _validate(self, val):
-        """
-        Checks that the value is numeric and that it is within the hard
-        bounds; if not, an exception is raised.
-        """
-        self._validate_value(val, self.allow_None)
-        self._validate_bounds(val, self.bounds)
-        self._validate_item_type(val, self.item_type)
-
-    def _validate_bounds(self, val, bounds):
-        "Checks that the list is of the right length and has the right contents."
-        if bounds is None or (val is None and self.allow_None):
-            return
-        min_length, max_length = bounds
-        l = len(val)
-        if min_length is not None and max_length is not None:
-            if not (min_length <= l <= max_length):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} length must be between "
-                    f"{min_length} and {max_length} (inclusive), not {l}."
-                )
-        elif min_length is not None:
-            if not min_length <= l:
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} length must be at "
-                    f"least {min_length}, not {l}."
-                )
-        elif max_length is not None:
-            if not l <= max_length:
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} length must be at "
-                    f"most {max_length}, not {l}."
-                )
-
-    def _validate_value(self, val, allow_None):
-        if allow_None and val is None:
-            return
-        if not isinstance(val, list):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} must be a list, not an "
-                f"object of {type(val)}."
-            )
-
-    def _validate_item_type(self, val, item_type):
-        if item_type is None or (self.allow_None and val is None):
-            return
-        for v in val:
-            if isinstance(v, item_type):
-                continue
-            raise TypeError(
-                f"{_validate_error_prefix(self)} items must be instances "
-                f"of {item_type!r}, not {type(v)}."
-            )
-
-
-class HookList(List):
-    """
-    Parameter whose value is a list of callable objects.
-
-    This type of List Parameter is typically used to provide a place
-    for users to register a set of commands to be called at a
-    specified place in some sequence of processing steps.
-    """
-    __slots__ = ['class_', 'bounds']
-
-    def _validate_value(self, val, allow_None):
-        super()._validate_value(val, allow_None)
-        if allow_None and val is None:
-            return
-        for v in val:
-            if callable(v):
-                continue
-            raise ValueError(
-                f"{_validate_error_prefix(self)} items must be callable, "
-                f"not {v!r}."
-            )
 
 
 class Dict(ClassSelector):
@@ -2299,7 +2456,142 @@ class Series(ClassSelector):
         if self.rows is not None:
             self._length_bounds_check(self.rows, len(val), 'row')
 
+#-----------------------------------------------------------------------------
+# List
+#-----------------------------------------------------------------------------
 
+class List(Parameter):
+    """
+    Parameter whose value is a list of objects, usually of a specified type.
+
+    The bounds allow a minimum and/or maximum length of
+    list to be enforced.  If the item_type is non-None, all
+    items in the list are checked to be of that type.
+
+    `class_` is accepted as an alias for `item_type`, but is
+    deprecated due to conflict with how the `class_` slot is
+    used in Selector classes.
+    """
+
+    __slots__ = ['bounds', 'item_type', 'class_']
+
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
+        instantiate=True, default=[],
+    )
+
+    @typing.overload
+    def __init__(
+        self,
+        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
+        allow_None=False, doc=None, label=None, precedence=None,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
+        allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
+                 instantiate=Undefined, bounds=Undefined, **params):
+        if class_ is not Undefined:
+            # PARAM3_DEPRECATION
+            warnings.warn(
+                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
+                category=_ParamDeprecationWarning,
+                stacklevel=3,
+            )
+        if item_type is not Undefined and class_ is not Undefined:
+            self.item_type = item_type
+        elif item_type is Undefined or item_type is None:
+            self.item_type = class_
+        else:
+            self.item_type = item_type
+        self.class_ = self.item_type
+        self.bounds = bounds
+        Parameter.__init__(self, default=default, instantiate=instantiate,
+                           **params)
+        self._validate(self.default)
+
+    def _validate(self, val):
+        """
+        Checks that the value is numeric and that it is within the hard
+        bounds; if not, an exception is raised.
+        """
+        self._validate_value(val, self.allow_None)
+        self._validate_bounds(val, self.bounds)
+        self._validate_item_type(val, self.item_type)
+
+    def _validate_bounds(self, val, bounds):
+        "Checks that the list is of the right length and has the right contents."
+        if bounds is None or (val is None and self.allow_None):
+            return
+        min_length, max_length = bounds
+        l = len(val)
+        if min_length is not None and max_length is not None:
+            if not (min_length <= l <= max_length):
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} length must be between "
+                    f"{min_length} and {max_length} (inclusive), not {l}."
+                )
+        elif min_length is not None:
+            if not min_length <= l:
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} length must be at "
+                    f"least {min_length}, not {l}."
+                )
+        elif max_length is not None:
+            if not l <= max_length:
+                raise ValueError(
+                    f"{_validate_error_prefix(self)} length must be at "
+                    f"most {max_length}, not {l}."
+                )
+
+    def _validate_value(self, val, allow_None):
+        if allow_None and val is None:
+            return
+        if not isinstance(val, list):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} must be a list, not an "
+                f"object of {type(val)}."
+            )
+
+    def _validate_item_type(self, val, item_type):
+        if item_type is None or (self.allow_None and val is None):
+            return
+        for v in val:
+            if isinstance(v, item_type):
+                continue
+            raise TypeError(
+                f"{_validate_error_prefix(self)} items must be instances "
+                f"of {item_type!r}, not {type(v)}."
+            )
+
+
+class HookList(List):
+    """
+    Parameter whose value is a list of callable objects.
+
+    This type of List Parameter is typically used to provide a place
+    for users to register a set of commands to be called at a
+    specified place in some sequence of processing steps.
+    """
+    __slots__ = ['class_', 'bounds']
+
+    def _validate_value(self, val, allow_None):
+        super()._validate_value(val, allow_None)
+        if allow_None and val is None:
+            return
+        for v in val:
+            if callable(v):
+                continue
+            raise ValueError(
+                f"{_validate_error_prefix(self)} items must be callable, "
+                f"not {v!r}."
+            )
+
+#-----------------------------------------------------------------------------
+# Path
+#-----------------------------------------------------------------------------
 
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
@@ -2535,312 +2827,9 @@ class Foldername(Path):
     def _resolve(self, path):
         return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
 
-
-
-def _abbreviate_paths(pathspec,named_paths):
-    """
-    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
-    Helps keep menu items short yet unambiguous.
-    """
-    from os.path import commonprefix, dirname, sep
-
-    prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
-    return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
-
-
-# PARAM3_DEPRECATION
-@_deprecated()
-def abbreviate_paths(pathspec,named_paths):
-    """
-    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
-    Helps keep menu items short yet unambiguous.
-
-    .. deprecated:: 2.0.0
-    """
-    return _abbreviate_paths(pathspec, named_paths)
-
-
-class FileSelector(Selector):
-    """
-    Given a path glob, allows one file to be selected from those matching.
-    """
-    __slots__ = ['path']
-
-    _slot_defaults = _dict_update(
-        Selector._slot_defaults, path="",
-    )
-
-    @typing.overload
-    def __init__(
-        self,
-        default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, constant=False, readonly=False,
-        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
-        self.default = default
-        self.path = path
-        self.update(path=path)
-        if default is not Undefined:
-            self.default = default
-        super().__init__(default=self.default, objects=self._objects, **kwargs)
-
-    def _on_set(self, attribute, old, new):
-        super()._on_set(attribute, new, old)
-        if attribute == 'path':
-            self.update(path=new)
-
-    def update(self, path=Undefined):
-        if path is Undefined:
-            path = self.path
-        if path == "":
-            self.objects = []
-        else:
-            # Convert using os.fspath and pathlib.Path to handle ensure
-            # the path separators are consistent (on Windows in particular)
-            pathpattern = os.fspath(pathlib.Path(path))
-            self.objects = sorted(glob.glob(pathpattern))
-        if self.default in self.objects:
-            return
-        self.default = self.objects[0] if self.objects else None
-
-    def get_range(self):
-        return _abbreviate_paths(self.path,super().get_range())
-
-
-class ListSelector(Selector):
-    """
-    Variant of Selector where the value can be multiple objects from
-    a list of possible objects.
-    """
-
-    @typing.overload
-    def __init__(
-        self,
-        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, constant=False, readonly=False,
-        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
-        super().__init__(
-            objects=objects, default=default, empty_default=True, **kwargs)
-
-    def compute_default(self):
-        if self.default is None and callable(self.compute_default_fn):
-            self.default = self.compute_default_fn()
-            for o in self.default:
-                if o not in self.objects:
-                    self.objects.append(o)
-
-    def _validate(self, val):
-        self._validate_type(val)
-
-        if self.check_on_set:
-            self._validate_value(val)
-        else:
-            self._ensure_value_is_in_objects(val)
-
-
-    def _validate_type(self, val):
-        if (val is None and self.allow_None):
-            return
-
-        if not isinstance(val, list):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} only takes list types, "
-                f"not {val!r}."
-            )
-
-    def _validate_value(self, val):
-        self._validate_type(val)
-        if val is not None:
-            for o in val:
-                super()._validate_value(o)
-
-    def _update_state(self):
-        if self.check_on_set is False and self.default is not None:
-            for o in self.default:
-                self._ensure_value_is_in_objects(o)
-
-
-class MultiFileSelector(ListSelector):
-    """
-    Given a path glob, allows multiple files to be selected from the list of matches.
-    """
-    __slots__ = ['path']
-
-    _slot_defaults = _dict_update(
-        Selector._slot_defaults, path="",
-    )
-
-    @typing.overload
-    def __init__(
-        self,
-        default=None, *, path="", objects=[], compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True,
-        per_instance=True, allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
-        self.default = default
-        self.path = path
-        self.update(path=path)
-        super().__init__(default=default, objects=self._objects, **kwargs)
-
-    def _on_set(self, attribute, old, new):
-        super()._on_set(attribute, new, old)
-        if attribute == 'path':
-            self.update(path=new)
-
-    def update(self, path=Undefined):
-        if path is Undefined:
-            path = self.path
-        self.objects = sorted(glob.glob(path))
-        if self.default and all([o in self.objects for o in self.default]):
-            return
-        elif not self.default:
-            return
-        self.default = self.objects
-
-    def get_range(self):
-        return _abbreviate_paths(self.path,super().get_range())
-
-
-def _to_datetime(x):
-    """
-    Internal function that will convert date objs to datetime objs, used
-    for comparing date and datetime objects without error.
-    """
-    if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
-        return dt.datetime(*x.timetuple()[:6])
-    return x
-
-
-class Date(Number):
-    """
-    Date parameter of datetime or date type.
-    """
-
-    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
-
-    @typing.overload
-    def __init__(
-        self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    def __init__(self, default=Undefined, **kwargs):
-        super().__init__(default=default, **kwargs)
-
-    def _validate_value(self, val, allow_None):
-        """
-        Checks that the value is numeric and that it is within the hard
-        bounds; if not, an exception is raised.
-        """
-        if self.allow_None and val is None:
-            return
-
-        if not isinstance(val, dt_types) and not (allow_None and val is None):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} only takes datetime and "
-                f"date types, not {type(val)}."
-            )
-
-    def _validate_step(self, val, step):
-        if step is not None and not isinstance(step, dt_types):
-            raise ValueError(
-                f"{_validate_error_prefix(self, 'step')} can only be None, "
-                f"a datetime or date type, not {type(step)}."
-            )
-
-    def _validate_bounds(self, val, bounds, inclusive_bounds):
-        val = _to_datetime(val)
-        bounds = None if bounds is None else map(_to_datetime, bounds)
-        return super()._validate_bounds(val, bounds, inclusive_bounds)
-
-    @classmethod
-    def serialize(cls, value):
-        if value is None:
-            return None
-        if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
-            value = value.astype(dt.datetime)
-        return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
-
-    @classmethod
-    def deserialize(cls, value):
-        if value == 'null' or value is None:
-            return None
-        return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
-
-
-class CalendarDate(Number):
-    """
-    Parameter specifically allowing dates (not datetimes).
-    """
-
-    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
-
-    @typing.overload
-    def __init__(
-        self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    def __init__(self, default=Undefined, **kwargs):
-        super().__init__(default=default, **kwargs)
-
-    def _validate_value(self, val, allow_None):
-        """
-        Checks that the value is numeric and that it is within the hard
-        bounds; if not, an exception is raised.
-        """
-        if self.allow_None and val is None:
-            return
-
-        if (not isinstance(val, dt.date) or isinstance(val, dt.datetime)) and not (allow_None and val is None):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} only takes date types."
-            )
-
-    def _validate_step(self, val, step):
-        if step is not None and not isinstance(step, dt.date):
-            raise ValueError(
-                f"{_validate_error_prefix(self, 'step')} can only be None or "
-                f"a date type, not {type(step)}."
-            )
-
-    @classmethod
-    def serialize(cls, value):
-        if value is None:
-            return None
-        return value.strftime("%Y-%m-%d")
-
-    @classmethod
-    def deserialize(cls, value):
-        if value == 'null' or value is None:
-            return None
-        return dt.datetime.strptime(value, "%Y-%m-%d").date()
-
+#-----------------------------------------------------------------------------
+# Color
+#-----------------------------------------------------------------------------
 
 class Color(Parameter):
     """
@@ -2934,316 +2923,60 @@ class Color(Parameter):
                 f"codes, received {val!r}."
             )
 
+#-----------------------------------------------------------------------------
+# Bytes
+#-----------------------------------------------------------------------------
 
-class Range(NumericTuple):
+class Bytes(Parameter):
     """
-    A numeric range with optional bounds and softbounds.
+    A Bytes Parameter, with a default value and optional regular
+    expression (regex) matching.
+
+    Similar to the String parameter, but instead of type string
+    this parameter only allows objects of type bytes (e.g. b'bytes').
     """
 
-    __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
+    __slots__ = ['regex']
 
     _slot_defaults = _dict_update(
-        NumericTuple._slot_defaults, default=None, bounds=None,
-        inclusive_bounds=(True,True), softbounds=None, step=None
+        Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
-    @typing.overload
-    def __init__(
-        self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
-
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, **params):
-        self.bounds = bounds
-        self.inclusive_bounds = inclusive_bounds
-        self.softbounds = softbounds
-        self.step = step
-        super().__init__(default=default,length=2,**params)
-
-    def _validate(self, val):
-        super()._validate(val)
-        self._validate_bounds(val, self.bounds, self.inclusive_bounds, 'bound')
-        self._validate_bounds(val, self.softbounds, self.inclusive_bounds, 'softbound')
-        self._validate_step(val, self.step)
-        self._validate_order(val, self.step, allow_None=self.allow_None)
-
-    def _validate_step(self, val, step):
-        if step is not None:
-            if not _is_number(step):
-                raise ValueError(
-                    f"{_validate_error_prefix(self, 'step')} can only be None "
-                    f"or a numeric value, not {type(step)}."
-                )
-            elif step == 0:
-                raise ValueError(
-                    f"{_validate_error_prefix(self, 'step')} cannot be 0."
-                )
-
-    def _validate_order(self, val, step, allow_None):
-        if val is None and allow_None:
-            return
-        elif val is not None and (val[0] is None or val[1] is None):
-            return
-
-        start, end = val
-        if step is not None and step > 0 and not start <= end:
-            raise ValueError(
-                f"{_validate_error_prefix(self)} end {end} is less than its "
-                f"start {start} with positive step {step}."
-            )
-        elif step is not None and step < 0 and not start >= end:
-            raise ValueError(
-                f"{_validate_error_prefix(self)} start {start} is less than its "
-                f"start {end} with negative step {step}."
-            )
-
-    def _validate_bound_type(self, value, position, kind):
-        if not _is_number(value):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} {position} {kind} can only be "
-                f"None or a numerical value, not {type(value)}."
-            )
-
-    def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
-        if bounds is not None:
-            for pos, v in zip(['lower', 'upper'], bounds):
-                if v is None:
-                    continue
-                self._validate_bound_type(v, pos, kind)
-        if kind == 'softbound':
-            return
-
-        if bounds is None or (val is None and self.allow_None):
-            return
-        vmin, vmax = bounds
-        incmin, incmax = inclusive_bounds
-        for bound, v in zip(['lower', 'upper'], val):
-            too_low = (vmin is not None) and (v < vmin if incmin else v <= vmin)
-            too_high = (vmax is not None) and (v > vmax if incmax else v >= vmax)
-            if too_low or too_high:
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} {bound} bound must be in "
-                    f"range {self.rangestr()}, not {v}."
-                )
-
-    def get_soft_bounds(self):
-        return get_soft_bounds(self.bounds, self.softbounds)
-
-    def rangestr(self):
-        vmin, vmax = self.bounds
-        incmin, incmax = self.inclusive_bounds
-        incmin = '[' if incmin else '('
-        incmax = ']' if incmax else ')'
-        return f'{incmin}{vmin}, {vmax}{incmax}'
-
-
-class DateRange(Range):
-    """
-    A datetime or date range specified as (start, end).
-
-    Bounds must be specified as datetime or date types (see param.dt_types).
-    """
-
-    def _validate_bound_type(self, value, position, kind):
-        if not isinstance(value, dt_types):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} {position} {kind} can only be "
-                f"None or a date/datetime value, not {type(value)}."
-            )
-
-    def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
-        val = None if val is None else tuple(map(_to_datetime, val))
-        bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
-        super()._validate_bounds(val, bounds, inclusive_bounds, kind)
-
-    def _validate_value(self, val, allow_None):
-        # Cannot use super()._validate_value as DateRange inherits from
-        # NumericTuple which check that the tuple values are numbers and
-        # datetime objects aren't numbers.
-        if allow_None and val is None:
-            return
-
-        if not isinstance(val, tuple):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} only takes a tuple value, "
-                f"not {type(val)}."
-            )
-        for n in val:
-            if isinstance(n, dt_types):
-                continue
-            raise ValueError(
-                f"{_validate_error_prefix(self)} only takes date/datetime "
-                f"values, not {type(n)}."
-            )
-
-        start, end = val
-        if not end >= start:
-            raise ValueError(
-                f"{_validate_error_prefix(self)} end datetime {val[1]} "
-                f"is before start datetime {val[0]}."
-            )
-
-    @classmethod
-    def serialize(cls, value):
-        if value is None:
-            return None
-        # List as JSON has no tuple representation
-        serialized = []
-        for v in value:
-            if not isinstance(v, (dt.datetime, dt.date)): # i.e np.datetime64
-                v = v.astype(dt.datetime)
-            # Separate date and datetime to deserialize to the right type.
-            if type(v) == dt.date:
-                v = v.strftime("%Y-%m-%d")
-            else:
-                v = v.strftime("%Y-%m-%dT%H:%M:%S.%f")
-            serialized.append(v)
-        return serialized
-
-    def deserialize(cls, value):
-        if value == 'null' or value is None:
-            return None
-        deserialized = []
-        for v in value:
-            # Date
-            if len(v) == 10:
-                v = dt.datetime.strptime(v, "%Y-%m-%d").date()
-            # Datetime
-            else:
-                v = dt.datetime.strptime(v, "%Y-%m-%dT%H:%M:%S.%f")
-            deserialized.append(v)
-        # As JSON has no tuple representation
-        return tuple(deserialized)
-
-class CalendarDateRange(Range):
-    """
-    A date range specified as (start_date, end_date).
-    """
-    def _validate_value(self, val, allow_None):
-        if allow_None and val is None:
-            return
-
-        for n in val:
-            if not isinstance(n, dt.date):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} only takes date types, "
-                    f"not {val}."
-                )
-
-        start, end = val
-        if not end >= start:
-            raise ValueError(
-                f"{_validate_error_prefix(self)} end date {val[1]} is before "
-                f"start date {val[0]}."
-            )
-
-    def _validate_bound_type(self, value, position, kind):
-        if not isinstance(value, dt.date):
-            raise ValueError(
-                f"{_validate_error_prefix(self)} {position} {kind} can only be "
-                f"None or a date value, not {type(value)}."
-            )
-
-    @classmethod
-    def serialize(cls, value):
-        if value is None:
-            return None
-        # As JSON has no tuple representation
-        return [v.strftime("%Y-%m-%d") for v in value]
-
-    @classmethod
-    def deserialize(cls, value):
-        if value == 'null' or value is None:
-            return None
-        # As JSON has no tuple representation
-        return tuple([dt.datetime.strptime(v, "%Y-%m-%d").date() for v in value])
-
-
-class Event(Boolean):
-    """
-    An Event Parameter is one whose value is intimately linked to the
-    triggering of events for watchers to consume. Event has a Boolean
-    value, which when set to True triggers the associated watchers (as
-    any Parameter does) and then is automatically set back to
-    False. Conversely, if events are triggered directly via `.trigger`,
-    the value is transiently set to True (so that it's clear which of
-    many parameters being watched may have changed), then restored to
-    False when the triggering completes. An Event parameter is thus like
-    a momentary switch or pushbutton with a transient True value that
-    serves only to launch some other action (e.g. via a param.depends
-    decorator), rather than encapsulating the action itself as
-    param.Action does.
-    """
-
-    # _autotrigger_value specifies the value used to set the parameter
-    # to when the parameter is supplied to the trigger method. This
-    # value change is then what triggers the watcher callbacks.
-    __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
     @typing.overload
     def __init__(
         self,
-        default=False, *,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        default=b"", *, regex=None, allow_None=False,
+        doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self,default=False,**params):
-        self._autotrigger_value = True
-        self._autotrigger_reset_value = False
-        self._mode = 'set-reset'
-        # Mode can be one of 'set', 'set-reset' or 'reset'
+    def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
+        super().__init__(default=default, **kwargs)
+        self.regex = regex
+        self._validate(self.default)
 
-        # 'set' is normal Boolean parameter behavior when set with a value.
-        # 'set-reset' temporarily sets the parameter (which triggers
-        # watching callbacks) but immediately resets the value back to
-        # False.
-        # 'reset' applies the reset from True to False without
-        # triggering watched callbacks
+    def _validate_regex(self, val, regex):
+        if (val is None and self.allow_None):
+            return
+        if regex is not None and re.match(regex, val) is None:
+            raise ValueError(
+                f"{_validate_error_prefix(self)} value {val!r} "
+                f"does not match regex {regex!r}."
+            )
 
-        # This _mode attribute is one of the few places where a specific
-        # parameter has a special behavior that is relied upon by the
-        # core functionality implemented in
-        # parameterized.py. Specifically, the set_param method
-        # temporarily sets this attribute in order to disable resetting
-        # back to False while triggered callbacks are executing
-        super().__init__(default=default,**params)
+    def _validate_value(self, val, allow_None):
+        if allow_None and val is None:
+            return
+        if not isinstance(val, bytes):
+            raise ValueError(
+                f"{_validate_error_prefix(self)} only takes a byte string value, "
+                f"not value of {type(val)}."
+            )
 
-    def _reset_event(self, obj, val):
-        val = False
-        if obj is None:
-            self.default = val
-        else:
-            obj._param__private.values[self.name] = val
-        self._post_setter(obj, val)
-
-    @instance_descriptor
-    def __set__(self, obj, val):
-        if self._mode in ['set-reset', 'set']:
-            super().__set__(obj, val)
-        if self._mode in ['set-reset', 'reset']:
-            self._reset_event(obj, val)
-
-
-@contextmanager
-def exceptions_summarized():
-    """Useful utility for writing docs that need to show expected errors.
-    Shows exception only, concisely, without a traceback.
-    """
-    try:
-        yield
-    except Exception:
-        import sys
-        etype, value, tb = sys.exc_info()
-        print(f"{etype.__name__}: {value}", file=sys.stderr)
-
-from .reactive import bind, rx # noqa: api import
+    def _validate(self, val):
+        self._validate_value(val, self.allow_None)
+        self._validate_regex(val, self.regex)

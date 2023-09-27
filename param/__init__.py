@@ -67,6 +67,7 @@ from ._utils import (  # noqa: api import
     concrete_descendents,
     abbreviate_paths,
     exceptions_summarized,
+    _is_number,
 )
 
 
@@ -149,6 +150,7 @@ __all__ = (
     'WARNING',
     'XYCoordinates',
     '__version__',
+    '_is_number',
     'abbreviate_paths',
     'as_unicode',
     'batch_watch',

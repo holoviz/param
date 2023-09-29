@@ -273,7 +273,7 @@ class reactive_ops:
                 "The value of a derived expression cannot be set. Ensure you "
                 "set the value on the root node wrapping a concrete value, e.g.:"
                 "\n\n    a = rx(1)\n    b = a + 1\n    a.rx.value = 2\n\n "
-                "is valid but you may not set `b.rx.value = 2."
+                "is valid but you may not set `b.rx.value = 2`."
             )
         if self._reactive._wrapper is None:
             raise AttributeError(
@@ -606,7 +606,7 @@ class rx:
         if self._error_state:
             raise self._error_state
         elif self._dirty or self._root._dirty_obj:
-            self.rx.value
+            self._resolve()
         return self._current_
 
     def _compute_root(self):
@@ -791,7 +791,7 @@ class rx:
         current = self_dict['_current_']
         dirty = self_dict['_dirty']
         if dirty:
-            self.rx.value
+            self._resolve()
             current = self_dict['_current_']
 
         method = self_dict['_method']

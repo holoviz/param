@@ -156,6 +156,107 @@ class TestDeprecateParameterizedModule:
 
         P()
 
+    # Inheritance tests to be move to testparameterizedobject.py when warnings will be turned into errors
+
+    def test_inheritance_with_incompatible_defaults(self):
+        class A(param.Parameterized):
+            p = param.String()
+
+        class B(A): pass
+
+        with pytest.raises(
+            param._utils.ParamFutureWarning,
+            match=re.escape(
+                "Number parameter 'C.p' failed to validate its "
+                "default value on class creation, this is going to raise "
+                "an error in the future. The Parameter type changed between class 'C' "
+                "and one of its parent classes (B, A) which made it invalid. "
+                "Please fix the Parameter type."
+                "\nValidation failed with:\nNumber parameter 'C.p' only takes numeric values, not <class 'str'>."
+            )
+        ):
+            class C(B):
+                p = param.Number()
+
+    def test_inheritance_default_validation_with_more_specific_type(self):
+        class A(param.Parameterized):
+            p = param.Tuple(default=('a', 'b'))
+
+        class B(A): pass
+
+        with pytest.raises(
+            param._utils.ParamFutureWarning,
+            match=re.escape(
+                "NumericTuple parameter 'C.p' failed to validate its "
+                "default value on class creation, this is going to raise "
+                "an error in the future. The Parameter type changed between class 'C' "
+                "and one of its parent classes (B, A) which made it invalid. "
+                "Please fix the Parameter type."
+                "\nValidation failed with:\nNumericTuple parameter 'C.p' only takes numeric values, not <class 'str'>."
+            )
+        ):
+            class C(B):
+                p = param.NumericTuple()
+
+    def test_inheritance_with_changing_bounds(self):
+        class A(param.Parameterized):
+            p = param.Number(default=5)
+
+        class B(A): pass
+
+        with pytest.raises(
+            param._utils.ParamFutureWarning,
+            match=re.escape(
+                "Number parameter 'C.p' failed to validate its "
+                "default value on class creation, this is going to raise "
+                "an error in the future. The Parameter is defined with attributes "
+                "which when combined with attributes inherited from its parent "
+                "classes (B, A) make it invalid. Please fix the Parameter attributes."
+                "\nValidation failed with:\nNumber parameter 'C.p' must be at most 3, not 5."
+            )
+        ):
+            class C(B):
+                p = param.Number(bounds=(-1, 3))
+
+    def test_inheritance_with_changing_default(self):
+        class A(param.Parameterized):
+            p = param.Number(default=5, bounds=(3, 10))
+
+        class B(A): pass
+
+        with pytest.raises(
+            param._utils.ParamFutureWarning,
+            match=re.escape(
+                "Number parameter 'C.p' failed to validate its "
+                "default value on class creation, this is going to raise "
+                "an error in the future. The Parameter is defined with attributes "
+                "which when combined with attributes inherited from its parent "
+                "classes (B, A) make it invalid. Please fix the Parameter attributes."
+                "\nValidation failed with:\nNumber parameter 'C.p' must be at least 3, not 1."
+            )
+        ):
+            class C(B):
+                p = param.Number(default=1)
+
+    def test_inheritance_with_changing_class_(self):
+        class A(param.Parameterized):
+            p = param.ClassSelector(class_=int, default=5)
+
+        class B(A): pass
+
+        with pytest.raises(
+            param._utils.ParamFutureWarning,
+            match=re.escape(
+                "ClassSelector parameter 'C.p' failed to validate its "
+                "default value on class creation, this is going to raise "
+                "an error in the future. The Parameter is defined with attributes "
+                "which when combined with attributes inherited from its parent "
+                "classes (B, A) make it invalid. Please fix the Parameter attributes."
+                "\nValidation failed with:\nClassSelector parameter 'C.p' value must be an instance of str, not 5."
+            )
+        ):
+            class C(B):
+                p = param.ClassSelector(class_=str)
 
 class TestDeprecateParameters:
 

@@ -3597,7 +3597,40 @@ class ParameterizedMetaclass(type):
         # automatic appending of an unknown value on Selector opens a whole
         # rabbit hole in regard to the validation.
         if type_change or slot_overridden and param.default is not None:
-            param._validate(param.default)
+            try:
+                param._validate(param.default)
+            # Param has no base validation exception class. Param Parameters raise
+            # ValueError, TypeError, OSError exceptions but external Parameters
+            # might raise other types of error, so we catch them all.
+            except Exception as e:
+                msg = f'{_validate_error_prefix(param)} failed to validate its ' \
+                      'default value on class creation, this is going to raise ' \
+                      'an error in the future. '
+                parents = ', '.join(klass.__name__ for klass in mcs.__mro__[1:-2])
+                if not type_change and slot_overridden:
+                    msg += (
+                        f'The Parameter is defined with attributes which when '
+                        'combined with attributes inherited from its parent '
+                        f'classes ({parents}) make it invalid. '
+                        'Please fix the Parameter attributes.'
+                    )
+                elif type_change and not slot_overridden:
+                    msg += (
+                        f'The Parameter type changed between class {mcs.__name__!r} '
+                        f'and one of its parent classes ({parents}) which '
+                        f'made it invalid. Please fix the Parameter type.'
+                    )
+                else:
+                    # type_change and slot_overriden is not possible as when
+                    # the type changes checking the slots is aborted for
+                    # performance reasons.
+                    pass
+                msg += f'\nValidation failed with:\n{e}'
+                warnings.warn(
+                    msg,
+                    category=_ParamFutureWarning,
+                    stacklevel=4,
+                )
 
     def get_param_descriptor(mcs,param_name):
         """

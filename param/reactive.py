@@ -280,7 +280,7 @@ class reactive_ops:
                 "Setting the value of a reactive expression is only "
                 "supported if it wraps a concrete value. A reactive "
                 "expression wrapping a Parameter or another dynamic "
-                "reference cannot be updated set."
+                "reference cannot be updated."
             )
         self._reactive._wrapper.object = resolve_value(new)
 
@@ -671,8 +671,8 @@ class rx:
            if any parameter changes we have to notify the pipeline that
            it has to re-evaluate the pipeline. This is done by marking
            the pipeline as `_dirty`. The next time the `_current` value
-           is requested we then run and `._resolve()` pass that re-executes
-           the pipeline.
+           is requested the value is resolved by re-executing the
+           pipeline.
         """
         if self._fn is not None:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):

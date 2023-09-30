@@ -202,7 +202,7 @@ class reactive_ops:
         dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
         """
-        return bind(lambda *_: self.resolve(), *dependencies).rx()
+        return bind(lambda *_: self.value, *dependencies).rx()
 
     def where(self, x, y):
         """
@@ -225,12 +225,12 @@ class reactive_ops:
         trigger = Trigger(parameters=params)
         if xrefs:
             def trigger_x(*args):
-                if self.resolve():
+                if self.value:
                     trigger.param.trigger('value')
             bind(trigger_x, *xrefs, watch=True)
         if yrefs:
             def trigger_y(*args):
-                if not self.resolve():
+                if not self.value:
                     trigger.param.trigger('value')
             bind(trigger_y, *yrefs, watch=True)
 
@@ -240,7 +240,8 @@ class reactive_ops:
 
     # Operations to get the output and set the input of an expression
 
-    def resolve(self):
+    @property
+    def value(self):
         """
         Returns the current state of the reactive expression by
         evaluating the pipeline.
@@ -252,39 +253,36 @@ class reactive_ops:
         else:
             return self._reactive()
 
-    def set_input(self, new):
+    @value.setter
+    def value(self, new):
         """
         Allows overriding the original input to the pipeline.
         """
         if isinstance(self._reactive, Parameter):
-            raise ValueError(
-                "Parameter.rx.set_input() is not supported. Cannot override "
+            raise AttributeError(
+                "`Parameter.rx.value = value` is not supported. Cannot override "
                 "parameter value."
             )
         elif not isinstance(self._reactive, rx):
-            raise ValueError(
-                "bind(...).rx.set_input() is not supported. Cannot override "
+            raise AttributeError(
+                "`bind(...).rx.value = value` is not supported. Cannot override "
                 "the output of a function."
             )
-        if isinstance(new, rx):
-            new = new.resolve()
-        prev = self._reactive
-        while prev is not None:
-            prev._dirty = True
-            if prev._prev is not None:
-                prev = prev._prev
-                continue
-
-            if prev._wrapper is None:
-                raise ValueError(
-                    'rx.rx.set_input() is only supported if the '
-                    'root object is a constant value. If the root is a '
-                    'Parameter or another dynamic value it must reflect '
-                    'the source and cannot be set.'
-                )
-            prev._wrapper.object = new
-            prev = None
-        return self._reactive
+        elif self._reactive._root is not self._reactive:
+            raise AttributeError(
+                "The value of a derived expression cannot be set. Ensure you "
+                "set the value on the root node wrapping a concrete value, e.g.:"
+                "\n\n    a = rx(1)\n    b = a + 1\n    a.rx.value = 2\n\n "
+                "is valid but you may not set `b.rx.value = 2`."
+            )
+        if self._reactive._wrapper is None:
+            raise AttributeError(
+                "Setting the value of a reactive expression is only "
+                "supported if it wraps a concrete value. A reactive "
+                "expression wrapping a Parameter or another dynamic "
+                "reference cannot be updated."
+            )
+        self._reactive._wrapper.object = resolve_value(new)
 
     def watch(self, fn, onlychanged=True, queued=False, precedence=0):
         """
@@ -298,7 +296,7 @@ class reactive_ops:
 
     def _watch(self, fn, onlychanged=True, queued=False, precedence=0):
         def cb(*args):
-            fn(self.resolve())
+            fn(self.value)
 
         if isinstance(self._reactive, rx):
             params = self._reactive._params
@@ -608,7 +606,7 @@ class rx:
         if self._error_state:
             raise self._error_state
         elif self._dirty or self._root._dirty_obj:
-            self.rx.resolve()
+            self._resolve()
         return self._current_
 
     def _compute_root(self):
@@ -673,8 +671,8 @@ class rx:
            if any parameter changes we have to notify the pipeline that
            it has to re-evaluate the pipeline. This is done by marking
            the pipeline as `_dirty`. The next time the `_current` value
-           is requested we then run and `.resolve()` pass that re-executes
-           the pipeline.
+           is requested the value is resolved by re-executing the
+           pipeline.
         """
         if self._fn is not None:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
@@ -793,7 +791,7 @@ class rx:
         current = self_dict['_current_']
         dirty = self_dict['_dirty']
         if dirty:
-            self.rx.resolve()
+            self._resolve()
             current = self_dict['_current_']
 
         method = self_dict['_method']
@@ -861,6 +859,9 @@ class rx:
 
     def __abs__(self):
         return self._apply_operator(abs)
+
+    def __str__(self):
+        return self._apply_operator(str)
 
     def __round__(self, ndigits=None):
         args = () if ndigits is None else (ndigits,)
@@ -964,7 +965,7 @@ class rx:
             while True:
                 try:
                     new = self._apply_operator(next)
-                    new.rx.resolve()
+                    new.rx.value
                 except RuntimeError:
                     break
                 yield new
@@ -995,6 +996,6 @@ class rx:
 def _rx_transform(obj):
     if not isinstance(obj, rx):
         return obj
-    return bind(lambda *_: obj.rx.resolve(), *obj._params)
+    return bind(lambda *_: obj.rx.value, *obj._params)
 
 register_reference_transform(_rx_transform)

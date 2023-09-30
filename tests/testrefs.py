@@ -62,7 +62,7 @@ def test_reactive_ref():
     rx_string = string+'!'
     p = Parameters(string=rx_string)
     assert p.string == 'string!'
-    string.rx.set_input('new string')
+    string.rx.value = 'new string'
     assert p.string == 'new string!'
 
 def test_nested_list_parameter_ref():

@@ -173,7 +173,7 @@ def resolve_value(value):
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    if hasattr(value, '_dinfo'):
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value):
         value = eval_function_with_deps(value)
     elif isinstance(value, Parameter):
         value = getattr(value.owner, value.name)

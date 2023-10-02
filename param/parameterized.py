@@ -3567,7 +3567,7 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
-            elif slot == 'allow_refs' and not slot_values[slot]:
+            elif slot == 'allow_refs' and param.allow_refs is False:
                 # Track Parameters that explicitly declared no refs
                 mcs._param__private.explicit_no_refs.append(param.name)
 

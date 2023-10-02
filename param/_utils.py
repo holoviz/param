@@ -546,3 +546,11 @@ def exceptions_summarized():
         import sys
         etype, value, tb = sys.exc_info()
         print(f"{etype.__name__}: {value}", file=sys.stderr)
+
+
+def _in_ipython():
+    try:
+        get_ipython()
+        return True
+    except NameError:
+        return False

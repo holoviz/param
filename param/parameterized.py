@@ -45,6 +45,7 @@ from ._utils import (
     _deprecated,
     _deprecate_positional_args,
     _dict_update,
+    _in_ipython,
     _is_auto_name,
     _is_mutable_container,
     _recursive_repr,
@@ -54,17 +55,19 @@ from ._utils import (
     descendents,
 )
 
-try:
-    get_ipython()
-except NameError:
-    param_pager = None
-else:
+# Ideally setting param_pager would be in __init__.py but param_pager is
+# needed on import to create the Parameterized class, so it'd need to precede
+# importing parameterized.py in __init__.py which would be a little weird.
+if _in_ipython():
     # In case the optional ipython module is unavailable
     try:
         from .ipython import ParamPager
         param_pager = ParamPager(metaclass=True)  # Generates param description
-    except:
+    except ImportError:
         param_pager = None
+else:
+    param_pager = None
+
 
 from inspect import getfullargspec
 

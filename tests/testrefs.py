@@ -13,6 +13,15 @@ class Parameters(param.Parameterized):
 
     string_list = param.List(default=[], item_type=str, allow_refs=True, nested_refs=True)
 
+    no_refs = param.Parameter(allow_refs=False)
+
+class Subclass(Parameters):
+
+    no_refs = param.Parameter()
+
+class SubclassOverride(Parameters):
+
+    no_refs = param.Parameter(allow_refs=True)
 
 class Nested(param.Parameterized):
 
@@ -22,6 +31,15 @@ class Nested(param.Parameterized):
     def string(self):
         return self.subobject.string + '!'
 
+
+def test_class_explicit_no_refs():
+    assert Parameters._param__private.explicit_no_refs == ['no_refs']
+
+def test_subclass_explicit_no_refs():
+    assert Subclass._param__private.explicit_no_refs == ['no_refs']
+
+def test_subclass_explicit_no_refs_override():
+    assert SubclassOverride._param__private.explicit_no_refs == []
 
 def test_parameterized_warns_explicit_no_ref():
     class ImplicitRefsParameters(param.Parameterized):

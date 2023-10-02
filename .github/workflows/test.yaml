@@ -56,8 +56,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
+      - name: run examples tests
+        # A notebook fails on Windows (UNIX path used in an example)
+        # No need to run these tests for PyPy really
+        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
+        run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
       - name: run unit tests
+        if: matrix.python-version != '3.12'
         run: hatch -v run +py=${{ matrix.python-version }} tests:with_coverage
+      - name: run unit tests (3.12 only)
+        if: matrix.python-version == '3.12'
+        run: |
+          pip install -e ".[tests]"
+          coverage run --source=numbergen,param -m pytest -v tests
+          coverage report
+          coverage xml
       - name: run examples tests
         # A notebook fails on Windows (UNIX path used in an example)
         # No need to run these tests for PyPy really

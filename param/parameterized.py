@@ -173,7 +173,7 @@ def resolve_value(value):
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    if hasattr(value, '_dinfo'):
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value):
         value = eval_function_with_deps(value)
     elif isinstance(value, Parameter):
         value = getattr(value.owner, value.name)
@@ -3567,9 +3567,13 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
-            elif slot == 'allow_refs' and not slot_values[slot]:
+            elif slot == 'allow_refs':
                 # Track Parameters that explicitly declared no refs
-                mcs._param__private.explicit_no_refs.append(param.name)
+                explicit_no_refs = mcs._param__private.explicit_no_refs
+                if param.allow_refs is False:
+                    explicit_no_refs.append(param.name)
+                elif param.allow_refs is True and param.name in explicit_no_refs:
+                    explicit_no_refs.remove(param.name)
 
         # Now set the actual slot values
         for slot, value in slot_values.items():

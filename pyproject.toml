@@ -46,6 +46,7 @@ doc = [
 tests = [
     "coverage[toml]",
     "pytest",
+    "pytest-asyncio",
 ]
 tests-deser = [
     "xlrd",
@@ -56,6 +57,7 @@ tests-deser = [
 ]
 tests-examples = [
     "pytest",
+    "pytest-asyncio",
     "pytest-xdist",
     "nbval",
     "param[examples]",
@@ -218,6 +220,7 @@ filterwarnings = [
   "error",
 ]
 xfail_strict = "true"
+asyncio_mode = "auto"
 
 [tool.coverage.report]
 omit = ["param/version.py"]

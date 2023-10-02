@@ -219,6 +219,7 @@ filterwarnings = [
   "error",
 ]
 xfail_strict = "true"
+asyncio_mode = "auto"
 
 [tool.coverage.report]
 omit = ["param/version.py"]

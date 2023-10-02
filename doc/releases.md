@@ -6,7 +6,7 @@ Date: 2023-09-XX
 
 20 years after its creation, Param has reached version 2.0! Can you guess when Param 3.0 will be released?
 
-Param 2.0 is a major new release available for Python 3.9 and above, significantly streamlining, simplifying, and improving the Param API. Many long-supported but also long-obsolete functions, methods, and usages will now warn loudly so that you can make sure your code is only using the fully supported and safe current approaches. Because upgrading to Param 2 is likely to reveal compatibility issues with older codebases, new releases in the 1.x series are expected to continue for some time, focused on compatibility with the ecosystem rather than adding new features. Thus you can keep using Param 1.x with your older code, but Param 2 is the future!
+Param 2.0 is a major new release available for Python 3.8 and above, significantly streamlining, simplifying, and improving the Param API. Many long-supported but also long-obsolete functions, methods, and usages will now warn loudly so that you can make sure your code is only using the fully supported and safe current approaches. Because upgrading to Param 2 is likely to reveal compatibility issues with older codebases, new releases in the 1.x series are expected to continue for some time, focused on compatibility with the ecosystem rather than adding new features. Thus you can keep using Param 1.x with your older code, but Param 2 is the future!
 
 We would like to thank @minimav for their first contribution, and @droumis, @Hoxbro, @jbednar, @maximlt, @philippjfr and @sdrobert for their contributions. We would also like to thank @ceball, who made the first plans for Param 2.0 quite a few years ago, and we are glad to be delivering on them at last!
 
@@ -80,7 +80,7 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 
 ### Breaking changes
 
-- While it's a major improvement to the definition of Parameters, properly inheriting Parameter slots can result in some Parameter slot values being different in Param 2, because Param 1 was sometimes silently not inheriting slot values. On top of that, Param 2.0 adds a validation step of the default value of a Parameter after the inheritance mechanism has completed if its type has changed (e.g. `x` in class `A` is a `Number` and in class `B(A)` is an `Integer`) or one of its slot values has changed ([#812](https://github.com/holoviz/param/pull/812), [#820](https://github.com/holoviz/param/pull/820))
+- While it's a major improvement to the definition of Parameters, properly inheriting Parameter slots can result in some Parameter slot values being different in Param 2, because Param 1 was sometimes silently not inheriting slot values.
 - User-defined `Parameter` classes should be updated to use `Undefined` as the formal default for any new slots, with the actual default defined on the new `_slot_defaults` dictionary. Otherwise, any new slot will fail to support inheritance, even if it was set to `None`, which would previously support inheritance.
 - `Parameterized` methods that were deprecated since Param 1.7.0 have finally been removed. These are now mostly available on the `.param` namespace ([#592](https://github.com/holoviz/param/pull/592))
 - No longer supports setting non-Parameter class attributes during initialization, and no longer warns when setting non-Parameter class attributes directly ([#729](https://github.com/holoviz/param/pull/729))
@@ -93,7 +93,11 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 
 ### Deprecations
 
-We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pull/734), [#751](https://github.com/holoviz/param/pull/751), [#768](https://github.com/holoviz/param/pull/768), [#797](https://github.com/holoviz/param/pull/797), [#834](https://github.com/holoviz/param/pull/834), [#838](https://github.com/holoviz/param/pull/838)) but have decided to do it in a gentle way, emitting deprecation warnings for a period of time before proceeding with removals. You will find below the complete list of deprecation warnings added in Param 2.0. This functionality is expected to be removed sometime in the next couple of 2.x releases, so if you use Param 2, please take care of these warnings as soon as you encounter them, and certainly before you upgrade to the next release!
+This section lists functionality that is expected to be removed sometime in the next couple of 2.x releases, so if you use Param 2, please take care of these warnings as soon as you encounter them, and certainly before you upgrade to the next release!
+
+Param 2.0 adds a validation step of the *default* value of a Parameter after the inheritance mechanism has completed if its type has changed (e.g. `x` in class `A` is a `Number` and in class `B(A)` is an `Integer`) or one of its slot values has changed ([#812](https://github.com/holoviz/param/pull/812), [#820](https://github.com/holoviz/param/pull/820)). We have decided to only emit a warning when this validation fails to make your life easier when upgrading your code from Param 1 to 2, as the validation is performed on class creation which means that any validation error breaks importing your code. You should definitely take care of these warnings, they indicate a Parameter is in an invalid state!
+
+We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pull/734), [#751](https://github.com/holoviz/param/pull/751), [#768](https://github.com/holoviz/param/pull/768), [#797](https://github.com/holoviz/param/pull/797), [#834](https://github.com/holoviz/param/pull/834), [#838](https://github.com/holoviz/param/pull/838)) but have decided to do it in a gentle way, emitting deprecation warnings for a period of time before proceeding with removals. You will find below the complete list of deprecation warnings added in Param 2.0.
 
 - Parameter signature:
   - Instantiating most parameters with positional arguments beyond `default` is deprecated:

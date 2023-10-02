@@ -46,6 +46,7 @@ doc = [
 tests = [
     "coverage[toml]",
     "pytest",
+    "pytest-asyncio",
 ]
 tests-deser = [
     "xlrd",

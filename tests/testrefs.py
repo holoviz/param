@@ -1,3 +1,5 @@
+import asyncio
+
 import param
 import pytest
 
@@ -100,3 +102,38 @@ def test_nested_param_method_ref():
     assert p2.string == 'string!'
     p.string = 'new string'
     assert p2.string == 'new string!'
+
+async def test_async_function_ref(async_executor):
+    async def gen_strings():
+        await asyncio.sleep(0.02)
+        return 'string!'
+
+    p = Parameters(string=gen_strings)
+
+    await asyncio.sleep(0.1)
+    assert p.string == 'string!'
+
+async def test_async_bind_ref(async_executor):
+    p = Parameters()
+
+    async def exclaim(string):
+        await asyncio.sleep(0.05)
+        return string + '!'
+
+    p2 = Parameters(string=bind(exclaim, p.param.string))
+    await asyncio.sleep(0.1)
+    assert p2.string == 'string!'
+    p.string = 'new string'
+    await asyncio.sleep(0.1)
+    assert p2.string == 'new string!'
+
+async def test_async_generator_ref(async_executor):
+    async def gen_strings():
+        string = 'string'
+        for i in range(10):
+            yield string + '!' * i
+
+    p = Parameters(string=gen_strings)
+
+    await asyncio.sleep(0.1)
+    assert p.string == 'string!!!!!!!!!'

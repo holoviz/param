@@ -68,7 +68,7 @@ jobs:
       - name: run examples tests
         # A notebook fails on Windows (UNIX path used in an example)
         # No need to run these tests for PyPy really
-        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != "3.12"
+        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.12'
         run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

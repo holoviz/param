@@ -5,9 +5,11 @@ _reactive_display_objs = weakref.WeakSet()
 
 def register_display_accessor(name, accessor, force=False):
     if name in _display_accessors and not force:
-        raise KeyError(
-            'Display accessor {name!r} already registered. Override it '
-            'by setting force=True or unregister the existing accessor first.')
+        if _display_accessors[name].__module__ != accessor.__module__:
+            raise KeyError(
+                f'Display accessor {name!r} already registered. Override it '
+                'by setting force=True or unregister the existing accessor first.'
+            )
     _display_accessors[name] = accessor
     for fn in _reactive_display_objs:
         setattr(fn, name, accessor(fn))

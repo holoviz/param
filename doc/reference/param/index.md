@@ -1,5 +1,11 @@
 # Param API reference
 
+## Reactive API
+
+```{include} reactive.md
+:start-line: 2
+```
+
 ## Parameterized objects
 
 ```{include} parameterized_objects.md
@@ -47,6 +53,7 @@
 maxdepth: 2
 hidden: true
 ---
+Reactive API <reactive>
 Parameterized objects <parameterized_objects>
 Parameterized helpers <parameterized_helpers>
 Parameters <parameters>

@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.8", "3.9", "3.10", "3.11", "pypy3.9"]') || fromJSON('["3.8", "3.9", "3.11"]') }}
+        python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.8", "3.9", "3.10", "3.11", "3.12", "pypy3.9"]') || fromJSON('["3.8", "3.10", "3.12"]') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v3
@@ -50,16 +50,25 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
       - name: env setup
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
       - name: run unit tests
+        if: matrix.python-version != '3.12'
         run: hatch -v run +py=${{ matrix.python-version }} tests:with_coverage
+      - name: run unit tests (3.12 only)
+        if: matrix.python-version == '3.12'
+        run: |
+          pip install -e ".[tests]"
+          coverage run --source=numbergen,param -m pytest -v tests
+          coverage report
+          coverage xml
       - name: run examples tests
         # A notebook fails on Windows (UNIX path used in an example)
         # No need to run these tests for PyPy really
-        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
+        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.12'
         run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
       - uses: codecov/codecov-action@v3
         if: github.event_name == 'push'

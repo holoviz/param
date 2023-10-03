@@ -45,6 +45,7 @@ from ._utils import (
     _deprecated,
     _deprecate_positional_args,
     _dict_update,
+    _in_ipython,
     _is_auto_name,
     _is_mutable_container,
     _recursive_repr,
@@ -54,17 +55,19 @@ from ._utils import (
     descendents,
 )
 
-try:
-    get_ipython()
-except NameError:
-    param_pager = None
-else:
+# Ideally setting param_pager would be in __init__.py but param_pager is
+# needed on import to create the Parameterized class, so it'd need to precede
+# importing parameterized.py in __init__.py which would be a little weird.
+if _in_ipython():
     # In case the optional ipython module is unavailable
     try:
         from .ipython import ParamPager
         param_pager = ParamPager(metaclass=True)  # Generates param description
-    except:
+    except ImportError:
         param_pager = None
+else:
+    param_pager = None
+
 
 from inspect import getfullargspec
 
@@ -173,7 +176,7 @@ def resolve_value(value):
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    if hasattr(value, '_dinfo'):
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value):
         value = eval_function_with_deps(value)
     elif isinstance(value, Parameter):
         value = getattr(value.owner, value.name)
@@ -3567,9 +3570,13 @@ class ParameterizedMetaclass(type):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
-            elif slot == 'allow_refs' and not slot_values[slot]:
+            elif slot == 'allow_refs':
                 # Track Parameters that explicitly declared no refs
-                mcs._param__private.explicit_no_refs.append(param.name)
+                explicit_no_refs = mcs._param__private.explicit_no_refs
+                if param.allow_refs is False:
+                    explicit_no_refs.append(param.name)
+                elif param.allow_refs is True and param.name in explicit_no_refs:
+                    explicit_no_refs.remove(param.name)
 
         # Now set the actual slot values
         for slot, value in slot_values.items():
@@ -3597,7 +3604,40 @@ class ParameterizedMetaclass(type):
         # automatic appending of an unknown value on Selector opens a whole
         # rabbit hole in regard to the validation.
         if type_change or slot_overridden and param.default is not None:
-            param._validate(param.default)
+            try:
+                param._validate(param.default)
+            # Param has no base validation exception class. Param Parameters raise
+            # ValueError, TypeError, OSError exceptions but external Parameters
+            # might raise other types of error, so we catch them all.
+            except Exception as e:
+                msg = f'{_validate_error_prefix(param)} failed to validate its ' \
+                      'default value on class creation, this is going to raise ' \
+                      'an error in the future. '
+                parents = ', '.join(klass.__name__ for klass in mcs.__mro__[1:-2])
+                if not type_change and slot_overridden:
+                    msg += (
+                        f'The Parameter is defined with attributes which when '
+                        'combined with attributes inherited from its parent '
+                        f'classes ({parents}) make it invalid. '
+                        'Please fix the Parameter attributes.'
+                    )
+                elif type_change and not slot_overridden:
+                    msg += (
+                        f'The Parameter type changed between class {mcs.__name__!r} '
+                        f'and one of its parent classes ({parents}) which '
+                        f'made it invalid. Please fix the Parameter type.'
+                    )
+                else:
+                    # type_change and slot_overriden is not possible as when
+                    # the type changes checking the slots is aborted for
+                    # performance reasons.
+                    pass
+                msg += f'\nValidation failed with:\n{e}'
+                warnings.warn(
+                    msg,
+                    category=_ParamFutureWarning,
+                    stacklevel=4,
+                )
 
     def get_param_descriptor(mcs,param_name):
         """

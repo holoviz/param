@@ -17,5 +17,8 @@
   discard_events
   edit_constant
   output
+  param.parameterized.register_reference_transform
+  param.parameterized.resolve_ref
+  param.parameterized.resolve_value
   script_repr
 ```

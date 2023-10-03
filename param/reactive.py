@@ -90,9 +90,8 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
 
 from . import Event
-from .depends import (
-    _display_accessors, _reactive_display_objs, depends,
-)
+from .depends import depends
+from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Parameter, Parameterized, eval_function_with_deps, get_method_owner,
     register_reference_transform, resolve_ref, resolve_value, transform_reference

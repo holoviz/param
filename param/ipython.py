@@ -24,9 +24,7 @@ import uuid
 
 import param
 
-from param.depends import depends, register_display_accessor
-from param.parameterized import resolve_ref
-from param.reactive import rx
+from param.display import register_display_accessor
 
 
 # Whether to generate warnings when misformatted docstrings are found
@@ -365,6 +363,10 @@ class IPythonDisplay:
         self._reactive = reactive
 
     def __call__(self):
+        from param.depends import depends
+        from param.parameterized import resolve_ref
+        from param.reactive import rx
+
         if isinstance(self._reactive, rx):
             cb = self._reactive._callback
             @depends(*self._reactive._params, watch=True)

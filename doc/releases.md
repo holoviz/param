@@ -2,7 +2,7 @@
 
 ## Version 2.0.0
 
-Date: 2023-09-XX
+Date: 2023-10-XX
 
 20 years after its creation, Param has reached version 2.0! Can you guess when Param 3.0 will be released?
 
@@ -15,8 +15,9 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 - Parameter slot values are now all inherited correctly across a hierarchy of Parameterized classes, making their behavior much clearer and more consistent. Let's say we have class `B` being a subclass of `A`, itself being a subclass of `param.Parameterized`. If `A` defines `x = Number(1, bounds=(0, 10))` and `B` defines `x = Number(2)`, `B.param['x'].bounds` is now going to be inherited from `A` and equal to `(0, 10)` as you would expect. Parameterized classes have always supported inheritance, but the previous mechanism was based on using `None` to indicate which values should be inherited, which was highly problematic because `None` was also a valid value for many slots. All Parameter slot signatures now default to the new `Undefined` sentinel, finally allowing `None` to be inherited where appropriate. ([#605](https://github.com/holoviz/param/pull/605), [#771](https://github.com/holoviz/param/pull/771), [#791](https://github.com/holoviz/param/pull/791))
 - The `objects` slot of a Selector was previously highly confusing, because it accepted either a dictionary or a list for initialization but then was accessible only as a list, making it difficult to watch or update the objects. There is now a `ListProxy` wrapper around `Selector.objects` (with forward and backward compatibility) to easily update `objects` and watch `objects` updates ([#598](https://github.com/holoviz/param/pull/598), [#825](https://github.com/holoviz/param/pull/825))
 - Parameterized classes and instances now have a rich HTML representation that is displayed automatically in a Jupyter/IPython notebook. For a class or instance `p`, just return `p.param` in a notebook cell to see a table of all the Parameters of the class/instance, their state, type, and range, plus the docstring on hover. It is likely we will improve the content and design of this repr based on feedback, so please let us know what you think! ([#425](https://github.com/holoviz/param/pull/425), [#781](https://github.com/holoviz/param/pull/781), [#821](https://github.com/holoviz/param/pull/821), [#831](https://github.com/holoviz/param/pull/831))
+- Parameters have all gained the `allow_refs` and `nested_refs` attributes, bringing an exceptionally useful feature that was available in Panel since version 1.2 to Param. Declaring a Parameter with `allow_refs=True` (`False` by default) allows setting this Parameter value with a *reference* to automatically mirror the value of the reference. Supported references include class/instance Parameter objects, functions/methods decorated with `param.depends`, reactive functions and expressions, asynchronous generators and custom objects transformed into a valid reference with a hook registered with `param.parameterized.register_reference_transform`. `nested_refs` indicate whether references should be resolved even when they are nested inside a container ([#843](https://github.com/holoviz/param/pull/843), [#845](https://github.com/holoviz/param/pull/845), [#849](https://github.com/holoviz/param/pull/849), [#865](https://github.com/holoviz/param/pull/865), [#862](https://github.com/holoviz/param/pull/862))
 - Experimental new `rx` reactive expressions: Param is widely used for building web apps in the HoloViz ecosystem, where packages have added various mechanisms for dynamic updates (e.g. `pn.bind` and `pn.depends` in Panel, and `.interactive` in hvPlot). These mechanisms were already built on Param and can be used far more widely than just in those packages, so that functionality has now been generalized, streamlined, and moved into Param. Nearly any Python expression can now be made reactive with `param.rx()`, at which point it will collect and be able to replay any operations (e.g. method calls) performed on them. This reactive programming approach lets you take just about any existing Python workflow and replace attributes with widgets or other reactive values, creating an app with fine-grained user control without having to design callbacks, event handlers, or any other complex logic! `rx` support is still experimental while we get feedback about the API, packaging, and documentation, but it's fully ready to try out and give us suggestions!
-([#460](https://github.com/holoviz/param/pull/460), [#842](https://github.com/holoviz/param/pull/842), [#841](https://github.com/holoviz/param/pull/841), [#843](https://github.com/holoviz/param/pull/843), [#844](https://github.com/holoviz/param/pull/844), [#845](https://github.com/holoviz/param/pull/845), [#846](https://github.com/holoviz/param/pull/846), [#849](https://github.com/holoviz/param/pull/849), [#847](https://github.com/holoviz/param/pull/847), [#850](https://github.com/holoviz/param/pull/850), [#851](https://github.com/holoviz/param/pull/851))
+([#460](https://github.com/holoviz/param/pull/460), [#842](https://github.com/holoviz/param/pull/842), [#841](https://github.com/holoviz/param/pull/841), [#844](https://github.com/holoviz/param/pull/844), [#846](https://github.com/holoviz/param/pull/846), [#847](https://github.com/holoviz/param/pull/847), [#850](https://github.com/holoviz/param/pull/850), [#851](https://github.com/holoviz/param/pull/851), [#856](https://github.com/holoviz/param/pull/856), [#860](https://github.com/holoviz/param/pull/860), [#854](https://github.com/holoviz/param/pull/854), [#859](https://github.com/holoviz/param/pull/859))
 
 
 ### Enhancements
@@ -33,6 +34,7 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 - `Integer` now accepts `numpy.integer` values ([#735](https://github.com/holoviz/param/pull/735))
 - `Range` now does stricter validation of the slot values ([#725](https://github.com/holoviz/param/pull/725), [#824](https://github.com/holoviz/param/pull/824))
 - `Path` now has `check_exists` attribute, leading it to raise an error if `path` is not found on parameter instantiation ([#800](https://github.com/holoviz/param/pull/800))
+- Add top-level `__all__` and move Parameter classes to `parameters.py` ([#853](https://github.com/holoviz/param/pull/853))
 
 ### Bug fixes
 
@@ -73,10 +75,11 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 - Upgrades to leverage `hatch`, `pyproject.toml` and `pre-commit` ([#749](https://github.com/holoviz/param/pull/749), [#772](https://github.com/holoviz/param/pull/772))
 - Add basic benchmark suite using `asv` ([#788](https://github.com/holoviz/param/pull/788))
 - Reduce the number of tested Python versions ([#732](https://github.com/holoviz/param/pull/732))
+- Run the tests with Python 3.12 ([#863](https://github.com/holoviz/param/pull/863))
 
 ### Compatibility
 
-- Drop support for Python 2.7, 3.6, and 3.8 and upgrade the code base accordingly ([#741](https://github.com/holoviz/param/pull/741), [#784](https://github.com/holoviz/param/pull/784))
+- Drop support for Python 2.7, 3.6, and 3.7 and upgrade the code base accordingly ([#741](https://github.com/holoviz/param/pull/741), [#784](https://github.com/holoviz/param/pull/784))
 
 ### Breaking changes
 
@@ -95,7 +98,7 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 
 This section lists functionality that is expected to be removed sometime in the next couple of 2.x releases, so if you use Param 2, please take care of these warnings as soon as you encounter them, and certainly before you upgrade to the next release!
 
-Param 2.0 adds a validation step of the *default* value of a Parameter after the inheritance mechanism has completed if its type has changed (e.g. `x` in class `A` is a `Number` and in class `B(A)` is an `Integer`) or one of its slot values has changed ([#812](https://github.com/holoviz/param/pull/812), [#820](https://github.com/holoviz/param/pull/820)). We have decided to only emit a warning when this validation fails to make your life easier when upgrading your code from Param 1 to 2, as the validation is performed on class creation which means that any validation error breaks importing your code. You should definitely take care of these warnings, they indicate a Parameter is in an invalid state!
+Param 2.0 adds a validation step of the *default* value of a Parameter after the inheritance mechanism has completed if its type has changed (e.g. `x` in class `A` is a `Number` and in class `B(A)` is an `Integer`) or one of its slot values has changed ([#812](https://github.com/holoviz/param/pull/812), [#820](https://github.com/holoviz/param/pull/820), [#857](https://github.com/holoviz/param/pull/857)). We have decided to only emit a warning when this validation fails to make your life easier when upgrading your code from Param 1 to 2, as the validation is performed on class creation which means that any validation error breaks importing your code. You should definitely take care of these warnings, they indicate a Parameter is in an invalid state!
 
 We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pull/734), [#751](https://github.com/holoviz/param/pull/751), [#768](https://github.com/holoviz/param/pull/768), [#797](https://github.com/holoviz/param/pull/797), [#834](https://github.com/holoviz/param/pull/834), [#838](https://github.com/holoviz/param/pull/838)) but have decided to do it in a gentle way, emitting deprecation warnings for a period of time before proceeding with removals. You will find below the complete list of deprecation warnings added in Param 2.0.
 

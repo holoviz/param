@@ -65,5 +65,6 @@ html_title = f'{project} v{version}'
 html_last_updated_fmt = '%Y-%m-%d'
 
 myst_heading_anchors = 3
+myst_enable_extensions = ["colon_fence"]
 
 napoleon_numpy_docstring = True

@@ -12,12 +12,12 @@ into a chain.
 The original input to an `rx` object is stored in a mutable list and can be
 accessed via the `_obj` property. The shared mutable data structure
 ensures that all `rx` instances created from the same object can
-hold a shared reference that can be updated, e.g. via the `.set`
-method or because the input was itself a reference to some object that
+hold a shared reference that can be updated, e.g. via the `.value`
+property or because the input was itself a reference to some object that
 can potentially be updated.
 
 When an operation is applied to an `rx` instance, it will
-record the operation and create a new instance using `_clone` method,
+record the operation and create a new instance using the `_clone` method,
 e.g. `dfi.head()` first records that the `'head'` attribute is
 accessed, which is achieved by overriding `__getattribute__`. A new
 reactive object is returned, which will then record that it is
@@ -33,7 +33,7 @@ operations that may be applied to an object, `rx` implements:
 - Operators: Implementing all valid operators `__gt__`, `__add__`, etc.
 - `__array_ufunc__`: Intercepting numpy universal function calls
 
-The `rx` object evaluates operations lazily but whenever the
+The `rx` object evaluates operations lazily, but whenever the
 current value is needed the operations are automatically
 evaluated. Note that even attribute access or tab-completion
 operations can result in evaluation of the pipeline. This is very
@@ -458,7 +458,7 @@ class rx:
     6.28
 
     Then update the original value and see the new result:
-    >>> ifloat.set(1)
+    >>> ifloat.value = 1
     2
     """
 

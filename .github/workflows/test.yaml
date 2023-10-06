@@ -55,6 +55,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
+      - name: temp patch pip for blosc2
+        if: contains(matrix.platform, 'ubuntu') && matrix.python-version == '3.8'
+        run: echo "PIP_ONLY_BINARY=blosc2" >> $GITHUB_ENV
       - name: run unit tests
         if: matrix.python-version != '3.12'
         run: hatch -v run +py=${{ matrix.python-version }} tests:with_coverage

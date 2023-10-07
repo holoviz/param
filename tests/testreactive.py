@@ -314,3 +314,14 @@ def test_reactive_set_value_non_root_raises():
     rx_val = rx(1) + 1
     with pytest.raises(AttributeError):
         rx_val.rx.value = 3
+
+def test_reactive_clone_evaluates_once():
+    namex = rx('bob')
+
+    items = []
+    def debug(value):
+        items.append(value)
+        return value
+
+    assert namex.rx.pipe(debug).title().rx.value == 'Bob'
+    assert len(items) == 1

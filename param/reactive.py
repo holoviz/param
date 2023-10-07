@@ -556,10 +556,10 @@ class rx:
         self._method = method
         self._operation = operation
         self._depth = depth
-        self._dirty = True
+        self._dirty = _current is None
         self._dirty_obj = False
         self._error_state = None
-        self._current_ = None
+        self._current_ = _current
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:

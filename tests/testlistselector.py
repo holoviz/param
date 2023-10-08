@@ -22,6 +22,7 @@ class TestListSelectorParameters(unittest.TestCase):
             h = param.ListSelector(default=None)
             g = param.ListSelector(default=None,objects=[7,8])
             i = param.ListSelector(default=[7],objects=[9],check_on_set=False)
+            j = param.ListSelector(objects=[11], check_on_set=False, allow_None=True)
 
         self.P = P
 
@@ -84,12 +85,17 @@ class TestListSelectorParameters(unittest.TestCase):
     def test_set_object_setattr(self):
         p = self.P(e=[6])
         p.f = [9]
-        self.assertEqual(p.f, [9])
+        assert p.f == [9]
+        assert p.param.f.objects == [10, 9]
+        assert self.P.param.f.objects == [10]
         p.g = [7]
-        self.assertEqual(p.g, [7])
+        assert p.g == [7]
+        assert p.param.g.objects == self.P.param.g.objects
+        assert p.param.g.objects == [7, 8]
         p.i = [12]
-        self.assertEqual(p.i, [12])
-
+        assert p.i == [12]
+        assert p.param.i.objects == [9, 7, 12]
+        assert self.P.param.i.objects == [9, 7]
 
     def test_set_object_not_None(self):
         p = self.P(e=[6])
@@ -111,6 +117,14 @@ class TestListSelectorParameters(unittest.TestCase):
         else:
             raise AssertionError("Object set outside range.")
 
+    def test_set_one_object_allow_None_check_on_set(self):
+        p = self.P(e=[6])
+        p.j = None
+        assert p.j is None
+        assert p.param.j.objects == [11]
+        p.j = [12]
+        assert p.j == [12]
+        assert p.param.j.objects == [11, 12]
 
     def test_set_object_setattr_post_error(self):
         p = self.P(e=[6])
@@ -147,11 +161,6 @@ class TestListSelectorParameters(unittest.TestCase):
         else:
             raise AssertionError("ListSelector created without range.")
 
-
-    ##################################################################
-    ##################################################################
-    ### new tests (not copied from testobjectselector)
-
     def test_bad_default(self):
         with pytest.raises(
             ValueError,
@@ -172,7 +181,6 @@ class TestListSelectorParameters(unittest.TestCase):
         class Q(param.Parameterized):
             r = param.ListSelector(default=[6])
 
-    ##########################
     def test_default_not_checked_to_be_iterable(self):
         with pytest.raises(
             ValueError,
@@ -187,8 +195,6 @@ class TestListSelectorParameters(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             Q.r = 6
-    ##########################
-
 
     def test_compute_default(self):
         class Q(param.Parameterized):

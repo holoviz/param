@@ -488,7 +488,7 @@ def _instantiate_param_obj(paramobj, owner=None):
     p.watchers = {}
 
     # shallow-copy any mutable slot values other than the actual default
-    for s in p.__class__.__slots__:
+    for s in p.__class__._all_slots_:
         v = getattr(p, s)
         if _is_mutable_container(v) and s != "default":
             setattr(p, s, copy.copy(v))

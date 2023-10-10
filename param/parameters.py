@@ -2071,18 +2071,17 @@ class ListSelector(Selector):
                     self.objects.append(o)
 
     def _validate(self, val):
+        if (val is None and self.allow_None):
+            return
         self._validate_type(val)
 
         if self.check_on_set:
             self._validate_value(val)
         else:
-            self._ensure_value_is_in_objects(val)
-
+            for v in val:
+                self._ensure_value_is_in_objects(v)
 
     def _validate_type(self, val):
-        if (val is None and self.allow_None):
-            return
-
         if not isinstance(val, list):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes list types, "

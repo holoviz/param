@@ -149,7 +149,7 @@ We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pul
   - `instance.param.trigger("<param_name>")`
   - `instance.param.watch(callback, "<param_name>")`
 - Parameterized namespace:
-  - `instance._param_watchers` (getter and setter): use instead `inst.param.watchers` (``= ...`)
+  - `instance._param_watchers` (getter and setter): use instead the property `inst.param.watchers`
 
 [*Full Changelog*](https://github.com/holoviz/param/compare/v1.13.0...v2.0.0)
 

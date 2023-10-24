@@ -2,7 +2,7 @@
 
 ## Version 2.0.0
 
-Date: 2023-10-XX
+Date: 2023-10-24
 
 20 years after its creation, Param has reached version 2.0! Can you guess when Param 3.0 will be released?
 

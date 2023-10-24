@@ -1511,7 +1511,9 @@ class Parameter(_ParameterBase):
             else:
                 # When setting a Parameter before calling super.
                 if not isinstance(obj._param__private, _InstancePrivate):
-                    obj._param__private = _InstancePrivate()
+                    obj._param__private = _InstancePrivate(
+                        explicit_no_refs=type(obj)._param__private.explicit_no_refs
+                    )
                 _old = obj._param__private.values.get(name, self.default)
                 obj._param__private.values[name] = val
         self._post_setter(obj, val)
@@ -4196,12 +4198,13 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         During this process the object is considered uninitialized.
         """
-        self._param__private = _InstancePrivate()
+        explicit_no_refs = type(self)._param__private.explicit_no_refs
+        self._param__private = _InstancePrivate(explicit_no_refs=explicit_no_refs)
         self._param__private.initialized = False
 
         _param__private = state.get('_param__private', None)
         if _param__private is None:
-            _param__private = _InstancePrivate()
+            _param__private = _InstancePrivate(explicit_no_refs=explicit_no_refs)
 
         # When making a copy the internal watchers have to be
         # recreated and point to the new instance

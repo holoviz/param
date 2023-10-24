@@ -151,7 +151,7 @@ We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pul
 - Parameterized namespace:
   - `instance._param_watchers` (getter and setter): use instead `inst.param.watchers` (``= ...`)
 
-**Full Changelog**: https://github.com/holoviz/param/compare/v1.13.0...v2.0.0
+[*Full Changelog*](https://github.com/holoviz/param/compare/v1.13.0...v2.0.0)
 
 ## Version 1.13.0
 

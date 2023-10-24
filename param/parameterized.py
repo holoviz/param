@@ -4040,6 +4040,7 @@ class _InstancePrivate:
         'syncing',
         'watchers',
         'values',
+        'explicit_no_refs',
     ]
 
     def __init__(
@@ -4051,8 +4052,10 @@ class _InstancePrivate:
         params=None,
         watchers=None,
         values=None,
+        explicit_no_refs=None
     ):
         self.initialized = initialized
+        self.explicit_no_refs = [] if explicit_no_refs is None else explicit_no_refs
         self.syncing = set()
         if parameters_state is None:
             parameters_state = {
@@ -4132,7 +4135,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # _InstancePrivate namespace over the _ClassPrivate namespace
         # (see Parameter.__set__) so we shouldn't override it here.
         if not isinstance(self._param__private, _InstancePrivate):
-            self._param__private = _InstancePrivate()
+            self._param__private = _InstancePrivate(
+                explicit_no_refs=type(self)._param__private.explicit_no_refs
+            )
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.

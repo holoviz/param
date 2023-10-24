@@ -1,5 +1,158 @@
 # Releases
 
+## Version 2.0.0
+
+Date: 2023-10-24
+
+20 years after its creation, Param has reached version 2.0! Can you guess when Param 3.0 will be released?
+
+Param 2.0 is a major new release available for Python 3.8 and above, significantly streamlining, simplifying, and improving the Param API. Many long-supported but also long-obsolete functions, methods, and usages will now warn loudly so that you can make sure your code is only using the fully supported and safe current approaches. Because upgrading to Param 2 is likely to reveal compatibility issues with older codebases, new releases in the 1.x series are expected to continue for some time, focused on compatibility with the ecosystem rather than adding new features. Thus you can keep using Param 1.x with your older code, but Param 2 is the future!
+
+We would like to thank @minimav for their first contribution, and @droumis, @Hoxbro, @jbednar, @maximlt, @philippjfr and @sdrobert for their contributions. We would also like to thank @ceball, who made the first plans for Param 2.0 quite a few years ago, and we are glad to be delivering on them at last!
+
+### Major enhancements and features
+
+- Parameter slot values are now all inherited correctly across a hierarchy of Parameterized classes, making their behavior much clearer and more consistent. Let's say we have class `B` being a subclass of `A`, itself being a subclass of `param.Parameterized`. If `A` defines `x = Number(1, bounds=(0, 10))` and `B` defines `x = Number(2)`, `B.param['x'].bounds` is now going to be inherited from `A` and equal to `(0, 10)` as you would expect. Parameterized classes have always supported inheritance, but the previous mechanism was based on using `None` to indicate which values should be inherited, which was highly problematic because `None` was also a valid value for many slots. All Parameter slot signatures now default to the new `Undefined` sentinel, finally allowing `None` to be inherited where appropriate. ([#605](https://github.com/holoviz/param/pull/605), [#771](https://github.com/holoviz/param/pull/771), [#791](https://github.com/holoviz/param/pull/791), [#874](https://github.com/holoviz/param/pull/874))
+- The `objects` slot of a Selector was previously highly confusing, because it accepted either a dictionary or a list for initialization but then was accessible only as a list, making it difficult to watch or update the objects. There is now a `ListProxy` wrapper around `Selector.objects` (with forward and backward compatibility) to easily update `objects` and watch `objects` updates ([#598](https://github.com/holoviz/param/pull/598), [#825](https://github.com/holoviz/param/pull/825))
+- Parameterized classes and instances now have a rich HTML representation that is displayed automatically in a Jupyter/IPython notebook. For a class or instance `p`, just return `p.param` in a notebook cell to see a table of all the Parameters of the class/instance, their state, type, and range, plus the docstring on hover. It is likely we will improve the content and design of this repr based on feedback, so please let us know what you think! ([#425](https://github.com/holoviz/param/pull/425), [#781](https://github.com/holoviz/param/pull/781), [#821](https://github.com/holoviz/param/pull/821), [#831](https://github.com/holoviz/param/pull/831))
+- Parameters have all gained the `allow_refs` and `nested_refs` attributes, bringing an exceptionally useful feature that was available in Panel since version 1.2 to Param. Declaring a Parameter with `allow_refs=True` (`False` by default) allows setting this Parameter value with a *reference* to automatically mirror the value of the reference. Supported references include class/instance Parameter objects, functions/methods decorated with `param.depends`, reactive functions and expressions, asynchronous generators and custom objects transformed into a valid reference with a hook registered with `param.parameterized.register_reference_transform`. `nested_refs` indicate whether references should be resolved even when they are nested inside a container ([#843](https://github.com/holoviz/param/pull/843), [#845](https://github.com/holoviz/param/pull/845), [#849](https://github.com/holoviz/param/pull/849), [#865](https://github.com/holoviz/param/pull/865), [#862](https://github.com/holoviz/param/pull/862), [#876](https://github.com/holoviz/param/pull/876))
+- Experimental new `rx` reactive expressions: Param is widely used for building web apps in the HoloViz ecosystem, where packages have added various mechanisms for dynamic updates (e.g. `pn.bind` and `pn.depends` in Panel, and `.interactive` in hvPlot). These mechanisms were already built on Param and can be used far more widely than just in those packages, so that functionality has now been generalized, streamlined, and moved into Param. Nearly any Python expression can now be made reactive with `param.rx()`, at which point it will collect and be able to replay any operations (e.g. method calls) performed on them. This reactive programming approach lets you take just about any existing Python workflow and replace attributes with widgets or other reactive values, creating an app with fine-grained user control without having to design callbacks, event handlers, or any other complex logic! `rx` support is still experimental while we get feedback about the API, packaging, and documentation, but it's fully ready to try out and give us suggestions!
+([#460](https://github.com/holoviz/param/pull/460), [#842](https://github.com/holoviz/param/pull/842), [#841](https://github.com/holoviz/param/pull/841), [#844](https://github.com/holoviz/param/pull/844), [#846](https://github.com/holoviz/param/pull/846), [#847](https://github.com/holoviz/param/pull/847), [#850](https://github.com/holoviz/param/pull/850), [#851](https://github.com/holoviz/param/pull/851), [#856](https://github.com/holoviz/param/pull/856), [#860](https://github.com/holoviz/param/pull/860), [#854](https://github.com/holoviz/param/pull/854), [#859](https://github.com/holoviz/param/pull/859), [#858](https://github.com/holoviz/param/pull/858), [#873](https://github.com/holoviz/param/pull/873))
+
+
+### Enhancements
+
+- Parameter slot values that are set to mutable containers (e.g. `Selector(objects=a_list)`) will now be shallow-copied on instantiation, so that the container is no longer confusingly shared between the class and its subclasses and instances ([#826](https://github.com/holoviz/param/pull/826))
+- To further clean up the Parameterized namespace (first started in version 1.7.0), the remaining private attributes haven been collected under two private namespaces `_param__private` and `_param__parameters` ([#766](https://github.com/holoviz/param/pull/766), [#790](https://github.com/holoviz/param/pull/790))
+- You can now use `.param.update` as a context manager for applying temporary updates ([#779](https://github.com/holoviz/param/pull/779))
+- The `name` Parameter has always had special behavior dating to its use in labeling objects in a GUI context, but this behavior is now able to be overriden at the class and instance level ([#740](https://github.com/holoviz/param/pull/740))
+- Improved Parameter signatures for static and dynamic code analysis ([#742](https://github.com/holoviz/param/pull/742))
+- Removed inferred Parameterized docstring signature and add basic `__signature__` support ([#802](https://github.com/holoviz/param/pull/802))
+- For speed, only generate the Parameter docstring in an IPython context ([#774](https://github.com/holoviz/param/pull/774))
+- Improve Parameter validation error messages ([#808](https://github.com/holoviz/param/pull/808))
+- Support for deserialization of file types into `Array` and `DataFrame` ([#482](https://github.com/holoviz/param/pull/482))
+- `Integer` now accepts `numpy.integer` values ([#735](https://github.com/holoviz/param/pull/735))
+- `Range` now does stricter validation of the slot values ([#725](https://github.com/holoviz/param/pull/725), [#824](https://github.com/holoviz/param/pull/824))
+- `Path` now has `check_exists` attribute, leading it to raise an error if `path` is not found on parameter instantiation ([#800](https://github.com/holoviz/param/pull/800))
+- Add top-level `__all__` and move Parameter classes to `parameters.py` ([#853](https://github.com/holoviz/param/pull/853))
+
+### Bug fixes
+
+- Allow type change for `DateRange` and `Date` ([#733](https://github.com/holoviz/param/pull/733))
+- Ensure class watchers are not inherited by instance parameter ([#833](https://github.com/holoviz/param/pull/833))
+- Fix multi-level indirection in Parameters access ([#840](https://github.com/holoviz/param/pull/840))
+- Ensure non-function types are not resolved as empty function declarations ([#753](https://github.com/holoviz/param/pull/753))
+- Fix watchers support when the Parameterized instance is falsy ([#769](https://github.com/holoviz/param/pull/769))
+- Fix depending on the method of a sub-parameter object ([#765](https://github.com/holoviz/param/pull/765))
+- Raise an error on bad non-watched references ([#777](https://github.com/holoviz/param/pull/777))
+- Ensure that the root dependency can be resolved, and error otherwise ([#813](https://github.com/holoviz/param/pull/813))
+- Fix basic pickling ([#783](https://github.com/holoviz/param/pull/783), [#792](https://github.com/holoviz/param/pull/792))
+- Validate that `self` is present in the `__init__` signature of a Parameterized class ([#786](https://github.com/holoviz/param/pull/786))
+- No longer force `instantiate` to True when `constant` is True ([#776](https://github.com/holoviz/param/pull/776))
+- Instantiate default Parameter values based on all the Parameters available ([#798](https://github.com/holoviz/param/pull/798))
+- `Array`: fix `param.pprint` ([#795](https://github.com/holoviz/param/pull/795))
+- `Array`: don't hard-code `allow_None` to `True` ([#726](https://github.com/holoviz/param/pull/726))
+- `Boolean`: validate the default type ([#722](https://github.com/holoviz/param/pull/722))
+- `FileSelector`: made more consistent with `Selector` by defaulting to the first globbed path ([#801](https://github.com/holoviz/param/pull/801))
+- `FileSelector`: ensure path separators are consistent on Windows ([#805](https://github.com/holoviz/param/pull/805))
+- `Path`: raise a `ValueError` if set to `None` while not allowed ([#799](https://github.com/holoviz/param/pull/799))
+- `Selector`: populate `objects` when `check_on_set` is False and `default` is not in `objects` ([#794](https://github.com/holoviz/param/pull/794), [#817](https://github.com/holoviz/param/pull/817))
+- `File/MultiFileSelector`: updating `path` updates `objects` ([#814](https://github.com/holoviz/param/pull/814))
+
+### Documentation
+
+- Build the site with `sphinx` directly and refactor the API reference ([#810](https://github.com/holoviz/param/pull/810))
+- Update to the latest version of `pydata-sphinx-theme` ([#752](https://github.com/holoviz/param/pull/752))
+- Update to Google Analytics 4 ([#758](https://github.com/holoviz/param/pull/758))
+- Fix minor errors in the Getting Started ([#787](https://github.com/holoviz/param/pull/787))
+- Add OpenCollective sponsor link on the repository page ([#811](https://github.com/holoviz/param/pull/811))
+
+### Infrastructure
+
+- Increase the test suite coverage ([#716](https://github.com/holoviz/param/pull/716), [#717](https://github.com/holoviz/param/pull/717), [#719](https://github.com/holoviz/param/pull/719), [#720](https://github.com/holoviz/param/pull/720), [#739](https://github.com/holoviz/param/pull/739), [#775](https://github.com/holoviz/param/pull/775), [#778](https://github.com/holoviz/param/pull/778))
+- Turn warnings into exceptions in the test suite ([#738](https://github.com/holoviz/param/pull/738))
+- Add notebook smoke tests ([#750](https://github.com/holoviz/param/pull/750))
+- Upgrades to leverage `hatch`, `pyproject.toml` and `pre-commit` ([#749](https://github.com/holoviz/param/pull/749), [#772](https://github.com/holoviz/param/pull/772))
+- Add basic benchmark suite using `asv` ([#788](https://github.com/holoviz/param/pull/788))
+- Reduce the number of tested Python versions ([#732](https://github.com/holoviz/param/pull/732))
+- Run the tests with Python 3.12 ([#863](https://github.com/holoviz/param/pull/863))
+
+### Compatibility
+
+- Drop support for Python 2.7, 3.6, and 3.7 and upgrade the code base accordingly ([#741](https://github.com/holoviz/param/pull/741), [#784](https://github.com/holoviz/param/pull/784))
+
+### Breaking changes
+
+- While it's a major improvement to the definition of Parameters, properly inheriting Parameter slots can result in some Parameter slot values being different in Param 2, because Param 1 was sometimes silently not inheriting slot values.
+- User-defined `Parameter` classes should be updated to use `Undefined` as the formal default for any new slots, with the actual default defined on the new `_slot_defaults` dictionary. Otherwise, any new slot will fail to support inheritance, even if it was set to `None`, which would previously support inheritance.
+- `Parameterized` methods that were deprecated since Param 1.7.0 have finally been removed. These are now mostly available on the `.param` namespace ([#592](https://github.com/holoviz/param/pull/592))
+- No longer supports setting non-Parameter class attributes during initialization, and no longer warns when setting non-Parameter class attributes directly ([#729](https://github.com/holoviz/param/pull/729))
+- `instance.param.watchers` no longer returns the transient dict of watchers but instead returns the instance watchers, as the now deprecated `instance._param_watchers` ([#797](https://github.com/holoviz/param/pull/797))
+- Removed deprecated `Parameterized.pprint`, `Parameterized._pprint`, `Parameterized.script_repr`, `ParameterizedFunction.script_repr` ([#767](https://github.com/holoviz/param/pull/767))
+- Removed `Time.next` method needed only for Param 2, and moved `Parameterized.state_pop` and `Parameterized.state_push` to the `.param` namespace ([#767](https://github.com/holoviz/param/pull/767))
+- Some removals were considered harmless and thus implemented immediately without a deprecation period:
+  - Removed unused `bounds` slot from `Boolean` and `Event` ([#744](https://github.com/holoviz/param/pull/744), [#755](https://github.com/holoviz/param/pull/755))
+  - Removed private Parameter `_internal_name` slot ([#796](https://github.com/holoviz/param/pull/796))
+
+### Deprecations
+
+This section lists functionality that is expected to be removed sometime in the next couple of 2.x releases, so if you use Param 2, please take care of these warnings as soon as you encounter them, and certainly before you upgrade to the next release!
+
+Param 2.0 adds a validation step of the *default* value of a Parameter after the inheritance mechanism has completed if its type has changed (e.g. `x` in class `A` is a `Number` and in class `B(A)` is an `Integer`) or one of its slot values has changed ([#812](https://github.com/holoviz/param/pull/812), [#820](https://github.com/holoviz/param/pull/820), [#857](https://github.com/holoviz/param/pull/857)). We have decided to only emit a warning when this validation fails to make your life easier when upgrading your code from Param 1 to 2, as the validation is performed on class creation which means that any validation error breaks importing your code. You should definitely take care of these warnings, they indicate a Parameter is in an invalid state!
+
+We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pull/734), [#751](https://github.com/holoviz/param/pull/751), [#768](https://github.com/holoviz/param/pull/768), [#797](https://github.com/holoviz/param/pull/797), [#834](https://github.com/holoviz/param/pull/834), [#838](https://github.com/holoviz/param/pull/838)) but have decided to do it in a gentle way, emitting deprecation warnings for a period of time before proceeding with removals. You will find below the complete list of deprecation warnings added in Param 2.0.
+
+- Parameter signature:
+  - Instantiating most parameters with positional arguments beyond `default` is deprecated:
+    - `String('prefix-test', '^prefix')`: deprecated!
+    - `String('prefix-test', regex='^prefix')`: OK
+    - `String(default='prefix-test', regex='^prefix')`: OK
+  - For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing any argument by position is deprecated:
+    - `Selector([1, 2])`: deprecated!
+    - `Selector(objects=[1, 2])`: OK
+    - `ClassSelector((str, int))`: deprecated!
+    - `ClassSelector(class_=(str, int))`: OK
+    - It's possible that in the future the signature of these two parameters will be aligned with the other parameters to accept `default` as first and only positional argument, but for now please use an explicit keyword so that your code will be compatible with all versions.
+- Parameter slots:
+  - `List._class`: use instead `item_type`.
+  - `Number.set_hook`: no replacement
+- `param.__init__` module:
+  - `param.produce_value`: no replacement
+  - `param.as_unicode`: no replacement
+  - `param.is_ordered_dict`: no replacement
+  - `param.is_ordered_dict`: no replacement
+  - `param.hashable`: no replacement
+  - `param.named_objs`: no replacement
+  - `param.normalize_path`: no replacement
+  - `param.abbreviate_paths`: no replacement
+- `param.parameterized` module:
+  - `param.parameterized.all_equal`: no replacement
+  - `param.parameterized.add_metaclass`: no replacement
+  - `param.parameterized.batch_watch`: use instead `batch_call_watchers`
+  - `param.parameterized.recursive_repr`: no replacement
+  - `param.parameterized.overridable_property`: no replacement
+- Parameterized `.param` namespace; many of these methods have been deprecated since version 1.12.0, however, this was just announced in the release notes and we realised many users missed them, sometimes even us included! They now all emit deprecation warnings when executed and are clearly marked as deprecated in the API reference:
+  - `.param.set_default`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
+  - `.param._add_parameter`: use instead `.param.add_parameter`
+  - `.param.params`: use instead `.param.values()` or `.param['param']`
+  - `.param.set_param`: use instead `.param.update`
+  - `.param.get_param_values`: use instead `.param.values().items()` (or `.param.values()` for the common case of `dict(....param.get_param_values())`)
+  - `.param.params_depended_on`: use instead `.param.method_dependencies`
+  - `.param.defaults`: use instead `{k:v.default for k,v in p.param.objects().items()}`
+  - `.param.print_param_defaults`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
+  - `.param.print_param_values`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
+  - `.param.message`: use instead `.param.log(param.MESSAGE, ...)`
+  - `.param.verbose`: use instead `.param.log(param.VERBOSE, ...)`
+  - `.param.debug`: use instead `.param.log(param.DEBUG, ...)`
+- Running unsafe operations **during Parameterized instance initialization**, instead run these operations after having called `super().__init__(**params)`:
+  - `instance.param.objects(instance=True)`
+  - `instance.param.trigger("<param_name>")`
+  - `instance.param.watch(callback, "<param_name>")`
+- Parameterized namespace:
+  - `instance._param_watchers` (getter and setter): use instead the property `inst.param.watchers`
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v1.13.0...v2.0.0)
+
 ## Version 1.13.0
 
 Date: 2023-03-14

@@ -88,7 +88,7 @@ def _deprecate_positional_args(func):
 
             warnings.warn(
                 f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
-                "has been deprecated since Param 2.0,0 and will raise an error in a future version, "
+                "has been deprecated since Param 2.0.0 and will raise an error in a future version, "
                 "please pass them as keyword arguments.",
                 ParamPendingDeprecationWarning,
                 stacklevel=2,

@@ -100,6 +100,9 @@ include = [
     "param",
     "numbergen",
 ]
+exclude = [
+    "doc",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [

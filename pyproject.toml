@@ -55,6 +55,7 @@ tests-deser = [
     "odfpy",
     "feather-format",
     "pyarrow",
+    "tables",
 ]
 tests-examples = [
     "pytest",

@@ -47,7 +47,7 @@ except:
         xlsxm = None
 
 try:
-    import feather
+    import pyarrow.feather as feather
 except:
     feather = None
 
@@ -71,7 +71,7 @@ modern_pd_skip = skipIf(modern_pd is None, "pandas is too old")
 xlsxm_skip = skipIf(xlsxm is None, "openpyxl is not available")
 ods_skip = skipIf(ods is None, "odfpy is not available")
 xls_skip = skipIf(xls is None, "xlrd is not available")
-feather_skip = skipIf(feather is None, "feather-format is not available")
+feather_skip = skipIf(feather is None, "pyarrow.feather is not available")
 parquet_skip = skipIf(parquet is None, "fastparquet and pyarrow are not available")
 hdf5_skip = skipIf(hdf5 is None, "pytables is not available")
 

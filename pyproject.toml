@@ -53,7 +53,6 @@ tests-deser = [
     "xlrd",
     "openpyxl",
     "odfpy",
-    "feather-format",
     "pyarrow",
 ]
 tests-examples = [
@@ -185,7 +184,6 @@ name."^(?!pypy).*".dependencies = [
     "xlrd",
     "openpyxl",
     "odfpy",
-    "feather-format",
     "pyarrow",
     "cloudpickle",
     "nest_asyncio",

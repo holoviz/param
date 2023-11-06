@@ -192,8 +192,10 @@ name."^(?!pypy).*".dependencies = [
     "nest_asyncio",
 ]
 # Only install gmpy on Linux on these version
+# Only install tables (deser HDF5) on Linux on these version
 matrix.python.dependencies = [
     { value = "gmpy", if = ["3.8", "3.9", "3.10"], platform = ["linux"] },
+    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11", "3.12"], platform = ["linux"] },
 ]
 
 [tool.hatch.envs.tests_examples]

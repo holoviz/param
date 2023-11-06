@@ -23,14 +23,15 @@
   NumericTuple
   XYCoordinates
   Range
+  Date
   DateRange
+  CalendarDate
   CalendarDateRange
   List
   HookList
   Path
   Filename
   Foldername
-  CalendarDateRange
   Selector
   FileSelector
   ListSelector

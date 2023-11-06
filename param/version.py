@@ -23,7 +23,8 @@ import os, subprocess, json
 def run_cmd(args, cwd=None):
     proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE,
-                            cwd=cwd)
+                            cwd=cwd,
+                            creationflags=subprocess.CREATE_NO_WINDOW)
     output, error = (str(s.decode()).strip() for s in proc.communicate())
 
     # Detects errors as _either_ a non-zero return code _or_ messages

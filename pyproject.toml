@@ -54,6 +54,7 @@ tests-deser = [
     "openpyxl",
     "odfpy",
     "pyarrow",
+    "tables",
 ]
 tests-examples = [
     "pytest",

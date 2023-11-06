@@ -97,18 +97,15 @@ source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 include = [
-    "param",
-    "numbergen",
-]
-exclude = [
-    "doc",
+    "/param",
+    "/numbergen",
 ]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "param",
-    "numbergen",
-    "tests",
+    "/param",
+    "/numbergen",
+    "/tests",
 ]
 
 [tool.hatch.build.hooks.vcs]

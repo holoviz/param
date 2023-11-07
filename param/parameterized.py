@@ -3101,11 +3101,11 @@ class Parameters:
                 warning_count+=1
         self_.__db_print(level, msg, *args, **kw)
 
-    # Note that there's no state_push method on the class, so
+    # Note that there's no _state_push method on the class, so
     # dynamic parameters set on a class can't have state saved. This
-    # is because, to do this, state_push() would need to be a
+    # is because, to do this, _state_push() would need to be a
     # @bothmethod, but that complicates inheritance in cases where we
-    # already have a state_push() method.
+    # already have a _state_push() method.
     # (isinstance(g,Parameterized) below is used to exclude classes.)
 
     def _state_push(self_):
@@ -3116,8 +3116,8 @@ class Parameters:
         dynamically generated values.
 
         Subclasses that maintain short-term state should additionally
-        save and restore that state using state_push() and
-        state_pop().
+        save and restore that state using _state_push() and
+        _state_pop().
 
         Generally, this method is used by operations that need to test
         something without permanently altering the objects' state.
@@ -3132,14 +3132,14 @@ class Parameters:
                 g._saved_Dynamic_time.append(g._Dynamic_time)
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
-            elif hasattr(g,'state_push') and isinstance(g,Parameterized):
-                g.state_push()
+            elif hasattr(g,'_state_push') and isinstance(g,Parameterized):
+                g._state_push()
 
     def _state_pop(self_):
         """
         Restore the most recently saved state.
 
-        See state_push() for more details.
+        See _state_push() for more details.
         """
         self = self_.self_or_cls
         if not isinstance(self, Parameterized):
@@ -3149,8 +3149,8 @@ class Parameters:
             if hasattr(g,'_Dynamic_last'):
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
-            elif hasattr(g,'state_pop') and isinstance(g,Parameterized):
-                g.state_pop()
+            elif hasattr(g,'_state_pop') and isinstance(g,Parameterized):
+                g._state_pop()
 
     def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
                qualify=False, separator=""):

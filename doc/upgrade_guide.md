@@ -23,7 +23,7 @@ print(B().param['x'].doc)
 # The value of x
 ```
 
-However, this was broken in some subtle ways! It mostly resolved around `None` being used as the specific sentinel value for allowing inheritance. Let's two examples that have been fixed in Param 2.0.
+However, this was broken in some subtle ways! It mostly resolved around `None` being used as the specific sentinel value for allowing inheritance. Let's have a look at two examples that have been fixed in Param 2.0.
 
 In this first example we want to re-set the default value of `x` to `None` in a subclass. As you can see, this was discarded entirely in versions before Param 2.0, while the new version correctly assigns `None`.
 
@@ -41,7 +41,7 @@ print(B().x)
 # Param 2.0: None    :)
 ```
 
-In this second example we want to narrow the bounds `x` in the subclass `B`. While you would have expected the default value of `5.0` to be inherited from `A`, it turns out that it's not the case, it is instead the default value of the `Number` `Parameter` that happens to be set on `B.x`.
+In this second example we want to narrow the bounds `x` in the subclass `B`. While you would have expected the default value of `5.0` to be inherited from `A`, it turns out that it's not the case, it is instead the default value of the `Number` `Parameter` (`0.0`) that happens to be set on `B.x`.
 
 ```python
 class A(param.Parameterized):
@@ -57,11 +57,9 @@ print(B().x)
 # Param 2.0: 5.0    :)
 ```
 
-These are just two of the most common cases that can affect your code, but there are more obviously! And as you can sense, these changes are subtle enough to have introduced changes in your code without you noticing, i.e. your `Parameter` attributes (like `default`, but other attributes are affected too) can now have different values in subclasses, without you getting any warning or your code raising any error.
+These are just two of the most common cases that can affect your code, but there are more obviously. And as you can sense, these changes are subtle enough to have introduced changes in your code without you noticing, i.e. your `Parameter` attributes (like `default`, but other attributes are affected too) can now have different values in subclasses, without you getting any warning or your code raising any error. On its own this change was worth the major bump to Param 2.0!
 
-On its own this change was worth the major bump to Param 2.0!
-
-Because we've worked a lot on making sure that Parameter attributes are properly inherited, we've realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid. Therefore, at the end of the class inheritance mechanism, we added a validation of the *default* value and decided for not to only emit a warning when it fails, not to break your code on imports! You should definitely take care of these warnings, they indicate a Parameter is in an invalid state!
+Because we've worked a lot on making sure that Parameter attributes are properly inherited, we've realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid. Therefore, at the end of the class inheritance mechanism, we added a validation of the *default* value and decided for now to only emit a warning when it fails, not to break your code on imports! You should definitely take care of these warnings, they indicate a Parameter is in an invalid state:
 
 ```python
 class A(param.Parameterized):
@@ -76,7 +74,7 @@ class B(A):
 
 #### Defining custom `Parameter`s
 
-To implement properly the `Parameter` attributes inheritance described in the section below we have had to make some changes to how `Parameter` classes are declared. While the custom `Parameter`s you previously wrote for Param before 2.0 should still work as expected, we now recommend custom `Parameter`s to be written follow the pattern we have adopted internally. In particular, we have:
+To implement properly the `Parameter` attributes inheritance described in the section below we have had to make some changes to how `Parameter` classes are declared. While the custom `Parameter`s you previously wrote for Param before 2.0 should still work, they might suffer from the same attribute inheritance issues. We now recommend custom `Parameter`s to be written following the pattern we have adopted internally. In particular, we have:
 
 - introduced the `param.parameterized.Undefined` sentinel object that is used as the default value of the `Parameter` parameters in its `__init__()` method
 - introduced the `_slot_defaults` class attribute to declare the actual default values of the `Parameter` parameters, e.g. in the example below the default value of `some_attribute` is declared to be `10`
@@ -145,7 +143,7 @@ class Person(param.Parameterized):
 
 print(Person.name)
 # Param < 2: Person         :(
-# Param 2.0: Person00002    :)
+# Param 2.0: Eva            :)
 
 print(Person().name)
 # Param < 2: Person0000     :(
@@ -154,7 +152,7 @@ print(Person().name)
 
 #### Setting a non-Parameter attribute via the constructor
 
-Before Param 2.0 you could set a instance attribute that was not a `Parameter` via the constructor. This behavior was prone to let typos slip through your code, setting the wrong instance attribute (with a warning though). Starting from Param 2.0 this now raises a `TypeError`, like when you call a Python callable with a wrong parameter name:
+Before Param 2.0 you could set an instance attribute that was not a `Parameter` via the constructor. This behavior was prone to let typos slip through your code, setting the wrong instance attribute (with a warning though). Starting from Param 2.0 this now raises a `TypeError`, similarly to when you call a Python callable with a wrong parameter name:
 
 ```python
 class A(param.Parameterized):
@@ -167,7 +165,7 @@ A(numbre=10)  # oops typo!
 
 #### `instance.param.watchers` value changed
 
-`instance.param.watchers` no longer returns the transient dict of watchers but instead returns the instance watchers, as the now deprecated `instance._param_watchers`:
+`instance.param.watchers` no longer returns the transient watchers state, that isn't very useful, but instead returns what you would expect, i.e. a dictionary of the watchers set up on this instance, which you could previously get from the now deprecated `instance._param_watchers`:
 
 ```python
 class A(param.Parameterized):
@@ -184,7 +182,7 @@ print(A().param.watchers)
 
 #### Clean-up of the `Parameterized` namespace
 
-The methods listed below were removed from the `Parameterized` namespace (i.e. members that are available to the classes that inherit from `param.Parameterized`). Most of the time, a replacement method is available from the `.param` namespace:
+The methods listed below were removed from the `Parameterized` namespace (i.e. members that are available to classes that inherit from `param.Parameterized`). Most of the time, a replacement method is available from the `.param` namespace:
 
 - `_add_parameter`: use instead `param.add_parameter`
 - `params`: use instead `.param.values()` or `.param['param']`

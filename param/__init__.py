@@ -75,6 +75,8 @@ from ._utils import (  # noqa: api import
 
 # Define '__version__'
 try:
+    # For performance reasons on imports, avoid importing setuptools_scm
+    # if not in a .git folder
     if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
         # If setuptools_scm is installed (e.g. in a development environment with
         # an editable install), then use it to determine the version dynamically.

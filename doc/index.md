@@ -25,9 +25,10 @@ hidden: true
 ---
 Getting Started <getting_started>
 User Guide <user_guide/index>
-Comparisons <comparisons>
 API <reference/index>
 Releases <releases>
+Upgrade Guide <upgrade_guide>
+Comparisons <comparisons>
 Roadmap <roadmap>
 Developer Guide <developer_guide>
 About <about>

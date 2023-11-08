@@ -89,7 +89,7 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 - No longer supports setting non-Parameter class attributes during initialization, and no longer warns when setting non-Parameter class attributes directly ([#729](https://github.com/holoviz/param/pull/729))
 - `instance.param.watchers` no longer returns the transient dict of watchers but instead returns the instance watchers, as the now deprecated `instance._param_watchers` ([#797](https://github.com/holoviz/param/pull/797))
 - Removed deprecated `Parameterized.pprint`, `Parameterized._pprint`, `Parameterized.script_repr`, `ParameterizedFunction.script_repr` ([#767](https://github.com/holoviz/param/pull/767))
-- Removed `Time.next` method needed only for Param 2, and moved `Parameterized.state_pop` and `Parameterized.state_push` to the `.param` namespace ([#767](https://github.com/holoviz/param/pull/767))
+- Removed `Time.next` method needed only for Python 2, and moved `Parameterized.state_pop` and `Parameterized.state_push` to the `.param` namespace ([#767](https://github.com/holoviz/param/pull/767))
 - Some removals were considered harmless and thus implemented immediately without a deprecation period:
   - Removed unused `bounds` slot from `Boolean` and `Event` ([#744](https://github.com/holoviz/param/pull/744), [#755](https://github.com/holoviz/param/pull/755))
   - Removed private Parameter `_internal_name` slot ([#796](https://github.com/holoviz/param/pull/796))

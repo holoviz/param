@@ -1,3 +1,5 @@
+import os
+
 from . import version  # noqa: api import
 from .depends import depends  # noqa: api import
 from .parameterized import (  # noqa: api import
@@ -73,14 +75,19 @@ from ._utils import (  # noqa: api import
 
 # Define '__version__'
 try:
-    # If setuptools_scm is installed (e.g. in a development environment with
-    # an editable install), then use it to determine the version dynamically.
-    from setuptools_scm import get_version
+    # For performance reasons on imports, avoid importing setuptools_scm
+    # if not in a .git folder
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
+        # If setuptools_scm is installed (e.g. in a development environment with
+        # an editable install), then use it to determine the version dynamically.
+        from setuptools_scm import get_version
 
-    # This will fail with LookupError if the package is not installed in
-    # editable mode or if Git is not installed.
-    __version__ = get_version(root="..", relative_to=__file__)
-except (ImportError, LookupError):
+        # This will fail with LookupError if the package is not installed in
+        # editable mode or if Git is not installed.
+        __version__ = get_version(root="..", relative_to=__file__)
+    else:
+        raise FileNotFoundError
+except (ImportError, LookupError, FileNotFoundError):
     # As a fallback, use the version that is hard-coded in the file.
     try:
         from ._version import __version__

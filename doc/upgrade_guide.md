@@ -60,7 +60,7 @@ print(B().x)
 
 These are just two of the most common cases where inheritance changes can affect your code, but there are many other cases, affecting any attribute where `None` is a legal value.  The new behavior should be much more predictable and intuitive, avoiding subtle cases where your code would previously have behaved inappropriately without necessarily having any obvious error. Fixing this was already enough to be worth the major bump to Param 2.0!
 
-Because of all our work on making sure that Parameter attributes are properly inherited, we've realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid according to the Parameter declarations. Therefore, once class inheritance has completed as your classes get defined, we have added validation that the Parameter's *default* value is an allowed value. For now Param 2.0 is only emitting a warning when it fails, to avoid breaking your code on imports! If you do see these warnings, you should address them immediately by adding a legal default value or by relaxing one of the declared constraints on the value, because the warnings indicate a Parameter is in an invalid state:
+Because of all our work on making sure that Parameter attributes are properly inherited, we've realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid according to the Parameter declarations. Therefore, once class inheritance has completed as your classes get defined, we have added validation that the Parameter's *default* value is an allowed value. For now Param 2.0 is only emitting a warning when this validation fails, to avoid breaking your code on imports! If you do see these warnings, you should address them immediately by adding a legal default value or by relaxing one of the declared constraints on the value, because the warnings indicate a Parameter is in an invalid state:
 
 ```python
 class A(param.Parameterized):
@@ -110,7 +110,7 @@ class CustomParameter(Parameter):
 
 ```
 
-To make Parameter attributes  work as expected, we have overridden `Parameter.__getattribute__` to detect whether the attribute value has been set to something that is not `Undefined`, and if not, to fall back to returning the default value declared in `_slot_defaults`:
+To make Parameter attributes work as expected, we have overridden `Parameter.__getattribute__` to detect whether the attribute value has been set to something that is not `Undefined`, and if not, to fall back to returning the default value declared in `_slot_defaults`:
 
 ```python
 print(CustomParameter(some_attribute=0).some_attribute)
@@ -136,7 +136,7 @@ print(A(name='some name').name)
 # some name
 ```
 
-However, sometimes you want to define your o9wn default value for the `name` parameter, as in the following example. Before Param 2.0, any such default value was discarded at both the class and instance levels, but since 2.0 the provided `name` is now respected:
+However, sometimes you want to define your own default value for the `name` parameter, as in the following example. Before Param 2.0, any such default value was discarded at both the class and instance levels, but since 2.0 the provided `name` is now respected:
 
 ```python
 class Person(param.Parameterized):
@@ -228,7 +228,7 @@ Here is the complete list of deprecation warnings added in Param 2.0:
     - `String('prefix-test', '^prefix')`: deprecated!
     - `String('prefix-test', regex='^prefix')`: OK
     - `String(default='prefix-test', regex='^prefix')`: OK
-  - For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing _any_ argument by position is deprecated:
+  - For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing *any* argument by position is deprecated:
     - `Selector([1, 2])`: deprecated!
     - `Selector(objects=[1, 2])`: OK
     - `ClassSelector((str, int))`: deprecated!
@@ -265,7 +265,7 @@ Here is the complete list of deprecation warnings added in Param 2.0:
   - `.param.message`: use instead `.param.log(param.MESSAGE, ...)`
   - `.param.verbose`: use instead `.param.log(param.VERBOSE, ...)`
   - `.param.debug`: use instead `.param.log(param.DEBUG, ...)`
-- Some methods now (correctly) warn that they are not safe to run in a `Parameterized` subclass constructor before until you have called `super().__init__(**params)`:
+- Some methods now (correctly) warn that they are not safe to run in a `Parameterized` subclass constructor until you have called `super().__init__(**params)`:
   - `instance.param.objects(instance=True)`
   - `instance.param.trigger("<param_name>")`
   - `instance.param.watch(callback, "<param_name>")`

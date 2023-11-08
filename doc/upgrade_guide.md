@@ -1,6 +1,6 @@
 # Upgrade guide
 
-Welcome to the Upgrade Guide for Param! When we make backward-incompatible changes, we will provide a detailed guide on how you can update your code to be compatible with the latest changes.
+Welcome to the Upgrade Guide for Param! When we make backward-incompatible changes, we will provide a detailed guide here on how you can update your code to be compatible with the latest changes.
 
 ## Version 2.0
 
@@ -8,7 +8,8 @@ Welcome to the Upgrade Guide for Param! When we make backward-incompatible chang
 
 #### Parameter attributes inheritance
 
-`Parameter`s have attributes like `default`, `doc`, `bounds`, etc. When redefining a `Parameter` in a subclass, the attributes are meant to be inherited; this is not a new feature, it's a core design of Param. You can see in the example below that the `doc` attribute of the `x` Parameter on the class `B` has been inherited from `A`:
+`Parameter`s have attributes like `default`, `doc`, `bounds`, etc. When redefining a `Parameter` in a subclass, attributes not specified in the subclass are meant to be inherited from the superclass.
+Inheritance is not a new feature; it's a core design of Param. You can see in the example below that the `doc` attribute of the `x` Parameter on the class `B` has been inherited from `A`:
 
 ```python
 class A(param.Parameterized):
@@ -23,9 +24,9 @@ print(B().param['x'].doc)
 # The value of x
 ```
 
-However, this was broken in some subtle ways! It mostly resolved around `None` being used as the specific sentinel value for allowing inheritance. Let's have a look at two examples that have been fixed in Param 2.0.
+However, throughout the Param 1.x series, inheritance was broken in some subtle ways! The issues traced back to using `None` as the specific sentinel value for allowing inheritance, when `None` is also often a valid `Parameter` value. Let's have a look at two examples that have been fixed in Param 2.0.
 
-In this first example we want to re-set the default value of `x` to `None` in a subclass. As you can see, this was discarded entirely in versions before Param 2.0, while the new version correctly assigns `None`.
+In this first example we want to re-set the default value of `x` to `None` in a subclass. As you can see, the explicit `None` value we provided in `B` was discarded entirely in versions before Param 2.0, while the new version now correctly re-assigns the value to `None`:
 
 ```python
 class A(param.Parameterized):
@@ -41,7 +42,7 @@ print(B().x)
 # Param 2.0: None    :)
 ```
 
-In this second example we want to narrow the bounds `x` in the subclass `B`. While you would have expected the default value of `5.0` to be inherited from `A`, it turns out that it's not the case, it is instead the default value of the `Number` `Parameter` (`0.0`) that happens to be set on `B.x`.
+In this second example we want to narrow the bounds `x` in the subclass `B`. Because no default value is specified for `x` in `B`, you might reasonably have expected the default value of `5.0` to be inherited from `A`. However, prior to Param 2.0, instead the default value of the `Number` `Parameter` (`0.0`) is used for `B.x` instead of what was declared in `A`:
 
 ```python
 class A(param.Parameterized):
@@ -57,9 +58,9 @@ print(B().x)
 # Param 2.0: 5.0    :)
 ```
 
-These are just two of the most common cases that can affect your code, but there are more obviously. And as you can sense, these changes are subtle enough to have introduced changes in your code without you noticing, i.e. your `Parameter` attributes (like `default`, but other attributes are affected too) can now have different values in subclasses, without you getting any warning or your code raising any error. On its own this change was worth the major bump to Param 2.0!
+These are just two of the most common cases where inheritance changes can affect your code, but there are many other cases, affecting any attribute where `None` is a legal value.  The new behavior should be much more predictable and intuitive, avoiding subtle cases where your code would previously have behaved inappropriately without necessarily having any obvious error. Fixing this was already enough to be worth the major bump to Param 2.0!
 
-Because we've worked a lot on making sure that Parameter attributes are properly inherited, we've realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid. Therefore, at the end of the class inheritance mechanism, we added a validation of the *default* value and decided for now to only emit a warning when it fails, not to break your code on imports! You should definitely take care of these warnings, they indicate a Parameter is in an invalid state:
+Because of all our work on making sure that Parameter attributes are properly inherited, we've realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid according to the Parameter declarations. Therefore, once class inheritance has completed as your classes get defined, we have added validation that the Parameter's *default* value is an allowed value. For now Param 2.0 is only emitting a warning when it fails, to avoid breaking your code on imports! If you do see these warnings, you should address them immediately by adding a legal default value or by relaxing one of the declared constraints on the value, because the warnings indicate a Parameter is in an invalid state:
 
 ```python
 class A(param.Parameterized):
@@ -74,13 +75,13 @@ class B(A):
 
 #### Defining custom `Parameter`s
 
-To implement properly the `Parameter` attributes inheritance described in the section below we have had to make some changes to how `Parameter` classes are declared. While the custom `Parameter`s you previously wrote for Param before 2.0 should still work, they might suffer from the same attribute inheritance issues. We now recommend custom `Parameter`s to be written following the pattern we have adopted internally. In particular, we have:
+To implement `Parameter` attribute inheritance correctly as described above, we have had to make some changes to how new `Parameter` classes are declared. While the custom `Parameter`s you previously wrote for Param before 2.0 should continue to work as they always have, unless you update their definitions, they could continue to suffer from the attribute inheritance issues that have been fixed within Param itself. We now recommend custom `Parameter`s to be written following the pattern we have adopted internally. In particular, we have:
 
 - introduced the `param.parameterized.Undefined` sentinel object that is used as the default value of the `Parameter` parameters in its `__init__()` method
 - introduced the `_slot_defaults` class attribute to declare the actual default values of the `Parameter` parameters, e.g. in the example below the default value of `some_attribute` is declared to be `10`
 - leveraged `@typing.overload` to expose the real default values to static type checkers and IDEs like VSCode
 
-All put together, this is now how `Parameter`s are structured internally and how we recommend writing custom `Parameter`s:
+All put together, this is now how `Parameter`s are structured internally and how we recommend writing custom `Parameter` classes:
 
 ```python
 class CustomParameter(Parameter):
@@ -109,7 +110,7 @@ class CustomParameter(Parameter):
 
 ```
 
-To make this work as expected, we have overriden `Parameter.__getattribute__` to detect whether the attribute value as been set to something that is not `Undefined`, and if not fall back to returning the default value declared in `_slot_defaults`:
+To make Parameter attributes  work as expected, we have overridden `Parameter.__getattribute__` to detect whether the attribute value has been set to something that is not `Undefined`, and if not, to fall back to returning the default value declared in `_slot_defaults`:
 
 ```python
 print(CustomParameter(some_attribute=0).some_attribute)
@@ -121,7 +122,7 @@ print(CustomParameter().some_attribute)  # Fallback case
 
 #### Default value of `name` accounted for
 
-Every `Parameterized` class is equipped with a `name` `Parameter`. At the class level its value is the class name, this is equivalent to `<class>.__name__`, and at the instance level its value is automatically generated, unless you set it in the constructor:
+Every `Parameterized` class has always been equipped with a `name` `Parameter`, which was originally to support using a Parameterized object in a GUI context that needs a text label, but is not always needed in other contexts. At the class level the `name` value is the class name, equivalent to `<class>.__name__`, and at the instance level the `name` value is automatically generated as a unique string, unless you set it in the constructor:
 
 ```python
 class A(param.Parameterized):
@@ -135,7 +136,7 @@ print(A(name='some name').name)
 # some name
 ```
 
-However, sometimes you want to set the default value of `name`, as in the following example. Before Param 2.0, the default value was discarded at both the class and instance levels, this is now fixed:
+However, sometimes you want to define your o9wn default value for the `name` parameter, as in the following example. Before Param 2.0, any such default value was discarded at both the class and instance levels, but since 2.0 the provided `name` is now respected:
 
 ```python
 class Person(param.Parameterized):
@@ -152,7 +153,7 @@ print(Person().name)
 
 #### Setting a non-Parameter attribute via the constructor
 
-Before Param 2.0 you could set an instance attribute that was not a `Parameter` via the constructor. This behavior was prone to let typos slip through your code, setting the wrong instance attribute (with a warning though). Starting from Param 2.0 this now raises a `TypeError`, similarly to when you call a Python callable with a wrong parameter name:
+Before Param 2.0, you could set an instance attribute that was not a `Parameter` via the constructor, though you would get a warning if you did so. This behavior was prone to let typos slip through your code, setting the wrong instance attribute but continuing to function. Starting from Param 2.0, providing an attribute value that is not a Parameter now raises a `TypeError`, similarly to when you call a Python callable with an incorrect parameter name:
 
 ```python
 class A(param.Parameterized):
@@ -165,7 +166,7 @@ A(numbre=10)  # oops typo!
 
 #### `instance.param.watchers` value changed
 
-`instance.param.watchers` no longer returns the transient watchers state, that isn't very useful, but instead returns what you would expect, i.e. a dictionary of the watchers set up on this instance, which you could previously get from the now deprecated `instance._param_watchers`:
+`instance.param.watchers` no longer returns the transient watchers state, which was never very useful, and now instead returns what you would expect, i.e. a dictionary of the watchers set up on this instance. To access that dictionary previously, you would have had to access the private attribute `instance._param_watchers`, which is now deprecated and was never intended to be public API:
 
 ```python
 class A(param.Parameterized):
@@ -182,7 +183,7 @@ print(A().param.watchers)
 
 #### Clean-up of the `Parameterized` namespace
 
-The methods listed below were removed from the `Parameterized` namespace (i.e. members that are available to classes that inherit from `param.Parameterized`). Most of the time, a replacement method is available from the `.param` namespace:
+To avoid having your Parameterized object namespaces polluted with internal Param details, the methods listed below have been removed from the `Parameterized` namespace (members available to any class that inherits from `param.Parameterized`). Most of the time, a replacement method is now available from the `.param` namespace instead:
 
 - `_add_parameter`: use instead `param.add_parameter`
 - `params`: use instead `.param.values()` or `.param['param']`
@@ -218,14 +219,16 @@ The methods listed below were removed from the `Parameterized` namespace (i.e. m
 
 ### Deprecations
 
-Param 2.0 was supposed to clean up even more Param's API, except that we noticed that deprecating API in the release notes of previous versions was not enough to warn Param's users (including ourselves!), so we decided to postpone removing some APIs and this time properly warn Param's users. We've also spent a lot of time looking at the code base while working on this major release and noticed more clean up that could be made in the future. Therefore and perhaps somewhat unconventionnally we have released Param 2.0 with quite a large number of deprecation warnings. Make sure you're adapting your code as soon as you can whenever you notice one of the newly emitted warnings. You will find below the complete list of deprecation warnings added in Param 2.0.
+Param 2.0 was originally meant to clean up even more Param's API, except that we noticed that deprecating API in the release notes of previous versions was not enough to warn Param's users (including ourselves!). Thus for 2.0 we decided to postpone removing some APIs, and this time properly warn Param's users that the code is about to be deleted. We've also spent a lot of time looking at the code base while working on this major release, and noticed additional clean up that could be made in the future. Therefore when you upgrade to 2.0, you are likely to encounter quite a large number of deprecation warnings. Make sure you're adapting your code as soon as you can whenever you notice one of the newly emitted warnings, because that code will not continue to be supported in later releases in the 2.x series. (Or you can pin your code to Param 1.x if you want to avoid the warnings and do not need any of the features or bugfixes from 2.0.) 
+
+Here is the complete list of deprecation warnings added in Param 2.0:
 
 - Parameter signature:
-  - Instantiating most parameters with positional arguments beyond `default` is deprecated:
+  - Instantiating parameters other than `default` with positional arguments is deprecated:
     - `String('prefix-test', '^prefix')`: deprecated!
     - `String('prefix-test', regex='^prefix')`: OK
     - `String(default='prefix-test', regex='^prefix')`: OK
-  - For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing any argument by position is deprecated:
+  - For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing _any_ argument by position is deprecated:
     - `Selector([1, 2])`: deprecated!
     - `Selector(objects=[1, 2])`: OK
     - `ClassSelector((str, int))`: deprecated!
@@ -249,7 +252,7 @@ Param 2.0 was supposed to clean up even more Param's API, except that we noticed
   - `param.parameterized.batch_watch`: use instead `batch_call_watchers`
   - `param.parameterized.recursive_repr`: no replacement
   - `param.parameterized.overridable_property`: no replacement
-- Parameterized `.param` namespace; many of these methods have been deprecated since version 1.12.0, however, this was just announced in the release notes and we realised many users missed them, sometimes even us included! They now all emit deprecation warnings when executed and are clearly marked as deprecated in the API reference:
+- Parameterized `.param` namespace; many of these methods have been deprecated since version 1.12.0, but because the deprecation was announced only in the release notes and not with runtime warnings, meany users have failed to realize the methods were deprecated, sometimes even us included! All these methods now emit deprecation warnings when executed and are now clearly marked as deprecated in the API reference:
   - `.param.set_default`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
   - `.param._add_parameter`: use instead `.param.add_parameter`
   - `.param.params`: use instead `.param.values()` or `.param['param']`
@@ -262,7 +265,7 @@ Param 2.0 was supposed to clean up even more Param's API, except that we noticed
   - `.param.message`: use instead `.param.log(param.MESSAGE, ...)`
   - `.param.verbose`: use instead `.param.log(param.VERBOSE, ...)`
   - `.param.debug`: use instead `.param.log(param.DEBUG, ...)`
-- Running unsafe operations **during Parameterized instance initialization**, instead run these operations after having called `super().__init__(**params)`:
+- Some methods now (correctly) warn that they are not safe to run in a `Parameterized` subclass constructor before until you have called `super().__init__(**params)`:
   - `instance.param.objects(instance=True)`
   - `instance.param.trigger("<param_name>")`
   - `instance.param.watch(callback, "<param_name>")`

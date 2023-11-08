@@ -1,5 +1,27 @@
 # Releases
 
+## Version 2.0.1
+
+Date: 2023-11-08
+
+This minor release fixes a number of bugs, including a regression introduced by the replacement of the build backend (`setuptools` for `hatchling`) which led to the `doc` folder being wrongly packaged. Many thanks to @SultanOrazbayev for their first contribution, to @musicinmybrain for spotting the regression and submitting fixes, and to the maintainers @Hoxbro, @jbednar and @maximlt for contributing to this release.
+
+Bug fixes:
+
+- Do not install `doc` folder in *site-packages* ([#878](https://github.com/holoviz/param/pull/878))
+- Drop the `feather-format` test dependency ([#879](https://github.com/holoviz/param/pull/879))
+- Add `tables` to the `tests-deser` extra ([#880](https://github.com/holoviz/param/pull/880))
+- Fix `_state_push` and `_state_pop` ([#884](https://github.com/holoviz/param/pull/884))
+- `version.py`: new process should not create a window on Windows ([#882](https://github.com/holoviz/param/pull/882), [#886](https://github.com/holoviz/param/pull/886))
+- Don't import `setuptools_scm` if the `.git` folder doesn't exist ([#885](https://github.com/holoviz/param/pull/885))
+
+Documentation:
+
+- Add migration guide to Param 2.0 ([#883](https://github.com/holoviz/param/pull/883))
+- Update Parameter API reference ([#881](https://github.com/holoviz/param/pull/881))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.0.0...v2.0.1)
+
 ## Version 2.0.0
 
 Date: 2023-10-24

@@ -2689,7 +2689,7 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = List(default=list(_get_default_search_paths_as_list()), pickle_default_value=False, doc="""
+    search_paths = List(default=_get_default_search_paths_as_list(), pickle_default_value=False, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
@@ -2820,8 +2820,8 @@ class Path(Parameter):
         except OSError:
             if self.check_exists:
                 raise
-            else:
-                return raw_path
+
+        return raw_path
 
     def __getstate__(self):
         # don't want to pickle the search_paths

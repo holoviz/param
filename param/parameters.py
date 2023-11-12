@@ -2601,41 +2601,38 @@ class HookList(List):
 #     and normalize_path() for paths to new files to be written.
 
 def _get_default_search_paths()->typing.Tuple[str]:
-    # Its 10x faster to pickle a string than a Path.
-    # Thus we use os.getcwd instead of pathlib.Path.cwd
     return (os.getcwd(), )
-
 @lru_cache
 def _resolve_path_fast(
     path: str,
     search_paths: typing.Tuple[str|pathlib.Path],
     path_to_file: bool|None=None
-)->str:
 
-    _path = pathlib.Path(os.path.normpath(path))
+):
+    path = os.path.normpath(path)
     ftype = "File" if path_to_file is True \
         else "Folder" if path_to_file is False else "Path"
 
-    if _path.is_absolute():
-        if ((path_to_file is None  and _path.exists()) or
-            (path_to_file is True  and _path.is_file()) or
-            (path_to_file is False and _path.is_dir())):
-            return str(_path)
-        raise OSError(f"{ftype} '{path}' was not found.")
+    if os.path.isabs(path):
+        if ((path_to_file is None  and os.path.exists(path)) or
+            (path_to_file is True  and os.path.isfile(path)) or
+            (path_to_file is False and os.path.isdir( path))):
+            return path
+        raise OSError(f"{ftype} '{path}' not found.")
 
     paths_tried = []
     for prefix in search_paths:
-        try_path = (pathlib.Path(prefix) / _path).resolve()
+        try_path = os.path.join(os.path.normpath(prefix), path)
 
-        if ((path_to_file is None  and try_path.exists()) or
-            (path_to_file is True  and try_path.is_file()) or
-            (path_to_file is False and try_path.is_dir())):
-            return str(try_path.absolute())
+        if ((path_to_file is None  and os.path.exists(try_path)) or
+            (path_to_file is True  and os.path.isfile(try_path)) or
+            (path_to_file is False and os.path.isdir( try_path))):
+            return try_path
 
-        paths_tried.append(str(try_path))
+        paths_tried.append(try_path)
 
     raise OSError(
-        f"{ftype} {_path.name} was not found in the following place(s): {str(paths_tried)}."
+        f"{ftype} {os.path.split(path)[1]} was not found in the following place(s): {str(paths_tried)}."
     )
 
 def _resolve_path(

@@ -624,12 +624,12 @@ class ResolvePathSuite:
 
         self.P = P
 
-    def resolve_new(self):
+    def time_resolve_new(self):
         for _ in range(1000):
             p = self.P()
             _ = p.x0
 
-    def resolve_same(self):
+    def time_resolve_same(self):
         p = self.P()
         for _ in range(1000):
             _ = p.x0

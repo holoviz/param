@@ -615,3 +615,21 @@ class WatcherSuite:
 
     def time_trigger(self):
         self.p.x0 += 1
+
+class ResolvePathSuite:
+
+    def setup(self):
+        class P(param.Parameterized):
+            x0 = param.Path("benchmarks/benchmarks/benchmarks.py")
+
+        self.P = P
+
+    def resolve_new(self):
+        for _ in range(1000):
+            p = self.P()
+            _ = p.x0
+
+    def resolve_same(self):
+        p = self.P()
+        for _ in range(1000):
+            _ = p.x0

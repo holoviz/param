@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import json
+import pathlib
+
 import param
 
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
 from nbsite.shared_conf import *  # noqa
+from nbsite.shared_conf import setup as nbsite_setup
+
+DOC_PATH = pathlib.Path(__file__).parent
 
 project = 'param'
 authors = 'HoloViz developers'
@@ -44,11 +50,17 @@ html_theme_options = {
             "icon": "fa-brands fa-discord",
         },
     ],
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "footer_start": [
         "copyright",
         "last-updated",
     ],
-    "analytics": {"google_analytics_id": 'G-KD5GGLCB54'}
+    "analytics": {"google_analytics_id": 'G-KD5GGLCB54'},
+    "switcher": {
+        "json_url": "http://param.holoviz.org.s3-website-us-east-1.amazonaws.com/en/latest/_static/switcher.json",
+        "version_match": version
+    }
+
 }
 
 extensions += [  # noqa
@@ -68,3 +80,24 @@ myst_heading_anchors = 3
 myst_enable_extensions = ["colon_fence"]
 
 napoleon_numpy_docstring = True
+
+def add_version(app):
+    with open(DOC_PATH / 'switcher.json', 'r') as f:
+        versions = json.load(f)
+    found = False
+    for v in versions:
+        if version == v.get('version'):
+            found = True
+    if not found:
+        versions.insert(1, {
+            'name': 'Version {version[1:]}',
+            'version': version,
+            'url': "http://param.holoviz.org.s3-website-us-east-1.amazonaws.com/en/{version}/"
+        })
+
+    with open(DOC_PATH / '_static' / 'switcher.json', 'w') as f:
+        json.dump(versions, f)
+
+def setup(app):
+    nbsite_setup(app)
+    app.connect('builder-inited', add_version)

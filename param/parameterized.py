@@ -1849,21 +1849,22 @@ class Parameters:
         Returns the class or instance parameter
         """
         inst = self_.self
-        params = self_ if inst is None else inst.param
-        p = params.objects(False)[key]
-        return p if inst is None else _instantiated_parameter(inst, p)
+        if inst is None:
+            return self_._cls_parameters[key]
+        p = self_.params.objects(instance=False)[key]
+        return _instantiated_parameter(inst, p)
 
     def __dir__(self_):
         """
         Adds parameters to dir
         """
-        return super().__dir__() + list(self_)
+        return super().__dir__() + list(self_._cls_parameters)
 
     def __iter__(self_):
         """
         Iterates over the parameters on this object.
         """
-        yield from self_.objects(instance=False)
+        yield from self_._cls_parameters
 
     def __contains__(self_, param):
         return param in self_._cls_parameters
@@ -1876,12 +1877,7 @@ class Parameters:
         if cls is None: # Class not initialized
             raise AttributeError
 
-        params = list(cls._param__private.params)
-        if not params:
-            params = [n for class_ in classlist(cls) for n, v in class_.__dict__.items()
-                      if isinstance(v, Parameter)]
-
-        if attr in params:
+        if attr in self_._cls_parameters:
             return self_.__getitem__(attr)
         elif self_.self is None:
             raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
@@ -1914,7 +1910,8 @@ class Parameters:
         ## Deepcopy all 'instantiate=True' parameters
         params_to_deepcopy = {}
         params_to_ref = {}
-        for pname, p in self_.objects(instance=False).items():
+        objects = self_._cls_parameters
+        for pname, p in objects.items():
             if p.instantiate and pname != "name":
                 params_to_deepcopy[pname] = p
             elif p.constant and pname != 'name':
@@ -1927,7 +1924,6 @@ class Parameters:
 
         ## keyword arg setting
         deps, refs = {}, {}
-        objects = self.param.objects(instance=False)
         for name, val in params.items():
             desc = self_.cls.get_param_descriptor(name)[0] # pylint: disable-msg=E1101
             if not desc:

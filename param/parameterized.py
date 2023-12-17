@@ -1866,10 +1866,7 @@ class Parameters:
         yield from self_.objects(instance=False)
 
     def __contains__(self_, param):
-        for p in self_.cls._param__private.params:
-            if param == p:
-                return True
-        return False
+        return param in self_._cls_parameters
 
     def __getattr__(self_, attr):
         """
@@ -2238,8 +2235,8 @@ class Parameters:
         # would need to handle the params() cache as well
         # (which is tricky but important for startup speed).
         cls = self_.cls
-        type.__setattr__(cls,param_name,param_obj)
-        ParameterizedMetaclass._initialize_parameter(cls,param_name,param_obj)
+        type.__setattr__(cls, param_name, param_obj)
+        ParameterizedMetaclass._initialize_parameter(cls, param_name, param_obj)
         # delete cached params()
         cls._param__private.params.clear()
 
@@ -2355,6 +2352,31 @@ class Parameters:
                                  (self_or_cls.name))
         return self_.update(kwargs)
 
+    @property
+    def _cls_parameters(self_):
+        """
+        Class parameters are cached because they are accessed often,
+        and parameters are rarely added (and cannot be deleted)
+        """
+        cls = self_.cls
+        pdict = cls._param__private.params
+        if pdict:
+            return pdict
+
+        paramdict = {}
+        for class_ in classlist(cls):
+            for name, val in class_.__dict__.items():
+                if isinstance(val, Parameter):
+                    paramdict[name] = val
+
+        # We only want the cache to be visible to the cls on which
+        # params() is called, so we mangle the name ourselves at
+        # runtime (if we were to mangle it now, it would be
+        # _Parameterized.__params for all classes).
+        # cls._param__private.params[f'_{cls.__name__}__params'] = paramdict
+        cls._param__private.params = paramdict
+        return paramdict
+
     def objects(self_, instance=True):
         """
         Returns the Parameters of this instance or class
@@ -2379,25 +2401,7 @@ class Parameters:
                 stacklevel=2,
             )
 
-        cls = self_.cls
-        # We cache the parameters because this method is called often,
-        # and parameters are rarely added (and cannot be deleted)
-        pdict = cls._param__private.params
-        if not pdict:
-            paramdict = {}
-            for class_ in classlist(cls):
-                for name, val in class_.__dict__.items():
-                    if isinstance(val, Parameter):
-                        paramdict[name] = val
-
-            # We only want the cache to be visible to the cls on which
-            # params() is called, so we mangle the name ourselves at
-            # runtime (if we were to mangle it now, it would be
-            # _Parameterized.__params for all classes).
-            # cls._param__private.params[f'_{cls.__name__}__params'] = paramdict
-            cls._param__private.params = paramdict
-            pdict = paramdict
-
+        pdict = self_._cls_parameters
         if instance and self_.self is not None:
             if instance == 'existing':
                 if getattr(self_.self._param__private, 'initialized', False) and self_.self._param__private.params:

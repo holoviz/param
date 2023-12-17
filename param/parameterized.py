@@ -1866,7 +1866,10 @@ class Parameters:
         yield from self_.objects(instance=False)
 
     def __contains__(self_, param):
-        return param in list(self_)
+        for p in self_.cls._param__private.params:
+            if param == p:
+                return True
+        return False
 
     def __getattr__(self_, attr):
         """

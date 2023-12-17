@@ -1851,7 +1851,7 @@ class Parameters:
         inst = self_.self
         if inst is None:
             return self_._cls_parameters[key]
-        p = self_.params.objects(instance=False)[key]
+        p = self_.objects(instance=False)[key]
         return _instantiated_parameter(inst, p)
 
     def __dir__(self_):

@@ -1,12 +1,14 @@
 import datetime as dt
 import os
 
+from functools import partial
+
 import param
 import pytest
 
 from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod
-from param._utils import _is_mutable_container
+from param._utils import _is_mutable_container, iscoroutinefunction
 
 
 try:
@@ -393,3 +395,29 @@ def test_error_prefix_set_instance():
 )
 def test__is_mutable_container(obj, ismutable):
     assert _is_mutable_container(obj) is ismutable
+
+
+async def coro():
+    return
+
+
+def test_iscoroutinefunction_coroutine():
+    assert iscoroutinefunction(coro)
+
+
+def test_iscoroutinefunction_partial_coroutine():
+    pcoro = partial(partial(coro))
+    assert iscoroutinefunction(pcoro)
+
+
+async def agen():
+    yield
+
+
+def test_iscoroutinefunction_asyncgen():
+    assert iscoroutinefunction(agen)
+
+
+def test_iscoroutinefunction_partial_asyncgen():
+    pagen = partial(partial(agen))
+    assert iscoroutinefunction(pagen)

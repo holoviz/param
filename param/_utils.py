@@ -208,18 +208,15 @@ def full_groupby(l, key=lambda x: x):
 
 def iscoroutinefunction(function):
     """
-    Whether the function is an asynchronous coroutine function.
+    Whether the function is an asynchronous generator or a coroutine.
     """
-    if not hasattr(inspect, 'iscoroutinefunction'):
-        return False
-    import asyncio
-    try:
-        return (
-            inspect.isasyncgenfunction(function) or
-            asyncio.iscoroutinefunction(function)
-        )
-    except AttributeError:
-        return False
+    # TODO: document why this is needed
+    while isinstance(function, functools.partial):
+        function = function.func
+    return (
+        inspect.isasyncgenfunction(function) or
+        inspect.iscoroutinefunction(function)
+    )
 
 
 def flatten(line):

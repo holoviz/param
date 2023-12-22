@@ -210,7 +210,8 @@ def iscoroutinefunction(function):
     """
     Whether the function is an asynchronous generator or a coroutine.
     """
-    # TODO: document why this is needed
+    # Partial unwrapping not required starting from Python 3.11.0
+    # See https://github.com/holoviz/param/pull/894#issuecomment-1867084447
     while isinstance(function, functools.partial):
         function = function.func
     return (

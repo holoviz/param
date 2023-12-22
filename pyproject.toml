@@ -41,7 +41,7 @@ examples = [
 ]
 doc = [
     "param[examples]",
-    "nbsite ==0.8.2",
+    "nbsite ==0.8.4",
     "sphinx-remove-toctrees",
 ]
 tests = [

@@ -48,16 +48,20 @@ html_theme_options = {
         "copyright",
         "last-updated",
     ],
-    "analytics": {"google_analytics_id": 'G-KD5GGLCB54'}
 }
 
 extensions += [  # noqa
     'sphinx_copybutton',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'sphinx_remove_toctrees'
+    'sphinx_remove_toctrees',
+    'nbsite.analytics',
 ]
 remove_from_toctrees = ["reference/param/generated/*"]
+
+nbsite_analytics = {
+    'goatcounter_holoviz': True,
+}
 
 # Override the Sphinx default title that appends `documentation`
 html_title = f'{project} v{version}'

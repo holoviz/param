@@ -95,13 +95,23 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def serialize_parameters(cls, pobj, subset=None):
-        components = {}
-        for name, p in pobj.param.objects('existing').items():
-            if subset is not None and name not in subset:
-                continue
-            value = pobj.param.get_value_generator(name)
-            components[name] = p.serialize(value)
-        return cls.dumps(components)
+        # components = {}
+        # for name, p in pobj.param.objects('existing').items():
+        #     if subset is not None and name not in subset:
+        #         continue
+        #     value = pobj.param.get_value_generator(name)
+        #     components[name] = p.serialize(value)
+        # return cls.dumps(components)
+        JSON = {}
+        pobjtype = type(pobj)
+        for key, param in pobj.parameters.objects().items():
+            if subset is not None and key not in subset:
+                pass 
+            else:
+                value = param.__get__(pobj, pobjtype)
+                value = param.serialize(value)
+                JSON[key] = value
+        return JSON
 
     @classmethod
     def deserialize_parameters(cls, pobj, serialization, subset=None):
@@ -119,7 +129,7 @@ class JSONSerialization(Serialization):
     @classmethod
     def _get_method(cls, ptype, suffix):
         "Returns specialized method if available, otherwise None"
-        method_name = ptype.lower()+'_' + suffix
+        method_name = ptype.lower()+ '_' + suffix
         return getattr(cls, method_name, None)
 
     @classmethod
@@ -326,3 +336,8 @@ class JSONSerialization(Serialization):
             schema['maxItems'] = maxrows
 
         return schema
+
+
+serializers = dict(
+    json = JSONSerialization
+)

@@ -183,7 +183,7 @@ class TestWatch(unittest.TestCase):
         obj.a = 1
         self.assertEqual(self.accumulator, 1)
 
-    def test_triggered_when_unchanged_complex_type(self):
+    def test_untriggered_when_unchanged_complex_type(self):
         def accumulator(change):
             self.accumulator += 1
 
@@ -193,7 +193,7 @@ class TestWatch(unittest.TestCase):
         obj.a = subobj
         self.assertEqual(self.accumulator, 1)
         obj.a = subobj
-        self.assertEqual(self.accumulator, 2)
+        self.assertEqual(self.accumulator, 1)
 
     def test_triggered_when_unchanged_if_not_onlychanged(self):
         accumulator = Accumulator()

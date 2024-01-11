@@ -1710,8 +1710,6 @@ class Comparator:
 
     @classmethod
     def is_equal(cls, obj1, obj2):
-        if obj1 is obj2:
-            return True
         for eq_type, eq in cls.equalities.items():
             try:
                 are_instances = isinstance(obj1, eq_type) and isinstance(obj2, eq_type)
@@ -2058,6 +2056,8 @@ class Parameters:
         Predicate that determines whether a Event object has actually
         changed such that old != new.
         """
+        if event.old is event.new:
+            return False
         return not Comparator.is_equal(event.old, event.new)
 
     def _instantiate_param(self_, param_obj, dict_=None, key=None, deepcopy=True):

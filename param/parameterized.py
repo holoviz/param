@@ -1710,6 +1710,8 @@ class Comparator:
 
     @classmethod
     def is_equal(cls, obj1, obj2):
+        if obj1 is obj2:
+            return True
         for eq_type, eq in cls.equalities.items():
             try:
                 are_instances = isinstance(obj1, eq_type) and isinstance(obj2, eq_type)

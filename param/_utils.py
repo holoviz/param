@@ -208,18 +208,16 @@ def full_groupby(l, key=lambda x: x):
 
 def iscoroutinefunction(function):
     """
-    Whether the function is an asynchronous coroutine function.
+    Whether the function is an asynchronous generator or a coroutine.
     """
-    if not hasattr(inspect, 'iscoroutinefunction'):
-        return False
-    import asyncio
-    try:
-        return (
-            inspect.isasyncgenfunction(function) or
-            asyncio.iscoroutinefunction(function)
-        )
-    except AttributeError:
-        return False
+    # Partial unwrapping not required starting from Python 3.11.0
+    # See https://github.com/holoviz/param/pull/894#issuecomment-1867084447
+    while isinstance(function, functools.partial):
+        function = function.func
+    return (
+        inspect.isasyncgenfunction(function) or
+        inspect.iscoroutinefunction(function)
+    )
 
 
 def flatten(line):

@@ -90,11 +90,23 @@ try:
 except (ImportError, LookupError, FileNotFoundError):
     # As a fallback, use the version that is hard-coded in the file.
     try:
-        from ._version import __version__
-    except ModuleNotFoundError:
-        # The user is probably trying to run this without having installed
-        # the package.
-        __version__ = "0.0.0+unknown"
+        # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
+        # the hopefully stable version variable.
+        from ._version import version as __version__
+    except (ModuleNotFoundError, ImportError):
+        # Either _version doesn't exist (ModuleNotFoundError) or version isn't
+        # in _version (ImportError). ModuleNotFoundError is a subclass of
+        # ImportError, let's be explicit anyway.
+
+        # Try something else:
+        from importlib.metadata import version as mversion, PackageNotFoundError
+
+        try:
+            __version__ = mversion("param")
+        except PackageNotFoundError:
+            # The user is probably trying to run this without having installed
+            # the package.
+            __version__ = "0.0.0+unknown"
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.

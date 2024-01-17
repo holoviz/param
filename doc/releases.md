@@ -1,5 +1,26 @@
 # Releases
 
+## Version 2.0.2
+
+Date: 2024-01-17
+
+This patch release fixes a few bugs and introduces a performance enhancement. Many thanks to @alfredocarella for their first contribution, and to the maintainers @maximlt and @philippjfr for contributing to this release.
+
+Optimization:
+
+- Minor optimizations in hot codepaths accessing class parameters ([#893](https://github.com/holoviz/param/pull/893))
+
+Bug fixes:
+
+- Unpack partial callables in `iscoroutinefunction` ([#894](https://github.com/holoviz/param/pull/894))
+- Fix building Param with `setuptools-scm<7` ([#903](https://github.com/holoviz/param/pull/903))
+
+Documentation:
+- Replace *Google Analytics* with *GoatCounter* ([#895](https://github.com/holoviz/param/pull/895))
+- Fix a typo in `Outputs.ipynb` ([#892](https://github.com/holoviz/param/pull/892))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.0.1...v2.0.2)
+
 ## Version 2.0.1
 
 Date: 2023-11-08

@@ -206,8 +206,8 @@ class TestFileDeserialization(unittest.TestCase):
     @hdf5_skip
     def test_data_frame_hdf5(self):
         path = '{}/val.h5'.format(self.temp_dir)
-        P.data_frame.to_hdf(path, 'df')
+        P.data_frame.to_hdf(path, key='df')
         self._test_deserialize_array(P, path, 'data_frame')
         path = '{}/val.hdf5'.format(self.temp_dir)
-        P.data_frame.to_hdf(path, 'df')
+        P.data_frame.to_hdf(path, key='df')
         self._test_deserialize_array(P, path, 'data_frame')

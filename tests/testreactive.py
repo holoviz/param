@@ -243,6 +243,21 @@ def test_reactive_not_():
     i.rx.value = 0
     assert b.rx.value is True
 
+def test_reactive_map():
+    i = rx(range(3))
+    b = i.rx.map(lambda x: x*2)
+    assert b.rx.value == [0, 2, 4]
+    i.rx.value = range(1, 4)
+    assert b.rx.value == [2, 4, 6]
+
+def test_reactive_map_args():
+    i = rx(range(3))
+    j = rx(2)
+    b = i.rx.map(lambda x, m: x*m, j)
+    assert b.rx.value == [0, 2, 4]
+    j.rx.value = 3
+    assert b.rx.value == [0, 3, 6]
+
 def test_reactive_iter():
     i = rx(('a', 'b'))
     a, b = i

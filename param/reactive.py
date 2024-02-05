@@ -166,6 +166,24 @@ class reactive_ops:
         rxi = self._reactive if isinstance(self._reactive, rx) else self()
         return rxi._apply_operator(len)
 
+    def map(self, func, *args, **kwargs):
+        """
+        Apply a function to each item.
+
+        Arguments
+        ---------
+        func: function
+          Function to apply.
+        args: iterable, optional
+          Positional arguments to pass to `func`.
+        kwargs: mapping, optional
+          A dictionary of keywords to pass to `func`.
+        """
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        def apply(vs, *args, **kwargs):
+            return [func(v, *args, **kwargs) for v in vs]
+        return rxi._apply_operator(apply, *args, **kwargs)
+
     def not_(self):
         """
         __bool__ cannot be implemented so not has to be provided as a method.
@@ -198,7 +216,7 @@ class reactive_ops:
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
 
-    def when(self, *dependencies):
+    def when(self, *dependencies, placeholder=None):
         """
         Returns a reactive expression that emits the contents of this
         expression only when the condition changes.
@@ -207,8 +225,16 @@ class reactive_ops:
         ---------
         dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
+        placeholder: object
+          Object that will stand in for the actual value until the
+          first time the dependencies are triggered.
         """
-        return bind(lambda *_: self.value, *dependencies).rx()
+        def eval(*deps):
+            if placeholder is not None and not any(deps):
+                return placeholder
+            else:
+                return self.value
+        return bind(eval , *dependencies).rx()
 
     def where(self, x, y):
         """
@@ -882,8 +908,6 @@ class rx:
         return self._apply_operator(operator.inv)
     def __neg__(self):
         return self._apply_operator(operator.neg)
-    def __not__(self):
-        return self._apply_operator(operator.not_)
     def __pos__(self):
         return self._apply_operator(operator.pos)
     def __trunc__(self):

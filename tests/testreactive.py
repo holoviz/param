@@ -236,6 +236,13 @@ def test_reactive_bool():
     i.rx.value = 0
     assert b.rx.value is False
 
+def test_reactive_not_():
+    i = rx(1)
+    b = i.rx.not_()
+    assert b.rx.value is False
+    i.rx.value = 0
+    assert b.rx.value is True
+
 def test_reactive_iter():
     i = rx(('a', 'b'))
     a, b = i

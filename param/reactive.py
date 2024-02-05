@@ -166,6 +166,13 @@ class reactive_ops:
         rxi = self._reactive if isinstance(self._reactive, rx) else self()
         return rxi._apply_operator(len)
 
+    def not_(self):
+        """
+        __bool__ cannot be implemented so not has to be provided as a method.
+        """
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(operator.not_)
+
     def pipe(self, func, *args, **kwargs):
         """
         Apply chainable functions.

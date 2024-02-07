@@ -131,6 +131,13 @@ class reactive_ops:
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
 
+    def and_(self, other):
+        """
+        Replacement for the ``and`` statement.
+        """
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(lambda obj, other: obj and other, other)
+
     def bool(self):
         """
         __bool__ cannot be implemented so it is provided as a method.
@@ -190,6 +197,13 @@ class reactive_ops:
         """
         rxi = self._reactive if isinstance(self._reactive, rx) else self()
         return rxi._apply_operator(operator.not_)
+
+    def or_(self, other):
+        """
+        Replacement for the ``or`` statement.
+        """
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        return rxi._apply_operator(lambda obj, other: obj or other, other)
 
     def pipe(self, func, *args, **kwargs):
         """

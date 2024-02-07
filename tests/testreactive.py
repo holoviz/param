@@ -243,6 +243,20 @@ def test_reactive_not_():
     i.rx.value = 0
     assert b.rx.value is True
 
+def test_reactive_and_():
+    i = rx('')
+    b = i.rx.and_('foo')
+    assert b.rx.value == ''
+    i.rx.value = 'bar'
+    assert b.rx.value == 'foo'
+
+def test_reactive_or_():
+    i = rx('')
+    b = i.rx.or_('')
+    assert b.rx.value == ''
+    i.rx.value = 'foo'
+    assert b.rx.value == 'foo'
+
 def test_reactive_map():
     i = rx(range(3))
     b = i.rx.map(lambda x: x*2)

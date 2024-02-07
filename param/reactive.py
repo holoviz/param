@@ -93,8 +93,9 @@ from . import Event
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
-    Parameter, Parameterized, eval_function_with_deps, get_method_owner,
-    register_reference_transform, resolve_ref, resolve_value, transform_reference
+    Parameter, Parameterized, _Undefined, eval_function_with_deps,
+    get_method_owner, register_reference_transform, resolve_ref,
+    resolve_value, transform_reference
 )
 from ._utils import iscoroutinefunction, full_groupby
 
@@ -230,25 +231,32 @@ class reactive_ops:
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
 
-    def when(self, *dependencies, placeholder=None):
+    def when(self, *dependencies, initial=_Undefined):
         """
         Returns a reactive expression that emits the contents of this
-        expression only when the condition changes.
+        expression only when the dependencies change. If initial value
+        is provided and the dependencies are all param.Event types the
+        expression will not be evaluated until the first event is
+        triggered.
 
         Arguments
         ---------
         dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
-        placeholder: object
+        initial: object
           Object that will stand in for the actual value until the
-          first time the dependencies are triggered.
+          first time a param.Event in the dependencies is triggered.
         """
-        def eval(*deps):
-            if placeholder is not None and not any(deps):
-                return placeholder
+        deps = [p for d in dependencies for p in resolve_ref(d)]
+        is_event = all(isinstance(dep, Event) for dep in deps)
+        def eval(*_, evaluated=[]):
+            if is_event and initial is not _Undefined and not evaluated:
+                # Abuse mutable default value to keep track of evaluation state
+                evaluated.append(True)
+                return initial
             else:
                 return self.value
-        return bind(eval , *dependencies).rx()
+        return bind(eval, *deps).rx()
 
     def where(self, x, y):
         """
@@ -571,7 +579,7 @@ class rx:
             wrapper = kwargs.pop('_wrapper', None)
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             fn = obj
-            obj = eval_function_with_deps(obj)
+            obj = None
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
             obj = getattr(obj.owner, obj.name)

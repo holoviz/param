@@ -361,3 +361,21 @@ def test_reactive_clone_evaluates_once():
 
     assert namex.rx.pipe(debug).title().rx.value == 'Bob'
     assert len(items) == 1
+
+def test_reactive_when():
+    p = Parameters(integer=3)
+    integer = p.param.integer.rx().rx.when(p.param.event)
+    assert integer.rx.value == 3
+    p.integer = 4
+    assert integer.rx.value == 3
+    p.param.trigger('event')
+    assert integer.rx.value == 4
+
+def test_reactive_when_initial():
+    p = Parameters(integer=3)
+    integer = p.param.integer.rx().rx.when(p.param.event, initial=None)
+    assert integer.rx.value is None
+    p.integer = 4
+    assert integer.rx.value is None
+    p.param.trigger('event')
+    assert integer.rx.value == 4

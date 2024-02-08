@@ -17,6 +17,7 @@ docstrings. Note that the class or object to be inspected must already
 exist in the active namespace.
 """
 
+import asyncio
 import re
 import itertools
 import textwrap
@@ -382,5 +383,23 @@ class IPythonDisplay:
         except TypeError:
             raise NotImplementedError
 
+def async_executor(func):
+    event_loop = None
+    try:
+        ip = get_ipython()  # noqa
+        if ip.kernel:
+            # We are in Jupyter and can piggyback the tornado IOLoop
+            from tornado.ioloop import IOLoop
+            ioloop = IOLoop.current()
+            event_loop = ioloop.asyncio_loop # type: ignore
+    except Exception:
+        pass
+    if event_loop is None:
+        event_loop = asyncio.get_event_loop()
+    if event_loop.is_running():
+        ioloop.add_callback(func)
+    else:
+        event_loop.run_until_complete(func())
+    return
 
 register_display_accessor('_ipython_display_', IPythonDisplay)

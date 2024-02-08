@@ -61,12 +61,12 @@ from ._utils import (
 if _in_ipython():
     # In case the optional ipython module is unavailable
     try:
-        from .ipython import ParamPager
+        from .ipython import ParamPager, async_executor
         param_pager = ParamPager(metaclass=True)  # Generates param description
     except ImportError:
-        param_pager = None
+        async_executor = param_pager = None
 else:
-    param_pager = None
+    async_executor = param_pager = None
 
 
 from inspect import getfullargspec
@@ -354,11 +354,6 @@ def discard_events(parameterized):
         parameterized.param._BATCH_WATCH = batch_watch
         parameterized.param._state_watchers = watchers
         parameterized.param._events = events
-
-
-# External components can register an async executor which will run
-# async functions
-async_executor = None
 
 
 def classlist(class_):

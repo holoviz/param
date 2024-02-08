@@ -1475,6 +1475,8 @@ class Parameter(_ParameterBase):
                 self.owner.param._update_ref(name, ref)
             elif name in refs:
                 del refs[name]
+                if name in obj._param__private.async_refs:
+                    obj._param__private.async_refs.pop(name).cancel()
 
         # Deprecated Number set_hook called here to avoid duplicating setter
         if hasattr(self, 'set_hook'):
@@ -1985,6 +1987,8 @@ class Parameters:
             ))
 
     def _update_ref(self_, name, ref):
+        if name in self_.self._param__private.async_refs:
+            self_.self._param__private.async_refs.pop(name).cancel()
         for _, watcher in self_.self._param__private.ref_watchers:
             dep_obj = watcher.cls if watcher.inst is None else watcher.inst
             dep_obj.param.unwatch(watcher)

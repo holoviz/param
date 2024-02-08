@@ -49,6 +49,7 @@ from ._utils import (
     _is_auto_name,
     _is_mutable_container,
     _recursive_repr,
+    _to_async_gen,
     _validate_error_prefix,
     accept_arguments,
     iscoroutinefunction,
@@ -176,8 +177,11 @@ def resolve_value(value):
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value):
+    is_gen = inspect.isgeneratorfunction(value)
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or is_gen:
         value = eval_function_with_deps(value)
+        if is_gen:
+            value = _to_async_gen(value)
     elif isinstance(value, Parameter):
         value = getattr(value.owner, value.name)
     return value
@@ -2014,9 +2018,10 @@ class Parameters:
                 self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
-        is_async = iscoroutinefunction(value)
+        is_gen = inspect.isgeneratorfunction(value)
+        is_async = iscoroutinefunction(value) or is_gen
         deps = resolve_ref(value, recursive=pobj.nested_refs)
-        if not deps and not is_async:
+        if not (deps or is_async or is_gen):
             return None, None, value, False
         ref = value
         value = resolve_value(value)
@@ -2043,7 +2048,8 @@ class Parameters:
         except Exception as e:
             raise e
         finally:
-            del self_.self._param__private.async_refs[pname]
+            if pname in self_.self._param__private.async_refs:
+                del self_.self._param__private.async_refs[pname]
 
     @classmethod
     def _changed(cls, event):

@@ -1,3 +1,4 @@
+import asyncio
 import collections
 import datetime as dt
 import inspect
@@ -219,6 +220,22 @@ def iscoroutinefunction(function):
         inspect.iscoroutinefunction(function)
     )
 
+async def _to_async_gen(sync_gen):
+    done = object()
+
+    def safe_next():
+        # Converts StopIteration to a sentinal value to avoid:
+        # TypeError: StopIteration interacts badly with generators and cannot be raised into a Future
+        try:
+            return next(sync_gen)
+        except StopIteration:
+            return done
+
+    while True:
+        value = await asyncio.to_thread(safe_next)
+        if value is done:
+            break
+        yield value
 
 def flatten(line):
     """

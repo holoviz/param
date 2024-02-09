@@ -1468,7 +1468,7 @@ class Parameter(_ParameterBase):
         """
         name = self.name
         if obj is not None and self.allow_refs and obj._param__private.initialized and name not in obj._param__private.syncing:
-            ref, deps, val, _ = obj.param._resolve_ref(self, val)
+            ref, deps, val, is_async = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)
@@ -1476,6 +1476,8 @@ class Parameter(_ParameterBase):
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
+            if is_async:
+                return
 
         # Deprecated Number set_hook called here to avoid duplicating setter
         if hasattr(self, 'set_hook'):
@@ -2002,7 +2004,8 @@ class Parameters:
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
             deps = resolve_ref(ref, self_[pname].nested_refs)
-            is_async = iscoroutinefunction(ref)
+            is_gen = inspect.isgeneratorfunction(ref)
+            is_async = iscoroutinefunction(ref) or is_gen
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
@@ -2034,9 +2037,10 @@ class Parameters:
         if not self_.self._param__private.initialized:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
+
         if pname in self_.self._param__private.async_refs:
             self_.self._param__private.async_refs[pname].cancel()
-        self_.self._param__private.async_refs[pname] = asyncio.current_task()
+        self_.self._param__private.async_refs[pname] = current_task = asyncio.current_task()
         try:
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
@@ -2048,7 +2052,8 @@ class Parameters:
         except Exception as e:
             raise e
         finally:
-            if pname in self_.self._param__private.async_refs:
+            # Ensure we clean up but only if the task matches the currrent task
+            if self_.self._param__private.async_refs.get(pname) is current_task:
                 del self_.self._param__private.async_refs[pname]
 
     @classmethod

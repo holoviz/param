@@ -1477,7 +1477,7 @@ class Parameter(_ParameterBase):
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
-            if is_async:
+            if is_async or val is Undefined:
                 return
 
         # Deprecated Number set_hook called here to avoid duplicating setter
@@ -2011,7 +2011,9 @@ class Parameters:
                 continue
 
             new_val = resolve_value(ref)
-            if is_async:
+            if new_val is Undefined:
+                continue
+            elif is_async:
                 async_executor(partial(self_._async_ref, pname, new_val))
                 continue
 
@@ -2031,7 +2033,7 @@ class Parameters:
         try:
             value = resolve_value(value)
         except Skip:
-            value = None
+            value = Undefined
         if is_async:
             async_executor(partial(self_._async_ref, pobj.name, value))
             value = None

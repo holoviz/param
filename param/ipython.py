@@ -365,7 +365,7 @@ class IPythonDisplay:
 
     def __call__(self):
         from param.depends import depends
-        from param.parameterized import resolve_ref
+        from param.parameterized import Undefined, resolve_ref
         from param.reactive import rx
 
         handle = None
@@ -382,7 +382,10 @@ class IPythonDisplay:
                 if handle is not None:
                     handle.update(cb())
         try:
-            handle = display(cb(), display_id=uuid.uuid4().hex) # noqa
+            obj = cb()
+            if obj is Undefined:
+                obj = None
+            handle = display(obj, display_id=uuid.uuid4().hex) # noqa
         except TypeError:
             raise NotImplementedError
 

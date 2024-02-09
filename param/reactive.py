@@ -721,7 +721,7 @@ class rx:
                 if operation:
                     obj = self._eval_operation(obj, operation)
             except Skip:
-                return Undefined
+                obj = Undefined
             except Exception as e:
                 self._error_state = e
                 raise e
@@ -825,7 +825,7 @@ class rx:
         # Getting all the public attributes available on the current object,
         # e.g. `sum`, `head`, etc.
         extras = [d for d in dir(current) if not d.startswith('_')]
-        if name in extras and name not in super().__dir__():
+        if (name in extras or current is Undefined) and name not in super().__dir__():
             new = self._resolve_accessor()
             # Setting the method name for a potential use later by e.g. an
             # operator or method, as in `dfi.A > 2`. or `dfi.A.max()`

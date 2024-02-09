@@ -63,12 +63,13 @@ from ._utils import (
 if _in_ipython():
     # In case the optional ipython module is unavailable
     try:
-        from .ipython import ParamPager, async_executor
+        from .ipython import ParamPager, ipython_async_executor as async_executor
         param_pager = ParamPager(metaclass=True)  # Generates param description
     except ImportError:
-        async_executor = param_pager = None
+        from ._utils import async_executor
 else:
-    async_executor = param_pager = None
+    from ._utils import async_executor
+    param_pager = None
 
 
 from inspect import getfullargspec

@@ -17,7 +17,6 @@ docstrings. Note that the class or object to be inspected must already
 exist in the active namespace.
 """
 
-import asyncio
 import re
 import itertools
 import textwrap
@@ -26,7 +25,7 @@ import uuid
 import param
 
 from param.display import register_display_accessor
-
+from param._utils import async_executor
 
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False
@@ -389,7 +388,7 @@ class IPythonDisplay:
         except TypeError:
             raise NotImplementedError
 
-def async_executor(func):
+def ipython_async_executor(func):
     event_loop = None
     try:
         ip = get_ipython()  # noqa
@@ -398,14 +397,13 @@ def async_executor(func):
             from tornado.ioloop import IOLoop
             ioloop = IOLoop.current()
             event_loop = ioloop.asyncio_loop # type: ignore
+            if event_loop.is_running():
+                ioloop.add_callback(func)
+            else:
+                event_loop.run_until_complete(func())
+            return
     except Exception:
         pass
-    if event_loop is None:
-        event_loop = asyncio.get_event_loop()
-    if event_loop.is_running():
-        ioloop.add_callback(func)
-    else:
-        event_loop.run_until_complete(func())
-    return
+    async_executor(func)
 
 register_display_accessor('_ipython_display_', IPythonDisplay)

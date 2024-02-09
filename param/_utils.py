@@ -22,6 +22,8 @@ DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('params', inspect.Parameter.VAR_KEYWORD),
 ])
 
+MUTABLE_TYPES = (abc.MutableSequence, abc.MutableSet, abc.MutableMapping)
+
 class ParamWarning(Warning):
     """Base Param Warning"""
 
@@ -189,7 +191,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
 def _is_mutable_container(value):
     """True for mutable containers, which typically need special handling when being copied"""
-    return issubclass(type(value), (abc.MutableSequence, abc.MutableSet, abc.MutableMapping))
+    return issubclass(type(value), MUTABLE_TYPES)
 
 
 def _dict_update(dictionary, **kwargs):
@@ -573,3 +575,18 @@ def _in_ipython():
         return True
     except NameError:
         return False
+
+_RUNNING_TASKS = []
+
+def _cleanup_task(task):
+    if task in _RUNNING_TASKS:
+        _RUNNING_TASKS.remove(task)
+
+def async_executor(func):
+    event_loop = asyncio.get_event_loop()
+    if event_loop.is_running():
+        task = asyncio.ensure_future(func())
+        _RUNNING_TASKS.append(task)
+        task.add_done_callback(_cleanup_task)
+    else:
+        asyncio.run_until_complete(func())

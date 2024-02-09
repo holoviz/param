@@ -146,6 +146,16 @@ class reactive_ops:
         rxi = self._reactive if isinstance(self._reactive, rx) else self()
         return rxi._apply_operator(bool)
 
+    def buffer(self, n):
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        items = []
+        def collect(new, n):
+            items.append(new)
+            while len(items) > n:
+                items.pop(0)
+            return items
+        return rxi._apply_operator(collect, n)
+
     def in_(self, other):
         """
         Replacement for the ``in`` statement.

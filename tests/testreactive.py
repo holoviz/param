@@ -1,7 +1,9 @@
+import asyncio
 import math
 import operator
 import os
 import unittest
+import time
 
 try:
     import numpy as np
@@ -325,3 +327,29 @@ def test_reactive_clone_evaluates_once():
 
     assert namex.rx.pipe(debug).title().rx.value == 'Bob'
     assert len(items) == 1
+
+async def test_reactive_gen():
+    def gen():
+        yield 1
+        time.sleep(0.1)
+        yield 2
+
+    rxgen = rx(gen)
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.05)
+    assert rxgen.rx.value == 1
+    await asyncio.sleep(0.1)
+    assert rxgen.rx.value == 2
+
+async def test_reactive_async_gen():
+    async def gen():
+        yield 1
+        await asyncio.sleep(0.1)
+        yield 2
+
+    rxgen = rx(gen)
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.05)
+    assert rxgen.rx.value == 1
+    await asyncio.sleep(0.1)
+    assert rxgen.rx.value == 2

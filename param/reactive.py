@@ -715,13 +715,13 @@ class rx:
         elif self._dirty or self._root._dirty_obj:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
-                if obj in (Skip, Undefined):
+                if obj is Undefined:
                     raise Skip()
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
             except Skip:
-                return Skip
+                return Undefined
             except Exception as e:
                 self._error_state = e
                 raise e
@@ -1006,13 +1006,13 @@ class rx:
         resolved_args = []
         for arg in args:
             val = resolve_value(arg)
-            if val in (Skip, Undefined):
+            if val is Undefined:
                 raise Skip()
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
             val = resolve_value(arg)
-            if val in (Skip, Undefined):
+            if val is Undefined:
                 raise Skip()
             resolved_kwargs[k] = val
         if isinstance(fn, str):

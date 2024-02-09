@@ -47,6 +47,10 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
     Always displayed.
     """
 
+class Skip(RuntimeError):
+    """
+    Exception that allows skipping an update when resolving a reference.
+    """
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
     def decorator(func):

@@ -368,16 +368,19 @@ class IPythonDisplay:
         from param.parameterized import resolve_ref
         from param.reactive import rx
 
+        handle = None
         if isinstance(self._reactive, rx):
             cb = self._reactive._callback
             @depends(*self._reactive._params, watch=True)
             def update_handle(*args, **kwargs):
-                handle.update(cb())
+                if handle is not None:
+                    handle.update(cb())
         else:
             cb = self._reactive
             @depends(*resolve_ref(cb), watch=True)
             def update_handle(*args, **kwargs):
-                handle.update(cb())
+                if handle is not None:
+                    handle.update(cb())
         try:
             handle = display(cb(), display_id=uuid.uuid4().hex) # noqa
         except TypeError:

@@ -406,7 +406,17 @@ def bind(function, *args, watch=False, **kwargs):
                 fn = eval_function_with_deps(p)
         return fn
 
-    if inspect.isasyncgenfunction(function):
+    if inspect.isgeneratorfunction(function):
+        def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(
+                wargs, wkwargs, asynchronous=True
+            )
+            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            for val in evaled:
+                yield val
+        wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
+        wrapped._dinfo = wrapper_fn._dinfo
+    elif inspect.isasyncgenfunction(function):
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True

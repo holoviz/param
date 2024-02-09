@@ -93,7 +93,7 @@ from . import Event
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
-    Parameter, Parameterized, eval_function_with_deps, get_method_owner,
+    Parameter, Parameterized, Skip, Undefined, eval_function_with_deps, get_method_owner,
     register_reference_transform, resolve_ref, resolve_value, transform_reference
 )
 from ._utils import iscoroutinefunction, full_groupby
@@ -105,6 +105,14 @@ class Wrapper(Parameterized):
     """
 
     object = Parameter(allow_refs=False)
+
+
+class GenWrapper(Parameterized):
+    """
+    Wrapper to allow streaming from generator functions.
+    """
+
+    object = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
@@ -535,6 +543,10 @@ class rx:
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             fn = obj
             obj = eval_function_with_deps(obj)
+        elif inspect.isgeneratorfunction(obj) or inspect.isasyncgenfunction(obj):
+            wrapper = GenWrapper(object=obj)
+            fn = bind(lambda obj: obj, wrapper.param.object)
+            obj = Undefined
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
             obj = getattr(obj.owner, obj.name)
@@ -703,9 +715,13 @@ class rx:
         elif self._dirty or self._root._dirty_obj:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
+                if obj in (Skip, Undefined):
+                    raise Skip()
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
+            except Skip:
+                return Skip
             except Exception as e:
                 self._error_state = e
                 raise e
@@ -989,10 +1005,16 @@ class rx:
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
         for arg in args:
-            resolved_args.append(resolve_value(arg))
+            val = resolve_value(arg)
+            if val in (Skip, Undefined):
+                raise Skip()
+            resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
-            resolved_kwargs[k] = resolve_value(arg)
+            val = resolve_value(arg)
+            if val in (Skip, Undefined):
+                raise Skip()
+            resolved_kwargs[k] = val
         if isinstance(fn, str):
             obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
         elif operation.get('reverse'):

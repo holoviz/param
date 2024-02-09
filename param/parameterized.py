@@ -42,6 +42,7 @@ from ._utils import (
     DEFAULT_SIGNATURE,
     ParamDeprecationWarning as _ParamDeprecationWarning,
     ParamFutureWarning as _ParamFutureWarning,
+    Skip,
     _deprecated,
     _deprecate_positional_args,
     _dict_update,
@@ -2027,7 +2028,10 @@ class Parameters:
         if not (deps or is_async or is_gen):
             return None, None, value, False
         ref = value
-        value = resolve_value(value)
+        try:
+            value = resolve_value(value)
+        except Skip:
+            value = None
         if is_async:
             async_executor(partial(self_._async_ref, pobj.name, value))
             value = None
@@ -2048,7 +2052,10 @@ class Parameters:
                         self_.update({pname: new_obj})
             else:
                 with _syncing(self_.self, (pname,)):
-                    self_.update({pname: await awaitable})
+                    try:
+                        self_.update({pname: await awaitable})
+                    except Skip:
+                        pass
         except Exception as e:
             raise e
         finally:

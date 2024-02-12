@@ -583,10 +583,14 @@ def _cleanup_task(task):
         _RUNNING_TASKS.remove(task)
 
 def async_executor(func):
-    event_loop = asyncio.get_event_loop()
+    try:
+        event_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        event_loop = asyncio.new_event_loop()
     if event_loop.is_running():
         task = asyncio.ensure_future(func())
         _RUNNING_TASKS.append(task)
         task.add_done_callback(_cleanup_task)
     else:
-        asyncio.run_until_complete(func())
+        raise Exception(func)
+        event_loop.run_until_complete(func())

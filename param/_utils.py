@@ -1,5 +1,6 @@
 import asyncio
 import collections
+import contextvars
 import datetime as dt
 import inspect
 import functools
@@ -226,6 +227,15 @@ def iscoroutinefunction(function):
         inspect.iscoroutinefunction(function)
     )
 
+async def _to_thread(func, /, *args, **kwargs):
+    """
+    Polyfill for asyncio.to_thread in Python < 3.9
+    """
+    loop = asyncio.get_running_loop()
+    ctx = contextvars.copy_context()
+    func_call = functools.partial(ctx.run, func, *args, **kwargs)
+    return await loop.run_in_executor(None, func_call)
+
 async def _to_async_gen(sync_gen):
     done = object()
 
@@ -238,7 +248,10 @@ async def _to_async_gen(sync_gen):
             return done
 
     while True:
-        value = await asyncio.to_thread(safe_next)
+        if sys.version_info >= (3, 9):
+            value = await asyncio.to_thread(safe_next)
+        else:
+            value = await _to_thread(safe_next)
         if value is done:
             break
         yield value

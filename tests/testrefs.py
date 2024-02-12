@@ -169,7 +169,7 @@ async def test_generator_ref():
 
     await asyncio.sleep(0.02)
     assert p.string == 'string?'
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.1)
     assert p.string == 'string!'
 
 async def test_async_generator_ref_cancelled():

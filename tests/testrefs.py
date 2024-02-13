@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import time
 
 import param
@@ -198,3 +199,31 @@ async def test_async_generator_ref_cancelled():
     assert task1.done()
     assert not task2.done()
     assert p._param__private.async_refs['string'] is task2
+
+async def test_generator_ref_cancelled():
+    threads = []
+    def gen_strings1():
+        threads.append(threading.current_thread())
+        i = 0
+        while True:
+            yield str(i)
+            time.sleep(0.01)
+
+    def gen_strings2():
+        threads.append(threading.current_thread())
+        i = 0
+        while True:
+            yield str(i)
+            time.sleep(0.01)
+
+    p = Parameters(string=gen_strings1)
+    await asyncio.sleep(0.02)
+    task1 = p._param__private.async_refs['string']
+    assert p.string is not None
+    p.string = gen_strings2
+    await asyncio.sleep(0.02)
+    task2 = p._param__private.async_refs['string']
+    assert task1 is not task2
+    assert task1.done()
+    assert not task2.done()
+    assert len(threads) == 2

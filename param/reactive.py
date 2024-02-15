@@ -726,12 +726,13 @@ class rx:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
                 if obj is Undefined:
+                    self._current_ = Undefined
                     raise Skip()
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
             except Skip:
-                obj = Undefined
+                return self._current_
             except Exception as e:
                 self._error_state = e
                 raise e

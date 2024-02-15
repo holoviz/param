@@ -24,6 +24,7 @@ except ImportError:
 import param
 import pytest
 
+from param.parameterized import Skip
 from param.reactive import bind, rx
 
 NUMERIC_BINARY_OPERATORS = (
@@ -158,6 +159,22 @@ def test_reactive_reflect_param_value():
     assert i.rx.value == 1
     P.integer = 2
     assert i.rx.value == 2
+
+def test_reactive_skip_value():
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v > 2:
+            raise Skip()
+        else:
+            return v+1
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    assert i.rx.value == 2
+    P.integer = 2
+    assert i.rx.value == 3
+    P.integer = 3
+    assert i.rx.value == 3
 
 def test_reactive_pipeline_reflect_param_value():
     P = Parameters(integer=1)

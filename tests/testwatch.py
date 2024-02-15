@@ -7,7 +7,7 @@ import unittest
 import param
 import pytest
 
-from param.parameterized import discard_events
+from param.parameterized import Skip, discard_events
 
 from .utils import MockLoggingHandler, warnings_as_excepts
 
@@ -111,6 +111,19 @@ class TestWatch(unittest.TestCase):
         self.assertEqual(self.accumulator, 1)
         obj.a = 2
         self.assertEqual(self.accumulator, 3)
+
+    def test_triggered_ignore_skip(self):
+        def accumulator(change):
+            if change.new > 1:
+                raise Skip()
+            self.accumulator += 1
+
+        obj = SimpleWatchExample()
+        obj.param.watch(accumulator, 'a')
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+        obj.a = 2
+        self.assertEqual(self.accumulator, 1)
 
     def test_discard_events_decorator(self):
         def accumulator(change):

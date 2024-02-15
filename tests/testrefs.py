@@ -5,6 +5,7 @@ import time
 import param
 import pytest
 
+from param.parameterized import Skip
 from param.reactive import bind, rx
 
 class Parameters(param.Parameterized):
@@ -16,6 +17,12 @@ class Parameters(param.Parameterized):
     string_list = param.List(default=[], item_type=str, allow_refs=True, nested_refs=True)
 
     no_refs = param.Parameter(allow_refs=False)
+
+    @param.depends('string')
+    def formatted_string(self):
+        if self.string.endswith('?'):
+            raise Skip()
+        return self.string + '!'
 
 class Subclass(Parameters):
 
@@ -79,6 +86,20 @@ def test_bind_ref():
     p.string = 'new string'
     assert p2.string == 'new string!'
 
+def test_bind_ref_skip():
+    p = Parameters()
+
+    def skip_fn(s):
+        if s == 'invalid':
+            raise Skip()
+        return s + '!'
+    p2 = Parameters(string=bind(skip_fn, p.param.string))
+    assert p2.string == 'string!'
+    p.string = 'new string'
+    assert p2.string == 'new string!'
+    p.string = 'invalid'
+    assert p2.string == 'new string!'
+
 def test_reactive_ref():
     string = rx('string')
     rx_string = string+'!'
@@ -122,6 +143,14 @@ def test_nested_param_method_ref():
     assert p2.string == 'string!'
     p.string = 'new string'
     assert p2.string == 'new string!'
+
+def test_nested_param_method_skip():
+    p = Parameters()
+    p2 = Parameters(string=p.formatted_string)
+
+    assert p2.string == 'string!'
+    p.string = 'new string?'
+    assert p2.string == 'string!'
 
 async def test_async_function_ref():
     async def gen_strings():

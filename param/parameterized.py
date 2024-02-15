@@ -2011,7 +2011,10 @@ class Parameters:
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
-            new_val = resolve_value(ref)
+            try:
+                new_val = resolve_value(ref)
+            except Skip:
+                new_val = Undefined
             if new_val is Undefined:
                 continue
             elif is_async:
@@ -2488,7 +2491,10 @@ class Parameters:
                                    watcher.fn)
             async_executor(partial(watcher.fn, *args, **kwargs))
         else:
-            watcher.fn(*args, **kwargs)
+            try:
+                watcher.fn(*args, **kwargs)
+            except Skip:
+                pass
 
     def _call_watcher(self_, watcher, event):
         """

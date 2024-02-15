@@ -348,12 +348,12 @@ def test_reactive_clone_evaluates_once():
 async def test_reactive_gen():
     def gen():
         yield 1
-        time.sleep(0.1)
+        time.sleep(0.05)
         yield 2
 
     rxgen = rx(gen)
     assert rxgen.rx.value is param.Undefined
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
     await asyncio.sleep(0.1)
     assert rxgen.rx.value == 2

@@ -404,9 +404,13 @@ def bind(function, *args, watch=False, **kwargs):
         for kw, arg in wkwargs.items():
             if asynchronous:
                 if kw.startswith('__arg'):
-                    combined_args[int(kw[5:])] = arg
+                    index = kw[5:]
+                    if index.is_digit():
+                        combined_args[int(index)] = arg
                 elif kw.startswith('__kwarg'):
-                    combined_kwargs[kw[8:]] = arg
+                    substring = kw[8:]
+                    if substring in combined_kwargs:
+                        combined_kwargs[substring] = arg
                 continue
             elif kw.startswith('__arg') or kw.startswith('__kwarg') or kw.startswith('__fn'):
                 continue

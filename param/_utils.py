@@ -589,11 +589,7 @@ def _in_ipython():
     except NameError:
         return False
 
-_RUNNING_TASKS = []
-
-def _cleanup_task(task):
-    if task in _RUNNING_TASKS:
-        _RUNNING_TASKS.remove(task)
+_RUNNING_TASKS = set()
 
 def async_executor(func):
     try:
@@ -602,8 +598,8 @@ def async_executor(func):
         event_loop = asyncio.new_event_loop()
     if event_loop.is_running():
         task = asyncio.ensure_future(func())
-        _RUNNING_TASKS.append(task)
-        task.add_done_callback(_cleanup_task)
+        _RUNNING_TASKS.add(task)
+        task.add_done_callback(_RUNNING_TASKS.discard)
     else:
         raise Exception(func)
         event_loop.run_until_complete(func())

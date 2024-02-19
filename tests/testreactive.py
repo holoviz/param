@@ -355,7 +355,10 @@ async def test_reactive_gen():
     assert rxgen.rx.value is param.Undefined
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    await asyncio.sleep(0.1)
+    for _ in range(3):
+        await asyncio.sleep(0.05)
+        if rxgen.rx.value == 2:
+            break
     assert rxgen.rx.value == 2
 
 async def test_reactive_async_gen():

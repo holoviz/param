@@ -405,7 +405,7 @@ def bind(function, *args, watch=False, **kwargs):
             if asynchronous:
                 if kw.startswith('__arg'):
                     index = kw[5:]
-                    if index.is_digit():
+                    if index.isdigit():
                         combined_args[int(index)] = arg
                 elif kw.startswith('__kwarg'):
                     substring = kw[8:]

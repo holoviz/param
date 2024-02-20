@@ -1990,9 +1990,10 @@ class Parameters:
             ))
 
     def _update_ref(self_, name, ref):
-        if name in self_.self._param__private.async_refs:
-            self_.self._param__private.async_refs.pop(name).cancel()
-        for _, watcher in self_.self._param__private.ref_watchers:
+        param_private = self_.self._param__private
+        if name in param_private.async_refs:
+            param_private.async_refs.pop(name).cancel()
+        for _, watcher in param_private.ref_watchers:
             dep_obj = watcher.cls if watcher.inst is None else watcher.inst
             dep_obj.param.unwatch(watcher)
         self_.self._param__private.ref_watchers = []

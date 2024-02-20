@@ -601,5 +601,4 @@ def async_executor(func):
         _RUNNING_TASKS.add(task)
         task.add_done_callback(_RUNNING_TASKS.discard)
     else:
-        raise Exception(func)
         event_loop.run_until_complete(func())

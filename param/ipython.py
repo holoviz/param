@@ -402,7 +402,7 @@ def ipython_async_executor(func):
             else:
                 event_loop.run_until_complete(func())
             return
-    except Exception:
+    except (NameError, AttributeError):
         pass
     async_executor(func)
 

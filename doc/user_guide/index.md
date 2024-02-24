@@ -5,8 +5,9 @@ This user guide provides detailed information about how to use Param, assuming y
 - [Simplifying Codebases](./Simplifying_Codebases): How Param allows you to eliminate boilerplate and unsafe code
 - [Parameters](./Parameters): Using parameters (Class vs. instance parameters, setting defaults, etc.)
 - [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use
-- [Dependencies and Watchers](./Dependencies_and_Watchers): Expressing relationships between parameters and parameters or code, and triggering events
+- [Dependencies and Watchers](./Dependencies_and_Watchers): Expressing relationships between parameters and parameters or code, and triggering events.
 - [Reactive Expressions](./Reactive_Expressions): How to write expressions and functions that automatically re-evaluate when their parameter inputs change.
+- [References](./References): Allowing parameters to resolve references to other references and functions.
 - [Generators](./Generators): Using (asynchronous) generators to drive events on parameters and expressions in a "push" based model.
 - [Serialization and Persistence](./Serialization_and_Persistence): Saving the state of a Parameterized object to a text, script, or pickle file
 - [Outputs](./Outputs): Output types and connecting output to Parameter inputs
@@ -27,6 +28,7 @@ Parameters <Parameters>
 Parameter Types <Parameter_Types>
 Dependencies and Watchers <Dependencies_and_Watchers>
 Reactive Expressions <Reactive_Expressions>
+References <References>
 Generators <Generators>
 Serialization and Persistence <Serialization_and_Persistence>
 Outputs <Outputs>

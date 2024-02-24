@@ -589,7 +589,7 @@ def _in_ipython():
     except NameError:
         return False
 
-_RUNNING_TASKS = set()
+_running_tasks = set()
 
 def async_executor(func):
     try:
@@ -598,7 +598,7 @@ def async_executor(func):
         event_loop = asyncio.new_event_loop()
     if event_loop.is_running():
         task = asyncio.ensure_future(func())
-        _RUNNING_TASKS.add(task)
-        task.add_done_callback(_RUNNING_TASKS.discard)
+        _running_tasks.add(task)
+        task.add_done_callback(_running_tasks.discard)
     else:
         event_loop.run_until_complete(func())

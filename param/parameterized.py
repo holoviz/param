@@ -1968,7 +1968,7 @@ class Parameters:
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
-            if not is_async:
+            if not is_async and resolved is not Undefined:
                 setattr(self, name, resolved)
         return refs, deps
 
@@ -2049,9 +2049,12 @@ class Parameters:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
 
-        if pname in self_.self._param__private.async_refs:
+        current_task = asyncio.current_task()
+        running_task = self_.self._param__private.async_refs.get(pname)
+        if running_task is None:
+            self_.self._param__private.async_refs[pname] = current_task
+        elif current_task is not running_task:
             self_.self._param__private.async_refs[pname].cancel()
-        self_.self._param__private.async_refs[pname] = current_task = asyncio.current_task()
         try:
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
@@ -2063,8 +2066,6 @@ class Parameters:
                         self_.update({pname: await awaitable})
                     except Skip:
                         pass
-        except Exception as e:
-            raise e
         finally:
             # Ensure we clean up but only if the task matches the currrent task
             if self_.self._param__private.async_refs.get(pname) is current_task:

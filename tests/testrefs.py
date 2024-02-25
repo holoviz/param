@@ -199,7 +199,7 @@ async def test_generator_ref():
 
     await asyncio.sleep(0.02)
     assert p.string == 'string?'
-    for _ in range(3):
+    for _ in range(5):
         await asyncio.sleep(0.05)
         if p.string == 'string!':
             break

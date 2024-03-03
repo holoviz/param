@@ -731,10 +731,12 @@ class rx:
                 obj = self._obj if self._prev is None else self._prev._resolve()
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
-                    raise Skip()
+                    raise Skip
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
+                    if obj is Skip:
+                        raise Skip
             except Skip:
                 return self._current_
             except Exception as e:
@@ -1022,13 +1024,13 @@ class rx:
         for arg in args:
             val = resolve_value(arg)
             if val in (Skip, Undefined):
-                raise Skip()
+                raise Skip
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
             val = resolve_value(arg)
             if val in (Skip, Undefined):
-                raise Skip()
+                raise Skip
             resolved_kwargs[k] = val
         if isinstance(fn, str):
             obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)

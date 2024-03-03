@@ -240,7 +240,7 @@ async def _to_async_gen(sync_gen):
     done = object()
 
     def safe_next():
-        # Converts StopIteration to a sentinal value to avoid:
+        # Converts StopIteration to a sentinel value to avoid:
         # TypeError: StopIteration interacts badly with generators and cannot be raised into a Future
         try:
             return next(sync_gen)

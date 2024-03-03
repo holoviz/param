@@ -50,7 +50,7 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
     Always displayed.
     """
 
-class Skip(RuntimeError):
+class Skip(Exception):
     """
     Exception that allows skipping an update when resolving a reference.
     """

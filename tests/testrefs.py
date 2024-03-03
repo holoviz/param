@@ -24,6 +24,12 @@ class Parameters(param.Parameterized):
             raise Skip()
         return self.string + '!'
 
+    @param.depends('string')
+    def formatted_string_skip_return(self):
+        if self.string.endswith('?'):
+            return Skip
+        return self.string + '!'
+
 class Subclass(Parameters):
 
     no_refs = param.Parameter()
@@ -147,6 +153,14 @@ def test_nested_param_method_ref():
 def test_nested_param_method_skip():
     p = Parameters()
     p2 = Parameters(string=p.formatted_string)
+
+    assert p2.string == 'string!'
+    p.string = 'new string?'
+    assert p2.string == 'string!'
+
+def test_nested_param_method_skip_return():
+    p = Parameters()
+    p2 = Parameters(string=p.formatted_string_skip_return)
 
     assert p2.string == 'string!'
     p.string = 'new string?'

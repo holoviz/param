@@ -1968,7 +1968,7 @@ class Parameters:
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
-            if not is_async and resolved is not Undefined:
+            if not is_async and not (resolved is Undefined or resolved is Skip):
                 setattr(self, name, resolved)
         return refs, deps
 
@@ -2016,7 +2016,7 @@ class Parameters:
                 new_val = resolve_value(ref)
             except Skip:
                 new_val = Undefined
-            if new_val is Undefined:
+            if new_val is Skip or new_val is Undefined:
                 continue
             elif is_async:
                 async_executor(partial(self_._async_ref, pname, new_val))

@@ -7,7 +7,7 @@ This user guide provides detailed information about how to use Param, assuming y
 - [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use
 - [Dependencies and Watchers](./Dependencies_and_Watchers): Expressing relationships between parameters and parameters or code, and triggering events.
 - [Reactive Expressions](./Reactive_Expressions): How to write expressions and functions that automatically re-evaluate when their parameter inputs change.
-- [References](./References): Allowing parameters to resolve references to other references and functions.
+- [References](./References): Allowing parameters to resolve references to other parameters, reactive expressions, and functions.
 - [Generators](./Generators): Using (asynchronous) generators to drive events on parameters and expressions in a "push" based model.
 - [Serialization and Persistence](./Serialization_and_Persistence): Saving the state of a Parameterized object to a text, script, or pickle file
 - [Outputs](./Outputs): Output types and connecting output to Parameter inputs

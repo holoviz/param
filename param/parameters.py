@@ -16,15 +16,16 @@ parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
 
+import collections
+import copy
+import datetime as dt
+import glob
+import inspect
 import numbers
 import os.path
-import sys
-import copy
-import glob
-import re
-import datetime as dt
-import collections
 import pathlib
+import re
+import sys
 import typing
 import warnings
 
@@ -803,7 +804,7 @@ class Number(Dynamic):
                     )
 
     def _validate_value(self, val, allow_None):
-        if (allow_None and val is None) or callable(val):
+        if (allow_None and val is None) or (callable(val) and not inspect.isgeneratorfunction(val)):
             return
 
         if not _is_number(val):

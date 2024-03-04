@@ -42,6 +42,7 @@ from ._utils import (
     DEFAULT_SIGNATURE,
     ParamDeprecationWarning as _ParamDeprecationWarning,
     ParamFutureWarning as _ParamFutureWarning,
+    Skip,
     _deprecated,
     _deprecate_positional_args,
     _dict_update,
@@ -49,6 +50,7 @@ from ._utils import (
     _is_auto_name,
     _is_mutable_container,
     _recursive_repr,
+    _to_async_gen,
     _validate_error_prefix,
     accept_arguments,
     iscoroutinefunction,
@@ -61,11 +63,12 @@ from ._utils import (
 if _in_ipython():
     # In case the optional ipython module is unavailable
     try:
-        from .ipython import ParamPager
+        from .ipython import ParamPager, ipython_async_executor as async_executor
         param_pager = ParamPager(metaclass=True)  # Generates param description
     except ImportError:
-        param_pager = None
+        from ._utils import async_executor
 else:
+    from ._utils import async_executor
     param_pager = None
 
 
@@ -176,8 +179,11 @@ def resolve_value(value):
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value):
+    is_gen = inspect.isgeneratorfunction(value)
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or is_gen:
         value = eval_function_with_deps(value)
+        if is_gen:
+            value = _to_async_gen(value)
     elif isinstance(value, Parameter):
         value = getattr(value.owner, value.name)
     return value
@@ -354,11 +360,6 @@ def discard_events(parameterized):
         parameterized.param._BATCH_WATCH = batch_watch
         parameterized.param._state_watchers = watchers
         parameterized.param._events = events
-
-
-# External components can register an async executor which will run
-# async functions
-async_executor = None
 
 
 def classlist(class_):
@@ -1469,12 +1470,16 @@ class Parameter(_ParameterBase):
         """
         name = self.name
         if obj is not None and self.allow_refs and obj._param__private.initialized and name not in obj._param__private.syncing:
-            ref, deps, val, _ = obj.param._resolve_ref(self, val)
+            ref, deps, val, is_async = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)
             elif name in refs:
                 del refs[name]
+                if name in obj._param__private.async_refs:
+                    obj._param__private.async_refs.pop(name).cancel()
+            if is_async or val is Undefined:
+                return
 
         # Deprecated Number set_hook called here to avoid duplicating setter
         if hasattr(self, 'set_hook'):
@@ -1963,7 +1968,7 @@ class Parameters:
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
-            if not is_async:
+            if not is_async and not (resolved is Undefined or resolved is Skip):
                 setattr(self, name, resolved)
         return refs, deps
 
@@ -1985,7 +1990,10 @@ class Parameters:
             ))
 
     def _update_ref(self_, name, ref):
-        for _, watcher in self_.self._param__private.ref_watchers:
+        param_private = self_.self._param__private
+        if name in param_private.async_refs:
+            param_private.async_refs.pop(name).cancel()
+        for _, watcher in param_private.ref_watchers:
             dep_obj = watcher.cls if watcher.inst is None else watcher.inst
             dep_obj.param.unwatch(watcher)
         self_.self._param__private.ref_watchers = []
@@ -1999,12 +2007,18 @@ class Parameters:
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
             deps = resolve_ref(ref, self_[pname].nested_refs)
-            is_async = iscoroutinefunction(ref)
+            is_gen = inspect.isgeneratorfunction(ref)
+            is_async = iscoroutinefunction(ref) or is_gen
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
-            new_val = resolve_value(ref)
-            if is_async:
+            try:
+                new_val = resolve_value(ref)
+            except Skip:
+                new_val = Undefined
+            if new_val is Skip or new_val is Undefined:
+                continue
+            elif is_async:
                 async_executor(partial(self_._async_ref, pname, new_val))
                 continue
 
@@ -2015,12 +2029,16 @@ class Parameters:
                 self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
-        is_async = iscoroutinefunction(value)
+        is_gen = inspect.isgeneratorfunction(value)
+        is_async = iscoroutinefunction(value) or is_gen
         deps = resolve_ref(value, recursive=pobj.nested_refs)
-        if not deps and not is_async:
+        if not (deps or is_async or is_gen):
             return None, None, value, False
         ref = value
-        value = resolve_value(value)
+        try:
+            value = resolve_value(value)
+        except Skip:
+            value = Undefined
         if is_async:
             async_executor(partial(self_._async_ref, pobj.name, value))
             value = None
@@ -2030,9 +2048,13 @@ class Parameters:
         if not self_.self._param__private.initialized:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
-        if pname in self_.self._param__private.async_refs:
+
+        current_task = asyncio.current_task()
+        running_task = self_.self._param__private.async_refs.get(pname)
+        if running_task is None:
+            self_.self._param__private.async_refs[pname] = current_task
+        elif current_task is not running_task:
             self_.self._param__private.async_refs[pname].cancel()
-        self_.self._param__private.async_refs[pname] = asyncio.current_task()
         try:
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
@@ -2040,11 +2062,14 @@ class Parameters:
                         self_.update({pname: new_obj})
             else:
                 with _syncing(self_.self, (pname,)):
-                    self_.update({pname: await awaitable})
-        except Exception as e:
-            raise e
+                    try:
+                        self_.update({pname: await awaitable})
+                    except Skip:
+                        pass
         finally:
-            del self_.self._param__private.async_refs[pname]
+            # Ensure we clean up but only if the task matches the currrent task
+            if self_.self._param__private.async_refs.get(pname) is current_task:
+                del self_.self._param__private.async_refs[pname]
 
     @classmethod
     def _changed(cls, event):
@@ -2468,7 +2493,10 @@ class Parameters:
                                    watcher.fn)
             async_executor(partial(watcher.fn, *args, **kwargs))
         else:
-            watcher.fn(*args, **kwargs)
+            try:
+                watcher.fn(*args, **kwargs)
+            except Skip:
+                pass
 
     def _call_watcher(self_, watcher, event):
         """

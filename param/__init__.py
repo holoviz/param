@@ -3,8 +3,8 @@ import os
 from . import version  # noqa: api import
 from .depends import depends  # noqa: api import
 from .parameterized import (  # noqa: api import
-    Parameterized, Parameter, String, ParameterizedFunction, ParamOverrides,
-    Undefined, get_logger
+    Parameterized, Parameter, Skip, String, ParameterizedFunction,
+    ParamOverrides, Undefined, get_logger
 )
 from .parameterized import (batch_watch, output, script_repr, # noqa: api import
                             discard_events, edit_constant)
@@ -161,6 +161,7 @@ __all__ = (
     'Selector',
     'SelectorBase',
     'Series',
+    'Skip',
     'String',
     'Time',
     'Tuple',

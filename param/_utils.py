@@ -1,4 +1,6 @@
+import asyncio
 import collections
+import contextvars
 import datetime as dt
 import inspect
 import functools
@@ -20,6 +22,8 @@ DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
     inspect.Parameter('params', inspect.Parameter.VAR_KEYWORD),
 ])
+
+MUTABLE_TYPES = (abc.MutableSequence, abc.MutableSet, abc.MutableMapping)
 
 class ParamWarning(Warning):
     """Base Param Warning"""
@@ -46,6 +50,10 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
     Always displayed.
     """
 
+class Skip(Exception):
+    """
+    Exception that allows skipping an update when resolving a reference.
+    """
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
     def decorator(func):
@@ -184,7 +192,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
 def _is_mutable_container(value):
     """True for mutable containers, which typically need special handling when being copied"""
-    return issubclass(type(value), (abc.MutableSequence, abc.MutableSet, abc.MutableMapping))
+    return issubclass(type(value), MUTABLE_TYPES)
 
 
 def _dict_update(dictionary, **kwargs):
@@ -219,6 +227,34 @@ def iscoroutinefunction(function):
         inspect.iscoroutinefunction(function)
     )
 
+async def _to_thread(func, /, *args, **kwargs):
+    """
+    Polyfill for asyncio.to_thread in Python < 3.9
+    """
+    loop = asyncio.get_running_loop()
+    ctx = contextvars.copy_context()
+    func_call = functools.partial(ctx.run, func, *args, **kwargs)
+    return await loop.run_in_executor(None, func_call)
+
+async def _to_async_gen(sync_gen):
+    done = object()
+
+    def safe_next():
+        # Converts StopIteration to a sentinel value to avoid:
+        # TypeError: StopIteration interacts badly with generators and cannot be raised into a Future
+        try:
+            return next(sync_gen)
+        except StopIteration:
+            return done
+
+    while True:
+        if sys.version_info >= (3, 9):
+            value = await asyncio.to_thread(safe_next)
+        else:
+            value = await _to_thread(safe_next)
+        if value is done:
+            break
+        yield value
 
 def flatten(line):
     """
@@ -552,3 +588,17 @@ def _in_ipython():
         return True
     except NameError:
         return False
+
+_running_tasks = set()
+
+def async_executor(func):
+    try:
+        event_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        event_loop = asyncio.new_event_loop()
+    if event_loop.is_running():
+        task = asyncio.ensure_future(func())
+        _running_tasks.add(task)
+        task.add_done_callback(_running_tasks.discard)
+    else:
+        event_loop.run_until_complete(func())

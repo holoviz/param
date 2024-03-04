@@ -1,7 +1,9 @@
+import asyncio
 import math
 import operator
 import os
 import unittest
+import time
 
 try:
     import numpy as np
@@ -22,6 +24,7 @@ except ImportError:
 import param
 import pytest
 
+from param.parameterized import Skip
 from param.reactive import bind, rx
 
 NUMERIC_BINARY_OPERATORS = (
@@ -156,6 +159,38 @@ def test_reactive_reflect_param_value():
     assert i.rx.value == 1
     P.integer = 2
     assert i.rx.value == 2
+
+def test_reactive_skip_value():
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v > 2:
+            raise Skip()
+        else:
+            return v+1
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    assert i.rx.value == 2
+    P.integer = 2
+    assert i.rx.value == 3
+    P.integer = 3
+    assert i.rx.value == 3
+
+def test_reactive_skip_value_return():
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v > 2:
+            return Skip
+        else:
+            return v+1
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    assert i.rx.value == 2
+    P.integer = 2
+    assert i.rx.value == 3
+    P.integer = 3
+    assert i.rx.value == 3
 
 def test_reactive_pipeline_reflect_param_value():
     P = Parameters(integer=1)
@@ -379,3 +414,32 @@ def test_reactive_when_initial():
     assert integer.rx.value is None
     p.param.trigger('event')
     assert integer.rx.value == 4
+
+async def test_reactive_gen():
+    def gen():
+        yield 1
+        time.sleep(0.05)
+        yield 2
+
+    rxgen = rx(gen)
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.04)
+    assert rxgen.rx.value == 1
+    for _ in range(3):
+        await asyncio.sleep(0.05)
+        if rxgen.rx.value == 2:
+            break
+    assert rxgen.rx.value == 2
+
+async def test_reactive_async_gen():
+    async def gen():
+        yield 1
+        await asyncio.sleep(0.1)
+        yield 2
+
+    rxgen = rx(gen)
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.05)
+    assert rxgen.rx.value == 1
+    await asyncio.sleep(0.1)
+    assert rxgen.rx.value == 2

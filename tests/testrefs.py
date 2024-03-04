@@ -1,8 +1,11 @@
 import asyncio
+import threading
+import time
 
 import param
 import pytest
 
+from param.parameterized import Skip
 from param.reactive import bind, rx
 
 class Parameters(param.Parameterized):
@@ -14,6 +17,18 @@ class Parameters(param.Parameterized):
     string_list = param.List(default=[], item_type=str, allow_refs=True, nested_refs=True)
 
     no_refs = param.Parameter(allow_refs=False)
+
+    @param.depends('string')
+    def formatted_string(self):
+        if self.string.endswith('?'):
+            raise Skip()
+        return self.string + '!'
+
+    @param.depends('string')
+    def formatted_string_skip_return(self):
+        if self.string.endswith('?'):
+            return Skip
+        return self.string + '!'
 
 class Subclass(Parameters):
 
@@ -77,6 +92,20 @@ def test_bind_ref():
     p.string = 'new string'
     assert p2.string == 'new string!'
 
+def test_bind_ref_skip():
+    p = Parameters()
+
+    def skip_fn(s):
+        if s == 'invalid':
+            raise Skip()
+        return s + '!'
+    p2 = Parameters(string=bind(skip_fn, p.param.string))
+    assert p2.string == 'string!'
+    p.string = 'new string'
+    assert p2.string == 'new string!'
+    p.string = 'invalid'
+    assert p2.string == 'new string!'
+
 def test_reactive_ref():
     string = rx('string')
     rx_string = string+'!'
@@ -121,7 +150,23 @@ def test_nested_param_method_ref():
     p.string = 'new string'
     assert p2.string == 'new string!'
 
-async def test_async_function_ref(async_executor):
+def test_nested_param_method_skip():
+    p = Parameters()
+    p2 = Parameters(string=p.formatted_string)
+
+    assert p2.string == 'string!'
+    p.string = 'new string?'
+    assert p2.string == 'string!'
+
+def test_nested_param_method_skip_return():
+    p = Parameters()
+    p2 = Parameters(string=p.formatted_string_skip_return)
+
+    assert p2.string == 'string!'
+    p.string = 'new string?'
+    assert p2.string == 'string!'
+
+async def test_async_function_ref():
     async def gen_strings():
         await asyncio.sleep(0.02)
         return 'string!'
@@ -131,7 +176,7 @@ async def test_async_function_ref(async_executor):
     await asyncio.sleep(0.1)
     assert p.string == 'string!'
 
-async def test_async_bind_ref(async_executor):
+async def test_async_bind_ref():
     p = Parameters()
 
     async def exclaim(string):
@@ -145,13 +190,86 @@ async def test_async_bind_ref(async_executor):
     await asyncio.sleep(0.1)
     assert p2.string == 'new string!'
 
-async def test_async_generator_ref(async_executor):
+async def test_async_generator_ref():
     async def gen_strings():
-        string = 'string'
-        for i in range(10):
-            yield string + '!' * i
+        yield 'string?'
+        await asyncio.sleep(0.02)
+        yield 'string!'
 
     p = Parameters(string=gen_strings)
 
+    await asyncio.sleep(0.01)
+    assert p.string == 'string?'
     await asyncio.sleep(0.1)
-    assert p.string == 'string!!!!!!!!!'
+    assert p.string == 'string!'
+
+async def test_generator_ref():
+    def gen_strings():
+        yield 'string?'
+        time.sleep(0.05)
+        yield 'string!'
+
+    p = Parameters(string=gen_strings)
+
+    await asyncio.sleep(0.02)
+    assert p.string == 'string?'
+    for _ in range(5):
+        await asyncio.sleep(0.05)
+        if p.string == 'string!':
+            break
+    assert p.string == 'string!'
+
+async def test_async_generator_ref_cancelled():
+    tasks = []
+    async def gen_strings1():
+        tasks.append(asyncio.current_task())
+        i = 0
+        while True:
+            yield str(i)
+            await asyncio.sleep(0.01)
+
+    async def gen_strings2():
+        tasks.append(asyncio.current_task())
+        i = 0
+        while True:
+            yield str(i)
+            await asyncio.sleep(0.01)
+
+    p = Parameters(string=gen_strings1)
+    await asyncio.sleep(0.02)
+    assert p.string is not None
+    p.string = gen_strings2
+    await asyncio.sleep(0.02)
+    assert len(tasks) == 2
+    task1, task2 = tasks
+    assert task1.done()
+    assert not task2.done()
+    assert p._param__private.async_refs['string'] is task2
+
+async def test_generator_ref_cancelled():
+    threads = []
+    def gen_strings1():
+        threads.append(threading.current_thread())
+        i = 0
+        while True:
+            yield str(i)
+            time.sleep(0.01)
+
+    def gen_strings2():
+        threads.append(threading.current_thread())
+        i = 0
+        while True:
+            yield str(i)
+            time.sleep(0.01)
+
+    p = Parameters(string=gen_strings1)
+    await asyncio.sleep(0.02)
+    task1 = p._param__private.async_refs['string']
+    assert p.string is not None
+    p.string = gen_strings2
+    await asyncio.sleep(0.02)
+    task2 = p._param__private.async_refs['string']
+    assert task1 is not task2
+    assert task1.done()
+    assert not task2.done()
+    assert len(threads) == 2

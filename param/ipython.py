@@ -25,7 +25,7 @@ import uuid
 import param
 
 from param.display import register_display_accessor
-
+from param._utils import async_executor
 
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False
@@ -364,23 +364,46 @@ class IPythonDisplay:
 
     def __call__(self):
         from param.depends import depends
-        from param.parameterized import resolve_ref
+        from param.parameterized import Undefined, resolve_ref
         from param.reactive import rx
 
+        handle = None
         if isinstance(self._reactive, rx):
             cb = self._reactive._callback
             @depends(*self._reactive._params, watch=True)
             def update_handle(*args, **kwargs):
-                handle.update(cb())
+                if handle is not None:
+                    handle.update(cb())
         else:
             cb = self._reactive
             @depends(*resolve_ref(cb), watch=True)
             def update_handle(*args, **kwargs):
-                handle.update(cb())
+                if handle is not None:
+                    handle.update(cb())
         try:
-            handle = display(cb(), display_id=uuid.uuid4().hex) # noqa
+            obj = cb()
+            if obj is Undefined:
+                obj = None
+            handle = display(obj, display_id=uuid.uuid4().hex) # noqa
         except TypeError:
             raise NotImplementedError
 
+def ipython_async_executor(func):
+    event_loop = None
+    try:
+        ip = get_ipython()  # noqa
+        if ip.kernel:
+            # We are in Jupyter and can piggyback the tornado IOLoop
+            from tornado.ioloop import IOLoop
+            ioloop = IOLoop.current()
+            event_loop = ioloop.asyncio_loop # type: ignore
+            if event_loop.is_running():
+                ioloop.add_callback(func)
+            else:
+                event_loop.run_until_complete(func())
+            return
+    except (NameError, AttributeError):
+        pass
+    async_executor(func)
 
 register_display_accessor('_ipython_display_', IPythonDisplay)

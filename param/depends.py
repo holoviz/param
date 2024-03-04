@@ -1,3 +1,5 @@
+import inspect
+
 from collections import defaultdict
 from functools import wraps
 
@@ -31,7 +33,17 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
         {key: transform_reference(arg) for key, arg in kw.items()}
     )
 
-    if iscoroutinefunction(func):
+    if inspect.isgeneratorfunction(func):
+        @wraps(func)
+        def _depends(*args, **kw):
+            for val in func(*args, **kw):
+                yield val
+    elif inspect.isasyncgenfunction(func):
+        @wraps(func)
+        async def _depends(*args, **kw):
+            async for val in func(*args, **kw):
+                yield val
+    elif iscoroutinefunction(func):
         @wraps(func)
         async def _depends(*args, **kw):
             return await func(*args, **kw)
@@ -72,7 +84,19 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
                              'parameters by name.')
 
     if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
-        if iscoroutinefunction(func):
+        if inspect.isgeneratorfunction(func):
+            def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                for val in func(*args, **dep_kwargs):
+                    yield val
+        elif inspect.isasyncgenfunction(func):
+            async def cb(*events):
+                args = (getattr(dep.owner, dep.name) for dep in dependencies)
+                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
+                async for val in func(*args, **dep_kwargs):
+                    yield val
+        elif iscoroutinefunction(func):
             async def cb(*events):
                 args = (getattr(dep.owner, dep.name) for dep in dependencies)
                 dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}

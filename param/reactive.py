@@ -93,7 +93,7 @@ from . import Event
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
-    Parameter, Parameterized, eval_function_with_deps, get_method_owner,
+    Parameter, Parameterized, Skip, Undefined, eval_function_with_deps, get_method_owner,
     register_reference_transform, resolve_ref, resolve_value, transform_reference
 )
 from ._utils import iscoroutinefunction, full_groupby
@@ -105,6 +105,14 @@ class Wrapper(Parameterized):
     """
 
     object = Parameter(allow_refs=False)
+
+
+class GenWrapper(Parameterized):
+    """
+    Wrapper to allow streaming from generator functions.
+    """
+
+    object = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
@@ -137,6 +145,16 @@ class reactive_ops:
         """
         rxi = self._reactive if isinstance(self._reactive, rx) else self()
         return rxi._apply_operator(bool)
+
+    def buffer(self, n):
+        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        items = []
+        def collect(new, n):
+            items.append(new)
+            while len(items) > n:
+                items.pop(0)
+            return items
+        return rxi._apply_operator(collect, n)
 
     def in_(self, other):
         """
@@ -386,9 +404,13 @@ def bind(function, *args, watch=False, **kwargs):
         for kw, arg in wkwargs.items():
             if asynchronous:
                 if kw.startswith('__arg'):
-                    combined_args[int(kw[5:])] = arg
+                    index = kw[5:]
+                    if index.isdigit():
+                        combined_args[int(index)] = arg
                 elif kw.startswith('__kwarg'):
-                    combined_kwargs[kw[8:]] = arg
+                    substring = kw[8:]
+                    if substring in combined_kwargs:
+                        combined_kwargs[substring] = arg
                 continue
             elif kw.startswith('__arg') or kw.startswith('__kwarg') or kw.startswith('__fn'):
                 continue
@@ -406,7 +428,17 @@ def bind(function, *args, watch=False, **kwargs):
                 fn = eval_function_with_deps(p)
         return fn
 
-    if inspect.isasyncgenfunction(function):
+    if inspect.isgeneratorfunction(function):
+        def wrapped(*wargs, **wkwargs):
+            combined_args, combined_kwargs = combine_arguments(
+                wargs, wkwargs, asynchronous=True
+            )
+            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            for val in evaled:
+                yield val
+        wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
+        wrapped._dinfo = wrapper_fn._dinfo
+    elif inspect.isasyncgenfunction(function):
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
@@ -525,6 +557,10 @@ class rx:
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             fn = obj
             obj = eval_function_with_deps(obj)
+        elif inspect.isgeneratorfunction(obj) or inspect.isasyncgenfunction(obj):
+            wrapper = GenWrapper(object=obj)
+            fn = bind(lambda obj: obj, wrapper.param.object)
+            obj = Undefined
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
             obj = getattr(obj.owner, obj.name)
@@ -693,9 +729,16 @@ class rx:
         elif self._dirty or self._root._dirty_obj:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
+                if obj is Skip or obj is Undefined:
+                    self._current_ = Undefined
+                    raise Skip
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
+                    if obj is Skip:
+                        raise Skip
+            except Skip:
+                return self._current_
             except Exception as e:
                 self._error_state = e
                 raise e
@@ -799,7 +842,7 @@ class rx:
         # Getting all the public attributes available on the current object,
         # e.g. `sum`, `head`, etc.
         extras = [d for d in dir(current) if not d.startswith('_')]
-        if name in extras and name not in super().__dir__():
+        if (name in extras or current is Undefined) and name not in super().__dir__():
             new = self._resolve_accessor()
             # Setting the method name for a potential use later by e.g. an
             # operator or method, as in `dfi.A > 2`. or `dfi.A.max()`
@@ -979,10 +1022,16 @@ class rx:
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
         for arg in args:
-            resolved_args.append(resolve_value(arg))
+            val = resolve_value(arg)
+            if val in (Skip, Undefined):
+                raise Skip
+            resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
-            resolved_kwargs[k] = resolve_value(arg)
+            val = resolve_value(arg)
+            if val in (Skip, Undefined):
+                raise Skip
+            resolved_kwargs[k] = val
         if isinstance(fn, str):
             obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
         elif operation.get('reverse'):

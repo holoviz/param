@@ -796,6 +796,20 @@ class TestParameterized(unittest.TestCase):
 
         assert p.x == 0
 
+    def test_update_dict_and_kwargs_instance(self):
+        t = TestPO(inst='foo', notinst=0)
+        t.param.update(dict(notinst=1, inst='bar'), notinst=2)
+        assert t.notinst == 2
+        assert t.inst == 'bar'
+
+    def test_update_context_dict_and_kwargs_instance(self):
+        t = TestPO(inst='foo', notinst=0)
+        with t.param.update(dict(notinst=1, inst='bar'), notinst=2):
+            assert t.notinst == 2
+            assert t.inst == 'bar'
+        assert t.notinst == 0
+        assert t.inst == 'foo'
+
     def test_update_context_single_parameter(self):
         t = TestPO(inst='foo')
         with t.param.update(inst='bar'):

@@ -2303,14 +2303,15 @@ class Parameters:
         """
         refs = {}
         if self_.self is not None:
-            params = ([] if arg is Undefined else list(arg)) + list(kwargs)
+            private = self_.self._param__private
+            params = list(kwargs if arg is Undefined else dict(arg, **kwargs))
             for pname in params:
                 if pname in refs:
                     continue
-                elif pname in self_.self._param__private.refs:
-                    refs[pname] = self_.self._param__private.refs[pname]
-                elif pname in self_.self._param__private.async_refs:
-                    refs[pname] = self_.self._param__private.async_refs[pname]
+                elif pname in private.refs:
+                    refs[pname] = private.refs[pname]
+                elif pname in private.async_refs:
+                    refs[pname] = private.async_refs[pname]
         restore = dict(self_._update(arg, **kwargs))
         return _ParametersRestorer(parameters=self_, restore=restore, refs=refs)
 

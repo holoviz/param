@@ -614,7 +614,7 @@ class rx:
             wrapper = kwargs.pop('_wrapper', None)
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             fn = obj
-            obj = eval_function_with_deps(obj)
+            obj = None
         elif inspect.isgeneratorfunction(obj) or inspect.isasyncgenfunction(obj):
             wrapper = GenWrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)

@@ -85,6 +85,19 @@ def test_parameter_ref_update():
     p3.string = 'newly linked'
     assert p2.string == 'newly linked'
 
+def test_parameter_ref_update_context():
+    p = Parameters(string='linked')
+    p2 = Parameters(string=p.param.string)
+
+    assert p2.string == 'linked'
+    with p2.param.update(string='override'):
+        assert p2.string == 'override'
+        p.string = 'not yet linked'
+        assert p2.string == 'override'
+    assert p2.string == 'not yet linked'
+    p.string = 'relinked'
+    assert p2.string == 'relinked'
+
 def test_bind_ref():
     p = Parameters()
     p2 = Parameters(string=bind(lambda x: x + '!', p.param.string))

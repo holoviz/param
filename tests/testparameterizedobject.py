@@ -796,25 +796,19 @@ class TestParameterized(unittest.TestCase):
 
         assert p.x == 0
 
-    def test_update_error_dict_and_kwargs_instance(self):
-        t = TestPO(inst='foo')
-        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
-            t.param.update(dict(a=1), a=1)
+    def test_update_dict_and_kwargs_instance(self):
+        t = TestPO(inst='foo', notinst=0)
+        t.param.update(dict(notinst=1, inst='bar'), notinst=2)
+        assert t.notinst == 2
+        assert t.inst == 'bar'
 
-    def test_update_context_error_dict_and_kwargs_instance(self):
-        t = TestPO(inst='foo')
-        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
-            with t.param.update(dict(a=1), a=1):
-                pass
-
-    def test_update_error_dict_and_kwargs_class(self):
-        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
-            TestPO.param.update(dict(a=1), a=1)
-
-    def test_update_context_error_dict_and_kwargs_class(self):
-        with pytest.raises(ValueError, match=re.escape("TestPO.param.update accepts *either* an iterable or key=value pairs, not both")):
-            with TestPO.param.update(dict(a=1), a=1):
-                pass
+    def test_update_context_dict_and_kwargs_instance(self):
+        t = TestPO(inst='foo', notinst=0)
+        with t.param.update(dict(notinst=1, inst='bar'), notinst=2):
+            assert t.notinst == 2
+            assert t.inst == 'bar'
+        assert t.notinst == 0
+        assert t.inst == 'foo'
 
     def test_update_context_single_parameter(self):
         t = TestPO(inst='foo')

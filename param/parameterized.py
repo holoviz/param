@@ -1757,16 +1757,17 @@ class _ParametersRestorer:
     Context-manager to handle the reset of parameter values after an update.
     """
 
-    def __init__(self, *, parameters, restore):
+    def __init__(self, *, parameters, restore, refs=None):
         self._parameters = parameters
         self._restore = restore
+        self._refs = {} if refs is None else refs
 
     def __enter__(self):
         return self._restore
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         try:
-            self._parameters._update(self._restore)
+            self._parameters._update(dict(self._restore, **self._refs))
         finally:
             self._restore = {}
 
@@ -2291,7 +2292,7 @@ class Parameters:
 
     # Bothmethods
 
-    def update(self_, *args, **kwargs):
+    def update(self_, arg=Undefined, /, **kwargs):
         """
         For the given dictionary or iterable or set of param=value
         keyword arguments, sets the corresponding parameter of this
@@ -2300,22 +2301,26 @@ class Parameters:
         May also be used as a context manager to temporarily set and
         then reset parameter values.
         """
-        restore = self_._update(*args, **kwargs)
-        return _ParametersRestorer(parameters=self_, restore=restore)
+        refs = {}
+        if self_.self is not None:
+            private = self_.self._param__private
+            params = list(kwargs if arg is Undefined else dict(arg, **kwargs))
+            for pname in params:
+                if pname in refs:
+                    continue
+                elif pname in private.refs:
+                    refs[pname] = private.refs[pname]
+                elif pname in private.async_refs:
+                    refs[pname] = private.async_refs[pname]
+        restore = dict(self_._update(arg, **kwargs))
+        return _ParametersRestorer(parameters=self_, restore=restore, refs=refs)
 
-    def _update(self_, *args, **kwargs):
+    def _update(self_, arg=Undefined, /, **kwargs):
         BATCH_WATCH = self_._BATCH_WATCH
         self_._BATCH_WATCH = True
         self_or_cls = self_.self_or_cls
-        if args:
-            if len(args) == 1 and not kwargs:
-                kwargs = args[0]
-            else:
-                self_._BATCH_WATCH = False
-                raise ValueError(
-                    f"{self_.cls.__name__}.param.update accepts *either* an iterable "
-                    "or key=value pairs, not both."
-                )
+        if arg is not Undefined:
+            kwargs = dict(arg, **kwargs)
 
         trigger_params = [
             k for k in kwargs

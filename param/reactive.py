@@ -606,7 +606,7 @@ class rx:
         """
         cls._method_handlers[method] = handler
 
-    def __new__(cls, obj, **kwargs):
+    def __new__(cls, obj=None, **kwargs):
         wrapper = None
         obj = transform_reference(obj)
         if kwargs.get('fn'):
@@ -632,7 +632,7 @@ class rx:
         return inst
 
     def __init__(
-        self, obj, operation=None, fn=None, depth=0, method=None, prev=None,
+        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None,
         _shared_obj=None, _current=None, _wrapper=None, **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its

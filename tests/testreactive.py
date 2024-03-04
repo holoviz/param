@@ -128,6 +128,12 @@ def test_numpy_ufunc(ufunc):
     array = np.ndarray([1, 2, 3])
     assert ufunc(rx(array)).rx.value == ufunc(array)
 
+def test_reactive_empty_construct():
+    i = rx()
+    assert i.rx.value is None
+    i.rx.value = 2
+    assert i.rx.value == 2
+
 def test_reactive_set_new_value():
     i = rx(1)
     assert i.rx.value == 1

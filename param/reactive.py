@@ -355,9 +355,11 @@ class reactive_ops:
             )
         self._reactive._wrapper.object = resolve_value(new)
 
-    def watch(self, fn, onlychanged=True, queued=False, precedence=0):
+    def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         """
-        Adds a callback that observes the output of the pipeline.
+        Adds a callable that observes the output of the pipeline.
+        If no callable is provided this simple causes the expression
+        to be eagerly evaluated.
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -365,9 +367,11 @@ class reactive_ops:
                              "are reserved for internal Watchers.")
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
-    def _watch(self, fn, onlychanged=True, queued=False, precedence=0):
+    def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         def cb(*args):
-            fn(self.value)
+            ret = self.value
+            if fn is not None:
+                fn(ret)
 
         if isinstance(self._reactive, rx):
             params = self._reactive._params

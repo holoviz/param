@@ -358,7 +358,7 @@ class reactive_ops:
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         """
         Adds a callable that observes the output of the pipeline.
-        If no callable is provided this simple causes the expression
+        If no callable is provided this simply causes the expression
         to be eagerly evaluated.
         """
         if precedence < 0:

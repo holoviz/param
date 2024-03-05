@@ -135,6 +135,9 @@ class reactive_ops:
     def __init__(self, reactive):
         self._reactive = reactive
 
+    def _as_rx(self):
+        return self._reactive if isinstance(self._reactive, rx) else self()
+
     def __call__(self):
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
@@ -143,53 +146,49 @@ class reactive_ops:
         """
         Replacement for the ``and`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(lambda obj, other: obj and other, other)
+        return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
     def bool(self):
         """
         __bool__ cannot be implemented so it is provided as a method.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(bool)
+        return self._as_rx()._apply_operator(bool)
 
     def buffer(self, n):
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        """
+        Collects the last n items that were emmitted.
+        """
         items = []
         def collect(new, n):
             items.append(new)
             while len(items) > n:
                 items.pop(0)
             return items
-        return rxi._apply_operator(collect, n)
+        return self._as_rx()._apply_operator(collect, n)
 
     def in_(self, other):
         """
         Replacement for the ``in`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.contains, other, reverse=True)
+        return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
     def is_(self, other):
         """
         Replacement for the ``is`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.is_, other)
+        return self._as_rx()._apply_operator(operator.is_, other)
 
     def is_not(self, other):
         """
         Replacement for the ``is not`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.is_not, other)
+        return self._as_rx()._apply_operator(operator.is_not, other)
 
     def len(self):
         """
         __len__ cannot be implemented so it is provided as a method.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(len)
+        return self._as_rx()._apply_operator(len)
 
     def map(self, func, *args, **kwargs):
         """
@@ -204,24 +203,21 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
         def apply(vs, *args, **kwargs):
             return [func(v, *args, **kwargs) for v in vs]
-        return rxi._apply_operator(apply, *args, **kwargs)
+        return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
     def not_(self):
         """
         __bool__ cannot be implemented so not has to be provided as a method.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.not_)
+        return self._as_rx()._apply_operator(operator.not_)
 
     def or_(self, other):
         """
         Replacement for the ``or`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(lambda obj, other: obj or other, other)
+        return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
     def pipe(self, func, *args, **kwargs):
         """
@@ -236,8 +232,7 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(func, *args, **kwargs)
+        return self._as_rx()._apply_operator(func, *args, **kwargs)
 
     def updating(self):
         """

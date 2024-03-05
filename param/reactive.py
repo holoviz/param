@@ -190,7 +190,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(len)
 
-    def map(self, func, *args, **kwargs):
+    def map(self, func, /, *args, **kwargs):
         """
         Apply a function to each item.
 
@@ -219,7 +219,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
-    def pipe(self, func, *args, **kwargs):
+    def pipe(self, func, /, *args, **kwargs):
         """
         Apply chainable functions.
 

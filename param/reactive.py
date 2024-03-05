@@ -364,6 +364,7 @@ class reactive_ops:
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         def cb(*args):
+            # Resolve value to ensure eager evaluation, then apply func if provided
             ret = self.value
             if fn is not None:
                 fn(ret)
@@ -605,19 +606,24 @@ class rx:
         wrapper = None
         obj = transform_reference(obj)
         if kwargs.get('fn'):
+            # rx._clone codepath
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
         elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
+            # Resolves generator and coroutine functions lazily
             wrapper = GenWrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
+            # Bound functions and methods are resolved on access
             fn = obj
             obj = None
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
             obj = getattr(obj.owner, obj.name)
         else:
+            # For all other objects wrap them so they can be updated
+            # via .rx.value property
             wrapper = Wrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
         inst = super(rx, cls).__new__(cls)

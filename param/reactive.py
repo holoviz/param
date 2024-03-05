@@ -607,13 +607,13 @@ class rx:
         if kwargs.get('fn'):
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
-            fn = obj
-            obj = None
-        elif inspect.isgeneratorfunction(obj) or inspect.isasyncgenfunction(obj):
+        elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
             wrapper = GenWrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
+        elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
+            fn = obj
+            obj = None
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
             obj = getattr(obj.owner, obj.name)

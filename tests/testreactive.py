@@ -421,6 +421,16 @@ def test_reactive_when_initial():
     p.param.trigger('event')
     assert integer.rx.value == 4
 
+async def test_reactive_async_func():
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return 2
+
+    async_rx = rx(async_func) + 2
+    assert async_rx.rx.value is param.Undefined
+    await asyncio.sleep(0.04)
+    assert async_rx.rx.value == 4
+
 async def test_reactive_gen():
     def gen():
         yield 1
@@ -437,6 +447,26 @@ async def test_reactive_gen():
             break
     assert rxgen.rx.value == 2
 
+async def test_reactive_gen_with_dep():
+    def gen(i):
+        yield i+1
+        time.sleep(0.05)
+        yield i+2
+
+    irx = rx(0)
+    rxgen = rx(bind(gen, irx))
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.04)
+    assert rxgen.rx.value == 1
+    irx.rx.value = 3
+    await asyncio.sleep(0.04)
+    assert rxgen.rx.value == 4
+    for _ in range(3):
+        await asyncio.sleep(0.05)
+        if rxgen.rx.value == 5:
+            break
+    assert rxgen.rx.value == 5
+
 async def test_reactive_async_gen():
     async def gen():
         yield 1
@@ -449,3 +479,20 @@ async def test_reactive_async_gen():
     assert rxgen.rx.value == 1
     await asyncio.sleep(0.1)
     assert rxgen.rx.value == 2
+
+async def test_reactive_async_gen_with_dep():
+    async def gen(i):
+        yield i+1
+        await asyncio.sleep(0.1)
+        yield i+2
+
+    irx = rx(0)
+    rxgen = rx(bind(gen, irx))
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.05)
+    assert rxgen.rx.value == 1
+    irx.rx.value = 3
+    await asyncio.sleep(0.05)
+    irx.rx.value = 4
+    await asyncio.sleep(0.1)
+    assert rxgen.rx.value == 5

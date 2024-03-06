@@ -128,6 +128,12 @@ def test_numpy_ufunc(ufunc):
     array = np.ndarray([1, 2, 3])
     assert ufunc(rx(array)).rx.value == ufunc(array)
 
+def test_reactive_empty_construct():
+    i = rx()
+    assert i.rx.value is None
+    i.rx.value = 2
+    assert i.rx.value == 2
+
 def test_reactive_set_new_value():
     i = rx(1)
     assert i.rx.value == 1
@@ -271,6 +277,42 @@ def test_reactive_bool():
     i.rx.value = 0
     assert b.rx.value is False
 
+def test_reactive_not_():
+    i = rx(1)
+    b = i.rx.not_()
+    assert b.rx.value is False
+    i.rx.value = 0
+    assert b.rx.value is True
+
+def test_reactive_and_():
+    i = rx('')
+    b = i.rx.and_('foo')
+    assert b.rx.value == ''
+    i.rx.value = 'bar'
+    assert b.rx.value == 'foo'
+
+def test_reactive_or_():
+    i = rx('')
+    b = i.rx.or_('')
+    assert b.rx.value == ''
+    i.rx.value = 'foo'
+    assert b.rx.value == 'foo'
+
+def test_reactive_map():
+    i = rx(range(3))
+    b = i.rx.map(lambda x: x*2)
+    assert b.rx.value == [0, 2, 4]
+    i.rx.value = range(1, 4)
+    assert b.rx.value == [2, 4, 6]
+
+def test_reactive_map_args():
+    i = rx(range(3))
+    j = rx(2)
+    b = i.rx.map(lambda x, m: x*m, j)
+    assert b.rx.value == [0, 2, 4]
+    j.rx.value = 3
+    assert b.rx.value == [0, 3, 6]
+
 def test_reactive_iter():
     i = rx(('a', 'b'))
     a, b = i
@@ -361,6 +403,34 @@ def test_reactive_clone_evaluates_once():
     assert namex.rx.pipe(debug).title().rx.value == 'Bob'
     assert len(items) == 1
 
+def test_reactive_when():
+    p = Parameters(integer=3)
+    integer = p.param.integer.rx().rx.when(p.param.event)
+    assert integer.rx.value == 3
+    p.integer = 4
+    assert integer.rx.value == 3
+    p.param.trigger('event')
+    assert integer.rx.value == 4
+
+def test_reactive_when_initial():
+    p = Parameters(integer=3)
+    integer = p.param.integer.rx().rx.when(p.param.event, initial=None)
+    assert integer.rx.value is None
+    p.integer = 4
+    assert integer.rx.value is None
+    p.param.trigger('event')
+    assert integer.rx.value == 4
+
+async def test_reactive_async_func():
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return 2
+
+    async_rx = rx(async_func) + 2
+    assert async_rx.rx.value is param.Undefined
+    await asyncio.sleep(0.04)
+    assert async_rx.rx.value == 4
+
 async def test_reactive_gen():
     def gen():
         yield 1
@@ -377,6 +447,26 @@ async def test_reactive_gen():
             break
     assert rxgen.rx.value == 2
 
+async def test_reactive_gen_with_dep():
+    def gen(i):
+        yield i+1
+        time.sleep(0.05)
+        yield i+2
+
+    irx = rx(0)
+    rxgen = rx(bind(gen, irx))
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.04)
+    assert rxgen.rx.value == 1
+    irx.rx.value = 3
+    await asyncio.sleep(0.04)
+    assert rxgen.rx.value == 4
+    for _ in range(3):
+        await asyncio.sleep(0.05)
+        if rxgen.rx.value == 5:
+            break
+    assert rxgen.rx.value == 5
+
 async def test_reactive_async_gen():
     async def gen():
         yield 1
@@ -389,3 +479,20 @@ async def test_reactive_async_gen():
     assert rxgen.rx.value == 1
     await asyncio.sleep(0.1)
     assert rxgen.rx.value == 2
+
+async def test_reactive_async_gen_with_dep():
+    async def gen(i):
+        yield i+1
+        await asyncio.sleep(0.1)
+        yield i+2
+
+    irx = rx(0)
+    rxgen = rx(bind(gen, irx))
+    assert rxgen.rx.value is param.Undefined
+    await asyncio.sleep(0.05)
+    assert rxgen.rx.value == 1
+    irx.rx.value = 3
+    await asyncio.sleep(0.05)
+    irx.rx.value = 4
+    await asyncio.sleep(0.1)
+    assert rxgen.rx.value == 5

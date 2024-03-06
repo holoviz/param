@@ -135,56 +135,91 @@ class reactive_ops:
     def __init__(self, reactive):
         self._reactive = reactive
 
+    def _as_rx(self):
+        return self._reactive if isinstance(self._reactive, rx) else self()
+
     def __call__(self):
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
+
+    def and_(self, other):
+        """
+        Replacement for the ``and`` statement.
+        """
+        return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
     def bool(self):
         """
         __bool__ cannot be implemented so it is provided as a method.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(bool)
+        return self._as_rx()._apply_operator(bool)
 
     def buffer(self, n):
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
+        """
+        Collects the last n items that were emmitted.
+        """
         items = []
         def collect(new, n):
             items.append(new)
             while len(items) > n:
                 items.pop(0)
             return items
-        return rxi._apply_operator(collect, n)
+        return self._as_rx()._apply_operator(collect, n)
 
     def in_(self, other):
         """
         Replacement for the ``in`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.contains, other, reverse=True)
+        return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
     def is_(self, other):
         """
         Replacement for the ``is`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.is_, other)
+        return self._as_rx()._apply_operator(operator.is_, other)
 
     def is_not(self, other):
         """
         Replacement for the ``is not`` statement.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(operator.is_not, other)
+        return self._as_rx()._apply_operator(operator.is_not, other)
 
     def len(self):
         """
         __len__ cannot be implemented so it is provided as a method.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(len)
+        return self._as_rx()._apply_operator(len)
 
-    def pipe(self, func, *args, **kwargs):
+    def map(self, func, /, *args, **kwargs):
+        """
+        Apply a function to each item.
+
+        Arguments
+        ---------
+        func: function
+          Function to apply.
+        args: iterable, optional
+          Positional arguments to pass to `func`.
+        kwargs: mapping, optional
+          A dictionary of keywords to pass to `func`.
+        """
+        def apply(vs, *args, **kwargs):
+            return [func(v, *args, **kwargs) for v in vs]
+        return self._as_rx()._apply_operator(apply, *args, **kwargs)
+
+    def not_(self):
+        """
+        __bool__ cannot be implemented so not has to be provided as a method.
+        """
+        return self._as_rx()._apply_operator(operator.not_)
+
+    def or_(self, other):
+        """
+        Replacement for the ``or`` statement.
+        """
+        return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
+
+    def pipe(self, func, /, *args, **kwargs):
         """
         Apply chainable functions.
 
@@ -197,8 +232,7 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        rxi = self._reactive if isinstance(self._reactive, rx) else self()
-        return rxi._apply_operator(func, *args, **kwargs)
+        return self._as_rx()._apply_operator(func, *args, **kwargs)
 
     def updating(self):
         """
@@ -209,17 +243,32 @@ class reactive_ops:
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
 
-    def when(self, *dependencies):
+    def when(self, *dependencies, initial=Undefined):
         """
         Returns a reactive expression that emits the contents of this
-        expression only when the condition changes.
+        expression only when the dependencies change. If initial value
+        is provided and the dependencies are all param.Event types the
+        expression will not be evaluated until the first event is
+        triggered.
 
         Arguments
         ---------
         dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
+        initial: object
+          Object that will stand in for the actual value until the
+          first time a param.Event in the dependencies is triggered.
         """
-        return bind(lambda *_: self.value, *dependencies).rx()
+        deps = [p for d in dependencies for p in resolve_ref(d)]
+        is_event = all(isinstance(dep, Event) for dep in deps)
+        def eval(*_, evaluated=[]):
+            if is_event and initial is not Undefined and not evaluated:
+                # Abuse mutable default value to keep track of evaluation state
+                evaluated.append(True)
+                return initial
+            else:
+                return self.value
+        return bind(eval, *deps).rx()
 
     def where(self, x, y):
         """
@@ -301,9 +350,11 @@ class reactive_ops:
             )
         self._reactive._wrapper.object = resolve_value(new)
 
-    def watch(self, fn, onlychanged=True, queued=False, precedence=0):
+    def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         """
-        Adds a callback that observes the output of the pipeline.
+        Adds a callable that observes the output of the pipeline.
+        If no callable is provided this simply causes the expression
+        to be eagerly evaluated.
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -311,9 +362,12 @@ class reactive_ops:
                              "are reserved for internal Watchers.")
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
-    def _watch(self, fn, onlychanged=True, queued=False, precedence=0):
+    def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         def cb(*args):
-            fn(self.value)
+            # Resolve value to ensure eager evaluation, then apply func if provided
+            ret = self.value
+            if fn is not None:
+                fn(ret)
 
         if isinstance(self._reactive, rx):
             params = self._reactive._params
@@ -548,23 +602,28 @@ class rx:
         """
         cls._method_handlers[method] = handler
 
-    def __new__(cls, obj, **kwargs):
+    def __new__(cls, obj=None, **kwargs):
         wrapper = None
         obj = transform_reference(obj)
         if kwargs.get('fn'):
+            # rx._clone codepath
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
-            fn = obj
-            obj = eval_function_with_deps(obj)
-        elif inspect.isgeneratorfunction(obj) or inspect.isasyncgenfunction(obj):
+        elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
+            # Resolves generator and coroutine functions lazily
             wrapper = GenWrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
+        elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
+            # Bound functions and methods are resolved on access
+            fn = obj
+            obj = None
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
             obj = getattr(obj.owner, obj.name)
         else:
+            # For all other objects wrap them so they can be updated
+            # via .rx.value property
             wrapper = Wrapper(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
         inst = super(rx, cls).__new__(cls)
@@ -574,7 +633,7 @@ class rx:
         return inst
 
     def __init__(
-        self, obj, operation=None, fn=None, depth=0, method=None, prev=None,
+        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None,
         _shared_obj=None, _current=None, _wrapper=None, **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
@@ -918,8 +977,6 @@ class rx:
         return self._apply_operator(operator.inv)
     def __neg__(self):
         return self._apply_operator(operator.neg)
-    def __not__(self):
-        return self._apply_operator(operator.not_)
     def __pos__(self):
         return self._apply_operator(operator.pos)
     def __trunc__(self):

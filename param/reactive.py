@@ -86,6 +86,7 @@ import math
 import operator
 
 from collections.abc import Iterable, Iterator
+from functools import partial
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
 
@@ -363,21 +364,13 @@ class reactive_ops:
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
-        def cb(*args):
-            # Resolve value to ensure eager evaluation, then apply func if provided
-            ret = self.value
-            if fn is not None:
-                fn(ret)
-
-        if isinstance(self._reactive, rx):
-            params = self._reactive._params
-        else:
-            params = resolve_ref(self._reactive)
-        for _, group in full_groupby(params, lambda x: id(x.owner)):
-            group[0].owner.param._watch(
-                cb, [dep.name for dep in group], onlychanged=onlychanged,
-                queued=queued, precedence=precedence
-            )
+        def cb(value):
+            from .parameterized import async_executor
+            if iscoroutinefunction(fn):
+                async_executor(partial(fn, value))
+            elif fn is not None:
+                fn(value)
+        bind(cb, self._reactive, watch=True)
 
 
 def bind(function, *args, watch=False, **kwargs):

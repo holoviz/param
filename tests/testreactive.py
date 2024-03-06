@@ -387,6 +387,18 @@ def test_reactive_watch_on_set_input():
     string.rx.value = 'new string'
     assert items == ['new string!']
 
+async def test_reactive_watch_async_on_event():
+    p = Parameters()
+    event = p.param.event.rx()
+    items = []
+    event.rx.watch(items.append)
+    p.param.trigger('event')
+    for _ in range(3):
+        await asyncio.sleep(0.05)
+        if items == [True]:
+            break
+    assert items == [True]
+
 def test_reactive_set_value_non_root_raises():
     rx_val = rx(1) + 1
     with pytest.raises(AttributeError):

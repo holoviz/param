@@ -235,6 +235,36 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(func, *args, **kwargs)
 
+    def resolve(self, recursive=True):
+        """
+        Resolves references held by the expression.
+
+        As an example if the expression returns a list of parameters
+        this operation will return a list of the parameter values.
+
+        Arguments
+        ---------
+        nested: bool
+          Whether to resolve nested references.
+        """
+        reactive = self._as_rx()
+        params = reactive._params
+        val = reactive.rx.value
+        trigger = Trigger(parameters=params)
+        watchers = []
+        def _update_trigger(o):
+            trigger.param.trigger('value')
+        def _update_triggers(o):
+            for w in watchers:
+                (w.inst or w.cls).param.unwatch(w)
+            refs = resolve_ref(o, recursive=recursive)
+            trigger.parameters = params+refs
+            for ref in refs:
+                watchers.append(ref.owner.param.watch(_update_trigger, ref.name))
+        self._watch(_update_triggers)
+        _update_triggers(val)
+        return bind(lambda *_: resolve_value(reactive.rx.value, recursive), *params, trigger.param.value).rx()
+
     def updating(self):
         """
         Returns a new expression that is True while the expression is updating.

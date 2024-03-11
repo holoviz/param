@@ -164,11 +164,13 @@ def eval_function_with_deps(function):
             kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
     return function(*args, **kwargs)
 
-def resolve_value(value):
+def resolve_value(value, recursive=True):
     """
     Resolves the current value of a dynamic reference.
     """
-    if isinstance(value, (list, tuple)):
+    if not recursive:
+        pass
+    elif isinstance(value, (list, tuple)):
         return type(value)(resolve_value(v) for v in value)
     elif isinstance(value, dict):
         return type(value)((resolve_value(k), resolve_value(v)) for k, v in value.items())
@@ -2007,14 +2009,15 @@ class Parameters:
         updates = {}
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
-            deps = resolve_ref(ref, self_[pname].nested_refs)
+            recursive = self_[pname].nested_refs
+            deps = resolve_ref(ref, recursive)
             is_gen = inspect.isgeneratorfunction(ref)
             is_async = iscoroutinefunction(ref) or is_gen
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
             try:
-                new_val = resolve_value(ref)
+                new_val = resolve_value(ref, recursive)
             except Skip:
                 new_val = Undefined
             if new_val is Skip or new_val is Undefined:
@@ -2037,7 +2040,7 @@ class Parameters:
             return None, None, value, False
         ref = value
         try:
-            value = resolve_value(value)
+            value = resolve_value(value, recursive=pobj.nested_refs)
         except Skip:
             value = Undefined
         if is_async:

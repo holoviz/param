@@ -518,16 +518,16 @@ def test_root_invalidation():
         computed.append(info)
         return value
 
-    expr = arx.title().rx.pipe(debug, 'a')+brx.title().rx.pipe(debug, 'b')
+    expr = arx.title().rx.pipe(debug, '1') + brx.title().rx.pipe(debug, '2')
 
     assert expr.rx.value == 'AB'
-    assert computed == ['a', 'b']
+    assert computed == ['1', '2']
 
     brx.rx.value = 'c'
 
     assert expr.rx.value == 'AC'
-    assert computed == ['a', 'b', 'b']
+    assert computed == ['1', '2', '2']
 
     arx.rx.value = 'd'
     assert expr.rx.value == 'DC'
-    assert computed == ['a', 'b', 'b', 'a']
+    assert computed == ['1', '2', '2', '1']

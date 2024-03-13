@@ -508,3 +508,26 @@ async def test_reactive_async_gen_with_dep():
     irx.rx.value = 4
     await asyncio.sleep(0.1)
     assert rxgen.rx.value == 5
+
+def test_root_invalidation():
+    arx = rx('a')
+    brx = rx('b')
+
+    computed = []
+    def debug(value, info):
+        computed.append(info)
+        return value
+
+    expr = arx.title().rx.pipe(debug, 'a')+brx.title().rx.pipe(debug, 'b')
+
+    assert expr.rx.value == 'AB'
+    assert computed == ['a', 'b']
+
+    brx.rx.value = 'c'
+
+    assert expr.rx.value == 'AC'
+    assert computed == ['a', 'b', 'b']
+
+    arx.rx.value = 'd'
+    assert expr.rx.value == 'DC'
+    assert computed == ['a', 'b', 'b', 'a']

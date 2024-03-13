@@ -90,19 +90,19 @@ from functools import partial
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
 
-from . import Event
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Parameter, Parameterized, Skip, Undefined, eval_function_with_deps, get_method_owner,
     register_reference_transform, resolve_ref, resolve_value, transform_reference
 )
+from .parameters import Boolean, Event
 from ._utils import iscoroutinefunction, full_groupby
 
 
 class Wrapper(Parameterized):
     """
-    Simple wrapper to allow updating literal values easily.
+    Helper class to allow updating literal values easily.
     """
 
     object = Parameter(allow_refs=False)
@@ -110,19 +110,71 @@ class Wrapper(Parameterized):
 
 class GenWrapper(Parameterized):
     """
-    Wrapper to allow streaming from generator functions.
+    Helper class to allow streaming from generator functions.
     """
 
     object = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
+    """
+    Helper class to allow triggering an event under some condition.
+    """
 
     value = Event()
 
     def __init__(self, parameters, **params):
         super().__init__(**params)
         self.parameters = parameters
+
+class Resolver(Parameterized):
+    """
+    Helper class to allow (recursively) resolving references.
+    """
+
+    object = Parameter(allow_refs=True)
+
+    recursive = Boolean(default=False)
+
+    value = Parameter()
+
+    def __init__(self, **params):
+        self._watchers = []
+        super().__init__(**params)
+
+    def _resolve_value(self, *events):
+        nested = self.param.object.nested_refs
+        refs = resolve_ref(self.object, nested)
+        value = resolve_value(self.object, nested)
+        if self.recursive:
+            new_refs = [r for r in resolve_ref(value, nested) if r not in refs]
+            while new_refs:
+                refs += new_refs
+                value = resolve_value(value, nested)
+                new_refs = [r for r in resolve_ref(value, nested) if r not in refs]
+            if events:
+                self._update_refs(refs)
+        self.value = value
+        return refs
+
+    @depends('object', watch=True, on_init=True)
+    def _resolve_object(self):
+        refs = self._resolve_value()
+        self._update_refs(refs)
+
+    def _update_refs(self, refs):
+        for w in self._watchers:
+            (w.inst or w.cls).param.unwatch(w)
+        self._watchers = []
+        for _, params in full_groupby(refs, lambda x: id(x.owner)):
+            self._watchers.append(
+                params[0].owner.param.watch(self._resolve_value, [p.name for p in params])
+            )
+
+
+class NestedResolver(Resolver):
+
+    object = Parameter(allow_refs=True, nested_refs=True)
 
 
 class reactive_ops:
@@ -235,7 +287,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(func, *args, **kwargs)
 
-    def resolve(self, recursive=True):
+    def resolve(self, nested=True, recursive=False):
         """
         Resolves references held by the expression.
 
@@ -245,25 +297,16 @@ class reactive_ops:
         Arguments
         ---------
         nested: bool
-          Whether to resolve nested references.
+          Whether to resolve references contained within nested objects,
+          i.e. tuples, lists, sets and dictionaries.
+        recursive: bool
+          Whether to recursively resolve references, i.e. if a reference
+          itself returns a reference we recurse into it until no more
+          references can be resolved.
         """
-        reactive = self._as_rx()
-        params = reactive._params
-        val = reactive.rx.value
-        trigger = Trigger(parameters=params)
-        watchers = []
-        def _update_trigger(o):
-            trigger.param.trigger('value')
-        def _update_triggers(o):
-            for w in watchers:
-                (w.inst or w.cls).param.unwatch(w)
-            refs = resolve_ref(o, recursive=recursive)
-            trigger.parameters = params+refs
-            for ref in refs:
-                watchers.append(ref.owner.param.watch(_update_trigger, ref.name))
-        self._watch(_update_triggers)
-        _update_triggers(val)
-        return bind(lambda *_: resolve_value(reactive.rx.value, recursive), *params, trigger.param.value).rx()
+        resolver_type = NestedResolver if nested else Resolver
+        resolver = resolver_type(object=self._reactive, recursive=recursive)
+        return resolver.param.value.rx()
 
     def updating(self):
         """

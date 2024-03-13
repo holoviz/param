@@ -763,7 +763,9 @@ class rx:
         """
         if self._fn is not None:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
-                params[0].owner.param._watch(self._invalidate_obj, [p.name for p in params], precedence=-1)
+                fps = [p.name for p in params if p in self._root._fn_params]
+                if fps:
+                    params[0].owner.param._watch(self._invalidate_obj, fps, precedence=-1)
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
             params[0].owner.param._watch(self._invalidate_current, [p.name for p in params], precedence=-1)
 
@@ -790,6 +792,7 @@ class rx:
                     if obj is Skip:
                         raise Skip
             except Skip:
+                self._dirty = False
                 return self._current_
             except Exception as e:
                 self._error_state = e

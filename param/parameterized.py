@@ -4199,13 +4199,13 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
     #PARAM3_DEPRECATION
     @property
-    @_deprecated(extra_msg="Use `inst.param.watchers` instead.", warning_cat=FutureWarning)
+    @_deprecated(extra_msg="Use `inst.param.watchers` instead.", warning_cat=_ParamFutureWarning)
     def _param_watchers(self):
         return self._param__private.watchers
 
     #PARAM3_DEPRECATION
     @_param_watchers.setter
-    @_deprecated(extra_msg="Use `inst.param.watchers = ...` instead.", warning_cat=FutureWarning)
+    @_deprecated(extra_msg="Use `inst.param.watchers = ...` instead.", warning_cat=_ParamFutureWarning)
     def _param_watchers(self, value):
         self._param__private.watchers = value
 

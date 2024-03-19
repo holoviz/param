@@ -22,7 +22,7 @@ def specific_filter():
 class TestDeprecateParameter:
 
     def test_deprecate_posargs_Parameter(self):
-        with pytest.raises(param._utils.ParamPendingDeprecationWarning):
+        with pytest.raises(param._utils.ParamDeprecationWarning):
             param.Parameter(1, 'doc')
 
     def test_deprecate_List_class_(self):

@@ -533,7 +533,7 @@ def concrete_descendents(parentclass):
 
     Only non-abstract classes will be included.
     """
-    return {c.__name__:c for c in descendents(parentclass)
+    return {c.__name__: c for c in descendents(parentclass)
             if not _is_abstract(c)}
 
 def _abbreviate_paths(pathspec,named_paths):
@@ -581,13 +581,6 @@ def exceptions_summarized():
         etype, value, tb = sys.exc_info()
         print(f"{etype.__name__}: {value}", file=sys.stderr)
 
-
-def _in_ipython():
-    try:
-        get_ipython()
-        return True
-    except NameError:
-        return False
 
 _running_tasks = set()
 

@@ -584,19 +584,14 @@ async def test_reactive_gen_pipe():
 
     rxv = rx(0)
     rxgen = rxv.rx.pipe(gen)
+    rxgen.rx.watch()
     assert rxgen.rx.value is param.Undefined
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    for _ in range(3):
-        await asyncio.sleep(0.05)
-        if rxgen.rx.value == 2:
-            break
+    await asyncio.sleep(0.07)
     assert rxgen.rx.value == 2
     rxv.rx.value = 2
-    for _ in range(3):
-        await asyncio.sleep(0.05)
-        if rxgen.rx.value == 3:
-            break
+    await asyncio.sleep(0.03)
     assert rxgen.rx.value == 3
 
 async def test_reactive_gen_with_dep():
@@ -635,10 +630,7 @@ async def test_reactive_gen_pipe_with_dep():
     irx.rx.value = 3
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 4
-    for _ in range(3):
-        await asyncio.sleep(0.05)
-        if rxgen.rx.value == 5:
-            break
+    await asyncio.sleep(0.05)
     assert rxgen.rx.value == 5
     rxv.rx.value = 5
     await asyncio.sleep(0.03)

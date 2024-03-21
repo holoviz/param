@@ -551,7 +551,6 @@ async def test_reactive_async_func():
 
 async def test_reactive_pipe_async_func():
     async def async_func(value):
-        print(value)
         await asyncio.sleep(0.02)
         return value+2
 

@@ -22,7 +22,7 @@ def specific_filter():
 class TestDeprecateParameter:
 
     def test_deprecate_posargs_Parameter(self):
-        with pytest.raises(param._utils.ParamPendingDeprecationWarning):
+        with pytest.raises(param._utils.ParamDeprecationWarning):
             param.Parameter(1, 'doc')
 
     def test_deprecate_List_class_(self):
@@ -103,11 +103,11 @@ class TestDeprecateParameterizedModule:
             param.parameterized.all_equal(1, 1)
 
     def test_deprecate_param_watchers(self):
-        with pytest.raises(FutureWarning):
+        with pytest.raises(param._utils.ParamFutureWarning):
             param.parameterized.Parameterized()._param_watchers
 
     def test_deprecate_param_watchers_setter(self):
-        with pytest.raises(FutureWarning):
+        with pytest.raises(param._utils.ParamFutureWarning):
             param.parameterized.Parameterized()._param_watchers = {}
 
     def test_param_error_unsafe_ops_before_initialized(self):

@@ -652,7 +652,7 @@ class TestWatch(unittest.TestCase):
 
         obj.param.watch(lambda: '', ['a', 'b'])
 
-        with pytest.warns(FutureWarning):
+        with pytest.warns(param._utils.ParamFutureWarning):
             pw = obj._param_watchers
         assert isinstance(pw, dict)
         for pname in ('a', 'b'):
@@ -667,7 +667,7 @@ class TestWatch(unittest.TestCase):
 
         obj.param.watch(accumulator, ['a', 'b'])
 
-        with pytest.warns(FutureWarning):
+        with pytest.warns(param._utils.ParamFutureWarning):
             pw = obj._param_watchers
         del pw['a']
 

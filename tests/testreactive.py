@@ -307,6 +307,20 @@ def test_reactive_map():
     i.rx.value = range(1, 4)
     assert b.rx.value == [2, 4, 6]
 
+async def test_reactive_async_map():
+    i = rx(range(3))
+    async def mul(x):
+        await asyncio.sleep(0.05)
+        return x*2
+    b = i.rx.map(mul)
+    assert b.rx.value is param.Undefined
+    await asyncio.sleep(0.1)
+    assert b.rx.value == [0, 2, 4]
+    i.rx.value = range(1, 4)
+    assert b.rx.value == [0, 2, 4]
+    await asyncio.sleep(0.1)
+    assert b.rx.value == [2, 4, 6]
+
 def test_reactive_map_args():
     i = rx(range(3))
     j = rx(2)

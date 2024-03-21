@@ -258,8 +258,12 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        def apply(vs, *args, **kwargs):
-            return [func(v, *args, **kwargs) for v in vs]
+        if inspect.iscoroutinefunction(func):
+            async def apply(vs, *args, **kwargs):
+                return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
+        else:
+            def apply(vs, *args, **kwargs):
+                return [func(v, *args, **kwargs) for v in vs]
         return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
     def not_(self):

@@ -1,6 +1,14 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", 'hatch-cython', 'cython']
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel.hooks.cython]
+dependencies = ["hatch-cython", 'cython']
+
+[tool.hatch.build.targets.wheel.hooks.cython.options]
+includes = []
+directives = { boundscheck = false, nonecheck = false, language_level = 3, binding = true }
+compile_py = false
 
 [project]
 name = "param"
@@ -92,6 +100,9 @@ Releases = "https://github.com/holoviz/param/releases"
 Source = "https://github.com/holoviz/param"
 HoloViz = "https://holoviz.org/"
 
+[tool.setuptools]
+packages = ["param", "numbergen"]
+
 [tool.hatch.version]
 source = "vcs"
 
@@ -100,8 +111,8 @@ include = [
     "/param",
     "/numbergen",
 ]
-
 [tool.hatch.build.targets.sdist]
+packages = ["param", "numbergen"]
 include = [
     "/param",
     "/numbergen",

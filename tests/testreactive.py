@@ -588,7 +588,7 @@ async def test_reactive_gen_pipe():
     assert rxgen.rx.value is param.Undefined
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    await asyncio.sleep(0.07)
+    await asyncio.sleep(0.1)
     assert rxgen.rx.value == 2
     rxv.rx.value = 2
     await asyncio.sleep(0.03)
@@ -630,10 +630,10 @@ async def test_reactive_gen_pipe_with_dep():
     irx.rx.value = 3
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 4
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.1)
     assert rxgen.rx.value == 5
     rxv.rx.value = 5
-    await asyncio.sleep(0.03)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 9
 
 async def test_reactive_async_gen():

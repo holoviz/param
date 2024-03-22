@@ -258,6 +258,11 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
+        if inspect.isasyncgenfunction(func) or inspect.isgeneratorfunction(func):
+            raise TypeError(
+                "Cannot map a generator function. Only regular function "
+                "or coroutine functions are permitted."
+            )
         if inspect.iscoroutinefunction(func):
             async def apply(vs, *args, **kwargs):
                 return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))

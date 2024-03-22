@@ -2,7 +2,7 @@
 
 ## Version 2.1.0
 
-Date: 2024-01-22
+Date: 2024-03-22
 
 This minor release focuses on improving reactive expressions and support for asynchronous (and synchronous) generators. Many thanks to @maximelt, @Hoxbro and @philippjfr for their continued maintenance and development efforts.
 

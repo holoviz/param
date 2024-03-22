@@ -9,9 +9,9 @@ This minor release focuses on improving reactive expressions and support for asy
 ### Enhancements
 
 - Improvements for synchronous and asychronous generators ([#908](https://github.com/holoviz/param/pull/908))
-- Additions to the .rx namespace including `and_`, `bool`, `map`, `not_`, `or_`, `updating` ([#906](https://github.com/holoviz/param/pull/906))
-- Add support for asynchronous watcher to `rx` ([#917](https://github.com/holoviz/param/pull/917))
-- Make it possible to resolve rx expressions recursively with `.rx.resolve` ([#918](https://github.com/holoviz/param/pull/918))
+- Additions to the .rx namespace including `and_`, `bool`, `map`, `not_`, `or_` and `updating` ([#906](https://github.com/holoviz/param/pull/906))
+- Add support for adding asynchronous watcher to `rx` ([#917](https://github.com/holoviz/param/pull/917))
+- Make it possible to resolve reactive expressions recursively with `.rx.resolve` ([#918](https://github.com/holoviz/param/pull/918))
 - Add support for async and generator functions in `.rx.pipe` ([#924](https://github.com/holoviz/param/pull/924))
 
 ### Bug fixes

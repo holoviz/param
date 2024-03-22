@@ -1,5 +1,28 @@
 # Releases
 
+## Version 2.1.0
+
+Date: 2024-03-22
+
+This minor release focuses on improving reactive expressions and support for asynchronous (and synchronous) generators. Many thanks to @maximelt, @Hoxbro and @philippjfr for their continued maintenance and development efforts.
+
+### Enhancements
+
+- Improvements for synchronous and asychronous generators ([#908](https://github.com/holoviz/param/pull/908))
+- Additions to the .rx namespace including `and_`, `bool`, `map`, `not_`, `or_` and `updating` ([#906](https://github.com/holoviz/param/pull/906))
+- Add support for adding asynchronous watcher to `rx` ([#917](https://github.com/holoviz/param/pull/917))
+- Make it possible to resolve reactive expressions recursively with `.rx.resolve` ([#918](https://github.com/holoviz/param/pull/918))
+- Add support for async and generator functions in `.rx.pipe` ([#924](https://github.com/holoviz/param/pull/924))
+
+### Bug fixes
+
+- Ensure that `.param.update` context manager restore refs ([#915](https://github.com/holoviz/param/pull/915))
+- Avoid overeager root invalidation on `rx` leading to unnecessary evaluation ([#919](https://github.com/holoviz/param/pull/919))
+
+### Deprecations
+
+- Passing positional arguments to `Parameter` now raises a `ParamDeprecationWarning` ([#921](https://github.com/holoviz/param/pull/921))
+
 ## Version 2.0.2
 
 Date: 2024-01-17

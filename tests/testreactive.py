@@ -27,6 +27,8 @@ import pytest
 from param.parameterized import Skip
 from param.reactive import bind, rx
 
+from .utils import async_wait_until
+
 NUMERIC_BINARY_OPERATORS = (
     operator.add, divmod, operator.floordiv, operator.mod, operator.mul,
     operator.pow, operator.sub, operator.truediv,
@@ -314,11 +316,10 @@ async def test_reactive_async_map():
         return x*2
     b = i.rx.map(mul)
     assert b.rx.value is param.Undefined
-    await asyncio.sleep(0.1)
-    assert b.rx.value == [0, 2, 4]
+    await async_wait_until(lambda: b.rx.value == [0, 2, 4])
     i.rx.value = range(1, 4)
     assert b.rx.value == [0, 2, 4]
-    await asyncio.sleep(0.1)
+    await async_wait_until(lambda: b.rx.value == [2, 4, 6])
     assert b.rx.value == [2, 4, 6]
 
 def test_reactive_map_args():
@@ -409,11 +410,7 @@ async def test_reactive_watch_async_on_event():
     items = []
     event.rx.watch(items.append)
     p.param.trigger('event')
-    for _ in range(3):
-        await asyncio.sleep(0.05)
-        if items == [True]:
-            break
-    assert items == [True]
+    await async_wait_until(lambda: items == [True])
 
 def test_reactive_set_value_non_root_raises():
     rx_val = rx(1) + 1
@@ -546,8 +543,7 @@ async def test_reactive_async_func():
 
     async_rx = rx(async_func) + 2
     assert async_rx.rx.value is param.Undefined
-    await asyncio.sleep(0.04)
-    assert async_rx.rx.value == 4
+    await async_wait_until(lambda: async_rx.rx.value == 4)
 
 async def test_reactive_pipe_async_func():
     async def async_func(value):
@@ -557,8 +553,7 @@ async def test_reactive_pipe_async_func():
     async_rx = rx(0).rx.pipe(async_func)
     async_rx.rx.watch()
     assert async_rx.rx.value is param.Undefined
-    await asyncio.sleep(0.04)
-    assert async_rx.rx.value == 2
+    await async_wait_until(lambda: async_rx.rx.value == 2)
 
 async def test_reactive_gen():
     def gen():
@@ -570,11 +565,7 @@ async def test_reactive_gen():
     assert rxgen.rx.value is param.Undefined
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    for _ in range(3):
-        await asyncio.sleep(0.05)
-        if rxgen.rx.value == 2:
-            break
-    assert rxgen.rx.value == 2
+    await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_gen_pipe():
     def gen(val):
@@ -588,11 +579,11 @@ async def test_reactive_gen_pipe():
     assert rxgen.rx.value is param.Undefined
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    await asyncio.sleep(0.1)
-    assert rxgen.rx.value == 2
+    await async_wait_until(lambda: rxgen.rx.value == 2)
     rxv.rx.value = 2
-    await asyncio.sleep(0.03)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 3
+    await async_wait_until(lambda: rxgen.rx.value == 4)
 
 async def test_reactive_gen_with_dep():
     def gen(i):
@@ -608,11 +599,7 @@ async def test_reactive_gen_with_dep():
     irx.rx.value = 3
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 4
-    for _ in range(3):
-        await asyncio.sleep(0.05)
-        if rxgen.rx.value == 5:
-            break
-    assert rxgen.rx.value == 5
+    await async_wait_until(lambda: rxgen.rx.value == 5)
 
 async def test_reactive_gen_pipe_with_dep():
     def gen(value, i):
@@ -630,37 +617,35 @@ async def test_reactive_gen_pipe_with_dep():
     irx.rx.value = 3
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 4
-    await asyncio.sleep(0.1)
-    assert rxgen.rx.value == 5
+    await async_wait_until(lambda: rxgen.rx.value == 5)
     rxv.rx.value = 5
     await asyncio.sleep(0.04)
     assert rxgen.rx.value == 9
+    await async_wait_until(lambda: rxgen.rx.value == 10)
 
 async def test_reactive_async_gen():
     async def gen():
         yield 1
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
         yield 2
 
     rxgen = rx(gen)
     assert rxgen.rx.value is param.Undefined
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    await asyncio.sleep(0.1)
-    assert rxgen.rx.value == 2
+    await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_async_gen_pipe():
     async def gen(value):
         yield value + 1
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
         yield value + 2
 
     rxgen = rx(0).rx.pipe(gen)
     assert rxgen.rx.value is param.Undefined
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
-    await asyncio.sleep(0.1)
-    assert rxgen.rx.value == 2
+    await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_async_gen_with_dep():
     async def gen(i):
@@ -682,7 +667,7 @@ async def test_reactive_async_gen_with_dep():
 async def test_reactive_async_gen_pipe_with_dep():
     async def gen(value, i):
         yield value+i+1
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
         yield value+i+2
 
     irx = rx(0)
@@ -690,16 +675,17 @@ async def test_reactive_async_gen_pipe_with_dep():
     rxgen = rxv.rx.pipe(bind(gen, i=irx))
     rxgen.rx.watch()
     assert rxgen.rx.value is param.Undefined
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 1
     irx.rx.value = 3
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.04)
     irx.rx.value = 4
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 5
     rxv.rx.value = 5
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.04)
     assert rxgen.rx.value == 10
+    await async_wait_until(lambda: rxgen.rx.value == 11)
 
 def test_root_invalidation():
     arx = rx('a')

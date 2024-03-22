@@ -81,6 +81,7 @@ display its repr.
 """
 from __future__ import annotations
 
+import asyncio
 import inspect
 import math
 import operator
@@ -97,7 +98,7 @@ from .parameterized import (
     register_reference_transform, resolve_ref, resolve_value, transform_reference
 )
 from .parameters import Boolean, Event
-from ._utils import iscoroutinefunction, full_groupby
+from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 
 class Wrapper(Parameterized):
@@ -123,8 +124,9 @@ class Trigger(Parameterized):
 
     value = Event()
 
-    def __init__(self, parameters, **params):
+    def __init__(self, parameters=None, internal=False, **params):
         super().__init__(**params)
+        self.internal = internal
         self.parameters = parameters
 
 class Resolver(Parameterized):
@@ -256,8 +258,17 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
         """
-        def apply(vs, *args, **kwargs):
-            return [func(v, *args, **kwargs) for v in vs]
+        if inspect.isasyncgenfunction(func) or inspect.isgeneratorfunction(func):
+            raise TypeError(
+                "Cannot map a generator function. Only regular function "
+                "or coroutine functions are permitted."
+            )
+        if inspect.iscoroutinefunction(func):
+            async def apply(vs, *args, **kwargs):
+                return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
+        else:
+            def apply(vs, *args, **kwargs):
+                return [func(v, *args, **kwargs) for v in vs]
         return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
     def not_(self):
@@ -719,19 +730,27 @@ class rx:
         self._depth = depth
         self._dirty = _current is None
         self._dirty_obj = False
+        self._current_task = None
         self._error_state = None
         self._current_ = _current
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
             self._prev = prev
+
+        # Define special trigger parameter if operation has to be lazily evaluated
+        if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
+            self._trigger = Trigger(internal=True)
+            self._current_ = Undefined
+        else:
+            self._trigger = None
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
         self._internal_params = self._compute_params()
         # Filter params that external objects depend on, ensuring
         # that Trigger parameters do not cause double execution
         self._params = [
-            p for p in self._internal_params if not isinstance(p.owner, Trigger)
+            p for p in self._internal_params if (not isinstance(p.owner, Trigger) or p.owner.internal)
             or any (p not in self._internal_params for p in p.owner.parameters)
         ]
         self._setup_invalidations(depth)
@@ -794,7 +813,9 @@ class rx:
         return args + kwargs
 
     def _compute_params(self) -> list[Parameter]:
-        ps = self._fn_params
+        ps = list(self._fn_params)
+        if self._trigger:
+            ps.append(self._trigger.param.value)
 
         # Collect parameters on previous objects in chain
         prev = self._prev
@@ -808,6 +829,9 @@ class rx:
             return ps
 
         # Accumulate dependencies in args and/or kwargs
+        for ref in resolve_ref(self._operation['fn']):
+            if ref not in ps:
+                ps.append(ref)
         for arg in list(self._operation['args'])+list(self._operation['kwargs'].values()):
             for ref in resolve_ref(arg):
                 if ref not in ps:
@@ -843,12 +867,34 @@ class rx:
             params[0].owner.param._watch(self._invalidate_current, [p.name for p in params], precedence=-1)
 
     def _invalidate_current(self, *events):
+        if all(event.obj is self._trigger for event in events):
+            return
         self._dirty = True
         self._error_state = None
 
     def _invalidate_obj(self, *events):
         self._root._dirty_obj = True
         self._error_state = None
+
+    async def _resolve_async(self, obj):
+        self._current_task = task = asyncio.current_task()
+        if inspect.isasyncgen(obj):
+            async for val in obj:
+                if self._current_task is not task:
+                    break
+                self._current_ = val
+                self._trigger.param.trigger('value')
+        else:
+            value = await obj
+            if self._current_task is task:
+                self._current_ = value
+                self._trigger.param.trigger('value')
+
+    def _lazy_resolve(self, obj):
+        from .parameterized import async_executor
+        if inspect.isgenerator(obj):
+            obj = _to_async_gen(obj)
+        async_executor(partial(self._resolve_async, obj))
 
     def _resolve(self):
         if self._error_state:
@@ -862,6 +908,9 @@ class rx:
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
+                    if inspect.isasyncgen(obj) or inspect.iscoroutine(obj) or inspect.isgenerator(obj):
+                        self._lazy_resolve(obj)
+                        obj = Skip
                     if obj is Skip:
                         raise Skip
             except Skip:

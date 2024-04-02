@@ -709,3 +709,35 @@ def test_root_invalidation():
     arx.rx.value = 'd'
     assert expr.rx.value == 'DC'
     assert computed == ['1', '2', '2', '1']
+
+
+def test_ensure_ref_can_update_by_watcher_of_same_parameter():
+    # https://github.com/holoviz/param/pull/929
+
+    class W(param.Parameterized):
+        value = param.String()
+
+
+    class T(param.Parameterized):
+        lst = param.List(allow_refs=True, allow_None=True)
+
+        @param.depends("lst", watch=True)
+        def test(self):
+            lst = self.lst or range(5)
+            items = [W(value=str(i)) for i in lst]
+            with param.discard_events(self):
+                self.lst = param.rx(items).rx.resolve()
+            self.items = items
+
+    def transform(obj):
+        if isinstance(obj, W):
+            return obj.param.value
+        return obj
+
+
+    param.reactive.register_reference_transform(transform)
+
+    t = T()
+    t.lst = list("ABCDE")
+    t.items[1].value = "TEST"
+    assert t.lst[1] == "TEST"

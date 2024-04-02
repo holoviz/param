@@ -1471,12 +1471,13 @@ class Parameter(_ParameterBase):
         item in a list).
         """
         name = self.name
-        if obj is not None and self.allow_refs and obj._param__private.initialized and name not in obj._param__private.syncing:
+        if obj is not None and self.allow_refs and obj._param__private.initialized:
+            syncing = name in obj._param__private.syncing
             ref, deps, val, is_async = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)
-            elif name in refs:
+            elif name in refs and not syncing:
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()

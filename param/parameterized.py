@@ -2104,7 +2104,7 @@ class Parameters:
 
         dict_[key] = new_object
 
-        if isinstance(new_object, Parameterized):
+        if isinstance(new_object, Parameterized) and deepcopy:
             global object_count
             object_count += 1
             # Writes over name given to the original object;

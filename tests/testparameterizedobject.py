@@ -833,6 +833,26 @@ class TestParameterized(unittest.TestCase):
         assert t.inst == 'foo'
         assert t.notinst == 1
 
+    def test_constant_readonly_parameterized(self):
+        class ParamClass(param.Parameterized):
+            x = param.Number()
+
+        pc1 = ParamClass(name="FOO1")
+        pc2 = ParamClass(name="FOO2")
+
+        class P(param.Parameterized):
+            ro = param.Parameter(pc1, constant=True)
+            const = param.Parameter(pc2, readonly=True)
+            ro_i = param.Parameter(pc1, constant=True, instantiate=True)
+            const_i = param.Parameter(pc2, readonly=True, instantiate=True)
+
+        p = P()
+
+        assert p.ro.name == 'FOO1'
+        assert p.const.name == 'FOO2'
+        assert p.ro_i.name.startswith('ParamClass0')
+        assert p.const_i.name == 'FOO2'
+
 
 class some_fn(param.ParameterizedFunction):
     __test__ = False

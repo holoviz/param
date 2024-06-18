@@ -5,7 +5,7 @@ import time
 import param
 import pytest
 
-from param.parameterized import Skip
+from param.parameterized import Skip, resolve_ref
 from param.reactive import bind, rx
 
 class Parameters(param.Parameterized):
@@ -286,3 +286,50 @@ async def test_generator_ref_cancelled():
     assert task1.done()
     assert not task2.done()
     assert len(threads) == 2
+
+def test_resolve_ref_parameter():
+    p = Parameters()
+    refs = resolve_ref(p.param.string)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string
+
+def test_resolve_ref_depends_method():
+    p = Parameters()
+    refs = resolve_ref(p.formatted_string)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string
+
+def test_resolve_ref_recursive_list():
+    p = Parameters()
+    nested = [[p.param.string]]
+    refs = resolve_ref(nested, recursive=True)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string
+
+def test_resolve_ref_recursive_set():
+    p = Parameters()
+    nested = {(p.param.string,)}  # Parameters aren't hashable
+    refs = resolve_ref(nested, recursive=True)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string
+
+def test_resolve_ref_recursive_tuple():
+    p = Parameters()
+    nested = ((p.param.string,),)
+    refs = resolve_ref(nested, recursive=True)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string
+
+def test_resolve_ref_recursive_dict():
+    p = Parameters()
+    nested = {'0': {'0': p.param.string}}
+    refs = resolve_ref(nested, recursive=True)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string
+
+def test_resolve_ref_recursive_slice():
+    p = Parameters()
+    nested = [slice(p.param.string)]
+    refs = resolve_ref(nested, recursive=True)
+    assert len(refs) == 1
+    assert refs[0] is p.param.string

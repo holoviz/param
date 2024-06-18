@@ -196,11 +196,11 @@ def resolve_ref(reference, recursive=False):
     """
     if recursive:
         if isinstance(reference, (list, tuple, set)):
-            return [r for v in reference for r in resolve_ref(v)]
+            return [r for v in reference for r in resolve_ref(v, recursive)]
         elif isinstance(reference, dict):
-            return [r for kv in reference.items() for o in kv for r in resolve_ref(o)]
+            return [r for kv in reference.items() for o in kv for r in resolve_ref(o, recursive)]
         elif isinstance(reference, slice):
-            return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v)]
+            return [r for v in (reference.start, reference.stop, reference.step) for r in resolve_ref(v, recursive)]
     reference = transform_reference(reference)
     if hasattr(reference, '_dinfo'):
         dinfo = getattr(reference, '_dinfo', {})

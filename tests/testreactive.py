@@ -125,6 +125,26 @@ def test_reactive_getitem_list():
     assert rx([1, 2, 3])[1].rx.value == 2
     assert rx([1, 2, 3])[2].rx.value == 3
 
+def test_reactive_getitem_list_with_slice():
+    i = rx(1)
+    j = rx(5)
+    lst = list(range(10))
+    lstx = rx(lst)
+    sx = lstx[i: j]
+    assert sx.rx.value == lst[i.rx.value: j.rx.value]
+    i.rx.value = 2
+    assert sx.rx.value == lst[i.rx.value: j.rx.value]
+
+def test_reactive_getitem_numpy_with_tuple():
+    i = rx(0)
+    j = rx(1)
+    arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    arrx = rx(arr)
+    selx = arrx[i, j]
+    assert selx.rx.value == arr[i.rx.value, j.rx.value]
+    i.rx.value = 1
+    assert selx.rx.value == arr[i.rx.value, j.rx.value]
+
 @pytest.mark.parametrize('ufunc', NUMPY_UFUNCS)
 def test_numpy_ufunc(ufunc):
     l = [1, 2, 3]

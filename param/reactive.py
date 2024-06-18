@@ -833,7 +833,7 @@ class rx:
             if ref not in ps:
                 ps.append(ref)
         for arg in list(self._operation['args'])+list(self._operation['kwargs'].values()):
-            for ref in resolve_ref(arg):
+            for ref in resolve_ref(arg, recursive=True):
                 if ref not in ps:
                     ps.append(ref)
 

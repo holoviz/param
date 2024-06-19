@@ -2150,7 +2150,7 @@ class MultiFileSelector(ListSelector):
 
 class ClassSelector(SelectorBase):
     """
-    Parameter allowing selection of either a subclass or an instance of a given set of classes.
+    Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.
     By default, requires an instance, but if is_instance=False, accepts a class instead.
     Both class and instance values respect the instantiate slot, though it matters only
     for is_instance=True.

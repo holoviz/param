@@ -107,8 +107,8 @@ def test_reactive_logic_binary_ops(op):
 
 @pytest.mark.parametrize('op', LOGIC_UNARY_OPERATORS)
 def test_reactive_logic_unary_ops(op):
-    assert op(rx(True)).rx.value == op(True)
-    assert op(rx(False)).rx.value == op(False)
+    assert op(rx(1)).rx.value == op(1)
+    assert op(rx(0)).rx.value == op(0)
 
 @pytest.mark.parametrize('op', LOGIC_BINARY_OPERATORS)
 def test_reactive_logic_binary_ops_reverse(op):

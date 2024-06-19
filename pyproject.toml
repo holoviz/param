@@ -57,7 +57,7 @@ tests-deser = [
     "tables",
 ]
 tests-examples = [
-    "pytest <8.1",  # https://github.com/computationalmodelling/nbval/issues/202
+    "pytest",
     "pytest-asyncio",
     "pytest-xdist",
     "nbval",
@@ -210,6 +210,7 @@ python = [
     "3.9",
     "3.10",
     "3.11",
+    "3.12",
 ]
 
 [tool.hatch.envs.tests_examples.scripts]

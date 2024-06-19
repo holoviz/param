@@ -48,7 +48,7 @@ class B(A):
 4
 ```
 
-As you can see, the Parameters defined here work precisely like any other Python attributes in your code, so it's generally quite straightforward to migrate an existing class to use Param. Just inherit from `param.Parameterized`, then provide an optional `Parameter` declaration for each parameter the object accepts, including ranges and allowed values if appropriate. You only need to declare and document each parameter _once_, at the highest superclass where it applies, and its default value all the other metadata will be inherited by each subclass.
+As you can see, the Parameters defined here work precisely like any other Python attributes in your code, so it's generally quite straightforward to migrate an existing class to use Param. Just inherit from `param.Parameterized`, then provide an optional `Parameter` declaration for each parameter the object accepts, including ranges and allowed values if appropriate. You only need to declare and document each parameter _once_, at the highest superclass where it applies, and its default value and all the other metadata will be inherited by each subclass.
 
 Once you've declared your parameters, a whole wealth of features and better behavior is now unlocked! For instance, what happens if a user tries to supply some inappropriate data? With Param, such errors will be caught immediately:
 

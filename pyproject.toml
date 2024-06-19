@@ -57,7 +57,7 @@ tests-deser = [
     "tables",
 ]
 tests-examples = [
-    "pytest <8.1",  # https://github.com/computationalmodelling/nbval/issues/202
+    "pytest",
     "pytest-asyncio",
     "pytest-xdist",
     "nbval",

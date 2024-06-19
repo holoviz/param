@@ -19,7 +19,7 @@ jobs:
     name: Run pre-commit hooks
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: "1"
       - name: set PY
@@ -41,13 +41,13 @@ jobs:
         python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.8", "3.9", "3.10", "3.11", "3.12", "pypy3.9"]') || fromJSON('["3.8", "3.10", "3.12"]') }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: "100"
       - name: Fetch unshallow
         run: git fetch --prune --tags --unshallow -f
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -73,5 +73,11 @@ jobs:
         # No need to run these tests for PyPy really
         if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py') && matrix.python-version != '3.12'
         run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
-      - uses: codecov/codecov-action@v3
-        if: github.event_name == 'push'
+      - name: Upload coverage reports to Codecov
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: false
+          verbose: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

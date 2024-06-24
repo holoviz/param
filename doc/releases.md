@@ -1,12 +1,35 @@
 # Releases
 
+## Version 2.1.1
+
+Date: 2024-06-25
+
+This minor release contains bug fixes for reactive expressions and a few minor documentation improvements. Thanks to @jrycw for their first contribution! And to @ahuang11, @maximelt, and @philippjfr for their continued maintenance and development efforts.
+
+Bug fixes:
+
+- Ensure `rx._callback` resolves accessors ([#949](https://github.com/holoviz/param/pull/949))
+- Ensure refs can be updated by watcher of the same parameter ([#929](https://github.com/holoviz/param/pull/929))
+- Recursively resolve references on args and kwargs passed to a reactive operation ([#944](https://github.com/holoviz/param/pull/944))
+- Only override the name of a Parameterized instance on Parameter instantiation when `instantiate=True` ([#938](https://github.com/holoviz/param/pull/938))
+
+Documentation:
+
+- Various minor documentation improvements ([#933](https://github.com/holoviz/param/pull/933), [#935](https://github.com/holoviz/param/pull/935), [#941](https://github.com/holoviz/param/pull/941), [#947](https://github.com/holoviz/param/pull/947))
+
+Maintenance:
+
+- Fix `test_reactive_logic_unary_ops` on Python 3.12 ([#946](https://github.com/holoviz/param/pull/946))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.1.0...v2.1.1)
+
 ## Version 2.1.0
 
 Date: 2024-03-22
 
 This minor release focuses on improving reactive expressions and support for asynchronous (and synchronous) generators. Many thanks to @maximelt, @Hoxbro and @philippjfr for their continued maintenance and development efforts.
 
-### Enhancements
+Enhancements:
 
 - Improvements for synchronous and asychronous generators ([#908](https://github.com/holoviz/param/pull/908))
 - Additions to the .rx namespace including `and_`, `bool`, `map`, `not_`, `or_` and `updating` ([#906](https://github.com/holoviz/param/pull/906))
@@ -14,14 +37,16 @@ This minor release focuses on improving reactive expressions and support for asy
 - Make it possible to resolve reactive expressions recursively with `.rx.resolve` ([#918](https://github.com/holoviz/param/pull/918))
 - Add support for async and generator functions in `.rx.pipe` ([#924](https://github.com/holoviz/param/pull/924))
 
-### Bug fixes
+Bug fixes:
 
 - Ensure that `.param.update` context manager restore refs ([#915](https://github.com/holoviz/param/pull/915))
 - Avoid overeager root invalidation on `rx` leading to unnecessary evaluation ([#919](https://github.com/holoviz/param/pull/919))
 
-### Deprecations
+Deprecations:
 
 - Passing positional arguments to `Parameter` now raises a `ParamDeprecationWarning` ([#921](https://github.com/holoviz/param/pull/921))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.0.2...v2.1.0)
 
 ## Version 2.0.2
 

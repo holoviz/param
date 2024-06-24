@@ -211,7 +211,7 @@ class reactive_ops:
 
     def buffer(self, n):
         """
-        Collects the last n items that were emmitted.
+        Collects the last n items that were emitted.
         """
         items = []
         def collect(new, n):
@@ -954,7 +954,10 @@ class rx:
     def _callback(self):
         params = self._params
         def evaluate(*args, **kwargs):
-            return self._transform_output(self._current)
+            out = self._current
+            if self._method:
+                out = getattr(out, self._method)
+            return self._transform_output(out)
         if params:
             return bind(evaluate, *params)
         return evaluate

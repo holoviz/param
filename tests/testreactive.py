@@ -761,3 +761,9 @@ def test_ensure_ref_can_update_by_watcher_of_same_parameter():
     t.lst = list("ABCDE")
     t.items[1].value = "TEST"
     assert t.lst[1] == "TEST"
+
+def test_reactive_callback_resolve_accessor():
+    df = pd.DataFrame({"name": ["Bill", "Bob"]})
+    dfx = rx(df)
+    out = dfx["name"].str._callback()
+    assert out is df["name"].str

@@ -4,7 +4,7 @@
 
 Date: 2024-06-25
 
-This minor release contains bug fixes for reactive expressions and a few minor documentation improvements. Thanks to @jrycw for their first contribution! And to @ahuang11, @maximelt, and @philippjfr for their continued maintenance and development efforts.
+This minor release contains bug fixes for reactive expressions and a few minor documentation improvements. Thanks to @jrycw for their first contribution! And to @ahuang11, @maximlt, and @philippjfr for their continued maintenance and development efforts.
 
 Bug fixes:
 
@@ -27,7 +27,7 @@ Maintenance:
 
 Date: 2024-03-22
 
-This minor release focuses on improving reactive expressions and support for asynchronous (and synchronous) generators. Many thanks to @maximelt, @Hoxbro and @philippjfr for their continued maintenance and development efforts.
+This minor release focuses on improving reactive expressions and support for asynchronous (and synchronous) generators. Many thanks to @maximlt, @Hoxbro and @philippjfr for their continued maintenance and development efforts.
 
 Enhancements:
 

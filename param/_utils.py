@@ -17,9 +17,11 @@ from contextlib import contextmanager
 from numbers import Real
 from textwrap import dedent
 from threading import get_ident
-from typing import TYPE_CHECKING, Callable, Concatenate, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 if TYPE_CHECKING:
+    from typing_extensions import Concatenate, ParamSpec
+
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
     CallableT = TypeVar("CallableT", bound=Callable)

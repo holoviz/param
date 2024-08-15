@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING, Callable, TypeVar
 if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec
 
-    _P = ParamSpec("_P")
-    _R = TypeVar("_R")
+    P = ParamSpec("P")
+    R = TypeVar("R")
     CallableT = TypeVar("CallableT", bound=Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
@@ -291,13 +291,13 @@ def flatten(line):
 
 
 def accept_arguments(
-    f: Callable[Concatenate[CallableT, _P], _R]
-) -> Callable[_P, Callable[[CallableT], _R]]:
+    f: Callable[Concatenate[CallableT, P], R]
+) -> Callable[P, Callable[[CallableT], R]]:
     """
     Decorator for decorators that accept arguments
     """
     @functools.wraps(f)
-    def _f(*args: _P.args, **kwargs: _P.kwargs) -> Callable[[CallableT], _R]:
+    def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
 

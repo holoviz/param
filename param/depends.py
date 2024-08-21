@@ -1,16 +1,46 @@
+from __future__ import annotations
+
 import inspect
 
 from collections import defaultdict
 from functools import wraps
+from typing import TYPE_CHECKING, TypeVar, Callable, Protocol, TypedDict, overload
 
 from .parameterized import (
     Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
 )
 from ._utils import accept_arguments, iscoroutinefunction
 
+if TYPE_CHECKING:
+    CallableT = TypeVar("CallableT", bound=Callable)
+    Dependency = Parameter | str
+
+    class DependencyInfo(TypedDict):
+        dependencies: tuple[Dependency, ...]
+        kw: dict[str, Dependency]
+        watch: bool
+        on_init: bool
+
+    class DependsFunc(Protocol[CallableT]):
+        _dinfo: DependencyInfo
+        __call__: CallableT
+
+@overload
+def depends(
+    *dependencies: str, watch: bool = ..., on_init: bool = ...
+) -> Callable[[CallableT], DependsFunc[CallableT]]:
+    ...
+
+@overload
+def depends(
+    *dependencies: Parameter, watch: bool = ..., on_init: bool = ..., **kw: Parameter
+) -> Callable[[CallableT], DependsFunc[CallableT]]:
+    ...
 
 @accept_arguments
-def depends(func, *dependencies, watch=False, on_init=False, **kw):
+def depends(
+    func: CallableT, /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Parameter
+) -> Callable[[CallableT], DependsFunc[CallableT]]:
     """Annotates a function or Parameterized method to express its dependencies.
 
     The specified dependencies can be either be Parameter instances or if a
@@ -117,6 +147,6 @@ def depends(func, *dependencies, watch=False, on_init=False, **kw):
     _dinfo.update({'dependencies': dependencies,
                    'kw': kw, 'watch': watch, 'on_init': on_init})
 
-    _depends._dinfo = _dinfo
+    _depends._dinfo = _dinfo  # type: ignore[attr-defined]
 
     return _depends

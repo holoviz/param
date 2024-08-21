@@ -1,22 +1,30 @@
+from __future__ import annotations
+
 import asyncio
 import collections
 import contextvars
 import datetime as dt
-import inspect
 import functools
+import inspect
 import numbers
 import os
 import re
 import sys
 import traceback
 import warnings
-
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, abc, defaultdict
 from contextlib import contextmanager
 from numbers import Real
 from textwrap import dedent
 from threading import get_ident
-from collections import abc
+from typing import TYPE_CHECKING, Callable, TypeVar
+
+if TYPE_CHECKING:
+    from typing_extensions import Concatenate, ParamSpec
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
+    CallableT = TypeVar("CallableT", bound=Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
@@ -282,12 +290,14 @@ def flatten(line):
             yield element
 
 
-def accept_arguments(f):
+def accept_arguments(
+    f: Callable[Concatenate[CallableT, P], R]
+) -> Callable[P, Callable[[CallableT], R]]:
     """
     Decorator for decorators that accept arguments
     """
     @functools.wraps(f)
-    def _f(*args, **kwargs):
+    def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
 

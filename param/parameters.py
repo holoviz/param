@@ -34,7 +34,7 @@ from contextlib import contextmanager
 
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
-    Undefined, get_logger, instance_descriptor, dt_types,
+    Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
 from ._utils import (
@@ -51,6 +51,8 @@ from ._utils import (
     concrete_descendents,
     _abbreviate_paths,
     _to_datetime,
+    anyinstance,
+    anysubclass,
 )
 
 #-----------------------------------------------------------------------------
@@ -94,7 +96,7 @@ def guess_param_types(**kwargs):
         kws = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
-        elif isinstance(v, dt_types):
+        elif anyinstance(v, _dt_types):
             params[k] = Date(**kws)
         elif isinstance(v, bool):
             params[k] = Boolean(**kws)
@@ -109,7 +111,7 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif all(isinstance(el, dt_types) for el in v) and len(v)==2:
+            elif all(anyinstance(el, _dt_types) for el in v) and len(v)==2:
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)
@@ -852,7 +854,7 @@ class Integer(Number):
         if allow_None and val is None:
             return
 
-        if not isinstance(val, _int_types):
+        if not anyinstance(val, _int_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be an integer, "
                 f"not {type(val)}."
@@ -917,14 +919,14 @@ class Date(Number):
         if self.allow_None and val is None:
             return
 
-        if not isinstance(val, dt_types) and not (allow_None and val is None):
+        if not anyinstance(val, _dt_types) and not (allow_None and val is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
                 f"date types, not {type(val)}."
             )
 
     def _validate_step(self, val, step):
-        if step is not None and not isinstance(step, dt_types):
+        if step is not None and not anyinstance(step, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
                 f"a datetime or date type, not {type(step)}."
@@ -1355,7 +1357,7 @@ class DateRange(Range):
     """
 
     def _validate_bound_type(self, value, position, kind):
-        if not isinstance(value, dt_types):
+        if not anyinstance(value, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} {position} {kind} can only be "
                 f"None or a date/datetime value, not {type(value)}."
@@ -1379,7 +1381,7 @@ class DateRange(Range):
                 f"not {type(val)}."
             )
         for n in val:
-            if isinstance(n, dt_types):
+            if anyinstance(n, _dt_types):
                 continue
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes date/datetime "
@@ -2189,11 +2191,11 @@ class ClassSelector(SelectorBase):
         else:
             class_name = class_.__name__
         if is_instance:
-            if not (isinstance(val, class_)):
+            if not anyinstance(val, class_):
                 raise ValueError(
                     f"{_validate_error_prefix(self)} value must be an instance of {class_name}, not {val!r}.")
         else:
-            if not (issubclass(val, class_)):
+            if not anysubclass(val, class_):
                 raise ValueError(
                     f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val}.")
 

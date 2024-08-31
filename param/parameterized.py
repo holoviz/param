@@ -18,6 +18,7 @@ import numbers
 import operator
 import random
 import re
+import sys
 import types
 import typing
 import warnings
@@ -74,15 +75,18 @@ else:
 
 from inspect import getfullargspec
 
-dt_types = (dt.datetime, dt.date)
-_int_types = (int,)
+def _dt_types():
+    yield dt.datetime
+    yield dt.date
+    if "numpy" in sys.modules:
+        import numpy as np
+        yield np.datetime64
 
-try:
-    import numpy as np
-    dt_types = dt_types + (np.datetime64,)
-    _int_types = _int_types + (np.integer,)
-except:
-    pass
+def _int_types():
+    yield int
+    if "numpy" in sys.modules:
+        import numpy as np
+        yield np.integer
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -1714,7 +1718,7 @@ class Comparator:
         type(None): operator.eq,
         lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
     }
-    equalities.update({dtt: operator.eq for dtt in dt_types})
+    # equalities.update({dtt: operator.eq for dtt in _dt_types})
 
     @classmethod
     def is_equal(cls, obj1, obj2):

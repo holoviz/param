@@ -16,7 +16,6 @@ import inspect
 import logging
 import numbers
 import operator
-import random
 import re
 import sys
 import types
@@ -3815,6 +3814,9 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
+    elif type(val) in (_np_random(), _py_random()):
+        rep = None
+
     elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         rep=val.param.pprint(imports=imports, prefix=prefix+"    ",
                         qualify=qualify, unknown_value=unknown_value,
@@ -3849,17 +3851,16 @@ def container_script_repr(container,imports,prefix,settings):
     return rep
 
 
-def empty_script_repr(*args): # pyflakes:ignore (unused arguments):
-    return None
+def _np_random():
+    if "numpy" in sys.modules:
+        import numpy as np
+        return np.random.RandomState
 
-try:
-    # Suppress scriptrepr for objects not yet having a useful string representation
-    import numpy
-    script_repr_reg[random.Random] = empty_script_repr
-    script_repr_reg[numpy.random.RandomState] = empty_script_repr
 
-except ImportError:
-    pass # Support added only if those libraries are available
+def _py_random():
+    if "random" in sys.modules:
+        import random
+        return random.Random
 
 
 def function_script_repr(fn,imports,prefix,settings):

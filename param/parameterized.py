@@ -1718,11 +1718,18 @@ class Comparator:
         type(None): operator.eq,
         lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
     }
-    # equalities.update({dtt: operator.eq for dtt in _dt_types})
+    gen_equalities = {
+        _dt_types: operator.eq
+    }
 
     @classmethod
     def is_equal(cls, obj1, obj2):
-        for eq_type, eq in cls.equalities.items():
+        equals = cls.equalities.copy()
+        for gen, op in cls.gen_equalities.items():
+            for t in gen():
+                equals[t] = op
+
+        for eq_type, eq in equals.items():
             try:
                 are_instances = isinstance(obj1, eq_type) and isinstance(obj2, eq_type)
             except TypeError:

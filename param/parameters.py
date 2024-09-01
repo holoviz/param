@@ -2198,7 +2198,7 @@ class ClassSelector(SelectorBase):
 
         raise ValueError(
             f"{_validate_error_prefix(self)} value must be "
-            f"{'an instance' if is_instance else 'a subclass'} of {class_name}, not {val}."
+            f"{'an instance' if is_instance else 'a subclass'} of {class_name}, not {val!r}."
         )
 
     def get_range(self):

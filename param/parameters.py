@@ -2186,18 +2186,20 @@ class ClassSelector(SelectorBase):
     def _validate_class_(self, val, class_, is_instance):
         if (val is None and self.allow_None):
             return
+        if (is_instance and anyinstance(val, class_)) or anysubclass(val, class_):
+            return
+
         if isinstance(class_, tuple):
-            class_name = ('(%s)' % ', '.join(cl.__name__ for cl in class_))
+            class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_)))
+        elif inspect.isgenerator(class_):
+            class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_())))
         else:
             class_name = class_.__name__
-        if is_instance:
-            if not anyinstance(val, class_):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be an instance of {class_name}, not {val!r}.")
-        else:
-            if not anysubclass(val, class_):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val}.")
+
+        raise ValueError(
+            f"{_validate_error_prefix(self)} value must be a "
+            f"{'instance' if is_instance else 'subclass'} of {class_name}, not {val}."
+        )
 
     def get_range(self):
         """

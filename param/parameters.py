@@ -2186,7 +2186,7 @@ class ClassSelector(SelectorBase):
     def _validate_class_(self, val, class_, is_instance):
         if (val is None and self.allow_None):
             return
-        if (is_instance and anyinstance(val, class_)) or anysubclass(val, class_):
+        if (is_instance and anyinstance(val, class_)) or (not is_instance and anysubclass(val, class_)):
             return
 
         if isinstance(class_, tuple):

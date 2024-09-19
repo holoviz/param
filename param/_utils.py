@@ -616,11 +616,11 @@ def async_executor(func):
 
 def anyinstance(obj, class_tuple_generator):
     if inspect.isgeneratorfunction(class_tuple_generator):
-        return any(isinstance(obj, i) for i in class_tuple_generator())
+        class_tuple_generator = tuple(class_tuple_generator())
     return isinstance(obj, class_tuple_generator)
 
 
 def anysubclass(obj, class_tuple_generator):
     if inspect.isgeneratorfunction(class_tuple_generator):
-        return any(issubclass(obj, i) for i in class_tuple_generator())
+        class_tuple_generator = tuple(class_tuple_generator())
     return issubclass(obj, class_tuple_generator)

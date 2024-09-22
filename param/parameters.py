@@ -143,7 +143,7 @@ def parameterized_class(name, params, bases=Parameterized):
     Dynamically create a parameterized class with the given name and the
     supplied parameters, inheriting from the specified base(s).
     """
-    if not (isinstance(bases, list) or isinstance(bases, tuple)):
+    if not isinstance(bases, (list, tuple)):
         bases=[bases]
     return type(name, tuple(bases), params)
 

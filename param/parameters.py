@@ -2563,7 +2563,7 @@ class List(Parameter):
         if item_type is None or (self.allow_None and val is None):
             return
         for v in val:
-            if isinstance(v, item_type):
+            if anyinstance(v, item_type):
                 continue
             raise TypeError(
                 f"{_validate_error_prefix(self)} items must be instances "

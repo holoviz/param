@@ -111,7 +111,7 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif all(anyinstance(el, _dt_types) for el in v) and len(v)==2:
+            elif len(v) == 2 and all(anyinstance(el, _dt_types) for el in v):
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)

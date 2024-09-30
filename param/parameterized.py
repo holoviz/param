@@ -3852,7 +3852,7 @@ def container_script_repr(container,imports,prefix,settings):
 
 
 def _np_random():
-    if "numpy" in sys.modules:
+    if "numpy.random" in sys.modules:
         import numpy as np
         return np.random.RandomState
 

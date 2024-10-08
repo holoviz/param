@@ -16,8 +16,8 @@ import inspect
 import logging
 import numbers
 import operator
-import random
 import re
+import sys
 import types
 import typing
 import warnings
@@ -74,15 +74,18 @@ else:
 
 from inspect import getfullargspec
 
-dt_types = (dt.datetime, dt.date)
-_int_types = (int,)
+def _dt_types():
+    yield dt.datetime
+    yield dt.date
+    if "numpy" in sys.modules:
+        import numpy as np
+        yield np.datetime64
 
-try:
-    import numpy as np
-    dt_types = dt_types + (np.datetime64,)
-    _int_types = _int_types + (np.integer,)
-except:
-    pass
+def _int_types():
+    yield int
+    if "numpy" in sys.modules:
+        import numpy as np
+        yield np.integer
 
 VERBOSE = INFO - 1
 logging.addLevelName(VERBOSE, "VERBOSE")
@@ -1715,11 +1718,18 @@ class Comparator:
         type(None): operator.eq,
         lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
     }
-    equalities.update({dtt: operator.eq for dtt in dt_types})
+    gen_equalities = {
+        _dt_types: operator.eq
+    }
 
     @classmethod
     def is_equal(cls, obj1, obj2):
-        for eq_type, eq in cls.equalities.items():
+        equals = cls.equalities.copy()
+        for gen, op in cls.gen_equalities.items():
+            for t in gen():
+                equals[t] = op
+
+        for eq_type, eq in equals.items():
             try:
                 are_instances = isinstance(obj1, eq_type) and isinstance(obj2, eq_type)
             except TypeError:
@@ -3805,6 +3815,9 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
+    elif type(val) in (_np_random(), _py_random()):
+        rep = None
+
     elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         rep=val.param.pprint(imports=imports, prefix=prefix+"    ",
                         qualify=qualify, unknown_value=unknown_value,
@@ -3839,17 +3852,16 @@ def container_script_repr(container,imports,prefix,settings):
     return rep
 
 
-def empty_script_repr(*args): # pyflakes:ignore (unused arguments):
-    return None
+def _np_random():
+    if "numpy.random" in sys.modules:
+        import numpy as np
+        return np.random.RandomState
 
-try:
-    # Suppress scriptrepr for objects not yet having a useful string representation
-    import numpy
-    script_repr_reg[random.Random] = empty_script_repr
-    script_repr_reg[numpy.random.RandomState] = empty_script_repr
 
-except ImportError:
-    pass # Support added only if those libraries are available
+def _py_random():
+    if "random" in sys.modules:
+        import random
+        return random.Random
 
 
 def function_script_repr(fn,imports,prefix,settings):

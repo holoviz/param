@@ -608,7 +608,7 @@ async def test_reactive_gen_pipe():
 async def test_reactive_gen_with_dep():
     def gen(i):
         yield i+1
-        time.sleep(0.05)
+        time.sleep(0.1)
         yield i+2
 
     irx = rx(0)

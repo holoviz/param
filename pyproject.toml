@@ -28,6 +28,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
@@ -166,6 +167,7 @@ python = [
     "3.10",
     "3.11",
     "3.12",
+    "3.13",
     "pypy3.9",
 ]
 
@@ -193,7 +195,7 @@ name."^(?!pypy).*".dependencies = [
 # Only install tables (deser HDF5) on Linux on these version
 matrix.python.dependencies = [
     { value = "gmpy", if = ["3.8", "3.9", "3.10"], platform = ["linux"] },
-    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11", "3.12"], platform = ["linux"] },
+    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"], platform = ["linux"] },
 ]
 
 [tool.hatch.envs.tests_examples]
@@ -211,6 +213,7 @@ python = [
     "3.10",
     "3.11",
     "3.12",
+    "3.13",
 ]
 
 [tool.hatch.envs.tests_examples.scripts]

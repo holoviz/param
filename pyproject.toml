@@ -217,12 +217,14 @@ python = [
 examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:doc}"
 
 [tool.pytest.ini_options]
+addopts = "--color=yes"
 python_files = "test*.py"
 filterwarnings = [
   "error",
 ]
 xfail_strict = "true"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope="funcion"
 
 [tool.coverage.report]
 omit = ["param/version.py"]

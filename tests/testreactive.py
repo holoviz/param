@@ -590,7 +590,7 @@ async def test_reactive_gen():
 async def test_reactive_gen_pipe():
     def gen(val):
         yield val+1
-        time.sleep(0.05)
+        time.sleep(0.1)
         yield val+2
 
     rxv = rx(0)

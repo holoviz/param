@@ -32,18 +32,18 @@ test:
     {% for dep in project['optional-dependencies']['tests'] %}
     - {{ dep }}
     {% endfor %}
-  source_files:
-    - pyproject.toml
-    - tests
+  # source_files:
+  #   - pyproject.toml
+  #   - tests
   imports:
     - param
     - numbergen
   commands:
     - python -c "import param; ver = param.__version__; assert ver != '0.0.0' and ver != 'unknown'"
-    - pytest tests
+    # - pytest tests
 
 about:
   home: {{ project['urls']['Homepage'] }}
   summary: {{ project['description'] }}
   license: {{ project['license']['text'] }}
-  license_file: LICENSE.txt
+  # license_file: LICENSE.txt

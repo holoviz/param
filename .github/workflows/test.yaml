@@ -5,10 +5,10 @@ on:
       - main
   pull_request:
     branches:
-    - '*'
+      - "*"
   workflow_dispatch:
   schedule:
-    - cron: '0 13 * * SUN'
+    - cron: "0 13 * * SUN"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   pre_commit:
     name: Run pre-commit hooks
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,6 +30,7 @@ jobs:
           key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
       - name: pre-commit
         uses: pre-commit/action@v3.0.0
+
   test_suite:
     name: Test ${{ matrix.python-version }}, ${{ matrix.platform }}
     needs: [pre_commit]
@@ -37,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        platform: ["ubuntu-latest", "windows-latest", "macos-latest"]
         python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.8", "3.9", "3.10", "3.11", "3.12", "pypy3.9"]') || fromJSON('["3.8", "3.10", "3.12"]') }}
     timeout-minutes: 30
     steps:

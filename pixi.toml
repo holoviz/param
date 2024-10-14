@@ -63,7 +63,6 @@ pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
 pytest-github-actions-annotate-failures = "*"
-pytest-rerunfailures = "*"
 
 [feature.test-core.tasks]
 test-unit = 'pytest tests'

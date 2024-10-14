@@ -112,7 +112,7 @@ pandas = "*"
 xlrd = "*"
 
 [feature.test-example.tasks]
-test-example = 'pytest -n logical --dist loadscope --nbval-lax examples'
+test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'
 
 [feature.test-example.dependencies]
 psutil = "*"

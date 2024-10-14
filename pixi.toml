@@ -125,6 +125,7 @@ nbval = "*"
 channels = ["pyviz"]
 
 [feature.doc.dependencies]
+graphviz = "*"
 nbsite = ">=0.8.4,<0.9.0"
 sphinx-remove-toctrees = "*"
 

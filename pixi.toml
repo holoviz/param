@@ -129,10 +129,6 @@ graphviz = "*"
 nbsite = ">=0.8.4,<0.9.0"
 sphinx-remove-toctrees = "*"
 
-[feature.doc.activation.env]
-MOZ_HEADLESS = "1"
-MPLBACKEND = "Agg"
-
 [feature.doc.tasks.docs-build]
 cmd = "sphinx-build -b html doc builtdocs"
 

@@ -32,3 +32,8 @@ param/_version.py
 # asv benchmark
 benchmarks/.asv
 benchmarks/param
+
+
+# pixi
+.pixi
+pixi.lock

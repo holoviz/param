@@ -2,6 +2,7 @@
 Unit test for watch mechanism
 """
 import copy
+import re
 import unittest
 
 import param
@@ -733,6 +734,25 @@ class TestWatch(unittest.TestCase):
         ):
             SimpleWatchExample.param.watchers = {}
 
+    def test_watch_error_unsafe_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    RuntimeError,
+                    match=re.escape(
+                        '(Un)registering a watcher on a partially initialized Parameterized instance '
+                        'is not allowed. Ensure you have called super().__init__(**) in the '
+                        'Parameterized instance constructor before trying to set up a watcher.',
+                    )
+                ):
+                    self.param.watch(print, 'x')
+
+        P()
+
+
 
 class TestWatchMethod(unittest.TestCase):
 
@@ -1055,3 +1075,21 @@ class TestTrigger(unittest.TestCase):
 
         example.picker.value += 1
         assert example.da == 3
+
+    def test_trigger_error_unsafe_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    RuntimeError,
+                    match=re.escape(
+                        'Triggering watchers on a partially initialized Parameterized instance '
+                        'is not allowed. Ensure you have called super().__init__(**params) in '
+                        'the Parameterized instance constructor before trying to set up a watcher.',
+                    )
+                ):
+                    self.param.trigger('x')
+
+        P()

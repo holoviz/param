@@ -2449,13 +2449,10 @@ class Parameters:
         that it is clear which Event parameter has been triggered.
         """
         if self_.self is not None and not self_.self._param__private.initialized:
-            warnings.warn(
+            raise RuntimeError(
                 'Triggering watchers on a partially initialized Parameterized instance '
-                'is deprecated and will raise an error in a future version. '
-                'Ensure you have called super().__init__(**params) in '
+                'is not allowed. Ensure you have called super().__init__(**params) in '
                 'the Parameterized instance constructor before trying to set up a watcher.',
-                category=_ParamFutureWarning,
-                stacklevel=2,
             )
 
         trigger_params = [p for p in self_
@@ -2904,13 +2901,10 @@ class Parameters:
 
     def _register_watcher(self_, action, watcher, what='value'):
         if self_.self is not None and not self_.self._param__private.initialized:
-            warnings.warn(
+            raise RuntimeError(
                 '(Un)registering a watcher on a partially initialized Parameterized instance '
-                'is deprecated and will raise an error in a future version. Ensure '
-                'you have called super().__init__(**) in the Parameterized instance '
-                'constructor before trying to set up a watcher.',
-                category=_ParamFutureWarning,
-                stacklevel=4,
+                'is not allowed. Ensure you have called super().__init__(**) in the '
+                'Parameterized instance constructor before trying to set up a watcher.',
             )
 
         parameter_names = watcher.parameter_names

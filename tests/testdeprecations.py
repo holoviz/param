@@ -110,38 +110,6 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamFutureWarning):
             param.parameterized.Parameterized()._param_watchers = {}
 
-    def test_param_error_unsafe_ops_before_initialized(self):
-        class P(param.Parameterized):
-
-            x = param.Parameter()
-
-            def __init__(self, **params):
-                with pytest.raises(
-                    param._utils.ParamFutureWarning,
-                    match=re.escape(
-                        'Triggering watchers on a partially initialized Parameterized instance '
-                        'is deprecated and will raise an error in a future version. '
-                        'Ensure you have called super().__init__(**params) in '
-                        'the Parameterized instance constructor before trying to set up a watcher.',
-                    )
-                ):
-                    self.param.trigger('x')
-
-                with pytest.raises(
-                    param._utils.ParamFutureWarning,
-                    match=re.escape(
-                        '(Un)registering a watcher on a partially initialized Parameterized instance '
-                        'is deprecated and will raise an error in a future version. Ensure '
-                        'you have called super().__init__(**) in the Parameterized instance '
-                        'constructor before trying to set up a watcher.',
-                    )
-                ):
-                    self.param.watch(print, 'x')
-
-                self.param.objects(instance=False)
-                super().__init__(**params)
-
-        P()
 
     # Inheritance tests to be move to testparameterizedobject.py when warnings will be turned into errors
 

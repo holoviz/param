@@ -2789,8 +2789,6 @@ class Parameters:
         outputs = {}
         for cls in classlist(self_.cls):
             for name in dir(cls):
-                if name == '_param_watchers':
-                    continue
                 method = getattr(self_.self_or_cls, name)
                 dinfo = getattr(method, '_dinfo', {})
                 if 'outputs' not in dinfo:
@@ -4190,18 +4188,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     @property
     def param(self):
         return Parameters(self.__class__, self=self)
-
-    #PARAM3_DEPRECATION
-    @property
-    @_deprecated(extra_msg="Use `inst.param.watchers` instead.", warning_cat=_ParamFutureWarning)
-    def _param_watchers(self):
-        return self._param__private.watchers
-
-    #PARAM3_DEPRECATION
-    @_param_watchers.setter
-    @_deprecated(extra_msg="Use `inst.param.watchers = ...` instead.", warning_cat=_ParamFutureWarning)
-    def _param_watchers(self, value):
-        self._param__private.watchers = value
 
     # 'Special' methods
 

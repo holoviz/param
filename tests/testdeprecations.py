@@ -102,15 +102,6 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamDeprecationWarning):
             param.parameterized.all_equal(1, 1)
 
-    def test_deprecate_param_watchers(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.parameterized.Parameterized()._param_watchers
-
-    def test_deprecate_param_watchers_setter(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.parameterized.Parameterized()._param_watchers = {}
-
-
     # Inheritance tests to be move to testparameterizedobject.py when warnings will be turned into errors
 
     def test_inheritance_with_incompatible_defaults(self):

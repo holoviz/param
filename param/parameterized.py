@@ -3644,8 +3644,7 @@ class ParameterizedMetaclass(type):
             # might raise other types of error, so we catch them all.
             except Exception as e:
                 msg = f'{_validate_error_prefix(param)} failed to validate its ' \
-                      'default value on class creation, this is going to raise ' \
-                      'an error in the future. '
+                      'default value on class creation. '
                 parents = ', '.join(klass.__name__ for klass in mcs.__mro__[1:-2])
                 if not type_change and slot_overridden:
                     msg += (
@@ -3666,11 +3665,7 @@ class ParameterizedMetaclass(type):
                     # performance reasons.
                     pass
                 msg += f'\nValidation failed with:\n{e}'
-                warnings.warn(
-                    msg,
-                    category=_ParamFutureWarning,
-                    stacklevel=4,
-                )
+                raise RuntimeError(msg) from e
 
     def get_param_descriptor(mcs,param_name):
         """

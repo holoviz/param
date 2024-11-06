@@ -119,19 +119,6 @@ class TestDeprecateParameterizedModule:
                 with pytest.raises(
                     param._utils.ParamFutureWarning,
                     match=re.escape(
-                        'Looking up instance Parameter objects (`.param.objects()`) until '
-                        'the Parameterized instance has been fully initialized is deprecated and will raise an error in a future version. '
-                        'Ensure you have called `super().__init__(**params)` in your Parameterized '
-                        'constructor before trying to access instance Parameter objects, or '
-                        'looking up the class Parameter objects with `.param.objects(instance=False)` '
-                        'may be enough for your use case.',
-                    )
-                ):
-                    self.param.objects()
-
-                with pytest.raises(
-                    param._utils.ParamFutureWarning,
-                    match=re.escape(
                         'Triggering watchers on a partially initialized Parameterized instance '
                         'is deprecated and will raise an error in a future version. '
                         'Ensure you have called super().__init__(**params) in '

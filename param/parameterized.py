@@ -2421,15 +2421,13 @@ class Parameters:
         instance='existing'.
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
-            warnings.warn(
+            raise RuntimeError(
                 'Looking up instance Parameter objects (`.param.objects()`) until '
-                'the Parameterized instance has been fully initialized is deprecated and will raise an error in a future version. '
+                'the Parameterized instance has been fully initialized is not allowed. '
                 'Ensure you have called `super().__init__(**params)` in your Parameterized '
                 'constructor before trying to access instance Parameter objects, or '
                 'looking up the class Parameter objects with `.param.objects(instance=False)` '
                 'may be enough for your use case.',
-                category=_ParamFutureWarning,
-                stacklevel=2,
             )
 
         pdict = self_._cls_parameters

@@ -588,6 +588,26 @@ class TestParameterized(unittest.TestCase):
             else:
                 assert obj is TestPO.param[p]
 
+    def test_param_error_unsafe_ops_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    RuntimeError,
+                    match=re.escape(
+                        'Looking up instance Parameter objects (`.param.objects()`) until '
+                        'the Parameterized instance has been fully initialized is not allowed. '
+                        'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                        'constructor before trying to access instance Parameter objects, or '
+                        'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                        'may be enough for your use case.',
+                    )
+                ):
+                    self.param.objects()
+        P()
+
     def test_instance_param_getitem(self):
         test = TestPO()
         assert test.param['inst'] is not TestPO.param['inst']

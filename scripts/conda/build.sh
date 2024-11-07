@@ -4,7 +4,7 @@ set -euxo pipefail
 
 PACKAGE="param"
 
-python -m build -w .
+python -m build -s .
 
 VERSION=$(python -c "import $PACKAGE; print($PACKAGE._version.__version__)")
 export VERSION

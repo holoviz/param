@@ -93,10 +93,10 @@ pixi run install
 :::{admonition} Note
 :class: info
 
-Currently, this needs to be run for each environment. So, if you want to install in the `test-ui` environment, you can add `--environment` / `-e` to the command:
+Currently, this needs to be run for each environment. So, if you want to install in the `test-312` environment, you can add `--environment` / `-e` to the command:
 
 ```bash
-pixi run -e test-ui install
+pixi run -e test-313 install
 ```
 
 You can find the list of environments in the **pixi.toml** file or via the command `pixi info`.

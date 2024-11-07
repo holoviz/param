@@ -40,13 +40,7 @@ examples = [
     "pandas",
     "panel",
 ]
-doc = [
-    "param[examples]",
-    "nbsite ==0.8.4",
-    "sphinx-remove-toctrees",
-]
 tests = [
-    "coverage[toml]",
     "pytest",
     "pytest-asyncio",
 ]
@@ -76,14 +70,8 @@ tests-full = [
     "cloudpickle",
     "nest_asyncio",
 ]
-lint = [
-    "flake8",
-    "pre-commit",
-]
 all = [
     "param[tests-full]",
-    "param[doc]",
-    "param[lint]",
 ]
 
 [project.urls]

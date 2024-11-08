@@ -2336,7 +2336,7 @@ class DataFrame(ClassSelector):
             import pandas as pd
             types += (pd.DataFrame,)
         if 'polars' in self.libraries and 'polars' in sys.modules:
-            import polaras as pl
+            import polars as pl
             types += (pl.DataFrame, pl.LazyFrame)
         if not types:
             return type(None)

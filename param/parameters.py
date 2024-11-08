@@ -2309,7 +2309,7 @@ class DataFrame(ClassSelector):
     @typing.overload
     def __init__(
         self,
-        default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
+        default=None, *, rows=None, columns=None, ordered=None, libraries=None, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -2329,31 +2329,22 @@ class DataFrame(ClassSelector):
         super().__init__(default=default, class_=None, **params)
         self._validate(self.default)
 
-    def _validate_class_(self, val, class_, is_instance):
-        pass
+    @property
+    def class_(self):
+        types = ()
+        if 'pandas' in self.libraries and 'pandas' in sys.modules:
+            import pandas as pd
+            types += (pd.DataFrame,)
+        if 'polars' in self.libraries and 'polars' in sys.modules:
+            import polaras as pl
+            types += (pl.DataFrame, pl.LazyFrame)
+        if not types:
+            return type(None)
+        return types if len(types) > 1 else types[0]
 
-    def _validate_library_(self, val, libraries):
-        if 'pandas' in libraries and 'pandas' in sys.modules:
-            try:
-                import pandas as pd
-                if isinstance(val, pd.DataFrame):
-                    return
-            except Exception:
-                pass
-        if 'polars' in libraries:
-            try:
-                import polars as pl
-                if isinstance(val, (pl.DataFrame, pl.LazyFrame)):
-                    return
-            except Exception:
-                pass
-        if len(libraries) > 1:
-            supported = ','.join(libraries[:-1]) + ' or ' + libraries[-1]
-        else:
-            supported = libraries[0]
-        raise ValueError(
-            f'DataFrame parameter value {type(val)} is not a {supported} DataFrame.'
-        )
+    @class_.setter
+    def class_(self, value):
+        pass # This is automatically determined from the libraries
 
     def _length_bounds_check(self, bounds, length, name):
         message = f'{name} length {length} does not match declared bounds of {bounds}'
@@ -2379,8 +2370,6 @@ class DataFrame(ClassSelector):
 
         if self.allow_None and val is None:
             return
-
-        self._validate_library_(val, self.libraries)
 
         if self.columns is None:
             pass

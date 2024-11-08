@@ -21,6 +21,7 @@ import sys
 import types
 import typing
 import warnings
+from inspect import getfullargspec
 
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
@@ -55,6 +56,7 @@ from ._utils import (
     accept_arguments,
     iscoroutinefunction,
     descendents,
+    gen_types,
 )
 
 # Ideally setting param_pager would be in __init__.py but param_pager is
@@ -72,8 +74,7 @@ else:
     param_pager = None
 
 
-from inspect import getfullargspec
-
+@gen_types
 def _dt_types():
     yield dt.datetime
     yield dt.date
@@ -81,6 +82,7 @@ def _dt_types():
         import numpy as np
         yield np.datetime64
 
+@gen_types
 def _int_types():
     yield int
     if "numpy" in sys.modules:

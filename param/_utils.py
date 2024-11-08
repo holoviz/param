@@ -612,3 +612,19 @@ def async_executor(func):
         task.add_done_callback(_running_tasks.discard)
     else:
         event_loop.run_until_complete(func())
+
+class _GeneratorIsMeta(type):
+    def __instancecheck__(cls, inst):
+        return isinstance(inst, tuple(cls.types()))
+
+    def __subclasscheck__(cls, sub):
+        return issubclass(sub, tuple(cls.types()))
+
+class _GeneratorIs(metaclass=_GeneratorIsMeta): ...
+
+def gen_types(gen_func):
+    """Decorator that creates a type using _GeneratorIsMeta with a specified gen_types function."""
+    if not inspect.isgeneratorfunction(gen_func):
+        msg = "gen_types decorator can only be applied to generator"
+        raise TypeError(msg)
+    return type(gen_func.__name__, (_GeneratorIs,), {"types": staticmethod(gen_func)})

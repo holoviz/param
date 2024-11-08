@@ -612,15 +612,3 @@ def async_executor(func):
         task.add_done_callback(_running_tasks.discard)
     else:
         event_loop.run_until_complete(func())
-
-
-def anyinstance(obj, class_tuple_generator):
-    if inspect.isgeneratorfunction(class_tuple_generator):
-        class_tuple_generator = tuple(class_tuple_generator())
-    return isinstance(obj, class_tuple_generator)
-
-
-def anysubclass(obj, class_tuple_generator):
-    if inspect.isgeneratorfunction(class_tuple_generator):
-        class_tuple_generator = tuple(class_tuple_generator())
-    return issubclass(obj, class_tuple_generator)

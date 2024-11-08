@@ -51,8 +51,6 @@ from ._utils import (
     concrete_descendents,
     _abbreviate_paths,
     _to_datetime,
-    anyinstance,
-    anysubclass,
 )
 
 #-----------------------------------------------------------------------------
@@ -96,7 +94,7 @@ def guess_param_types(**kwargs):
         kws = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
-        elif anyinstance(v, _dt_types):
+        elif isinstance(v, _dt_types):
             params[k] = Date(**kws)
         elif isinstance(v, bool):
             params[k] = Boolean(**kws)
@@ -111,7 +109,7 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif len(v) == 2 and all(anyinstance(el, _dt_types) for el in v):
+            elif len(v) == 2 and all(isinstance(el, _dt_types) for el in v):
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)
@@ -854,7 +852,7 @@ class Integer(Number):
         if allow_None and val is None:
             return
 
-        if not anyinstance(val, _int_types):
+        if not isinstance(val, _int_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be an integer, "
                 f"not {type(val)}."
@@ -919,14 +917,14 @@ class Date(Number):
         if self.allow_None and val is None:
             return
 
-        if not anyinstance(val, _dt_types) and not (allow_None and val is None):
+        if not isinstance(val, _dt_types) and not (allow_None and val is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
                 f"date types, not {type(val)}."
             )
 
     def _validate_step(self, val, step):
-        if step is not None and not anyinstance(step, _dt_types):
+        if step is not None and not isinstance(step, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
                 f"a datetime or date type, not {type(step)}."
@@ -1357,7 +1355,7 @@ class DateRange(Range):
     """
 
     def _validate_bound_type(self, value, position, kind):
-        if not anyinstance(value, _dt_types):
+        if not isinstance(value, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} {position} {kind} can only be "
                 f"None or a date/datetime value, not {type(value)}."
@@ -1381,7 +1379,7 @@ class DateRange(Range):
                 f"not {type(val)}."
             )
         for n in val:
-            if anyinstance(n, _dt_types):
+            if isinstance(n, _dt_types):
                 continue
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes date/datetime "
@@ -2186,7 +2184,7 @@ class ClassSelector(SelectorBase):
     def _validate_class_(self, val, class_, is_instance):
         if (val is None and self.allow_None):
             return
-        if (is_instance and anyinstance(val, class_)) or (not is_instance and anysubclass(val, class_)):
+        if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
             return
 
         if isinstance(class_, tuple):
@@ -2563,7 +2561,7 @@ class List(Parameter):
         if item_type is None or (self.allow_None and val is None):
             return
         for v in val:
-            if anyinstance(v, item_type):
+            if isinstance(v, item_type):
                 continue
             raise TypeError(
                 f"{_validate_error_prefix(self)} items must be instances "

@@ -620,7 +620,10 @@ class _GeneratorIsMeta(type):
     def __subclasscheck__(cls, sub):
         return issubclass(sub, tuple(cls.types()))
 
-class _GeneratorIs(metaclass=_GeneratorIsMeta): ...
+class _GeneratorIs(metaclass=_GeneratorIsMeta):
+    @classmethod
+    def __iter__(cls):
+        yield from cls.types()
 
 def gen_types(gen_func):
     """Decorator that creates a type using _GeneratorIsMeta with a specified gen_types function."""

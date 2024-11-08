@@ -2401,6 +2401,8 @@ class DataFrame(ClassSelector):
     def serialize(cls, value):
         if value is None:
             return None
+        if hasattr(value, 'collect'):
+            value = value.collect()  # Polars LazyFrame
         if hasattr(value, 'to_dicts'):
             return value.to_dicts()
         return value.to_dict('records')

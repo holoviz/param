@@ -2277,7 +2277,11 @@ class Array(ClassSelector):
 
 class DataFrame(ClassSelector):
     """
-    Parameter whose value is a pandas DataFrame.
+    Parameter whose value is a DataFrame of one of the enabled libraries.
+
+    The supported libraries can be controlled with the libraries argument.
+    Currently pandas is supported by default and both pandas and polars
+    can be enabled.
 
     The structure of the DataFrame can be constrained by the rows and
     columns arguments:
@@ -2294,11 +2298,13 @@ class DataFrame(ClassSelector):
     same columns and in the same order and no other columns.
     """
 
-    __slots__ = ['rows', 'columns', 'ordered']
+    __slots__ = ['rows', 'columns', 'ordered', 'libraries']
 
     _slot_defaults = _dict_update(
-        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
+        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None, libraries=None
     )
+
+    _supported_libraries = ('pandas', 'polars')
 
     @typing.overload
     def __init__(
@@ -2311,13 +2317,43 @@ class DataFrame(ClassSelector):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
-        from pandas import DataFrame as pdDFrame
+    def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, libraries=Undefined, **params):
+        if libraries in (None, Undefined):
+            libraries = ('pandas',)
+        elif any(l not in self._supported_libraries for l in libraries):
+            raise ValueError(f'DataFrame parameter libraries must be one of {self._supported_libraries}')
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super().__init__(default=default, class_=pdDFrame, **params)
+        self.libraries = libraries
+        super().__init__(default=default, class_=None, **params)
         self._validate(self.default)
+
+    def _validate_class_(self, val, class_, is_instance):
+        pass
+
+    def _validate_library_(self, val, libraries):
+        if 'pandas' in libraries and 'pandas' in sys.modules:
+            try:
+                import pandas as pd
+                if isinstance(val, pd.DataFrame):
+                    return
+            except Exception:
+                pass
+        if 'polars' in libraries:
+            try:
+                import polars as pl
+                if isinstance(val, (pl.DataFrame, pl.LazyFrame)):
+                    return
+            except Exception:
+                pass
+        if len(libraries) > 1:
+            supported = ','.join(libraries[:-1]) + ' or ' + libraries[-1]
+        else:
+            supported = libraries[0]
+        raise ValueError(
+            f'DataFrame parameter value {type(val)} is not a {supported} DataFrame.'
+        )
 
     def _length_bounds_check(self, bounds, length, name):
         message = f'{name} length {length} does not match declared bounds of {bounds}'
@@ -2343,6 +2379,8 @@ class DataFrame(ClassSelector):
 
         if self.allow_None and val is None:
             return
+
+        self._validate_library_(val, self.libraries)
 
         if self.columns is None:
             pass
@@ -2374,6 +2412,8 @@ class DataFrame(ClassSelector):
     def serialize(cls, value):
         if value is None:
             return None
+        if hasattr(value, 'to_dicts'):
+            return value.to_dicts()
         return value.to_dict('records')
 
     @classmethod

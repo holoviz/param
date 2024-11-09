@@ -620,13 +620,18 @@ class _GeneratorIsMeta(type):
     def __subclasscheck__(cls, sub):
         return issubclass(sub, tuple(cls.types()))
 
+    def __iter__(cls):
+        yield from cls.types()
+
 class _GeneratorIs(metaclass=_GeneratorIsMeta):
     @classmethod
     def __iter__(cls):
         yield from cls.types()
 
 def gen_types(gen_func):
-    """Decorator that creates a type using _GeneratorIsMeta with a specified gen_types function."""
+    """
+    Decorator which takes a generator function which yields difference types
+    make it so it can be called with isinstance and issubclass."""
     if not inspect.isgeneratorfunction(gen_func):
         msg = "gen_types decorator can only be applied to generator"
         raise TypeError(msg)

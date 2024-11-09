@@ -30,6 +30,7 @@ import typing
 import warnings
 
 from collections import OrderedDict
+from collections.abc import Iterable
 from contextlib import contextmanager
 
 from .parameterized import (
@@ -2187,10 +2188,8 @@ class ClassSelector(SelectorBase):
         if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
             return
 
-        if isinstance(class_, tuple):
+        if isinstance(class_, Iterable):
             class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_)))
-        elif inspect.isgenerator(class_):
-            class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_())))
         else:
             class_name = class_.__name__
 

@@ -3815,7 +3815,7 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     elif type(val) in script_repr_reg:
         rep = script_repr_reg[type(val)](val,imports,prefix,settings)
 
-    elif type(val) in (_np_random(), _py_random()):
+    elif isinstance(val, _no_script_repr):
         rep = None
 
     elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
@@ -3852,16 +3852,13 @@ def container_script_repr(container,imports,prefix,settings):
     return rep
 
 
-def _np_random():
-    if "numpy.random" in sys.modules:
-        import numpy as np
-        return np.random.RandomState
-
-
-def _py_random():
-    if "random" in sys.modules:
-        import random
-        return random.Random
+@gen_types
+def _no_script_repr():
+    # Suppress scriptrepr for objects not yet having a useful string representation
+    if random := sys.modules.get("random"):
+        yield random.Random
+    if npr := sys.modules.get("numpy.random"):
+        yield npr.RandomState
 
 
 def function_script_repr(fn,imports,prefix,settings):

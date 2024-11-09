@@ -78,15 +78,13 @@ else:
 def _dt_types():
     yield dt.datetime
     yield dt.date
-    if "numpy" in sys.modules:
-        import numpy as np
+    if np := sys.modules.get("numpy"):
         yield np.datetime64
 
 @gen_types
 def _int_types():
     yield int
-    if "numpy" in sys.modules:
-        import numpy as np
+    if np := sys.modules.get("numpy"):
         yield np.integer
 
 VERBOSE = INFO - 1

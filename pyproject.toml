@@ -28,6 +28,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
@@ -39,13 +40,7 @@ examples = [
     "pandas",
     "panel",
 ]
-doc = [
-    "param[examples]",
-    "nbsite ==0.8.4",
-    "sphinx-remove-toctrees",
-]
 tests = [
-    "coverage[toml]",
     "pytest",
     "pytest-asyncio",
 ]
@@ -75,14 +70,8 @@ tests-full = [
     "cloudpickle",
     "nest_asyncio",
 ]
-lint = [
-    "flake8",
-    "pre-commit",
-]
 all = [
     "param[tests-full]",
-    "param[doc]",
-    "param[lint]",
 ]
 
 [project.urls]
@@ -94,6 +83,7 @@ HoloViz = "https://holoviz.org/"
 
 [tool.hatch.version]
 source = "vcs"
+raw-options = { version_scheme = "no-guess-dev" }
 
 [tool.hatch.build.targets.wheel]
 include = [
@@ -111,118 +101,15 @@ include = [
 [tool.hatch.build.hooks.vcs]
 version-file = "param/_version.py"
 
-[tool.hatch.envs.default]
-dependencies = [
-    # Linters
-    "param[lint]",
-    # Base tests dependencies
-    "param[tests]",
-    # Examples tests dependencies
-    "param[tests-examples]",
-    # Deserializatoin dependencies
-    "param[tests-deser]",
-    # Additional tests dependencies, not including gmpy as
-    # it's tricky to install.
-    "ipython",
-    "jsonschema",
-    "numpy",
-    "pandas",
-    "cloudpickle",
-    "nest_asyncio",
-    # To keep __version__ up-to-date in editable installs
-    "setuptools_scm",
-]
-post-install-commands = [
-  "python -m pip install pre-commit",
-  "pre-commit install",
-]
-
-[tool.hatch.envs.default.scripts]
-tests = "pytest {args:tests}"
-examples = "pytest -n logical --dist loadscope --nbval-lax {args:doc}"
-
-[tool.hatch.envs.docs]
-template = "docs"
-features = ["doc"]
-python = "3.9"
-
-[tool.hatch.envs.docs.scripts]
-build = [
-    "sphinx-build -b html doc builtdocs",
-]
-
-[tool.hatch.envs.tests]
-template = "tests"
-dependencies = [
-    "param[tests]",
-    "ipython",
-    "jsonschema",
-]
-
-[[tool.hatch.envs.tests.matrix]]
-python = [
-    "3.8",
-    "3.9",
-    "3.10",
-    "3.11",
-    "3.12",
-    "pypy3.9",
-]
-
-[tool.hatch.envs.tests.scripts]
-tests = "pytest {args:tests}"
-with_coverage = [
-    "coverage run --source=numbergen,param -m pytest -v {args:tests}",
-    "coverage report",
-    "coverage xml",
-]
-
-[tool.hatch.envs.tests.overrides]
-# Only install these on non PyPy environments
-name."^(?!pypy).*".dependencies = [
-    "numpy",
-    "pandas",
-    "xlrd",
-    "openpyxl",
-    "odfpy",
-    "pyarrow",
-    "cloudpickle",
-    "nest_asyncio",
-]
-# Only install gmpy on Linux on these version
-# Only install tables (deser HDF5) on Linux on these version
-matrix.python.dependencies = [
-    { value = "gmpy", if = ["3.8", "3.9", "3.10"], platform = ["linux"] },
-    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11", "3.12"], platform = ["linux"] },
-]
-
-[tool.hatch.envs.tests_examples]
-template = "tests_examples"
-dependencies = [
-    "param[tests-examples]",
-    "ipython",
-    "jsonschema",
-]
-
-[[tool.hatch.envs.tests_examples.matrix]]
-python = [
-    "3.8",
-    "3.9",
-    "3.10",
-    "3.11",
-    "3.12",
-]
-
-[tool.hatch.envs.tests_examples.scripts]
-examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:doc}"
-
 [tool.pytest.ini_options]
+addopts = "--color=yes"
 python_files = "test*.py"
 filterwarnings = [
   "error",
 ]
 xfail_strict = "true"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
 omit = ["param/version.py"]

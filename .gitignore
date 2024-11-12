@@ -19,7 +19,7 @@ builtdocs/
 jupyter_execute/
 doc/Reference_Manual/
 doc/user_guide/data.pickle
-doc/user_guide/output.csv
+doc/user_guide/output.*
 doc/reference/generated
 
 # Unit test / Coverage report
@@ -32,3 +32,7 @@ param/_version.py
 # asv benchmark
 benchmarks/.asv
 benchmarks/param
+
+# pixi
+.pixi
+pixi.lock

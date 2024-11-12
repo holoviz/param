@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 
+from collections.abc import Iterable
 from functools import partial
 
 import param
@@ -8,7 +9,7 @@ import pytest
 
 from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod
-from param._utils import _is_mutable_container, iscoroutinefunction
+from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
 
 
 try:
@@ -421,3 +422,20 @@ def test_iscoroutinefunction_asyncgen():
 def test_iscoroutinefunction_partial_asyncgen():
     pagen = partial(partial(agen))
     assert iscoroutinefunction(pagen)
+
+def test_gen_types():
+    @gen_types
+    def _int_types():
+        yield int
+
+    assert isinstance(1, (str, _int_types))
+    assert isinstance(5, _int_types)
+    assert isinstance(5.0, _int_types) is False
+
+    assert issubclass(int, (str, _int_types))
+    assert issubclass(int, _int_types)
+    assert issubclass(float, _int_types) is False
+
+    assert next(iter(_int_types())) is int
+    assert next(iter(_int_types)) is int
+    assert isinstance(_int_types, Iterable)

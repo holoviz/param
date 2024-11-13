@@ -340,7 +340,7 @@ def edit_constant(parameterized):
         p.constant = False
     try:
         yield
-    except:
+    except Exception:
         raise
     finally:
         for (p, const) in zip(params, constants):
@@ -359,7 +359,7 @@ def discard_events(parameterized):
                         list(parameterized.param._events))
     try:
         yield
-    except:
+    except Exception:
         raise
     finally:
         parameterized.param._BATCH_WATCH = batch_watch
@@ -2354,7 +2354,7 @@ class Parameters:
                 raise ValueError(f"{k!r} is not a parameter of {self_.cls.__name__}")
             try:
                 setattr(self_or_cls, k, v)
-            except:
+            except Exception:
                 self_._BATCH_WATCH = False
                 raise
 

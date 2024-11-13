@@ -11,7 +11,7 @@ import pytest
 
 try:
     import numpy as np
-except:
+except ImportError:
     np = None
 
 from .utils import check_defaults

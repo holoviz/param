@@ -9,11 +9,11 @@ except ImportError:
     cloudpickle = None
 try:
     import numpy as np
-except:
+except ImportError:
     np = None
 try:
     import pandas as pd
-except:
+except ImportError:
     pd = None
 
 

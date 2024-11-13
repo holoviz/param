@@ -252,7 +252,7 @@ class JSONSerialization(Serialization):
             schema = {'anyOf': allowed_types}
             schema['enum'] = p.objects
             return schema
-        except:
+        except Exception:
             if safe is True:
                 msg = ('ObjectSelector cannot be guaranteed to be safe for '
                        'serialization due to unserializable type in objects')
@@ -267,7 +267,7 @@ class JSONSerialization(Serialization):
             schema = {'anyOf': allowed_types}
             schema['enum'] = p.objects
             return schema
-        except:
+        except Exception:
             if safe is True:
                 msg = ('Selector cannot be guaranteed to be safe for '
                        'serialization due to unserializable type in objects')

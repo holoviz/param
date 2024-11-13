@@ -1958,7 +1958,7 @@ class Selector(SelectorBase, _SignatureSelector):
         Subclasses can override if they support multiple items on a list,
         to check each item instead.
         """
-        if not (val in self.objects):
+        if val not in self.objects:
             self._objects.append(val)
 
     def get_range(self):

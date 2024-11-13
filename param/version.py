@@ -18,7 +18,9 @@ See https://github.com/holoviz/autover for more information.
 
 __author__ = 'Jean-Luc Stevens'
 
-import os, subprocess, json
+import os
+import subprocess
+import json
 
 def run_cmd(args, cwd=None):
     kwargs = {}

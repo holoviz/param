@@ -91,7 +91,7 @@ class ParamPager:
         contents = []
         displayed_params = []
         for name in self.sort_by_precedence(params):
-            if only_changed and not (name in changed):
+            if only_changed and name not in changed:
                 continue
             displayed_params.append((name, params[name]))
 
@@ -155,7 +155,7 @@ class ParamPager:
         ordering = self.sort_by_precedence(params)
         for name in ordering:
             p = params[name]
-            if only_changed and not (name in changed):
+            if only_changed and name not in changed:
                 continue
 
             constant = 'C' if p.constant else 'V'

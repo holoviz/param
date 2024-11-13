@@ -2386,7 +2386,7 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         if args:
-            if len(args) == 2 and not args[0] in kwargs and not kwargs:
+            if len(args) == 2 and args[0] not in kwargs and not kwargs:
                 kwargs[args[0]] = args[1]
             else:
                 raise ValueError("Invalid positional arguments for %s.set_param" %
@@ -3388,7 +3388,7 @@ class ParameterizedMetaclass(type):
         """
         name_param = dict_.get("name", None)
         if name_param is not None:
-            if not type(name_param) is String:
+            if type(name_param) is not String:
                 raise TypeError(
                     f"Parameterized class {name!r} cannot override "
                     f"the 'name' Parameter with type {type(name_param)}. "

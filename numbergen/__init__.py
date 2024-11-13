@@ -14,7 +14,7 @@ from math import e,pi
 import param
 
 
-from param import __version__  # noqa: API import
+from param import __version__
 
 class TimeAware(param.Parameterized):
     """
@@ -763,5 +763,5 @@ class BoundedNumber(NumberGenerator):
         else: return val
 
 
-_public = list({_k for _k,_v in locals().items() if isinstance(_v,type) and issubclass(_v,NumberGenerator)})
-__all__ = _public
+_public = {_k for _k,_v in locals().items() if isinstance(_v,type) and issubclass(_v,NumberGenerator)}
+__all__ = ["__version__", *_public]

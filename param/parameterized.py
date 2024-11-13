@@ -2298,12 +2298,50 @@ class Parameters:
         cls = self_.cls
         setattr(cls,param_name,value)
 
-    def add_parameter(self_, param_name, param_obj):
+    def add_parameter(self_, param_name: str, param_obj: Parameter):
         """
         Add a new Parameter object into this object's class.
 
         Should result in a Parameter equivalent to one declared
         in the class's source code.
+
+        Parameters
+        ----------
+        param_name : str
+            The name of the parameter to add.
+        param_obj : Parameter
+            The Parameter object to add.
+
+        Example
+        -------
+
+        ```python
+        import param
+
+
+        class P(param.Parameterized):
+            a = param.Number()
+            b = param.String()
+
+
+        p = P()
+        ```
+
+        Add a new parameter to the class via the class:
+
+        ```python
+        P.param.add_parameter('c', param.Tuple(default=(1,2,3)))
+        print(p.c)
+        # (1, 2, 3)
+        ```
+
+        Add a new parameter to the class via the instance:
+
+        ```python
+        p.param.add_parameter('d', param.Tuple(default=(3,2,1)))
+        print(p.d)
+        # (3, 2, 1)
+        ```
         """
         # Could have just done setattr(cls,param_name,param_obj),
         # which is supported by the metaclass's __setattr__ , but
@@ -2347,12 +2385,46 @@ class Parameters:
 
     def update(self_, arg=Undefined, /, **kwargs):
         """
-        For the given dictionary or iterable or set of param=value
-        keyword arguments, sets the corresponding parameter of this
-        object or class to the given value.
+        Updates one or more parameters of this object or class.
+        
+        This method allows you to set the parameters of the object or class using a dictionary, 
+        an iterable, or keyword arguments in the form of param=value. The specified parameters 
+        will be updated to the given values.
 
-        May also be used as a context manager to temporarily set and
-        then reset parameter values.
+        This method can also be used as a context manager to temporarily set and then reset 
+        parameter values.
+
+        Reference: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
+        
+        Examples:
+
+        ```python
+        import param
+
+        class P(param.Parameterized):
+            a = param.Number()
+            b = param.String()
+
+        p = P()
+        ```
+
+        Update parameters permanently:
+
+        ```python
+        p.param.update(a=1, b="Hello")
+        print(p.a, p.b)
+        # Output: 1 Hello
+        ```
+
+        Update parameters temporarily:
+
+        ```python
+        with p.param.update(a=2, b="World"):
+            print(p.a, p.b)
+            # Output: 2 World
+        print(p.a, p.b)
+        # Output: 1 Hello
+        ```
         """
         refs = {}
         if self_.self is not None:
@@ -2635,7 +2707,45 @@ class Parameters:
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_, subset=None, mode='json'):
+    def serialize_parameters(self_, subset=None, mode='json')->str:
+        """Returns the serialized parameters of the Parameterized object.
+
+        Parameters
+        ----------
+        subset (list, optional):
+            A list of parameter names to serialize. If None, all parameters will be serialized. Defaults to None.
+        mode (str, optional):
+            The serialization format. By default, only 'json' is supported. Defaults to 'json'.
+
+        Raises:
+            ValueError: If the `mode` is not valid.
+
+        Returns
+        -------
+        dict: The serialized string
+
+        Reference
+        ---------
+        For more details visit https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
+
+        Example
+        -------
+
+        ```python
+        import param
+
+        class P(param.Parameterized):
+            a = param.Number()
+            b = param.String()
+
+
+        p = P(a=1, b="hello")
+
+        serialized_data = p.param.serialize_parameters()
+        print(type(serialized_data))
+        # {"name": "P00002", "a": 1, "b": "hello"}
+        ```
+        """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
@@ -2649,7 +2759,38 @@ class Parameters:
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
-    def deserialize_parameters(self_, serialization, subset=None, mode='json'):
+    def deserialize_parameters(self_, serialization, subset=None, mode='json') -> dict:
+        """
+        Deserialize the given serialized data. You may use the deserialized to create a Parameteried object or
+        update the parameters of a Parameterized object.
+
+        Parameters:
+        - serialization (str): The serialized parameter data as a JSON string.
+        - subset (list, optional): A list of parameter names to deserialize. If None, all parameters will be deserialized. Defaults to None.
+        - mode (str, optional): The serialization format. By default, only 'json' is supported. Defaults to 'json'.
+
+        Returns:
+        dict: A dictionary with parameter names as keys and deserialized values.
+
+        Reference: https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
+
+        Example:
+
+        ```python
+        import param
+
+        class P(param.Parameterized):
+            a = param.Number()
+            b = param.String()
+
+        serialized_data = '{"a": 1, "b": "hello"}'
+        deserialized_data = P.param.deserialize_parameters(serialized_data)
+        print(deserialized_data)
+        # Output: {'a': 1, 'b': 'hello'}
+
+        instance = P(**deserialized_data)
+        ```
+        """
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)

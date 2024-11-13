@@ -60,7 +60,7 @@ def test_guess_param_types(val, p):
     assert 'key' in output
     out_param = output['key']
     assert isinstance(out_param, p)
-    if not type(out_param) == param.Parameter:
+    if type(out_param) is not param.Parameter:
         assert out_param.default is val
         assert out_param.constant
 

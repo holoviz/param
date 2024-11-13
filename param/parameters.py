@@ -1404,7 +1404,7 @@ class DateRange(Range):
             if not isinstance(v, (dt.datetime, dt.date)): # i.e np.datetime64
                 v = v.astype(dt.datetime)
             # Separate date and datetime to deserialize to the right type.
-            if type(v) == dt.date:
+            if type(v) is dt.date:
                 v = v.strftime("%Y-%m-%d")
             else:
                 v = v.strftime("%Y-%m-%dT%H:%M:%S.%f")

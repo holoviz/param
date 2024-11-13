@@ -225,6 +225,7 @@ class reactive_ops:
         return self._reactive if isinstance(self._reactive, rx) else self()
 
     def __call__(self):
+        """Creates a reactive expression."""
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
 
@@ -786,13 +787,55 @@ class rx:
         ]
         self._setup_invalidations(depth)
         self._kwargs = kwargs
-        self.rx = reactive_ops(self)
+        self._rx = reactive_ops(self)
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, accessor(self))
         for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))
+
+    @property
+    def rx(self):
+        """The reactive namespace.
+
+        Provides reactive versions of the operations that cannot be made reactive through overloading, such as
+        `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
+
+        Reference: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+
+        Examples:
+
+        Turn your parameter into a reactive expression:
+
+        ```python
+        import param
+
+        class MyClass(param.Parameterized):
+            value = param.Parameter()
+
+        my_instance = MyClass(value=0)
+        ```
+
+        Get the current value:
+
+        ```python
+        a = my_instance.rx.value
+        ```
+
+        Set the current value:
+
+        ```python
+        my_instance.rx.value = 1
+        ```
+
+        Call it to get a reactive expression:
+
+        ```python
+        rx_value = my_instance.rx()
+        ```
+        """
+        return self._rx
 
     @property
     def _obj(self):

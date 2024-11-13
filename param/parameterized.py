@@ -4244,6 +4244,37 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
     @property
     def param(self):
+        """
+        The `.param` namespace for Parameterized classes and instances.
+
+        This namespace provides access to powerful methods and properties for managing parameters in a `Parameterized` object.
+        It includes utilities for adding parameters, updating parameters, debugging, serialization, logging, and more.
+
+        Reference: https://param.holoviz.org/user_guide/Parameters.html#parameter-objects-and-instances
+
+        Example:
+
+        ```python
+        import param
+
+        class MyClass(param.Parameterized):
+            value = param.Parameter()
+
+        my_instance = MyClass(value=0)
+        ```
+
+        Access the `value` parameter of `my_instance`:
+
+        ```python
+        my_instance.param.value  # the Parameter instance
+        ```
+
+        Note this is different from the current `value` of `my_instance`:
+
+        ```python
+        my_instance.value  # 0, the current parameter value
+        ```
+        """
         return Parameters(self.__class__, self=self)
 
     #PARAM3_DEPRECATION

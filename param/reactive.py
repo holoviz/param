@@ -793,7 +793,7 @@ class rx:
                 setattr(self, name, accessor(self))
 
     @property
-    def rx(self):
+    def rx(self) -> reactive_ops:
         """The reactive namespace.
 
         Provides reactive versions of the operations that cannot be made reactive through overloading, such as

@@ -36,3 +36,4 @@ benchmarks/param
 # pixi
 .pixi
 pixi.lock
+script.*

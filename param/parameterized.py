@@ -1320,6 +1320,44 @@ class Parameter(_ParameterBase):
 
     @property
     def rx(self):
+        """The reactive namespace.
+        
+        Provides reactive versions of the operations that cannot be made reactive through overloading, such as
+        `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
+
+        Reference: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+
+        Examples:
+
+        Turn your parameter into a reactive expression:
+
+        ```python
+        import param
+
+        class MyClass(param.Parameterized):
+            value = param.Parameter()
+
+        my_instance = MyClass(value=0)
+        ```
+
+        Get the current value:
+
+        ```python
+        a = my_instance.rx.value
+        ```
+
+        Set the current value:
+
+        ```python
+        my_instance.rx.value = 1
+        ```
+
+        Call it to get a reactive expression:
+
+        ```python
+        rx_value = my_instance.rx()
+        ```
+        """
         from .reactive import reactive_ops
         return reactive_ops(self)
 

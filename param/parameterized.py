@@ -340,8 +340,6 @@ def edit_constant(parameterized):
         p.constant = False
     try:
         yield
-    except Exception:
-        raise
     finally:
         for (p, const) in zip(params, constants):
             p.constant = const
@@ -359,8 +357,6 @@ def discard_events(parameterized):
                         list(parameterized.param._events))
     try:
         yield
-    except Exception:
-        raise
     finally:
         parameterized.param._BATCH_WATCH = batch_watch
         parameterized.param._state_watchers = watchers

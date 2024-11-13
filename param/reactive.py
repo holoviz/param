@@ -180,7 +180,7 @@ class NestedResolver(Resolver):
 
 
 class reactive_ops:
-     """The reactive namespace.
+    """The reactive namespace.
 
     Provides reactive versions of the operations that cannot be made reactive through overloading, such as
     `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.

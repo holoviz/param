@@ -2386,16 +2386,16 @@ class Parameters:
     def update(self_, arg=Undefined, /, **kwargs):
         """
         Updates one or more parameters of this object or class.
-        
-        This method allows you to set the parameters of the object or class using a dictionary, 
-        an iterable, or keyword arguments in the form of param=value. The specified parameters 
+
+        This method allows you to set the parameters of the object or class using a dictionary,
+        an iterable, or keyword arguments in the form of param=value. The specified parameters
         will be updated to the given values.
 
-        This method can also be used as a context manager to temporarily set and then reset 
+        This method can also be used as a context manager to temporarily set and then reset
         parameter values.
 
         Reference: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
-        
+
         Examples:
 
         ```python

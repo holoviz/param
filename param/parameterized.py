@@ -1329,33 +1329,29 @@ class Parameter(_ParameterBase):
 
         Examples:
 
-        Turn your parameter into a reactive expression:
+        Lets create a Parameterized instance:
 
         ```python
         import param
 
-        class MyClass(param.Parameterized):
-            value = param.Parameter()
+        class P(param.Parameterized):
+            a = param.Number()
+            b = param.String()
 
-        my_instance = MyClass(value=0)
+
+        p = P(a=1, b="hello")
         ```
 
         Get the current value:
 
         ```python
-        a = my_instance.rx.value
-        ```
-
-        Set the current value:
-
-        ```python
-        my_instance.rx.value = 1
+        a = p.param.a.rx.value
         ```
 
         Call it to get a reactive expression:
 
         ```python
-        rx_value = my_instance.rx()
+        rx_value = p.param.a.rx()
         ```
         """
         from .reactive import reactive_ops

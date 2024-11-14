@@ -1328,7 +1328,8 @@ class Parameter(_ParameterBase):
 
         User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
-        Examples:
+        Examples
+        --------
 
         Lets create a Parameterized instance:
 

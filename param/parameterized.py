@@ -2710,7 +2710,7 @@ class Parameters:
 
         Parameters
         ----------
-        subset (list, optional):
+        subset: list, optional
             A list of parameter names to serialize. If None, all parameters will be serialized. Defaults to None.
         mode (str, optional):
             The serialization format. By default, only 'json' is supported. Defaults to 'json'.

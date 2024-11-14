@@ -1,6 +1,4 @@
-"""
-Generic support for objects with full-featured Parameters and
-messaging.
+"""Generic support for objects with full-featured Parameters and messaging.
 
 This file comes from the Param library (https://github.com/holoviz/param)
 but can be taken out of the param module and used on its own if desired,
@@ -127,9 +125,7 @@ warning_count = 0
 _reference_transforms = []
 
 def register_reference_transform(transform):
-    """
-    Appends a transform to extract potential parameter dependencies
-    from an object.
+    """Append a transform to extract potential parameter dependencies from an object.
 
     Arguments
     ---------
@@ -139,9 +135,9 @@ def register_reference_transform(transform):
 
 def transform_reference(arg):
     """
-    Applies transforms to turn objects which should be treated like
-    a parameter reference into a valid reference that can be resolved
-    by Param. This is useful for adding handling for depending on objects
+    Apply transforms to turn objects which should be treated like a parameter reference into a valid reference that can be resolved by Param.
+
+    This is useful for adding handling for depending on objects
     that are not simple Parameters or functions with dependency
     definitions.
     """
@@ -152,7 +148,7 @@ def transform_reference(arg):
     return arg
 
 def eval_function_with_deps(function):
-    """Evaluates a function after resolving its dependencies.
+    """Evaluate a function after resolving its dependencies.
 
     Calls and returns a function after resolving any dependencies
     stored on the _dinfo attribute and passing the resolved values
@@ -168,9 +164,7 @@ def eval_function_with_deps(function):
     return function(*args, **kwargs)
 
 def resolve_value(value, recursive=True):
-    """
-    Resolves the current value of a dynamic reference.
-    """
+    """Resolve the current value of a dynamic reference."""
     if not recursive:
         pass
     elif isinstance(value, (list, tuple)):
@@ -194,9 +188,7 @@ def resolve_value(value, recursive=True):
     return value
 
 def resolve_ref(reference, recursive=False):
-    """
-    Resolves all parameters a dynamic reference depends on.
-    """
+    """Resolve all parameters a dynamic reference depends on."""
     if recursive:
         if isinstance(reference, (list, tuple, set)):
             return [r for v in reference for r in resolve_ref(v, recursive)]
@@ -230,15 +222,12 @@ def resolve_ref(reference, recursive=False):
     return []
 
 def _identity_hook(obj, val):
-    """To be removed when set_hook is removed"""
+    """To be removed when set_hook is removed."""
     return val
 
 
 class _Undefined:
-    """
-    Dummy value to signal completely undefined values rather than
-    simple None values.
-    """
+    """Dummy value to signal completely undefined values rather than simple None values."""
 
     def __bool__(self):
         # Haven't defined whether Undefined is falsy or truthy,
@@ -255,9 +244,7 @@ Undefined = _Undefined()
 
 @contextmanager
 def logging_level(level):
-    """
-    Temporarily modify param's logging level.
-    """
+    """Temporarily modify param's logging level."""
     level = level.upper()
     levels = [DEBUG, INFO, WARNING, ERROR, CRITICAL, VERBOSE]
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
@@ -276,8 +263,10 @@ def logging_level(level):
 
 @contextmanager
 def _batch_call_watchers(parameterized, enable=True, run=True):
-    """
-    Internal version of batch_call_watchers, adding control over queueing and running.
+    """Add control over queueing and running.
+
+    Internal version of batch_call_watchers.
+
     Only actually batches events if enable=True; otherwise a no-op. Only actually
     calls the accumulated watchers on exit if run=True; otherwise they remain queued.
     """
@@ -302,8 +291,9 @@ def batch_watch(parameterized, enable=True, run=True):
 @contextmanager
 def batch_call_watchers(parameterized):
     """
-    Context manager to batch events to provide to Watchers on a
-    parameterized object.  This context manager queues any events
+    Context manager to batch events to provide to Watchers on a parameterized object.
+
+    This context manager queues any events
     triggered by setting a parameter on the supplied parameterized
     object, saving them up to dispatch them all at once when the
     context manager exits.
@@ -330,10 +320,7 @@ def _syncing(parameterized, parameters):
 
 @contextmanager
 def edit_constant(parameterized):
-    """
-    Temporarily set parameters on Parameterized object to constant=False
-    to allow editing them.
-    """
+    """Temporarily set parameters on Parameterized object to constant=False to allow editing them."""
     params = parameterized.param.objects('existing').values()
     constants = [p.constant for p in params]
     for p in params:
@@ -349,10 +336,7 @@ def edit_constant(parameterized):
 
 @contextmanager
 def discard_events(parameterized):
-    """
-    Context manager that discards any events within its scope
-    triggered on the supplied parameterized object.
-    """
+    """Context manager that discards any events within its scope triggered on the supplied parameterized object."""
     batch_watch = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
     watchers, events = (list(parameterized.param._state_watchers),
@@ -962,10 +946,7 @@ class ParameterMetaclass(type):
 
 
 class _ParameterBase(metaclass=ParameterMetaclass):
-    """
-    Base Parameter class used to dynamically update the signature of all
-    the Parameters.
-    """
+    """Base Parameter class used to dynamically update the signature of all the Parameters."""
 
     @classmethod
     def _modified_slots_defaults(cls):

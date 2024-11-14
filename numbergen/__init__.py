@@ -135,7 +135,7 @@ operator_symbols = {
 }
 
 def pprint(x, *args, **kwargs):
-    "Pretty-print the provided item, translating operators to their symbols"
+    """Pretty-print the provided item, translating operators to their symbols"""
     return x.pprint(*args, **kwargs) if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
 
 
@@ -214,6 +214,7 @@ class Hash:
     for __call__ must be specified in the constructor and must stay
     constant across calls.
     """
+
     def __init__(self, name, input_count):
         self.name = name
         self.input_count = input_count
@@ -224,7 +225,6 @@ class Hash:
 
     def _rational(self, val):
         """Convert the given value to a rational, if necessary."""
-
         I32 = 4294967296 # Maximum 32 bit unsigned int (i.e. 'I') value
         if isinstance(val, int):
             numer, denom = val, 1

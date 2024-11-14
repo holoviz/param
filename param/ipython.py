@@ -61,7 +61,6 @@ class ParamPager:
         and the dictionary of parameter values. If include_super is
         True, parameters are also collected from the super classes.
         """
-
         params = dict(obj.param.objects('existing'))
         if isinstance(obj,type):
             changed = []
@@ -86,7 +85,6 @@ class ParamPager:
         docstrings in a clean format (alternating red and blue for
         readability).
         """
-
         (params, val_dict, changed) = info
         contents = []
         displayed_params = []
@@ -147,7 +145,6 @@ class ParamPager:
         Collect the information about parameters needed to build a
         properly formatted table and then tabulate it.
         """
-
         info_list, bounds_dict = [], {}
         (params, val_dict, changed) = info
         col_widths = {k:0 for k in order}
@@ -209,7 +206,6 @@ class ParamPager:
         order:      The order of the table columns
         bound_dict: Dictionary of appropriately formatted bounds
         """
-
         contents, tail = [], []
         column_set = {k for _, row in info_list for k in row}
         columns = [col for col in order if col in column_set]
@@ -316,6 +312,7 @@ def load_ipython_extension(ip, verbose=True):
         Implements the %params line magic used to inspect the parameters
         of a parameterized class or object.
         """
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.param_pager = ParamPager()

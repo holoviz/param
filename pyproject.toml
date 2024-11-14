@@ -113,3 +113,9 @@ asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
 omit = ["param/version.py"]
+
+[tool.ruff.lint]
+select = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

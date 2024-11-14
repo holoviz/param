@@ -34,7 +34,7 @@ class MockLoggingHandler(logging.Handler):
         super().__init__(*args, **kwargs)
 
     def emit(self, record):
-        "Store a message to the instance's messages dictionary"
+        """Store a message to the instance's messages dictionary"""
         self.acquire()
         try:
             self.messages[record.levelname].append(record.getMessage())
@@ -48,7 +48,7 @@ class MockLoggingHandler(logging.Handler):
         self.release()
 
     def tail(self, level, n=1):
-        "Returns the last n lines captured at the given level"
+        """Returns the last n lines captured at the given level"""
         return [str(el) for el in self.messages[level][-n:]]
 
     def assertEndsWith(self, level, substring):

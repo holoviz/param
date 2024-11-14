@@ -122,7 +122,7 @@ def _deprecate_positional_args(func):
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
 def _recursive_repr(fillvalue='...'):
-    'Decorator to make a repr function return fillvalue for a recursive call'
+    """Decorator to make a repr function return fillvalue for a recursive call"""
 
     def decorating_function(user_function):
         repr_running = set()
@@ -631,7 +631,8 @@ class _GeneratorIs(metaclass=_GeneratorIsMeta):
 def gen_types(gen_func):
     """
     Decorator which takes a generator function which yields difference types
-    make it so it can be called with isinstance and issubclass."""
+    make it so it can be called with isinstance and issubclass.
+    """
     if not inspect.isgeneratorfunction(gen_func):
         msg = "gen_types decorator can only be applied to generator"
         raise TypeError(msg)

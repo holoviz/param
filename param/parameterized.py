@@ -456,6 +456,7 @@ class bothmethod:
     object (if called on the class) or the instance object
     (if called on the instance) as its first argument.
     """
+
     def __init__(self, method):
         self.method = method
 
@@ -484,7 +485,6 @@ def no_instance_params(cls):
 
 def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
-
     # Shallow-copy Parameter object without the watchers
     p = copy.copy(paramobj)
     p.owner = owner
@@ -922,6 +922,7 @@ class ParameterMetaclass(type):
     """
     Metaclass allowing control over creation of Parameter classes.
     """
+
     def __new__(mcs, classname, bases, classdict):
 
         # store the class's docstring in __classdoc
@@ -1203,7 +1204,6 @@ class Parameter(_ParameterBase):
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
                  per_instance=Undefined, allow_refs=Undefined, nested_refs=Undefined):
-
         """Initialize a new Parameter object and store the supplied attributes:
 
         default: the owning class's value for the attribute represented
@@ -1283,7 +1283,6 @@ class Parameter(_ParameterBase):
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
         """
-
         self.name = None
         self.owner = None
         self.allow_refs = allow_refs
@@ -1302,12 +1301,12 @@ class Parameter(_ParameterBase):
 
     @classmethod
     def serialize(cls, value):
-        "Given the parameter value, return a Python value suitable for serialization"
+        """Given the parameter value, return a Python value suitable for serialization"""
         return value
 
     @classmethod
     def deserialize(cls, value):
-        "Given a serializable Python value, return a value that the parameter can be set to"
+        """Given a serializable Python value, return a value that the parameter can be set to"""
         return value
 
     def schema(self, safe=False, subset=None, mode='json'):
@@ -2415,7 +2414,6 @@ class Parameters:
         >>> print(p.a, p.b)
         1 Hello
         """
-
         refs = {}
         if self_.self is not None:
             private = self_.self._param__private
@@ -3488,6 +3486,7 @@ class ParameterizedMetaclass(type):
     attribute __abstract set to True. The 'abstract' attribute can be
     used to find out if a class is abstract or not.
     """
+
     def __init__(mcs, name, bases, dict_):
         """
         Initialize the class object (not an instance of the class, but
@@ -3919,7 +3918,6 @@ def script_repr(val, imports=None, prefix="\n    ", settings=[],
     ways that are more suitable for saving as a separate script than
     for e.g. pretty-printing at the Python prompt.
     """
-
     if imports is None:
         imports = []
 
@@ -3977,7 +3975,6 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     parameter can be suppressed by returning None from the appropriate
     hook in script_repr_reg.
     """
-
     if imports is None:
         imports = []
 
@@ -4647,6 +4644,7 @@ class ParameterizedFunction(Parameterized):
 
     To obtain an instance of this class, call instance().
     """
+
     __abstract = True
 
     def __str__(self):
@@ -4658,7 +4656,6 @@ class ParameterizedFunction(Parameterized):
         Return an instance of this class, copying parameters from any
         existing instance provided.
         """
-
         if isinstance (self_or_cls,ParameterizedMetaclass):
             cls = self_or_cls
         else:
@@ -4707,7 +4704,7 @@ class ParameterizedFunction(Parameterized):
 
 
 class default_label_formatter(ParameterizedFunction):
-    "Default formatter to turn parameter names into appropriate widget labels."
+    """Default formatter to turn parameter names into appropriate widget labels."""
 
     capitalize = Parameter(default=True, doc="""
         Whether or not the label should be capitalized.""")
@@ -4745,6 +4742,7 @@ class overridable_property:
 
     .. deprecated:: 2.0.0
     """
+
     # Delays looking up the accessors until they're needed, rather
     # than finding them when the class is first created.
 

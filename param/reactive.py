@@ -218,7 +218,6 @@ class reactive_ops:
     >>> rx_value = p.param.a.rx()
     """
 
-
     def __init__(self, reactive):
         self._reactive = reactive
 

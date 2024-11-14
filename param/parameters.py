@@ -396,7 +396,6 @@ class Time(Parameterized):
         the current state remains consistent, this is normally the only
         way to change the time_type of an existing Time instance.
         """
-
         if time_type and val is None:
             raise Exception("Please specify a value for the new time_type.")
         if time_type:
@@ -560,7 +559,6 @@ class Dynamic(Parameter):
         value will be produced and returned. Otherwise, the last value
         gen produced will be returned.
         """
-
         if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:
@@ -613,6 +611,7 @@ class Dynamic(Parameter):
 
 class __compute_set_hook:
     """Remove when set_hook is removed"""
+
     def __call__(self, p):
         return _identity_hook
 
@@ -1431,6 +1430,7 @@ class CalendarDateRange(Range):
     """
     A date range specified as (start_date, end_date).
     """
+
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
@@ -1780,6 +1780,7 @@ class __compute_selector_default:
     then the object in _slot_defaults would itself be updated and the next Selector
     instance created wouldn't have [] as the default but a populated list.
     """
+
     def __call__(self, p):
         return []
 
@@ -1996,6 +1997,7 @@ class FileSelector(Selector):
     """
     Given a path glob, allows one file to be selected from those matching.
     """
+
     __slots__ = ['path']
 
     _slot_defaults = _dict_update(
@@ -2106,6 +2108,7 @@ class MultiFileSelector(ListSelector):
     """
     Given a path glob, allows multiple files to be selected from the list of matches.
     """
+
     __slots__ = ['path']
 
     _slot_defaults = _dict_update(
@@ -2523,7 +2526,7 @@ class List(Parameter):
         self._validate_item_type(val, self.item_type)
 
     def _validate_bounds(self, val, bounds):
-        "Checks that the list is of the right length and has the right contents."
+        """Checks that the list is of the right length and has the right contents."""
         if bounds is None or (val is None and self.allow_None):
             return
         min_length, max_length = bounds
@@ -2576,6 +2579,7 @@ class HookList(List):
     for users to register a set of commands to be called at a
     specified place in some sequence of processing steps.
     """
+
     __slots__ = ['class_', 'bounds']
 
     def _validate_value(self, val, allow_None):

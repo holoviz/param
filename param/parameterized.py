@@ -1323,38 +1323,39 @@ class Parameter(_ParameterBase):
         """
         The reactive namespace.
 
-        Provides reactive versions of the operations that cannot be made reactive through overloading, such as
-        `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
+        Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
+        `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
 
-        User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Reactive expression
+            The result of calling the reactive namespace is a reactive expression.
+
+        User Guide
+        ----------
+        https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
         Examples
         --------
+        Create a Parameterized instance:
 
-        Lets create a Parameterized instance:
-
-        ```python
-        import param
-
-        class P(param.Parameterized):
-            a = param.Number()
-            b = param.String()
-
-
-        p = P(a=1, b="hello")
-        ```
+        >>> import param
+        >>> class P(param.Parameterized):
+        >>>     a = param.Number()
+        >>>     b = param.String()
+        >>> p = P(a=1, b="hello")
 
         Get the current value:
 
-        ```python
-        a = p.param.a.rx.value
-        ```
+        >>> a = p.param.a.rx.value
 
         Call it to get a reactive expression:
 
-        ```python
-        rx_value = p.param.a.rx()
-        ```
+        >>> rx_value = p.param.a.rx()
         """
         from .reactive import reactive_ops
         return reactive_ops(self)
@@ -2298,10 +2299,10 @@ class Parameters:
 
     def add_parameter(self_, param_name: str, param_obj: Parameter):
         """
-        Add a new Parameter object into this object's class.
+        Add a new Parameter object to this class.
 
-        Should result in a Parameter equivalent to one declared
-        in the class's source code.
+        This method allows dynamically adding a Parameter to the class, resulting in behavior equivalent to declaring
+        the Parameter in the class's source code.
 
         Parameters
         ----------
@@ -2312,34 +2313,25 @@ class Parameters:
 
         Examples
         --------
+        Create a Parameterized class:
 
-        ```python
-        import param
-
-
-        class P(param.Parameterized):
-            a = param.Number()
-            b = param.String()
-
-
-        p = P()
-        ```
+        >>> import param
+        >>> class P(param.Parameterized):
+        >>>     a = param.Number()
+        >>>     b = param.String()
+        >>> p = P()
 
         Add a new parameter to the class via the class:
 
-        ```python
-        P.param.add_parameter('c', param.Tuple(default=(1,2,3)))
-        print(p.c)
-        # (1, 2, 3)
-        ```
+        >>> P.param.add_parameter('c', param.Tuple(default=(1, 2, 3)))
+        >>> print(p.c)
+        (1, 2, 3)
 
         Add a new parameter to the class via the instance:
 
-        ```python
-        p.param.add_parameter('d', param.Tuple(default=(3,2,1)))
-        print(p.d)
-        # (3, 2, 1)
-        ```
+        >>> p.param.add_parameter('d', param.Tuple(default=(3, 2, 1)))
+        >>> print(p.d)
+        (3, 2, 1)
         """
         # Could have just done setattr(cls,param_name,param_obj),
         # which is supported by the metaclass's __setattr__ , but
@@ -2383,48 +2375,47 @@ class Parameters:
 
     def update(self_, arg=Undefined, /, **kwargs):
         """
-        Updates one or more parameters of this object or class.
+        Update one or more parameters of this object or class.
 
-        This method allows you to set the parameters of the object or class using a dictionary,
-        an iterable, or keyword arguments in the form of param=value. The specified parameters
-        will be updated to the given values.
+        Allows setting the parameters of the object or class using a dictionary, an iterable, or keyword arguments
+        in the form of `param=value`. The specified parameters will be updated to the given values.
 
-        This method can also be used as a context manager to temporarily set and then reset
-        parameter values.
+        This method can also be used as a context manager to temporarily set and then reset parameter values.
 
+        Parameters
+        ----------
+        **params : dict or iterable or keyword arguments
+            The parameters to update, provided as a dictionary, iterable, or keyword arguments in `param=value` format.
+
+        References
+        ----------
         User Guide: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
         Examples
         --------
+        Create a Parameterized instance:
 
-        ```python
-        import param
-
-        class P(param.Parameterized):
-            a = param.Number()
-            b = param.String()
-
-        p = P()
-        ```
+        >>> import param
+        >>> class P(param.Parameterized):
+        >>>     a = param.Number()
+        >>>     b = param.String()
+        >>> p = P()
 
         Update parameters permanently:
 
-        ```python
-        p.param.update(a=1, b="Hello")
-        print(p.a, p.b)
-        # Output: 1 Hello
-        ```
+        >>> p.param.update(a=1, b="Hello")
+        >>> print(p.a, p.b)
+        1 Hello
 
         Update parameters temporarily:
 
-        ```python
-        with p.param.update(a=2, b="World"):
-            print(p.a, p.b)
-            # Output: 2 World
-        print(p.a, p.b)
-        # Output: 1 Hello
-        ```
+        >>> with p.param.update(a=2, b="World"):
+        >>>     print(p.a, p.b)
+        2 World
+        >>> print(p.a, p.b)
+        1 Hello
         """
+
         refs = {}
         if self_.self is not None:
             private = self_.self._param__private
@@ -2707,40 +2698,40 @@ class Parameters:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
     def serialize_parameters(self_, subset=None, mode='json'):
-        """Returns the serialized parameters of the Parameterized object.
+        """
+        Return the serialized parameters of the Parameterized object.
 
         Parameters
         ----------
-        subset: list, optional
+        subset : list, optional
             A list of parameter names to serialize. If None, all parameters will be serialized. Defaults to None.
-        mode (str, optional):
+        mode : str, optional
             The serialization format. By default, only 'json' is supported. Defaults to 'json'.
 
         Returns
         -------
-        Any: The serialized value
+        Any
+            The serialized value.
 
-        Reference
-        ---------
-        For more details visit https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
+        User Guide
+        ----------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
-        Example
-        -------
+        Examples
+        --------
+        Create a Parameterized instance and serialize its parameters:
 
-        ```python
-        import param
+        >>> import param
+        >>> class P(param.Parameterized):
+        >>>     a = param.Number()
+        >>>     b = param.String()
+        >>> p = P(a=1, b="hello")
 
-        class P(param.Parameterized):
-            a = param.Number()
-            b = param.String()
+        Serialize parameters:
 
-
-        p = P(a=1, b="hello")
-
-        serialized_data = p.param.serialize_parameters()
-        print(type(serialized_data))
-        # {"name": "P00002", "a": 1, "b": "hello"}
-        ```
+        >>> serialized_data = p.param.serialize_parameters()
+        >>> print(serialized_data)
+        {"name": "P00002", "a": 1, "b": "hello"}
         """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
@@ -2776,9 +2767,8 @@ class Parameters:
         dict
             A dictionary with parameter names as keys and deserialized values.
 
-        References
+        User Guide
         ----------
-        For more details on parameter serialization, see:
         https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
         Examples

@@ -183,38 +183,41 @@ class reactive_ops:
     """
     The reactive namespace.
 
-    Provides reactive versions of the operations that cannot be made reactive through overloading, such as
-    `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
+    Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
+    `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
 
-    User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+    Parameters
+    ----------
+    None
 
-    Examples:
+    Returns
+    -------
+    Reactive expression
+        The result of calling the reactive namespace is a reactive expression.
 
-    Lets create a Parameterized instance:
+    User Guide
+    ----------
+    https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
-    ```python
-    import param
+    Examples
+    --------
+    Create a Parameterized instance:
 
-    class P(param.Parameterized):
-        a = param.Number()
-        b = param.String()
-
-
-    p = P(a=1, b="hello")
-    ```
+    >>> import param
+    >>> class P(param.Parameterized):
+    >>>     a = param.Number()
+    >>>     b = param.String()
+    >>> p = P(a=1, b="hello")
 
     Get the current value:
 
-    ```python
-    a = p.param.a.rx.value
-    ```
+    >>> a = p.param.a.rx.value
 
     Call it to get a reactive expression:
 
-    ```python
-    rx_value = p.param.a.rx()
-    ```
+    >>> rx_value = p.param.a.rx()
     """
+
 
     def __init__(self, reactive):
         self._reactive = reactive
@@ -798,38 +801,39 @@ class rx:
         """
         The reactive namespace.
 
-        Provides reactive versions of the operations that cannot be made reactive through overloading, such as
-        `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
+        Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
+        `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
 
-        User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Reactive expression
+            The result of calling the reactive namespace is a reactive expression.
+
+        User Guide
+        ----------
+        https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
         Examples
         --------
+        Create a Parameterized instance:
 
-        Lets create a Parameterized instance:
-
-        ```python
-        import param
-
-        class P(param.Parameterized):
-            a = param.Number()
-            b = param.String()
-
-
-        p = P(a=1, b="hello")
-        ```
+        >>> import param
+        >>> class P(param.Parameterized):
+        >>>     a = param.Number()
+        >>>     b = param.String()
+        >>> p = P(a=1, b="hello")
 
         Get the current value:
 
-        ```python
-        a = p.param.a.rx.value
-        ```
+        >>> a = p.param.a.rx.value
 
         Call it to get a reactive expression:
 
-        ```python
-        rx_value = p.param.a.rx()
-        ```
+        >>> rx_value = p.param.a.rx()
         """
         return self._rx
 

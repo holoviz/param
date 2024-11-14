@@ -2309,8 +2309,8 @@ class Parameters:
         param_obj : Parameter
             The Parameter object to add.
 
-        Example
-        -------
+        Examples
+        --------
 
         ```python
         import param

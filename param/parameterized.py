@@ -1326,7 +1326,7 @@ class Parameter(_ParameterBase):
         Provides reactive versions of the operations that cannot be made reactive through overloading, such as
         `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
 
-        Reference: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+        User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
         Examples:
 
@@ -2391,7 +2391,7 @@ class Parameters:
         This method can also be used as a context manager to temporarily set and then reset
         parameter values.
 
-        Reference: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
+        User Guide: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
         Examples:
 
@@ -2704,7 +2704,7 @@ class Parameters:
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_, subset=None, mode='json')->str:
+    def serialize_parameters(self_, subset=None, mode='json'):
         """Returns the serialized parameters of the Parameterized object.
 
         Parameters
@@ -2714,12 +2714,9 @@ class Parameters:
         mode (str, optional):
             The serialization format. By default, only 'json' is supported. Defaults to 'json'.
 
-        Raises:
-            ValueError: If the `mode` is not valid.
-
         Returns
         -------
-        dict: The serialized string
+        Any: The serialized value
 
         Reference
         ---------
@@ -2758,35 +2755,42 @@ class Parameters:
 
     def deserialize_parameters(self_, serialization, subset=None, mode='json') -> dict:
         """
-        Deserialize the given serialized data. You may use the deserialized to create a Parameteried object or
-        update the parameters of a Parameterized object.
+        Deserialize the given serialized data. This data can be used to create a
+        `Parameterized` object or update the parameters of an existing `Parameterized` object.
 
-        Parameters:
-        - serialization (str): The serialized parameter data as a JSON string.
-        - subset (list, optional): A list of parameter names to deserialize. If None, all parameters will be deserialized. Defaults to None.
-        - mode (str, optional): The serialization format. By default, only 'json' is supported. Defaults to 'json'.
+        Parameters
+        ----------
+        serialization : str
+            The serialized parameter data as a JSON string.
+        subset : list of str, optional
+            A list of parameter names to deserialize. If `None`, all parameters will be
+            deserialized. Defaults to `None`.
+        mode : str, optional
+            The serialization format. By default, only 'json' is supported.
+            Defaults to 'json'.
 
-        Returns:
-        dict: A dictionary with parameter names as keys and deserialized values.
+        Returns
+        -------
+        dict
+            A dictionary with parameter names as keys and deserialized values.
 
-        Reference: https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
+        References
+        ----------
+        For more details on parameter serialization, see:
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
-        Example:
-
-        ```python
-        import param
-
-        class P(param.Parameterized):
-            a = param.Number()
-            b = param.String()
-
-        serialized_data = '{"a": 1, "b": "hello"}'
-        deserialized_data = P.param.deserialize_parameters(serialized_data)
-        print(deserialized_data)
-        # Output: {'a': 1, 'b': 'hello'}
-
-        instance = P(**deserialized_data)
-        ```
+        Examples
+        --------
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number()
+        ...     b = param.String()
+        ...
+        >>> serialized_data = '{"a": 1, "b": "hello"}'
+        >>> deserialized_data = P.param.deserialize_parameters(serialized_data)
+        >>> print(deserialized_data)
+        {'a': 1, 'b': 'hello'}
+        >>> instance = P(**deserialized_data)
         """
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
@@ -4383,35 +4387,35 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     @property
     def param(self):
         """
-        The `.param` namespace for Parameterized classes and instances.
+        The `.param` namespace for `Parameterized` classes and instances.
 
-        This namespace provides access to powerful methods and properties for managing parameters in a `Parameterized` object.
-        It includes utilities for adding parameters, updating parameters, debugging, serialization, logging, and more.
+        This namespace provides access to powerful methods and properties for managing
+        parameters in a `Parameterized` object. It includes utilities for adding parameters,
+        updating parameters, debugging, serialization, logging, and more.
 
-        Reference: https://param.holoviz.org/user_guide/Parameters.html#parameter-objects-and-instances
+        User Guide
+        ----------
+        For more details on parameter objects and instances, see:
+        https://param.holoviz.org/user_guide/Parameters.html#parameter-objects-and-instances
 
-        Example:
+        Examples
+        --------
+        Basic usage of `.param` in a `Parameterized` class:
 
-        ```python
-        import param
-
-        class MyClass(param.Parameterized):
-            value = param.Parameter()
-
-        my_instance = MyClass(value=0)
-        ```
+        >>> import param
+        >>>
+        >>> class MyClass(param.Parameterized):
+        ...     value = param.Parameter()
+        >>>
+        >>> my_instance = MyClass(value=0)
 
         Access the `value` parameter of `my_instance`:
 
-        ```python
-        my_instance.param.value  # the Parameter instance
-        ```
+        >>> my_instance.param.value  # the Parameter instance
 
-        Note this is different from the current `value` of `my_instance`:
+        Note that this is different from the current `value` of `my_instance`:
 
-        ```python
-        my_instance.value  # 0, the current parameter value
-        ```
+        >>> my_instance.value  # 0, the current parameter value
         """
         return Parameters(self.__class__, self=self)
 

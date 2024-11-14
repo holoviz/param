@@ -186,7 +186,7 @@ class reactive_ops:
     Provides reactive versions of the operations that cannot be made reactive through overloading, such as
     `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
 
-    Reference: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+    User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
     Examples:
 
@@ -801,7 +801,7 @@ class rx:
         Provides reactive versions of the operations that cannot be made reactive through overloading, such as
         `.rx.and_` and `.rx.bool`. Call it (`()`) to obtain a reactive expression.
 
-        Reference: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+        User Guide: https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
         Examples:
 

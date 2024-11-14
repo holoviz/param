@@ -2393,7 +2393,8 @@ class Parameters:
 
         Reference: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
-        Examples:
+        Examples
+        --------
 
         ```python
         import param

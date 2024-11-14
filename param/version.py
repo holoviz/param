@@ -517,10 +517,7 @@ def get_setupcfg_version():
     parse setup.cfg...but then git export-subst would not work.
 
     """
-    try:
-        import configparser
-    except ModuleNotFoundError:
-        import ConfigParser as configparser # python2 (also prevents dict-like access)
+    import configparser
     import re
     cfg = "setup.cfg"
     autover_section = 'tool:autover'

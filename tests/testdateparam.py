@@ -11,7 +11,7 @@ import pytest
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     np = None
 
 from .utils import check_defaults

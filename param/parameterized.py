@@ -26,7 +26,7 @@ from inspect import getfullargspec
 # Allow this file to be used standalone if desired, albeit without JSON serialization
 try:
     from . import serializer
-except ImportError:
+except ModuleNotFoundError:
     serializer = None
 
 from collections import defaultdict, namedtuple, OrderedDict
@@ -67,7 +67,7 @@ if _in_ipython():
     try:
         from .ipython import ParamPager, ipython_async_executor as async_executor
         param_pager = ParamPager(metaclass=True)  # Generates param description
-    except ImportError:
+    except ModuleNotFoundError:
         from ._utils import async_executor
 else:
     from ._utils import async_executor

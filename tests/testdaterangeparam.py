@@ -12,7 +12,7 @@ from .utils import check_defaults
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     np = None
 
 # Assuming tests of range parameter cover most of what's needed to

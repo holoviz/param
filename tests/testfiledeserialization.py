@@ -20,19 +20,19 @@ try:
     pd_ver = pd.__version__.split('.')
     df = pd.DataFrame({'A':[1,2,3], 'B':[1.1,2.2,3.3]})
     modern_pd = pd if (int(pd_ver[0]) >= 1 and int(pd_ver[1]) >= 2) else None
-except ImportError:
+except ModuleNotFoundError:
     pd = df1 = df2 = modern_pd = None
 
 # The writer could be xlsxwriter, but the sufficient condition is the presence of
 # openpyxl
 try:
     import openpyxl as xlsxm
-except ImportError:
+except ModuleNotFoundError:
     xlsxm = None
 
 try:
     import odf as ods
-except ImportError:
+except ModuleNotFoundError:
     ods = None
 
 # prior to pandas version 1.2, xlrd was always the default excel reader (though it
@@ -42,27 +42,27 @@ try:
     import xlrd as xls
     if int(xls.__version__.split('.')[0]) > 2:
         raise Exception()
-except ImportError:
+except ModuleNotFoundError:
     if modern_pd is None:
         xlsxm = None
 
 try:
     import pyarrow.feather as feather
-except ImportError:
+except ModuleNotFoundError:
     feather = None
 
 try:
     import fastparquet as parquet
-except ImportError:
+except ModuleNotFoundError:
     parquet = None
 try:
     import pyarrow as parquet
-except ImportError:
+except ModuleNotFoundError:
     pass
 
 try:
     import tables as hdf5
-except ImportError:
+except ModuleNotFoundError:
     hdf5 = None
 
 np_skip = skipIf(np is None, "NumPy is not available")

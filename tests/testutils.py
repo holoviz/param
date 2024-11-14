@@ -14,12 +14,12 @@ from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     np = None
 
 try:
     import pandas as pd
-except ImportError:
+except ModuleNotFoundError:
     pd = None
 
 now = dt.datetime.now()

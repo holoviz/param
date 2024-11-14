@@ -23,11 +23,11 @@ skip = []
 
 try:
     import numpy # noqa
-except ImportError:
+except ModuleNotFoundError:
     skip.append('Array')
 try:
     import pandas # noqa
-except ImportError:
+except ModuleNotFoundError:
     skip.append('DataFrame')
     skip.append('Series')
 

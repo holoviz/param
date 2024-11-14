@@ -519,7 +519,7 @@ def get_setupcfg_version():
     """
     try:
         import configparser
-    except ImportError:
+    except ModuleNotFoundError:
         import ConfigParser as configparser # python2 (also prevents dict-like access)
     import re
     cfg = "setup.cfg"

@@ -11,7 +11,7 @@ from .utils import check_defaults
 try:
     import numpy
     import numpy.testing
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_NUMPY','0') == '1':
         raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
     else:

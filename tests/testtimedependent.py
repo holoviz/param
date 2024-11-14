@@ -13,7 +13,7 @@ import numbergen
 
 try:
     import gmpy
-except ImportError:
+except ModuleNotFoundError:
     import os
     if os.getenv('PARAM_TEST_GMPY','0') == '1':
         raise ImportError("PARAM_TEST_GMPY=1 but gmpy not available.")

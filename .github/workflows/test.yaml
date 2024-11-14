@@ -5,71 +5,128 @@ on:
       - main
   pull_request:
     branches:
-    - '*'
+      - "*"
   workflow_dispatch:
   schedule:
-    - cron: '0 13 * * SUN'
+    - cron: "0 13 * * SUN"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash -e {0}
+
+env:
+  DISPLAY: ":99.0"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  COV: "--cov=./param --cov-report=xml"
+
 jobs:
   pre_commit:
-    name: Run pre-commit hooks
-    runs-on: 'ubuntu-latest'
+    name: Run pre-commit
+    runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v4
+      - uses: holoviz-dev/holoviz_tasks/pre-commit@v0
+
+  setup:
+    name: Setup workflow
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ env.MATRIX }}
+    steps:
+      - name: Set matrix option
+        run: |
+          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
+            OPTION=${{ github.event.inputs.target }}
+          elif [[ '${{ github.event_name }}' == 'schedule' ]]; then
+            OPTION="full"
+          elif [[ '${{ github.event_name }}' == 'push' && '${{ github.ref_type }}' == 'tag' ]]; then
+            OPTION="full"
+          else
+            OPTION="default"
+          fi
+          echo "MATRIX_OPTION=$OPTION" >> $GITHUB_ENV
+      - name: Set test matrix with 'default' option
+        if: env.MATRIX_OPTION == 'default'
+        run: |
+          MATRIX=$(jq -nsc '{
+              "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
+              "environment": ["test-38", "test-312", "test-313"]
+          }')
+          echo "MATRIX=$MATRIX" >> $GITHUB_ENV
+      - name: Set test matrix with 'full' option
+        if: env.MATRIX_OPTION == 'full'
+        run: |
+          MATRIX=$(jq -nsc '{
+              "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
+              "environment": ["test-38", "test-39", "test-310", "test-311", "test-312", "test-313"]
+          }')
+          echo "MATRIX=$MATRIX" >> $GITHUB_ENV
+      - name: Set test matrix with 'downstream' option
+        if: env.MATRIX_OPTION == 'downstream'
+        run: |
+          MATRIX=$(jq -nsc '{
+              "os": ["ubuntu-latest"],
+              "environment": ["test-312"]
+          }')
+          echo "MATRIX=$MATRIX" >> $GITHUB_ENV
+
+  pixi_lock:
+    name: Pixi lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: holoviz-dev/holoviz_tasks/pixi_lock@v0
         with:
-          fetch-depth: "1"
-      - name: set PY
-        run: echo "PY=$(python -VV | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
-      - uses: actions/cache@v4
+          cache: ${{ github.event.inputs.cache == 'true' || github.event.inputs.cache == '' }}
+
+  unit_test_suite:
+    name: unit:${{ matrix.environment }}:${{ matrix.os }}
+    needs: [pre_commit, setup, pixi_lock]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+    timeout-minutes: 30
+    steps:
+      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
-          path: ~/.cache/pre-commit
-          key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
-      - name: pre-commit
-        uses: pre-commit/action@v3.0.0
-  test_suite:
-    name: Test ${{ matrix.python-version }}, ${{ matrix.platform }}
-    needs: [pre_commit]
-    runs-on: ${{ matrix.platform }}
+          environments: ${{ matrix.environment }}
+      - name: Test Unit
+        run: |
+          pixi run -e ${{ matrix.environment }} test-unit $COV
+      - name: Test Examples
+        run: |
+          pixi run -e ${{ matrix.environment }} test-example
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  core_test_suite:
+    name: core:${{ matrix.environment }}:${{ matrix.os }}
+    needs: [pre_commit, pixi_lock]
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        platform: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        python-version: ${{ ( github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'push' && github.ref_type == 'tag' ) ) && fromJSON('["3.8", "3.9", "3.10", "3.11", "3.12", "pypy3.9"]') || fromJSON('["3.8", "3.10", "3.12"]') }}
+        os: ["ubuntu-latest"]
+        environment: ["test-core", "test-pypy"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
-          fetch-depth: "100"
-      - name: Fetch unshallow
-        run: git fetch --prune --tags --unshallow -f
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
-      - name: env setup
+          environments: ${{ matrix.environment }}
+      - name: Test Unit
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install hatch
-      - name: temp patch pip for blosc2
-        if: contains(matrix.platform, 'ubuntu') && matrix.python-version == '3.8'
-        run: echo "PIP_ONLY_BINARY=blosc2" >> $GITHUB_ENV
-      - name: run unit tests
-        run: hatch -v run +py=${{ matrix.python-version }} tests:with_coverage
-      - name: run examples tests
-        # A notebook fails on Windows (UNIX path used in an example)
-        # No need to run these tests for PyPy really
-        if: contains(matrix.platform, 'ubuntu') && !startsWith(matrix.python-version, 'py')
-        run: hatch -v run +py=${{ matrix.python-version }} tests_examples:examples
-      - name: Upload coverage reports to Codecov
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: false
-          verbose: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          pixi run -e ${{ matrix.environment }} test-unit
+
+  result_test_suite:
+    name: result:test
+    needs: [unit_test_suite, core_test_suite]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: check for failures
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: echo job failed && exit 1

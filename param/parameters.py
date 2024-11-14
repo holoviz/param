@@ -30,11 +30,12 @@ import typing
 import warnings
 
 from collections import OrderedDict
+from collections.abc import Iterable
 from contextlib import contextmanager
 
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
-    Undefined, get_logger, instance_descriptor, dt_types,
+    Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
 from ._utils import (
@@ -94,7 +95,7 @@ def guess_param_types(**kwargs):
         kws = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
-        elif isinstance(v, dt_types):
+        elif isinstance(v, _dt_types):
             params[k] = Date(**kws)
         elif isinstance(v, bool):
             params[k] = Boolean(**kws)
@@ -109,7 +110,7 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif all(isinstance(el, dt_types) for el in v) and len(v)==2:
+            elif len(v) == 2 and all(isinstance(el, _dt_types) for el in v):
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)
@@ -141,7 +142,7 @@ def parameterized_class(name, params, bases=Parameterized):
     Dynamically create a parameterized class with the given name and the
     supplied parameters, inheriting from the specified base(s).
     """
-    if not (isinstance(bases, list) or isinstance(bases, tuple)):
+    if not isinstance(bases, (list, tuple)):
         bases=[bases]
     return type(name, tuple(bases), params)
 
@@ -917,14 +918,14 @@ class Date(Number):
         if self.allow_None and val is None:
             return
 
-        if not isinstance(val, dt_types) and not (allow_None and val is None):
+        if not isinstance(val, _dt_types) and not (allow_None and val is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
                 f"date types, not {type(val)}."
             )
 
     def _validate_step(self, val, step):
-        if step is not None and not isinstance(step, dt_types):
+        if step is not None and not isinstance(step, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
                 f"a datetime or date type, not {type(step)}."
@@ -1355,7 +1356,7 @@ class DateRange(Range):
     """
 
     def _validate_bound_type(self, value, position, kind):
-        if not isinstance(value, dt_types):
+        if not isinstance(value, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} {position} {kind} can only be "
                 f"None or a date/datetime value, not {type(value)}."
@@ -1379,7 +1380,7 @@ class DateRange(Range):
                 f"not {type(val)}."
             )
         for n in val:
-            if isinstance(n, dt_types):
+            if isinstance(n, _dt_types):
                 continue
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes date/datetime "
@@ -2184,18 +2185,18 @@ class ClassSelector(SelectorBase):
     def _validate_class_(self, val, class_, is_instance):
         if (val is None and self.allow_None):
             return
-        if isinstance(class_, tuple):
-            class_name = ('(%s)' % ', '.join(cl.__name__ for cl in class_))
+        if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
+            return
+
+        if isinstance(class_, Iterable):
+            class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_)))
         else:
             class_name = class_.__name__
-        if is_instance:
-            if not (isinstance(val, class_)):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be an instance of {class_name}, not {val!r}.")
-        else:
-            if not (issubclass(val, class_)):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val}.")
+
+        raise ValueError(
+            f"{_validate_error_prefix(self)} value must be "
+            f"{'an instance' if is_instance else 'a subclass'} of {class_name}, not {val!r}."
+        )
 
     def get_range(self):
         """

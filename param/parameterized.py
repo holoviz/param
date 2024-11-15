@@ -23,12 +23,6 @@ import typing
 import warnings
 from inspect import getfullargspec
 
-# Allow this file to be used standalone if desired, albeit without JSON serialization
-try:
-    from . import serializer
-except ImportError:
-    serializer = None
-
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from html import escape
@@ -39,6 +33,7 @@ from types import FunctionType, MethodType
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
     ParamDeprecationWarning as _ParamDeprecationWarning,
@@ -1307,8 +1302,6 @@ class Parameter(_ParameterBase):
         return value
 
     def schema(self, safe=False, subset=None, mode='json'):
-        if serializer is None:
-            raise ImportError('Cannot import serializer.py needed to generate schema')
         if mode not in  self._serializers:
             raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(self.__class__.__name__, self,

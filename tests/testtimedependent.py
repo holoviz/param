@@ -13,7 +13,7 @@ import numbergen
 
 try:
     import gmpy
-except ImportError:
+except ModuleNotFoundError:
     import os
     if os.getenv('PARAM_TEST_GMPY','0') == '1':
         raise ImportError("PARAM_TEST_GMPY=1 but gmpy not available.")
@@ -57,7 +57,8 @@ class TestTimeClass(unittest.TestCase):
     def test_time_int_eq(self):
         t = param.Time(time_type=int)
         s = param.Time(time_type=int)
-        t(3); s(3)
+        t(3)
+        s(3)
         self.assertEqual(t == s, True)
 
     def test_time_int_context(self):

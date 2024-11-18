@@ -110,7 +110,7 @@ class TestDictParameters(unittest.TestCase):
         assert p.allow_None is True
         assert p.instantiate is True
         assert p.is_instance is True
-        assert p.class_ == dict
+        assert p.class_ is dict
 
     def test_defaults_class(self):
         class P(param.Parameterized):

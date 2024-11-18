@@ -23,11 +23,11 @@ skip = []
 
 try:
     import numpy # noqa
-except ImportError:
+except ModuleNotFoundError:
     skip.append('Array')
 try:
     import pandas # noqa
-except ImportError:
+except ModuleNotFoundError:
     skip.append('DataFrame')
     skip.append('Series')
 
@@ -61,7 +61,7 @@ class DefaultsMetaclassTest(type):
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
-                    if type(parameter) == param.Composite and slot == 'objtype':
+                    if type(parameter) is param.Composite and slot == 'objtype':
                         continue
                     assert getattr(P.param.p, slot) is not param.Undefined
                     # Handled in a special way, skip it
@@ -82,7 +82,7 @@ class DefaultsMetaclassTest(type):
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
-                    if type(parameter) == param.Composite and slot == 'objtype':
+                    if type(parameter) is param.Composite and slot == 'objtype':
                         continue
                     assert getattr(inst.param.p, slot) is not param.Undefined
                     # Handled in a special way, skip it

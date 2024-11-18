@@ -23,12 +23,6 @@ import typing
 import warnings
 from inspect import getfullargspec
 
-# Allow this file to be used standalone if desired, albeit without JSON serialization
-try:
-    from . import serializer
-except ImportError:
-    serializer = None
-
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial, wraps, reduce
 from html import escape
@@ -39,6 +33,7 @@ from types import FunctionType, MethodType
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
     ParamDeprecationWarning as _ParamDeprecationWarning,
@@ -67,7 +62,7 @@ if _in_ipython():
     try:
         from .ipython import ParamPager, ipython_async_executor as async_executor
         param_pager = ParamPager(metaclass=True)  # Generates param description
-    except ImportError:
+    except ModuleNotFoundError:
         from ._utils import async_executor
 else:
     from ._utils import async_executor
@@ -340,8 +335,6 @@ def edit_constant(parameterized):
         p.constant = False
     try:
         yield
-    except:
-        raise
     finally:
         for (p, const) in zip(params, constants):
             p.constant = const
@@ -359,8 +352,6 @@ def discard_events(parameterized):
                         list(parameterized.param._events))
     try:
         yield
-    except:
-        raise
     finally:
         parameterized.param._BATCH_WATCH = batch_watch
         parameterized.param._state_watchers = watchers
@@ -1311,8 +1302,6 @@ class Parameter(_ParameterBase):
         return value
 
     def schema(self, safe=False, subset=None, mode='json'):
-        if serializer is None:
-            raise ImportError('Cannot import serializer.py needed to generate schema')
         if mode not in  self._serializers:
             raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
@@ -1747,7 +1736,7 @@ class Comparator:
 
     @classmethod
     def compare_iterator(cls, obj1, obj2):
-        if type(obj1) != type(obj2) or len(obj1) != len(obj2):
+        if type(obj1) is not type(obj2) or len(obj1) != len(obj2):
             return False
         for o1, o2 in zip(obj1, obj2):
             if not cls.is_equal(o1, o2):
@@ -1756,7 +1745,7 @@ class Comparator:
 
     @classmethod
     def compare_mapping(cls, obj1, obj2):
-        if type(obj1) != type(obj2) or len(obj1) != len(obj2): return False
+        if type(obj1) is not type(obj2) or len(obj1) != len(obj2): return False
         for k in obj1:
             if k in obj2:
                 if not cls.is_equal(obj1[k], obj2[k]):
@@ -2354,7 +2343,7 @@ class Parameters:
                 raise ValueError(f"{k!r} is not a parameter of {self_.cls.__name__}")
             try:
                 setattr(self_or_cls, k, v)
-            except:
+            except Exception:
                 self_._BATCH_WATCH = False
                 raise
 
@@ -2386,7 +2375,7 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         if args:
-            if len(args) == 2 and not args[0] in kwargs and not kwargs:
+            if len(args) == 2 and args[0] not in kwargs and not kwargs:
                 kwargs[args[0]] = args[1]
             else:
                 raise ValueError("Invalid positional arguments for %s.set_param" %
@@ -3388,7 +3377,7 @@ class ParameterizedMetaclass(type):
         """
         name_param = dict_.get("name", None)
         if name_param is not None:
-            if not type(name_param) is String:
+            if type(name_param) is not String:
                 raise TypeError(
                     f"Parameterized class {name!r} cannot override "
                     f"the 'name' Parameter with type {type(name_param)}. "

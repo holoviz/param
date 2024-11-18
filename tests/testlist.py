@@ -166,14 +166,14 @@ class TestListParameters(unittest.TestCase):
         assert B.param.p.default == [0]
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (0, None)
-        assert B.param.p.item_type == int
+        assert B.param.p.item_type is int
 
         b = B()
 
         assert b.param.p.default == [0]
         assert b.param.p.instantiate is True
         assert b.param.p.bounds == (0, None)
-        assert b.param.p.item_type == int
+        assert b.param.p.item_type is int
 
     def test_inheritance_behavior5(self):
         class A(param.Parameterized):

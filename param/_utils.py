@@ -200,7 +200,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
 def _is_mutable_container(value):
     """True for mutable containers, which typically need special handling when being copied"""
-    return issubclass(type(value), MUTABLE_TYPES)
+    return isinstance(value, MUTABLE_TYPES)
 
 
 def full_groupby(l, key=lambda x: x):

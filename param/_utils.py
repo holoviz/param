@@ -203,15 +203,6 @@ def _is_mutable_container(value):
     return issubclass(type(value), MUTABLE_TYPES)
 
 
-def _dict_update(dictionary, **kwargs):
-    """
-    Small utility to update a copy of a dict with the provided keyword args.
-    """
-    d = dictionary.copy()
-    d.update(kwargs)
-    return d
-
-
 def full_groupby(l, key=lambda x: x):
     """
     Groupby implementation which does not require a prior sort

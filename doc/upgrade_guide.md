@@ -90,7 +90,7 @@ class CustomParameter(Parameter):
 
     __slots__ = ['some_attribute']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults,
+    _slot_defaults = dict(Parameter._slot_defaults,
         default=None, some_attribute=10
     )
 

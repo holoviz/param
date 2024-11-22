@@ -42,7 +42,6 @@ from ._utils import (
     ParamDeprecationWarning as _ParamDeprecationWarning,
     _deprecate_positional_args,
     _deprecated,
-    _dict_update,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -674,7 +673,7 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
@@ -844,7 +843,7 @@ class Number(Dynamic):
 class Integer(Number):
     """Numeric Parameter required to be an Integer"""
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=0)
+    _slot_defaults = dict(Number._slot_defaults, default=0)
 
     def _validate_value(self, val, allow_None):
         if callable(val):
@@ -870,7 +869,7 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
+    _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
     @typing.overload
     def __init__(
@@ -895,7 +894,7 @@ class Date(Number):
     Date parameter of datetime or date type.
     """
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+    _slot_defaults = dict(Number._slot_defaults, default=None)
 
     @typing.overload
     def __init__(
@@ -956,7 +955,7 @@ class CalendarDate(Number):
     Parameter specifically allowing dates (not datetimes).
     """
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+    _slot_defaults = dict(Number._slot_defaults, default=None)
 
     @typing.overload
     def __init__(
@@ -1010,7 +1009,7 @@ class CalendarDate(Number):
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
+    _slot_defaults = dict(Parameter._slot_defaults, default=False)
 
     @typing.overload
     def __init__(
@@ -1136,7 +1135,7 @@ class Tuple(Parameter):
 
     __slots__ = ['length']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
+    _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
     @typing.overload
     def __init__(
@@ -1224,7 +1223,7 @@ class NumericTuple(Tuple):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
+    _slot_defaults = dict(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
     @typing.overload
     def __init__(
@@ -1247,7 +1246,7 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         NumericTuple._slot_defaults, default=None, bounds=None,
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
@@ -1809,7 +1808,7 @@ _compute_selector_checking_default = __compute_selector_checking_default()
 
 class _SignatureSelector(Parameter):
     # Needs docstring; why is this a separate mixin?
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         SelectorBase._slot_defaults, _objects=_compute_selector_default,
         compute_default_fn=None, check_on_set=_compute_selector_checking_default,
         allow_None=None, instantiate=False, default=None,
@@ -1998,7 +1997,7 @@ class FileSelector(Selector):
     """
     __slots__ = ['path']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Selector._slot_defaults, path="",
     )
 
@@ -2108,7 +2107,7 @@ class MultiFileSelector(ListSelector):
     """
     __slots__ = ['path']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Selector._slot_defaults, path="",
     )
 
@@ -2159,7 +2158,7 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
+    _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
     @typing.overload
     def __init__(
@@ -2297,7 +2296,7 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
@@ -2413,7 +2412,7 @@ class Series(ClassSelector):
 
     __slots__ = ['rows']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
@@ -2476,7 +2475,7 @@ class List(Parameter):
 
     __slots__ = ['bounds', 'item_type', 'class_']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
         instantiate=True, default=[],
     )
@@ -2715,7 +2714,7 @@ class Path(Parameter):
 
     __slots__ = ['search_paths', 'check_exists']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Parameter._slot_defaults, check_exists=True,
     )
 
@@ -2877,7 +2876,7 @@ class Color(Parameter):
 
     __slots__ = ['allow_named']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
+    _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
     @typing.overload
     def __init__(
@@ -2939,7 +2938,7 @@ class Bytes(Parameter):
 
     __slots__ = ['regex']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 

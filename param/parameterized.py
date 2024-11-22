@@ -41,7 +41,6 @@ from ._utils import (
     Skip,
     _deprecated,
     _deprecate_positional_args,
-    _dict_update,
     _in_ipython,
     _is_auto_name,
     _is_mutable_container,
@@ -1601,7 +1600,7 @@ class String(Parameter):
 
     __slots__ = ['regex']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default="", regex=None)
+    _slot_defaults = dict(Parameter._slot_defaults, default="", regex=None)
 
     @typing.overload
     def __init__(

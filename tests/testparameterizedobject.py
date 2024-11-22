@@ -17,7 +17,6 @@ import pytest
 import random
 
 from param import parameterized, Parameter
-from param._utils import _dict_update
 from param.parameterized import (
     ParamOverrides,
     Undefined,
@@ -1357,7 +1356,7 @@ class TestShallowCopyMutableAttributes:
 
             __slots__ = ['container']
 
-            _slot_defaults = _dict_update(Parameter._slot_defaults, container=None)
+            _slot_defaults = dict(Parameter._slot_defaults, container=None)
 
             def __init__(self, default=Undefined, *, container=Undefined, **kwargs):
                 super().__init__(default=default, **kwargs)

@@ -1346,8 +1346,7 @@ class Parameter(_ParameterBase):
         >>> import param
         >>> class P(param.Parameterized):
         >>>     a = param.Number()
-        >>>     b = param.String()
-        >>> p = P(a=1, b="hello")
+        >>> p = P(a=1)
 
         Get the current value:
 

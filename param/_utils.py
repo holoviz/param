@@ -200,16 +200,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
 def _is_mutable_container(value):
     """True for mutable containers, which typically need special handling when being copied"""
-    return issubclass(type(value), MUTABLE_TYPES)
-
-
-def _dict_update(dictionary, **kwargs):
-    """
-    Small utility to update a copy of a dict with the provided keyword args.
-    """
-    d = dictionary.copy()
-    d.update(kwargs)
-    return d
+    return isinstance(value, MUTABLE_TYPES)
 
 
 def full_groupby(l, key=lambda x: x):

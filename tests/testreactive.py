@@ -8,7 +8,7 @@ from textwrap import dedent
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_NUMPY','0') == '1':
         raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
     else:
@@ -16,7 +16,7 @@ except ImportError:
 
 try:
     import pandas as pd
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_PANDAS','0') == '1':
         raise ImportError("PARAM_TEST_PANDAS=1 but pandas not available.")
     else:

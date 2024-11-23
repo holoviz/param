@@ -11,7 +11,7 @@ import param
 
 try:
     from jsonschema import validate, ValidationError
-except ImportError:
+except ModuleNotFoundError:
     import os
     if os.getenv('PARAM_TEST_JSONSCHEMA','0') == '1':
         raise ImportError("PARAM_TEST_JSONSCHEMA=1 but jsonschema not available.")
@@ -25,7 +25,7 @@ try:
     ndarray = np.array([[1,2,3],[4,5,6]])
     npdt1 = np.datetime64(now)
     npdt2 = np.datetime64(after_now)
-except:
+except ModuleNotFoundError:
     np, ndarray, npdt1, npdt2 = None, None, None, None
 
 np_skip = skipIf(np is None, "NumPy is not available")
@@ -36,7 +36,7 @@ try:
     df2 = pd.DataFrame({'A':[1.1,2.2,3.3], 'B':[1.1,2.2,3.3]})
     pdts1 = pd.Timestamp(now)
     pdts2 = pd.Timestamp(after_now)
-except:
+except ModuleNotFoundError:
     pd, df1, df2, pdts1, pdts2 = None, None, None, None, None
 
 pd_skip = skipIf(pd is None, "pandas is not available")

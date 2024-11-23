@@ -18,7 +18,9 @@ See https://github.com/holoviz/autover for more information.
 
 __author__ = 'Jean-Luc Stevens'
 
-import os, subprocess, json
+import os
+import subprocess
+import json
 
 def run_cmd(args, cwd=None):
     kwargs = {}
@@ -192,7 +194,7 @@ class Version:
                         output = self._output_from_file()
                         if output is not None:
                             self._update_from_vcs(output)
-                    except: pass
+                    except Exception: pass
             if output is None:
                 # glob pattern (not regexp) matching vX.Y.Z* tags
                 output = run_cmd([cmd, 'describe', '--long', '--match',
@@ -251,7 +253,7 @@ class Version:
             vfile = os.path.join(os.path.dirname(self.fpath), '.version')
             with open(vfile) as f:
                 return json.loads(f.read()).get(entry, None)
-        except: # File may be missing if using pip + git archive
+        except Exception: # File may be missing if using pip + git archive
             return None
 
 
@@ -427,7 +429,7 @@ class Version:
 
             if git_describe is not None:
                 info['git_describe'] = git_describe
-        except: pass
+        except Exception: pass
 
         if git_describe is None:
             extracted_directory_tag = Version.extract_directory_tag(setup_path, reponame)
@@ -436,7 +438,7 @@ class Version:
             try:
                 with open(os.path.join(setup_path, pkgname, '.version'), 'w') as f:
                     f.write(json.dumps({'extracted_directory_tag':extracted_directory_tag}))
-            except:
+            except Exception:
                 print('Error in setup_version: could not write .version file.')
 
 
@@ -449,7 +451,7 @@ class Version:
         try:
             with open(os.path.join(setup_path, pkgname, '.version'), 'w') as f:
                 f.write(json.dumps(info))
-        except:
+        except Exception:
             print('Error in setup_version: could not write .version file.')
 
         return info['version_string']
@@ -515,10 +517,7 @@ def get_setupcfg_version():
     parse setup.cfg...but then git export-subst would not work.
 
     """
-    try:
-        import configparser
-    except ImportError:
-        import ConfigParser as configparser # python2 (also prevents dict-like access)
+    import configparser
     import re
     cfg = "setup.cfg"
     autover_section = 'tool:autover'

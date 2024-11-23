@@ -8,7 +8,7 @@ from .utils import check_defaults
 
 try:
     import numpy as np
-except:
+except ModuleNotFoundError:
     np = None
 
 

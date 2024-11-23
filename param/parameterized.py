@@ -1345,7 +1345,7 @@ class Parameter(_ParameterBase):
 
         >>> import param
         >>> class P(param.Parameterized):
-        >>>     a = param.Number()
+        ...     a = param.Number()
         >>> p = P(a=1)
 
         Get the current value:
@@ -2320,16 +2320,16 @@ class Parameters:
         >>>     b = param.String()
         >>> p = P()
 
-        Add a new parameter to the class via the class:
+        Add a new parameter to the class `P` via the class namespace `P.param`:
 
         >>> P.param.add_parameter('c', param.Tuple(default=(1, 2, 3)))
         >>> print(p.c)
         (1, 2, 3)
 
-        Add a new parameter to the class via the instance:
+        Add a new parameter to the class `P` via the instance namespace `p.param`:
 
         >>> p.param.add_parameter('d', param.Tuple(default=(3, 2, 1)))
-        >>> print(p.d)
+        >>> p.d
         (3, 2, 1)
         """
         # Could have just done setattr(cls,param_name,param_obj),
@@ -2396,8 +2396,8 @@ class Parameters:
 
         >>> import param
         >>> class P(param.Parameterized):
-        >>>     a = param.Number()
-        >>>     b = param.String()
+        ...     a = param.Number()
+        ...     b = param.String()
         >>> p = P()
 
         Update parameters permanently:
@@ -2409,7 +2409,7 @@ class Parameters:
         Update parameters temporarily:
 
         >>> with p.param.update(a=2, b="World"):
-        >>>     print(p.a, p.b)
+        ...     print(p.a, p.b)
         2 World
         >>> print(p.a, p.b)
         1 Hello
@@ -2722,8 +2722,8 @@ class Parameters:
 
         >>> import param
         >>> class P(param.Parameterized):
-        >>>     a = param.Number()
-        >>>     b = param.String()
+        ...     a = param.Number()
+        ...     b = param.String()
         >>> p = P(a=1, b="hello")
 
         Serialize parameters:

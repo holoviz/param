@@ -53,7 +53,7 @@ class TestDynamicParameterBasics(TestDynamicParameters):
             self.t1.param['y']._value_is_dynamic(self.t1), False)
 
     def test_inspect_x(self):
-        "no value generated yet"
+        """No value generated yet"""
         self.assertEqual(self.t1.param.inspect_value('x'), None)
 
     def test_inspect_y(self):
@@ -69,17 +69,17 @@ class TestDynamicParameterBasics(TestDynamicParameters):
         self.assertEqual(is_numbergen, True)
 
     def test_matching_numbergen_streams(self):
-        "check that t2 and t3 have identical streams"
+        """Check that t2 and t3 have identical streams"""
         self.assertEqual(self.t2.x, self.t3.x)
 
     def test_numbergen_objects_distinct(self):
-        "check t2 and t3 do not share UniformRandom objects"
+        """Check t2 and t3 do not share UniformRandom objects"""
         self.t2.x
         self.assertNotEqual(self.t2.param.inspect_value('x'),
                             self.t3.param.inspect_value('x'))
 
     def test_numbergen_inspect(self):
-        " inspect_value() should return last generated value "
+        """inspect_value() should return last generated value"""
         self.t2.x # Call 1
         self.t2.x # Call 2
         t2_last_value = self.t2.x  # advance t2 beyond t3
@@ -95,7 +95,7 @@ class TestDynamicParameterBasics(TestDynamicParameters):
                             t6_first_value)
 
     def test_non_dynamic_value_not_instantiated(self):
-        "  non-dynamic value not instantiated"
+        """non-dynamic value not instantiated"""
         self.TestPO2.y = 4
         self.assertEqual(self.t6.y, 4)
         self.assertEqual(self.t7.y, 4)
@@ -122,7 +122,7 @@ class TestDynamicParameterBasics(TestDynamicParameters):
         self.assertEqual(self.TestPO2().param['y'].default.__class__.__name__, 'UniformRandom')
 
     def test_copy_match(self):
-        "check a copy is the same"
+        """Check a copy is the same"""
         t9 = copy.deepcopy(self.t7)
         self.assertEqual(t9.param.get_value_generator('y') is self.TestPO2().param['y'].default, True)
 
@@ -139,7 +139,8 @@ class TestDynamicTimeDependent(TestDynamicParameters):
                                                               time_dependent=True))
 
         class TestPO4(self.TestPO1):
-            "Nested parameterized objects"
+            """Nested parameterized objects"""
+
             z = param.Parameter(default=self.TestPO1())
 
         self.TestPO3 = TestPO3
@@ -204,21 +205,21 @@ class TestDynamicTimeDependent(TestDynamicParameters):
         self.assertEqual(t12.y, t12.y)
 
     def test_dynamic_value_change_disabled(self):
-        " time_fn set on the UniformRandom() when t13.y was set"
+        """time_fn set on the UniformRandom() when t13.y was set"""
         t13 = self.TestPO1()
         t13.param.set_dynamic_time_fn(None)
         t13.y = numbergen.UniformRandom()
         self.assertNotEqual(t13.y, t13.y)
 
     def test_dynamic_value_change_enabled(self):
-        " time_fn set on the UniformRandom() when t13.y was set"
+        """time_fn set on the UniformRandom() when t13.y was set"""
         t14 = self.TestPO1()
         t14.y = numbergen.UniformRandom()
         self.assertEqual(t14.y, t14.y)
 
 
     def test_dynamic_time_fn_not_inherited(self):
-        " time_fn not inherited"
+        """time_fn not inherited"""
         t15 = self.TestPO4()
         t15.param.set_dynamic_time_fn(None)
         with param.Dynamic.time_fn as t:
@@ -230,7 +231,8 @@ class TestDynamicTimeDependent(TestDynamicParameters):
 
 
 class TestDynamicSharedNumbergen(TestDynamicParameters):
-    "Check shared generator"
+    """Check shared generator"""
+
     def setUp(self):
         super().setUp()
         self.shared = numbergen.UniformRandom(lbound=-1,ubound=1,seed=20)

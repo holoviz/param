@@ -124,9 +124,10 @@ def register_reference_transform(transform):
     Appends a transform to extract potential parameter dependencies
     from an object.
 
-    Arguments
+    Arguments:
     ---------
     transform: Callable[Any, Any]
+
     """
     return _reference_transforms.append(transform)
 
@@ -145,7 +146,8 @@ def transform_reference(arg):
     return arg
 
 def eval_function_with_deps(function):
-    """Evaluates a function after resolving its dependencies.
+    """
+    Evaluates a function after resolving its dependencies.
 
     Calls and returns a function after resolving any dependencies
     stored on the _dinfo attribute and passing the resolved values
@@ -423,7 +425,8 @@ def all_equal(arg1,arg2):
 # Code from six (https://bitbucket.org/gutworth/six; version 1.4.1).
 @_deprecated(warning_cat=_ParamFutureWarning)
 def add_metaclass(metaclass):
-    """Class decorator for creating a class with a metaclass.
+    """
+    Class decorator for creating a class with a metaclass.
 
     .. deprecated:: 2.0.0
     """
@@ -445,6 +448,7 @@ class bothmethod:
     object (if called on the class) or the instance object
     (if called on the instance) as its first argument.
     """
+
     def __init__(self, method):
         self.method = method
 
@@ -473,7 +477,6 @@ def no_instance_params(cls):
 
 def _instantiate_param_obj(paramobj, owner=None):
     """Return a Parameter object suitable for instantiation given the class's Parameter object"""
-
     # Shallow-copy Parameter object without the watchers
     p = copy.copy(paramobj)
     p.owner = owner
@@ -911,6 +914,7 @@ class ParameterMetaclass(type):
     """
     Metaclass allowing control over creation of Parameter classes.
     """
+
     def __new__(mcs, classname, bases, classdict):
 
         # store the class's docstring in __classdoc
@@ -1192,8 +1196,8 @@ class Parameter(_ParameterBase):
                  instantiate=Undefined, constant=Undefined, readonly=Undefined,
                  pickle_default_value=Undefined, allow_None=Undefined,
                  per_instance=Undefined, allow_refs=Undefined, nested_refs=Undefined):
-
-        """Initialize a new Parameter object and store the supplied attributes:
+        """
+        Initialize a new Parameter object and store the supplied attributes:
 
         default: the owning class's value for the attribute represented
         by this Parameter, which can be overridden in an instance.
@@ -1272,7 +1276,6 @@ class Parameter(_ParameterBase):
         inheritance of Parameter slots (attributes) from the owning-class'
         class hierarchy (see ParameterizedMetaclass).
         """
-
         self.name = None
         self.owner = None
         self.allow_refs = allow_refs
@@ -1291,12 +1294,12 @@ class Parameter(_ParameterBase):
 
     @classmethod
     def serialize(cls, value):
-        "Given the parameter value, return a Python value suitable for serialization"
+        """Given the parameter value, return a Python value suitable for serialization"""
         return value
 
     @classmethod
     def deserialize(cls, value):
-        "Given a serializable Python value, return a value that the parameter can be set to"
+        """Given a serializable Python value, return a value that the parameter can be set to"""
         return value
 
     def schema(self, safe=False, subset=None, mode='json'):
@@ -1338,6 +1341,7 @@ class Parameter(_ParameterBase):
         Call it to get a reactive expression:
 
         >>> rx_value = p.param.a.rx()
+
         """
         from .reactive import reactive_ops
         return reactive_ops(self)
@@ -1806,7 +1810,8 @@ class _ParametersRestorer:
 
 
 class Parameters:
-    """Object that holds the namespace and implementation of Parameterized
+    """
+    Object that holds the namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
     Parameters themselves.
 
@@ -2255,7 +2260,8 @@ class Parameters:
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
     def print_param_defaults(self_):
-        """Print the default values of all cls's Parameters.
+        """
+        Print the default values of all cls's Parameters.
 
         .. deprecated:: 1.12.0
             Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
@@ -2314,6 +2320,7 @@ class Parameters:
         >>> p.param.add_parameter('d', param.Tuple(default=(3, 2, 1)))
         >>> p.d
         (3, 2, 1)
+
         """
         # Could have just done setattr(cls,param_name,param_obj),
         # which is supported by the metaclass's __setattr__ , but
@@ -2328,7 +2335,8 @@ class Parameters:
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.add_parameter`", warning_cat=_ParamFutureWarning)
     def _add_parameter(self_,param_name, param_obj):
-        """Add a new Parameter object into this object's class.
+        """
+        Add a new Parameter object into this object's class.
 
         .. deprecated :: 1.12.0
         """
@@ -2375,7 +2383,6 @@ class Parameters:
 
         Examples
         --------
-
         Create a Parameterized class:
 
         >>> import param
@@ -2409,8 +2416,8 @@ class Parameters:
         ...     print(p.a, p.b)
         >>> my_param.param.update(a="3. Hello",b="3. World")
         3. Hello 3. World
-        """
 
+        """
         refs = {}
         if self_.self is not None:
             private = self_.self._param__private
@@ -2722,6 +2729,7 @@ class Parameters:
         >>> serialized_data = p.param.serialize_parameters()
         >>> print(serialized_data)
         {"name": "P00002", "a": 1, "b": "hello"}
+
         """
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
@@ -2773,6 +2781,7 @@ class Parameters:
         >>> print(deserialized_data)
         {'a': 1, 'b': 'hello'}
         >>> instance = P(**deserialized_data)
+
         """
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
@@ -3230,7 +3239,8 @@ class Parameters:
     # PARAM3_DEPRECATION
     @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
     def print_param_values(self_):
-        """Print the values of all this object's Parameters.
+        """
+        Print the values of all this object's Parameters.
 
         .. deprecated:: 1.12.0
             Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
@@ -3473,6 +3483,7 @@ class ParameterizedMetaclass(type):
     attribute __abstract set to True. The 'abstract' attribute can be
     used to find out if a class is abstract or not.
     """
+
     def __init__(mcs, name, bases, dict_):
         """
         Initialize the class object (not an instance of the class, but
@@ -3899,7 +3910,6 @@ def script_repr(val, imports=None, prefix="\n    ", settings=[],
     ways that are more suitable for saving as a separate script than
     for e.g. pretty-printing at the Python prompt.
     """
-
     if imports is None:
         imports = []
 
@@ -3957,7 +3967,6 @@ def pprint(val,imports=None, prefix="\n    ", settings=[],
     parameter can be suppressed by returning None from the appropriate
     hook in script_repr_reg.
     """
-
     if imports is None:
         imports = []
 
@@ -4389,6 +4398,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         >>> my_instance.value  # the current parameter value
         0
+
         """
         return Parameters(self.__class__, self=self)
 
@@ -4616,6 +4626,7 @@ class ParameterizedFunction(Parameterized):
 
     To obtain an instance of this class, call instance().
     """
+
     __abstract = True
 
     def __str__(self):
@@ -4627,7 +4638,6 @@ class ParameterizedFunction(Parameterized):
         Return an instance of this class, copying parameters from any
         existing instance provided.
         """
-
         if isinstance (self_or_cls,ParameterizedMetaclass):
             cls = self_or_cls
         else:
@@ -4676,7 +4686,7 @@ class ParameterizedFunction(Parameterized):
 
 
 class default_label_formatter(ParameterizedFunction):
-    "Default formatter to turn parameter names into appropriate widget labels."
+    """Default formatter to turn parameter names into appropriate widget labels."""
 
     capitalize = Parameter(default=True, doc="""
         Whether or not the label should be capitalized.""")
@@ -4714,6 +4724,7 @@ class overridable_property:
 
     .. deprecated:: 2.0.0
     """
+
     # Delays looking up the accessors until they're needed, rather
     # than finding them when the class is first created.
 

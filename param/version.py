@@ -83,7 +83,8 @@ class Version:
     obtained via git describe. This later portion is only shown if the
     commit count since the last tag is non zero. Instead of '.post', an
     alternate valid prefix such as '.rev', '_rev', '_r' or '.r' may be
-    supplied."""
+    supplied.
+    """
 
     def __new__(cls,**kw):
         # If called in the old way, provide the previous class. Means
@@ -133,22 +134,22 @@ class Version:
 
     @property
     def release(self):
-        "Return the release tuple"
+        """Return the release tuple"""
         return self.fetch()._release
 
     @property
     def commit(self):
-        "A specification for this particular VCS version, e.g. a short git SHA"
+        """A specification for this particular VCS version, e.g. a short git SHA"""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        "Return the number of commits since the last release"
+        """Return the number of commits since the last release"""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        "True if there are uncommited changes, False otherwise"
+        """True if there are uncommited changes, False otherwise"""
         return self.fetch()._dirty
 
 
@@ -258,7 +259,7 @@ class Version:
 
 
     def _update_from_vcs(self, output):
-        "Update state based on the VCS state e.g the output of git describe"
+        """Update state based on the VCS state e.g the output of git describe"""
         split = output[1:].split('-')
         dot_split = split[0].split('.')
         for prefix in ['a','b','rc']:
@@ -459,7 +460,8 @@ class Version:
 
 
 def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
-    """Helper for use in setup.py to get the current version from either
+    """
+    Helper for use in setup.py to get the current version from either
     git describe or the .version file (if available).
 
     Set pkgname to the package name if it is different from the
@@ -482,7 +484,8 @@ def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
 
 
 def get_setupcfg_version():
-    """As get_setup_version(), but configure via setup.cfg.
+    """
+    As get_setup_version(), but configure via setup.cfg.
 
     If your project uses setup.cfg to configure setuptools, and hence has
     at least a "name" key in the [metadata] section, you can
@@ -598,22 +601,22 @@ class OldDeprecatedVersion:
 
     @property
     def release(self):
-        "Return the release tuple"
+        """Return the release tuple"""
         return self.fetch()._release
 
     @property
     def commit(self):
-        "A specification for this particular VCS version, e.g. a short git SHA"
+        """A specification for this particular VCS version, e.g. a short git SHA"""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        "Return the number of commits since the last release"
+        """Return the number of commits since the last release"""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        "True if there are uncommited changes, False otherwise"
+        """True if there are uncommited changes, False otherwise"""
         return self.fetch()._dirty
 
 
@@ -666,7 +669,7 @@ class OldDeprecatedVersion:
         self._update_from_vcs(output)
 
     def _update_from_vcs(self, output):
-        "Update state based on the VCS state e.g the output of git describe"
+        """Update state based on the VCS state e.g the output of git describe"""
         split = output[1:].split('-')
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')

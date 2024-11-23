@@ -25,7 +25,8 @@ class TestCompositeParameters(unittest.TestCase):
         self.a = self.A()
 
         class SomeSequence:
-            "Can't use iter with Dynamic (doesn't pickle, doesn't copy)"
+            """Can't use iter with Dynamic (doesn't pickle, doesn't copy)"""
+
             def __init__(self,sequence):
                 self.sequence=sequence
                 self.index=0
@@ -67,7 +68,7 @@ class TestCompositeParameters(unittest.TestCase):
         assert not hasattr(c, 'objtype')
 
     def test_initialization(self):
-        "Make an instance and do default checks"
+        """Make an instance and do default checks"""
         self.assertEqual(self.a.x, 0)
         self.assertEqual(self.a.y, 0)
         self.assertEqual(self.a.xy, [0,0])
@@ -82,7 +83,7 @@ class TestCompositeParameters(unittest.TestCase):
         self.assertEqual(self.a.y, 3)
 
     def test_compound_class(self):
-        " Get the compound on the class "
+        """Get the compound on the class"""
         self.assertEqual(self.A.xy, [0,0])
 
     def test_set_compound_class_set(self):

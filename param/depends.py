@@ -41,7 +41,8 @@ def depends(
 def depends(
     func: CallableT, /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Parameter
 ) -> Callable[[CallableT], DependsFunc[CallableT]]:
-    """Annotates a function or Parameterized method to express its dependencies.
+    """
+    Annotates a function or Parameterized method to express its dependencies.
 
     The specified dependencies can be either be Parameter instances or if a
     method is supplied they can be defined as strings referring to Parameters
@@ -57,6 +58,7 @@ def depends(
     on_init : bool, optional
         Whether to invoke the function/method when the instance is created,
         by default False
+
     """
     dependencies, kw = (
         tuple(transform_reference(arg) for arg in dependencies),

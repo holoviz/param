@@ -8,7 +8,8 @@ import param
 
 
 class MockLoggingHandler(logging.Handler):
-    """Mock logging handler to check for expected logs.
+    """
+    Mock logging handler to check for expected logs.
 
     Messages are available from an instance's ``messages`` dict, in
     order, indexed by a lowercase log level string (e.g., 'debug',
@@ -34,7 +35,7 @@ class MockLoggingHandler(logging.Handler):
         super().__init__(*args, **kwargs)
 
     def emit(self, record):
-        "Store a message to the instance's messages dictionary"
+        """Store a message to the instance's messages dictionary"""
         self.acquire()
         try:
             self.messages[record.levelname].append(record.getMessage())
@@ -48,7 +49,7 @@ class MockLoggingHandler(logging.Handler):
         self.release()
 
     def tail(self, level, n=1):
-        "Returns the last n lines captured at the given level"
+        """Returns the last n lines captured at the given level"""
         return [str(el) for el in self.messages[level][-n:]]
 
     def assertEndsWith(self, level, substring):
@@ -138,6 +139,7 @@ async def async_wait_until(fn, timeout=5000, interval=100):
         Waiting interval, by default 100
 
     Adapted from pytest-qt.
+
     """
     # Hide this function traceback from the pytest output if the test fails
     __tracebackhide__ = True

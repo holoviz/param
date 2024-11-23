@@ -1,6 +1,4 @@
-"""
-Unit tests for DateRange parameter.
-"""
+"""Unit tests for DateRange parameter."""
 import datetime as dt
 import re
 import unittest

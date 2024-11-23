@@ -1,6 +1,4 @@
-"""
-Test deserialization routines that read from file
-"""
+"""Test deserialization routines that read from file"""
 import unittest
 import param
 import sys

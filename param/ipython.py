@@ -350,9 +350,7 @@ def load_ipython_extension(ip, verbose=True):
 
 
 class IPythonDisplay:
-    """
-    Reactive display handler that updates the output.
-    """
+    """Reactive display handler that updates the output."""
 
     enabled = True
 

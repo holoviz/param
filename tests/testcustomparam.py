@@ -1,6 +1,4 @@
-"""
-Unit tests for checking the API defended to create custom Parameters.
-"""
+"""Unit tests for checking the API defended to create custom Parameters."""
 
 import param
 import pytest

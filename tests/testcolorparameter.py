@@ -1,6 +1,4 @@
-"""
-Unit test for Color parameters.
-"""
+"""Unit test for Color parameters."""
 import re
 import unittest
 

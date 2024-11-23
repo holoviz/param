@@ -1,6 +1,4 @@
-"""
-Unit test for CalendarDate parameters.
-"""
+"""Unit test for CalendarDate parameters."""
 import datetime as dt
 import re
 import unittest

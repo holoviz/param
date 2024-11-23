@@ -1,6 +1,4 @@
-"""
-Unit test for param.depends.
-"""
+"""Unit test for param.depends."""
 
 import asyncio
 

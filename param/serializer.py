@@ -19,9 +19,7 @@ def JSONNullable(json_type):
 
 
 class Serialization:
-    """
-    Base class used to implement different types of serialization.
-    """
+    """Base class used to implement different types of serialization."""
 
     @classmethod
     def schema(cls, pobj, subset=None):
@@ -45,16 +43,12 @@ class Serialization:
 
     @classmethod
     def serialize_parameter_value(cls, pobj, pname):
-        """
-        Serialize a single parameter value.
-        """
+        """Serialize a single parameter value."""
         raise NotImplementedError
 
     @classmethod
     def deserialize_parameter_value(cls, pobj, pname, value):
-        """
-        Deserialize a single parameter value.
-        """
+        """Deserialize a single parameter value."""
         raise NotImplementedError
 
 

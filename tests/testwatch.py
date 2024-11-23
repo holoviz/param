@@ -1,6 +1,4 @@
-"""
-Unit test for watch mechanism
-"""
+"""Unit test for watch mechanism"""
 import copy
 import re
 import unittest

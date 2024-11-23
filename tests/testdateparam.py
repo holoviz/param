@@ -1,6 +1,4 @@
-"""
-Unit test for Date parameters.
-"""
+"""Unit test for Date parameters."""
 import datetime as dt
 import json
 import re

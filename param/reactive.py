@@ -102,25 +102,19 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 
 class Wrapper(Parameterized):
-    """
-    Helper class to allow updating literal values easily.
-    """
+    """Helper class to allow updating literal values easily."""
 
     object = Parameter(allow_refs=False)
 
 
 class GenWrapper(Parameterized):
-    """
-    Helper class to allow streaming from generator functions.
-    """
+    """Helper class to allow streaming from generator functions."""
 
     object = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
-    """
-    Helper class to allow triggering an event under some condition.
-    """
+    """Helper class to allow triggering an event under some condition."""
 
     value = Event()
 
@@ -130,9 +124,7 @@ class Trigger(Parameterized):
         self.parameters = parameters
 
 class Resolver(Parameterized):
-    """
-    Helper class to allow (recursively) resolving references.
-    """
+    """Helper class to allow (recursively) resolving references."""
 
     object = Parameter(allow_refs=True)
 
@@ -226,21 +218,15 @@ class reactive_ops:
         return rxi if isinstance(rx, rx) else rx(rxi)
 
     def and_(self, other):
-        """
-        Replacement for the ``and`` statement.
-        """
+        """Replacement for the ``and`` statement."""
         return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
     def bool(self):
-        """
-        __bool__ cannot be implemented so it is provided as a method.
-        """
+        """__bool__ cannot be implemented so it is provided as a method."""
         return self._as_rx()._apply_operator(bool)
 
     def buffer(self, n):
-        """
-        Collects the last n items that were emitted.
-        """
+        """Collects the last n items that were emitted."""
         items = []
         def collect(new, n):
             items.append(new)
@@ -250,27 +236,19 @@ class reactive_ops:
         return self._as_rx()._apply_operator(collect, n)
 
     def in_(self, other):
-        """
-        Replacement for the ``in`` statement.
-        """
+        """Replacement for the ``in`` statement."""
         return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
     def is_(self, other):
-        """
-        Replacement for the ``is`` statement.
-        """
+        """Replacement for the ``is`` statement."""
         return self._as_rx()._apply_operator(operator.is_, other)
 
     def is_not(self, other):
-        """
-        Replacement for the ``is not`` statement.
-        """
+        """Replacement for the ``is not`` statement."""
         return self._as_rx()._apply_operator(operator.is_not, other)
 
     def len(self):
-        """
-        __len__ cannot be implemented so it is provided as a method.
-        """
+        """__len__ cannot be implemented so it is provided as a method."""
         return self._as_rx()._apply_operator(len)
 
     def map(self, func, /, *args, **kwargs):
@@ -301,15 +279,11 @@ class reactive_ops:
         return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
     def not_(self):
-        """
-        __bool__ cannot be implemented so not has to be provided as a method.
-        """
+        """__bool__ cannot be implemented so not has to be provided as a method."""
         return self._as_rx()._apply_operator(operator.not_)
 
     def or_(self, other):
-        """
-        Replacement for the ``or`` statement.
-        """
+        """Replacement for the ``or`` statement."""
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
     def pipe(self, func, /, *args, **kwargs):
@@ -351,9 +325,7 @@ class reactive_ops:
         return resolver.param.value.rx()
 
     def updating(self):
-        """
-        Returns a new expression that is True while the expression is updating.
-        """
+        """Returns a new expression that is True while the expression is updating."""
         wrapper = Wrapper(object=False)
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
@@ -439,9 +411,7 @@ class reactive_ops:
 
     @value.setter
     def value(self, new):
-        """
-        Allows overriding the original input to the pipeline.
-        """
+        """Allows overriding the original input to the pipeline."""
         if isinstance(self._reactive, Parameter):
             raise AttributeError(
                 "`Parameter.rx.value = value` is not supported. Cannot override "
@@ -1005,9 +975,7 @@ class rx:
         return current
 
     def _transform_output(self, obj):
-        """
-        Applies custom display handlers before their output.
-        """
+        """Applies custom display handlers before their output."""
         applies = False
         for predicate, (handler, opts) in self._display_handlers.items():
             display_opts = {

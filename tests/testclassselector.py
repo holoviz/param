@@ -1,6 +1,4 @@
-"""
-Unit test for ClassSelector parameters.
-"""
+"""Unit test for ClassSelector parameters."""
 import unittest
 
 from numbers import Number

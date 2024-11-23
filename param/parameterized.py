@@ -163,9 +163,7 @@ def eval_function_with_deps(function):
     return function(*args, **kwargs)
 
 def resolve_value(value, recursive=True):
-    """
-    Resolves the current value of a dynamic reference.
-    """
+    """Resolves the current value of a dynamic reference."""
     if not recursive:
         pass
     elif isinstance(value, (list, tuple)):
@@ -189,9 +187,7 @@ def resolve_value(value, recursive=True):
     return value
 
 def resolve_ref(reference, recursive=False):
-    """
-    Resolves all parameters a dynamic reference depends on.
-    """
+    """Resolves all parameters a dynamic reference depends on."""
     if recursive:
         if isinstance(reference, (list, tuple, set)):
             return [r for v in reference for r in resolve_ref(v, recursive)]
@@ -250,9 +246,7 @@ Undefined = _Undefined()
 
 @contextmanager
 def logging_level(level):
-    """
-    Temporarily modify param's logging level.
-    """
+    """Temporarily modify param's logging level."""
     level = level.upper()
     levels = [DEBUG, INFO, WARNING, ERROR, CRITICAL, VERBOSE]
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
@@ -468,9 +462,7 @@ def _getattrr(obj, attr, *args):
 
 
 def no_instance_params(cls):
-    """
-    Disables instance parameters on the class
-    """
+    """Disables instance parameters on the class"""
     cls._param__private.disable_instance_params = True
     return cls
 
@@ -527,9 +519,7 @@ def instance_descriptor(f):
 
 
 def get_method_owner(method):
-    """
-    Gets the instance that owns the supplied method
-    """
+    """Gets the instance that owns the supplied method"""
     if not inspect.ismethod(method):
         return None
     if isinstance(method, partial):
@@ -738,9 +728,7 @@ def _skip_event(*events, **kwargs):
 
 
 def extract_dependencies(function):
-    """
-    Extract references from a method or function that declares the references.
-    """
+    """Extract references from a method or function that declares the references."""
     subparameters = list(function._dinfo['dependencies'])+list(function._dinfo['kw'].values())
     params = []
     for p in subparameters:
@@ -893,9 +881,7 @@ class Watcher(_Watcher):
     """
 
     def __new__(cls_, *args, **kwargs):
-        """
-        Allows creating Watcher without explicit precedence value.
-        """
+        """Allows creating Watcher without explicit precedence value."""
         values = dict(zip(cls_._fields, args))
         values.update(kwargs)
         if 'precedence' not in values:
@@ -911,9 +897,7 @@ class Watcher(_Watcher):
 
 
 class ParameterMetaclass(type):
-    """
-    Metaclass allowing control over creation of Parameter classes.
-    """
+    """Metaclass allowing control over creation of Parameter classes."""
 
     def __new__(mcs, classname, bases, classdict):
 
@@ -1790,9 +1774,7 @@ class Comparator:
 
 
 class _ParametersRestorer:
-    """
-    Context-manager to handle the reset of parameter values after an update.
-    """
+    """Context-manager to handle the reset of parameter values after an update."""
 
     def __init__(self, *, parameters, restore, refs=None):
         self._parameters = parameters
@@ -1889,9 +1871,7 @@ class Parameters:
             setattr(self, k, v)
 
     def __getitem__(self_, key):
-        """
-        Returns the class or instance parameter
-        """
+        """Returns the class or instance parameter"""
         inst = self_.self
         if inst is None:
             return self_._cls_parameters[key]
@@ -1899,24 +1879,18 @@ class Parameters:
         return _instantiated_parameter(inst, p)
 
     def __dir__(self_):
-        """
-        Adds parameters to dir
-        """
+        """Adds parameters to dir"""
         return super().__dir__() + list(self_._cls_parameters)
 
     def __iter__(self_):
-        """
-        Iterates over the parameters on this object.
-        """
+        """Iterates over the parameters on this object."""
         yield from self_._cls_parameters
 
     def __contains__(self_, param):
         return param in self_._cls_parameters
 
     def __getattr__(self_, attr):
-        """
-        Extends attribute access to parameter objects.
-        """
+        """Extends attribute access to parameter objects."""
         cls = self_.__dict__.get('cls')
         if cls is None: # Class not initialized
             raise AttributeError
@@ -2585,9 +2559,7 @@ class Parameters:
         self_._state_watchers += watchers
 
     def _update_event_type(self_, watcher, event, triggered):
-        """
-        Returns an updated Event object with the type field set appropriately.
-        """
+        """Returns an updated Event object with the type field set appropriately."""
         if triggered:
             event_type = 'triggered'
         else:
@@ -2616,9 +2588,7 @@ class Parameters:
                 pass
 
     def _call_watcher(self_, watcher, event):
-        """
-        Invoke the given watcher appropriately given an Event object.
-        """
+        """Invoke the given watcher appropriately given an Event object."""
         if self_._TRIGGER:
             pass
         elif watcher.onlychanged and (not self_._changed(event)):
@@ -2795,9 +2765,7 @@ class Parameters:
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
     def schema(self_, safe=False, subset=None, mode='json'):
-        """
-        Returns a schema for the parameters on this Parameterized object.
-        """
+        """Returns a schema for the parameters on this Parameterized object."""
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
@@ -3162,9 +3130,7 @@ class Parameters:
         return watcher
 
     def unwatch(self_, watcher):
-        """
-        Remove the given Watcher object (from `watch` or `watch_values`) from this object's list.
-        """
+        """Remove the given Watcher object (from `watch` or `watch_values`) from this object's list."""
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:

@@ -2386,9 +2386,9 @@ class Parameters:
         **params : dict or iterable or keyword arguments
             The parameters to update, provided as a dictionary, iterable, or keyword arguments in `param=value` format.
 
-        References
+        User Guide
         ----------
-        User Guide: https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
+        https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
         Examples
         --------

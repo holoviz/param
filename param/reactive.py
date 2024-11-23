@@ -186,10 +186,6 @@ class reactive_ops:
     Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
     `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
 
-    Parameters
-    ----------
-    None
-
     Returns
     -------
     Reactive expression
@@ -205,9 +201,8 @@ class reactive_ops:
 
     >>> import param
     >>> class P(param.Parameterized):
-    >>>     a = param.Number()
-    >>>     b = param.String()
-    >>> p = P(a=1, b="hello")
+    ...     a = param.Number()
+    >>> p = P(a=1)
 
     Get the current value:
 
@@ -819,9 +814,8 @@ class rx:
 
         >>> import param
         >>> class P(param.Parameterized):
-        >>>     a = param.Number()
-        >>>     b = param.String()
-        >>> p = P(a=1, b="hello")
+        ...     a = param.Number()
+        >>> p = P(a=1)
 
         Get the current value:
 

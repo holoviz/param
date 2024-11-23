@@ -1326,10 +1326,6 @@ class Parameter(_ParameterBase):
         Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
         `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
         Reactive expression
@@ -2374,7 +2370,7 @@ class Parameters:
 
     def update(self_, arg=Undefined, /, **kwargs):
         """
-        Update one or more parameters of this object or class.
+        Update multiple parameters of this object or class before triggering events.
 
         Allows setting the parameters of the object or class using a dictionary, an iterable, or keyword arguments
         in the form of `param=value`. The specified parameters will be updated to the given values.
@@ -2392,27 +2388,39 @@ class Parameters:
 
         Examples
         --------
-        Create a Parameterized instance:
+        
+        Create a Parameterized class:
 
         >>> import param
         >>> class P(param.Parameterized):
-        ...     a = param.Number()
-        ...     b = param.String()
-        >>> p = P()
+        ...    a = param.String()
+        ...    b = param.String()
 
-        Update parameters permanently:
+        Define the instance:
 
-        >>> p.param.update(a=1, b="Hello")
-        >>> print(p.a, p.b)
-        1 Hello
+        >>> p = P(a="0. Hello", b="0. World")
 
-        Update parameters temporarily:
+        Usea `.update` to update the parameters:
 
-        >>> with p.param.update(a=2, b="World"):
+        >>> p.param.update(a="1. Hello", b="2. World")
+        p.a, p.b
+
+        Update the parameters temporarily:
+
+        >>> with p.param.update(a="2. Hello", b="2. World"):
+        ...     p.a, p.b
+        2. Hello, 2. World
+        >>> p.a, p.b
+        1. Hello, 1. World
+
+        Lets see that events are **after** all parameters have been updated 
+
+        >>> @param.depends(p.param.a, watch=True)
+        ... def print_a_b(a):
         ...     print(p.a, p.b)
-        2 World
-        >>> print(p.a, p.b)
-        1 Hello
+
+        >>> my_param.param.update(a="3. Hello",b="3. World")
+        3. Hello 3. World
         """
 
         refs = {}

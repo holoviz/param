@@ -804,10 +804,6 @@ class rx:
         Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
         `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
         Reactive expression

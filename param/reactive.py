@@ -514,7 +514,7 @@ def bind(function, *args, watch=False, **kwargs):
     kwargs: object, param.Parameter
         Keyword arguments to bind to the function.
 
-    Returns:
+    Returns
     -------
     Returns a new function with the args and kwargs bound to it and
     annotated with all dependencies.

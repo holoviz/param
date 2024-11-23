@@ -144,3 +144,6 @@ ignore = [
     "E741", # Ambiguous variable name
     "F405", # From star imports
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

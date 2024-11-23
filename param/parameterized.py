@@ -4407,7 +4407,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         Note that this is different from the current `value` of `my_instance`:
 
-        >>> my_instance.value  # 0, the current parameter value
+        >>> my_instance.value  # the current parameter value
+        0
         """
         return Parameters(self.__class__, self=self)
 

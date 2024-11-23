@@ -2388,7 +2388,7 @@ class Parameters:
 
         Examples
         --------
-        
+
         Create a Parameterized class:
 
         >>> import param
@@ -2400,25 +2400,26 @@ class Parameters:
 
         >>> p = P(a="0. Hello", b="0. World")
 
-        Usea `.update` to update the parameters:
+        Use `.update` to update the parameters:
 
         >>> p.param.update(a="1. Hello", b="2. World")
-        p.a, p.b
+        >>> p.a, p.b
+        ('1. Hello', '1. World')
 
         Update the parameters temporarily:
 
         >>> with p.param.update(a="2. Hello", b="2. World"):
-        ...     p.a, p.b
-        2. Hello, 2. World
-        >>> p.a, p.b
-        1. Hello, 1. World
+        ...     print(p.a, p.b)
+        2. Hello 2. World
 
-        Lets see that events are **after** all parameters have been updated 
+        >>> p.a, p.b
+        ('1. Hello', '1. World')
+
+        Lets see that events are triggered **after** all parameters have been updated
 
         >>> @param.depends(p.param.a, watch=True)
         ... def print_a_b(a):
         ...     print(p.a, p.b)
-
         >>> my_param.param.update(a="3. Hello",b="3. World")
         3. Hello 3. World
         """
@@ -4329,10 +4330,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     parameter in the instance will get the value given as a keyword
     argument.  For example:
 
-      class Foo(Parameterized):
-         xx = Parameter(default=1)
+    >>> class Foo(Parameterized):
+    ...     xx = Parameter(default=1)
 
-      foo = Foo(xx=20)
+    >>> foo = Foo(xx=20)
 
     in this case foo.xx gets the value 20.
 

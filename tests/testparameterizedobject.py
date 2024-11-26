@@ -587,6 +587,26 @@ class TestParameterized(unittest.TestCase):
             else:
                 assert obj is TestPO.param[p]
 
+    def test_param_error_unsafe_ops_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    RuntimeError,
+                    match=re.escape(
+                        'Looking up instance Parameter objects (`.param.objects()`) until '
+                        'the Parameterized instance has been fully initialized is not allowed. '
+                        'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                        'constructor before trying to access instance Parameter objects, or '
+                        'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                        'may be enough for your use case.',
+                    )
+                ):
+                    self.param.objects()
+        P()
+
     def test_instance_param_getitem(self):
         test = TestPO()
         assert test.param['inst'] is not TestPO.param['inst']
@@ -1499,7 +1519,6 @@ def test_namespace_class():
     assert _dir(P) == [
         '_param__parameters',
         '_param__private',
-        '_param_watchers',
         'foo',
         'name',
         'param',
@@ -1521,7 +1540,6 @@ def test_namespace_inst():
     assert _dir(p) == [
         '_param__parameters',
         '_param__private',
-        '_param_watchers',
         'foo',
         'name',
         'param',
@@ -1675,3 +1693,108 @@ def test_parameterized_signature_subclass_multiple_inheritance_init_different():
     check_signature(A, ['a1', 'a2', 'name'])
     assert B.__signature__ is None
     assert C.__signature__ is None
+
+
+def test_inheritance_with_incompatible_defaults():
+    class A(param.Parameterized):
+        p = param.String()
+
+    class B(A): pass
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Number parameter 'C.p' failed to validate its "
+            "default value on class creation. "
+            "The Parameter type changed between class 'C' "
+            "and one of its parent classes (B, A) which made it invalid. "
+            "Please fix the Parameter type."
+            "\nValidation failed with:\nNumber parameter 'C.p' only takes numeric values, not <class 'str'>."
+        )
+    ):
+        class C(B):
+            p = param.Number()
+
+
+def test_inheritance_default_validation_with_more_specific_type():
+    class A(param.Parameterized):
+        p = param.Tuple(default=('a', 'b'))
+
+    class B(A): pass
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "NumericTuple parameter 'C.p' failed to validate its "
+            "default value on class creation. "
+            "The Parameter type changed between class 'C' "
+            "and one of its parent classes (B, A) which made it invalid. "
+            "Please fix the Parameter type."
+            "\nValidation failed with:\nNumericTuple parameter 'C.p' only takes numeric values, not <class 'str'>."
+        )
+    ):
+        class C(B):
+            p = param.NumericTuple()
+
+
+def test_inheritance_with_changing_bounds():
+    class A(param.Parameterized):
+        p = param.Number(default=5)
+
+    class B(A): pass
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Number parameter 'C.p' failed to validate its "
+            "default value on class creation. "
+            "The Parameter is defined with attributes "
+            "which when combined with attributes inherited from its parent "
+            "classes (B, A) make it invalid. Please fix the Parameter attributes."
+            "\nValidation failed with:\nNumber parameter 'C.p' must be at most 3, not 5."
+        )
+    ):
+        class C(B):
+            p = param.Number(bounds=(-1, 3))
+
+
+def test_inheritance_with_changing_default():
+    class A(param.Parameterized):
+        p = param.Number(default=5, bounds=(3, 10))
+
+    class B(A): pass
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Number parameter 'C.p' failed to validate its "
+            "default value on class creation. "
+            "The Parameter is defined with attributes "
+            "which when combined with attributes inherited from its parent "
+            "classes (B, A) make it invalid. Please fix the Parameter attributes."
+            "\nValidation failed with:\nNumber parameter 'C.p' must be at least 3, not 1."
+        )
+    ):
+        class C(B):
+            p = param.Number(default=1)
+
+
+def test_inheritance_with_changing_class_():
+    class A(param.Parameterized):
+        p = param.ClassSelector(class_=int, default=5)
+
+    class B(A): pass
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "ClassSelector parameter 'C.p' failed to validate its "
+            "default value on class creation. "
+            "The Parameter is defined with attributes "
+            "which when combined with attributes inherited from its parent "
+            "classes (B, A) make it invalid. Please fix the Parameter attributes."
+            "\nValidation failed with:\nClassSelector parameter 'C.p' value must be an instance of str, not 5."
+        )
+    ):
+        class C(B):
+            p = param.ClassSelector(class_=str)

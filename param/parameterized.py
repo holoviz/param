@@ -2419,15 +2419,13 @@ class Parameters:
         instance='existing'.
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
-            warnings.warn(
+            raise RuntimeError(
                 'Looking up instance Parameter objects (`.param.objects()`) until '
-                'the Parameterized instance has been fully initialized is deprecated and will raise an error in a future version. '
+                'the Parameterized instance has been fully initialized is not allowed. '
                 'Ensure you have called `super().__init__(**params)` in your Parameterized '
                 'constructor before trying to access instance Parameter objects, or '
                 'looking up the class Parameter objects with `.param.objects(instance=False)` '
                 'may be enough for your use case.',
-                category=_ParamFutureWarning,
-                stacklevel=2,
             )
 
         pdict = self_._cls_parameters
@@ -2449,13 +2447,10 @@ class Parameters:
         that it is clear which Event parameter has been triggered.
         """
         if self_.self is not None and not self_.self._param__private.initialized:
-            warnings.warn(
+            raise RuntimeError(
                 'Triggering watchers on a partially initialized Parameterized instance '
-                'is deprecated and will raise an error in a future version. '
-                'Ensure you have called super().__init__(**params) in '
+                'is not allowed. Ensure you have called super().__init__(**params) in '
                 'the Parameterized instance constructor before trying to set up a watcher.',
-                category=_ParamFutureWarning,
-                stacklevel=2,
             )
 
         trigger_params = [p for p in self_
@@ -2792,8 +2787,6 @@ class Parameters:
         outputs = {}
         for cls in classlist(self_.cls):
             for name in dir(cls):
-                if name == '_param_watchers':
-                    continue
                 method = getattr(self_.self_or_cls, name)
                 dinfo = getattr(method, '_dinfo', {})
                 if 'outputs' not in dinfo:
@@ -2904,13 +2897,10 @@ class Parameters:
 
     def _register_watcher(self_, action, watcher, what='value'):
         if self_.self is not None and not self_.self._param__private.initialized:
-            warnings.warn(
+            raise RuntimeError(
                 '(Un)registering a watcher on a partially initialized Parameterized instance '
-                'is deprecated and will raise an error in a future version. Ensure '
-                'you have called super().__init__(**) in the Parameterized instance '
-                'constructor before trying to set up a watcher.',
-                category=_ParamFutureWarning,
-                stacklevel=4,
+                'is not allowed. Ensure you have called super().__init__(**) in the '
+                'Parameterized instance constructor before trying to set up a watcher.',
             )
 
         parameter_names = watcher.parameter_names
@@ -3652,8 +3642,7 @@ class ParameterizedMetaclass(type):
             # might raise other types of error, so we catch them all.
             except Exception as e:
                 msg = f'{_validate_error_prefix(param)} failed to validate its ' \
-                      'default value on class creation, this is going to raise ' \
-                      'an error in the future. '
+                      'default value on class creation. '
                 parents = ', '.join(klass.__name__ for klass in mcs.__mro__[1:-2])
                 if not type_change and slot_overridden:
                     msg += (
@@ -3674,11 +3663,7 @@ class ParameterizedMetaclass(type):
                     # performance reasons.
                     pass
                 msg += f'\nValidation failed with:\n{e}'
-                warnings.warn(
-                    msg,
-                    category=_ParamFutureWarning,
-                    stacklevel=4,
-                )
+                raise RuntimeError(msg) from e
 
     def get_param_descriptor(mcs,param_name):
         """
@@ -4195,18 +4180,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     @property
     def param(self):
         return Parameters(self.__class__, self=self)
-
-    #PARAM3_DEPRECATION
-    @property
-    @_deprecated(extra_msg="Use `inst.param.watchers` instead.", warning_cat=_ParamFutureWarning)
-    def _param_watchers(self):
-        return self._param__private.watchers
-
-    #PARAM3_DEPRECATION
-    @_param_watchers.setter
-    @_deprecated(extra_msg="Use `inst.param.watchers = ...` instead.", warning_cat=_ParamFutureWarning)
-    def _param_watchers(self, value):
-        self._param__private.watchers = value
 
     # 'Special' methods
 

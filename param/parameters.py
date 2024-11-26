@@ -39,7 +39,7 @@ from .parameterized import (
     _int_types, _identity_hook
 )
 from ._utils import (
-    ParamDeprecationWarning as _ParamDeprecationWarning,
+    ParamFutureWarning as _ParamFutureWarning,
     _deprecate_positional_args,
     _deprecated,
     _validate_error_prefix,
@@ -2497,7 +2497,7 @@ class List(Parameter):
             # PARAM3_DEPRECATION
             warnings.warn(
                 message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamDeprecationWarning,
+                category=_ParamFutureWarning,
                 stacklevel=3,
             )
         if item_type is not Undefined and class_ is not Undefined:
@@ -2658,7 +2658,7 @@ class resolve_path(ParameterizedFunction):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=_ParamFutureWarning)
 class normalize_path(ParameterizedFunction):
     """
     Convert a UNIX-style path to the current OS's format,

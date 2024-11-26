@@ -106,7 +106,7 @@ def _deprecate_positional_args(func):
                 f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
                 "has been deprecated since Param 2.0.0 and will raise an error in a future version, "
                 "please pass them as keyword arguments.",
-                ParamDeprecationWarning,
+                ParamFutureWarning,
                 stacklevel=2,
             )
 
@@ -306,7 +306,7 @@ def _produce_value(value_obj):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=ParamFutureWarning)
 def produce_value(value_obj):
     """
     A helper function that produces an actual parameter from a stored
@@ -319,7 +319,7 @@ def produce_value(value_obj):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=ParamFutureWarning)
 def as_unicode(obj):
     """
     Safely casts any object to unicode including regular string
@@ -331,7 +331,7 @@ def as_unicode(obj):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=ParamFutureWarning)
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
@@ -362,7 +362,7 @@ def _hashable(x):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=ParamFutureWarning)
 def hashable(x):
     """
     Return a hashable version of the given object x, with lists and
@@ -411,7 +411,7 @@ def _named_objs(objlist, namesdict=None):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=ParamFutureWarning)
 def named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from
@@ -549,7 +549,7 @@ def _abbreviate_paths(pathspec,named_paths):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=ParamFutureWarning)
 def abbreviate_paths(pathspec,named_paths):
     """
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.

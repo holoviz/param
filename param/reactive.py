@@ -181,11 +181,38 @@ class NestedResolver(Resolver):
 
 class reactive_ops:
     """
-    Namespace for reactive operators.
+    The reactive namespace.
 
-    Implements operators that cannot be implemented using regular
-    Python syntax.
+    Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
+    `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
+
+    Returns
+    -------
+    Reactive expression
+        The result of calling the reactive namespace is a reactive expression.
+
+    User Guide
+    ----------
+    https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+
+    Examples
+    --------
+    Create a Parameterized instance:
+
+    >>> import param
+    >>> class P(param.Parameterized):
+    ...     a = param.Number()
+    >>> p = P(a=1)
+
+    Get the current value:
+
+    >>> a = p.param.a.rx.value
+
+    Call it to get a reactive expression:
+
+    >>> rx_value = p.param.a.rx()
     """
+
 
     def __init__(self, reactive):
         self._reactive = reactive
@@ -194,6 +221,7 @@ class reactive_ops:
         return self._reactive if isinstance(self._reactive, rx) else self()
 
     def __call__(self):
+        """Creates a reactive expression."""
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
 
@@ -755,13 +783,49 @@ class rx:
         ]
         self._setup_invalidations(depth)
         self._kwargs = kwargs
-        self.rx = reactive_ops(self)
+        self._rx = reactive_ops(self)
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, accessor(self))
         for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))
+
+    @property
+    def rx(self) -> reactive_ops:
+        """
+        The reactive namespace.
+
+        Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
+        `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
+
+        Returns
+        -------
+        Reactive expression
+            The result of calling the reactive namespace is a reactive expression.
+
+        User Guide
+        ----------
+        https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+
+        Examples
+        --------
+        Create a Parameterized instance:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number()
+        >>> p = P(a=1)
+
+        Get the current value:
+
+        >>> a = p.param.a.rx.value
+
+        Call it to get a reactive expression:
+
+        >>> rx_value = p.param.a.rx()
+        """
+        return self._rx
 
     @property
     def _obj(self):

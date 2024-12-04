@@ -37,7 +37,8 @@ class ParamWarning(Warning):
     """Base Param Warning"""
 
 class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
-    """Param PendingDeprecationWarning
+    """
+    Param PendingDeprecationWarning
 
     This warning type is useful when the warning is not meant to be displayed
     to REPL/notebooks users, as DeprecationWarning are displayed when triggered
@@ -46,14 +47,16 @@ class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
 
 
 class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
-    """Param DeprecationWarning
+    """
+    Param DeprecationWarning
 
     Ignored by default except when triggered by code in __main__
     """
 
 
 class ParamFutureWarning(ParamWarning, FutureWarning):
-    """Param FutureWarning
+    """
+    Param FutureWarning
 
     Always displayed.
     """
@@ -80,7 +83,8 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
 
 
 def _deprecate_positional_args(func):
-    """Internal decorator for methods that issues warnings for positional arguments
+    """
+    Internal decorator for methods that issues warnings for positional arguments
     Using the keyword-only argument syntax in pep 3102, arguments after the
     ``*`` will issue a warning when passed as a positional argument.
     Adapted from scikit-learn
@@ -122,7 +126,7 @@ def _deprecate_positional_args(func):
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
 def _recursive_repr(fillvalue='...'):
-    'Decorator to make a repr function return fillvalue for a recursive call'
+    """Decorator to make a repr function return fillvalue for a recursive call"""
 
     def decorating_function(user_function):
         repr_running = set()
@@ -273,6 +277,7 @@ def flatten(line):
     Returns
     -------
     flattened : generator
+
     """
     for element in line:
         if any(isinstance(element, tp) for tp in (list, tuple, dict)):
@@ -572,7 +577,8 @@ def _to_datetime(x):
 
 @contextmanager
 def exceptions_summarized():
-    """Useful utility for writing docs that need to show expected errors.
+    """
+    Useful utility for writing docs that need to show expected errors.
     Shows exception only, concisely, without a traceback.
     """
     try:
@@ -622,7 +628,8 @@ class _GeneratorIs(metaclass=_GeneratorIsMeta):
 def gen_types(gen_func):
     """
     Decorator which takes a generator function which yields difference types
-    make it so it can be called with isinstance and issubclass."""
+    make it so it can be called with isinstance and issubclass.
+    """
     if not inspect.isgeneratorfunction(gen_func):
         msg = "gen_types decorator can only be applied to generator"
         raise TypeError(msg)

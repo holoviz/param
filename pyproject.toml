@@ -119,8 +119,21 @@ fix = true
 include = ["*.py"]
 
 [tool.ruff.lint]
-select = ["W", "E", "F"]
+select = ["D", "W", "E", "F"]
 ignore = [
+    "D100", # Missing docstring in public module"
+    "D101", # Missing docstring in public class"
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package"
+    "D105", # Missing docstring in magic method"
+    "D107", # Missing docstring in `__init__`"
+    "D200", # One-line docstring should fit on one line"
+    "D205", # 1 blank line required between summary line and description
+    "D400", # First line should end with a period"
+    "D401", # First line of docstring should be in imperative mood: "Returns the last n lines captured at the given level"
+    "D415", # First line should end with a period, question mark, or exclamation point
+    "D417", # Missing argument description in the docstring for `param_union`: `*parameterizeds`
     "E402", # Module level import not at top of file
     "E501", # Line too long
     "E701", # Multiple statements on one line
@@ -129,3 +142,6 @@ ignore = [
     "E741", # Ambiguous variable name
     "F405", # From star imports
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

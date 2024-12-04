@@ -2300,8 +2300,8 @@ class Parameters:
 
         >>> import param
         >>> class P(param.Parameterized):
-        >>>     a = param.Number()
-        >>>     b = param.String()
+        ...     a = param.Number()
+        ...     b = param.String()
         >>> p = P()
 
         Add a new parameter to the class `P` via the class namespace `P.param`:

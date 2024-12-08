@@ -1,6 +1,4 @@
-"""
-Callable objects that generate numbers according to different distributions.
-"""
+"""Callable objects that generate numbers according to different distributions."""
 
 import random
 import operator
@@ -241,9 +239,7 @@ class Hash:
 
 
     def __getstate__(self):
-        """
-        Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)
-        """
+        """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)"""
         d = self.__dict__.copy()
         d.pop('_digest')
         d.pop('_hash_struct')
@@ -374,9 +370,7 @@ class TimeAwareRandomState(TimeAware):
 
 
     def _verify_constrained_hash(self):
-        """
-        Warn if the object name is not explicitly set.
-        """
+        """Warn if the object name is not explicitly set."""
         changed_params = self.param.values(onlychanged=True)
         if self.time_dependent and ('name' not in changed_params):
             self.param.log(param.WARNING, "Default object name used to set the seed: "
@@ -575,9 +569,7 @@ class VonMisesRandom(RandomDistribution):
 
 
 class ScaledTime(NumberGenerator, TimeDependent):
-    """
-    The current time multiplied by some conversion factor.
-    """
+    """The current time multiplied by some conversion factor."""
 
     factor = param.Number(default=1.0, doc="""
        The factor to be multiplied by the current time value.""")

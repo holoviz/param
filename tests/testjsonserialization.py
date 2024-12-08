@@ -1,6 +1,4 @@
-"""
-Testing JSON serialization of parameters and the corresponding schemas.
-"""
+"""Testing JSON serialization of parameters and the corresponding schemas."""
 import datetime
 import json
 import unittest
@@ -101,9 +99,7 @@ test = TestSet(a=29)
 
 
 class TestSerialization(unittest.TestCase):
-    """
-    Base class for testing serialization of Parameter values
-    """
+    """Base class for testing serialization of Parameter values"""
 
     mode = None
 

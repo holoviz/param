@@ -1,6 +1,4 @@
-"""
-Unit test for Boolean parameters.
-"""
+"""Unit test for Boolean parameters."""
 import unittest
 
 import param

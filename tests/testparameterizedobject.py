@@ -1,6 +1,4 @@
-"""
-Unit test for Parameterized.
-"""
+"""Unit test for Parameterized."""
 import inspect
 import re
 import unittest

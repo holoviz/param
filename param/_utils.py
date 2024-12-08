@@ -62,9 +62,7 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
     """
 
 class Skip(Exception):
-    """
-    Exception that allows skipping an update when resolving a reference.
-    """
+    """Exception that allows skipping an update when resolving a reference."""
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
     def decorator(func):
@@ -208,9 +206,7 @@ def _is_mutable_container(value):
 
 
 def full_groupby(l, key=lambda x: x):
-    """
-    Groupby implementation which does not require a prior sort
-    """
+    """Groupby implementation which does not require a prior sort"""
     d = defaultdict(list)
     for item in l:
         d[key(item)].append(item)
@@ -218,9 +214,7 @@ def full_groupby(l, key=lambda x: x):
 
 
 def iscoroutinefunction(function):
-    """
-    Whether the function is an asynchronous generator or a coroutine.
-    """
+    """Whether the function is an asynchronous generator or a coroutine."""
     # Partial unwrapping not required starting from Python 3.11.0
     # See https://github.com/holoviz/param/pull/894#issuecomment-1867084447
     while isinstance(function, functools.partial):
@@ -231,9 +225,7 @@ def iscoroutinefunction(function):
     )
 
 async def _to_thread(func, /, *args, **kwargs):
-    """
-    Polyfill for asyncio.to_thread in Python < 3.9
-    """
+    """Polyfill for asyncio.to_thread in Python < 3.9"""
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
@@ -289,9 +281,7 @@ def flatten(line):
 def accept_arguments(
     f: Callable[Concatenate[CallableT, P], R]
 ) -> Callable[P, Callable[[CallableT], R]]:
-    """
-    Decorator for decorators that accept arguments
-    """
+    """Decorator for decorators that accept arguments"""
     @functools.wraps(f)
     def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)

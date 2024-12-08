@@ -1,6 +1,4 @@
-"""
-Unit test for the repr and pprint of parameterized objects, and for pprint/script_repr.
-"""
+"""Unit test for the repr and pprint of parameterized objects, and for pprint/script_repr."""
 import inspect
 import unittest
 

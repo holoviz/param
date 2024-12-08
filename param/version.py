@@ -328,9 +328,7 @@ class Version:
         return str(self)
 
     def abbrev(self):
-        """
-        Abbreviated string representation of just the release number.
-        """
+        """Abbreviated string representation of just the release number."""
         return '.'.join(str(el) for el in self.release)
 
     def verify(self, string_version=None):

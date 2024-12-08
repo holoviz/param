@@ -1,6 +1,4 @@
-"""
-Do all subclasses of Parameter supply a valid default?
-"""
+"""Do all subclasses of Parameter supply a valid default?"""
 import unittest
 
 import pytest

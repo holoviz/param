@@ -1,6 +1,4 @@
-"""
-Unit test for Bytes parameters
-"""
+"""Unit test for Bytes parameters"""
 import unittest
 
 import pytest

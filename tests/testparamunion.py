@@ -1,6 +1,4 @@
-"""
-UnitTest for param_union helper
-"""
+"""UnitTest for param_union helper"""
 import logging
 import unittest
 

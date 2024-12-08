@@ -128,7 +128,6 @@ ignore = [
     "D104", # Missing docstring in public package"
     "D105", # Missing docstring in magic method"
     "D107", # Missing docstring in `__init__`"
-    "D200", # One-line docstring should fit on one line"
     "D205", # 1 blank line required between summary line and description
     "D400", # First line should end with a period"
     "D401", # First line of docstring should be in imperative mood: "Returns the last n lines captured at the given level"

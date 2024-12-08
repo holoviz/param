@@ -501,9 +501,7 @@ class Dynamic(Parameter):
 
 
     def _initialize_generator(self,gen,obj=None):
-        """
-        Add 'last time' and 'last value' attributes to the generator.
-        """
+        """Add 'last time' and 'last value' attributes to the generator."""
         # Could use a dictionary to hold these things.
         if hasattr(obj,"_Dynamic_time_fn"):
             gen._Dynamic_time_fn = obj._Dynamic_time_fn
@@ -890,9 +888,7 @@ class Magnitude(Number):
 
 
 class Date(Number):
-    """
-    Date parameter of datetime or date type.
-    """
+    """Date parameter of datetime or date type."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
 
@@ -951,9 +947,7 @@ class Date(Number):
 
 
 class CalendarDate(Number):
-    """
-    Parameter specifically allowing dates (not datetimes).
-    """
+    """Parameter specifically allowing dates (not datetimes)."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
 
@@ -1240,9 +1234,7 @@ class XYCoordinates(NumericTuple):
 
 
 class Range(NumericTuple):
-    """
-    A numeric range with optional bounds and softbounds.
-    """
+    """A numeric range with optional bounds and softbounds."""
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
@@ -1427,9 +1419,7 @@ class DateRange(Range):
 
 
 class CalendarDateRange(Range):
-    """
-    A date range specified as (start_date, end_date).
-    """
+    """A date range specified as (start_date, end_date)."""
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
@@ -1557,9 +1547,7 @@ class Composite(Parameter):
         self.attribs = attribs
 
     def __get__(self, obj, objtype):
-        """
-        Return the values of all the attribs, as a list.
-        """
+        """Return the values of all the attribs, as a list."""
         if obj is None:
             return [getattr(objtype, a) for a in self.attribs]
         else:
@@ -1994,9 +1982,7 @@ class ObjectSelector(Selector):
 
 
 class FileSelector(Selector):
-    """
-    Given a path glob, allows one file to be selected from those matching.
-    """
+    """Given a path glob, allows one file to be selected from those matching."""
 
     __slots__ = ['path']
 
@@ -2105,9 +2091,7 @@ class ListSelector(Selector):
 
 
 class MultiFileSelector(ListSelector):
-    """
-    Given a path glob, allows multiple files to be selected from the list of matches.
-    """
+    """Given a path glob, allows multiple files to be selected from the list of matches."""
 
     __slots__ = ['path']
 
@@ -2222,9 +2206,7 @@ class ClassSelector(SelectorBase):
 
 
 class Dict(ClassSelector):
-    """
-    Parameter whose value is a dictionary.
-    """
+    """Parameter whose value is a dictionary."""
 
     @typing.overload
     def __init__(
@@ -2241,9 +2223,7 @@ class Dict(ClassSelector):
 
 
 class Array(ClassSelector):
-    """
-    Parameter whose value is a numpy array.
-    """
+    """Parameter whose value is a numpy array."""
 
     @typing.overload
     def __init__(
@@ -2764,9 +2744,7 @@ class Path(Parameter):
                     raise OSError(e.args[0]) from None
 
     def __get__(self, obj, objtype):
-        """
-        Return an absolute, normalized path (see resolve_path).
-        """
+        """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj,objtype)
         if raw_path is None:
             path = None

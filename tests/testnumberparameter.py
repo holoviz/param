@@ -1,6 +1,4 @@
-"""
-Unit test for Number parameters and their subclasses.
-"""
+"""Unit test for Number parameters and their subclasses."""
 import unittest
 import pytest
 

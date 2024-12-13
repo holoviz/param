@@ -36,7 +36,7 @@ from contextlib import contextmanager
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
-    _int_types, _identity_hook
+    _int_types, _identity_hook, T
 )
 from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
@@ -451,7 +451,7 @@ class Time(Parameterized):
 #-----------------------------------------------------------------------------
 
 
-class Dynamic(Parameter):
+class Dynamic(Parameter[T]):
     """
     Parameter whose value can be generated dynamically by a callable
     object.
@@ -481,7 +481,7 @@ class Dynamic(Parameter):
 
     @typing.overload
     def __init__(
-        self, default=None, *,
+        self, default: T = None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -515,7 +515,7 @@ class Dynamic(Parameter):
         gen._saved_Dynamic_time = []
 
 
-    def __get__(self,obj,objtype):
+    def __get__(self, obj, objtype) -> T:
         """
         Call the superclass's __get__; if the result is not dynamic
         return that result, otherwise ask that result to produce a
@@ -530,7 +530,7 @@ class Dynamic(Parameter):
 
 
     @instance_descriptor
-    def __set__(self,obj,val):
+    def __set__(self, obj, val: T) -> None:
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -624,7 +624,7 @@ class __compute_set_hook:
 _compute_set_hook = __compute_set_hook()
 
 
-class Number(Dynamic):
+class Number(Dynamic[T]):
     """
     A numeric Dynamic Parameter, with a default value and optional bounds.
 
@@ -679,7 +679,7 @@ class Number(Dynamic):
     @typing.overload
     def __init__(
         self,
-        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default: T = 0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -702,7 +702,7 @@ class Number(Dynamic):
         self.step = step
         self._validate(self.default)
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj, objtype) -> T:
         """
         Same as the superclass's __get__, but if the value was
         dynamically generated, check the bounds.
@@ -838,7 +838,7 @@ class Number(Dynamic):
 
 
 
-class Integer(Number):
+class Integer(Number[int]):
     """Numeric Parameter required to be an Integer"""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
@@ -887,7 +887,7 @@ class Magnitude(Number):
         )
 
 
-class Date(Number):
+class Date(Number[T]):
     """Date parameter of datetime or date type."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
@@ -895,7 +895,7 @@ class Date(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default: T = None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -1000,7 +1000,7 @@ class CalendarDate(Number):
 # Boolean
 #-----------------------------------------------------------------------------
 
-class Boolean(Parameter):
+class Boolean(Parameter[bool]):
     """Binary or tristate Boolean Parameter."""
 
     _slot_defaults = dict(Parameter._slot_defaults, default=False)
@@ -1099,7 +1099,7 @@ class Event(Boolean):
         self._post_setter(obj, val)
 
     @instance_descriptor
-    def __set__(self, obj, val):
+    def __set__(self, obj, val: T) -> None:
         if self._mode in ['set-reset', 'set']:
             super().__set__(obj, val)
         if self._mode in ['set-reset', 'reset']:
@@ -1546,7 +1546,7 @@ class Composite(Parameter):
         super().__init__(default=Undefined, **kw)
         self.attribs = attribs
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj, objtype) -> T:
         """Return the values of all the attribs, as a list."""
         if obj is None:
             return [getattr(objtype, a) for a in self.attribs]
@@ -1576,7 +1576,7 @@ class Composite(Parameter):
 # Selector
 #-----------------------------------------------------------------------------
 
-class SelectorBase(Parameter):
+class SelectorBase(Parameter[T]):
     """
     Parameter whose value must be chosen from a list of possibilities.
 
@@ -2136,7 +2136,7 @@ class MultiFileSelector(ListSelector):
         return _abbreviate_paths(self.path,super().get_range())
 
 
-class ClassSelector(SelectorBase):
+class ClassSelector(SelectorBase[T]):
     """
     Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.
     By default, requires an instance, but if is_instance=False, accepts a class instead.
@@ -2151,7 +2151,7 @@ class ClassSelector(SelectorBase):
     @typing.overload
     def __init__(
         self,
-        *, class_, default=None, instantiate=True, is_instance=True,
+        *, class_, default: T = None, instantiate=True, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -2743,7 +2743,7 @@ class Path(Parameter):
                 if self.check_exists:
                     raise OSError(e.args[0]) from None
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj, objtype) -> T:
         """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj,objtype)
         if raw_path is None:

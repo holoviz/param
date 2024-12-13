@@ -29,6 +29,7 @@ from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
+from typing import TypeVar, Generic
 
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -51,6 +52,8 @@ from ._utils import (
     descendents,
     gen_types,
 )
+
+T = TypeVar("T")
 
 # Ideally setting param_pager would be in __init__.py but param_pager is
 # needed on import to create the Parameterized class, so it'd need to precede
@@ -1005,7 +1008,9 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig
 
 
-class Parameter(_ParameterBase):
+
+
+class Parameter(Generic[T], _ParameterBase):
     """
     An attribute descriptor for declaring parameters.
 
@@ -1431,7 +1436,7 @@ class Parameter(_ParameterBase):
         values, after the slot values have been set in the inheritance procedure.
         """
 
-    def __get__(self, obj, objtype): # pylint: disable-msg=W0613
+    def __get__(self, obj, objtype) -> T:
         """
         Return the value for this Parameter.
 
@@ -1455,7 +1460,7 @@ class Parameter(_ParameterBase):
         return result
 
     @instance_descriptor
-    def __set__(self, obj, val):
+    def __set__(self, obj, val: T) -> None:
         """
         Set the value for this Parameter.
 

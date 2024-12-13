@@ -2444,7 +2444,7 @@ class Series(ClassSelector):
 # List
 #-----------------------------------------------------------------------------
 
-class List(Parameter):
+class List(Parameter[T]):
     """
     Parameter whose value is a list of objects, usually of a specified type.
 
@@ -2467,7 +2467,7 @@ class List(Parameter):
     @typing.overload
     def __init__(
         self,
-        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
+        default: T = [], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
         allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -2475,7 +2475,7 @@ class List(Parameter):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
+    def __init__(self, default: T = Undefined, *, class_=Undefined, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, **params):
         if class_ is not Undefined:
             # PARAM3_DEPRECATION

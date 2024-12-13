@@ -488,7 +488,7 @@ class Dynamic(Parameter[T]):
     ):
         ...
 
-    def __init__(self, default=Undefined, **params):
+    def __init__(self, default: T = Undefined, **params):
         """
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
@@ -687,7 +687,7 @@ class Number(Dynamic[T]):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
+    def __init__(self, default: T =Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
@@ -902,7 +902,7 @@ class Date(Number[T]):
     ):
         ...
 
-    def __init__(self, default=Undefined, **kwargs):
+    def __init__(self, default: T = Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
@@ -2159,7 +2159,7 @@ class ClassSelector(SelectorBase[T]):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+    def __init__(self, *, class_, default: T = Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super().__init__(default=default,instantiate=instantiate,**params)

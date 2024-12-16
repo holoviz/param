@@ -1,5 +1,43 @@
 # Releases
 
+## Version 2.2.0
+
+Date: 2024-12-16
+
+This minor release brings a few enhancements and bugfixes. Importantly, it includes some breaking changes, removing deprecated APIs or raising errors during unsafe operations which would previously only emit warnings. Many thanks to @gandhis1 and @JRRudy1 for their first contributions, and to @hoxbro, @maximlt,and @MarcSkovMadsen for their continued maintenance and development efforts.
+
+Enhancements:
+
+- Annotate `depends` and `accept_arguments` decorators ([#962](https://github.com/holoviz/param/pull/962))
+- Stop directly importing numpy and add `gen_types` decorator ([#966](https://github.com/holoviz/param/pull/966))
+
+Bug Fixes:
+
+- Added missing `super().__init_subclass__` call in `_ParameterBase.__init_subclass__` ([#969](https://github.com/holoviz/param/pull/969))
+- Remove `_dict_update` ([#980](https://github.com/holoviz/param/pull/980))
+
+Documentation:
+
+- Improve some docstrings and set up `ruff` to validate them ([#977](https://github.com/holoviz/param/pull/977), [#982](https://github.com/holoviz/param/pull/982), and [#983](https://github.com/holoviz/param/pull/983))
+
+Breaking changes / Deprecations:
+
+- Remove `_param_watchers`, raise `RuntimeError` on unsafe ops during init, and failed validation of a parameter default after inheritance ([#973](https://github.com/holoviz/param/pull/973))
+- Promote many deprecation warnings to future warnings ([#974](https://github.com/holoviz/param/pull/974))
+
+Compatibility:
+
+- Test Python 3.13 ([#971](https://github.com/holoviz/param/pull/971))
+- Drop Python 3.8 support ([#986](https://github.com/holoviz/param/pull/986))
+
+Infrastructure / Tests:
+
+- Replace `hatch` with `pixi` ([#971](https://github.com/holoviz/param/pull/971))
+- Fix reactive tests failing intermittently on Windows ([#971](https://github.com/holoviz/param/pull/971), [#967](https://github.com/holoviz/param/pull/967))
+- Change linting to `ruff` ([#978](https://github.com/holoviz/param/pull/978))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.1.1...v2.2.0)
+
 ## Version 2.1.1
 
 Date: 2024-06-25

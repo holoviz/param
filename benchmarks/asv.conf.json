@@ -15,7 +15,7 @@
     "environment_type": "virtualenv",
     "install_timeout": 600,
     "show_commit_url": "https://github.com/holoviz/param/commit/",
-    // "pythons": ["3.8"],
+    // "pythons": ["3.9"],
     "benchmark_dir": "benchmarks",
     "env_dir": ".asv/env",
     "results_dir": ".asv/results",

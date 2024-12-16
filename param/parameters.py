@@ -2165,7 +2165,7 @@ class ClassSelector(SelectorBase[T]):
     @typing.overload
     def __init__(
         self,
-        *, class_, default: T = None, instantiate=True, is_instance=True,
+        *, class_: tuple[type[T], ...] | type[T], default: T = None, instantiate=True, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -2173,7 +2173,7 @@ class ClassSelector(SelectorBase[T]):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, *, class_, default: T = Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+    def __init__(self, *, class_: tuple[type[T]] | type[T], default: T = Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super().__init__(default=default,instantiate=instantiate,**params)

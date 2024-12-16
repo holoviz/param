@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.serialize\_parameters
+====================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.serialize_parameters

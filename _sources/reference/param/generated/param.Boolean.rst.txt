@@ -1,0 +1,46 @@
+﻿param.Boolean
+=============
+
+.. currentmodule:: param
+
+.. autoclass:: Boolean
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Boolean.__init__
+      ~Boolean.deserialize
+      ~Boolean.schema
+      ~Boolean.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Boolean.allow_None
+      ~Boolean.allow_refs
+      ~Boolean.constant
+      ~Boolean.default
+      ~Boolean.doc
+      ~Boolean.instantiate
+      ~Boolean.label
+      ~Boolean.name
+      ~Boolean.nested_refs
+      ~Boolean.owner
+      ~Boolean.per_instance
+      ~Boolean.pickle_default_value
+      ~Boolean.precedence
+      ~Boolean.readonly
+      ~Boolean.rx
+      ~Boolean.watchers
+   
+   

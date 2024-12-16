@@ -1,0 +1,6 @@
+﻿param.guess\_param\_types
+=========================
+
+.. currentmodule:: param
+
+.. autofunction:: guess_param_types

@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.params\_depended\_on
+===================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.params_depended_on

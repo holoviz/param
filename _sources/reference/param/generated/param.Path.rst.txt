@@ -1,0 +1,48 @@
+﻿param.Path
+==========
+
+.. currentmodule:: param
+
+.. autoclass:: Path
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Path.__init__
+      ~Path.deserialize
+      ~Path.schema
+      ~Path.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Path.search_paths
+      ~Path.check_exists
+      ~Path.allow_None
+      ~Path.allow_refs
+      ~Path.constant
+      ~Path.default
+      ~Path.doc
+      ~Path.instantiate
+      ~Path.label
+      ~Path.name
+      ~Path.nested_refs
+      ~Path.owner
+      ~Path.per_instance
+      ~Path.pickle_default_value
+      ~Path.precedence
+      ~Path.readonly
+      ~Path.rx
+      ~Path.watchers
+   
+   

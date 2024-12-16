@@ -1,0 +1,6 @@
+﻿param.parameterized.batch\_call\_watchers
+=========================================
+
+.. currentmodule:: param.parameterized
+
+.. autofunction:: batch_call_watchers

@@ -1,0 +1,54 @@
+﻿param.MultiFileSelector
+=======================
+
+.. currentmodule:: param
+
+.. autoclass:: MultiFileSelector
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MultiFileSelector.__init__
+      ~MultiFileSelector.compute_default
+      ~MultiFileSelector.deserialize
+      ~MultiFileSelector.get_range
+      ~MultiFileSelector.schema
+      ~MultiFileSelector.serialize
+      ~MultiFileSelector.update
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~MultiFileSelector.path
+      ~MultiFileSelector.allow_None
+      ~MultiFileSelector.allow_refs
+      ~MultiFileSelector.check_on_set
+      ~MultiFileSelector.compute_default_fn
+      ~MultiFileSelector.constant
+      ~MultiFileSelector.default
+      ~MultiFileSelector.doc
+      ~MultiFileSelector.instantiate
+      ~MultiFileSelector.label
+      ~MultiFileSelector.name
+      ~MultiFileSelector.names
+      ~MultiFileSelector.nested_refs
+      ~MultiFileSelector.objects
+      ~MultiFileSelector.owner
+      ~MultiFileSelector.per_instance
+      ~MultiFileSelector.pickle_default_value
+      ~MultiFileSelector.precedence
+      ~MultiFileSelector.readonly
+      ~MultiFileSelector.rx
+      ~MultiFileSelector.watchers
+   
+   

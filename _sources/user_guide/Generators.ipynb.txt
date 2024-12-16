@@ -1,0 +1,337 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "f62c5bb1-91c5-4663-b429-d45f4a55b344",
+   "metadata": {},
+   "source": [
+    "# Generators\n",
+    "\n",
+    "As described in the [Dynamic Parameters](./Dynamic_Parameters.ipynb) user guide, Param offers a variety of programming models. While Dynamic parameters allow you to build applications in a \"pull\" based paradigm, dependencies and watchers allow setting up a \"push\" based model where data flows through the application when an event is triggered. How such events are triggered is largely dependent on the use case; e.g. often such events will emanate from a UI that updates parameters. However, generators can be another source of event generation, and offer an easy and flexible approach for generating data that arrives from an external source.\n",
+    "\n",
+    "Let's start with a simple but concrete example. Let's say we are observing an external sensor measuring the output of a tidal gauge:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7dd8369e-631b-443d-a266-dc96745f8f4b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import random\n",
+    "\n",
+    "def tidal_gauge(last=[0]):\n",
+    "    last[0] += random.gauss(0, 1)/2.\n",
+    "    return last[0]\n",
+    "\n",
+    "tidal_gauge()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1e8361a2-8af5-4fd0-ba42-646c8e988f87",
+   "metadata": {},
+   "source": [
+    "Instead of scheduling periodic events on an event loop we can simply write a generator function to poll the sensor at some defined interval:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "91691b69-5996-40a8-b59f-f8d18a7ea2a2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import time\n",
+    "\n",
+    "def poll_sensor(timeout=0.5):\n",
+    "    while True:\n",
+    "        yield tidal_gauge()\n",
+    "        time.sleep(timeout)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "75f6423b-1606-42d9-957a-441ce5eb5254",
+   "metadata": {},
+   "source": [
+    "Now let us declare a `TidalGauge` class that will reflect the value of our sensor. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8f72b8fa-379d-4fbe-bcf2-7039b6a4f9f9",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import param\n",
+    "\n",
+    "class TidalGauge(param.Parameterized):\n",
+    "\n",
+    "    height = param.Number(allow_refs=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0623a51f-c5f4-442b-94b6-e7202553ec9a",
+   "metadata": {},
+   "source": [
+    "Note how we declare that the `height` parameter to `allow_refs`, i.e. we enable the ability for it to resolve references, which include generators."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "dd038cd8-0b2b-4546-9ecb-d69d9623eb11",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gauge = TidalGauge(height=poll_sensor)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "75c104d0-9278-46a4-a5b0-2968b826c86e",
+   "metadata": {},
+   "source": [
+    "Now let's look at the gauge and watch the `height` value update every 0.5 seconds (try evaluating the cell below a few times):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "eef834c3-385a-41f5-97fd-d79c4a526f22",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gauge"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8a0ba5a1-b6cd-46f8-86c0-88cf0cc2a97f",
+   "metadata": {},
+   "source": [
+    "## Expressions"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8985f2bb-f797-4077-9117-08c0de0a16bf",
+   "metadata": {},
+   "source": [
+    "To watch the tidal gauge update live we can obtain the gauge value as a [reactive expression](Reactive_Expressions.ipynb):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4833830d-eb28-4991-8a8f-dea8056118a2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gauge.param.height.rx()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "63e76938-6eac-4f28-8362-7b9637ed935f",
+   "metadata": {},
+   "source": [
+    "Note that `rx` can also evaluate a generator directly:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "fa62a383-2647-48c9-9049-6f2c13e299ec",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gauge_rx = param.rx(poll_sensor)\n",
+    "\n",
+    "gauge_rx"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "aa50e6af-636c-45c5-88e9-e055b31457b3",
+   "metadata": {},
+   "source": [
+    "Just like other expressions, generator expressions allow operator chaining and applying methods. So let's say we know that our sensor has a fixed error, we can correct this directly by adding a value to our expression:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f78275a9-c90c-48dc-8765-aa298913ae58",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "corrected = gauge_rx + 8\n",
+    "\n",
+    "corrected"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "960cf77e-fe1c-4ffd-8849-3d3067486aa0",
+   "metadata": {},
+   "source": [
+    "The precise value is interesting but maybe we want to build a system that warns us if the value exceeds some threshold. Using a `where` expression this can be expressed very simply:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "30c1c63b-5c9e-4662-8a15-078f6b79f6b6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(corrected > 10).rx.where('Risk of flooding', 'Everything is normal')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e1e80a15-e715-4cb7-bde8-17005e64c78d",
+   "metadata": {},
+   "source": [
+    "The same thing can also easily be achieved by using parameter binding:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "13f3bc65-be27-451e-b119-3faf0df6c559",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "param.bind(lambda value: 'Risk of flooding' if value > 10 else 'Everything is normal', corrected).rx()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d1099127-bc12-4068-a123-737fbc7aae66",
+   "metadata": {},
+   "source": [
+    "## Classes"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c5cff863-cbf3-4e44-a1da-df915a9deab7",
+   "metadata": {},
+   "source": [
+    "In the context of a class we can depend on a parameter that is driven by a generator as normal:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "137954a7-9c9d-474c-92b8-fdf2b9a29c03",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class TidalWarning(TidalGauge):\n",
+    "\n",
+    "    message = param.String()\n",
+    "    \n",
+    "    @param.depends('height', watch=True)\n",
+    "    def _update_message(self):\n",
+    "        self.message = 'Risk of flooding' if self.height > 10 else 'Everything is normal'\n",
+    "\n",
+    "warn = TidalWarning(height=poll_sensor)\n",
+    "\n",
+    "warn.param['message'].rx()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "154d60b8-6460-4f83-9d12-9dc7bab45625",
+   "metadata": {},
+   "source": [
+    "## Asynchronous Generators\n",
+    "\n",
+    "Generators are powerful and internally Param will execute the generators on a separate thread to ensure that it does not block the main event loop. However, often an asynchronous generator is more appropriate since many operations that rely on generators are waiting on some external event, i.e. by polling a file or network resource, which can be done asynchronously.\n",
+    "\n",
+    "Regular generators and asynchronous generators can be used interchangeably:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6fe71ab8-c87e-4e30-914e-d043f7922766",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import asyncio\n",
+    "\n",
+    "async def poll_sensor_async(timeout=0.5):\n",
+    "    while True:\n",
+    "        yield tidal_gauge()\n",
+    "        await asyncio.sleep(timeout)\n",
+    "\n",
+    "async_gauge = TidalGauge(height=poll_sensor_async)\n",
+    "\n",
+    "async_gauge.param.height.rx()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fde666d8-38a8-4829-ad25-81a039f09055",
+   "metadata": {},
+   "source": [
+    "## Dependencies\n",
+    "\n",
+    "Now let us say that our generator itself has some dependency, e.g. we want to be able to control the sampling frequency of our gauge. To achieve this we can bind a parameter to our generator:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f50d6bc7-7ec6-40fc-a4fa-71db0ae8e413",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class VariableRateTidalGauge(TidalGauge):\n",
+    "\n",
+    "    frequency = param.Integer(default=2, doc=\"\"\"\n",
+    "      Frequency in Hz to sample the tidal gauge sensor at.\"\"\")\n",
+    "\n",
+    "variable_gauge = VariableRateTidalGauge(frequency=5)\n",
+    "\n",
+    "variable_gauge.height = param.bind(poll_sensor_async, timeout=1/variable_gauge.param.frequency.rx())\n",
+    "\n",
+    "variable_gauge.param.height.rx()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "eb210a56-2b9b-4804-8080-f856eb38234f",
+   "metadata": {},
+   "source": [
+    "Now we can vary the frequency at which our generator samples the sensor:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "14e0cfea-ad5a-4399-89ff-4bdfad0b25ed",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "variable_gauge.frequency = 1"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

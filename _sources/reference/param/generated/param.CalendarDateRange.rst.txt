@@ -1,0 +1,53 @@
+﻿param.CalendarDateRange
+=======================
+
+.. currentmodule:: param
+
+.. autoclass:: CalendarDateRange
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CalendarDateRange.__init__
+      ~CalendarDateRange.deserialize
+      ~CalendarDateRange.get_soft_bounds
+      ~CalendarDateRange.rangestr
+      ~CalendarDateRange.schema
+      ~CalendarDateRange.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CalendarDateRange.allow_None
+      ~CalendarDateRange.allow_refs
+      ~CalendarDateRange.bounds
+      ~CalendarDateRange.constant
+      ~CalendarDateRange.default
+      ~CalendarDateRange.doc
+      ~CalendarDateRange.inclusive_bounds
+      ~CalendarDateRange.instantiate
+      ~CalendarDateRange.label
+      ~CalendarDateRange.length
+      ~CalendarDateRange.name
+      ~CalendarDateRange.nested_refs
+      ~CalendarDateRange.owner
+      ~CalendarDateRange.per_instance
+      ~CalendarDateRange.pickle_default_value
+      ~CalendarDateRange.precedence
+      ~CalendarDateRange.readonly
+      ~CalendarDateRange.rx
+      ~CalendarDateRange.softbounds
+      ~CalendarDateRange.step
+      ~CalendarDateRange.watchers
+   
+   

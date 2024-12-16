@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.log
+==================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.log

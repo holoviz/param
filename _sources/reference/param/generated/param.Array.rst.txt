@@ -1,0 +1,49 @@
+﻿param.Array
+===========
+
+.. currentmodule:: param
+
+.. autoclass:: Array
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Array.__init__
+      ~Array.deserialize
+      ~Array.get_range
+      ~Array.schema
+      ~Array.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Array.allow_None
+      ~Array.allow_refs
+      ~Array.class_
+      ~Array.constant
+      ~Array.default
+      ~Array.doc
+      ~Array.instantiate
+      ~Array.is_instance
+      ~Array.label
+      ~Array.name
+      ~Array.nested_refs
+      ~Array.owner
+      ~Array.per_instance
+      ~Array.pickle_default_value
+      ~Array.precedence
+      ~Array.readonly
+      ~Array.rx
+      ~Array.watchers
+   
+   

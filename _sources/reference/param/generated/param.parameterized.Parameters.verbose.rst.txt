@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.verbose
+======================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.verbose

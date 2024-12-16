@@ -1,0 +1,6 @@
+﻿param.get\_soft\_bounds
+=======================
+
+.. currentmodule:: param
+
+.. autofunction:: get_soft_bounds

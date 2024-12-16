@@ -1,0 +1,48 @@
+﻿param.Dynamic
+=============
+
+.. currentmodule:: param
+
+.. autoclass:: Dynamic
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Dynamic.__init__
+      ~Dynamic.deserialize
+      ~Dynamic.schema
+      ~Dynamic.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Dynamic.allow_None
+      ~Dynamic.allow_refs
+      ~Dynamic.constant
+      ~Dynamic.default
+      ~Dynamic.doc
+      ~Dynamic.instantiate
+      ~Dynamic.label
+      ~Dynamic.name
+      ~Dynamic.nested_refs
+      ~Dynamic.owner
+      ~Dynamic.per_instance
+      ~Dynamic.pickle_default_value
+      ~Dynamic.precedence
+      ~Dynamic.readonly
+      ~Dynamic.rx
+      ~Dynamic.time_dependent
+      ~Dynamic.time_fn
+      ~Dynamic.watchers
+   
+   

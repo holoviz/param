@@ -1,0 +1,46 @@
+﻿param.Parameter
+===============
+
+.. currentmodule:: param
+
+.. autoclass:: Parameter
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Parameter.__init__
+      ~Parameter.deserialize
+      ~Parameter.schema
+      ~Parameter.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Parameter.name
+      ~Parameter.default
+      ~Parameter.doc
+      ~Parameter.precedence
+      ~Parameter.instantiate
+      ~Parameter.constant
+      ~Parameter.readonly
+      ~Parameter.pickle_default_value
+      ~Parameter.allow_None
+      ~Parameter.per_instance
+      ~Parameter.watchers
+      ~Parameter.owner
+      ~Parameter.allow_refs
+      ~Parameter.nested_refs
+      ~Parameter.label
+      ~Parameter.rx
+   
+   

@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.schema
+=====================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.schema

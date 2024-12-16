@@ -1,0 +1,6 @@
+﻿param.parameterized.register\_reference\_transform
+==================================================
+
+.. currentmodule:: param.parameterized
+
+.. autofunction:: register_reference_transform

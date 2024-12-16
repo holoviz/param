@@ -1,0 +1,6 @@
+﻿param.edit\_constant
+====================
+
+.. currentmodule:: param
+
+.. autofunction:: edit_constant

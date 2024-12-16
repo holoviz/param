@@ -1,0 +1,56 @@
+﻿param.Number
+============
+
+.. currentmodule:: param
+
+.. autoclass:: Number
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Number.__init__
+      ~Number.crop_to_bounds
+      ~Number.deserialize
+      ~Number.get_soft_bounds
+      ~Number.schema
+      ~Number.serialize
+      ~Number.set_in_bounds
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Number.bounds
+      ~Number.softbounds
+      ~Number.inclusive_bounds
+      ~Number.set_hook
+      ~Number.step
+      ~Number.allow_None
+      ~Number.allow_refs
+      ~Number.constant
+      ~Number.default
+      ~Number.doc
+      ~Number.instantiate
+      ~Number.label
+      ~Number.name
+      ~Number.nested_refs
+      ~Number.owner
+      ~Number.per_instance
+      ~Number.pickle_default_value
+      ~Number.precedence
+      ~Number.readonly
+      ~Number.rx
+      ~Number.time_dependent
+      ~Number.time_fn
+      ~Number.watchers
+   
+   

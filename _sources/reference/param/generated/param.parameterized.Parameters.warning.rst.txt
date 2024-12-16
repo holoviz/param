@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.warning
+======================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.warning

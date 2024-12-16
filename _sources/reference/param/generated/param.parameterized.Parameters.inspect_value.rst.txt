@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.inspect\_value
+=============================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.inspect_value

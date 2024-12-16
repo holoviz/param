@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.watchers
+=======================================
+
+.. currentmodule:: param.parameterized
+
+.. autoproperty:: Parameters.watchers

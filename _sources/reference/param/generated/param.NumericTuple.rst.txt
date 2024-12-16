@@ -1,0 +1,47 @@
+﻿param.NumericTuple
+==================
+
+.. currentmodule:: param
+
+.. autoclass:: NumericTuple
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~NumericTuple.__init__
+      ~NumericTuple.deserialize
+      ~NumericTuple.schema
+      ~NumericTuple.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~NumericTuple.allow_None
+      ~NumericTuple.allow_refs
+      ~NumericTuple.constant
+      ~NumericTuple.default
+      ~NumericTuple.doc
+      ~NumericTuple.instantiate
+      ~NumericTuple.label
+      ~NumericTuple.length
+      ~NumericTuple.name
+      ~NumericTuple.nested_refs
+      ~NumericTuple.owner
+      ~NumericTuple.per_instance
+      ~NumericTuple.pickle_default_value
+      ~NumericTuple.precedence
+      ~NumericTuple.readonly
+      ~NumericTuple.rx
+      ~NumericTuple.watchers
+   
+   

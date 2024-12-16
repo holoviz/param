@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.set\_dynamic\_time\_fn
+=====================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.set_dynamic_time_fn

@@ -1,0 +1,49 @@
+﻿param.HookList
+==============
+
+.. currentmodule:: param
+
+.. autoclass:: HookList
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~HookList.__init__
+      ~HookList.deserialize
+      ~HookList.schema
+      ~HookList.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~HookList.class_
+      ~HookList.bounds
+      ~HookList.allow_None
+      ~HookList.allow_refs
+      ~HookList.constant
+      ~HookList.default
+      ~HookList.doc
+      ~HookList.instantiate
+      ~HookList.item_type
+      ~HookList.label
+      ~HookList.name
+      ~HookList.nested_refs
+      ~HookList.owner
+      ~HookList.per_instance
+      ~HookList.pickle_default_value
+      ~HookList.precedence
+      ~HookList.readonly
+      ~HookList.rx
+      ~HookList.watchers
+   
+   

@@ -1,0 +1,49 @@
+﻿param.ClassSelector
+===================
+
+.. currentmodule:: param
+
+.. autoclass:: ClassSelector
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ClassSelector.__init__
+      ~ClassSelector.deserialize
+      ~ClassSelector.get_range
+      ~ClassSelector.schema
+      ~ClassSelector.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~ClassSelector.class_
+      ~ClassSelector.is_instance
+      ~ClassSelector.allow_None
+      ~ClassSelector.allow_refs
+      ~ClassSelector.constant
+      ~ClassSelector.default
+      ~ClassSelector.doc
+      ~ClassSelector.instantiate
+      ~ClassSelector.label
+      ~ClassSelector.name
+      ~ClassSelector.nested_refs
+      ~ClassSelector.owner
+      ~ClassSelector.per_instance
+      ~ClassSelector.pickle_default_value
+      ~ClassSelector.precedence
+      ~ClassSelector.readonly
+      ~ClassSelector.rx
+      ~ClassSelector.watchers
+   
+   

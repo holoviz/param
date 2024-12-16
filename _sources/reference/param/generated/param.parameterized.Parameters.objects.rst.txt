@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.objects
+======================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.objects

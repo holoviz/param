@@ -1,0 +1,46 @@
+﻿param.Callable
+==============
+
+.. currentmodule:: param
+
+.. autoclass:: Callable
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Callable.__init__
+      ~Callable.deserialize
+      ~Callable.schema
+      ~Callable.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Callable.allow_None
+      ~Callable.allow_refs
+      ~Callable.constant
+      ~Callable.default
+      ~Callable.doc
+      ~Callable.instantiate
+      ~Callable.label
+      ~Callable.name
+      ~Callable.nested_refs
+      ~Callable.owner
+      ~Callable.per_instance
+      ~Callable.pickle_default_value
+      ~Callable.precedence
+      ~Callable.readonly
+      ~Callable.rx
+      ~Callable.watchers
+   
+   

@@ -1,0 +1,36 @@
+﻿param.parameterized.Event
+=========================
+
+.. currentmodule:: param.parameterized
+
+.. autoclass:: Event
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Event.__init__
+      ~Event.count
+      ~Event.index
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Event.cls
+      ~Event.name
+      ~Event.new
+      ~Event.obj
+      ~Event.old
+      ~Event.type
+      ~Event.what
+   
+   

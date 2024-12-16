@@ -1,0 +1,6 @@
+﻿param.bind
+==========
+
+.. currentmodule:: param
+
+.. autofunction:: bind

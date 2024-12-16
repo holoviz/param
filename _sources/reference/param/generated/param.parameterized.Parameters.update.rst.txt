@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.update
+=====================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.update

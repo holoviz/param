@@ -1,0 +1,406 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "5d4a9beb-65c0-47dd-8afc-14b2c448f0b9",
+   "metadata": {},
+   "source": [
+    "# Reactive References\n",
+    "\n",
+    "Building on previous discussion about the dual roles of a `Parameter` - as both a value holder and a metadata container - let's explore how parameters can go a step further by acting as dynamic references to other parameters (and other, more advanced, reactive references). What we mean by this is that parameters do not have to refer to a specific static value but can reference another object and update reactively when its value changes. \n",
+    "\n",
+    "## Parameter References\n",
+    "\n",
+    "In the simplest case, when a parameter is configured with `allow_refs=True`, it can be given another `Parameter` as its value and it will automatically mirror its current value . This capability enables more intricate relationships between parameters, allowing for automatic value synchronization and forming the basis for reactive programming:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e45694e1-9503-488f-8797-531b18d3502d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import param\n",
+    "\n",
+    "class U(param.Parameterized):\n",
+    "    \n",
+    "    a = param.Number()\n",
+    "    \n",
+    "class V(param.Parameterized):\n",
+    "    \n",
+    "    b = param.Number(default=None, allow_refs=True)\n",
+    "\n",
+    "u = U(a=3.14)\n",
+    "v = V(b=u.param.a)\n",
+    "\n",
+    "v.b"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5c5cbfee-a199-4ffb-8e35-f0b543916ff2",
+   "metadata": {},
+   "source": [
+    "By declaring that `V.b` allows references we have made it possible to pass the Parameter `U.a`, which means `v.b` will reflect the value of `u.a`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3926d917-7334-45b4-8a49-4b9baf558d50",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "u.a = 1.57\n",
+    "\n",
+    "v.b"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "33744151-91c0-4d65-b84e-9a2678dc5eeb",
+   "metadata": {},
+   "source": [
+    "This unidirectional link will be in effect until something else tries to set the value:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "345e5b1e-a191-44b0-8c8f-48908b4332a2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "v.b = 14.1\n",
+    "u.a = 13.2\n",
+    "\n",
+    "v.b"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b8f1dd08-a91d-4e83-bb12-dd2447c8fad8",
+   "metadata": {},
+   "source": [
+    "In other words, if the value is overridden from the outside the link will be automatically removed.\n",
+    "\n",
+    "Simple references are resolved when `allow_refs=True` but to allow nested references we separately have to set `nested_refs=True`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e3ad5e4c-e8f1-4a16-b800-a06e434f2f65",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class W(V):\n",
+    "    \n",
+    "    c = param.List(allow_refs=True, nested_refs=True)\n",
+    "    \n",
+    "u1 = U(a=3)\n",
+    "u2 = U(a=13)\n",
+    "\n",
+    "w = W(c=[u1.param.a, u2.param.a]) \n",
+    "\n",
+    "w.c"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2f52c6d5-dad7-4d38-8b0f-1364123b8e17",
+   "metadata": {},
+   "source": [
+    "When we modify either `u1.a` or `u2.a`, `w.c` will update:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e739d5f3-c762-4971-8386-48c5ed89e701",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "u1.a = 7\n",
+    "\n",
+    "w.c"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "46039ee7-93a7-44d8-b1bb-a9c1ed7f87a9",
+   "metadata": {},
+   "source": [
+    "## Other reference types"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "32f2429f-fbff-4906-b3b0-4db7c3a9aa2b",
+   "metadata": {},
+   "source": [
+    "Note that `Parameter` types are not the only types of valid references. The full list of valid references include:\n",
+    "\n",
+    "- Class and instance `Parameter` objects\n",
+    "- [Functions or methods with dependencies](Dependencies_and_Watchers.ipynb#dependencies) added using `param.depends`\n",
+    "- [Reactive Functions](Reactive_Expressions.ipynb#parameters-and-param-bind) using `param.bind`\n",
+    "- [Reactive expressions](Reactive_Expressions.ipynb) declared using `param.rx`\n",
+    "- [(Asynchronous) generators](Generators.ipynb)\n",
+    "- Custom objects transformed into a valid reference with a hook registered with `param.parameterized.register_reference_transform`.\n",
+    "\n",
+    "There are two utility functions which allow resolving all parameters a reference depends on and the current value of the reference:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "da0cbf1c-e8b3-4d3a-9974-0c0e6ec1d2b0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from param.parameterized import resolve_ref, resolve_value\n",
+    "\n",
+    "resolve_ref(u1.param.a), resolve_value(u1.param.a)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9856dd01-153f-4f87-9acc-3f951592a475",
+   "metadata": {},
+   "source": [
+    "## Skipping Reference Updates\n",
+    "\n",
+    "Since references are resolved eagerly whenever one of the dependencies change we may run into situations where we want to control when a reference is updated. Specifically we may want to skip resolving a reference if one of the inputs does not meet some condition or only if a certain event is triggered.\n",
+    "\n",
+    "Let's see how we can configure this. Here we will create a class `W` with parameters `a` and `b` and a `run` event. We then define a function to `add` parameters `a` and `b` but only if the `run` event is active. To do this we can raise a `param.Skip` exception in the function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "d04c62cc-8bab-46d6-9a4a-9c645d1d6510",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class W(param.Parameterized):\n",
+    "    \n",
+    "    a = param.Number()\n",
+    "    \n",
+    "    b = param.Number()\n",
+    "\n",
+    "    run = param.Event()\n",
+    "\n",
+    "w = W(a=0, b=2)\n",
+    "\n",
+    "def add(a, b, run):\n",
+    "    if not run:\n",
+    "        raise param.Skip\n",
+    "    return a + b"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a5ab6ca1-e220-405d-a8cf-89c276a6aa7e",
+   "metadata": {},
+   "source": [
+    "We can now bind all three parameters to the function:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "62af2167-e8cf-4099-8921-36d8a34b2a2b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "v = V(b=param.bind(add, w.param.a, w.param.b, w.param.run))\n",
+    "\n",
+    "v.b"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f28c3c42-bd6f-46e1-b269-fa6d13d0bbbd",
+   "metadata": {},
+   "source": [
+    "Even though we initialized `v.b` with a reference it will not resolve this reference until we trigger a `run` event:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "28c13ab5-4616-4a42-8cff-f82ba9599e8f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "w.param.trigger('run')\n",
+    "\n",
+    "v.b"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "751e6786-7140-4a91-a430-6de35150f55c",
+   "metadata": {},
+   "source": [
+    ":::{caution}\n",
+    "`Skip` exceptions are a useful tool for handling control flow in an application, however they should only be raised when writing a reactive reference and never be used in place of a real exception in your business logic. For example, when writing a function that fetches some data, you should raise specific exceptions and then catch those in the function that you are using as a reference and raise the `Skip` from there, e.g.:\n",
+    "\n",
+    "```python\n",
+    "def fetch_data(url):\n",
+    "    response = requests.get(url)\n",
+    "    json = response.json()\n",
+    "    if 'data' in json: \n",
+    "        raise ValueError(\"JSON response did not contain expected 'data' field.\")\n",
+    "    return json['data']\n",
+    "\n",
+    "def data_ref(url):\n",
+    "    try:\n",
+    "        data = fetch_data(url)\n",
+    "    except Exception:\n",
+    "        raise Skip\n",
+    "    return data\n",
+    "```\n",
+    ":::"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6ffd34f8-211c-4945-95b8-e87ec712e028",
+   "metadata": {},
+   "source": [
+    "## Composable classes through references\n",
+    "\n",
+    "One common problem that occurs when writing classes where one object depends on the parameters of some other object is that the objects end up having to reference each other. This introduces dependencies between the two classes and leads to less composable abstractions and it only gets worse as you add more classes to the mix.\n",
+    "\n",
+    "Let's illustrate this with an example, say we have an investment portfolio and want to determine how much it is worth in our local currency and how much capital gains taxes we owe on our profit. We obtain these values from some external objects called `Forex` and `TaxSchedule`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "11cf2cca-fcb3-4684-af9e-9b1ff476efe2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class Forex(param.Parameterized):\n",
+    "\n",
+    "    exchange_rate = param.Number(default=1.125)\n",
+    "\n",
+    "    ...\n",
+    "\n",
+    "class TaxSchedule(param.Parameterized):\n",
+    "\n",
+    "    capital_gains = param.Number(default=0.25)\n",
+    "\n",
+    "    ...\n",
+    "\n",
+    "forex = Forex(exchange_rate=1.14)\n",
+    "tax_schedule = TaxSchedule(capital_gains=0.25)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b44d1a47-c5e1-492c-9f48-027179ca180e",
+   "metadata": {},
+   "source": [
+    "Without references we would now be forced to structure our `Portfolio` class to reference both the `forex` and `tax_schedule` objects because that's the only way we could cleanly depend on the values:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "355b840f-8acc-43c6-b46e-d34e21799779",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class Portfolio(param.Parameterized):\n",
+    "\n",
+    "    foreign_value = param.Number()\n",
+    "\n",
+    "    local_value = param.Number()\n",
+    "\n",
+    "    taxes_owed = param.Number()\n",
+    "\n",
+    "    forex = param.ClassSelector(class_=Forex)\n",
+    "\n",
+    "    tax_schedule = param.ClassSelector(class_=TaxSchedule)\n",
+    "\n",
+    "    @param.depends('foreign_value', 'forex.exchange_rate', watch=True, on_init=True)\n",
+    "    def _update_local(self):\n",
+    "        self.local_value = self.foreign_value * self.forex.exchange_rate\n",
+    "\n",
+    "    @param.depends('local_value', 'tax_schedule.capital_gains', watch=True, on_init=True)\n",
+    "    def _update_taxes(self):\n",
+    "        self.taxes_owed = self.local_value * self.tax_schedule.capital_gains\n",
+    "\n",
+    "portfolio = Portfolio(foreign_value=12000, forex=forex, tax_schedule=tax_schedule)\n",
+    "\n",
+    "portfolio"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "391e8070-4798-4104-90a6-fcfa15fce096",
+   "metadata": {},
+   "source": [
+    "Not only does our `Portfolio` class now have to know about these other objects but it also has to make significant assumptions about it, e.g. the naming of the `exchange_rate` and `capital_gains` parameter names is now hard coded in the actual class definition.\n",
+    "\n",
+    "References allow us to declare only the subset of parameter values our class cares about and does so without having to make any reference to anything external through it, the class becomes agnostic to the exact provider of the value."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3c538cfb-5101-47a1-864d-b7c252af0087",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class Portfolio(param.Parameterized):\n",
+    "\n",
+    "    foreign_value = param.Number()\n",
+    "\n",
+    "    local_value = param.Number()\n",
+    "\n",
+    "    taxes_owed = param.Number()\n",
+    "\n",
+    "    exchange_rate = param.Number(allow_refs=True)\n",
+    "\n",
+    "    capital_gains = param.Number(allow_refs=True)\n",
+    "\n",
+    "    @param.depends('foreign_value', 'exchange_rate', watch=True, on_init=True)\n",
+    "    def _update_local(self):\n",
+    "        self.local_value = self.foreign_value * self.exchange_rate\n",
+    "    \n",
+    "    @param.depends('local_value', 'capital_gains', watch=True, on_init=True)\n",
+    "    def _update_taxes(self):\n",
+    "        self.taxes_owed = self.local_value * self.capital_gains\n",
+    "\n",
+    "portfolio = Portfolio(\n",
+    "    foreign_value=12000,\n",
+    "    exchange_rate=forex.param.exchange_rate,\n",
+    "    capital_gains=tax_schedule.param.capital_gains\n",
+    ")\n",
+    "\n",
+    "portfolio"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ff72fa97-9f08-45ed-864b-503fb19b224f",
+   "metadata": {},
+   "source": [
+    "As we have discovered reactive references are a powerful tool not only to link two parameters together but unlock the ability to express a whole host of dynamic behavior through a simple, declarative syntax. The various valid reference types make it possible to everything from [using generators](Generators.ipynb) to push new updates to a parameter periodically or merely in sequence to expressing complex dependencies between two or more parameters with a [simple reactive expression](ReactiveExpressions.ipynb). Lastly, they ensure that you can write composable components without incorporating complex dependencies between objects into your classes themselves."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

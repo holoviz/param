@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.message
+======================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.message

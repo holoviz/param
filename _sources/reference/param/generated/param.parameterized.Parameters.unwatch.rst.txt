@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.unwatch
+======================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.unwatch

@@ -1,0 +1,35 @@
+﻿param.ParamOverrides
+====================
+
+.. currentmodule:: param
+
+.. autoclass:: ParamOverrides
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ParamOverrides.__init__
+      ~ParamOverrides.clear
+      ~ParamOverrides.copy
+      ~ParamOverrides.extra_keywords
+      ~ParamOverrides.fromkeys
+      ~ParamOverrides.get
+      ~ParamOverrides.items
+      ~ParamOverrides.keys
+      ~ParamOverrides.param_keywords
+      ~ParamOverrides.pop
+      ~ParamOverrides.popitem
+      ~ParamOverrides.setdefault
+      ~ParamOverrides.update
+      ~ParamOverrides.values
+   
+   
+
+   
+   
+   

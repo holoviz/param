@@ -1,0 +1,48 @@
+﻿param.Composite
+===============
+
+.. currentmodule:: param
+
+.. autoclass:: Composite
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Composite.__init__
+      ~Composite.deserialize
+      ~Composite.schema
+      ~Composite.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Composite.attribs
+      ~Composite.objtype
+      ~Composite.allow_None
+      ~Composite.allow_refs
+      ~Composite.constant
+      ~Composite.default
+      ~Composite.doc
+      ~Composite.instantiate
+      ~Composite.label
+      ~Composite.name
+      ~Composite.nested_refs
+      ~Composite.owner
+      ~Composite.per_instance
+      ~Composite.pickle_default_value
+      ~Composite.precedence
+      ~Composite.readonly
+      ~Composite.rx
+      ~Composite.watchers
+   
+   

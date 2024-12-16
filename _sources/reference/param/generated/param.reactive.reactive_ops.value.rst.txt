@@ -1,0 +1,6 @@
+﻿param.reactive.reactive\_ops.value
+==================================
+
+.. currentmodule:: param.reactive
+
+.. autoproperty:: reactive_ops.value

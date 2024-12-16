@@ -1,0 +1,30 @@
+﻿param.ParameterizedFunction
+===========================
+
+.. currentmodule:: param
+
+.. autoclass:: ParameterizedFunction
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ParameterizedFunction.__init__
+      ~ParameterizedFunction.instance
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~ParameterizedFunction.name
+      ~ParameterizedFunction.param
+   
+   

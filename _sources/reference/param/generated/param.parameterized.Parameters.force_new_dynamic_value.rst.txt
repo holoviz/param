@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.force\_new\_dynamic\_value
+=========================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.force_new_dynamic_value

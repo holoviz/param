@@ -1,0 +1,6 @@
+﻿param.parameterized.resolve\_ref
+================================
+
+.. currentmodule:: param.parameterized
+
+.. autofunction:: resolve_ref

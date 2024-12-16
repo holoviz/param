@@ -854,8 +854,8 @@ class Integer(Number[T]):
     ):
         ...
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, default: T = Undefined, *args, **kwargs):
+        super().__init__(default=default, *args, **kwargs)
 
     def _validate_value(self, val, allow_None):
         if callable(val):
@@ -2173,7 +2173,7 @@ class ClassSelector(SelectorBase[T]):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, *, class_: tuple[type[T]] | type[T], default: T = Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+    def __init__(self, *, class_: tuple[type[T], ...] | type[T], default: T = Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
         super().__init__(default=default,instantiate=instantiate,**params)

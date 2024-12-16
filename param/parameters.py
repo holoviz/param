@@ -15,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import annotations
 
 import collections
 import copy
@@ -842,6 +843,19 @@ class Integer(Number[T]):
     """Numeric Parameter required to be an Integer"""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
+
+    @typing.overload
+    def __init__(
+        self,
+        default: T = 0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
+        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
+        allow_refs=False, nested_refs=False
+    ):
+        ...
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def _validate_value(self, val, allow_None):
         if callable(val):

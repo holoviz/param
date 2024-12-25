@@ -1,4 +1,4 @@
-"""Do all subclasses of Parameter supply a valid default?"""
+"""Test that all subclasses of Parameter supply a valid default."""
 import unittest
 
 import pytest

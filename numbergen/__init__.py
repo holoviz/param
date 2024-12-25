@@ -133,7 +133,7 @@ operator_symbols = {
 }
 
 def pprint(x, *args, **kwargs):
-    """Pretty-print the provided item, translating operators to their symbols"""
+    """Pretty-print the provided item, translating operators to their symbols."""
     return x.pprint(*args, **kwargs) if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
 
 
@@ -239,7 +239,7 @@ class Hash:
 
 
     def __getstate__(self):
-        """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)"""
+        """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)."""
         d = self.__dict__.copy()
         d.pop('_digest')
         d.pop('_hash_struct')

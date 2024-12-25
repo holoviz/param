@@ -1,4 +1,4 @@
-"""If numpy's present, is numpy stuff ok?"""
+"""If numpy is present, test if numpy stuff is ok."""
 import os
 import unittest
 

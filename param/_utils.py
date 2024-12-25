@@ -34,11 +34,11 @@ DEFAULT_SIGNATURE = inspect.Signature([
 MUTABLE_TYPES = (abc.MutableSequence, abc.MutableSet, abc.MutableMapping)
 
 class ParamWarning(Warning):
-    """Base Param Warning"""
+    """Base Param Warning."""
 
 class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
     """
-    Param PendingDeprecationWarning
+    Param PendingDeprecationWarning.
 
     This warning type is useful when the warning is not meant to be displayed
     to REPL/notebooks users, as DeprecationWarning are displayed when triggered
@@ -48,7 +48,7 @@ class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
 
 class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
     """
-    Param DeprecationWarning
+    Param DeprecationWarning.
 
     Ignored by default except when triggered by code in __main__
     """
@@ -56,7 +56,7 @@ class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
 
 class ParamFutureWarning(ParamWarning, FutureWarning):
     """
-    Param FutureWarning
+    Param FutureWarning.
 
     Always displayed.
     """
@@ -85,7 +85,7 @@ def _deprecate_positional_args(func):
     Internal decorator for methods that issues warnings for positional arguments
     Using the keyword-only argument syntax in pep 3102, arguments after the
     ``*`` will issue a warning when passed as a positional argument.
-    Adapted from scikit-learn
+    Adapted from scikit-learn.
     """
     signature = inspect.signature(func)
 
@@ -124,7 +124,7 @@ def _deprecate_positional_args(func):
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
 def _recursive_repr(fillvalue='...'):
-    """Decorator to make a repr function return fillvalue for a recursive call"""
+    """Decorator to make a repr function return fillvalue for a recursive call."""
 
     def decorating_function(user_function):
         repr_running = set()
@@ -201,12 +201,12 @@ def _validate_error_prefix(parameter, attribute=None):
 
 
 def _is_mutable_container(value):
-    """True for mutable containers, which typically need special handling when being copied"""
+    """True for mutable containers, which typically need special handling when being copied."""
     return isinstance(value, MUTABLE_TYPES)
 
 
 def full_groupby(l, key=lambda x: x):
-    """Groupby implementation which does not require a prior sort"""
+    """Groupby implementation which does not require a prior sort."""
     d = defaultdict(list)
     for item in l:
         d[key(item)].append(item)
@@ -225,7 +225,7 @@ def iscoroutinefunction(function):
     )
 
 async def _to_thread(func, /, *args, **kwargs):
-    """Polyfill for asyncio.to_thread in Python < 3.9"""
+    """Polyfill for asyncio.to_thread in Python < 3.9."""
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
@@ -281,7 +281,7 @@ def flatten(line):
 def accept_arguments(
     f: Callable[Concatenate[CallableT, P], R]
 ) -> Callable[P, Callable[[CallableT], R]]:
-    """Decorator for decorators that accept arguments"""
+    """Decorator for decorators that accept arguments."""
     @functools.wraps(f)
     def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
@@ -330,7 +330,7 @@ def as_unicode(obj):
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, and vanilla Python dictionaries are ordered for Python 3.6+
+    ordered, and vanilla Python dictionaries are ordered for Python 3.6+.
 
     .. deprecated:: 2.0.0
     """

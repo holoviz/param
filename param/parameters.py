@@ -608,7 +608,7 @@ class Dynamic(Parameter):
 
 
 class __compute_set_hook:
-    """Remove when set_hook is removed"""
+    """Remove when set_hook is removed."""
 
     def __call__(self, p):
         return _identity_hook
@@ -839,7 +839,7 @@ class Number(Dynamic):
 
 
 class Integer(Number):
-    """Numeric Parameter required to be an Integer"""
+    """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
 

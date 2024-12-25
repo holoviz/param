@@ -221,7 +221,7 @@ def resolve_ref(reference, recursive=False):
     return []
 
 def _identity_hook(obj, val):
-    """To be removed when set_hook is removed"""
+    """To be removed when set_hook is removed."""
     return val
 
 
@@ -436,7 +436,7 @@ def add_metaclass(metaclass):
 
 class bothmethod:
     """
-    'optional @classmethod'
+    'optional @classmethod'.
 
     A decorator that allows a method to receive either the class
     object (if called on the class) or the instance object
@@ -462,13 +462,13 @@ def _getattrr(obj, attr, *args):
 
 
 def no_instance_params(cls):
-    """Disables instance parameters on the class"""
+    """Disables instance parameters on the class."""
     cls._param__private.disable_instance_params = True
     return cls
 
 
 def _instantiate_param_obj(paramobj, owner=None):
-    """Return a Parameter object suitable for instantiation given the class's Parameter object"""
+    """Return a Parameter object suitable for instantiation given the class's Parameter object."""
     # Shallow-copy Parameter object without the watchers
     p = copy.copy(paramobj)
     p.owner = owner
@@ -519,7 +519,7 @@ def instance_descriptor(f):
 
 
 def get_method_owner(method):
-    """Gets the instance that owns the supplied method"""
+    """Gets the instance that owns the supplied method."""
     if not inspect.ismethod(method):
         return None
     if isinstance(method, partial):
@@ -530,7 +530,7 @@ def get_method_owner(method):
 # PARAM3_DEPRECATION
 def recursive_repr(fillvalue='...'):
     """
-    Decorator to make a repr function return fillvalue for a recursive call
+    Decorator to make a repr function return fillvalue for a recursive call.
 
     .. deprecated:: 1.12.0
     """
@@ -632,7 +632,9 @@ def output(func, *output, **kw):
 
 def _parse_dependency_spec(spec):
     """
-    Parses param.depends specifications into three components:
+    Parses param.depends string specifications into three components.
+
+    The 3 components are:
 
     1. The dotted path to the sub-object
     2. The attribute being depended on, i.e. either a parameter or method
@@ -781,7 +783,7 @@ def _m_caller(self, method_name, what='value', changed=None, callback=None):
 
 
 def _add_doc(obj, docstring):
-    """Add a docstring to a namedtuple"""
+    """Add a docstring to a namedtuple."""
     obj.__doc__ = docstring
 
 
@@ -1181,7 +1183,7 @@ class Parameter(_ParameterBase):
                  pickle_default_value=Undefined, allow_None=Undefined,
                  per_instance=Undefined, allow_refs=Undefined, nested_refs=Undefined):
         """
-        Initialize a new Parameter object and store the supplied attributes:
+        Initialize a new Parameter object and store the supplied attributes.
 
         default: the owning class's value for the attribute represented
         by this Parameter, which can be overridden in an instance.
@@ -1278,12 +1280,12 @@ class Parameter(_ParameterBase):
 
     @classmethod
     def serialize(cls, value):
-        """Given the parameter value, return a Python value suitable for serialization"""
+        """Given the parameter value, return a Python value suitable for serialization."""
         return value
 
     @classmethod
     def deserialize(cls, value):
-        """Given a serializable Python value, return a value that the parameter can be set to"""
+        """Given a serializable Python value, return a value that the parameter can be set to."""
         return value
 
     def schema(self, safe=False, subset=None, mode='json'):
@@ -1566,14 +1568,14 @@ class Parameter(_ParameterBase):
             obj.param._batch_call_watchers()
 
     def _validate_value(self, value, allow_None):
-        """Implements validation for parameter value"""
+        """Implements validation for parameter value."""
 
     def _validate(self, val):
-        """Implements validation for the parameter value and attributes"""
+        """Implements validation for the parameter value and attributes."""
         self._validate_value(val, self.allow_None)
 
     def _post_setter(self, obj, val):
-        """Called after the parameter value has been validated and set"""
+        """Called after the parameter value has been validated and set."""
 
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed." % self.name)
@@ -1871,7 +1873,7 @@ class Parameters:
             setattr(self, k, v)
 
     def __getitem__(self_, key):
-        """Returns the class or instance parameter"""
+        """Returns the class or instance parameter."""
         inst = self_.self
         if inst is None:
             return self_._cls_parameters[key]
@@ -1879,7 +1881,7 @@ class Parameters:
         return _instantiated_parameter(inst, p)
 
     def __dir__(self_):
-        """Adds parameters to dir"""
+        """Adds parameters to dir."""
         return super().__dir__() + list(self_._cls_parameters)
 
     def __iter__(self_):
@@ -2321,7 +2323,7 @@ class Parameters:
     def params(self_, parameter_name=None):
         """
         Return the Parameters of this class as the
-        dictionary {name: parameter_object}
+        dictionary {name: parameter_object}.
 
         Includes Parameters from this class and its
         superclasses.
@@ -2473,7 +2475,7 @@ class Parameters:
     def _cls_parameters(self_):
         """
         Class parameters are cached because they are accessed often,
-        and parameters are rarely added (and cannot be deleted)
+        and parameters are rarely added (and cannot be deleted).
         """
         cls = self_.cls
         pdict = cls._param__private.params
@@ -2496,7 +2498,7 @@ class Parameters:
 
     def objects(self_, instance=True):
         """
-        Returns the Parameters of this instance or class
+        Returns the Parameters of this instance or class.
 
         If instance=True and called on a Parameterized instance it
         will create instance parameters for all Parameters defined on
@@ -4013,13 +4015,13 @@ dbprint_prefix=None
 
 
 def truncate(str_, maxlen = 30):
-    """Return HTML-safe truncated version of given string"""
+    """Return HTML-safe truncated version of given string."""
     rep = (str_[:(maxlen-2)] + '..') if (len(str_) > (maxlen-2)) else str_
     return html.escape(rep)
 
 
 def _get_param_repr(key, val, p, vallen=30, doclen=40):
-    """HTML representation for a single Parameter object and its value"""
+    """HTML representation for a single Parameter object and its value."""
     if isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         value = val.param._repr_html_(open=False)
     elif hasattr(val, "_repr_html_"):
@@ -4073,7 +4075,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
 
 
 def _parameterized_repr_html(p, open):
-    """HTML representation for a Parameterized object"""
+    """HTML representation for a Parameterized object."""
     if isinstance(p, Parameterized):
         cls = p.__class__
         title = cls.name + "()"
@@ -4142,7 +4144,7 @@ class _ClassPrivate:
     renamed: bool
         Whethe the class has been renamed by a super class
     params: dict
-        Dict of parameter_name:parameter
+        Dict of parameter_name:parameter.
     """
 
     __slots__ = [
@@ -4205,7 +4207,7 @@ class _InstancePrivate:
             parameter_name:
                 parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
-        Dict of parameter name: value
+        Dict of parameter name: value.
     """
 
     __slots__ = [
@@ -4642,7 +4644,7 @@ class ParameterizedFunction(Parameterized):
                 qualify=False, separator=""):
         """
         Same as self.param.pprint, except that X.classname(Y
-        is replaced with X.classname.instance(Y
+        is replaced with X.classname.instance(Y.
         """
         r = self.param.pprint(imports,prefix,
                               unknown_value=unknown_value,

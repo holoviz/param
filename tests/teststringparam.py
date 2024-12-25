@@ -1,4 +1,4 @@
-"""Unit test for String parameters"""
+"""Unit test for String parameters."""
 import unittest
 
 import param

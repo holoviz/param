@@ -134,22 +134,22 @@ class Version:
 
     @property
     def release(self):
-        """Return the release tuple"""
+        """Return the release tuple."""
         return self.fetch()._release
 
     @property
     def commit(self):
-        """A specification for this particular VCS version, e.g. a short git SHA"""
+        """A specification for this particular VCS version, e.g. a short git SHA."""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        """Return the number of commits since the last release"""
+        """Return the number of commits since the last release."""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        """True if there are uncommited changes, False otherwise"""
+        """True if there are uncommited changes, False otherwise."""
         return self.fetch()._dirty
 
 
@@ -259,7 +259,7 @@ class Version:
 
 
     def _update_from_vcs(self, output):
-        """Update state based on the VCS state e.g the output of git describe"""
+        """Update state based on the VCS state e.g the output of git describe."""
         split = output[1:].split('-')
         dot_split = split[0].split('.')
         for prefix in ['a','b','rc']:
@@ -599,22 +599,22 @@ class OldDeprecatedVersion:
 
     @property
     def release(self):
-        """Return the release tuple"""
+        """Return the release tuple."""
         return self.fetch()._release
 
     @property
     def commit(self):
-        """A specification for this particular VCS version, e.g. a short git SHA"""
+        """A specification for this particular VCS version, e.g. a short git SHA."""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        """Return the number of commits since the last release"""
+        """Return the number of commits since the last release."""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        """True if there are uncommited changes, False otherwise"""
+        """True if there are uncommited changes, False otherwise."""
         return self.fetch()._dirty
 
 
@@ -667,7 +667,7 @@ class OldDeprecatedVersion:
         self._update_from_vcs(output)
 
     def _update_from_vcs(self, output):
-        """Update state based on the VCS state e.g the output of git describe"""
+        """Update state based on the VCS state e.g the output of git describe."""
         split = output[1:].split('-')
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')

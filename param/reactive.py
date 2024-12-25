@@ -1,5 +1,5 @@
 """
-reactive API
+reactive API.
 
 `rx` is a wrapper around a Python object that lets users create
 reactive expression pipelines by calling existing APIs on an object with dynamic

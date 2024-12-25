@@ -121,7 +121,7 @@ _reference_transforms = []
 
 def register_reference_transform(transform):
     """
-    Appends a transform to extract potential parameter dependencies
+    Append a transform to extract potential parameter dependencies
     from an object.
 
     Arguments:
@@ -133,7 +133,7 @@ def register_reference_transform(transform):
 
 def transform_reference(arg):
     """
-    Applies transforms to turn objects which should be treated like
+    Apply transforms to turn objects which should be treated like
     a parameter reference into a valid reference that can be resolved
     by Param. This is useful for adding handling for depending on objects
     that are not simple Parameters or functions with dependency
@@ -147,7 +147,7 @@ def transform_reference(arg):
 
 def eval_function_with_deps(function):
     """
-    Evaluates a function after resolving its dependencies.
+    Evaluate a function after resolving its dependencies.
 
     Calls and returns a function after resolving any dependencies
     stored on the _dinfo attribute and passing the resolved values
@@ -163,7 +163,7 @@ def eval_function_with_deps(function):
     return function(*args, **kwargs)
 
 def resolve_value(value, recursive=True):
-    """Resolves the current value of a dynamic reference."""
+    """Resolve the current value of a dynamic reference."""
     if not recursive:
         pass
     elif isinstance(value, (list, tuple)):
@@ -187,7 +187,7 @@ def resolve_value(value, recursive=True):
     return value
 
 def resolve_ref(reference, recursive=False):
-    """Resolves all parameters a dynamic reference depends on."""
+    """Resolve all parameters a dynamic reference depends on."""
     if recursive:
         if isinstance(reference, (list, tuple, set)):
             return [r for v in reference for r in resolve_ref(v, recursive)]
@@ -265,10 +265,20 @@ def logging_level(level):
 
 @contextmanager
 def _batch_call_watchers(parameterized, enable=True, run=True):
-    """
-    Internal version of batch_call_watchers, adding control over queueing and running.
-    Only actually batches events if enable=True; otherwise a no-op. Only actually
-    calls the accumulated watchers on exit if run=True; otherwise they remain queued.
+    """Manage batching of watcher calls with optional queueing and execution.
+
+    This internal version of `batch_call_watchers` allows control over whether
+    events are queued and whether accumulated watchers are executed upon exit.
+
+    Args:
+        parameterized: The object whose watchers are being managed.
+        enable (bool, optional): If `True`, enable batching of events. Defaults to `True`.
+        run (bool, optional): If `True`, execute accumulated watchers on exit.
+                              If `False`, they remain queued. Defaults to `True`.
+
+    Yields
+    ------
+        None: This is a context manager that temporarily modifies watcher behavior.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = enable or parameterized.param._BATCH_WATCH
@@ -519,7 +529,7 @@ def instance_descriptor(f):
 
 
 def get_method_owner(method):
-    """Gets the instance that owns the supplied method."""
+    """Get the instance that owns the supplied method."""
     if not inspect.ismethod(method):
         return None
     if isinstance(method, partial):
@@ -530,7 +540,7 @@ def get_method_owner(method):
 # PARAM3_DEPRECATION
 def recursive_repr(fillvalue='...'):
     """
-    Decorator to make a repr function return fillvalue for a recursive call.
+    Decorate to make a repr function return fillvalue for a recursive call.
 
     .. deprecated:: 1.12.0
     """
@@ -632,7 +642,7 @@ def output(func, *output, **kw):
 
 def _parse_dependency_spec(spec):
     """
-    Parses param.depends string specifications into three components.
+    Parse param.depends string specifications into three components.
 
     The 3 components are:
 
@@ -653,7 +663,8 @@ def _parse_dependency_spec(spec):
 
 def _params_depended_on(minfo, dynamic=True, intermediate=True):
     """
-    Resolves dependencies declared on a Parameterized method.
+    Resolve dependencies declared on a Parameterized method.
+
     Dynamic dependencies, i.e. dependencies on sub-objects which may
     or may not yet be available, are only resolved if dynamic=True.
     By default intermediate dependencies, i.e. dependencies on the
@@ -682,7 +693,7 @@ def _params_depended_on(minfo, dynamic=True, intermediate=True):
 
 def _resolve_mcs_deps(obj, resolved, dynamic, intermediate=True):
     """
-    Resolves constant and dynamic parameter dependencies previously
+    Resolve constant and dynamic parameter dependencies previously
     obtained using the _params_depended_on function. Existing resolved
     dependencies are updated with a supplied parameter instance while
     dynamic dependencies are resolved if possible.
@@ -708,7 +719,8 @@ def _resolve_mcs_deps(obj, resolved, dynamic, intermediate=True):
 
 def _skip_event(*events, **kwargs):
     """
-    Checks whether a subobject event should be skipped.
+    Check whether a subobject event should be skipped.
+
     Returns True if all the values on the new subobject
     match the values on the previous subobject.
     """
@@ -771,7 +783,7 @@ def _sync_caller(*events, what='value', changed=None, callback=None, function=No
 
 def _m_caller(self, method_name, what='value', changed=None, callback=None):
     """
-    Wraps a method call adding support for scheduling a callback
+    Wrap a method call adding support for scheduling a callback
     before it is executed and skipping events if a subobject has
     changed but its values have not.
     """
@@ -883,7 +895,20 @@ class Watcher(_Watcher):
     """
 
     def __new__(cls_, *args, **kwargs):
-        """Allows creating Watcher without explicit precedence value."""
+        """Create a new instance of the class, setting a default precedence value.
+
+        This method allows creating a `Watcher` instance without explicitly
+        specifying a `precedence` value. If `precedence` is not provided, it
+        defaults to `0`.
+
+        Args:
+            *args: Positional arguments to initialize the instance.
+            **kwargs: Keyword arguments to initialize the instance.
+
+        Returns
+        -------
+            An instance of the class with the specified or default values.
+        """
         values = dict(zip(cls_._fields, args))
         values.update(kwargs)
         if 'precedence' not in values:
@@ -1568,14 +1593,40 @@ class Parameter(_ParameterBase):
             obj.param._batch_call_watchers()
 
     def _validate_value(self, value, allow_None):
-        """Implements validation for parameter value."""
+        """Validate the parameter value against constraints.
+
+        Args:
+            value: The value to be validated.
+            allow_None (bool): Whether `None` is allowed as a valid value.
+
+        Raises
+        ------
+            ValueError: If the value does not meet the parameter's constraints.
+        """
 
     def _validate(self, val):
-        """Implements validation for the parameter value and attributes."""
+        """Validate the parameter value and its attributes.
+
+        This method ensures that the given value adheres to the parameter's
+        constraints and attributes. Subclasses can extend this method to
+        include additional validation logic.
+
+        Args:
+            val: The value to be validated.
+        """
         self._validate_value(val, self.allow_None)
 
     def _post_setter(self, obj, val):
-        """Called after the parameter value has been validated and set."""
+        """Handle actions to be performed after setting a parameter value.
+
+        This method is called after the parameter value has been validated
+        and assigned. Subclasses can override this method to implement
+        additional behavior post-assignment.
+
+        Args:
+            obj: The object on which the parameter is being set.
+            val: The value that has been assigned to the parameter.
+        """
 
     def __delete__(self,obj):
         raise TypeError("Cannot delete '%s': Parameters deletion not allowed." % self.name)
@@ -1685,7 +1736,7 @@ class shared_parameters:
 
 def as_uninitialized(fn):
     """
-    Decorator: call fn with the parameterized_instance's
+    Decorate call fn with the parameterized_instance's
     initialization flag set to False, then revert the flag.
 
     (Used to decorate Parameterized methods that must alter
@@ -1873,7 +1924,16 @@ class Parameters:
             setattr(self, k, v)
 
     def __getitem__(self_, key):
-        """Returns the class or instance parameter."""
+        """Retrieve the class or instance parameter by key.
+
+        Args:
+            key: The name of the parameter to retrieve.
+
+        Returns
+        -------
+            The parameter associated with the given key. If accessed on an instance,
+            returns the instantiated parameter.
+        """
         inst = self_.self
         if inst is None:
             return self_._cls_parameters[key]
@@ -1881,18 +1941,40 @@ class Parameters:
         return _instantiated_parameter(inst, p)
 
     def __dir__(self_):
-        """Adds parameters to dir."""
+        """Return the list of standard attributes and parameters.
+
+        Returns
+        -------
+            list: A combined list of standard attributes and parameter names.
+        """
         return super().__dir__() + list(self_._cls_parameters)
 
     def __iter__(self_):
-        """Iterates over the parameters on this object."""
+        """Iterate over the parameters on this object."""
         yield from self_._cls_parameters
 
     def __contains__(self_, param):
         return param in self_._cls_parameters
 
     def __getattr__(self_, attr):
-        """Extends attribute access to parameter objects."""
+        """Handle attribute access for parameter objects.
+
+        This method extends standard attribute access to support parameters
+        defined in the object. If the requested attribute corresponds to a
+        parameter, it retrieves the parameter value.
+
+        Args:
+            attr (str): The name of the attribute to access.
+
+        Returns
+        -------
+            The value of the parameter if it exists.
+
+        Raises
+        ------
+            AttributeError: If the class is not initialized or the attribute
+                            does not exist in the parameter objects.
+        """
         cls = self_.__dict__.get('cls')
         if cls is None: # Class not initialized
             raise AttributeError
@@ -2204,7 +2286,9 @@ class Parameters:
 
     def _watch_group(self_, obj, name, queued, group, attribute=None):
         """
-        Sets up a watcher for a group of dependencies. Ensures that
+        Set up a watcher for a group of dependencies.
+
+        Ensures that
         if the dependency was dynamically generated we check whether
         a subobject change event actually causes a value change and
         that we update the existing watchers, i.e. clean up watchers
@@ -2498,7 +2582,7 @@ class Parameters:
 
     def objects(self_, instance=True):
         """
-        Returns the Parameters of this instance or class.
+        Return the Parameters of this instance or class.
 
         If instance=True and called on a Parameterized instance it
         will create instance parameters for all Parameters defined on
@@ -2561,7 +2645,7 @@ class Parameters:
         self_._state_watchers += watchers
 
     def _update_event_type(self_, watcher, event, triggered):
-        """Returns an updated Event object with the type field set appropriately."""
+        """Return an updated Event object with the type field set appropriately."""
         if triggered:
             event_type = 'triggered'
         else:
@@ -2767,7 +2851,7 @@ class Parameters:
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
     def schema(self_, safe=False, subset=None, mode='json'):
-        """Returns a schema for the parameters on this Parameterized object."""
+        """Return a schema for the parameters on this Parameterized object."""
         self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
@@ -2938,7 +3022,7 @@ class Parameters:
 
     def outputs(self_):
         """
-        Returns a mapping between any declared outputs and a tuple
+        Return a mapping between any declared outputs and a tuple
         of the declared Parameter type, the output method, and the
         index into the output if multiple outputs are returned.
         """
@@ -2957,7 +3041,7 @@ class Parameters:
 
     def _spec_to_obj(self_, spec, dynamic=True, intermediate=True):
         """
-        Resolves a dependency specification into lists of explicit
+        Resolve a dependency specification into lists of explicit
         parameter dependencies and dynamic dependencies.
 
         Dynamic dependencies are specifications to be resolved when
@@ -3191,7 +3275,7 @@ class Parameters:
     # verbose(), debug(), etc are taking advantage of this.
     def __db_print(self_,level,msg,*args,**kw):
         """
-        Calls the logger returned by the get_logger() function,
+        Call the logger returned by the get_logger() function,
         prepending the result of calling dbprint_prefix() (if any).
 
         See python's logging module for details.
@@ -3625,18 +3709,19 @@ class ParameterizedMetaclass(type):
     param = property(_get_param)
 
     def __setattr__(mcs, attribute_name, value):
-        """
-        Implements 'self.attribute_name=value' in a way that also supports Parameters.
+        """Set an attribute, supporting special behavior for Parameters.
 
-        If there is already a descriptor named attribute_name, and
-        that descriptor is a Parameter, and the new value is *not* a
-        Parameter, then call that Parameter's __set__ method with the
-        specified value.
+        If the attribute being set corresponds to a Parameter descriptor and the
+        new value is not a Parameter, the descriptor's `__set__` method is invoked
+        with the provided value. This ensures proper handling of Parameter values.
 
-        In all other cases set the attribute normally (i.e. overwrite
-        the descriptor).  If the new value is a Parameter, once it has
-        been set we make sure that the value is inherited from
-        Parameterized superclasses as described in __param_inheritance().
+        In all other cases, the attribute is set normally. If the new value is a
+        Parameter, the method ensures that the value is inherited correctly from
+        Parameterized superclasses as described in `__param_inheritance()`.
+
+        Args:
+            attribute_name (str): The name of the attribute to set.
+            value: The value to assign to the attribute.
         """
         # Find out if there's a Parameter called attribute_name as a
         # class attribute of this class - if not, parameter is None.
@@ -4642,9 +4727,21 @@ class ParameterizedFunction(Parameterized):
 
     def _pprint(self, imports=None, prefix="\n    ",unknown_value='<?>',
                 qualify=False, separator=""):
-        """
-        Same as self.param.pprint, except that X.classname(Y
-        is replaced with X.classname.instance(Y.
+        """Pretty-print the object with adjustments for instance representation.
+
+        This method is similar to `self.param.pprint`, but replaces
+        `X.classname(Y` with `X.classname.instance(Y`.
+
+        Args:
+            imports (optional): Additional imports to include in the output.
+            prefix (str, optional): String prefix for each line of the output.
+            unknown_value (str, optional): Placeholder for unknown values. Defaults to '<?>'.
+            qualify (bool, optional): Whether to include full qualification for names.
+            separator (str, optional): String separator for elements.
+
+        Returns
+        -------
+            str: The formatted string representation of the object.
         """
         r = self.param.pprint(imports,prefix,
                               unknown_value=unknown_value,

@@ -112,7 +112,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def _get_method(cls, ptype, suffix):
-        """Returns specialized method if available, otherwise None."""
+        """Return specialized method if available, otherwise None."""
         method_name = ptype.lower()+'_' + suffix
         return getattr(cls, method_name, None)
 

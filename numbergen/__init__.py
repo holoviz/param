@@ -141,14 +141,20 @@ class BinaryOperator(NumberGenerator):
     """Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator."""
 
     def __init__(self,lhs,rhs,operator,reverse=False,**args):
+        """Initialize a BinaryOperator with operands, an operator, and optional arguments.
+
+        Args:
+            lhs: The left-hand side operand, which can be a NumberGenerator or a number.
+            rhs: The right-hand side operand, which can be a NumberGenerator or a number.
+            operator (Callable): The binary operator to apply to the operands.
+            reverse (bool, optional): If `True`, swaps the left and right operands. Defaults to `False`.
+            **args: Optional keyword arguments to pass to the operator when it is called.
+
+        Notes
+        -----
+            It is currently not possible to set parameters in the superclass during
+            initialization because `**args` is used by this class itself.
         """
-        Accepts two NumberGenerator operands, an operator, and
-        optional arguments to be provided to the operator when calling
-        it on the two operands.
-        """
-        # Note that it's currently not possible to set
-        # parameters in the superclass when creating an instance,
-        # because **args is used by this class itself.
         super().__init__()
 
         if reverse:
@@ -174,14 +180,18 @@ class UnaryOperator(NumberGenerator):
     """Applies any unary operator to a NumberGenerator to yield another NumberGenerator."""
 
     def __init__(self,operand,operator,**args):
+        """Initialize a UnaryOperator with an operand, operator, and optional arguments.
+
+        Args:
+            operand (NumberGenerator): The NumberGenerator to which the operator is applied.
+            operator (Callable): The unary operator to apply to the operand.
+            **args: Optional keyword arguments to pass to the operator when it is called.
+
+        Notes
+        -----
+            It is currently not possible to set parameters in the superclass during
+            initialization because `**args` is used by this class itself.
         """
-        Accepts a NumberGenerator operand, an operator, and
-        optional arguments to be provided to the operator when calling
-        it on the operand.
-        """
-        # Note that it's currently not possible to set
-        # parameters in the superclass when creating an instance,
-        # because **args is used by this class itself.
         super().__init__()
 
         self.operand=operand
@@ -330,7 +340,9 @@ class TimeAwareRandomState(TimeAware):
 
     def _initialize_random_state(self, seed=None, shared=True, name=None):
         """
-        Initialization method to be called in the constructor of
+        Initialize the random state correctly.
+
+        Method to be called in the constructor of
         subclasses to initialize the random state correctly.
 
         If seed is None, there is no control over the random stream

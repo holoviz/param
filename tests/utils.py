@@ -49,7 +49,7 @@ class MockLoggingHandler(logging.Handler):
         self.release()
 
     def tail(self, level, n=1):
-        """Returns the last n lines captured at the given level."""
+        """Return the last n lines captured at the given level."""
         return [str(el) for el in self.messages[level][-n:]]
 
     def assertEndsWith(self, level, substring):

@@ -1322,37 +1322,45 @@ class Parameter(_ParameterBase):
     @property
     def rx(self):
         """
-        The reactive namespace.
+        The reactive operations namespace.
 
-        Provides reactive versions of operations that cannot be made reactive through operator overloading, such as
-        `.rx.and_` and `.rx.bool`. Calling this namespace (`()`) returns a reactive expression.
+        Provides reactive versions of operations that cannot be made reactive through
+        operator overloading. This includes operations such as `.rx.and_` and `.rx.bool`.
+
+        Calling this namespace (`.rx()`) creates and returns a reactive expression, enabling
+        dynamic updates and computation tracking.
 
         Returns
         -------
-        Reactive expression
-            The result of calling the reactive namespace is a reactive expression.
+        rx
+            A reactive expression representing the operation applied to the current value.
 
         User Guide
         ----------
+        For more details, see the user guide:
         https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
 
         Examples
         --------
-        Create a Parameterized instance:
+        Create a Parameterized instance and access its reactive operations property:
 
         >>> import param
         >>> class P(param.Parameterized):
         ...     a = param.Number()
         >>> p = P(a=1)
 
-        Get the current value:
+        Retrieve the current value reactively:
 
-        >>> a = p.param.a.rx.value
+        >>> a_value = p.param.a.rx.value
 
-        Call it to get a reactive expression:
+        Create a reactive expression by calling the namespace:
 
-        >>> rx_value = p.param.a.rx()
+        >>> rx_expression = p.param.a.rx()
 
+        Use special methods from the reactive ops namespace for reactive operations:
+
+        >>> condition = p.param.a.rx.and_(True)
+        >>> piped = p.param.a.rx.pipe(lambda x: x * 2)
         """
         from .reactive import reactive_ops
         return reactive_ops(self)

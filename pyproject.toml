@@ -124,9 +124,7 @@ ignore = [
     "D101", # Missing docstring in public class"
     "D102", # Missing docstring in public method
     "D103", # Missing docstring in public function
-    "D104", # Missing docstring in public package"
     "D105", # Missing docstring in magic method"
-    "D107", # Missing docstring in `__init__`"
     "D205", # 1 blank line required between summary line and description
     "D415", # First line should end with a period, question mark, or exclamation point
     "D417", # Missing argument description in the docstring for `param_union`: `*parameterizeds`

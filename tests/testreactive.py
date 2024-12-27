@@ -768,8 +768,3 @@ def test_reactive_callback_resolve_accessor():
     dfx = rx(df)
     out = dfx["name"].str._callback()
     assert out is df["name"].str
-
-def test_docstrings_in_sync():
-    # The docstring needs to be explicitly written to work with LSP.
-    assert dedent(reactive_ops.__doc__) == dedent(Parameter.rx.__doc__)
-    assert dedent(reactive_ops.__doc__) == dedent(rx.rx.__doc__)

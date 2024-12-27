@@ -517,7 +517,7 @@ class reactive_ops:
         """
         Apply a function to each item in the reactive collection.
 
-        This method applies a given function to every item in the current reactive 
+        This method applies a given function to every item in the current reactive
         collection and returns a new reactive expression containing the results.
 
         Parameters
@@ -532,13 +532,13 @@ class reactive_ops:
         Returns
         -------
         rx
-            A new reactive expression containing the results of applying `func` 
+            A new reactive expression containing the results of applying `func`
             to each item.
 
         Raises
         ------
         TypeError
-            If `func` is a generator or asynchronous generator function, which 
+            If `func` is a generator or asynchronous generator function, which
             are not supported.
 
         Examples
@@ -580,7 +580,7 @@ class reactive_ops:
         """
         Perform a logical NOT operation on the current reactive value.
 
-        This method computes the logical negation (`not`) of the current reactive 
+        This method computes the logical negation (`not`) of the current reactive
         expression and returns the result as a new reactive expression.
 
         Returns
@@ -610,8 +610,8 @@ class reactive_ops:
         """
         Perform a logical OR operation with the given operand.
 
-        This method computes a logical OR (`or`) operation between the current 
-        reactive value and the provided operand. The result is returned as a new 
+        This method computes a logical OR (`or`) operation between the current
+        reactive value and the provided operand. The result is returned as a new
         reactive expression.
 
         Parameters
@@ -653,8 +653,8 @@ class reactive_ops:
         """
         Apply a chainable function to the current reactive value.
 
-        This method allows applying a custom function to the current reactive 
-        expression. The result is returned as a new reactive expression, making 
+        This method allows applying a custom function to the current reactive
+        expression. The result is returned as a new reactive expression, making
         it possible to create dynamic and chainable pipelines.
 
         Parameters
@@ -703,19 +703,19 @@ class reactive_ops:
         """
         Resolve references held by the reactive expression.
 
-        This method resolves references within the reactive expression, replacing 
-        any references with their actual values. For example, if the expression 
-        contains a list of reactive parameters, this operation returns a list of 
+        This method resolves references within the reactive expression, replacing
+        any references with their actual values. For example, if the expression
+        contains a list of reactive parameters, this operation returns a list of
         their resolved values.
 
         Parameters
         ----------
         nested : bool, optional
-            Whether to resolve references within nested objects such as tuples, 
+            Whether to resolve references within nested objects such as tuples,
             lists, sets, and dictionaries. Default is True.
         recursive : bool, optional
-            Whether to recursively resolve references. If a resolved reference 
-            itself contains further references, this option enables resolving 
+            Whether to recursively resolve references. If a resolved reference
+            itself contains further references, this option enables resolving
             them until no references remain. Default is False.
 
         Returns
@@ -748,15 +748,15 @@ class reactive_ops:
         """
         Return a new expression that indicates whether the current expression is updating.
 
-        This method creates a reactive expression that evaluates to `True` while the 
-        current expression is in the process of updating and `False` otherwise. This 
-        can be useful for tracking or reacting to the update state of an expression, 
+        This method creates a reactive expression that evaluates to `True` while the
+        current expression is in the process of updating and `False` otherwise. This
+        can be useful for tracking or reacting to the update state of an expression,
         such as displaying loading indicators or triggering conditional logic.
 
         Returns
         -------
         ReactiveExpression
-            A reactive expression that is `True` while the current expression is updating 
+            A reactive expression that is `True` while the current expression is updating
             and `False` otherwise.
 
         Examples
@@ -787,9 +787,9 @@ class reactive_ops:
         """
         Create a reactive expression that updates only when specified dependencies change.
 
-        This method creates a new reactive expression that emits the value of the 
-        current expression only when one of the provided dependencies changes. If 
-        all dependencies are of type `param.Event` and an initial value is provided, 
+        This method creates a new reactive expression that emits the value of the
+        current expression only when one of the provided dependencies changes. If
+        all dependencies are of type `param.Event` and an initial value is provided,
         the expression will not be evaluated until the first event is triggered.
 
         Parameters
@@ -797,7 +797,7 @@ class reactive_ops:
         dependencies : param.Parameter or reactive expression rx
             Dependencies that trigger an update in the reactive expression.
         initial : object, optional
-            A placeholder value that is used until a dependency event is triggered. 
+            A placeholder value that is used until a dependency event is triggered.
             Defaults to `Undefined`.
 
         Returns
@@ -860,8 +860,8 @@ class reactive_ops:
         """
         Return either `x` or `y` depending on the current state of the expression.
 
-        This method implements a reactive version of a ternary conditional expression. 
-        It evaluates the current reactive expression as a condition and returns `x` 
+        This method implements a reactive version of a ternary conditional expression.
+        It evaluates the current reactive expression as a condition and returns `x`
         if the condition is `True`, or `y` if the condition is `False`.
 
         Parameters
@@ -874,7 +874,7 @@ class reactive_ops:
         Returns
         -------
         rx
-            A reactive expression that evaluates to `x` or `y` based on the current 
+            A reactive expression that evaluates to `x` or `y` based on the current
             state of the condition.
 
         Examples
@@ -939,14 +939,14 @@ class reactive_ops:
         """
         Get or set the current state of the reactive expression.
 
-        When getting the value it evaluates the reactive expression, resolving all operations 
-        and dependencies to return the current value. The value reflects the 
+        When getting the value it evaluates the reactive expression, resolving all operations
+        and dependencies to return the current value. The value reflects the
         latest state of the expression after applying all transformations or updates.
 
         Returns
         -------
         any
-            The current value of the reactive expression, resolved based on the 
+            The current value of the reactive expression, resolved based on the
             operations and dependencies in its pipeline.
 
         Examples
@@ -982,14 +982,14 @@ class reactive_ops:
         """
         Get or set the current state of the reactive expression.
 
-        When getting the value it evaluates the reactive expression, resolving all operations 
-        and dependencies to return the current value. The value reflects the 
+        When getting the value it evaluates the reactive expression, resolving all operations
+        and dependencies to return the current value. The value reflects the
         latest state of the expression after applying all transformations or updates.
 
         Returns
         -------
         any
-            The current value of the reactive expression, resolved based on the 
+            The current value of the reactive expression, resolved based on the
             operations and dependencies in its pipeline.
 
         Examples
@@ -1043,25 +1043,25 @@ class reactive_ops:
         """
         Add a callback to observe changes in the reactive expression's output.
 
-        This method allows you to attach a callable function (`fn`) that will be 
-        invoked whenever the output of the reactive expression changes. The callback 
-        can be either a regular or asynchronous function. If no callable is provided, 
+        This method allows you to attach a callable function (`fn`) that will be
+        invoked whenever the output of the reactive expression changes. The callback
+        can be either a regular or asynchronous function. If no callable is provided,
         the expression is eagerly evaluated whenever it updates.
 
         Parameters
         ----------
         fn : callable or coroutine function, optional
-            The function to be called whenever the reactive expression changes. 
-            For function should accept a single argument, which is 
+            The function to be called whenever the reactive expression changes.
+            For function should accept a single argument, which is
             the new value of the reactive expression.
             If no function provided, the expression is simply evaluated eagerly.
-            
+
         Other arguments have no effect. See https://github.com/holoviz/param/issues/996.
 
         Raises
         ------
         ValueError
-            If `precedence` is negative, as negative precedences are reserved 
+            If `precedence` is negative, as negative precedences are reserved
             for internal watchers.
 
         Examples
@@ -1110,39 +1110,39 @@ def bind(function, *args, watch=False, **kwargs):
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
 
-    This function creates a wrapper around the given `function`, binding some or 
-    all of its arguments to constant values, `param.Parameter` objects, or 
-    reactive expressions. The resulting function automatically reflects updates 
-    to any bound parameters or reactive expressions, ensuring that its output 
+    This function creates a wrapper around the given `function`, binding some or
+    all of its arguments to constant values, `param.Parameter` objects, or
+    reactive expressions. The resulting function automatically reflects updates
+    to any bound parameters or reactive expressions, ensuring that its output
     remains up-to-date.
 
-    Similar to `functools.partial`, arguments can also be bound to constants, 
-    leaving a simple callable object. When `watch=True`, the function is 
+    Similar to `functools.partial`, arguments can also be bound to constants,
+    leaving a simple callable object. When `watch=True`, the function is
     automatically evaluated whenever any bound parameter or reactive expression changes.
 
     Parameters
     ----------
     function : callable, generator, async generator, or coroutine
-        The function or coroutine to bind constant, dynamic, or reactive arguments to. 
+        The function or coroutine to bind constant, dynamic, or reactive arguments to.
         It can be:
         - A standard callable (e.g., a regular function).
         - A generator function (producing iterables).
         - An async generator function (producing asynchronous iterables).
         - A coroutine function (producing awaitables).
     *args : object, param.Parameter, bound function or reactive expression rx
-        Positional arguments to bind to the function. These can be constants, 
+        Positional arguments to bind to the function. These can be constants,
         `param.Parameter` objects, bound functions or reactive expressions.
     watch : bool, optional
-        If `True`, the function is automatically evaluated whenever a bound 
+        If `True`, the function is automatically evaluated whenever a bound
         parameter or reactive expression changes. Defaults to `False`.
     **kwargs : object, param.Parameter, bound function or reactive expression rx
-        Keyword arguments to bind to the function. These can also be constants, 
+        Keyword arguments to bind to the function. These can also be constants,
         `param.Parameter` objects, bound functions or reactive expressions.
 
     Returns
     -------
     callable, generator, async generator, or coroutine
-        A new function with the bound arguments, annotated with all dependencies. 
+        A new function with the bound arguments, annotated with all dependencies.
         The function reflects changes to bound parameters or reactive expressions.
 
     Examples

@@ -4,7 +4,6 @@ import operator
 import os
 import unittest
 import time
-from textwrap import dedent
 
 try:
     import numpy as np
@@ -25,8 +24,8 @@ except ModuleNotFoundError:
 import param
 import pytest
 
-from param.parameterized import Skip, Parameter
-from param.reactive import bind, rx, reactive_ops
+from param.parameterized import Skip
+from param.reactive import bind, rx
 
 from .utils import async_wait_until
 

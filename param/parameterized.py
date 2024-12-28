@@ -4349,51 +4349,88 @@ class _InstancePrivate:
 
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
-    Base class for named objects that support Parameters and message
-    formatting.
+    Base class for named objects with observable Parameters.
 
-    Automatic object naming: Every Parameterized instance has a name
-    parameter.  If the user doesn't designate a name=<str> argument
-    when constructing the object, the object will be given a name
-    consisting of its class name followed by a unique 5-digit number.
+    The `Parameterized` base class simplifies your codebase, making it more robust and maintainable,
+    while enabling the creation of rich, interactive applications. It integrates seamlessly with
+    the rest of the HoloViz ecosystem for building visualizations and user interfaces.
 
-    Automatic parameter setting: The Parameterized __init__ method
-    will automatically read the list of keyword parameters.  If any
-    keyword matches the name of a Parameter (see Parameter class)
-    defined in the object's class or any of its superclasses, that
-    parameter in the instance will get the value given as a keyword
-    argument.  For example:
+    Features
+    --------
+    1. **Parameters**:
+    - Support for default, constant, and readonly values.
+    - Validation, documentation, custom labels, and parameter references.
+    2. **`param` Namespace**:
+    - Provides utility methods for tasks like pretty-printing, logging, serialization, deserialization, and more.
+    3. **Observer Pattern**:
+    - Enables "watching" parameters for changes and reacting through callbacks, supporting reactive programming.
 
-    >>> class Foo(Parameterized):
-    ...     xx = Parameter(default=1)
+    Documentation
+    -------------
+    For detailed documentation, see: https://param.holoviz.org/user_guide/Parameters.html.
 
-    >>> foo = Foo(xx=20)
+    Examples
+    --------
+    1. **Defining a Class with Validated Parameters**:
 
-    in this case foo.xx gets the value 20.
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     my_number = param.Number(default=1, bounds=(0, 10), doc='A numeric value')
+        ...     my_list = param.List(default=[1, 2, 3], item_type=int, doc='A list of integers')
+        >>> obj = MyClass(my_number=2)
 
-    When initializing a Parameterized instance ('foo' in the example
-    above), the values of parameters can be supplied as keyword
-    arguments to the constructor (using parametername=parametervalue);
-    these values will override the class default values for this one
-    instance.
+        - The instance `obj` will always include a `name` parameter:
 
-    If no 'name' parameter is supplied, self.name defaults to the
-    object's class name with a unique number appended to it.
+        >>> obj.name
+        'MyClass12345'  # The default `name` is the class name with a unique 5-digit suffix.
 
-    Message formatting: Each Parameterized instance has several
-    methods for optionally printing output. This functionality is
-    based on the standard Python 'logging' module; using the methods
-    provided here, wraps calls to the 'logging' module's root logger
-    and prepends each message with information about the instance
-    from which the call was made. For more information on how to set
-    the global logging level and change the default message prefix,
-    see documentation for the 'logging' module.
+        - Default parameter values are set unless overridden:
+
+        >>> obj.my_list
+        [1, 2, 3]
+
+        - Constructor arguments override default values:
+
+        >>> obj.my_number
+        2  # The value set in the constructor overrides the default.
+
+    2. **Changing Parameter Values**:
+
+        >>> obj.my_number = 5  # Valid update within bounds.
+
+        - Attempting to set an invalid value raises a `ValueError`:
+
+        >>> obj.my_number = 15  # ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
+
+    3. **Watching Parameter Changes**:
+
+        Add a watcher to respond to parameter updates:
+
+        >>> def callback(event):
+        ...     print(f"Changed {event.name} from {event.old} to {event.new}")
+        >>> obj.param.watch(callback, 'my_number')
+        >>> obj.my_number = 7
+        Changed my_number from 5 to 7
+
+        `watch` is the most low level, reactive api. For most use cases we recommend
+        using the higher level `depends`, `bind` or `rx` apis.
     """
 
     name = String(default=None, constant=True, doc="""
-        String identifier for this object.""")
+        String identifier for this object.
+        Defaults to the object's class name plus a unique integer""")
 
     def __init__(self, **params):
+        """
+        Initialize the object.
+
+        The values of the parameters
+        can be supplied as keyword arguments (MyClass(parameter_name=parameter_value, ...);
+        these values will override the default values for this one instance.
+
+        If no 'name' parameter is supplied, 'name' defaults to the
+        object's class name with a unique number appended to it.
+        """
         global object_count
 
         # Setting a Parameter value in an __init__ block before calling

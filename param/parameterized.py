@@ -29,6 +29,7 @@ from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
+from typing import Type, Union, Literal # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -1846,16 +1847,20 @@ class _ParametersRestorer:
 
 class Parameters:
     """
-    Object that holds the namespace and implementation of Parameterized
+    Object that holds the `.param` namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
     Parameters themselves.
 
     Exists at both the metaclass level (instantiated by the metaclass)
     and at the instance level. Can contain state specific to either the
     class or the instance as necessary.
+
+    Documentation
+    -------------
+    https://param.holoviz.org/user_guide/Parameters.html#parameterized-namespace
     """
 
-    def __init__(self_, cls, self=None):
+    def __init__(self_, cls: Type['Parameterized'], self: Union['Parameterized', None]=None):
         """
         cls is the Parameterized class which is always set.
         self is the instance if set.
@@ -1909,7 +1914,29 @@ class Parameters:
         self_.self._param__private.watchers = value
 
     @property
-    def self_or_cls(self_):
+    def self_or_cls(self_) -> Union['Parameterized', Type['Parameterized']]:
+        """
+        Return the instance if possible, otherwise return the class.
+
+        This property provides a convenient way to access the class or the
+        instance depending on the context.
+
+        Returns
+        -------
+        Parameterized
+            The instance if if posssible; otherwise, the class.
+
+        Examples
+        --------
+        import param
+        >>> class MyClass(param.Parameterized):
+        ...     value = param.Parameter()
+        ... MyClass.param.self_or_cls
+        __main__.MyClass
+        >>> my_instance = MyClass()
+        >>> my_instance.param.self_or_cls
+        MyClass(name='MyClass00003', value=None)
+        """
         return self_.cls if self_.self is None else self_.self
 
     def __setstate__(self, state):
@@ -2434,11 +2461,11 @@ class Parameters:
 
         Parameters
         ----------
-        **params : dict or iterable or keyword arguments
+        **kwargs : dict or iterable or keyword arguments
             The parameters to update, provided as a dictionary, iterable, or keyword arguments in `param=value` format.
 
-        User Guide
-        ----------
+        Documentation
+        -------------
         https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
         Examples
@@ -2476,7 +2503,6 @@ class Parameters:
         ...     print(p.a, p.b)
         >>> my_param.param.update(a="3. Hello",b="3. World")
         3. Hello 3. World
-
         """
         refs = {}
         if self_.self is not None:
@@ -2580,26 +2606,63 @@ class Parameters:
         cls._param__private.params = paramdict
         return paramdict
 
-    def objects(self_, instance=True):
+    def objects(self_, instance: Literal[True, False, 'existing']=True) -> dict[str, Parameter]:
         """
-        Return the Parameters of this instance or class.
+        Return the parameters of this class or instance.
 
-        If instance=True and called on a Parameterized instance it
-        will create instance parameters for all Parameters defined on
-        the class. To force class parameters to be returned use
-        instance=False. Since classes avoid creating instance
-        parameters unless necessary you may also request only existing
-        instance parameters to be returned by setting
-        instance='existing'.
+        This method provides access to `Parameter` objects defined on a `Parameterized`
+        class or instance, depending on the `instance` argument.
+
+        Parameters
+        ----------
+        instance : bool or {'existing'}, optional, default=True
+            - `True`: Return instance-specific parameters, creating them if necessary. This
+            requires the instance to be fully initialized.
+            - `False`: Return class-level parameters without creating instance-specific copies.
+            - `'existing'`: Return only the instance parameters that already exist, avoiding
+            creation of new instance-specific parameters.
+
+        Returns
+        -------
+        dict[str, Parameter]
+            A dictionary mapping parameter names to their corresponding `Parameter` objects.
+
+        Raises
+        ------
+        RuntimeError
+            If the method is called on a `Parameterized` instance that has not been
+            fully initialized. Ensure `super().__init__(**params)` is called in the
+            constructor before triggering watchers.
+
+        Notes
+        -----
+        - This method distinguishes between class-level and instance-specific parameters.
+        - Instance-specific parameters are lazily created; they are not initialized unless
+        explicitly requested or accessed.
+        - When `instance='existing'`, only parameters already initialized at the instance level
+        will be returned, while class-level parameters remain unaffected.
+
+        Examples
+        --------
+        Accessing Class-Level Parameters:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     param1 = param.Number(default=1)
+        >>> MyClass.param.objects(instance=False)
+        {'name': <param.parameterized.String at 0x...>}
+
+        Accessing Instance Parameters:
+
+        >>> obj = MyClass()
+        >>> obj.param.objects()
+        {'name': <param.parameterized.String at 0x...>}
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
             raise RuntimeError(
-                'Looking up instance Parameter objects (`.param.objects()`) until '
-                'the Parameterized instance has been fully initialized is not allowed. '
-                'Ensure you have called `super().__init__(**params)` in your Parameterized '
-                'constructor before trying to access instance Parameter objects, or '
-                'looking up the class Parameter objects with `.param.objects(instance=False)` '
-                'may be enough for your use case.',
+                'Cannot access instance parameters before the Parameterized instance '
+                'is fully initialized. Ensure `super().__init__(**params)` is called, or '
+                'use `.param.objects(instance=False)` for class parameters.'
             )
 
         pdict = self_._cls_parameters
@@ -2612,13 +2675,39 @@ class Parameters:
                 return {k: self_.self.param[k] for k in pdict}
         return pdict
 
-    def trigger(self_, *param_names):
+    def trigger(self_, *param_names: str) -> None:
         """
-        Trigger watchers for the given set of parameter names. Watchers
-        will be triggered whether or not the parameter values have
-        actually changed. As a special case, the value will actually be
-        changed for a Parameter of type Event, setting it to True so
-        that it is clear which Event parameter has been triggered.
+        Trigger event handlers for the specified parameters.
+
+        This method activates all watchers associated with the given parameter names,
+        regardless of whether the parameter values have actually changed. For parameters
+        of type `Event`, the parameter value will be temporarily set to `True` to
+        indicate that the event has been triggered.
+
+        Parameters
+        ----------
+        *param_names : str
+            Names of the parameters to trigger. Each name must correspond to a
+            parameter defined on this `Parameterized` instance.
+
+        Raises
+        ------
+        RuntimeError
+            If the method is called on a `Parameterized` instance that has not been
+            fully initialized. Ensure `super().__init__(**params)` is called in the
+            constructor before triggering watchers.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     event = param.Event()
+        >>> obj = MyClass()
+        >>> def callback(event):
+        ...     print(f"Triggered: {event.name}")
+        >>> obj.param.watch(callback, 'event')
+        >>> obj.param.trigger('event')
+        Triggered: event
         """
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
@@ -4493,7 +4582,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self._param__private.refs = refs
 
     @property
-    def param(self):
+    def param(self) -> Parameters:
         """
         The `.param` namespace for `Parameterized` classes and instances.
 

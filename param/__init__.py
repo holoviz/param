@@ -6,6 +6,14 @@ Param is a lightweight library for defining and managing user-modifiable paramet
 designed to simplify Python programs and enhance their readability, maintainability,
 and robustness. In addition Param provides the `rx` framework for reactive programming.
 
+Param is well-suited for use in scientific computing, data analysis tools,
+graphical user interfaces (GUIs), and any Python application where well-defined,
+validated parameters are needed.
+
+Documentation
+-------------
+For detailed documentation, see https://param.holoviz.org/.
+
 Examples
 --------
 Here is an example of using `param.Parameterized` to define a class with validated parameters:
@@ -31,16 +39,6 @@ Lets update the reactive value and check its length:
 >>> rx_value.rx.value = [1,2,3,4]
 >>> rx_value.rx.len()
 4
-
-Documentation
--------------
-For detailed documentation, see https://param.holoviz.org/.
-
-Notes
------
-Param is well-suited for use in scientific computing, data analysis tools,
-graphical user interfaces (GUIs), and any Python application where well-defined,
-validated parameters are needed.
 """
 import os
 

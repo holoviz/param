@@ -1035,81 +1035,99 @@ class _ParameterBase(metaclass=ParameterMetaclass):
 
 class Parameter(_ParameterBase):
     """
-    An attribute descriptor for declaring parameters.
+    Base Parameter type to hold any type of Python object.
 
-    Parameters are a special kind of class attribute.  Setting a
-    Parameterized class attribute to be a Parameter instance causes
-    that attribute of the class (and the class's instances) to be
-    treated as a Parameter.  This allows special behavior, including
-    dynamically generated parameter values, documentation strings,
-    constant and read-only parameters, and type or range checking at
-    assignment time.
+    Parameters are a specialized type of class attribute. Setting a
+    Parameterized class attribute to a `Parameter` instance enables enhanced
+    functionality, including type and range validation at assignment, support for constant and
+    read-only parameters, documentation strings and dynamic parameter values.
 
-    For example, suppose someone wants to define two new kinds of
-    objects Foo and Bar, such that Bar has a parameter delta, Foo is a
-    subclass of Bar, and Foo has parameters alpha, sigma, and gamma
-    (and delta inherited from Bar).  She would begin her class
-    definitions with something like this::
+    Parameters can only be used as class attributes of `Parameterized` classes.
+    Using them in standalone contexts or with non-`Parameterized` classes will
+    not provide the described behavior.
 
-       class Bar(Parameterized):
-           delta = Parameter(default=0.6, doc='The difference between steps.')
-           ...
-       class Foo(Bar):
-           alpha = Parameter(default=0.1, doc='The starting value.')
-           sigma = Parameter(default=0.5, doc='The standard deviation.',
-                           constant=True)
-           gamma = Parameter(default=1.0, doc='The ending value.')
-           ...
+    Parameters
+    ----------
+    default : Any, optional
+        The default value of the parameter. Default is `None`.
+    doc : str, optional
+        A documentation string describing the parameter.
+    constant : bool, optional
+        If True, the parameter value cannot be changed after being set.
+        Default is False.
+    readonly : bool, optional
+        If True, the parameter value cannot be modified. Default is False.
+    allow_None : bool, optional
+        If True, the parameter value can be set to `None`. Default is False.
+    precedence : float, optional
+        Determines the order in which parameters are displayed or processed
+        in user interfaces. Lower precedence values are displayed earlier.
+    instantiate : bool, optional
+        If True, each instance of the `Parameterized` class will get a new
+        copy of the parameter object. Default is False.
 
-    Class Foo would then have four parameters, with delta defaulting
-    to 0.6.
+    Notes
+    -----
+    Parameters provide lots of features.
 
-    Parameters have several advantages over plain attributes:
+    **Dynamic Behavior**:
 
-    1. Parameters can be set automatically when an instance is
-       constructed: The default constructor for Foo (and Bar) will
-       accept arbitrary keyword arguments, each of which can be used
-       to specify the value of a Parameter of Foo (or any of Foo's
-       superclasses).  E.g., if a script does this::
+    - Parameters provide support for dynamic values, type validation,
+        and range checking.
+    - Parameters can be declared as constant or read-only.
 
-           myfoo = Foo(alpha=0.5)
+    **Automatic Initialization**:
 
-       myfoo.alpha will return 0.5, without the Foo constructor
-       needing special code to set alpha.
+    - Parameters can be set during object construction using keyword
+        arguments. For example:
+        ```python
+        myfoo = Foo(alpha=0.5)
+        print(myfoo.alpha)  # Output: 0.5
+        ```
+    - If custom constructors are implemented, they can still pass
+        keyword arguments to the superclass to allow Parameter initialization.
 
-       If Foo implements its own constructor, keyword arguments will
-       still be accepted if the constructor accepts a dictionary of
-       keyword arguments (as in ``def __init__(self,**params):``), and
-       then each class calls its superclass (as in
-       ``super(Foo,self).__init__(**params)``) so that the
-       Parameterized constructor will process the keywords.
+    **Inheritance**:
 
-    2. A Parameterized class need specify only the attributes of a
-       Parameter whose values differ from those declared in
-       superclasses; the other values will be inherited.  E.g. if Foo
-       declares::
+    - Parameterized classes automatically inherit parameters from
+        their superclasses. Attributes can be selectively overridden.
 
-        delta = Parameter(default=0.2)
+    **Subclassing**:
 
-       the default value of 0.2 will override the 0.6 inherited from
-       Bar, but the doc will be inherited from Bar.
+    - The `Parameter` class can be subclassed to create custom behavior,
+        such as validating specific ranges or generating values dynamically.
 
-    3. The Parameter descriptor class can be subclassed to provide
-       more complex behavior, allowing special types of parameters
-       that, for example, require their values to be numbers in
-       certain ranges, generate their values dynamically from a random
-       distribution, or read their values from a file or other
-       external source.
+    **GUI Integration**:
 
-    4. The attributes associated with Parameters provide enough
-       information for automatically generating property sheets in
-       graphical user interfaces, allowing Parameterized instances to
-       be edited by users.
+    - Parameters provide sufficient metadata for auto-generating property
+        sheets in graphical user interfaces, enabling user-friendly
+        parameter editing.
 
-    Note that Parameters can only be used when set as class attributes
-    of Parameterized classes. Parameters used as standalone objects,
-    or as class attributes of non-Parameterized classes, will not have
-    the behavior described here.
+    Examples
+    --------
+    Define a `Parameterized` class with parameters:
+
+    >>> import param
+    >>> class Foo(param.Parameterized):
+    ...     alpha = param.Parameter(default=0.1, doc="The starting value.")
+    ...     beta = param.Parameter(default=0.5, doc="The standard deviation.", constant=True)
+
+    When no initial value is provided the default is used:
+
+    >>> Foo().alpha
+    0.1
+
+    When an initial value is provided it is used:
+
+    >>> foo = Foo(alpha=0.5)
+    >>> foo.alpha
+    0.5
+
+    Constant parameters cannot be modified:
+
+    >>> foo.beta = 0.1  # Cannot be changed since it's constant
+    ...
+    TypeError: Constant parameter 'beta' cannot be modified
     """
 
     # Because they implement __get__ and __set__, Parameters are known
@@ -1196,97 +1214,106 @@ class Parameter(_ParameterBase):
     def __init__(
         self,
         default=None, *,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
+        doc=None, label=None, precedence =None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, doc=Undefined, # pylint: disable-msg=R0913
-                 label=Undefined, precedence=Undefined,
-                 instantiate=Undefined, constant=Undefined, readonly=Undefined,
-                 pickle_default_value=Undefined, allow_None=Undefined,
-                 per_instance=Undefined, allow_refs=Undefined, nested_refs=Undefined):
+    def __init__( # pylint: disable-msg=R0913
+        self,
+        default=Undefined,
+        *,
+        doc = Undefined,
+        label = Undefined,
+        precedence = Undefined,
+        instantiate = Undefined,
+        constant = Undefined,
+        readonly = Undefined,
+        pickle_default_value = Undefined,
+        allow_None = Undefined,
+        per_instance = Undefined,
+        allow_refs = Undefined,
+        nested_refs = Undefined
+    ):
         """
-        Initialize a new Parameter object and store the supplied attributes.
+        Initialize a new `Parameter` object with the specified attributes.
 
-        default: the owning class's value for the attribute represented
-        by this Parameter, which can be overridden in an instance.
+        Parameters
+        ----------
+        default : Any, optional
+            The default value for the parameter, which can be overridden by
+            instances. Default is `Undefined`.
+        doc : str, optional
+            A documentation string describing the purpose of the parameter.
+            Default is `Undefined`.
+        label : str, optional
+            An optional text label used when displaying this parameter, such as in
+            a listing. If not specified, the parameter's attribute name in the
+            owning `Parameterized` object is used. Default is `Undefined`.
+        precedence : float, optional
+            A numeric value that determines the order of the parameter in a
+            listing or user interface. A negative value hides the parameter.
+            Default is `Undefined`.
+        instantiate : bool, optional
+            Whether to create a new copy of the parameter's value for each instance
+            of the `Parameterized` object (`True`), or share the same value across
+            instances (`False`). Default is `Undefined`.
+        constant : bool, optional
+            If `True`, the parameter value can only be set at the class level or
+            during the construction of a `Parameterized` instance. Default is
+            `Undefined`.
+        readonly : bool, optional
+            If `True`, the parameter value cannot be modified at the class or
+            instance level. Default is `Undefined`.
+        pickle_default_value : bool, optional
+            Whether the default value should be pickled. Set to `False` in rare
+            cases, such as system-specific file paths. Default is `Undefined`.
+        allow_None : bool, optional
+            If `True`, allows `None` as a valid parameter value. If the default
+            value is `None`, this is automatically set to `True`. Default is
+            `Undefined`.
+        per_instance : bool, optional
+            Whether to create a separate `Parameter` object for each instance of
+            the `Parameterized` class (`True`), or share the same `Parameter`
+            object across all instances (`False`). Default is `Undefined`.
+        allow_refs : bool, optional
+            If `True`, allows linking parameter references to this parameter,
+            meaning the value will reflect the current value of the reference.
+            Default is `Undefined`.
+        nested_refs : bool, optional
+            If `True` and `allow_refs=True`, inspects nested objects (e.g.,
+            dictionaries, lists) for references and resolves them automatically.
+            Default is `Undefined`.
 
-        doc: docstring explaining what this parameter represents.
+        Notes
+        -----
+        - `default`, `doc`, and `precedence` all default to `Undefined`, allowing
+        their values to be inherited from the owning class's hierarchy via
+        `ParameterizedMetaclass`.
+        - Use `instantiate=True` for mutable parameter values that need to be
+        unique per instance. Otherwise, leave it as `False`.
 
-        label: optional text label to be used when this Parameter is
-        shown in a listing. If no label is supplied, the attribute name
-        for this parameter in the owning Parameterized object is used.
+        Examples
+        --------
+        Define a parameter with a default value:
 
-        precedence: a numeric value, usually in the range 0.0 to 1.0,
-        which allows the order of Parameters in a class to be defined in
-        a listing or e.g. in GUI menus. A negative precedence indicates
-        a parameter that should be hidden in such listings.
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     my_param = param.Parameter(default=10, doc="An example parameter.")
+        >>> instance = MyClass()
+        >>> instance.my_param
+        10
 
-        instantiate: controls whether the value of this Parameter will
-        be deepcopied when a Parameterized object is instantiated (if
-        True), or if the single default value will be shared by all
-        Parameterized instances (if False). For an immutable Parameter
-        value, it is best to leave instantiate at the default of
-        False, so that a user can choose to change the value at the
-        Parameterized instance level (affecting only that instance) or
-        at the Parameterized class or superclass level (affecting all
-        existing and future instances of that class or superclass). For
-        a mutable Parameter value, the default of False is also appropriate
-        if you want all instances to share the same value state, e.g. if
-        they are each simply referring to a single global object like
-        a singleton. If instead each Parameterized should have its own
-        independently mutable value, instantiate should be set to
-        True, but note that there is then no simple way to change the
-        value of this Parameter at the class or superclass level,
-        because each instance, once created, will then have an
-        independently instantiated value.
+        Use a constant parameter:
 
-        constant: if true, the Parameter value can be changed only at
-        the class level or in a Parameterized constructor call. The
-        value is otherwise constant on the Parameterized instance,
-        once it has been constructed.
-
-        readonly: if true, the Parameter value cannot ordinarily be
-        changed by setting the attribute at the class or instance
-        levels at all. The value can still be changed in code by
-        temporarily overriding the value of this slot and then
-        restoring it, which is useful for reporting values that the
-        _user_ should never change but which do change during code
-        execution.
-
-        pickle_default_value: whether the default value should be
-        pickled. Usually, you would want the default value to be pickled,
-        but there are rare cases where that would not be the case (e.g.
-        for file search paths that are specific to a certain system).
-
-        per_instance: whether a separate Parameter instance will be
-        created for every Parameterized instance. True by default.
-        If False, all instances of a Parameterized class will share
-        the same Parameter object, including all validation
-        attributes (bounds, etc.). See also instantiate, which is
-        conceptually similar but affects the Parameter value rather
-        than the Parameter object.
-
-        allow_None: if True, None is accepted as a valid value for
-        this Parameter, in addition to any other values that are
-        allowed. If the default value is defined as None, allow_None
-        is set to True automatically.
-
-        allow_refs: if True allows automatically linking parameter
-        references to this Parameter, i.e. the parameter value will
-        automatically reflect the current value of the reference that
-        is passed in.
-
-        nested_refs: if True and allow_refs=True then even nested objects
-        such as dictionaries, lists, slices, tuples and sets will be
-        inspected for references and will be automatically resolved.
-
-        default, doc, and precedence all default to None, which allows
-        inheritance of Parameter slots (attributes) from the owning-class'
-        class hierarchy (see ParameterizedMetaclass).
+        >>> class ConstantExample(param.Parameterized):
+        ...     my_param = param.Parameter(default=5, constant=True)
+        >>> instance = ConstantExample()
+        >>> instance.my_param = 10  # Raises an error
+        ...
+        TypeError: Constant parameter 'my_param' cannot be modified.
         """
         self.name = None
         self.owner = None

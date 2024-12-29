@@ -3955,7 +3955,8 @@ class Parameters:
         Parameters
         ----------
         level : int
-            The logging level at which the message should be logged e.g., `logging.INFO`.
+            The logging level at which the message should be logged e.g., `logging.INFO` or
+            `param.INFO`.
         msg : str
             The message to log. This message can include format specifiers,
             which will be replaced with values from `args`.
@@ -3984,19 +3985,18 @@ class Parameters:
         Log a message at the `INFO` level:
 
         >>> import param
-        >>> from logging import INFO, WARNING
         >>> class MyClass(param.Parameterized):
         ...     def log_message(self):
         ...         self.param.log(INFO, "This is an info message.")
 
         >>> instance = MyClass()
-        >>> instance.param.log(INFO, "This is an info message.")
+        >>> instance.param.log(param.INFO, "This is an info message.")
         INFO:param.MyClass...: This is an info message.
 
         Log a warning and treat it as an exception:
 
         >>> param.parameterized.warnings_as_exceptions = True
-        >>> instance.param.log(WARNING, "This will raise an exception.")
+        >>> instance.param.log(param.WARNING, "This will raise an exception.")
         ...
         Exception: Warning: This will raise an exception.
         """

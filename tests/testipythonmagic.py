@@ -1,4 +1,4 @@
-"""Unit test for the IPython magic"""
+"""Unit test for the IPython magic."""
 import re
 import sys
 import unittest

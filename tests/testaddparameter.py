@@ -1,4 +1,6 @@
 """
+Test of add_parameter class method.
+
 At the time of adding these tests, the implementation of add_parameter
 had not changed since it was committed (f10b324 in July 2012). The tests
 are checking that (not fully understood) implementation:

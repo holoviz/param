@@ -270,7 +270,7 @@ class TestParameterized(unittest.TestCase):
     def test_constant_parameter_modify_class_before(self):
         """
         Test you can set on class and the new default is picked up
-        by new instances
+        by new instances.
         """
         TestPO.const=9
         testpo = TestPO()
@@ -279,7 +279,7 @@ class TestParameterized(unittest.TestCase):
     def test_constant_parameter_modify_class_after_init(self):
         """
         Test that setting the value on the class doesn't update the instance value
-        even when the instance value hasn't yet been set
+        even when the instance value hasn't yet been set.
         """
         oobj = []
         class P(param.Parameterized):
@@ -596,12 +596,9 @@ class TestParameterized(unittest.TestCase):
                 with pytest.raises(
                     RuntimeError,
                     match=re.escape(
-                        'Looking up instance Parameter objects (`.param.objects()`) until '
-                        'the Parameterized instance has been fully initialized is not allowed. '
-                        'Ensure you have called `super().__init__(**params)` in your Parameterized '
-                        'constructor before trying to access instance Parameter objects, or '
-                        'looking up the class Parameter objects with `.param.objects(instance=False)` '
-                        'may be enough for your use case.',
+                        'Cannot access instance parameters before the Parameterized instance '
+                        'is fully initialized. Ensure `super().__init__(**params)` is called, or '
+                        'use `.param.objects(instance=False)` for class parameters.'
                     )
                 ):
                     self.param.objects()
@@ -1135,6 +1132,8 @@ def test_inheritance_default_is_None_in_sub():
 
 def test_inheritance_diamond_not_supported():
     """
+    Test that Parameters don't respect diamond inheritance.
+
     In regular Python, the value of the class attribute p on D is resolved
     to 2:
 

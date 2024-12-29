@@ -99,7 +99,7 @@ test = TestSet(a=29)
 
 
 class TestSerialization(unittest.TestCase):
-    """Base class for testing serialization of Parameter values"""
+    """Base class for testing serialization of Parameter values."""
 
     mode = None
 

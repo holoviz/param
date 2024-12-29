@@ -512,35 +512,73 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
-def bind(function, *args, watch=False, **kwargs):
+def bind(function, *args, watch: bool=False, **kwargs):
     """
-    Given a function, returns a wrapper function that binds the values
-    of some or all arguments to Parameter values and expresses Param
-    dependencies on those values, so that the function can be invoked
-    whenever the underlying values change and the output will reflect
-    those updated values.
+    Create a wrapper function that binds arguments to Parameters and tracks dependencies.
 
-    As for functools.partial, arguments can also be bound to constants,
-    which allows all of the arguments to be bound, leaving a simple
-    callable object.
+    The `bind` function allows you to bind some or all arguments of a function
+    to Parameter values. The resulting wrapper function dynamically reflects
+    changes in the bound Parameter values and can be invoked whenever those
+    values are updated. Additionally, arguments can be bound to constants,
+    similar to `functools.partial`.
 
-    Arguments:
-    ---------
-    function: callable
-        The function to bind constant or dynamic args and kwargs to.
-    args: object, param.Parameter
-        Positional arguments to bind to the function.
-    watch: boolean
-        Whether to evaluate the function automatically whenever one of
-        the bound parameters changes.
-    kwargs: object, param.Parameter
-        Keyword arguments to bind to the function.
+    If `watch=True`, the function is automatically evaluated whenever any
+    bound Parameter changes.
+
+    Parameters
+    ----------
+    function : callable
+        The function to bind constant or dynamic arguments to.
+    *args : object or param.Parameter
+        Positional arguments to bind to the function. These can be constants
+        or Parameter objects.
+    watch : bool, optional
+        Whether to automatically invoke the function whenever one of the bound
+        Parameter values changes. Default is `False`.
+    **kwargs : object or param.Parameter
+        Keyword arguments to bind to the function. These can also be constants
+        or Parameter objects.
 
     Returns
     -------
-    Returns a new function with the args and kwargs bound to it and
-    annotated with all dependencies.
+    callable
+        A new function with the specified arguments and keyword arguments bound
+        to it. The returned function is annotated with all dependencies.
 
+    Notes
+    -----
+    - This method is particularly useful for creating reactive functions that
+      respond to changes in Parameter values.
+    - Dependencies are automatically tracked and annotated on the returned
+      function.
+
+    Examples
+    --------
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     a = param.Number(1)
+    ...     b = param.Number(1)
+    >>> instance = MyClass()
+    >>> def multiply(a, b):
+    ...     return a * b
+
+    Bind the `multiply` function to the Parameters.
+
+    >>> bound_multiply = param.bind(multiply, instance.param.a, instance.param.b)
+    >>> bound_multiply()
+    1
+
+    Update the Parameter value and invoke the function again:
+
+    >>> instance.a = 2
+    >>> bound_multiply()
+    2
+
+    Use `watch=True` for automatic invocation on Parameter changes:
+
+    >>> param.bind(print, instance.param.a, watch=True)
+    >>> instance.a=3
+    3
     """
     args, kwargs = (
         tuple(transform_reference(arg) for arg in args),

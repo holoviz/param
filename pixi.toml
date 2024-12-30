@@ -67,13 +67,12 @@ test-unit = 'pytest tests'
 cloudpickle = "*"
 ipython = "*"
 jsonschema = "*"
-libprotobuf = ">=5.28.3" # Pin to avoid Mac arm64 Symbol undefined errors
 nest-asyncio = "*"
 numpy = "*"
 odfpy = "*"
 openpyxl = "*"
 pandas = "*"
-pyarrow = "*"
+pyarrow = "<18" # Temporary pin to avoid issue with libprotobuf and libaseil on Mac arm64 (https://github.com/conda-forge/abseil-cpp-feedstock/issues/87)
 pytables = "*"
 xlrd = "*"
 

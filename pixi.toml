@@ -72,7 +72,7 @@ numpy = "*"
 odfpy = "*"
 openpyxl = "*"
 pandas = "*"
-pyarrow = "*"
+pyarrow = "!=18.1.0" # Temporary ping to avoid OSX Symbol undefined error
 pytables = "*"
 xlrd = "*"
 

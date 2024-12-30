@@ -67,7 +67,7 @@ test-unit = 'pytest tests'
 cloudpickle = "*"
 ipython = "*"
 jsonschema = "*"
-libabseil = "!=20240722.0=cxx17_h07bc746_2" # Avoid symbol error with build _2 on OSX
+libabseil = { build = "!=cxx17_h07bc746_2" } # Avoid symbol error with build _2 on OSX
 nest-asyncio = "*"
 numpy = "*"
 odfpy = "*"

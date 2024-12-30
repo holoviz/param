@@ -72,7 +72,7 @@ numpy = "*"
 odfpy = "*"
 openpyxl = "*"
 pandas = "*"
-pyarrow = "<18" # Temporary pin to avoid issue with libprotobuf and libaseil on Mac arm64 (https://github.com/conda-forge/abseil-cpp-feedstock/issues/87)
+pyarrow = "<18.1" # Temporary pin to avoid issue with libprotobuf and libaseil on Mac arm64 (https://github.com/conda-forge/abseil-cpp-feedstock/issues/87)
 pytables = "*"
 xlrd = "*"
 

@@ -67,12 +67,13 @@ test-unit = 'pytest tests'
 cloudpickle = "*"
 ipython = "*"
 jsonschema = "*"
+libprotobuf = "<5.28" # Temporary ping to avoid OSX Symbol undefined error
 nest-asyncio = "*"
 numpy = "*"
 odfpy = "*"
 openpyxl = "*"
 pandas = "*"
-pyarrow = "!=18.1.0" # Temporary ping to avoid OSX Symbol undefined error
+pyarrow = "*"
 pytables = "*"
 xlrd = "*"
 

@@ -61,8 +61,10 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
     Always displayed.
     """
 
+
 class Skip(Exception):
     """Exception that allows skipping an update when resolving a reference."""
+
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
     def decorator(func):
@@ -72,12 +74,15 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
         or method is called, indicating that it has been deprecated and will
         be removed in a future version.
 
-        Args:
-            func: The function or method to mark as deprecated.
+        Parameters
+        ----------
+        func: FunctionType | MethodType
+            The function or method to mark as deprecated.
 
         Returns
         -------
-            Callable: The wrapped function that issues a deprecation warning.
+        callable:
+            The wrapped function that issues a deprecation warning.
         """
         @functools.wraps(func)
         def inner(*args, **kwargs):
@@ -99,12 +104,15 @@ def _deprecate_positional_args(func):
     are passed as positional arguments, in accordance with PEP 3102.
     It adapts the behavior from scikit-learn.
 
-    Args:
-        func: The function to wrap with positional argument deprecation warnings.
+    Parameters
+    ----------
+    func: FunctionType | MethodType
+        The function to wrap with positional argument deprecation warnings.
 
     Returns
     -------
-        Callable: The wrapped function that issues warnings for deprecated
+    callable:
+        The wrapped function that issues warnings for deprecated
         positional arguments.
     """
     signature = inspect.signature(func)
@@ -219,7 +227,6 @@ def _validate_error_prefix(parameter, attribute=None):
             pass
     return ' '.join(out)
 
-
 def _is_mutable_container(value):
     """Determine if the value is a mutable container.
 
@@ -227,14 +234,12 @@ def _is_mutable_container(value):
     """
     return isinstance(value, MUTABLE_TYPES)
 
-
 def full_groupby(l, key=lambda x: x):
     """Groupby implementation which does not require a prior sort."""
     d = defaultdict(list)
     for item in l:
         d[key(item)].append(item)
     return d.items()
-
 
 def iscoroutinefunction(function):
     """Whether the function is an asynchronous generator or a coroutine."""
@@ -582,12 +587,15 @@ def _to_datetime(x):
     This internal function ensures that date and datetime objects can be
     compared without errors by converting date objects to datetime objects.
 
-    Args:
-        x: The object to convert, which may be a `date` or `datetime` object.
+    Parameters
+    ----------
+    x: Any
+        The object to convert, which may be a `date` or `datetime` object.
 
     Returns
     -------
-        datetime.datetime: A datetime object if the input was a date object;
+    datetime.datetime:
+        A datetime object if the input was a date object;
         otherwise, the input is returned unchanged.
     """
     if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
@@ -605,11 +613,13 @@ def exceptions_summarized():
 
     Yields
     ------
-        None: Allows the code inside the context to execute.
+    None:
+        Allows the code inside the context to execute.
 
-    Prints:
-        A concise summary of any exception raised, including the exception
-        type and message, to `sys.stderr`.
+    Prints
+    ------
+    A concise summary of any exception raised, including the exception
+    type and message, to `sys.stderr`.
     """
     try:
         yield
@@ -661,17 +671,20 @@ def gen_types(gen_func):
     This decorator modifies a generator function that yields different types
     so that it can be used with `isinstance` and `issubclass`.
 
-    Args:
-        gen_func (function): The generator function to decorate.
+    Parameters
+    ----------
+    gen_func : GeneratorType
+        The generator function to decorate.
 
     Returns
     -------
-        type: A new type that supports `isinstance` and `issubclass` checks
+    type:
+        A new type that supports `isinstance` and `issubclass` checks
         based on the generator function's yielded types.
 
     Raises
     ------
-        TypeError: If the provided function is not a generator function.
+    TypeError: If the provided function is not a generator function.
     """
     if not inspect.isgeneratorfunction(gen_func):
         msg = "gen_types decorator can only be applied to generator"

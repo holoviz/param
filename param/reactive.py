@@ -220,12 +220,14 @@ class reactive_ops:
     def and_(self, other):
         """Perform a logical AND operation with the given operand.
 
-        Args:
-            other: The operand to combine with using the AND operation.
+        Parameters
+        ----------
+        other:
+            The operand to combine with using the AND operation.
 
         Returns
         -------
-            The result of applying the AND operation.
+        An expression with the result of applying the AND operation.
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
@@ -234,7 +236,7 @@ class reactive_ops:
 
         Returns
         -------
-            The boolean value of the object.
+        An expression with the boolean value of the object.
         """
         return self._as_rx()._apply_operator(bool)
 
@@ -251,36 +253,42 @@ class reactive_ops:
     def in_(self, other):
         """Check if the current object is contained "in" the given operand.
 
-        Args:
-            other: The operand to check for containment.
+        Parameters
+        ----------
+        other:
+            The operand to check for containment.
 
         Returns
         -------
-            The result of the containment check.
+        An expression with the result of the containment check.
         """
         return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
     def is_(self, other):
         """Perform a logical "is" comparison with the given operand.
 
-        Args:
-            other: The operand to compare against.
+        Parameters
+        ----------
+        other:
+            The operand to compare against.
 
         Returns
         -------
-            The result of the "is" comparison.
+        An expression with the result of the "is" comparison.
         """
         return self._as_rx()._apply_operator(operator.is_, other)
 
     def is_not(self, other):
         """Perform a logical "is not" comparison with the given operand.
 
-        Args:
-            other: The operand to compare against.
+        Parameters
+        ----------
+        other:
+            The operand to compare against.
 
         Returns
         -------
-            The result of the "is not" comparison.
+        An expression containing the result of the "is not" comparison.
         """
         return self._as_rx()._apply_operator(operator.is_not, other)
 
@@ -292,8 +300,8 @@ class reactive_ops:
         """
         Apply a function to each item.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         func: function
           Function to apply.
         args: iterable, optional
@@ -301,6 +309,9 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
 
+        Returns
+        -------
+        An expression containing a list with the result of the mapped values.
         """
         if inspect.isasyncgenfunction(func) or inspect.isgeneratorfunction(func):
             raise TypeError(
@@ -320,19 +331,21 @@ class reactive_ops:
 
         Returns
         -------
-            The result of applying the NOT operation.
+        An expression with the result of applying the NOT operation.
         """
         return self._as_rx()._apply_operator(operator.not_)
 
     def or_(self, other):
         """Perform a logical OR operation with the given operand.
 
-        Args:
-            other: The operand to combine with using the OR operation.
+        Parameters
+        ----------
+        other
+            The operand to combine with using the OR operation.
 
         Returns
         -------
-            The result of applying the OR operation.
+        An expression with the result of applying the OR operation.
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
@@ -340,8 +353,8 @@ class reactive_ops:
         """
         Apply chainable functions.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         func: function
           Function to apply.
         args: iterable, optional
@@ -349,6 +362,9 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
 
+        Returns
+        -------
+        An expression with the result of the applied function.
         """
         return self._as_rx()._apply_operator(func, *args, **kwargs)
 
@@ -359,8 +375,8 @@ class reactive_ops:
         As an example if the expression returns a list of parameters
         this operation will return a list of the parameter values.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         nested: bool
           Whether to resolve references contained within nested objects,
           i.e. tuples, lists, sets and dictionaries.
@@ -369,6 +385,9 @@ class reactive_ops:
           itself returns a reference we recurse into it until no more
           references can be resolved.
 
+        Returns
+        -------
+        An expression where any references have been resolved.
         """
         resolver_type = NestedResolver if nested else Resolver
         resolver = resolver_type(object=self._reactive, recursive=recursive)
@@ -389,14 +408,18 @@ class reactive_ops:
         expression will not be evaluated until the first event is
         triggered.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
         initial: object
           Object that will stand in for the actual value until the
           first time a param.Event in the dependencies is triggered.
 
+        Returns
+        -------
+        An expression which updates only when the supplied dependencies
+        change.
         """
         deps = [p for d in dependencies for p in resolve_ref(d)]
         is_event = all(isinstance(dep, Event) for dep in deps)
@@ -416,13 +439,17 @@ class reactive_ops:
 
         Replaces a ternary if statement.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         x: object
           The value to return if the expression evaluates to True.
         y: object
           The value to return if the expression evaluates to False.
 
+        Returns
+        -------
+        An expression returning either x or y dependending on
+        whether the condition is True or False.
         """
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
@@ -493,8 +520,23 @@ class reactive_ops:
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         """
         Add a callable that observes the output of the pipeline.
-        If no callable is provided this simply causes the expression
-        to be eagerly evaluated.
+
+        Parameters
+        ----------
+        fn : callable, optional
+            A callable to observe the output. If None, the expression is
+            evaluated eagerly.
+        onlychanged : bool, optional
+            If True, the observer will only be notified of changes in output.
+        queued : bool, optional
+            If True, changes will be processed in a queued manner.
+        precedence : int, optional
+            The priority level of the observer. Higher values have higher precedence.
+
+        Notes
+        -----
+        Using this method without a callable will ensure that the expression
+        tied to the pipeline is eagerly evaluated.
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -524,8 +566,8 @@ def bind(function, *args, watch=False, **kwargs):
     which allows all of the arguments to be bound, leaving a simple
     callable object.
 
-    Arguments:
-    ---------
+    Parameters
+    ----------
     function: callable
         The function to bind constant or dynamic args and kwargs to.
     args: object, param.Parameter
@@ -540,7 +582,6 @@ def bind(function, *args, watch=False, **kwargs):
     -------
     Returns a new function with the args and kwargs bound to it and
     annotated with all dependencies.
-
     """
     args, kwargs = (
         tuple(transform_reference(arg) for arg in args),
@@ -679,7 +720,6 @@ class rx:
     Then update the original value and see the new result:
     >>> ifloat.value = 1
     2
-
     """
 
     _accessors: dict[str, Callable[[rx], Any]] = {}
@@ -698,8 +738,8 @@ class rx:
         """
         Register an accessor that extends rx with custom behavior.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         name: str
           The name of the accessor will be attribute-accessible under.
         accessor: Callable[[rx], any]
@@ -718,8 +758,8 @@ class rx:
         Makes it possible to define custom display options for
         specific objects.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         obj_type: type | callable
           The type to register a custom display handler on.
         handler: Viewable | callable

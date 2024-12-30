@@ -138,25 +138,30 @@ def pprint(x, *args, **kwargs):
 
 
 class BinaryOperator(NumberGenerator):
-    """Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator."""
+    """
+    Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator.
 
-    def __init__(self,lhs,rhs,operator,reverse=False,**args):
-        """Initialize a BinaryOperator with operands, an operator, and optional arguments.
+    Parameters
+    ----------
+    lhs: NumberGenerator or Number
+        The left-hand side operand, which can be a NumberGenerator or a number.
+    rhs: NumberGenerator or Number
+        The right-hand side operand, which can be a NumberGenerator or a number.
+    operator :  callable
+        The binary operator to apply to the operands.
+    reverse : bool, optional
+        If `True`, swaps the left and right operands. Defaults to `False`.
+    **args:
+        Optional keyword arguments to pass to the operator when it is called.
 
-        Args:
-            lhs: The left-hand side operand, which can be a NumberGenerator or a number.
-            rhs: The right-hand side operand, which can be a NumberGenerator or a number.
-            operator (Callable): The binary operator to apply to the operands.
-            reverse (bool, optional): If `True`, swaps the left and right operands. Defaults to `False`.
-            **args: Optional keyword arguments to pass to the operator when it is called.
+    Notes
+    -----
+    It is currently not possible to set parameters in the superclass during
+    initialization because `**args` is used by this class itself.
+    """
 
-        Notes
-        -----
-            It is currently not possible to set parameters in the superclass during
-            initialization because `**args` is used by this class itself.
-        """
+    def __init__(self,lhs, rhs, operator, reverse=False, **args):
         super().__init__()
-
         if reverse:
             self.lhs=rhs
             self.rhs=lhs
@@ -177,21 +182,25 @@ class BinaryOperator(NumberGenerator):
 
 
 class UnaryOperator(NumberGenerator):
-    """Applies any unary operator to a NumberGenerator to yield another NumberGenerator."""
+    """
+    Applies any unary operator to a NumberGenerator to yield another NumberGenerator.
 
-    def __init__(self,operand,operator,**args):
-        """Initialize a UnaryOperator with an operand, operator, and optional arguments.
+    Parameters
+    ----------
+    operand : NumberGenerator
+        The NumberGenerator to which the operator is applied.
+    operator : callable
+        The unary operator to apply to the operand.
+    **args:
+        Optional keyword arguments to pass to the operator when it is called.
 
-        Args:
-            operand (NumberGenerator): The NumberGenerator to which the operator is applied.
-            operator (Callable): The unary operator to apply to the operand.
-            **args: Optional keyword arguments to pass to the operator when it is called.
+    Notes
+    -----
+    It is currently not possible to set parameters in the superclass during
+    initialization because `**args` is used by this class itself.
+    """
 
-        Notes
-        -----
-            It is currently not possible to set parameters in the superclass during
-            initialization because `**args` is used by this class itself.
-        """
+    def __init__(self, operand, operator, **args):
         super().__init__()
 
         self.operand=operand
@@ -247,7 +256,6 @@ class Hash:
             numer, denom = frac.numerator, frac.denominator
         return numer % I32, denom % I32
 
-
     def __getstate__(self):
         """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)."""
         d = self.__dict__.copy()
@@ -255,14 +263,12 @@ class Hash:
         d.pop('_hash_struct')
         return d
 
-
     def __setstate__(self, d):
         self._digest = hashlib.md5()
         name, input_count = d['name'], d['input_count']
         self._digest.update(name.encode())
         self._hash_struct = struct.Struct( "!" +" ".join(["I"] * (input_count * 2)))
         self.__dict__.update(d)
-
 
     def __call__(self, *vals):
         """
@@ -439,7 +445,7 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
 
     __abstract = True
 
-    def __init__(self,**params):
+    def __init__(self, **params):
         """
         Initialize a new Random() instance and store the supplied
         positional and keyword arguments.

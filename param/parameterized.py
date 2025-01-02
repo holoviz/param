@@ -1737,6 +1737,23 @@ class String(Parameter):
         self._validate_regex(val, self.regex)
 
 
+class AutoName(Parameter):
+    _slot_defaults = _dict_update(
+        Parameter._slot_defaults, constant=True, doc="Autoincrement name of object",
+    )
+
+    def __get__(self, instance, owner):
+        if self.default is not None:
+            return self.default
+        if instance is not None:
+            if not hasattr(instance, '_auto_name'):
+                global object_count
+                instance._auto_name = f"{owner.__name__}{object_count:05d}"
+                object_count += 1
+            return instance._auto_name
+        return owner.__name__
+
+
 class shared_parameters:
     """
     Context manager to share parameter instances when creating
@@ -2017,13 +2034,13 @@ class Parameters:
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
 
-    @as_uninitialized
-    def _set_name(self_, name):
-        self_.self.name = name
-
-    @as_uninitialized
-    def _generate_name(self_):
-        self_._set_name('%s%05d' % (self_.cls.__name__, object_count))
+    # @as_uninitialized
+    # def _set_name(self_, name):
+    #     self_.self.name = name
+    #
+    # @as_uninitialized
+    # def _generate_name(self_):
+    #     self_._set_name('%s%05d' % (self_.cls.__name__, object_count))
 
     @as_uninitialized
     def _setup_params(self_, **params):
@@ -2228,12 +2245,12 @@ class Parameters:
 
         dict_[key] = new_object
 
-        if isinstance(new_object, Parameterized) and deepcopy:
-            global object_count
-            object_count += 1
-            # Writes over name given to the original object;
-            # could instead have kept the same name
-            new_object.param._generate_name()
+        # if isinstance(new_object, Parameterized) and deepcopy:
+        #     global object_count
+        #     object_count += 1
+        #     # Writes over name given to the original object;
+        #     # could instead have kept the same name
+        #     new_object.param._generate_name()
 
     def _update_deps(self_, attribute=None, init=False):
         obj = self_.self
@@ -3587,7 +3604,7 @@ class ParameterizedMetaclass(type):
 
         _param__private = _ClassPrivate(explicit_no_refs=list(explicit_no_refs))
         mcs._param__private = _param__private
-        mcs.__set_name(name, dict_)
+        # mcs.__set_name(name, dict_)
         mcs._param__parameters = Parameters(mcs)
 
         # All objects (with their names) of type Parameter that are
@@ -4424,11 +4441,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     see documentation for the 'logging' module.
     """
 
-    name = String(default=None, constant=True, doc="""
-        String identifier for this object.""")
+    name = AutoName()
 
     def __init__(self, **params):
-        global object_count
+        # global object_count
 
         # Setting a Parameter value in an __init__ block before calling
         # Parameterized.__init__ (via super() generally) already sets the
@@ -4441,10 +4457,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.
-        if self.param.name.default == self.__class__.__name__:
-            self.param._generate_name()
+        # if self.param.name.default == self.__class__.__name__:
+        #     self.param._generate_name()
         refs, deps = self.param._setup_params(**params)
-        object_count += 1
+        # object_count += 1
 
         self._param__private.initialized = True
 
@@ -4743,7 +4759,7 @@ class ParameterizedFunction(Parameterized):
     def __new__(class_,*args,**params):
         # Create and __call__() an instance of this class.
         inst = class_.instance()
-        inst.param._set_name(class_.__name__)
+        # inst.param._set_name(class_.__name__)
         return inst.__call__(*args,**params)
 
     def __call__(self,*args,**kw):

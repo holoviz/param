@@ -608,7 +608,7 @@ class Dynamic(Parameter):
 
 
 class __compute_set_hook:
-    """Remove when set_hook is removed"""
+    """Remove when set_hook is removed."""
 
     def __call__(self, p):
         return _identity_hook
@@ -703,9 +703,18 @@ class Number(Dynamic):
         self._validate(self.default)
 
     def __get__(self, obj, objtype):
-        """
-        Same as the superclass's __get__, but if the value was
-        dynamically generated, check the bounds.
+        """Retrieve the value of the attribute, checking bounds if dynamically generated.
+
+        Arguments
+        ---------
+        obj: Parameterized | None
+            The instance the attribute is accessed on, or `None` for class access.
+        objtype: type[Parameterized]
+            The class that owns the attribute.
+
+        Returns
+        -------
+        The value of the attribute, potentially after applying bounds checks.
         """
         result = super().__get__(obj, objtype)
 
@@ -820,7 +829,7 @@ class Number(Dynamic):
 
     def _validate(self, val):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         self._validate_value(val, self.allow_None)
@@ -839,7 +848,7 @@ class Number(Dynamic):
 
 
 class Integer(Number):
-    """Numeric Parameter required to be an Integer"""
+    """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
 
@@ -907,7 +916,7 @@ class Date(Number):
 
     def _validate_value(self, val, allow_None):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         if self.allow_None and val is None:
@@ -966,7 +975,7 @@ class CalendarDate(Number):
 
     def _validate_value(self, val, allow_None):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         if self.allow_None and val is None:
@@ -2498,7 +2507,7 @@ class List(Parameter):
 
     def _validate(self, val):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         self._validate_value(val, self.allow_None)
@@ -2506,7 +2515,7 @@ class List(Parameter):
         self._validate_item_type(val, self.item_type)
 
     def _validate_bounds(self, val, bounds):
-        """Checks that the list is of the right length and has the right contents."""
+        """Check that the list is of the right length and has the right contents."""
         if bounds is None or (val is None and self.allow_None):
             return
         min_length, max_length = bounds

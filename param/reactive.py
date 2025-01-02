@@ -1,5 +1,5 @@
 """
-reactive API
+reactive API.
 
 `rx` is a wrapper around a Python object that lets users create
 reactive expression pipelines by calling existing APIs on an object with dynamic
@@ -213,20 +213,35 @@ class reactive_ops:
         return self._reactive if isinstance(self._reactive, rx) else self()
 
     def __call__(self):
-        """Creates a reactive expression."""
+        """Create a reactive expression."""
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
 
     def and_(self, other):
-        """Replacement for the ``and`` statement."""
+        """Perform a logical AND operation with the given operand.
+
+        Parameters
+        ----------
+        other:
+            The operand to combine with using the AND operation.
+
+        Returns
+        -------
+        An expression with the result of applying the AND operation.
+        """
         return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
     def bool(self):
-        """__bool__ cannot be implemented so it is provided as a method."""
+        """Evaluate the truthiness of the current object.
+
+        Returns
+        -------
+        An expression with the boolean value of the object.
+        """
         return self._as_rx()._apply_operator(bool)
 
     def buffer(self, n):
-        """Collects the last n items that were emitted."""
+        """Collect the last n items that were emitted."""
         items = []
         def collect(new, n):
             items.append(new)
@@ -236,15 +251,45 @@ class reactive_ops:
         return self._as_rx()._apply_operator(collect, n)
 
     def in_(self, other):
-        """Replacement for the ``in`` statement."""
+        """Check if the current object is contained "in" the given operand.
+
+        Parameters
+        ----------
+        other:
+            The operand to check for containment.
+
+        Returns
+        -------
+        An expression with the result of the containment check.
+        """
         return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
     def is_(self, other):
-        """Replacement for the ``is`` statement."""
+        """Perform a logical "is" comparison with the given operand.
+
+        Parameters
+        ----------
+        other:
+            The operand to compare against.
+
+        Returns
+        -------
+        An expression with the result of the "is" comparison.
+        """
         return self._as_rx()._apply_operator(operator.is_, other)
 
     def is_not(self, other):
-        """Replacement for the ``is not`` statement."""
+        """Perform a logical "is not" comparison with the given operand.
+
+        Parameters
+        ----------
+        other:
+            The operand to compare against.
+
+        Returns
+        -------
+        An expression containing the result of the "is not" comparison.
+        """
         return self._as_rx()._apply_operator(operator.is_not, other)
 
     def len(self):
@@ -255,8 +300,8 @@ class reactive_ops:
         """
         Apply a function to each item.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         func: function
           Function to apply.
         args: iterable, optional
@@ -264,6 +309,9 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
 
+        Returns
+        -------
+        An expression containing a list with the result of the mapped values.
         """
         if inspect.isasyncgenfunction(func) or inspect.isgeneratorfunction(func):
             raise TypeError(
@@ -279,19 +327,34 @@ class reactive_ops:
         return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
     def not_(self):
-        """__bool__ cannot be implemented so not has to be provided as a method."""
+        """Perform a logical NOT operation.
+
+        Returns
+        -------
+        An expression with the result of applying the NOT operation.
+        """
         return self._as_rx()._apply_operator(operator.not_)
 
     def or_(self, other):
-        """Replacement for the ``or`` statement."""
+        """Perform a logical OR operation with the given operand.
+
+        Parameters
+        ----------
+        other
+            The operand to combine with using the OR operation.
+
+        Returns
+        -------
+        An expression with the result of applying the OR operation.
+        """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
     def pipe(self, func, /, *args, **kwargs):
         """
         Apply chainable functions.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         func: function
           Function to apply.
         args: iterable, optional
@@ -299,18 +362,21 @@ class reactive_ops:
         kwargs: mapping, optional
           A dictionary of keywords to pass to `func`.
 
+        Returns
+        -------
+        An expression with the result of the applied function.
         """
         return self._as_rx()._apply_operator(func, *args, **kwargs)
 
     def resolve(self, nested=True, recursive=False):
         """
-        Resolves references held by the expression.
+        Resolve references held by the expression.
 
         As an example if the expression returns a list of parameters
         this operation will return a list of the parameter values.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         nested: bool
           Whether to resolve references contained within nested objects,
           i.e. tuples, lists, sets and dictionaries.
@@ -319,13 +385,16 @@ class reactive_ops:
           itself returns a reference we recurse into it until no more
           references can be resolved.
 
+        Returns
+        -------
+        An expression where any references have been resolved.
         """
         resolver_type = NestedResolver if nested else Resolver
         resolver = resolver_type(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
 
     def updating(self):
-        """Returns a new expression that is True while the expression is updating."""
+        """Return a new expression that is True while the expression is updating."""
         wrapper = Wrapper(object=False)
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
@@ -333,20 +402,24 @@ class reactive_ops:
 
     def when(self, *dependencies, initial=Undefined):
         """
-        Returns a reactive expression that emits the contents of this
+        Return a reactive expression that emits the contents of this
         expression only when the dependencies change. If initial value
         is provided and the dependencies are all param.Event types the
         expression will not be evaluated until the first event is
         triggered.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         dependencies: param.Parameter | rx
           A dependency that will trigger an update in the output.
         initial: object
           Object that will stand in for the actual value until the
           first time a param.Event in the dependencies is triggered.
 
+        Returns
+        -------
+        An expression which updates only when the supplied dependencies
+        change.
         """
         deps = [p for d in dependencies for p in resolve_ref(d)]
         is_event = all(isinstance(dep, Event) for dep in deps)
@@ -361,16 +434,22 @@ class reactive_ops:
 
     def where(self, x, y):
         """
-        Returns either x or y depending on the current state of the
-        expression, i.e. replaces a ternary if statement.
+        Return either x or y depending on the current state of the
+        expression.
 
-        Arguments:
-        ---------
+        Replaces a ternary if statement.
+
+        Parameters
+        ----------
         x: object
           The value to return if the expression evaluates to True.
         y: object
           The value to return if the expression evaluates to False.
 
+        Returns
+        -------
+        An expression returning either x or y dependending on
+        whether the condition is True or False.
         """
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
@@ -411,7 +490,7 @@ class reactive_ops:
 
     @value.setter
     def value(self, new):
-        """Allows overriding the original input to the pipeline."""
+        """Override the original input to the pipeline."""
         if isinstance(self._reactive, Parameter):
             raise AttributeError(
                 "`Parameter.rx.value = value` is not supported. Cannot override "
@@ -440,9 +519,24 @@ class reactive_ops:
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         """
-        Adds a callable that observes the output of the pipeline.
-        If no callable is provided this simply causes the expression
-        to be eagerly evaluated.
+        Add a callable that observes the output of the pipeline.
+
+        Parameters
+        ----------
+        fn : callable, optional
+            A callable to observe the output. If None, the expression is
+            evaluated eagerly.
+        onlychanged : bool, optional
+            If True, the observer will only be notified of changes in output.
+        queued : bool, optional
+            If True, changes will be processed in a queued manner.
+        precedence : int, optional
+            The priority level of the observer. Higher values have higher precedence.
+
+        Notes
+        -----
+        Using this method without a callable will ensure that the expression
+        tied to the pipeline is eagerly evaluated.
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -472,8 +566,8 @@ def bind(function, *args, watch=False, **kwargs):
     which allows all of the arguments to be bound, leaving a simple
     callable object.
 
-    Arguments:
-    ---------
+    Parameters
+    ----------
     function: callable
         The function to bind constant or dynamic args and kwargs to.
     args: object, param.Parameter
@@ -488,7 +582,6 @@ def bind(function, *args, watch=False, **kwargs):
     -------
     Returns a new function with the args and kwargs bound to it and
     annotated with all dependencies.
-
     """
     args, kwargs = (
         tuple(transform_reference(arg) for arg in args),
@@ -627,7 +720,6 @@ class rx:
     Then update the original value and see the new result:
     >>> ifloat.value = 1
     2
-
     """
 
     _accessors: dict[str, Callable[[rx], Any]] = {}
@@ -644,10 +736,10 @@ class rx:
         predicate: Optional[Callable[[Any], bool]] = None
     ):
         """
-        Registers an accessor that extends rx with custom behavior.
+        Register an accessor that extends rx with custom behavior.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         name: str
           The name of the accessor will be attribute-accessible under.
         accessor: Callable[[rx], any]
@@ -661,12 +753,13 @@ class rx:
     @classmethod
     def register_display_handler(cls, obj_type, handler, **kwargs):
         """
-        Registers a display handler for a specific type of object,
-        making it possible to define custom display options for
+        Register a display handler for a specific type of object.
+
+        Makes it possible to define custom display options for
         specific objects.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         obj_type: type | callable
           The type to register a custom display handler on.
         handler: Viewable | callable
@@ -681,7 +774,7 @@ class rx:
     @classmethod
     def register_method_handler(cls, method, handler):
         """
-        Registers a handler that is called when a specific method on
+        Register a handler that is called when a specific method on
         an object is called.
         """
         cls._method_handlers[method] = handler
@@ -975,7 +1068,7 @@ class rx:
         return current
 
     def _transform_output(self, obj):
-        """Applies custom display handlers before their output."""
+        """Apply custom display handlers before their output."""
         applies = False
         for predicate, (handler, opts) in self._display_handlers.items():
             display_opts = {

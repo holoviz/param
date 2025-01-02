@@ -330,14 +330,17 @@ def load_ipython_extension(ip, verbose=True):
             Usage:
                 %params <parameterized class or object>
 
-            Args:
-                parameter_s (str, optional): The name of the parameterized object to inspect.
-                                            Defaults to an empty string.
-                namespaces (optional): Additional namespaces to search for the object.
+            Parameters
+            ----------
+            parameter_s : str, optional
+                The name of the parameterized object to inspect. Defaults to an empty string.
+            namespaces : dict, optional
+                Additional namespaces to search for the object.
 
             Returns
             -------
-                None: Outputs the parameter information or error messages directly.
+            None:
+                Outputs the parameter information or error messages to stdout.
             """
             if parameter_s=='':
                 print("Please specify an object to inspect.")

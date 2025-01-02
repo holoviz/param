@@ -124,8 +124,8 @@ def register_reference_transform(transform):
     Append a transform to extract potential parameter dependencies
     from an object.
 
-    Arguments:
-    ---------
+    Parameters
+    ----------
     transform: Callable[Any, Any]
 
     """
@@ -270,15 +270,20 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
     This internal version of `batch_call_watchers` allows control over whether
     events are queued and whether accumulated watchers are executed upon exit.
 
-    Args:
-        parameterized: The object whose watchers are being managed.
-        enable (bool, optional): If `True`, enable batching of events. Defaults to `True`.
-        run (bool, optional): If `True`, execute accumulated watchers on exit.
-                              If `False`, they remain queued. Defaults to `True`.
+    Parameters
+    ----------
+    parameterized : object
+        The object whose watchers are being managed.
+    enable : bool, optional
+        If `True`, enable batching of events. Defaults to `True`.
+    run : bool, optional
+        If `True`, execute accumulated watchers on exit.
+        If `False`, they remain queued. Defaults to `True`.
 
     Yields
     ------
-        None: This is a context manager that temporarily modifies watcher behavior.
+    None:
+        This is a context manager that temporarily modifies watcher behavior.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = enable or parameterized.param._BATCH_WATCH
@@ -901,13 +906,16 @@ class Watcher(_Watcher):
         specifying a `precedence` value. If `precedence` is not provided, it
         defaults to `0`.
 
-        Args:
-            *args: Positional arguments to initialize the instance.
-            **kwargs: Keyword arguments to initialize the instance.
+        Parameters
+        ----------
+        *args : Any
+            Positional arguments to initialize the instance.
+        **kwargs : Any
+            Keyword arguments to initialize the instance.
 
         Returns
         -------
-            An instance of the class with the specified or default values.
+        An instance of the Watcher with the specified or default values.
         """
         values = dict(zip(cls_._fields, args))
         values.update(kwargs)
@@ -919,7 +927,6 @@ class Watcher(_Watcher):
         cls = type(self)
         attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
         return f"{cls.__name__}({attrs})"
-
 
 
 
@@ -1603,13 +1610,17 @@ class Parameter(_ParameterBase):
     def _validate_value(self, value, allow_None):
         """Validate the parameter value against constraints.
 
-        Args:
-            value: The value to be validated.
-            allow_None (bool): Whether `None` is allowed as a valid value.
+        Parameters
+        ----------
+        value : Any
+            The value to be validated.
+        allow_None : bool
+            Whether `None` is allowed as a valid value.
 
         Raises
         ------
-            ValueError: If the value does not meet the parameter's constraints.
+        ValueError
+            If the value does not meet the parameter's constraints.
         """
 
     def _validate(self, val):
@@ -1619,8 +1630,10 @@ class Parameter(_ParameterBase):
         constraints and attributes. Subclasses can extend this method to
         include additional validation logic.
 
-        Args:
-            val: The value to be validated.
+        Parameters
+        ----------
+        val: Any
+            The value to be validated.
         """
         self._validate_value(val, self.allow_None)
 
@@ -1631,9 +1644,12 @@ class Parameter(_ParameterBase):
         and assigned. Subclasses can override this method to implement
         additional behavior post-assignment.
 
-        Args:
-            obj: The object on which the parameter is being set.
-            val: The value that has been assigned to the parameter.
+        Parameters
+        ----------
+        obj : Parameterized
+            The object on which the parameter is being set.
+        val : Any
+            The value that has been assigned to the parameter.
         """
 
     def __delete__(self,obj):
@@ -1934,11 +1950,14 @@ class Parameters:
     def __getitem__(self_, key):
         """Retrieve the class or instance parameter by key.
 
-        Args:
-            key: The name of the parameter to retrieve.
+        Parameters
+        ----------
+        key: str
+            The name of the parameter to retrieve.
 
         Returns
         -------
+        Parameter:
             The parameter associated with the given key. If accessed on an instance,
             returns the instantiated parameter.
         """
@@ -1953,7 +1972,8 @@ class Parameters:
 
         Returns
         -------
-            list: A combined list of standard attributes and parameter names.
+        list[str]:
+            A combined list of standard attributes and parameter names.
         """
         return super().__dir__() + list(self_._cls_parameters)
 
@@ -1971,17 +1991,20 @@ class Parameters:
         defined in the object. If the requested attribute corresponds to a
         parameter, it retrieves the parameter value.
 
-        Args:
-            attr (str): The name of the attribute to access.
+        Parameters
+        ----------
+        attr : str
+            The name of the attribute to access.
 
         Returns
         -------
-            The value of the parameter if it exists.
+        The value of the parameter if it exists.
 
         Raises
         ------
-            AttributeError: If the class is not initialized or the attribute
-                            does not exist in the parameter objects.
+        AttributeError
+            If the class is not initialized or the attribute does not exist in
+            the parameter objects.
         """
         cls = self_.__dict__.get('cls')
         if cls is None: # Class not initialized
@@ -3727,9 +3750,12 @@ class ParameterizedMetaclass(type):
         Parameter, the method ensures that the value is inherited correctly from
         Parameterized superclasses as described in `__param_inheritance()`.
 
-        Args:
-            attribute_name (str): The name of the attribute to set.
-            value: The value to assign to the attribute.
+        Parameters
+        ----------
+        attribute_name : str
+            The name of the attribute to set.
+        value: Any
+            The value to assign to the attribute.
         """
         # Find out if there's a Parameter called attribute_name as a
         # class attribute of this class - if not, parameter is None.
@@ -4740,16 +4766,23 @@ class ParameterizedFunction(Parameterized):
         This method is similar to `self.param.pprint`, but replaces
         `X.classname(Y` with `X.classname.instance(Y`.
 
-        Args:
-            imports (optional): Additional imports to include in the output.
-            prefix (str, optional): String prefix for each line of the output.
-            unknown_value (str, optional): Placeholder for unknown values. Defaults to '<?>'.
-            qualify (bool, optional): Whether to include full qualification for names.
-            separator (str, optional): String separator for elements.
+        Parameters
+        ----------
+        imports : optional
+            Additional imports to include in the output.
+        prefix : str, optional
+            String prefix for each line of the output.
+        unknown_value : str, optional
+            Placeholder for unknown values. Defaults to '<?>'.
+        qualify : bool, optional
+            Whether to include full qualification for names.
+        separator : str, optional
+            String separator for elements.
 
         Returns
         -------
-            str: The formatted string representation of the object.
+        str
+            The formatted string representation of the object.
         """
         r = self.param.pprint(imports,prefix,
                               unknown_value=unknown_value,

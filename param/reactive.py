@@ -228,12 +228,12 @@ class reactive_ops:
     def _as_rx(self):
         return self._reactive if isinstance(self._reactive, rx) else self()
 
-    def __call__(self)-> 'rx':
+    def __call__(self) -> 'rx':
         """Create a reactive expression."""
         rxi = self._reactive
         return rxi if isinstance(rx, rx) else rx(rxi)
 
-    def and_(self, other)-> 'rx':
+    def and_(self, other) -> 'rx':
         """
         Perform a logical AND operation with the given operand.
 
@@ -270,7 +270,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
-    def bool(self)-> 'rx':
+    def bool(self) -> 'rx':
         """
         Evaluate the truthiness of the current object.
 
@@ -302,7 +302,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(bool)
 
-    def buffer(self, n)-> 'rx':
+    def buffer(self, n) -> 'rx':
         """
         Collect the last `n` items emitted by the reactive expression.
 
@@ -338,6 +338,7 @@ class reactive_ops:
         >>> rx_buffer.rx.value
         [2, 3, 4]
         """
+
         items = []
         def collect(new, n):
             items.append(new)
@@ -346,7 +347,7 @@ class reactive_ops:
             return items
         return self._as_rx()._apply_operator(collect, n)
 
-    def in_(self, other)-> 'rx':
+    def in_(self, other) -> 'rx':
         """
         Check if the current object is contained "in" the given operand.
 
@@ -388,7 +389,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
-    def is_(self, other)-> 'rx':
+    def is_(self, other) -> 'rx':
         """
         Perform a logical "is" comparison with the given operand.
 
@@ -431,7 +432,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(operator.is_, other)
 
-    def is_not(self, other)-> 'rx':
+    def is_not(self, other) -> 'rx':
         """
         Perform a logical "is not" comparison with the given operand.
 
@@ -475,7 +476,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(operator.is_not, other)
 
-    def len(self)-> 'rx':
+    def len(self) -> 'rx':
         """
         Return the length of the current object as a reactive expression.
 
@@ -513,7 +514,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(len)
 
-    def map(self, func, /, *args, **kwargs)-> 'rx':
+    def map(self, func, /, *args, **kwargs) -> 'rx':
         """
         Apply a function to each item in the reactive collection.
 
@@ -576,7 +577,7 @@ class reactive_ops:
                 return [func(v, *args, **kwargs) for v in vs]
         return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
-    def not_(self)-> 'rx':
+    def not_(self) -> 'rx':
         """
         Perform a logical NOT operation on the current reactive value.
 
@@ -856,7 +857,7 @@ class reactive_ops:
                 return self.value
         return bind(eval, *deps).rx()
 
-    def where(self, x, y)-> 'rx':
+    def where(self, x, y) -> 'rx':
         """
         Return either `x` or `y` depending on the current state of the expression.
 
@@ -1352,8 +1353,8 @@ class rx:
         """
         Register an accessor that extends rx with custom behavior.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         name: str
           The name of the accessor will be attribute-accessible under.
         accessor: Callable[[rx], any]
@@ -1372,8 +1373,8 @@ class rx:
         Makes it possible to define custom display options for
         specific objects.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         obj_type: type | callable
           The type to register a custom display handler on.
         handler: Viewable | callable

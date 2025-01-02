@@ -338,7 +338,6 @@ class reactive_ops:
         >>> rx_buffer.rx.value
         [2, 3, 4]
         """
-
         items = []
         def collect(new, n):
             items.append(new)

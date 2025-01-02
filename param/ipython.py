@@ -330,7 +330,7 @@ def load_ipython_extension(ip, verbose=True):
             Usage:
                 %params <parameterized class or object>
 
-            Argsuments
+            Parameters
             ----------
             parameter_s : str, optional
                 The name of the parameterized object to inspect. Defaults to an empty string.

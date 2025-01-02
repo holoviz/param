@@ -134,28 +134,28 @@ class Version:
 
     @property
     def release(self):
-        """Return the release tuple"""
+        """Return the release tuple."""
         return self.fetch()._release
 
     @property
     def commit(self):
-        """A specification for this particular VCS version, e.g. a short git SHA"""
+        """A specification for this particular VCS version, e.g. a short git SHA."""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        """Return the number of commits since the last release"""
+        """Return the number of commits since the last release."""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        """True if there are uncommited changes, False otherwise"""
+        """True if there are uncommited changes, False otherwise."""
         return self.fetch()._dirty
 
 
     def fetch(self):
         """
-        Returns a tuple of the major version together with the
+        Return a tuple of the major version together with the
         appropriate SHA and dirty bit (for development version only).
         """
         if self._release is not None:
@@ -228,6 +228,8 @@ class Version:
 
     def _known_stale(self):
         """
+        Return whether the commit is know to be stale or not.
+
         The commit is known to be from a file (and therefore stale) if a
         SHA is supplied by git archive and doesn't match the parsed commit.
         """
@@ -259,7 +261,7 @@ class Version:
 
 
     def _update_from_vcs(self, output):
-        """Update state based on the VCS state e.g the output of git describe"""
+        """Update state based on the VCS state e.g the output of git describe."""
         split = output[1:].split('-')
         dot_split = split[0].split('.')
         for prefix in ['a','b','rc']:
@@ -361,7 +363,7 @@ class Version:
     def get_setup_version(cls, setup_path, reponame, describe=False,
                           dirty='report', pkgname=None, archive_commit=None):
         """
-        Helper for use in setup.py to get the version from the .version file (if available)
+        Get the version from the .version file (if available)
         or more up-to-date information from git describe (if available).
 
         Assumes the __init__.py will be found in the directory
@@ -459,8 +461,8 @@ class Version:
 
 def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
     """
-    Helper for use in setup.py to get the current version from either
-    git describe or the .version file (if available).
+    Get the current version from either git describe or the
+    .version file (if available).
 
     Set pkgname to the package name if it is different from the
     repository name.
@@ -599,28 +601,28 @@ class OldDeprecatedVersion:
 
     @property
     def release(self):
-        """Return the release tuple"""
+        """Return the release tuple."""
         return self.fetch()._release
 
     @property
     def commit(self):
-        """A specification for this particular VCS version, e.g. a short git SHA"""
+        """A specification for this particular VCS version, e.g. a short git SHA."""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        """Return the number of commits since the last release"""
+        """Return the number of commits since the last release."""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        """True if there are uncommited changes, False otherwise"""
+        """True if there are uncommited changes, False otherwise."""
         return self.fetch()._dirty
 
 
     def fetch(self):
         """
-        Returns a tuple of the major version together with the
+        Return a tuple of the major version together with the
         appropriate SHA and dirty bit (for development version only).
         """
         if self._release is not None:
@@ -667,7 +669,7 @@ class OldDeprecatedVersion:
         self._update_from_vcs(output)
 
     def _update_from_vcs(self, output):
-        """Update state based on the VCS state e.g the output of git describe"""
+        """Update state based on the VCS state e.g the output of git describe."""
         split = output[1:].split('-')
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')

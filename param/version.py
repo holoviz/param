@@ -611,7 +611,11 @@ class OldDeprecatedVersion:
         :dev:          Development version number. None if not a development version.
         :commit_count  Commits since last release. Set for dev releases.
         """
-        warnings.warn('param.version.OldDeprecatedVersion has been deprecated and will be removed in a future version.', FutureWarning, stacklevel=2)
+        warnings.warn(
+            'param.version.OldDeprecatedVersion has been deprecated and will be removed in a future version.',
+            FutureWarning,
+            stacklevel=2
+        )
         self.fpath = fpath
         self._expected_commit = commit
         self.expected_release = release

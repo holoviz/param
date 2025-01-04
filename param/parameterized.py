@@ -1884,7 +1884,7 @@ class Parameters:
     https://param.holoviz.org/user_guide/Parameters.html#parameterized-namespace
     """
 
-    def __init__(self_, cls: Type['Parameterized'], self: Union['Parameterized', None]=None):
+    def __init__(self_, cls: type['Parameterized'], self: Union['Parameterized', None]=None):
         """
         cls is the Parameterized class which is always set.
         self is the instance if set.
@@ -1938,7 +1938,7 @@ class Parameters:
         self_.self._param__private.watchers = value
 
     @property
-    def self_or_cls(self_) -> Union['Parameterized', Type['Parameterized']]:
+    def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
         """
         Return the instance if possible, otherwise return the class.
 
@@ -1979,8 +1979,7 @@ class Parameters:
         Retrieve a Parameter by its key.
 
         This method allows access to a class or instance Parameter using its name.
-        If accessed on an instance, the returned Parameter will be instantiated.
-
+        
         Parameters
         ----------
         key : str
@@ -5146,8 +5145,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     >>> obj.my_number = 7
     Changed my_number from 5 to 7
 
-    `watch` is the most low level, reactive api. For most use cases we recommend
-    using the higher level `depends`, `bind` or `rx` apis.
+    `watch` is the most low level, event-driven API. For most use cases we recommend
+    using the higher level `depends`, `bind` or `rx` APIs.
     """
 
     name = String(default=None, constant=True, doc="""

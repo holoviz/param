@@ -705,13 +705,16 @@ class Number(Dynamic):
     def __get__(self, obj, objtype):
         """Retrieve the value of the attribute, checking bounds if dynamically generated.
 
-        Args:
-            obj: The instance the attribute is accessed on, or `None` for class access.
-            objtype: The class that owns the attribute.
+        Arguments
+        ---------
+        obj: Parameterized | None
+            The instance the attribute is accessed on, or `None` for class access.
+        objtype: type[Parameterized]
+            The class that owns the attribute.
 
         Returns
         -------
-            The value of the attribute, potentially after applying bounds checks.
+        The value of the attribute, potentially after applying bounds checks.
         """
         result = super().__get__(obj, objtype)
 

@@ -16,7 +16,7 @@ For detailed documentation, see https://param.holoviz.org/.
 
 Examples
 --------
-Here is an example of using `Parameterized` to define a named class with observable parameters:
+Here is an example of using `param.Parameterized` to define a class with validated parameters:
 
 >>> import param
 >>> class MyClass(param.Parameterized):
@@ -27,7 +27,7 @@ Here is an example of using `Parameterized` to define a named class with observa
 >>> obj.my_number = 5  # Valid
 >>> obj.my_number = 15  # Raises ValueError: must be in range (0, 10)
 
-Here is an example of using `rx` to define a reactive expression:
+Here is an example of using `param.rx` to define a reactive expression:
 
 >>> import param
 >>> rx_value = param.rx([1,2,3])

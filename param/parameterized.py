@@ -2649,7 +2649,7 @@ class Parameters:
 
         Parameters
         ----------
-        instance : bool or {'existing'}, optional, default=True
+        instance : bool or {'existing'}, default=True
             - `True`: Return instance-specific parameters, creating them if necessary. This
             requires the instance to be fully initialized.
             - `False`: Return class-level parameters without creating instance-specific copies.
@@ -5166,7 +5166,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         Parameters
         ----------
-        **params : dict
+        **params
             Keyword arguments where keys are parameter names and values are the desired
             values for those parameters. Parameter names must match those defined in the
             class or its superclasses.
@@ -5185,7 +5185,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         **Default Naming**
 
         >>> obj.name
-        'MyClass12345'  # Default name: class name + unique identifier.
+        'MyClass00001'  # Default name: class name + unique identifier.
 
         **Handling Invalid Parameters**
 

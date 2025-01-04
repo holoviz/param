@@ -5186,7 +5186,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         **Default Naming**
 
         >>> obj.name
-        'MyClass12345'  # Default name: class name + unique identifier.
+        'MyClass00001'  # Default name: class name + unique identifier.
 
         **Handling Invalid Parameters**
 

@@ -2650,7 +2650,7 @@ class Parameters:
 
         Parameters
         ----------
-        instance : bool or {'existing'}, optional, default=True
+        instance : bool or {'existing'}, default=True
             - `True`: Return instance-specific parameters, creating them if necessary. This
             requires the instance to be fully initialized.
             - `False`: Return class-level parameters without creating instance-specific copies.

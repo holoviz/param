@@ -5167,7 +5167,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         Parameters
         ----------
-        **params : dict
+        **params
             Keyword arguments where keys are parameter names and values are the desired
             values for those parameters. Parameter names must match those defined in the
             class or its superclasses.

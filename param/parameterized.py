@@ -2242,7 +2242,7 @@ class Parameters:
     https://param.holoviz.org/user_guide/Parameters.html#parameterized-namespace
     """
 
-    def __init__(self_, cls: Type['Parameterized'], self: Union['Parameterized', None]=None):
+    def __init__(self_, cls: type['Parameterized'], self: Union['Parameterized', None]=None):
         """
         cls is the Parameterized class which is always set.
         self is the instance if set.
@@ -2296,7 +2296,7 @@ class Parameters:
         self_.self._param__private.watchers = value
 
     @property
-    def self_or_cls(self_) -> Union['Parameterized', Type['Parameterized']]:
+    def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
         """
         Return the instance if possible, otherwise return the class.
 
@@ -2337,8 +2337,7 @@ class Parameters:
         Retrieve a Parameter by its key.
 
         This method allows access to a class or instance Parameter using its name.
-        If accessed on an instance, the returned Parameter will be instantiated.
-
+        
         Parameters
         ----------
         key : str
@@ -3008,7 +3007,7 @@ class Parameters:
 
         Parameters
         ----------
-        instance : bool or {'existing'}, optional, default=True
+        instance : bool or {'existing'}, default=True
             - `True`: Return instance-specific parameters, creating them if necessary. This
             requires the instance to be fully initialized.
             - `False`: Return class-level parameters without creating instance-specific copies.
@@ -5554,8 +5553,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     >>> obj.my_number = 7
     Changed my_number from 5 to 7
 
-    `watch` is the most low level, reactive api. For most use cases we recommend
-    using the higher level `depends`, `bind` or `rx` apis.
+    `watch` is the most low level, event-driven API. For most use cases we recommend
+    using the higher level `depends`, `bind` or `rx` APIs.
     """
 
     name = String(default=None, constant=True, doc="""
@@ -5575,7 +5574,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         Parameters
         ----------
-        **params : dict
+        **params
             Keyword arguments where keys are parameter names and values are the desired
             values for those parameters. Parameter names must match those defined in the
             class or its superclasses.
@@ -5594,7 +5593,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         **Default Naming**
 
         >>> obj.name
-        'MyClass12345'  # Default name: class name + unique identifier.
+        'MyClass00001'  # Default name: class name + unique identifier.
 
         **Handling Invalid Parameters**
 

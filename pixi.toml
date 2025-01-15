@@ -37,8 +37,14 @@ python = "3.11.*"
 [feature.py312.dependencies]
 python = "3.12.*"
 
+[feature.py312.activation.env]
+COVERAGE_CORE = "sysmon"
+
 [feature.py313.dependencies]
 python = "3.13.*"
+
+[feature.py313.activation.env]
+COVERAGE_CORE = "sysmon"
 
 [feature.pypy]
 platforms = ["linux-64", "osx-64", "win-64"] # not supported for osx-arm64

@@ -40,6 +40,7 @@ from .parameterized import (
 )
 from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
+    ParamDeprecationWarning as _ParamDeprecationWarning,
     _deprecate_positional_args,
     _deprecated,
     _validate_error_prefix,
@@ -1868,6 +1869,13 @@ class Selector(SelectorBase, _SignatureSelector):
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
+        if compute_default_fn is not Undefined:
+            warnings.warn(
+                'compute_default_fn has been deprecated and will be removed in a future version.',
+                _ParamDeprecationWarning,
+                stacklevel=3,
+            )
+
         autodefault = Undefined
         if objects is not Undefined and objects:
             if isinstance(objects, dict):
@@ -1919,7 +1927,15 @@ class Selector(SelectorBase, _SignatureSelector):
 
         Also removes None from the list of objects (if the default is
         no longer None).
+
+        .. deprecated:: 2.3.0
         """
+        warnings.warn(
+            'compute_default() has been deprecated and will be removed in a future version.',
+            _ParamDeprecationWarning,
+            stacklevel=2,
+        )
+
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
             self._ensure_value_is_in_objects(self.default)
@@ -2063,6 +2079,11 @@ class ListSelector(Selector):
             objects=objects, default=default, empty_default=True, **kwargs)
 
     def compute_default(self):
+        warnings.warn(
+            'compute_default() has been deprecated and will be removed in a future version.',
+            _ParamDeprecationWarning,
+            stacklevel=2,
+        )
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
             for o in self.default:

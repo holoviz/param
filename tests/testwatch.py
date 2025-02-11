@@ -713,6 +713,14 @@ class TestWatch(unittest.TestCase):
         P()
 
 
+    def test_watch_raises_bad_parameter(self):
+        obj = SimpleWatchExample()
+        with pytest.raises(
+            ValueError,
+            match="does_not_exist parameter was not found in list of parameters of class SimpleWatchExample"
+        ):
+            obj.param.watch(lambda e: print(e), 'does_not_exist')
+
 
 class TestWatchMethod(unittest.TestCase):
 

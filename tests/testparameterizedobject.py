@@ -19,6 +19,7 @@ from param.parameterized import (
     ParamOverrides,
     Undefined,
     default_label_formatter,
+    edit_constant,
     no_instance_params,
     shared_parameters,
 )
@@ -312,6 +313,17 @@ class TestParameterized(unittest.TestCase):
         TestPO.const=9
         testpo = TestPO()
         self.assertEqual(testpo.const,9)
+
+    def test_edit_constant(self):
+        testpo = TestPO(const=17)
+        # Checking no parameter was already instantiated
+        assert not testpo._param__private.params
+        with edit_constant(testpo):
+            testpo.const = 18
+        assert testpo.const == 18
+        assert testpo.param['const'].constant
+        assert TestPO.param['const'].constant
+        assert TestPO.param['const'].default == 1
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""

@@ -1276,7 +1276,7 @@ def test_inheritance_instantiate_behavior():
     assert b.param.p.instantiate is True
 
 
-def test_inheritance_constant_behavior():
+def test_inheritance_readonly_behavior():
     class A(param.Parameterized):
         p = param.Parameter(readonly=True)
 
@@ -1284,13 +1284,28 @@ def test_inheritance_constant_behavior():
         p = param.Parameter()
 
 
-    # Normally, param.Parameter(readonly=True) ends up with constant being
-    # True.
-    assert B.param.p.constant is False
+    assert B.param.p.readonly is True
+    assert B.param.p.constant is True
 
     b = B()
 
-    assert b.param.p.constant is False
+    assert b.param.p.readonly is True
+    assert b.param.p.constant is True
+
+
+def test_inheritance_constant_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(constant=True)
+
+    class B(A):
+        p = param.Parameter()
+
+
+    assert B.param.p.constant is True
+
+    b = B()
+
+    assert b.param.p.constant is True
 
 
 def test_inheritance_set_Parameter_instantiate_constant_before_instantation():

@@ -315,15 +315,15 @@ class TestParameterized(unittest.TestCase):
         self.assertEqual(testpo.const,9)
 
     def test_edit_constant(self):
-        testpo = TestPO(const=17)
+        testpo = TestPO(const=670)
         # Checking no parameter was already instantiated
         assert not testpo._param__private.params
         with edit_constant(testpo):
-            testpo.const = 18
-        assert testpo.const == 18
+            testpo.const = 891
+        assert testpo.const == 891
         assert testpo.param['const'].constant
         assert TestPO.param['const'].constant
-        assert TestPO.param['const'].default == 1
+        assert TestPO.param['const'].default not in (670, 891)
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""

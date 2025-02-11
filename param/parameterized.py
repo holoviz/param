@@ -36,6 +36,7 @@ from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
+    ParamDeprecationWarning as _ParamDeprecationWarning,
     ParamFutureWarning as _ParamFutureWarning,
     Skip,
     _deprecated,
@@ -1305,6 +1306,12 @@ class Parameter(_ParameterBase):
         self.readonly = readonly
         self._label = label
         self._set_instantiate(instantiate)
+        if pickle_default_value is False:
+            warnings.warn(
+                'pickle_default_value has been deprecated.',
+                category=_ParamDeprecationWarning,
+                stacklevel=3,
+            )
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
         self.watchers = {}

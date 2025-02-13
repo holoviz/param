@@ -4740,6 +4740,9 @@ class ParameterizedFunction(Parameterized):
         else:                 inst.__name__ = self_or_cls.name
         return inst
 
+    def __init__(self, *args, **params):
+        super().__init__(*args, **params)
+
     def __new__(class_,*args,**params):
         # Create and __call__() an instance of this class.
         inst = class_.instance()

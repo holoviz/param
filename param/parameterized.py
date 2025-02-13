@@ -4741,6 +4741,8 @@ class ParameterizedFunction(Parameterized):
         return inst
 
     def __init__(self, *args, **params):
+        # This is needed so type checkers don't complain about positional arguments
+        # See https://github.com/holoviz/param/pull/1021
         super().__init__(*args, **params)
 
     def __new__(class_,*args,**params):

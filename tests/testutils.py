@@ -7,7 +7,7 @@ from functools import partial
 import param
 import pytest
 
-from param import guess_param_types, resolve_path
+from param import descendents, guess_param_types, resolve_path
 from param.parameterized import bothmethod
 from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
 
@@ -439,3 +439,8 @@ def test_gen_types():
     assert next(iter(_int_types())) is int
     assert next(iter(_int_types)) is int
     assert isinstance(_int_types, Iterable)
+
+
+def test_descendents_object():
+    # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
+    assert descendents(object)

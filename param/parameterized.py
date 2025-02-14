@@ -37,6 +37,7 @@ from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
     ParamFutureWarning as _ParamFutureWarning,
+    ParamPendingDeprecationWarning as _ParamPendingDeprecationWarning,
     Skip,
     _deprecated,
     _deprecate_positional_args,
@@ -1572,6 +1573,15 @@ class Parameter(_ParameterBase):
             else:
                 # When setting a Parameter before calling super.
                 if not isinstance(obj._param__private, _InstancePrivate):
+                    warnings.warn(
+                        f"Setting the Parameter {self.name!r} to {val!r} before "
+                        f"the Parameterized class {type(obj).__name__!r} is fully "
+                        "instantiated is deprecated and will raise an error in "
+                        "a future version. Ensure the value is set after calling "
+                        "`super().__init__(**params)` in the constructor.",
+                        category=_ParamPendingDeprecationWarning,
+                        stacklevel=5,
+                    )
                     obj._param__private = _InstancePrivate(
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs
                     )
@@ -4438,6 +4448,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             self._param__private = _InstancePrivate(
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
+        else:
+            print("BAR")
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.

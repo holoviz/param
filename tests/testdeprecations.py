@@ -97,6 +97,16 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamFutureWarning):
             param.parameterized.all_equal(1, 1)
 
+    def test_deprecate_setting_parameter_before_init(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                self.x = 10
+                super().__init__(**params)
+        with pytest.raises(param._utils.ParamPendingDeprecationWarning):
+            P()
+
 
 class TestDeprecateParameters:
 

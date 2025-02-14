@@ -2,6 +2,7 @@
 import inspect
 import re
 import unittest
+import warnings
 
 import param
 import numbergen
@@ -400,7 +401,9 @@ class TestParameterized(unittest.TestCase):
                 nonlocal count
                 count += 1
 
-        p = P()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            p = P()
 
         assert p.x == 1
         assert count == 0
@@ -417,7 +420,9 @@ class TestParameterized(unittest.TestCase):
                     self.sub = P(depth+1)
                 super().__init__()
 
-        p = P()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            p = P()
 
         assert p.value == 'B'
         assert p.sub.value == 'B'
@@ -442,7 +447,9 @@ class TestParameterized(unittest.TestCase):
 
         # When b is instantiated the `batched` Parameter of B is set before
         # Parameterized.__init__ is called.
-        b = B()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            b = B()
         assert b.batched is True
 
     def test_instantiation_param_objects_before_super_subclass(self):

@@ -1580,7 +1580,7 @@ class Parameter(_ParameterBase):
                         "a future version. Ensure the value is set after calling "
                         "`super().__init__(**params)` in the constructor.",
                         category=_ParamPendingDeprecationWarning,
-                        stacklevel=5,
+                        stacklevel=4,
                     )
                     obj._param__private = _InstancePrivate(
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs

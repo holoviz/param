@@ -767,3 +767,8 @@ def test_reactive_callback_resolve_accessor():
     dfx = rx(df)
     out = dfx["name"].str._callback()
     assert out is df["name"].str
+
+def test_reactive_set_value_attributeerror():
+    x = rx(1)
+    with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
+        x.value = 1

@@ -4448,8 +4448,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             self._param__private = _InstancePrivate(
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
-        else:
-            print("BAR")
 
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.

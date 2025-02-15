@@ -81,8 +81,6 @@ pandas = "*"
 pyarrow = "*"
 pytables = "*"
 xlrd = "*"
-
-[feature.test.target.linux.dependencies]
 gmpy2 = "*"
 
 [feature.test-pypy.dependencies]

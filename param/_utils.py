@@ -511,7 +511,7 @@ def _deserialize_from_path(ext_to_routine, path, type_name):
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
-    # found in numpy, gmpy, etc.
+    # found in numpy, gmpy2, etc.
     elif (hasattr(obj, '__int__') and hasattr(obj, '__add__')): return True
     # This is for older versions of gmpy
     elif hasattr(obj, 'qdiv'): return True

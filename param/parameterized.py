@@ -8,6 +8,7 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
+import abc
 import asyncio
 import copy
 import datetime as dt
@@ -4569,6 +4570,22 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __str__(self):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
+
+
+class ParameterizedABCMeta(abc.ABCMeta, ParameterizedMetaclass):
+    """Metaclass for abstract base classes using Parameterized.
+
+    Ensures compatibility between ABCMeta and ParameterizedMetaclass.
+    """
+
+
+class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMeta):
+    """Base class for user-defined ABCs that extends Parameterized."""
+
+    def __init_subclass__(cls, **kwargs):
+        if cls.__bases__ and cls.__bases__[0] is ParameterizedABC:
+            setattr(cls, f'_{cls.__name__}__abstract', True)
+        super().__init_subclass__(**kwargs)
 
 
 def print_all_param_defaults():

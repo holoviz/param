@@ -8,8 +8,13 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod
-from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
+from param.parameterized import bothmethod, Parameterized, ParameterizedABC
+from param._utils import (
+    _is_abstract,
+    _is_mutable_container,
+    iscoroutinefunction,
+    gen_types,
+)
 
 
 try:
@@ -439,3 +444,27 @@ def test_gen_types():
     assert next(iter(_int_types())) is int
     assert next(iter(_int_types)) is int
     assert isinstance(_int_types, Iterable)
+
+
+def test_is_abstract_false():
+    class A: pass
+    class B(Parameterized): pass
+    assert not _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_attribute():
+    class A(Parameterized):
+        __abstract = True
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_abc():
+    class A(ParameterizedABC): pass
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)

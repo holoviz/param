@@ -8,7 +8,7 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod
+from param.parameterized import bothmethod, Parameterized
 from param._utils import (
     _is_mutable_container,
     descendents,
@@ -452,3 +452,18 @@ def test_descendents_bad_type():
         match="descendents expected a class object, not int"
     ):
         descendents(1)
+
+class A(Parameterized):
+    __abstract = True
+class B(A): pass
+class C(A): pass
+class X(B): pass
+class Y(B): pass
+
+
+def test_descendents():
+    assert descendents(A) == [A, B, C, X, Y]
+
+
+def test_descendents_concrete():
+    assert descendents(A, concrete=True) == [B, C, X, Y]

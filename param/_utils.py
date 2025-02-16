@@ -525,7 +525,7 @@ def _is_abstract(class_):
         return False
 
 
-def descendents(class_):
+def descendents(class_, concrete=False):
     """
     Return a list of the class hierarchy below (and including) the given class.
 
@@ -538,11 +538,11 @@ def descendents(class_):
     out = []
     while len(q):
         x = q.pop(0)
-        out.insert(0,x)
+        out.insert(0, x)
         for b in x.__subclasses__():
             if b not in q and b not in out:
                 q.append(b)
-    return out[::-1]
+    return [kls for kls in out if not (concrete and _is_abstract(kls))][::-1]
 
 
 # Could be a method of ClassSelector.

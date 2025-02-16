@@ -16,7 +16,6 @@ test-311 = ["py311", "test-core", "test", "example", "test-example"]
 test-312 = ["py312", "test-core", "test", "example", "test-example"]
 test-313 = ["py313", "test-core", "test", "example", "test-example"]
 test-core = ["py313", "test-core"]
-test-pypy = ["pypy", "test-core", "test-pypy"]
 docs = ["py311", "example", "doc"]
 build = ["py311", "build"]
 lint = ["py311", "lint"]
@@ -45,12 +44,6 @@ python = "3.13.*"
 
 [feature.py313.activation.env]
 COVERAGE_CORE = "sysmon"
-
-[feature.pypy]
-platforms = ["linux-64", "osx-64", "win-64"] # not supported for osx-arm64
-
-[feature.pypy.dependencies]
-pypy = "7.3.*"
 
 [feature.example.dependencies]
 aiohttp = "*"
@@ -82,17 +75,6 @@ pyarrow = "*"
 pytables = "*"
 xlrd = "*"
 gmpy2 = "*"
-
-[feature.test-pypy.dependencies]
-cloudpickle = "*"
-ipython = "*"
-jsonschema = "*"
-nest-asyncio = "*"
-numpy = "*"
-odfpy = "*"
-openpyxl = "*"
-pandas = "*"
-xlrd = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'

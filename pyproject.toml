@@ -64,10 +64,10 @@ tests-pypy = [
     "jsonschema",
     "nest-asyncio",
     "numpy",
-    "odfpy",
-    "openpyxl",
-    "pandas",
-    "xlrd",
+    # "odfpy",
+    # "openpyxl",
+    # "pandas",
+    # "xlrd",
 ]
 tests-full = [
     "param[tests]",

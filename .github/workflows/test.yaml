@@ -122,13 +122,14 @@ jobs:
           pixi run -e ${{ matrix.environment }} test-unit
 
   pypy_test_suite:
-    name: core:${{ matrix.environment }}:pypy3.10
+    name: core:${{ matrix.python-version }}:${{ matrix.environment }}
     needs: [pre_commit]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
+        python-version: ["pypy3.10"]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -138,15 +139,25 @@ jobs:
         run: git fetch --prune --tags -f
       - uses: actions/setup-python@v5
         with:
-          python-version: 'pypy3.10'
-      - name: pip update
-        run: pip install --upgrade pip
-      - name: install
-        run: pip install -e ."[tests,tests-pypy]"
-      - name: pip list
-        run: pip list
-      - name: Test Unit
-        run: pytest tests
+          python-version: ${{ matrix.python-version }}
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Create virtual environment
+        run: uv venv --python ${{ matrix.python-version }}
+      - name: Install project dependencies
+        run: uv pip install -e ."[tests,tests-pypy]"
+      - name: List installed packages
+        run: uv pip list
+      - name: Run tests
+        run: uv venv exec pytest tests
+      # - name: pip update
+      #   run: pip install --upgrade pip
+      # - name: install
+      #   run: pip install -e ."[tests,tests-pypy]"
+      # - name: pip list
+      #   run: pip list
+      # - name: Test Unit
+      #   run: pytest tests
 
   result_test_suite:
     name: result:test

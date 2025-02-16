@@ -9,7 +9,12 @@ import pytest
 
 from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod
-from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
+from param._utils import (
+    _is_mutable_container,
+    descendents,
+    iscoroutinefunction,
+    gen_types,
+)
 
 
 try:
@@ -439,3 +444,11 @@ def test_gen_types():
     assert next(iter(_int_types())) is int
     assert next(iter(_int_types)) is int
     assert isinstance(_int_types, Iterable)
+
+
+def test_descendents_bad_type():
+    with pytest.raises(
+        TypeError,
+        match="descendents expected a class object, not int"
+    ):
+        descendents(1)

@@ -532,7 +532,8 @@ def descendents(class_):
     The list is ordered from least- to most-specific.  Can be useful for
     printing the contents of an entire class hierarchy.
     """
-    assert isinstance(class_,type)
+    if not isinstance(class_, type):
+        raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")
     q = [class_]
     out = []
     while len(q):

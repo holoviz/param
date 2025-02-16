@@ -518,19 +518,42 @@ def _is_number(obj):
     else: return False
 
 
-def _is_abstract(class_):
+def _is_abstract(class_: type) -> bool:
     try:
         return class_.abstract
     except AttributeError:
         return False
 
 
-def descendents(class_, concrete=False):
+def descendents(class_: type, concrete: bool = False) -> list[type]:
     """
-    Return a list of the class hierarchy below (and including) the given class.
+    Return a list of all descendant classes of a given class.
 
-    The list is ordered from least- to most-specific.  Can be useful for
-    printing the contents of an entire class hierarchy.
+    This function performs a breadth-first traversal of the class hierarchy,
+    collecting all subclasses of `class_`. The result includes `class_` itself
+    and all of its subclasses. If `concrete=True`, abstract base classes
+    are excluded from the result.
+
+    Parameters
+    ----------
+    class_ : type
+        The base class whose descendants should be found.
+    concrete : bool, optional
+        If `True`, exclude abstract classes from the result. Default is `False`.
+
+    Returns
+    -------
+    list of type
+        A list of descendant classes, ordered from the most base to the most derived.
+
+    Examples
+    --------
+    >>> class A: pass
+    >>> class B(A): pass
+    >>> class C(A): pass
+    >>> class D(B): pass
+    >>> descendents(A)
+    [A, B, C, D]
     """
     if not isinstance(class_, type):
         raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")

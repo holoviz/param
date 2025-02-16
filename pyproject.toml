@@ -42,6 +42,7 @@ examples = [
 tests = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
 ]
 tests-deser = [
     "xlrd",
@@ -56,6 +57,17 @@ tests-examples = [
     "pytest-xdist",
     "nbval",
     "param[examples]",
+]
+tests-pypy = [
+    "cloudpickle",
+    "ipython",
+    "jsonschema",
+    "nest-asyncio",
+    "numpy",
+    "odfpy",
+    "openpyxl",
+    "pandas",
+    "xlrd",
 ]
 tests-full = [
     "param[tests]",

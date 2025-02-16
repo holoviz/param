@@ -111,7 +111,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        environment: ["test-core", "test-pypy"]
+        environment: ["test-core"]
     timeout-minutes: 30
     steps:
       - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
@@ -121,9 +121,31 @@ jobs:
         run: |
           pixi run -e ${{ matrix.environment }} test-unit
 
+  pypy_test_suite:
+    name: core:${{ matrix.environment }}:pypy3.10
+    needs: [pre_commit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest"]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 'pypy3.10'
+      - name: pip update
+        run: pip install --upgrade pip
+      - name: install
+        run: pip install -e ."[tests,tests-pypy]"
+      - name: pip list
+        run: pip list
+      - name: Test Unit
+        run: pytest tests
+
   result_test_suite:
     name: result:test
-    needs: [unit_test_suite, core_test_suite]
+    needs: [unit_test_suite, core_test_suite, pypy_test_suite]
     if: always()
     runs-on: ubuntu-latest
     steps:

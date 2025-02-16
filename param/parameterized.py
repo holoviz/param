@@ -48,7 +48,7 @@ from ._utils import (
     _validate_error_prefix,
     accept_arguments,
     iscoroutinefunction,
-    descendents,
+    descendents,  # noqa: F401
     gen_types,
 )
 
@@ -4569,20 +4569,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __str__(self):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
-
-
-def print_all_param_defaults():
-    """Print the default values for all imported Parameters."""
-    print("_______________________________________________________________________________")
-    print("")
-    print("                           Parameter Default Values")
-    print("")
-    classes = descendents(Parameterized)
-    classes.sort(key=lambda x:x.__name__)
-    for c in classes:
-        c.print_param_defaults()
-    print("_______________________________________________________________________________")
-
 
 
 # As of Python 2.6+, a fn's **args no longer has to be a

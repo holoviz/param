@@ -3268,7 +3268,7 @@ class Parameters:
 
         return value
 
-    def inspect_value(self_,name: str)->Any: # pylint: disable-msg=E0213
+    def inspect_value(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
         Inspect the current value of a parameter without modifying it.
 

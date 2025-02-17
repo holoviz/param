@@ -3575,8 +3575,13 @@ class Parameters:
                 getattr(watchers[what], action)(watcher)
 
     def watch(
-        self_, fn, parameter_names: list[str], what: str='value', onlychanged: bool=True,
-        queued: bool=False, precedence: int=0
+        self_,
+        fn,
+        parameter_names: Union[str, list[str]],
+        what: str='value',
+        onlychanged: bool = True,
+        queued: bool = False,
+        precedence: int = 0,
     ) -> Watcher:
         """
         Register a callback function to be invoked for parameter events.
@@ -3591,8 +3596,8 @@ class Parameters:
             The callback function to invoke when an event occurs. This function
             will be provided with `Event` objects as positional arguments, allowing
             it to determine the triggering events.
-        parameter_names : list[str]
-            A list of parameter names to watch for events.
+        parameter_names : str or list[str]
+            A parameter name or a list of parameter names to watch for events.
         what : str, optional
             The type of change to watch for. By default, this is 'value', but it
             can be set to other slots such as 'constant'. Default is 'value'.

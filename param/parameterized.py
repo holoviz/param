@@ -2677,30 +2677,38 @@ class Parameters:
 
     def trigger(self_, *param_names: str) -> None:
         """
-        Trigger event handlers for the specified parameters.
+        Trigger watchers for the given set of parameter names.
 
-        This method activates all watchers associated with the given parameter names,
-        regardless of whether the parameter values have actually changed. For parameters
-        of type `Event`, the parameter value will be temporarily set to `True` to
-        indicate that the event has been triggered.
+        This method invokes all watchers associated with the given parameter names,
+        regardless of whether the parameter values have actually changed.
 
         Parameters
         ----------
         *param_names : str
             Names of the parameters to trigger. Each name must correspond to a
-            parameter defined on this `Parameterized` instance.
+            parameter defined on this `Parameterized` object.
+
+        Notes
+        -----
+        As a special case, the value will actually be changed for a Parameter
+        of type `Event`, setting it to True so that it is clear which `Event`
+        parameter has been triggered.
 
         Examples
         --------
+        This method is useful to trigger watchers of parameters whose value
+        is a mutable container:
+
         >>> import param
         >>> class MyClass(param.Parameterized):
-        ...     event = param.Event()
+        ...     values = param.List([1, 2])
         >>> obj = MyClass()
         >>> def callback(event):
-        ...     print(f"Triggered: {event.name}")
-        >>> obj.param.watch(callback, 'event')
-        >>> obj.param.trigger('event')
-        Triggered: event
+        ...     print(f"Triggered {event.name} / {event.new}")
+        >>> obj.param.watch(callback, 'values')
+        >>> obj.values.append(3)
+        >>> obj.param.trigger('values')
+        Triggered values / [1, 2, 3]
         """
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(

@@ -3607,11 +3607,15 @@ class Parameters:
             item changes. If False, the callback is invoked even when the `what`
             item is set to its current value.
         queued : bool, optional
-            If False (default), additional watcher events generated inside the
-            callback are dispatched immediately, performing depth-first processing
-            of watcher events. If True, new downstream events generated during
-            the callback are queued and dispatched after all triggering events
-            have been processed, performing breadth-first processing.
+            By default (False), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting `queued=True` on this Watcher will queue up new downstream
+            events generated during `fn` until `fn` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
         precedence : int, optional
             The precedence level of the watcher. Lower precedence levels are
             executed earlier. User-defined watchers must use positive precedence

@@ -24,12 +24,13 @@ import warnings
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
+from collections.abc import Callable, Iterable
 from functools import partial, wraps, reduce
 from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
-from typing import Any, Union, Literal, Iterable, Callable # When python 3.9 support is dropped replace Union with |
+from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL

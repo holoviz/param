@@ -3940,13 +3940,7 @@ class Parameters:
         """
         self_.__db_print(DEBUG,msg,*args,**kw)
 
-    def log(
-        self_,
-        level: int,
-        msg: str,
-        *args,
-        **kw
-    ) -> None:
+    def log(self_, level: int, msg: str, *args, **kw) -> None:
         """
         Log a message at the specified logging level.
 

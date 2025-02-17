@@ -65,7 +65,7 @@ tests-full = [
     "pandas",
     "ipython",
     "jsonschema",
-    "gmpy",
+    "gmpy2",
     "cloudpickle",
     "nest_asyncio",
 ]

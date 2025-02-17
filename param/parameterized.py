@@ -5112,8 +5112,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     """
 
     name = String(default=None, constant=True, doc="""
-        String identifier for this object.
-        Default is the object's class name plus a unique integer""")
+        String identifier for this object.""")
 
     def __init__(self, **params):
         """

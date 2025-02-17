@@ -3325,6 +3325,10 @@ class Parameters:
         """
         Retrieve the parameter dependencies of a specified method.
 
+        By default intermediate dependencies on sub-objects are not returned as
+        these are primarily useful for internal use to determine when a
+        sub-object dependency has to be updated.
+
         Parameters
         ----------
         name : str

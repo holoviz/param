@@ -2639,13 +2639,6 @@ class Parameters:
         dict[str, Parameter]
             A dictionary mapping parameter names to their corresponding `Parameter` objects.
 
-        Raises
-        ------
-        RuntimeError
-            If the method is called on a `Parameterized` instance that has not been
-            fully initialized. Ensure `super().__init__(**params)` is called in the
-            constructor before triggering watchers.
-
         Examples
         --------
         Accessing Class-Level Parameters:
@@ -2696,13 +2689,6 @@ class Parameters:
         *param_names : str
             Names of the parameters to trigger. Each name must correspond to a
             parameter defined on this `Parameterized` instance.
-
-        Raises
-        ------
-        RuntimeError
-            If the method is called on a `Parameterized` instance that has not been
-            fully initialized. Ensure `super().__init__(**params)` is called in the
-            constructor before triggering watchers.
 
         Examples
         --------

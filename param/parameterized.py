@@ -3200,7 +3200,7 @@ class Parameters:
         else:
             return param_obj._force(slf, cls)
 
-    def get_value_generator(self_,name: str)->Any: # pylint: disable-msg=E0213
+    def get_value_generator(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
         Retrieve the value or value-generating object of a named parameter.
 

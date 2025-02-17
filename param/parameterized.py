@@ -2631,8 +2631,8 @@ class Parameters:
             - `True`: Return instance-specific parameters, creating them if necessary. This
             requires the instance to be fully initialized.
             - `False`: Return class-level parameters without creating instance-specific copies.
-            - `'existing'`: Return only the instance parameters that already exist, avoiding
-            creation of new instance-specific parameters.
+            - `'existing'`: Returns a mix of instance parameters that already exist and
+            class parameters, avoiding creation of new instance-specific parameters.
 
         Returns
         -------
@@ -2645,14 +2645,6 @@ class Parameters:
             If the method is called on a `Parameterized` instance that has not been
             fully initialized. Ensure `super().__init__(**params)` is called in the
             constructor before triggering watchers.
-
-        Notes
-        -----
-        - This method distinguishes between class-level and instance-specific parameters.
-        - Instance-specific parameters are lazily created; they are not initialized unless
-        explicitly requested or accessed.
-        - When `instance='existing'`, only parameters already initialized at the instance level
-        will be returned, while class-level parameters remain unaffected.
 
         Examples
         --------

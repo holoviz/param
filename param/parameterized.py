@@ -1939,28 +1939,6 @@ class Parameters:
 
     @property
     def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
-        """
-        Return the instance if possible, otherwise return the class.
-
-        This property provides a convenient way to access the class or the
-        instance depending on the context.
-
-        Returns
-        -------
-        Parameterized
-            The instance if if posssible; otherwise, the class.
-
-        Examples
-        --------
-        import param
-        >>> class MyClass(param.Parameterized):
-        ...     value = param.Parameter()
-        ... MyClass.param.self_or_cls
-        __main__.MyClass
-        >>> my_instance = MyClass()
-        >>> my_instance.param.self_or_cls
-        MyClass(name='MyClass00003', value=None)
-        """
         return self_.cls if self_.self is None else self_.self
 
     def __setstate__(self, state):

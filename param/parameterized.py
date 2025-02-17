@@ -3946,7 +3946,12 @@ class Parameters:
 
         This method logs a message constructed by merging `msg` with `args` at
         the indicated logging level. It supports logging levels defined in
-        Python's `logging` module.
+        Python's `logging` module plus VERBOSE, either obtained directly from
+        the logging module like `logging.INFO`, or from parameterized like
+        `param.parameterized.INFO`.
+
+        Supported logging levels include (in order of severity):
+        DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
 
         Parameters
         ----------

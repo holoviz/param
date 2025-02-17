@@ -2849,7 +2849,7 @@ class Parameters:
 
         Parameters
         ----------
-        subset : iterable, optional
+        subset : iterable of str, optional
             An iterable of parameter names to serialize. If None, all parameters will be serialized.
             Default is None.
         mode : str, optional

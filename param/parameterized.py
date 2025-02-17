@@ -3214,8 +3214,7 @@ class Parameters:
         -------
         Any
             The current value of the parameter, a value-generating object for
-            `Dynamic` parameters, or a list of value-generating objects for
-            `CompositeParameter` parameters.
+            `Dynamic` parameters.
 
         Examples
         --------

@@ -3281,8 +3281,7 @@ class Parameters:
         -------
         Any
             The current value of the parameter, the last generated value for
-            `Dynamic` parameters, or a list of inspected values for composite
-            parameters.
+            `Dynamic` parameters.
 
         Examples
         --------

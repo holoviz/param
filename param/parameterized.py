@@ -3775,13 +3775,6 @@ class Parameters:
         Watcher
             The `Watcher` object encapsulating the registered callback.
 
-        Raises
-        ------
-        ValueError
-            If a negative precedence is provided, which is reserved for internal watchers.
-        AssertionError
-            If `what` is not 'value', as this method only supports monitoring parameter values.
-
         Notes
         -----
         - This method is a convenient shorthand for `watch` when only monitoring

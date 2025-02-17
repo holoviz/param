@@ -5042,73 +5042,71 @@ class _InstancePrivate:
 
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
-    Base class for named objects with observable Parameters.
+    A base class for creating Parameterized objects.
 
-    The `Parameterized` base class simplifies your codebase, making it more robust and maintainable,
-    while enabling the creation of rich, interactive applications. It integrates seamlessly with
-    the rest of the HoloViz ecosystem for building visualizations and user interfaces.
+    The `Parameterized` base class enables two main use cases:
+    - Defining rich and run-time validated class and instance attributes,
+    called Parameters.
+    - Watching Parameters for changes and reacting through callbacks.
 
-    Features
-    --------
-    1. **Parameters**
-    - Support for default, constant, and readonly values.
-    - Validation, documentation, custom labels, and parameter references.
-    2. **`param` Namespace**
-    - Provides utility methods for tasks like adding parameters, updating parameters,
-    debugging, pretty-printing, logging, serialization, deserialization, and more.
-    3. **Observer Pattern**
-    - Enables "watching" parameters for changes and reacting through callbacks, supporting
-    reactive programming.
+    This makes it well-suited for robust, maintainable code bases and
+    particularly useful in interactive applications requiring reactive behavior.
+
+    Attributes
+    ----------
+    name : str
+        Class/instance name.
+    param
 
     Documentation
     -------------
-    For detailed documentation, see: https://param.holoviz.org/user_guide/Parameters.html.
+    https://param.holoviz.org/user_guide/Parameters.html.
 
     Examples
     --------
-    **Defining a Class with Validated Parameters**
+    Defining a class with two Parameters and a callback run on changes
+    to `my_number`.
 
     >>> import param
     >>> class MyClass(param.Parameterized):
     ...     my_number = param.Number(default=1, bounds=(0, 10), doc='A numeric value')
     ...     my_list = param.List(default=[1, 2, 3], item_type=int, doc='A list of integers')
+    ...
+    ...     @param.depends('my_number', watch=True)
+    ...     def callback(self):
+    ...         print(f'my_number new value: {self.my_number}')
+
+    Parameters are available as class attributes:
+
+    >>> MyClass.my_number
+    1
+
     >>> obj = MyClass(my_number=2)
 
-    The instance `obj` will always include a `name` parameter:
+    Constructor arguments override default values and default Parameter values
+    are set unless overridden:
 
-    >>> obj.name
-    'MyClass12345'  # The default `name` is the class name with a unique 5-digit suffix.
-
-    Default parameter values are set unless overridden:
-
+    >>> obj.my_number
+    2
     >>> obj.my_list
     [1, 2, 3]
 
-    Constructor arguments override default values:
-
-    >>> obj.my_number
-    2  # The value set in the constructor overrides the default.
-
-    **Changing Parameter Values**
+    Parameter values are dynamically validated:
 
     >>> obj.my_number = 5  # Valid update within bounds.
 
-    Attempting to set an invalid value raises a `ValueError`:
+    Attempting to set an invalid value raises an error:
 
-    >>> obj.my_number = 15  # ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
+    >>> try:
+    >>>     obj.my_number = 15
+    >>> except Exception as e:
+    >>>     print(repr(e))
+    ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
 
-    **Watching Parameter Changes**
+    Updating `my_number` executes the callback method:
 
-    Add a watcher to respond to parameter updates:
-
-    >>> def callback(event):
-    ...     print(f"Changed {event.name} from {event.old} to {event.new}")
-    >>> obj.param.watch(callback, 'my_number')
     >>> obj.my_number = 7
-    Changed my_number from 5 to 7
-
-    `watch` is the most low level, event-driven API. For most use cases we recommend
-    using the higher level `depends`, `bind` or `rx` APIs.
+    my_number new value: 7
     """
 
     name = String(default=None, constant=True, doc="""
@@ -5116,49 +5114,35 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
     def __init__(self, **params):
         """
-        Initialize a `Parameterized` object with optional parameter values.
+        Initialize a `Parameterized` instance with optional Parameter values.
 
-        Parameters can be supplied as keyword arguments (`param_name=value`), overriding
-        their default values for this specific instance. Any parameters not explicitly
-        set will retain their defined default values.
+        Optional Parameter values must be supplied as keyword arguments
+        (`param_name=value`), overriding their default values for this one
+        instance. Any parameters not explicitly set will retain their defined
+        default values.
 
-        If no `name` parameter is provided, the instance's `name` attribute will default
-        to a unique string composed of the class name followed by a unique 5-digit suffix.
+        If no `name` parameter is provided, the instance's `name` attribute will
+        default to an identifier string composed of the class name followed by
+        an incremental 5-digit number.
 
         Parameters
         ----------
         **params
-            Keyword arguments where keys are parameter names and values are the desired
-            values for those parameters. Parameter names must match those defined in the
-            class or its superclasses.
+            Optional keyword arguments mapping Parameter names to values.
+
+        Raises
+        ------
+        TypeError
+            If one of the keywords of `params` is not a Parameter name.
 
         Examples
         --------
-        **Setting Parameters at Initialization**
-
         >>> import param
         >>> class MyClass(param.Parameterized):
         ...     value = param.Number(default=10, bounds=(0, 20))
         >>> obj = MyClass(value=15)
 
         The `value` parameter is set to 15 for this instance, overriding the default.
-
-        **Default Naming**
-
-        >>> obj.name
-        'MyClass00001'  # Default name: class name + unique identifier.
-
-        **Handling Invalid Parameters**
-
-        If a keyword does not match a defined parameter, it raises a TypeError:
-
-        >>> obj = MyClass(nonexistent_param=42)  # TypeError: MyClass.__init__() got an unexpected keyword argument 'nonexistent_param'
-
-        **Handling Invalid Parameter Values**
-
-        If a parameter value is not valid it raises a ValueError:
-
-        >>> obj = MyClass(value=25) # ValueError: Number parameter 'MyClass.value' must be at most 20, not 25.
         """
         global object_count
 

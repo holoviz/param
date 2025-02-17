@@ -3578,7 +3578,7 @@ class Parameters:
         self_,
         fn,
         parameter_names: Union[str, list[str]],
-        what: str='value',
+        what: str = 'value',
         onlychanged: bool = True,
         queued: bool = False,
         precedence: int = 0,

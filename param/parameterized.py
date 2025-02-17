@@ -3690,11 +3690,6 @@ class Parameters:
             The `Watcher` object to remove. This should be an object returned
             by a previous call to `watch` or `watch_values`.
 
-        Notes
-        -----
-        - If the watcher does not exist in the list of registered watchers,
-        the method logs a warning message instead of silently failing.
-
         See Also
         --------
         watch : Registers a new watcher to observe parameter changes.

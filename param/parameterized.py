@@ -3634,26 +3634,33 @@ class Parameters:
 
         Examples
         --------
-        Register a watcher for parameter changes:
+        Register two watchers for parameter changes, one directly in
+        the constructor and one after the instance is created:
 
         >>> import param
         >>> class MyClass(param.Parameterized):
         ...     a = param.Number(default=1)
         ...     b = param.Number(default=2)
         ...
+        ...     def __init__(self, **params):
+        ...         super().__init__(**params)
+        ...         self.param.watch(self.callback, ['a'])
+        ...
         ...     def callback(self, event):
         ...         print(f"Event triggered by: {event.name}, new value: {event.new}")
         ...
         >>> instance = MyClass()
 
-        Watch for changes to `a`:
+        Watch for changes to `b`:
 
-        >>> instance.param.watch(instance.callback, ['a'])
+        >>> instance.param.watch(instance.callback, ['b'])
 
         Trigger a change to invoke the callback:
 
         >>> instance.a = 10
         Event triggered by: a, new value: 10
+        >>> instance.b = 11
+        Event triggered by: b, new value: 11
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "

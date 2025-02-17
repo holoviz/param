@@ -601,7 +601,8 @@ class TestParameterized(unittest.TestCase):
                         'Ensure you have called `super().__init__(**params)` in your Parameterized '
                         'constructor before trying to access instance Parameter objects, or '
                         'looking up the class Parameter objects with `.param.objects(instance=False)` '
-                        'may be enough for your use case.',                    )
+                        'may be enough for your use case.',
+                    )
                 ):
                     self.param.objects()
         P()

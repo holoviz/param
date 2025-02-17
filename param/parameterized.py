@@ -3690,10 +3690,6 @@ class Parameters:
             The `Watcher` object to remove. This should be an object returned
             by a previous call to `watch` or `watch_values`.
 
-        Returns
-        -------
-        None
-
         Notes
         -----
         - If the watcher does not exist in the list of registered watchers,
@@ -3975,10 +3971,6 @@ class Parameters:
             Arguments to merge into `msg` using the format specifiers.
         **kw : dict
             Additional keyword arguments passed to the logging implementation.
-
-        Returns
-        -------
-        None
 
         Raises
         ------

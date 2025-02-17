@@ -292,7 +292,7 @@ def test_reactive_len():
     l = i.rx.len()
     assert l.rx.value == 3
     i.rx.value = [1, 2]
-    assert l == 2
+    assert l.rx.value == 2
 
 def test_reactive_bool():
     i = rx(1)

@@ -1967,7 +1967,7 @@ class Parameters:
         -------
         Parameter
             The Parameter associated with the given key. If accessed on an instance,
-            the method returns the instantiated parameter.
+            the method returns the instance-level (copied) parameter.
         """
         inst = self_.self
         if inst is None:

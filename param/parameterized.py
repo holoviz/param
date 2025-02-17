@@ -3204,6 +3204,10 @@ class Parameters:
         """
         Retrieve the value or value-generating object of a named parameter.
 
+        For most parameters, this is simply the parameter's value (i.e. the
+        same as getattr()), but Dynamic parameters have their value-generating
+        object returned.
+
         Parameters
         ----------
         name : str

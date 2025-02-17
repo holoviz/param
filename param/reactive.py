@@ -1939,6 +1939,19 @@ class rx:
         for i in range(len(self._current)):
             yield items[i]
 
+    def __bool__(self):
+        # Implemented otherwise truth value testing (e.g. if rx: ...)
+        # defers to __len__ which raises an error.
+        return True
+
+    def __len__(self):
+        raise TypeError(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
+
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []

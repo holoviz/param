@@ -2672,9 +2672,12 @@ class Parameters:
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
             raise RuntimeError(
-                'Cannot access instance parameters before the Parameterized instance '
-                'is fully initialized. Ensure `super().__init__(**params)` is called, or '
-                'use `.param.objects(instance=False)` for class parameters.'
+                'Looking up instance Parameter objects (`.param.objects()`) until '
+                'the Parameterized instance has been fully initialized is not allowed. '
+                'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                'constructor before trying to access instance Parameter objects, or '
+                'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                'may be enough for your use case.',
             )
 
         pdict = self_._cls_parameters

@@ -777,7 +777,7 @@ def test_reactive_dunder_len_error():
             'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
             'obtain the length as a reactive expression, or '
             '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
-            'value.'
+            'expression value.'
         )
     ):
         len(rx([1, 2]))

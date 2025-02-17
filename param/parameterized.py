@@ -3600,7 +3600,8 @@ class Parameters:
             A parameter name or a list of parameter names to watch for events.
         what : str, optional
             The type of change to watch for. By default, this is 'value', but it
-            can be set to other slots such as 'constant'. Default is 'value'.
+            can be set to other parameter attributes such as 'constant'.
+            Default is 'value'.
         onlychanged : bool, optional
             If True (default), the callback is only invoked when the watched
             item changes. If False, the callback is invoked even when the `what`

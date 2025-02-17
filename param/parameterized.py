@@ -3973,11 +3973,6 @@ class Parameters:
             If the logging level is `WARNING` and warnings are treated as
             exceptions (`warnings_as_exceptions` is True).
 
-        Notes
-        -----
-        - This method respects the `warnings_as_exceptions` flag. If enabled,
-        `WARNING` messages are raised as exceptions instead of being logged.
-
         Examples
         --------
         Log a message at the `INFO` level:

@@ -159,14 +159,6 @@ jobs:
         run: |
           .venv\Scripts\Activate.ps1
           pytest tests
-      # - name: pip update
-      #   run: pip install --upgrade pip
-      # - name: install
-      #   run: pip install -e ."[tests,tests-pypy]"
-      # - name: pip list
-      #   run: pip list
-      # - name: Test Unit
-      #   run: pytest tests
 
   result_test_suite:
     name: result:test

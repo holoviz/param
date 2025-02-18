@@ -58,6 +58,7 @@ tests-examples = [
     "nbval",
     "param[examples]",
 ]
+# Set of dependencies that work with pypy and are quick to install.
 tests-pypy = [
     "cloudpickle",
     "ipython",

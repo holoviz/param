@@ -202,7 +202,7 @@ class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
     Python's float('inf') value, this object can be safely compared
-    with gmpy numeric types across different gmpy versions.
+    with gmpy2 numeric types across different gmpy2 versions.
 
     All operators on Infinity() return Infinity(), apart from the
     comparison and equality operators. Equality works by checking
@@ -322,11 +322,11 @@ class Time(Parameterized):
            times in decimal notation, but very slow and needs to be
            installed separately.
 
-         - gmpy.mpq: Allows a natural representation of times in
+         - gmpy2.mpq: Allows a natural representation of times in
            decimal notation, and very fast because it uses the GNU
            Multi-Precision library, but needs to be installed
-           separately and depends on a non-Python library.  gmpy.mpq
-           is gmpy's rational type.
+           separately and depends on a non-Python library.  gmpy2.mpq
+           is gmpy2's rational type.
         """)
 
     timestep = Parameter(default=1.0,doc="""

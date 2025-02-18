@@ -24,13 +24,14 @@ import warnings
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
+from collections.abc import Callable, Generator, Iterable
 from functools import partial, wraps, reduce
 from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 # When python 3.9 support is dropped replace Union with |
-from typing import Any, Type, Union, Literal, Iterable, Callable, TypeVar, Optional, Generator
+from typing import Any, Type, Union, Literal, TypeVar, Optional
 
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -2297,28 +2298,6 @@ class Parameters:
 
     @property
     def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
-        """
-        Return the instance if possible, otherwise return the class.
-
-        This property provides a convenient way to access the class or the
-        instance depending on the context.
-
-        Returns
-        -------
-        Parameterized
-            The instance if if posssible; otherwise, the class.
-
-        Examples
-        --------
-        import param
-        >>> class MyClass(param.Parameterized):
-        ...     value = param.Parameter()
-        ... MyClass.param.self_or_cls
-        __main__.MyClass
-        >>> my_instance = MyClass()
-        >>> my_instance.param.self_or_cls
-        MyClass(name='MyClass00003', value=None)
-        """
         return self_.cls if self_.self is None else self_.self
 
     def __setstate__(self, state):
@@ -2337,7 +2316,7 @@ class Parameters:
         Retrieve a Parameter by its key.
 
         This method allows access to a class or instance Parameter using its name.
-        
+
         Parameters
         ----------
         key : str
@@ -3011,28 +2990,13 @@ class Parameters:
             - `True`: Return instance-specific parameters, creating them if necessary. This
             requires the instance to be fully initialized.
             - `False`: Return class-level parameters without creating instance-specific copies.
-            - `'existing'`: Return only the instance parameters that already exist, avoiding
-            creation of new instance-specific parameters.
+            - `'existing'`: Returns a mix of instance parameters that already exist and
+            class parameters, avoiding creation of new instance-specific parameters.
 
         Returns
         -------
         dict[str, Parameter]
             A dictionary mapping parameter names to their corresponding `Parameter` objects.
-
-        Raises
-        ------
-        RuntimeError
-            If the method is called on a `Parameterized` instance that has not been
-            fully initialized. Ensure `super().__init__(**params)` is called in the
-            constructor before triggering watchers.
-
-        Notes
-        -----
-        - This method distinguishes between class-level and instance-specific parameters.
-        - Instance-specific parameters are lazily created; they are not initialized unless
-        explicitly requested or accessed.
-        - When `instance='existing'`, only parameters already initialized at the instance level
-        will be returned, while class-level parameters remain unaffected.
 
         Examples
         --------
@@ -3069,37 +3033,38 @@ class Parameters:
 
     def trigger(self_, *param_names: str) -> None:
         """
-        Trigger event handlers for the specified parameters.
+        Trigger watchers for the given set of parameter names.
 
-        This method activates all watchers associated with the given parameter names,
-        regardless of whether the parameter values have actually changed. For parameters
-        of type `Event`, the parameter value will be temporarily set to `True` to
-        indicate that the event has been triggered.
+        This method invokes all watchers associated with the given parameter names,
+        regardless of whether the parameter values have actually changed.
 
         Parameters
         ----------
         *param_names : str
             Names of the parameters to trigger. Each name must correspond to a
-            parameter defined on this `Parameterized` instance.
+            parameter defined on this `Parameterized` object.
 
-        Raises
-        ------
-        RuntimeError
-            If the method is called on a `Parameterized` instance that has not been
-            fully initialized. Ensure `super().__init__(**params)` is called in the
-            constructor before triggering watchers.
+        Notes
+        -----
+        As a special case, the value will actually be changed for a Parameter
+        of type `Event`, setting it to True so that it is clear which `Event`
+        parameter has been triggered.
 
         Examples
         --------
+        This method is useful to trigger watchers of parameters whose value
+        is a mutable container:
+
         >>> import param
         >>> class MyClass(param.Parameterized):
-        ...     event = param.Event()
+        ...     values = param.List([1, 2])
         >>> obj = MyClass()
         >>> def callback(event):
-        ...     print(f"Triggered: {event.name}")
-        >>> obj.param.watch(callback, 'event')
-        >>> obj.param.trigger('event')
-        Triggered: event
+        ...     print(f"Triggered {event.name} / {event.new}")
+        >>> obj.param.watch(callback, 'values')
+        >>> obj.values.append(3)
+        >>> obj.param.trigger('values')
+        Triggered values / [1, 2, 3]
         """
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
@@ -3240,7 +3205,7 @@ class Parameters:
 
         Parameters
         ----------
-        subset : iterable, optional
+        subset : iterable of str, optional
             An iterable of parameter names to serialize. If None, all parameters will be serialized.
             Default is None.
         mode : str, optional
@@ -3591,9 +3556,13 @@ class Parameters:
         else:
             return param_obj._force(slf, cls)
 
-    def get_value_generator(self_,name: str)->Any: # pylint: disable-msg=E0213
+    def get_value_generator(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
         Retrieve the value or value-generating object of a named parameter.
+
+        For most parameters, this is simply the parameter's value (i.e. the
+        same as getattr()), but Dynamic parameters have their value-generating
+        object returned.
 
         Parameters
         ----------
@@ -3605,8 +3574,7 @@ class Parameters:
         -------
         Any
             The current value of the parameter, a value-generating object for
-            `Dynamic` parameters, or a list of value-generating objects for
-            `CompositeParameter` parameters.
+            `Dynamic` parameters.
 
         Examples
         --------
@@ -3656,7 +3624,7 @@ class Parameters:
 
         return value
 
-    def inspect_value(self_,name: str)->Any: # pylint: disable-msg=E0213
+    def inspect_value(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
         Inspect the current value of a parameter without modifying it.
 
@@ -3669,8 +3637,7 @@ class Parameters:
         -------
         Any
             The current value of the parameter, the last generated value for
-            `Dynamic` parameters, or a list of inspected values for composite
-            parameters.
+            `Dynamic` parameters.
 
         Examples
         --------
@@ -3712,6 +3679,10 @@ class Parameters:
     def method_dependencies(self_, name: str, intermediate: bool=False) -> list[PInfo]:
         """
         Retrieve the parameter dependencies of a specified method.
+
+        By default intermediate dependencies on sub-objects are not returned as
+        these are primarily useful for internal use to determine when a
+        sub-object dependency has to be updated.
 
         Parameters
         ----------
@@ -3960,8 +3931,13 @@ class Parameters:
                 getattr(watchers[what], action)(watcher)
 
     def watch(
-        self_, fn, parameter_names: list[str], what: str='value', onlychanged: bool=True,
-        queued: bool=False, precedence: int=0
+        self_,
+        fn,
+        parameter_names: Union[str, list[str]],
+        what: str = 'value',
+        onlychanged: bool = True,
+        queued: bool = False,
+        precedence: int = 0,
     ) -> Watcher:
         """
         Register a callback function to be invoked for parameter events.
@@ -3976,21 +3952,26 @@ class Parameters:
             The callback function to invoke when an event occurs. This function
             will be provided with `Event` objects as positional arguments, allowing
             it to determine the triggering events.
-        parameter_names : list[str]
-            A list of parameter names to watch for events.
+        parameter_names : str or list[str]
+            A parameter name or a list of parameter names to watch for events.
         what : str, optional
             The type of change to watch for. By default, this is 'value', but it
-            can be set to other slots such as 'constant'. Default is 'value'.
+            can be set to other parameter attributes such as 'constant'.
+            Default is 'value'.
         onlychanged : bool, optional
             If True (default), the callback is only invoked when the watched
             item changes. If False, the callback is invoked even when the `what`
             item is set to its current value.
         queued : bool, optional
-            If False (default), additional watcher events generated inside the
-            callback are dispatched immediately, performing depth-first processing
-            of watcher events. If True, new downstream events generated during
-            the callback are queued and dispatched after all triggering events
-            have been processed, performing breadth-first processing.
+            By default (False), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting `queued=True` on this Watcher will queue up new downstream
+            events generated during `fn` until `fn` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
         precedence : int, optional
             The precedence level of the watcher. Lower precedence levels are
             executed earlier. User-defined watchers must use positive precedence
@@ -4002,12 +3983,6 @@ class Parameters:
         Watcher
             The `Watcher` object that encapsulates the registered callback.
 
-        Raises
-        ------
-        ValueError
-            If a negative precedence is provided, which is reserved for internal
-            watchers.
-
         See Also
         --------
         Watcher : Contains detailed information about the watcher object.
@@ -4015,26 +3990,33 @@ class Parameters:
 
         Examples
         --------
-        Register a watcher for parameter changes:
+        Register two watchers for parameter changes, one directly in
+        the constructor and one after the instance is created:
 
         >>> import param
         >>> class MyClass(param.Parameterized):
         ...     a = param.Number(default=1)
         ...     b = param.Number(default=2)
         ...
+        ...     def __init__(self, **params):
+        ...         super().__init__(**params)
+        ...         self.param.watch(self.callback, ['a'])
+        ...
         ...     def callback(self, event):
         ...         print(f"Event triggered by: {event.name}, new value: {event.new}")
         ...
         >>> instance = MyClass()
 
-        Watch for changes to `a`:
+        Watch for changes to `b`:
 
-        >>> instance.param.watch(instance.callback, ['a'])
+        >>> instance.param.watch(instance.callback, ['b'])
 
         Trigger a change to invoke the callback:
 
         >>> instance.a = 10
         Event triggered by: a, new value: 10
+        >>> instance.b = 11
+        Event triggered by: b, new value: 11
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -4063,15 +4045,6 @@ class Parameters:
         watcher : Watcher
             The `Watcher` object to remove. This should be an object returned
             by a previous call to `watch` or `watch_values`.
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-        - If the watcher does not exist in the list of registered watchers,
-        the method logs a warning message instead of silently failing.
 
         See Also
         --------
@@ -4144,10 +4117,15 @@ class Parameters:
             changes. If False, the callback is invoked even when the parameter is
             set to its current value.
         queued : bool, optional
-            If False (default), additional watcher events generated inside the
-            callback are dispatched immediately (depth-first processing). If True,
-            new downstream events are queued and dispatched after all triggering
-            events are processed (breadth-first processing).
+            By default (False), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting `queued=True` on this Watcher will queue up new downstream
+            events generated during `fn` until `fn` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
         precedence : int, optional
             The precedence level of the watcher. Lower precedence values are executed
             earlier. User-defined watchers must use positive precedence values.
@@ -4157,13 +4135,6 @@ class Parameters:
         -------
         Watcher
             The `Watcher` object encapsulating the registered callback.
-
-        Raises
-        ------
-        ValueError
-            If a negative precedence is provided, which is reserved for internal watchers.
-        AssertionError
-            If `what` is not 'value', as this method only supports monitoring parameter values.
 
         Notes
         -----
@@ -4323,19 +4294,18 @@ class Parameters:
         """
         self_.__db_print(DEBUG,msg,*args,**kw)
 
-    def log(
-        self_,
-        level: int,
-        msg: str,
-        *args,
-        **kw
-    ) -> None:
+    def log(self_, level: int, msg: str, *args, **kw) -> None:
         """
         Log a message at the specified logging level.
 
         This method logs a message constructed by merging `msg` with `args` at
         the indicated logging level. It supports logging levels defined in
-        Python's `logging` module.
+        Python's `logging` module plus VERBOSE, either obtained directly from
+        the logging module like `logging.INFO`, or from parameterized like
+        `param.parameterized.INFO`.
+
+        Supported logging levels include (in order of severity):
+        DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
 
         Parameters
         ----------
@@ -4350,20 +4320,11 @@ class Parameters:
         **kw : dict
             Additional keyword arguments passed to the logging implementation.
 
-        Returns
-        -------
-        None
-
         Raises
         ------
         Exception
             If the logging level is `WARNING` and warnings are treated as
             exceptions (`warnings_as_exceptions` is True).
-
-        Notes
-        -----
-        - This method respects the `warnings_as_exceptions` flag. If enabled,
-        `WARNING` messages are raised as exceptions instead of being logged.
 
         Examples
         --------
@@ -4492,7 +4453,6 @@ class Parameters:
 
         Notes
         -----
-        - This method is experimental and subject to change in future versions.
         - The generated representation assumes the necessary imports are provided
         for evaluation with `eval`.
 
@@ -5488,73 +5448,71 @@ class _InstancePrivate:
 
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
-    Base class for named objects with observable Parameters.
+    A base class for creating Parameterized objects.
 
-    The `Parameterized` base class simplifies your codebase, making it more robust and maintainable,
-    while enabling the creation of rich, interactive applications. It integrates seamlessly with
-    the rest of the HoloViz ecosystem for building visualizations and user interfaces.
+    The `Parameterized` base class enables two main use cases:
+    - Defining rich and run-time validated class and instance attributes,
+    called Parameters.
+    - Watching Parameters for changes and reacting through callbacks.
 
-    Features
-    --------
-    1. **Parameters**
-    - Support for default, constant, and readonly values.
-    - Validation, documentation, custom labels, and parameter references.
-    2. **`param` Namespace**
-    - Provides utility methods for tasks like adding parameters, updating parameters,
-    debugging, pretty-printing, logging, serialization, deserialization, and more.
-    3. **Observer Pattern**
-    - Enables "watching" parameters for changes and reacting through callbacks, supporting
-    reactive programming.
+    This makes it well-suited for robust, maintainable code bases and
+    particularly useful in interactive applications requiring reactive behavior.
+
+    Attributes
+    ----------
+    name : str
+        Class/instance name.
+    param
 
     Documentation
     -------------
-    For detailed documentation, see: https://param.holoviz.org/user_guide/Parameters.html.
+    https://param.holoviz.org/user_guide/Parameters.html.
 
     Examples
     --------
-    **Defining a Class with Validated Parameters**
+    Defining a class with two Parameters and a callback run on changes
+    to `my_number`.
 
     >>> import param
     >>> class MyClass(param.Parameterized):
     ...     my_number = param.Number(default=1, bounds=(0, 10), doc='A numeric value')
     ...     my_list = param.List(default=[1, 2, 3], item_type=int, doc='A list of integers')
+    ...
+    ...     @param.depends('my_number', watch=True)
+    ...     def callback(self):
+    ...         print(f'my_number new value: {self.my_number}')
+
+    Parameters are available as class attributes:
+
+    >>> MyClass.my_number
+    1
+
     >>> obj = MyClass(my_number=2)
 
-    The instance `obj` will always include a `name` parameter:
+    Constructor arguments override default values and default Parameter values
+    are set unless overridden:
 
-    >>> obj.name
-    'MyClass12345'  # The default `name` is the class name with a unique 5-digit suffix.
-
-    Default parameter values are set unless overridden:
-
+    >>> obj.my_number
+    2
     >>> obj.my_list
     [1, 2, 3]
 
-    Constructor arguments override default values:
-
-    >>> obj.my_number
-    2  # The value set in the constructor overrides the default.
-
-    **Changing Parameter Values**
+    Parameter values are dynamically validated:
 
     >>> obj.my_number = 5  # Valid update within bounds.
 
-    Attempting to set an invalid value raises a `ValueError`:
+    Attempting to set an invalid value raises an error:
 
-    >>> obj.my_number = 15  # ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
+    >>> try:
+    >>>     obj.my_number = 15
+    >>> except Exception as e:
+    >>>     print(repr(e))
+    ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
 
-    **Watching Parameter Changes**
+    Updating `my_number` executes the callback method:
 
-    Add a watcher to respond to parameter updates:
-
-    >>> def callback(event):
-    ...     print(f"Changed {event.name} from {event.old} to {event.new}")
-    >>> obj.param.watch(callback, 'my_number')
     >>> obj.my_number = 7
-    Changed my_number from 5 to 7
-
-    `watch` is the most low level, event-driven API. For most use cases we recommend
-    using the higher level `depends`, `bind` or `rx` APIs.
+    my_number new value: 7
     """
 
     name = String(default=None, constant=True, doc="""
@@ -5563,49 +5521,35 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
     def __init__(self, **params):
         """
-        Initialize a `Parameterized` object with optional parameter values.
+        Initialize a `Parameterized` instance with optional Parameter values.
 
-        Parameters can be supplied as keyword arguments (`param_name=value`), overriding
-        their default values for this specific instance. Any parameters not explicitly
-        set will retain their defined default values.
+        Optional Parameter values must be supplied as keyword arguments
+        (`param_name=value`), overriding their default values for this one
+        instance. Any parameters not explicitly set will retain their defined
+        default values.
 
-        If no `name` parameter is provided, the instance's `name` attribute will default
-        to a unique string composed of the class name followed by a unique 5-digit suffix.
+        If no `name` parameter is provided, the instance's `name` attribute will
+        default to an identifier string composed of the class name followed by
+        an incremental 5-digit number.
 
         Parameters
         ----------
         **params
-            Keyword arguments where keys are parameter names and values are the desired
-            values for those parameters. Parameter names must match those defined in the
-            class or its superclasses.
+            Optional keyword arguments mapping Parameter names to values.
+
+        Raises
+        ------
+        TypeError
+            If one of the keywords of `params` is not a Parameter name.
 
         Examples
         --------
-        **Setting Parameters at Initialization**
-
         >>> import param
         >>> class MyClass(param.Parameterized):
         ...     value = param.Number(default=10, bounds=(0, 20))
         >>> obj = MyClass(value=15)
 
         The `value` parameter is set to 15 for this instance, overriding the default.
-
-        **Default Naming**
-
-        >>> obj.name
-        'MyClass00001'  # Default name: class name + unique identifier.
-
-        **Handling Invalid Parameters**
-
-        If a keyword does not match a defined parameter, it raises a TypeError:
-
-        >>> obj = MyClass(nonexistent_param=42)  # TypeError: MyClass.__init__() got an unexpected keyword argument 'nonexistent_param'
-
-        **Handling Invalid Parameter Values**
-
-        If a parameter value is not valid it raises a ValueError:
-
-        >>> obj = MyClass(value=25) # ValueError: Number parameter 'MyClass.value' must be at most 20, not 25.
         """
         global object_count
 

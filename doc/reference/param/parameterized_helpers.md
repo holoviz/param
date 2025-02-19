@@ -14,6 +14,7 @@
   param.parameterized.batch_call_watchers
   concrete_descendents
   depends
+  descendents
   discard_events
   edit_constant
   output

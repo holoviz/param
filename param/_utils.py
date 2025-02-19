@@ -511,7 +511,7 @@ def _deserialize_from_path(ext_to_routine, path, type_name):
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
-    # found in numpy, gmpy, etc.
+    # found in numpy, gmpy2, etc.
     elif (hasattr(obj, '__int__') and hasattr(obj, '__add__')): return True
     # This is for older versions of gmpy
     elif hasattr(obj, 'qdiv'): return True
@@ -564,7 +564,13 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
     while len(q):
         x = q.pop(0)
         out.insert(0, x)
-        for b in x.__subclasses__():
+        try:
+            subclasses = x.__subclasses__()
+        except TypeError:
+            # TypeError raised when __subclasses__ is called on unbound methods,
+            # on `type` for example.
+            continue
+        for b in subclasses:
             if b not in q and b not in out:
                 q.append(b)
     return [kls for kls in out if not (concrete and _is_abstract(kls))][::-1]

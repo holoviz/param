@@ -519,6 +519,8 @@ def _is_number(obj):
 
 
 def _is_abstract(class_):
+    if inspect.isabstract(class_):
+        return True
     try:
         return class_.abstract
     except AttributeError:

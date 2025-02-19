@@ -365,11 +365,28 @@ class TestParameterized(unittest.TestCase):
         assert t.param['instPO'].instantiate is True
         assert isinstance(t.instPO,AnotherTestPO)
 
-    def test_abstract_class(self):
+    def test_abstract_class_attribute(self):
         """Check that a class declared abstract actually shows up as abstract."""
         self.assertEqual(TestAbstractPO.abstract, True)
         self.assertEqual(_AnotherAbstractPO.abstract, True)
         self.assertEqual(TestPO.abstract, False)
+        # Test subclasses are not abstract
+        class A(param.Parameterized):
+            __abstract = True
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
+
+    def test_abstract_class_abc(self):
+        """Check that an ABC class actually shows up as abstract."""
+        class A(param.parameterized.ParameterizedABC): pass
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
 
     def test_override_class_param_validation(self):
         test = TestPOValidation()

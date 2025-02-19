@@ -340,15 +340,23 @@ def edit_constant(parameterized):
     Temporarily set parameters on Parameterized object to constant=False
     to allow editing them.
     """
-    params = parameterized.param.objects('existing').values()
-    constants = [p.constant for p in params]
-    for p in params:
-        p.constant = False
+    kls_params = parameterized.param.objects(instance=False)
+    inst_params = parameterized._param__private.params
+    updated = []
+    for pname, pobj in (kls_params | inst_params).items():
+        if pobj.constant:
+            pobj.constant = False
+            updated.append(pname)
     try:
         yield
     finally:
-        for (p, const) in zip(params, constants):
-            p.constant = const
+        for pname in updated:
+            # Some operations trigger a parameter instantiation (copy),
+            # we ensure both the class and instance parameters are reset.
+            if pname in kls_params:
+                type(parameterized).param[pname].constant=True
+            if pname in inst_params:
+                parameterized.param[pname].constant = True
 
 
 @contextmanager

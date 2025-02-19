@@ -135,10 +135,9 @@ pixi run test-unit
 The task is available in the following environments:
 
 1. `test-39`, `test-310`, `test-311`, `test-312`, and `test-313`.
-1. `test-core` and `test-pypy`
+1. `test-core`
 
-Where the first ones have the same environments except for different Python versions. `test-core` only has a core set of dependencies, and `test-pypy` is for testing on PyPy.
-
+Where the first ones have the same environments except for different Python versions. `test-core` only has a core set of dependencies.
 If you haven't set the environment flag in the command, a menu will help you select which one of the environments to use.
 
 ### Example tests
@@ -150,7 +149,7 @@ Example tests can be run with the following command:
 pixi run test-example
 ```
 
-This task has the same environments as the unit tests except for `test-core` and `test-pypy`.
+This task has the same environments as the unit tests except for `test-core`.
 
 ## Documentation
 

@@ -3568,12 +3568,17 @@ class Parameters:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
                     watchers[parameter_name][what] = []
-                getattr(watchers[parameter_name][what], action)(watcher)
+                method = getattr(watchers[parameter_name][what], action)
             else:
                 watchers = self_[parameter_name].watchers
                 if what not in watchers:
                     watchers[what] = []
-                getattr(watchers[what], action)(watcher)
+                method = getattr(watchers[what], action)
+            try:
+                method(watcher)
+            except ValueError:
+                # raised when method is 'remove' and watcher is not in the list.
+                raise ValueError(f"Watcher '{watcher}' has already been removed or was never added.")
 
     def watch(
         self_,
@@ -3724,10 +3729,7 @@ class Parameters:
 
         >>> instance.a = 20  # No output
         """
-        try:
-            self_._register_watcher('remove', watcher, what=watcher.what)
-        except Exception:
-            self_.warning(f'No such watcher {str(watcher)} to remove.')
+        self_._register_watcher('remove', watcher, what=watcher.what)
 
     def watch_values(
         self_,

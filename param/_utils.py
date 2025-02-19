@@ -538,7 +538,13 @@ def descendents(class_):
     while len(q):
         x = q.pop(0)
         out.insert(0,x)
-        for b in x.__subclasses__():
+        try:
+            subclasses = x.__subclasses__()
+        except TypeError:
+            # TypeError raised when __subclasses__ is called on unbound methods,
+            # on `type` for example.
+            continue
+        for b in subclasses:
             if b not in q and b not in out:
                 q.append(b)
     return out[::-1]

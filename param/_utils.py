@@ -577,7 +577,7 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
 
 
 # Could be a method of ClassSelector.
-def concrete_descendents(parentclass):
+def concrete_descendents(parentclass: type) -> dict[str, type]:
     """
     Return a dictionary containing all subclasses of the specified
     parentclass, including the parentclass.  Only classes that are

@@ -543,6 +543,11 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
     concrete : bool, optional
         If `True`, exclude abstract classes from the result. Default is `False`.
 
+        .. versionadded:: 2.3.0
+
+        Added to encourage users to use `descendents` in favor of
+        `concrete_descendents` that clobbers classes sharing the same name.
+
     Returns
     -------
     list of type

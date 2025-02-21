@@ -37,6 +37,7 @@ List (created after the release of version `2.2.0`) of removed APIs:
 
 | Removed in | Warning | Description |
 |-|-|-|
+| `2.3.0` | None | `param.parameterized.print_all_param_defaults` / This functions was undocumented, unused, and broken. |
 | `2.2.0` | `ParamFutureWarning` since `2.0.0` | Parameterized namespace / `instance._param_watchers` (getter and setter): use instead the property `inst.param.watchers` |
 | `2.2.0` | `ParamFutureWarning` since `2.0.0` | Warn on failed validation of the *default* value of a Parameter after the inheritance mechanism has completed |
 | `2.2.0` | `ParamFutureWarning` since `2.0.0` | Running unsafe `instance.param.objects(instance=True)` during Parameterized instance initialization, instead run it after having called `super().__init__(**params)` |

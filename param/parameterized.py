@@ -5289,14 +5289,14 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         return f"<{self.__class__.__name__} {self.name}>"
 
 
-class ParameterizedABCMeta(abc.ABCMeta, ParameterizedMetaclass):
+class ParameterizedABCMetaclass(abc.ABCMeta, ParameterizedMetaclass):
     """Metaclass for abstract base classes using Parameterized.
 
     Ensures compatibility between ABCMeta and ParameterizedMetaclass.
     """
 
 
-class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMeta):
+class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMetaclass):
     """Base class for user-defined ABCs that extends Parameterized."""
 
     def __init_subclass__(cls, **kwargs):

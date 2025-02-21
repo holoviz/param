@@ -197,11 +197,12 @@ def _validate_error_prefix(parameter, attribute=None):
     - unbound and name can be found: "Number parameter 'x'"
     - bound parameter: "Number parameter 'P.x'"
     """
-    from param.parameterized import ParameterizedMetaclass
+    from param.parameterized import ParameterizedMetaclass, ParameterizedABCMetaclass
 
     pclass = type(parameter).__name__
     if parameter.owner is not None:
-        if type(parameter.owner) is ParameterizedMetaclass:
+        otype = type(parameter.owner)
+        if otype is ParameterizedMetaclass or otype is ParameterizedABCMetaclass:
             powner = parameter.owner.__name__
         else:
             powner = type(parameter.owner).__name__

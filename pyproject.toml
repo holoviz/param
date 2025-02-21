@@ -42,6 +42,7 @@ examples = [
 tests = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
 ]
 tests-deser = [
     "xlrd",
@@ -56,6 +57,14 @@ tests-examples = [
     "pytest-xdist",
     "nbval",
     "param[examples]",
+]
+# Set of dependencies that work with pypy and are quick to install.
+tests-pypy = [
+    "cloudpickle",
+    "ipython",
+    "jsonschema",
+    "nest-asyncio",
+    "numpy",
 ]
 tests-full = [
     "param[tests]",

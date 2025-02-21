@@ -10,4 +10,5 @@ maxdepth: 2
 ---
 Param <param/index>
 Numbergen <numbergen>
+Deprecations/Removals <deprecations>
 ```

@@ -24,11 +24,13 @@ import warnings
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
+from collections.abc import Callable, Iterable
 from functools import partial, wraps, reduce
 from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
+from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -1870,16 +1872,20 @@ class _ParametersRestorer:
 
 class Parameters:
     """
-    Object that holds the namespace and implementation of Parameterized
+    Object that holds the `.param` namespace and implementation of Parameterized
     methods as well as any state that is not in __slots__ or the
     Parameters themselves.
 
     Exists at both the metaclass level (instantiated by the metaclass)
     and at the instance level. Can contain state specific to either the
     class or the instance as necessary.
+
+    Documentation
+    -------------
+    https://param.holoviz.org/user_guide/Parameters.html#parameterized-namespace
     """
 
-    def __init__(self_, cls, self=None):
+    def __init__(self_, cls: type['Parameterized'], self: Union['Parameterized', None]=None):
         """
         cls is the Parameterized class which is always set.
         self is the instance if set.
@@ -1933,7 +1939,7 @@ class Parameters:
         self_.self._param__private.watchers = value
 
     @property
-    def self_or_cls(self_):
+    def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
         return self_.cls if self_.self is None else self_.self
 
     def __setstate__(self, state):
@@ -1947,19 +1953,22 @@ class Parameters:
         for k, v in state.items():
             setattr(self, k, v)
 
-    def __getitem__(self_, key):
-        """Retrieve the class or instance parameter by key.
+    def __getitem__(self_, key: str) -> Parameter:
+        """
+        Retrieve a Parameter by its key.
+
+        This method allows access to a class or instance Parameter using its name.
 
         Parameters
         ----------
-        key: str
-            The name of the parameter to retrieve.
+        key : str
+            The name of the Parameter to retrieve.
 
         Returns
         -------
-        Parameter:
-            The parameter associated with the given key. If accessed on an instance,
-            returns the instantiated parameter.
+        Parameter
+            The Parameter associated with the given key. If accessed on an instance,
+            the method returns the instance-level (copied) parameter.
         """
         inst = self_.self
         if inst is None:
@@ -2465,11 +2474,11 @@ class Parameters:
 
         Parameters
         ----------
-        **params : dict or iterable or keyword arguments
+        **kwargs : dict or iterable or keyword arguments
             The parameters to update, provided as a dictionary, iterable, or keyword arguments in `param=value` format.
 
-        User Guide
-        ----------
+        Documentation
+        -------------
         https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
         Examples
@@ -2507,7 +2516,6 @@ class Parameters:
         ...     print(p.a, p.b)
         >>> my_param.param.update(a="3. Hello",b="3. World")
         3. Hello 3. World
-
         """
         refs = {}
         if self_.self is not None:
@@ -2611,17 +2619,42 @@ class Parameters:
         cls._param__private.params = paramdict
         return paramdict
 
-    def objects(self_, instance=True):
+    def objects(self_, instance: Literal[True, False, 'existing']=True) -> dict[str, Parameter]:
         """
         Return the Parameters of this instance or class.
 
-        If instance=True and called on a Parameterized instance it
-        will create instance parameters for all Parameters defined on
-        the class. To force class parameters to be returned use
-        instance=False. Since classes avoid creating instance
-        parameters unless necessary you may also request only existing
-        instance parameters to be returned by setting
-        instance='existing'.
+        This method provides access to `Parameter` objects defined on a `Parameterized`
+        class or instance, depending on the `instance` argument.
+
+        Parameters
+        ----------
+        instance : bool or {'existing'}, default=True
+            - `True`: Return instance-specific parameters, creating them if necessary. This
+            requires the instance to be fully initialized.
+            - `False`: Return class-level parameters without creating instance-specific copies.
+            - `'existing'`: Returns a mix of instance parameters that already exist and
+            class parameters, avoiding creation of new instance-specific parameters.
+
+        Returns
+        -------
+        dict[str, Parameter]
+            A dictionary mapping parameter names to their corresponding `Parameter` objects.
+
+        Examples
+        --------
+        Accessing Class-Level Parameters:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     param1 = param.Number(default=1)
+        >>> MyClass.param.objects(instance=False)
+        {'name': <param.parameterized.String at 0x...>}
+
+        Accessing Instance Parameters:
+
+        >>> obj = MyClass()
+        >>> obj.param.objects()
+        {'name': <param.parameterized.String at 0x...>}
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
             raise RuntimeError(
@@ -2643,13 +2676,40 @@ class Parameters:
                 return {k: self_.self.param[k] for k in pdict}
         return pdict
 
-    def trigger(self_, *param_names):
+    def trigger(self_, *param_names: str) -> None:
         """
-        Trigger watchers for the given set of parameter names. Watchers
-        will be triggered whether or not the parameter values have
-        actually changed. As a special case, the value will actually be
-        changed for a Parameter of type Event, setting it to True so
-        that it is clear which Event parameter has been triggered.
+        Trigger watchers for the given set of parameter names.
+
+        This method invokes all watchers associated with the given parameter names,
+        regardless of whether the parameter values have actually changed.
+
+        Parameters
+        ----------
+        *param_names : str
+            Names of the parameters to trigger. Each name must correspond to a
+            parameter defined on this `Parameterized` object.
+
+        Notes
+        -----
+        As a special case, the value will actually be changed for a Parameter
+        of type `Event`, setting it to True so that it is clear which `Event`
+        parameter has been triggered.
+
+        Examples
+        --------
+        This method is useful to trigger watchers of parameters whose value
+        is a mutable container:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     values = param.List([1, 2])
+        >>> obj = MyClass()
+        >>> def callback(event):
+        ...     print(f"Triggered {event.name} / {event.new}")
+        >>> obj.param.watch(callback, 'values')
+        >>> obj.values.append(3)
+        >>> obj.param.trigger('values')
+        Triggered values / [1, 2, 3]
         """
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
@@ -2739,7 +2799,10 @@ class Parameters:
                           if (name, watcher.what) in event_dict]
                 with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                     self_._execute_watcher(watcher, events)
-
+    # Please update the docstring with better description and examples
+    # I've (MarcSkovMadsen) not been able to understand this. Its probably because I lack context.
+    # Its not mentioned in the documentation.
+    # The pytests do not make sense to me.
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """
         Set time_fn for all Dynamic Parameters of this class or
@@ -2781,24 +2844,30 @@ class Parameters:
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_, subset=None, mode='json'):
+    def serialize_parameters(self_, subset: Union[Iterable[str], None]=None, mode='json'):
         """
         Return the serialized parameters of the Parameterized object.
 
         Parameters
         ----------
-        subset : list, optional
-            A list of parameter names to serialize. If None, all parameters will be serialized. Defaults to None.
+        subset : iterable of str, optional
+            An iterable of parameter names to serialize. If None, all parameters will be serialized.
+            Default is None.
         mode : str, optional
-            The serialization format. By default, only 'json' is supported. Defaults to 'json'.
+            The serialization format. By default, only 'json' is supported. Default is 'json'.
 
         Returns
         -------
         Any
             The serialized value.
 
-        User Guide
-        ----------
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        Documentation
+        -------------
         https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
         Examples
@@ -2814,24 +2883,67 @@ class Parameters:
         Serialize parameters:
 
         >>> serialized_data = p.param.serialize_parameters()
-        >>> print(serialized_data)
-        {"name": "P00002", "a": 1, "b": "hello"}
-
+        >>> serialized_data
+        '{"name": "P00002", "a": 1, "b": "hello"}'
         """
-        self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
 
-    def serialize_value(self_, pname, mode='json'):
-        self_or_cls = self_.self_or_cls
+    def serialize_value(self_, pname: str, mode: str='json'):
+        """
+        Serialize the value of a specific parameter.
+
+        This method serializes the value of a given parameter on a Parameterized
+        object using the specified serialization mode.
+
+        Parameters
+        ----------
+        pname : str
+            The name of the parameter whose value is to be serialized.
+        mode : str, optional
+            The serialization format to use. By default, only 'json' is supported.
+            Default is 'json'.
+
+        Returns
+        -------
+        Any
+            The serialized value of the specified parameter.
+
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        Documentation
+        -------------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
+
+        Examples
+        --------
+        Serialize the value of a specific parameter:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number()
+        ...     b = param.String()
+        >>> p = P(a=1, b="hello")
+
+        Serialize the value of parameter 'a':
+
+        >>> serialized_value = p.param.serialize_value('a')
+        >>> serialized_value
+        '1'
+        """
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
-    def deserialize_parameters(self_, serialization, subset=None, mode='json') -> dict:
+    def deserialize_parameters(self_, serialization, subset: Union[Iterable[str], None]=None, mode: str='json') -> dict:
         """
         Deserialize the given serialized data. This data can be used to create a
         `Parameterized` object or update the parameters of an existing `Parameterized` object.
@@ -2839,21 +2951,26 @@ class Parameters:
         Parameters
         ----------
         serialization : str
-            The serialized parameter data as a JSON string.
-        subset : list of str, optional
-            A list of parameter names to deserialize. If `None`, all parameters will be
-            deserialized. Defaults to `None`.
+            The serialized parameter data.
+        subset : iterable of str, optional
+            An iterable of parameter names to deserialize. If `None`, all parameters will be
+            deserialized. Default is `None`.
         mode : str, optional
             The serialization format. By default, only 'json' is supported.
-            Defaults to 'json'.
+            Default is 'json'.
 
         Returns
         -------
         dict
             A dictionary with parameter names as keys and deserialized values.
 
-        User Guide
-        ----------
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        Documentation
+        -------------
         https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
         Examples
@@ -2865,27 +2982,126 @@ class Parameters:
         ...
         >>> serialized_data = '{"a": 1, "b": "hello"}'
         >>> deserialized_data = P.param.deserialize_parameters(serialized_data)
-        >>> print(deserialized_data)
+        >>> deserialized_data
         {'a': 1, 'b': 'hello'}
         >>> instance = P(**deserialized_data)
-
+        >>> instance
+        P(a=1, b='hello', name='P...')
         """
+        if mode not in Parameter._serializers:
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
 
-    def deserialize_value(self_, pname, value, mode='json'):
-        self_or_cls = self_.self_or_cls
+    def deserialize_value(self_, pname: str, value, mode: str='json'):
+        """
+        Deserialize the value of a specific parameter.
+
+        This method deserializes a value for a given parameter on a Parameterized
+        object using the specified deserialization mode.
+
+        Parameters
+        ----------
+        pname : str
+            The name of the parameter whose value is to be deserialized.
+        value : Any
+            The serialized value to be deserialized.
+        mode : str, optional
+            The deserialization format to use. By default, only 'json' is supported.
+            Default is 'json'.
+
+        Returns
+        -------
+        Any
+            The deserialized value of the specified parameter.
+
+        Raises
+        ------
+        ValueError
+            If the specified deserialization mode is not supported.
+
+        Documentation
+        -------------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#deserializing-with-json
+
+        Examples
+        --------
+        Deserialize the value of a specific parameter:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number()
+        ...     b = param.String()
+        >>> p = P(a=1, b="hello")
+
+        Deserialize the value of parameter 'a':
+
+        >>> deserialized_value = p.param.deserialize_value('a', '10')
+        >>> deserialized_value
+        10
+        """
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
-    def schema(self_, safe=False, subset=None, mode='json'):
-        """Return a schema for the parameters on this Parameterized object."""
-        self_or_cls = self_.self_or_cls
+    def schema(self_, safe: bool=False, subset: Union[Iterable[str], None]=None, mode: str='json'):
+        """
+        Generate a schema for the parameters on this Parameterized object.
+
+        This method provides a schema representation of the parameters on a
+        Parameterized object, including their metadata, using the specified
+        serialization mode.
+
+        Parameters
+        ----------
+        safe : bool, optional
+            If True, the schema will only include parameters marked as safe for
+            serialization. Default is False.
+        subset : Iterable[str], optional
+            An iterable of parameter names to include in the schema. If None, all
+            parameters will be included. Default is None.
+        mode : str, optional
+            The serialization format to use. By default, only 'json' is supported.
+            Default is 'json'.
+
+        Returns
+        -------
+        dict
+            A schema dictionary representing the parameters and their metadata.
+
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        Documentation
+        -------------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#json-schemas
+
+        Examples
+        --------
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number(default=1, bounds=(0, 10), doc="A numeric parameter")
+        ...     b = param.String(default="hello", doc="A string parameter")
+        >>> p = P()
+
+        Generate the schema for all parameters:
+
+        >>> schema = p.param.schema()
+        >>> schema
+        {'name': {'anyOf': [{'type': 'string'}, {'type': 'null'}],
+         'description': "String identifier for this object. Default is the object's class name plus a unique integer",
+         'title': 'Name'},
+        'a': {'type': 'number',...
+        }
+        """
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
@@ -2911,14 +3127,39 @@ class Parameters:
         vals = self_.values(onlychanged)
         return [(k, v) for k, v in vals.items()]
 
-    def values(self_, onlychanged=False):
+    def values(self_, onlychanged: bool = False) -> dict[str, Any]:
         """
-        Return a dictionary of name,value pairs for the Parameters of this
-        object.
+        Retrieve a dictionary of parameter names and their current values.
 
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
+        Parameters
+        ----------
+        onlychanged : bool, optional
+            If True, only parameters with values different from their defaults are
+            included (applicable only to instances). Default is False.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing parameter names as keys and their current values
+            as values.
+
+        Examples
+        --------
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number(default=0)
+        ...     b = param.String(default="hello")
+        >>> p = P(a=10)
+
+        Get all parameter values:
+
+        >>> p.param.values()
+        {'a': 10, 'b': 'hello', 'name': 'P...'}
+
+        Get only changed parameter values:
+
+        >>> p.param.values(onlychanged=True)
+        {'a': 10}
         """
         self_or_cls = self_.self_or_cls
         vals = []
@@ -2932,6 +3173,9 @@ class Parameters:
         vals.sort(key=itemgetter(0))
         return dict(vals)
 
+    # Please update the docstring with better description and examples
+    # I've (MarcSkovMadsen) not been able to understand this. Its probably because I lack context.
+    # Its not mentioned in the documentation or pytests
     def force_new_dynamic_value(self_, name): # pylint: disable-msg=E0213
         """
         Force a new value to be generated for the dynamic attribute
@@ -2957,14 +3201,47 @@ class Parameters:
         else:
             return param_obj._force(slf, cls)
 
-    def get_value_generator(self_,name): # pylint: disable-msg=E0213
+    def get_value_generator(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
-        Return the value or value-generating object of the named
-        attribute.
+        Retrieve the value or value-generating object of a named parameter.
 
-        For most parameters, this is simply the parameter's value
-        (i.e. the same as getattr()), but Dynamic parameters have
-        their value-generating object returned.
+        For most parameters, this is simply the parameter's value (i.e. the
+        same as getattr()), but Dynamic parameters have their value-generating
+        object returned.
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter whose value or value-generating object is
+            to be retrieved.
+
+        Returns
+        -------
+        Any
+            The current value of the parameter, a value-generating object for
+            `Dynamic` parameters.
+
+        Examples
+        --------
+        >>> import param
+        >>> import numbergen
+        >>> class MyClass(param.Parameterized):
+        ...     x = param.String(default="Hello")
+        ...     y = param.Dynamic(default=numbergen.UniformRandom(lbound=-1, ubound=1, seed=1))
+
+        >>> instance = MyClass()
+
+        Access the parameter value directly:
+
+        >>> instance.y
+        -0.7312715117751976
+        >>> instance.y
+        0.6948674738744653
+
+        Retrieve the parameter's value or value-generating object:
+
+        >>> instance.param.get_value_generator("y")
+        <UniformRandom UniformRandom ...>
         """
         cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.objects('existing').get(name)
@@ -2992,12 +3269,40 @@ class Parameters:
 
         return value
 
-    def inspect_value(self_,name): # pylint: disable-msg=E0213
+    def inspect_value(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
-        Return the current value of the named attribute without modifying it.
+        Inspect the current value of a parameter without modifying it.
 
-        Same as getattr() except for Dynamic parameters, which have their
-        last generated value returned.
+        Parameters
+        ----------
+        name : str
+            The name of the parameter whose value is to be inspected.
+
+        Returns
+        -------
+        Any
+            The current value of the parameter, the last generated value for
+            `Dynamic` parameters.
+
+        Examples
+        --------
+        >>> import param
+        >>> import numbergen
+        >>> class MyClass(param.Parameterized):
+        ...     x = param.String(default="Hello")
+        ...     y = param.Dynamic(default=numbergen.UniformRandom(lbound=-1, ubound=1, seed=1), doc="nothing")
+
+        >>> instance = MyClass()
+
+        Access the parameter value directly:
+
+        >>> instance.y
+        -0.7312715117751976
+
+        Inspect the parameter value without modifying it:
+
+        >>> instance.param.inspect_value("y")
+        -0.7312715117751976
         """
         cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.objects('existing').get(name)
@@ -3016,14 +3321,45 @@ class Parameters:
 
         return value
 
-    def method_dependencies(self_, name, intermediate=False):
+    def method_dependencies(self_, name: str, intermediate: bool=False) -> list[PInfo]:
         """
-        Given the name of a method, returns a PInfo object for each dependency
-        of this method. See help(PInfo) for the contents of these objects.
+        Retrieve the parameter dependencies of a specified method.
 
-        By default intermediate dependencies on sub-objects are not
-        returned as these are primarily useful for internal use to
-        determine when a sub-object dependency has to be updated.
+        By default intermediate dependencies on sub-objects are not returned as
+        these are primarily useful for internal use to determine when a
+        sub-object dependency has to be updated.
+
+        Parameters
+        ----------
+        name : str
+            The name of the method whose dependencies are to be retrieved.
+        intermediate : bool, optional
+            If True, includes intermediate dependencies on sub-objects. These are
+            primarily useful for internal purposes. Default is False.
+
+        Returns
+        -------
+        list[PInfo]
+            A list of `PInfo` objects representing the dependencies of the specified
+            method. Each `PInfo` object contains information about the instance,
+            parameter, and the type of dependency.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Parameter()
+        ...     b = param.Parameter()
+        ...
+        ...     @param.depends('a', 'b', watch=True)
+        ...     def test(self):
+        ...         pass
+
+        Create an instance and inspect method dependencies:
+
+        >>> instance = MyClass()
+        >>> instance.param.method_dependencies('test')
+        [PInfo(inst=MyClass(a=None, b=None, name='MyClass...]
         """
         method = getattr(self_.self_or_cls, name)
         minfo = MInfo(cls=self_.cls, inst=self_.self, name=name,
@@ -3051,11 +3387,55 @@ class Parameters:
         """
         return self_.method_dependencies(*args, **kwargs)
 
-    def outputs(self_):
+    def outputs(self_) -> dict[str,tuple]:
         """
-        Return a mapping between any declared outputs and a tuple
-        of the declared Parameter type, the output method, and the
-        index into the output if multiple outputs are returned.
+        Retrieve a mapping of declared outputs for the Parameterized object.
+
+        Parameters are declared as outputs using the `@param.output` decorator.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping output names to a tuple of:
+            - Parameter type (`Parameter`).
+            - Bound method of the output.
+            - Index into the output, or `None` if there is no specific index.
+
+        Examples
+        --------
+        Declare a single output in a `Parameterized` class:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     @param.output()
+        ...     def single_output(self):
+        ...         return 1
+
+        Access the outputs:
+
+        >>> p = P()
+        >>> p.param.outputs()
+        {'single_output': (<param.parameterized.Parameter at 0x...>,
+          <bound method P.single_output of P(name='P...')>,
+          None)}
+
+        Declare multiple outputs:
+
+        >>> class Q(param.Parameterized):
+        ...     @param.output(('output1', param.Number), ('output2', param.String))
+        ...     def multi_output(self):
+        ...         return 42, "hello"
+
+        Access the outputs:
+
+        >>> q = Q()
+        >>> q.param.outputs()
+        {'output1': (<param.parameters.Number at 0x...>,
+          <bound method Q.multi_output of Q(name='Q...')>,
+          0),
+         'output2': (<param.parameterized.String at 0x...>,
+          <bound method Q.multi_output of Q(name='Q...')>,
+          1)}
         """
         outputs = {}
         for cls in classlist(self_.cls):
@@ -3195,42 +3575,93 @@ class Parameters:
                     watchers[what] = []
                 getattr(watchers[what], action)(watcher)
 
-    def watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
+    def watch(
+        self_,
+        fn,
+        parameter_names: Union[str, list[str]],
+        what: str = 'value',
+        onlychanged: bool = True,
+        queued: bool = False,
+        precedence: int = 0,
+    ) -> Watcher:
         """
-        Register the given callback function `fn` to be invoked for
-        events on the indicated parameters.
+        Register a callback function to be invoked for parameter events.
 
-        `what`: What to watch on each parameter; either the value (by
-        default) or else the indicated slot (e.g. 'constant').
+        This method allows you to register a callback function (`fn`) that will
+        be triggered when specified events occur on the indicated parameters. The
+        behavior of the watcher can be customized using various options.
 
-        `onlychanged`: By default, only invokes the function when the
-        watched item changes, but if `onlychanged=False` also invokes
-        it when the `what` item is set to its current value again.
+        Parameters
+        ----------
+        fn : callable
+            The callback function to invoke when an event occurs. This function
+            will be provided with `Event` objects as positional arguments, allowing
+            it to determine the triggering events.
+        parameter_names : str or list[str]
+            A parameter name or a list of parameter names to watch for events.
+        what : str, optional
+            The type of change to watch for. By default, this is 'value', but it
+            can be set to other parameter attributes such as 'constant'.
+            Default is 'value'.
+        onlychanged : bool, optional
+            If True (default), the callback is only invoked when the watched
+            item changes. If False, the callback is invoked even when the `what`
+            item is set to its current value.
+        queued : bool, optional
+            By default (False), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting `queued=True` on this Watcher will queue up new downstream
+            events generated during `fn` until `fn` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
+        precedence : int, optional
+            The precedence level of the watcher. Lower precedence levels are
+            executed earlier. User-defined watchers must use positive precedence
+            values. Negative precedences are reserved for internal watchers
+            (e.g., those set up by `param.depends`). Default is 0.
 
-        `queued`: By default, additional watcher events generated
-        inside the callback fn are dispatched immediately, effectively
-        doing depth-first processing of Watcher events. However, in
-        certain scenarios, it is helpful to wait to dispatch such
-        downstream events until all events that triggered this watcher
-        have been processed. In such cases setting `queued=True` on
-        this Watcher will queue up new downstream events generated
-        during `fn` until `fn` completes and all other watchers
-        invoked by that same event have finished executing),
-        effectively doing breadth-first processing of Watcher events.
+        Returns
+        -------
+        Watcher
+            The `Watcher` object that encapsulates the registered callback.
 
-        `precedence`: Declares a precedence level for the Watcher that
-        determines the priority with which the callback is executed.
-        Lower precedence levels are executed earlier. Negative
-        precedences are reserved for internal Watchers, i.e. those
-        set up by param.depends.
+        See Also
+        --------
+        Watcher : Contains detailed information about the watcher object.
+        Event : Provides details about the triggering events.
 
-        When the `fn` is called, it will be provided the relevant
-        Event objects as positional arguments, which allows it to
-        determine which of the possible triggering events occurred.
+        Examples
+        --------
+        Register two watchers for parameter changes, one directly in
+        the constructor and one after the instance is created:
 
-        Returns a Watcher object.
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...     b = param.Number(default=2)
+        ...
+        ...     def __init__(self, **params):
+        ...         super().__init__(**params)
+        ...         self.param.watch(self.callback, ['a'])
+        ...
+        ...     def callback(self, event):
+        ...         print(f"Event triggered by: {event.name}, new value: {event.new}")
+        ...
+        >>> instance = MyClass()
 
-        See help(Watcher) and help(Event) for the contents of those objects.
+        Watch for changes to `b`:
+
+        >>> instance.param.watch(instance.callback, ['b'])
+
+        Trigger a change to invoke the callback:
+
+        >>> instance.a = 10
+        Event triggered by: a, new value: 10
+        >>> instance.b = 11
+        Event triggered by: b, new value: 11
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -3246,19 +3677,146 @@ class Parameters:
         self_._register_watcher('append', watcher, what)
         return watcher
 
-    def unwatch(self_, watcher):
-        """Remove the given Watcher object (from `watch` or `watch_values`) from this object's list."""
+    def unwatch(self_, watcher: Watcher) -> None:
+        """
+        Remove a watcher from this object's list of registered watchers.
+
+        This method unregisters a previously registered `Watcher` object,
+        effectively stopping it from being triggered by events on the associated
+        parameters.
+
+        Parameters
+        ----------
+        watcher : Watcher
+            The `Watcher` object to remove. This should be an object returned
+            by a previous call to `watch` or `watch_values`.
+
+        See Also
+        --------
+        watch : Registers a new watcher to observe parameter changes.
+        watch_values : Registers a watcher specifically for value changes.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...
+        ...     def callback(self, event):
+        ...         print(f"Triggered by {event.name}")
+        ...
+        >>> instance = MyClass()
+
+        Add a watcher:
+
+        >>> watcher = instance.param.watch(instance.callback, ['a'])
+
+        Trigger the watcher:
+
+        >>> instance.a = 10
+        Triggered by a
+
+        Remove the watcher:
+
+        >>> instance.param.unwatch(watcher)
+
+        No callback is triggered after removing the watcher:
+
+        >>> instance.a = 20  # No output
+        """
         try:
             self_._register_watcher('remove', watcher, what=watcher.what)
         except Exception:
             self_.warning(f'No such watcher {str(watcher)} to remove.')
 
-    def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
+    def watch_values(
+        self_,
+        fn: Callable,
+        parameter_names: Union[str, list[str]],
+        what: Literal["value"] = 'value',
+        onlychanged: bool = True,
+        queued: bool = False,
+        precedence: int = 0
+    ) -> Watcher:
         """
-        Easier-to-use version of `watch` specific to watching for changes in parameter values.
+        Register a callback function for changes in parameter values.
 
-        Only allows `what` to be 'value', and invokes the callback `fn` using keyword
-        arguments <param_name>=<new_value> rather than with a list of Event objects.
+        This method is a simplified version of `watch`, specifically designed for
+        monitoring changes in parameter values. Unlike `watch`, the callback is
+        invoked with keyword arguments (`<param_name>=<new_value>`) instead of
+        `Event` objects.
+
+        Parameters
+        ----------
+        fn : Callable
+            The callback function to invoke when a parameter value changes. The
+            function is called with keyword arguments where the parameter names
+            are keys, and their new values are values.
+        parameter_names : str or list of str
+            The name(s) of the parameters to monitor. Can be a single parameter
+            name, a list of parameter names, or a tuple of parameter names.
+        what : str, optional
+            The type of change to watch for. Must be 'value'. Default is 'value'.
+        onlychanged : bool, optional
+            If True (default), the callback is only invoked when the parameter value
+            changes. If False, the callback is invoked even when the parameter is
+            set to its current value.
+        queued : bool, optional
+            By default (False), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting `queued=True` on this Watcher will queue up new downstream
+            events generated during `fn` until `fn` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
+        precedence : int, optional
+            The precedence level of the watcher. Lower precedence values are executed
+            earlier. User-defined watchers must use positive precedence values.
+            Default is 0.
+
+        Returns
+        -------
+        Watcher
+            The `Watcher` object encapsulating the registered callback.
+
+        Notes
+        -----
+        - This method is a convenient shorthand for `watch` when only monitoring
+        changes in parameter values is needed.
+        - Callback functions receive new values as keyword arguments, making it easier
+        to work with parameter updates.
+
+        See Also
+        --------
+        watch : General-purpose watcher registration supporting a broader range of events.
+
+        Examples
+        --------
+        Monitor parameter value changes:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...     b = param.Number(default=2)
+        ...
+        ...     def callback(self, a=None, b=None):
+        ...         print(f"Callback triggered with a={a}, b={b}")
+        ...
+        >>> instance = MyClass()
+
+        Register a watcher:
+
+        >>> instance.param.watch_values(instance.callback, ['a', 'b'])
+        Watcher(inst=MyClass(a=1, b=2, name=...)
+
+        Trigger changes to invoke the callback:
+
+        >>> instance.a = 10
+        Callback triggered with a=10, b=None
+        >>> instance.b = 20
+        Callback triggered with a=None, b=20
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -3381,18 +3939,57 @@ class Parameters:
         """
         self_.__db_print(DEBUG,msg,*args,**kw)
 
-    def log(self_, level, msg, *args, **kw):
+    def log(self_, level: int, msg: str, *args, **kw) -> None:
         """
-        Print msg merged with args as a message at the indicated logging level.
+        Log a message at the specified logging level.
 
-        Logging levels include those provided by the Python logging module
-        plus VERBOSE, either obtained directly from the logging module like
-        `logging.INFO`, or from parameterized like `param.parameterized.INFO`.
+        This method logs a message constructed by merging `msg` with `args` at
+        the indicated logging level. It supports logging levels defined in
+        Python's `logging` module plus VERBOSE, either obtained directly from
+        the logging module like `logging.INFO`, or from parameterized like
+        `param.parameterized.INFO`.
 
-        Supported logging levels include (in order of severity)
+        Supported logging levels include (in order of severity):
         DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
 
-        See Python's logging module for details of message formatting.
+        Parameters
+        ----------
+        level : int
+            The logging level at which the message should be logged e.g., `logging.INFO` or
+            `param.INFO`.
+        msg : str
+            The message to log. This message can include format specifiers,
+            which will be replaced with values from `args`.
+        *args : tuple
+            Arguments to merge into `msg` using the format specifiers.
+        **kw : dict
+            Additional keyword arguments passed to the logging implementation.
+
+        Raises
+        ------
+        Exception
+            If the logging level is `WARNING` and warnings are treated as
+            exceptions (`warnings_as_exceptions` is True).
+
+        Examples
+        --------
+        Log a message at the `INFO` level:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     def log_message(self):
+        ...         self.param.log(INFO, "This is an info message.")
+
+        >>> instance = MyClass()
+        >>> instance.param.log(param.INFO, "This is an info message.")
+        INFO:param.MyClass...: This is an info message.
+
+        Log a warning and treat it as an exception:
+
+        >>> param.parameterized.warnings_as_exceptions = True
+        >>> instance.param.log(param.WARNING, "This will raise an exception.")
+        ...
+        Exception: Warning: This will raise an exception.
         """
         if level is WARNING:
             if warnings_as_exceptions:
@@ -3453,11 +4050,74 @@ class Parameters:
             elif hasattr(g,'_state_pop') and isinstance(g,Parameterized):
                 g._state_pop()
 
-    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
+    def pprint(
+        self_,
+        imports: Union[list[str], None]=None,
+        prefix: str = " ",
+        unknown_value: str = "<?>",
+        qualify: bool = False,
+        separator: str = ""
+    )->str:
         """
-        (Experimental) Pretty printed representation that may be
-        evaluated with eval. See pprint() function for more details.
+        Generate a pretty-printed representation of the object.
+
+        This method provides a pretty-printed string representation of the object,
+        which can be evaluated using `eval` to reconstruct the object. It is intended
+        for debugging, introspection, or generating reproducible representations
+        of `Parameterized` objects.
+
+        Parameters
+        ----------
+        imports : list of str, optional
+            A list of import statements to include in the generated representation.
+            Defaults to None, meaning no imports are included.
+        prefix : str, optional
+            A string to prepend to each line of the representation for indentation
+            or formatting purposes. Default is a single space (" ").
+        unknown_value : str, optional
+            A placeholder string for values that cannot be determined or represented.
+            Default is `<?>`.
+        qualify : bool, optional
+            If True, includes fully qualified names (e.g., `module.Class`) in the
+            representation. Default is False.
+        separator : str, optional
+            A string used to separate elements in the generated representation.
+            Default is an empty string (`""`).
+
+        Returns
+        -------
+        str
+            A pretty-printed string representation of the object that can be
+            evaluated using `eval`.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is called at the class level instead of an instance
+            of `Parameterized`.
+
+        Notes
+        -----
+        - The generated representation assumes the necessary imports are provided
+        for evaluation with `eval`.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=10)
+        ...     b = param.String(default="hello")
+        >>> instance = MyClass(a=20)
+
+        Pretty-print the instance:
+
+        >>> instance.param.pprint()
+        'MyClass(a=20)'
+
+        Use eval to create an instance:
+
+        >>> eval(instance.param.pprint())
+        MyClass(a=20, b='hello', name='MyClass00004')
         """
         self = self_.self_or_cls
         if not isinstance(self, Parameterized):
@@ -4383,51 +5043,108 @@ class _InstancePrivate:
 
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
-    Base class for named objects that support Parameters and message
-    formatting.
+    A base class for creating Parameterized objects.
 
-    Automatic object naming: Every Parameterized instance has a name
-    parameter.  If the user doesn't designate a name=<str> argument
-    when constructing the object, the object will be given a name
-    consisting of its class name followed by a unique 5-digit number.
+    The `Parameterized` base class enables two main use cases:
+    - Defining rich and run-time validated class and instance attributes,
+    called Parameters.
+    - Watching Parameters for changes and reacting through callbacks.
 
-    Automatic parameter setting: The Parameterized __init__ method
-    will automatically read the list of keyword parameters.  If any
-    keyword matches the name of a Parameter (see Parameter class)
-    defined in the object's class or any of its superclasses, that
-    parameter in the instance will get the value given as a keyword
-    argument.  For example:
+    This makes it well-suited for robust, maintainable code bases and
+    particularly useful in interactive applications requiring reactive behavior.
 
-    >>> class Foo(Parameterized):
-    ...     xx = Parameter(default=1)
+    Attributes
+    ----------
+    name : str
+        Class/instance name.
+    param
 
-    >>> foo = Foo(xx=20)
+    Documentation
+    -------------
+    https://param.holoviz.org/user_guide/Parameters.html.
 
-    in this case foo.xx gets the value 20.
+    Examples
+    --------
+    Defining a class with two Parameters and a callback run on changes
+    to `my_number`.
 
-    When initializing a Parameterized instance ('foo' in the example
-    above), the values of parameters can be supplied as keyword
-    arguments to the constructor (using parametername=parametervalue);
-    these values will override the class default values for this one
-    instance.
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     my_number = param.Number(default=1, bounds=(0, 10), doc='A numeric value')
+    ...     my_list = param.List(default=[1, 2, 3], item_type=int, doc='A list of integers')
+    ...
+    ...     @param.depends('my_number', watch=True)
+    ...     def callback(self):
+    ...         print(f'my_number new value: {self.my_number}')
 
-    If no 'name' parameter is supplied, self.name defaults to the
-    object's class name with a unique number appended to it.
+    Parameters are available as class attributes:
 
-    Message formatting: Each Parameterized instance has several
-    methods for optionally printing output. This functionality is
-    based on the standard Python 'logging' module; using the methods
-    provided here, wraps calls to the 'logging' module's root logger
-    and prepends each message with information about the instance
-    from which the call was made. For more information on how to set
-    the global logging level and change the default message prefix,
-    see documentation for the 'logging' module.
+    >>> MyClass.my_number
+    1
+
+    >>> obj = MyClass(my_number=2)
+
+    Constructor arguments override default values and default Parameter values
+    are set unless overridden:
+
+    >>> obj.my_number
+    2
+    >>> obj.my_list
+    [1, 2, 3]
+
+    Parameter values are dynamically validated:
+
+    >>> obj.my_number = 5  # Valid update within bounds.
+
+    Attempting to set an invalid value raises an error:
+
+    >>> try:
+    >>>     obj.my_number = 15
+    >>> except Exception as e:
+    >>>     print(repr(e))
+    ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
+
+    Updating `my_number` executes the callback method:
+
+    >>> obj.my_number = 7
+    my_number new value: 7
     """
 
     name = String(default=None, constant=True, doc="""
         String identifier for this object.""")
 
     def __init__(self, **params):
+        """
+        Initialize a `Parameterized` instance with optional Parameter values.
+
+        Optional Parameter values must be supplied as keyword arguments
+        (`param_name=value`), overriding their default values for this one
+        instance. Any parameters not explicitly set will retain their defined
+        default values.
+
+        If no `name` parameter is provided, the instance's `name` attribute will
+        default to an identifier string composed of the class name followed by
+        an incremental 5-digit number.
+
+        Parameters
+        ----------
+        **params
+            Optional keyword arguments mapping Parameter names to values.
+
+        Raises
+        ------
+        TypeError
+            If one of the keywords of `params` is not a Parameter name.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     value = param.Number(default=10, bounds=(0, 20))
+        >>> obj = MyClass(value=15)
+
+        The `value` parameter is set to 15 for this instance, overriding the default.
+        """
         global object_count
 
         # Setting a Parameter value in an __init__ block before calling
@@ -4453,7 +5170,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self._param__private.refs = refs
 
     @property
-    def param(self):
+    def param(self) -> Parameters:
         """
         The `.param` namespace for `Parameterized` classes and instances.
 

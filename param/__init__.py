@@ -46,7 +46,7 @@ from . import version
 from .depends import depends
 from .parameterized import (
     Parameterized, Parameter, Skip, String, ParameterizedFunction,
-    ParamOverrides, Undefined, get_logger
+    ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
 from .parameterized import (batch_watch, output, script_repr,
                             discard_events, edit_constant)
@@ -197,6 +197,7 @@ __all__ = (
     'ParamOverrides',
     'Parameter',
     'Parameterized',
+    'ParameterizedABC',
     'ParameterizedFunction',
     'Path',
     'Range',

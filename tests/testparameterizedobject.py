@@ -1849,7 +1849,7 @@ def test_abc_error_when_interface_not_implemented():
     class Bad(MyABC):
         def wrong_method(self): pass
 
-    with pytest.raises(TypeError, match="Can't instantiate abstract class Bad without"):
+    with pytest.raises(TypeError, match="Can't instantiate abstract class Bad"):
         Bad()
 
 def test_abc_basic_checks():

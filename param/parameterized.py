@@ -1311,7 +1311,10 @@ class Parameter(_ParameterBase):
         self.precedence = precedence
         self.default = default
         self.doc = doc
-        self.constant = constant is True or readonly is True # readonly => constant
+        if constant is True or readonly is True:  # readonly => constant
+            self.constant = True
+        else:
+            self.constant = constant
         self.readonly = readonly
         self._label = label
         self._set_instantiate(instantiate)

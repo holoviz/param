@@ -8,8 +8,13 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod
-from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
+from param.parameterized import bothmethod, Parameterized
+from param._utils import (
+    _is_mutable_container,
+    descendents,
+    iscoroutinefunction,
+    gen_types,
+)
 
 
 try:
@@ -439,3 +444,31 @@ def test_gen_types():
     assert next(iter(_int_types())) is int
     assert next(iter(_int_types)) is int
     assert isinstance(_int_types, Iterable)
+
+
+def test_descendents_object():
+    # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
+    assert descendents(object)
+
+
+def test_descendents_bad_type():
+    with pytest.raises(
+        TypeError,
+        match="descendents expected a class object, not int"
+    ):
+        descendents(1)
+
+class A(Parameterized):
+    __abstract = True
+class B(A): pass
+class C(A): pass
+class X(B): pass
+class Y(B): pass
+
+
+def test_descendents():
+    assert descendents(A) == [A, B, C, X, Y]
+
+
+def test_descendents_concrete():
+    assert descendents(A, concrete=True) == [B, C, X, Y]

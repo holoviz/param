@@ -250,8 +250,8 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         watcher = obj.param.watch(accumulator, 'a')
         obj.param.unwatch(watcher)
-        with pytest.raises(ValueError, match="has already been removed or was never added"):
-            obj.param.unwatch(watcher)
+        # Idempotent, not error raised.
+        obj.param.unwatch(watcher)
 
     def test_simple_batched_watch_setattr(self):
 

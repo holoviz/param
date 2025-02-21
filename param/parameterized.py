@@ -3548,7 +3548,11 @@ class Parameters:
             deps.append(info)
         return deps, dynamic_deps
 
-    def _register_watcher(self_, action, watcher, what='value'):
+    def _register_watcher(
+        self_,
+        action: Literal['append', 'remove'],
+        watcher: Watcher, what: str = 'value',
+    ):
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
                 '(Un)registering a watcher on a partially initialized Parameterized instance '
@@ -3577,8 +3581,10 @@ class Parameters:
             try:
                 method(watcher)
             except ValueError:
-                # raised when method is 'remove' and watcher is not in the list.
-                raise ValueError(f"Watcher '{watcher}' has already been removed or was never added.")
+                # ValueError raised when attempting to remove an already
+                # removed watcher. Error swallowed as unwatch is idempotent.
+                if action != 'remove':
+                    raise
 
     def watch(
         self_,
@@ -3688,7 +3694,8 @@ class Parameters:
 
         This method unregisters a previously registered `Watcher` object,
         effectively stopping it from being triggered by events on the associated
-        parameters.
+        parameters. Calling unwatch with an already unregistered watcher
+        is a no-op.
 
         Parameters
         ----------
@@ -3728,6 +3735,10 @@ class Parameters:
         No callback is triggered after removing the watcher:
 
         >>> instance.a = 20  # No output
+
+        Calling unwatch() again has no effect:
+
+        >>> instance.param.unwatch(watcher)
         """
         self_._register_watcher('remove', watcher, what=watcher.what)
 

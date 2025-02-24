@@ -88,7 +88,6 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 """
 from __future__ import annotations
 
-import asyncio
 import inspect
 import math
 import operator
@@ -569,6 +568,7 @@ class reactive_ops:
                 "or coroutine functions are permitted."
             )
         if inspect.iscoroutinefunction(func):
+            import asyncio
             async def apply(vs, *args, **kwargs):
                 return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
         else:
@@ -1622,6 +1622,7 @@ class rx:
         self._error_state = None
 
     async def _resolve_async(self, obj):
+        import asyncio
         self._current_task = task = asyncio.current_task()
         if inspect.isasyncgen(obj):
             async for val in obj:

@@ -8,7 +8,6 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
-import asyncio
 import copy
 import datetime as dt
 import html
@@ -2198,6 +2197,7 @@ class Parameters:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
 
+        import asyncio
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
         if running_task is None:

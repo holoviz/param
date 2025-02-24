@@ -8,7 +8,7 @@ def test_no_blocklist_imports():
     import sys
     import param
 
-    blocklist = {"numpy", "IPython", "pandas"}
+    blocklist = {"numpy", "IPython", "pandas", "asyncio"}
     mods = blocklist & set(sys.modules)
 
     if mods:

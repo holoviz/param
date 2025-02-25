@@ -1,3 +1,7 @@
+import builtins
+
+builtins.__IPYTHON__ = True  # To force signature in _ParameterBase.__init_subclass__
+
 import param
 import pytest
 

@@ -10,6 +10,7 @@ __init__.py (providing specialized Parameter types).
 
 import asyncio
 import copy
+import builtins
 import datetime as dt
 import html
 import inspect
@@ -996,6 +997,9 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
+        # Only update signature in an IPython environment
+        if not hasattr(builtins, "__IPYTHON__"):
+            return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere
         # so wrapping this in a loose try/except.

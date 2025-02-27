@@ -8,12 +8,9 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
-import asyncio
 import copy
 import datetime as dt
-import html
 import inspect
-import logging
 import numbers
 import operator
 import re
@@ -26,14 +23,18 @@ from inspect import getfullargspec
 from collections import defaultdict, namedtuple, OrderedDict
 from collections.abc import Callable, Iterable
 from functools import partial, wraps, reduce
-from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+CRITICAL = 50
+ERROR = 40
+WARNING = 30
+INFO = 20
+DEBUG = 10
+VERBOSE = INFO - 1
 
 from . import serializer
 from ._utils import (
@@ -82,8 +83,6 @@ def _int_types():
     if np := sys.modules.get("numpy"):
         yield np.integer
 
-VERBOSE = INFO - 1
-logging.addLevelName(VERBOSE, "VERBOSE")
 
 # Get the appropriate logging.Logger instance. If `logger` is None, a
 # logger named `"param"` will be instantiated. If `name` is set, a descendant
@@ -91,7 +90,9 @@ logging.addLevelName(VERBOSE, "VERBOSE")
 # ``logger.name + ".<name>"``)
 logger = None
 def get_logger(name=None):
+    import logging
     if logger is None:
+        logging.addLevelName(VERBOSE, "VERBOSE")
         root_logger = logging.getLogger('param')
         if not root_logger.handlers:
             root_logger.setLevel(logging.INFO)
@@ -2198,6 +2199,7 @@ class Parameters:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
 
+        import asyncio
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
         if running_task is None:
@@ -4806,12 +4808,14 @@ dbprint_prefix=None
 
 def truncate(str_, maxlen = 30):
     """Return HTML-safe truncated version of given string."""
+    import html
     rep = (str_[:(maxlen-2)] + '..') if (len(str_) > (maxlen-2)) else str_
     return html.escape(rep)
 
 
 def _get_param_repr(key, val, p, vallen=30, doclen=40):
     """HTML representation for a single Parameter object and its value."""
+    import html
     if isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         value = val.param._repr_html_(open=False)
     elif hasattr(val, "_repr_html_"):
@@ -4852,7 +4856,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
     if getattr(p, 'allow_None', False):
         range_ = ' '.join(s for s in ['<i>nullable</i>', range_] if s)
 
-    tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
+    tooltip = f' class="param-doc-tooltip" data-tooltip="{html.escape(p.doc.strip())}"' if p.doc else ''
 
     return (
         f'<tr>'

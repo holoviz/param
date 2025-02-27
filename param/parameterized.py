@@ -10,13 +10,13 @@ __init__.py (providing specialized Parameter types).
 
 import asyncio
 import copy
-import builtins
 import datetime as dt
 import html
 import inspect
 import logging
 import numbers
 import operator
+import os
 import re
 import sys
 import types
@@ -26,7 +26,7 @@ from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
 from collections.abc import Callable, Iterable
-from functools import partial, wraps, reduce
+from functools import lru_cache, partial, wraps, reduce
 from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
@@ -982,6 +982,13 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
+@lru_cache()
+def _update_signature():
+    # Only update signature in an IPython environment
+    # or if PARAM_SIGNATURE environment variable is set
+    return _in_ipython() or os.getenv("PARAM_SIGNATURE")
+
+
 class _ParameterBase(metaclass=ParameterMetaclass):
     """
     Base Parameter class used to dynamically update the signature of all
@@ -997,8 +1004,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        # Only update signature in an IPython environment
-        if not hasattr(builtins, "__IPYTHON__"):
+        if not _update_signature():
             return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere

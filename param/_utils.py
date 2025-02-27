@@ -665,7 +665,7 @@ def exceptions_summarized():
 
 def _in_ipython():
     try:
-        get_ipython()
+        get_ipython
         return True
     except NameError:
         return False

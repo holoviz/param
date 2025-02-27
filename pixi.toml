@@ -90,6 +90,9 @@ nbval = "*"
 [feature.doc]
 channels = ["pyviz"]
 
+[feature.doc.activation.env]
+PARAM_PARAMETER_SIGNATURE = "1"
+
 [feature.doc.dependencies]
 graphviz = "*"
 nbsite = ">=0.8.4,<0.9.0"

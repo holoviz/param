@@ -120,7 +120,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
-omit = ["param/version.py"]
+omit = ["param/version.py", "tests/testimports.py"]
 
 [tool.ruff]
 fix = true

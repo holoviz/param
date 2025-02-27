@@ -91,7 +91,7 @@ nbval = "*"
 channels = ["pyviz"]
 
 [feature.doc.activation.env]
-PARAM_SIGNATURE = "1"
+PARAM_PARAMETER_SIGNATURE = "1"
 
 [feature.doc.dependencies]
 graphviz = "*"

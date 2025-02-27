@@ -982,7 +982,7 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
-_UDPATE_SIGNATURE = _in_ipython() or os.getenv("PARAM_SIGNATURE")
+_UDPATE_PARAM_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
 
 
 class _ParameterBase(metaclass=ParameterMetaclass):
@@ -1000,7 +1000,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        if not _UDPATE_SIGNATURE:
+        if not _UDPATE_PARAMETER_SIGNATURE:
             return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere

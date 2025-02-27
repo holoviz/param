@@ -982,7 +982,7 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
-_UDPATE_PARAM_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+_UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
 
 
 class _ParameterBase(metaclass=ParameterMetaclass):

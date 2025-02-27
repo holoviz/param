@@ -6,6 +6,7 @@ from textwrap import dedent
 def test_no_blocklist_imports():
     check = """\
     import sys
+    sys.modules.pop("logging", None)  # Added because of coverage will add it
     import param
 
     blocklist = {"numpy", "IPython", "pandas", "asyncio", "html", "logging"}

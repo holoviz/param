@@ -7,6 +7,7 @@ testEnumerationParameter.txt
 
 import re
 import unittest
+import warnings
 
 from collections import OrderedDict
 
@@ -550,12 +551,16 @@ class TestObjectSelectorParameters(unittest.TestCase):
             raise AssertionError("ObjectSelector created without range.")
 
     def test_compute_default_fn_in_objects(self):
-        class P(param.Parameterized):
-            o = param.ObjectSelector(objects=[0, 1], compute_default_fn=lambda: 1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default_fn', category=param._utils.ParamDeprecationWarning)
+            class P(param.Parameterized):
+                o = param.ObjectSelector(objects=[0, 1], compute_default_fn=lambda: 1)
 
         assert P.param.o.default is None
 
-        P.param.o.compute_default()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default', category=param._utils.ParamDeprecationWarning)
+            P.param.o.compute_default()
 
         assert P.param.o.default == 1
 
@@ -565,12 +570,16 @@ class TestObjectSelectorParameters(unittest.TestCase):
 
 
     def test_compute_default_fn_not_in_objects(self):
-        class P(param.Parameterized):
-            o = param.ObjectSelector(objects=[0, 1], compute_default_fn=lambda: 2)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default_fn', category=param._utils.ParamDeprecationWarning)
+            class P(param.Parameterized):
+                o = param.ObjectSelector(objects=[0, 1], compute_default_fn=lambda: 2)
 
         assert P.param.o.default is None
 
-        P.param.o.compute_default()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default', category=param._utils.ParamDeprecationWarning)
+            P.param.o.compute_default()
 
         assert P.param.o.default == 2
 

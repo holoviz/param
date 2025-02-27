@@ -26,7 +26,7 @@ from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
 from collections.abc import Callable, Iterable
-from functools import lru_cache, partial, wraps, reduce
+from functools import partial, wraps, reduce
 from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
@@ -982,11 +982,7 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
-@lru_cache()
-def _update_signature():
-    # Only update signature in an IPython environment
-    # or if PARAM_SIGNATURE environment variable is set
-    return _in_ipython() or os.getenv("PARAM_SIGNATURE")
+_UDPATE_SIGNATURE = _in_ipython() or os.getenv("PARAM_SIGNATURE")
 
 
 class _ParameterBase(metaclass=ParameterMetaclass):
@@ -1004,7 +1000,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        if not _update_signature():
+        if not _UDPATE_SIGNATURE:
             return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere

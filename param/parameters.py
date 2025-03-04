@@ -2618,11 +2618,11 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = List(default=[os.getcwd()], pickle_default_value=False, doc="""
+    search_paths = List(default=[os.getcwd()], pickle_default_value=None, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=False,
+    path_to_file = Boolean(default=True, pickle_default_value=None,
                            allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a
         'Folder'. If None, the path may point to *either* a 'File' *or*
@@ -2673,7 +2673,7 @@ class normalize_path(ParameterizedFunction):
     prefix rather than os.getcwd).
     """
 
-    prefix = String(default=os.getcwd(),pickle_default_value=False,doc="""
+    prefix = String(default=os.getcwd(),pickle_default_value=None,doc="""
         Prepended to the specified path, if that path is not
         absolute.""")
 

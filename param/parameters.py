@@ -15,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import annotations
 
 import collections
 import copy
@@ -32,6 +33,7 @@ import warnings
 from collections import OrderedDict
 from collections.abc import Iterable
 from contextlib import contextmanager
+from functools import lru_cache
 
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
@@ -2601,6 +2603,78 @@ class HookList(List):
 #   - use resolve_path(path_to_file=False) for paths to existing folders to be read,
 #     and normalize_path() for paths to new files to be written.
 
+def _get_default_search_paths()->typing.Tuple[str]:
+    return (os.getcwd(), )
+@lru_cache
+def _resolve_path_fast(
+    path: str,
+    search_paths: typing.Tuple[str|pathlib.Path],
+    path_to_file: bool|None=None
+
+):
+    path = os.path.normpath(path)
+    ftype = "File" if path_to_file is True \
+        else "Folder" if path_to_file is False else "Path"
+
+    if os.path.isabs(path):
+        if ((path_to_file is None  and os.path.exists(path)) or
+            (path_to_file is True  and os.path.isfile(path)) or
+            (path_to_file is False and os.path.isdir( path))):
+            return path
+        raise OSError(f"{ftype} '{path}' not found.")
+
+    paths_tried = []
+    for prefix in search_paths:
+        try_path = os.path.join(os.path.normpath(prefix), path)
+
+        if ((path_to_file is None  and os.path.exists(try_path)) or
+            (path_to_file is True  and os.path.isfile(try_path)) or
+            (path_to_file is False and os.path.isdir( try_path))):
+            return try_path
+
+        paths_tried.append(try_path)
+
+    raise OSError(
+        f"{ftype} {os.path.split(path)[1]} was not found in the following place(s): {str(paths_tried)}."
+    )
+
+def _resolve_path(
+    path: str,
+    search_paths: typing.List[str|pathlib.Path]|None=None,
+    path_to_file: bool|None=None
+)->str:
+    """
+    Find the path to an existing file, searching the paths specified
+    in the search_paths parameter if the filename is not absolute, and
+    converting a UNIX-style path to the current OS's format if
+    necessary.
+
+    To turn a supplied relative path into an absolute one, the path is
+    appended to paths in the search_paths parameter, in order, until
+    the file is found.
+
+    An IOError is raised if the file is not found.
+
+    Similar to Python's os.path.abspath(), except more search paths
+    than just os.getcwd() can be used, and the file must exist.
+
+    Parameters
+    ----------
+    search_paths : tuple, default=(os.getcwd(),)
+        Tuple of paths to search the path from
+    check_exists: boolean, default=True
+        If True (default) the path must exist on instantiation and set,
+        otherwise the path can optionally exist.
+    """
+    if not search_paths:
+        _search_paths = _get_default_search_paths()
+    else:
+        _search_paths = tuple(search_paths)
+    return _resolve_path_fast(path, _search_paths, path_to_file)
+
+def _get_default_search_paths_as_list()->typing.List[str]:
+    return [str(path) for path in _get_default_search_paths()]
+
 class resolve_path(ParameterizedFunction):
     """
     Find the path to an existing file, searching the paths specified
@@ -2618,7 +2692,7 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = List(default=[os.getcwd()], pickle_default_value=False, doc="""
+    search_paths = List(default=_get_default_search_paths_as_list(), pickle_default_value=False, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
@@ -2628,35 +2702,11 @@ class resolve_path(ParameterizedFunction):
         'Folder'. If None, the path may point to *either* a 'File' *or*
         a 'Folder'.""")
 
+
     def __call__(self, path, **params):
         p = ParamOverrides(self, params)
-        path = os.path.normpath(path)
-        ftype = "File" if p.path_to_file is True \
-            else "Folder" if p.path_to_file is False else "Path"
 
-        if not p.search_paths:
-            p.search_paths = [os.getcwd()]
-
-        if os.path.isabs(path):
-            if ((p.path_to_file is None  and os.path.exists(path)) or
-                (p.path_to_file is True  and os.path.isfile(path)) or
-                (p.path_to_file is False and os.path.isdir( path))):
-                return path
-            raise OSError(f"{ftype} '{path}' not found.")
-
-        else:
-            paths_tried = []
-            for prefix in p.search_paths:
-                try_path = os.path.join(os.path.normpath(prefix), path)
-
-                if ((p.path_to_file is None  and os.path.exists(try_path)) or
-                    (p.path_to_file is True  and os.path.isfile(try_path)) or
-                    (p.path_to_file is False and os.path.isdir( try_path))):
-                    return try_path
-
-                paths_tried.append(try_path)
-
-            raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
+        return _resolve_path(path, p.search_paths, p.path_to_file)
 
 
 # PARAM3_DEPRECATION
@@ -2742,10 +2792,11 @@ class Path(Parameter):
             raise ValueError("'check_exists' attribute value must be a boolean")
         self.check_exists = check_exists
         super().__init__(default,**params)
+
         self._validate(self.default)
 
     def _resolve(self, path):
-        return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
+        return _resolve_path(path=path, search_paths=self.search_paths)
 
     def _validate(self, val):
         if val is None:
@@ -2763,17 +2814,17 @@ class Path(Parameter):
     def __get__(self, obj, objtype):
         """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj,objtype)
+
         if raw_path is None:
-            path = None
-        else:
-            try:
-                path = self._resolve(raw_path)
-            except OSError:
-                if self.check_exists:
-                    raise
-                else:
-                    path = raw_path
-        return path
+            return None
+
+        try:
+            return self._resolve(raw_path)
+        except OSError:
+            if self.check_exists:
+                raise
+
+        return raw_path
 
     def __getstate__(self):
         # don't want to pickle the search_paths
@@ -2805,7 +2856,7 @@ class Filename(Path):
     """
 
     def _resolve(self, path):
-        return resolve_path(path, path_to_file=True, search_paths=self.search_paths)
+        return _resolve_path(path, path_to_file=True, search_paths=self.search_paths)
 
 
 class Foldername(Path):
@@ -2827,7 +2878,7 @@ class Foldername(Path):
     """
 
     def _resolve(self, path):
-        return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
+        return _resolve_path(path, path_to_file=False, search_paths=self.search_paths)
 
 #-----------------------------------------------------------------------------
 # Color

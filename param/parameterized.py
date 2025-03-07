@@ -5341,6 +5341,9 @@ class ParamOverrides(dict):
         #  def __init__(self,overridden,**kw):
         #      ...
         #      dict.__init__(self,**kw)
+        for pname, pobj in overridden.param.objects().items():
+            if pname in dict_:
+                pobj._validate(dict_[pname])
         self._overridden = overridden
         dict.__init__(self,dict_)
 

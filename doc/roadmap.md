@@ -1,6 +1,6 @@
 # Roadmap
 
-Param is a mature library (originally from 2003) that changes very slowly and very rarely; it is fully ready for use in production applications. Major changes are undertaken only after significant discussions and with attention to how existing Param-based applications will be affected. Thus Param users should not expect only slow progress on these roadmap items, but they are listed here in the hopes that they will be useful.
+Param is a mature library (originally from 2003) that changes very slowly and very rarely; it is fully ready for use in production applications. Major changes are undertaken only after significant discussions and with attention to how existing Param-based applications will be affected. Thus Param users should expect only slow progress on these roadmap items, but they are listed here in the hopes that they will be useful.
 
 Currently scheduled plans:
 

@@ -17,31 +17,38 @@ from .utils import check_defaults
 
 opts=dict(A=[1,2],B=[3,4],C=dict(a=1,b=2))
 
+def P_factory(*args, **kwargs):
+    """Create a factroy function.
+    This is only currently needed on freethreaded.
+    See https://github.com/Quansight-Labs/pytest-run-parallel/issues/14.
+    """
+
+    class P(param.Parameterized):
+        e = param.ObjectSelector(default=5,objects=[5,6,7])
+        f = param.ObjectSelector(default=10)
+        h = param.ObjectSelector(default=None)
+        g = param.ObjectSelector(default=None,objects=[7,8])
+        i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
+        s = param.ObjectSelector(default=3,objects=OrderedDict(one=1,two=2,three=3))
+        d = param.ObjectSelector(default=opts['B'],objects=opts)
+
+        changes = []
+
+        @param.depends('e:objects', watch=True)
+        def track_e_objects(self):
+            self.changes.append(('e', list(self.param.e.objects)))
+
+        @param.depends('s:objects', watch=True)
+        def track_s_objects(self):
+            self.changes.append(('s', list(self.param.s.objects)))
+
+    return P(*args, **kwargs)
 
 class TestObjectSelectorParameters(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        class P(param.Parameterized):
-            e = param.ObjectSelector(default=5,objects=[5,6,7])
-            f = param.ObjectSelector(default=10)
-            h = param.ObjectSelector(default=None)
-            g = param.ObjectSelector(default=None,objects=[7,8])
-            i = param.ObjectSelector(default=7,objects=[9],check_on_set=False)
-            s = param.ObjectSelector(default=3,objects=OrderedDict(one=1,two=2,three=3))
-            d = param.ObjectSelector(default=opts['B'],objects=opts)
-
-            changes = []
-
-            @param.depends('e:objects', watch=True)
-            def track_e_objects(self):
-                self.changes.append(('e', list(self.param.e.objects)))
-
-            @param.depends('s:objects', watch=True)
-            def track_s_objects(self):
-                self.changes.append(('s', list(self.param.s.objects)))
-
-        self.P = P
+        self.P = P_factory
 
     def _check_defaults(self, p):
         assert p.default is None
@@ -166,17 +173,20 @@ class TestObjectSelectorParameters(unittest.TestCase):
         assert p.param.d.allow_None is None
 
     def test_get_range_list(self):
-        r = self.P.param['g'].get_range()
+        p = type(self.P())  # Because of freethreaded
+        r = p.param['g'].get_range()
         self.assertEqual(r['7'],7)
         self.assertEqual(r['8'],8)
 
     def test_get_range_dict(self):
-        r = self.P.param['s'].get_range()
+        p = type(self.P())  # Because of freethreaded
+        r = p.param['s'].get_range()
         self.assertEqual(r['one'],1)
         self.assertEqual(r['two'],2)
 
     def test_get_range_mutable(self):
-        r = self.P.param['d'].get_range()
+        p = type(self.P())  # Because of freethreaded
+        r = p.param['d'].get_range()
         self.assertEqual(r['A'],opts['A'])
         self.assertEqual(r['C'],opts['C'])
         self.d=opts['A']

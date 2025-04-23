@@ -15,6 +15,7 @@ test-310 = ["py310", "test-core", "test", "example", "test-example"]
 test-311 = ["py311", "test-core", "test", "example", "test-example"]
 test-312 = ["py312", "test-core", "test", "example", "test-example"]
 test-313 = ["py313", "test-core", "test", "example", "test-example"]
+test-313t = ["py313", "test-freethreading", "test-core"]
 test-core = ["py313", "test-core"]
 docs = ["py311", "example", "doc"]
 build = ["py311", "build"]
@@ -61,6 +62,14 @@ pytest-github-actions-annotate-failures = "*"
 
 [feature.test-core.tasks]
 test-unit = 'pytest tests'
+
+[feature.test-freethreading.dependencies]
+psutil = "*"
+pytest-run-parallel = "*"
+python-freethreading = "*"
+
+[feature.test-freethreading.tasks]
+test-unit = 'pytest tests --parallel-threads auto'
 
 [feature.test.dependencies]
 cloudpickle = "*"

@@ -10,5 +10,6 @@
   :nosignatures:
 
   Parameterized
+  ParameterizedABC
   ParameterizedFunction
 ```

@@ -4,7 +4,7 @@
 
 Date: 2025-06-11
 
-This patch release contains a bug fix for nested references. Thanks to @philippjfr for their first contribution.
+This patch release contains a bug fix for nested references. Thanks to @philippjfr for their contribution.
 
 Bug Fixes:
 

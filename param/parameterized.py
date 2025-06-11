@@ -3282,6 +3282,8 @@ class Parameters:
             if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
                 value = cls_or_slf._param__private.values[name]
+            elif not callable(param_obj.default):
+                value = getattr(cls_or_slf, name)
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default

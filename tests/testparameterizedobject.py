@@ -553,6 +553,14 @@ class TestParameterized(unittest.TestCase):
         # name not ignored when set
         assert param.Parameterized(name='foo').param.values(onlychanged=True)['name'] == 'foo'
 
+    def test_values_dyn(self):
+        # See https://github.com/holoviz/param/issues/1057
+        t = TestPO()
+        orig_default = t.param.dyn.default
+        t.param.dyn.default = 3290432424
+        values = t.param.values()
+        assert values['dyn'] == orig_default
+
     def test_param_iterator(self):
         self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn',
                                              'ro', 'ro2', 'ro_label', 'ro_format'})
@@ -670,6 +678,14 @@ class TestParameterized(unittest.TestCase):
         assert t.param.inspect_value('dyn')!=orig
         t.param._state_pop()
         assert t.param.inspect_value('dyn')==orig
+
+    def test_get_value_generator_dyn(self):
+        # See https://github.com/holoviz/param/issues/1057
+        t = TestPO()
+        orig_default = t.param.dyn.default
+        t.param.dyn.default = 9594323423
+        vg = t.param.get_value_generator('dyn')
+        assert vg == orig_default
 
     def test_label(self):
         t = TestPO()

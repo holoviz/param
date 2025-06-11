@@ -1,0 +1,1132 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "edc2a19c",
+   "metadata": {},
+   "source": [
+    "# Parameters and Parameterized objects\n",
+    "\n",
+    "Fundamentally, what Param does is allow you to control how certain user-visible attributes (\"parameters\") of a Python class or instance will behave when their value is get or set. A user of that class can set those attributes to control the class, but only if the mechanisms provided by Param and configured by the programmer allow it. In this way, Param allows the author of a class to implement and constrain what a user can do with that class or an instance of it, setting up a clear contract of what is and is not allowed, and how that attribute will behave. To do this, Param provides two main new types of Python object: `Parameter` objects, and `Parameterized` objects.\n",
+    "\n",
+    "A parameter is a special kind of Python class attribute.  Setting a `Parameterized` class attribute to be a Parameter instance causes that attribute of the class (and the class's instances) to be treated as a parameter, not just an ordinary attribute. Parameters support special behavior, including dynamically generated parameter values, documentation strings, constant and read-only parameters, type or range checking at assignment time, and values dependent on those of other parameters.\n",
+    "\n",
+    "More concretely, a Python `Parameter` object inherits from `param.Parameter` and stores various metadata attributes describing how a corresponding Python attribute of a `Parameterized` object should behave. By convention, we will use a capital 'P' Parameter to refer to the Parameter object itself, and a lower-case 'p' parameter to refer to the Python attribute it controls (i.e., the Parameter's \"value\"). \n",
+    "\n",
+    "A `Parameterized` class is a Python class that inherits from `param.Parameterized` and can accept `Parameter` objects as class attributes. A `Parameterized` class or instance uses the `Parameter` objects to determine how the corresponding attribute should behave.\n",
+    "\n",
+    "There are many specific types of `Parameter` with different behavior, discussed in [Parameter Types](Parameter_Types.ipynb), but here we will cover the common behavior between _all_ Parameter types when used in a `Parameterized` object."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "49c75fc9",
+   "metadata": {},
+   "source": [
+    "## Parameter metadata\n",
+    "\n",
+    "Each Parameter type can define additional behavior and associated metadata, but the metadata supported for all Parameter types includes:\n",
+    "\n",
+    "- **default**: Default value for this parameter at the class level, which will also be the value at the Parameterized instance level if it hasn't been set separately on the instance.\n",
+    "- **name**: String **name** of this parameter, which is typically determined by the attribute name of this Parameter in the owning Parameterized object, and is not set directly by a programmer.\n",
+    "- **label**: Optional long name used for a verbose listing; defaults to the **name**.\n",
+    "- **allow_None**: Whether this parameter accepts None as an allowed value, in addition to whatever other types it accepts. Automatically set to True if the default value of this Parameter is None.\n",
+    "- **doc**: Docstring describing this parameter, which can be used by automatic documentation systems.\n",
+    "- **constant**: Parameter whose value can only be changed at the class level or in a Parameterized constructor. Once the Parameterized instance has been created, the value is constant except in the context of `with param.edit_constant(obj)` (see below).\n",
+    "- **readonly**: Parameter whose value cannot be set by a user either on an instance or at the class level. Can still be changed inside a codebase by temporarily overriding this value, e.g. to report internal state.\n",
+    "- **instantiate**: Whether to deepcopy the default value into a Parameterized instance when it is created. False by default for Parameter and most of its subtypes, but some Parameter types commonly used with mutable containers default to `instantiate=True` to avoid interaction between separate Parameterized instances, and users can control this when declaring the Parameter (see below). \n",
+    "- **per_instance**: whether a separate Parameter instance will be created for every Parameterized instance created. Similar to `instantiate`, but applies to the Parameter object rather than to its value.\n",
+    "- **precedence**: Optional numeric value controlling whether this parameter is visible in a listing and if so in what order.\n",
+    "- **allow_refs**: Whether to allow the Parameter to accept references to other Parameters that will be dynamically resolved.\n",
+    "- **nested_refs**: Whether references should be resolved even when they are nested inside a container.\n",
+    "\n",
+    "Most of these settings (apart from **name**) are accepted as keyword arguments to the Parameter's constructor, with `default` mostly also accepted as the only positional argument:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "15441c20",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import param\n",
+    "from param import Parameter, Parameterized\n",
+    "\n",
+    "p = Parameter(default=42, doc=\"The answer\", constant=True)\n",
+    "p.default"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8972998f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.allow_None"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "40523986",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.doc"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "880c08d0",
+   "metadata": {},
+   "source": [
+    "## Parameter objects and instances\n",
+    "\n",
+    "In most cases, a Parameter will not be declared on its own as above; the Parameter object by itself is little more than a container for the metadata above. Until it is put into a class, most of those declarations are not meaningful, because what the Parameter object does is to specify how the corresponding Python attribute of that class should be handled. For example, we can define a Parameterized class with a couple of Parameter objects, and we'll then be able to access the corresponding attributes of that class:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4161f316",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class A(Parameterized):\n",
+    "    question = Parameter(\"What is it?\", doc=\"The question\")\n",
+    "    answer = Parameter(default=2, constant=True, doc=\"The answer\")\n",
+    "    ultimate_answer = Parameter(default=42, readonly=True, doc=\"The real answer\")\n",
+    "\n",
+    "a = A(question=\"How is it?\", answer=\"6\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "23141898",
+   "metadata": {},
+   "source": [
+    "Here, we created a Parameterized class `A`, with parameters `question` and `answer`, each with default values. We then instantiated a Python object `a` of type `A`. Without having to write a constructor for `A`, we were able to provide our own values for `question` and `answer`, while inheriting the default value of `ultimate_answer`. This approach gives a lot of (but not too much!) configurability to the user of this class, without much effort by the class author. Any values we provide at instantiation need to be allowed by the `Parameter` declaration; e.g. here we could not provide a value for `ultimate_answer` when declaring `a`, because that parameter is declared read only:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "016377f1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():\n",
+    "    A(ultimate_answer=\"no\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "876b69fa",
+   "metadata": {},
+   "source": [
+    "Now that we have a Parameterized instance `a`, we can access the attributes we defined just as if they were normal Python instance attributes, and we'll get the values we provided:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "76e87cfd",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.question"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "372f24e5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.answer"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3206cfdb",
+   "metadata": {},
+   "source": [
+    "Meanwhile, the `Parameterized` _class_ `A` (not the instance `a`) still has the default values, accessible as class attributes and used for any future objects instantiated of type `A`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9954dc0e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A.question"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c855c562",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A.answer"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8c59c6b5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b = A()\n",
+    "b.answer"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b3589305",
+   "metadata": {},
+   "source": [
+    "If accessing the attribute always gives us a value whether on the instance or the class, what happened to the `Parameter` objects? They are stored on the Parameterized instance or class, and are accessible via a special `param` accessor object at either the instance or class levels, via attribute or key:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7786fe6d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.param['question']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "700999a6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.param.question"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "766e3a42",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.param.question.name"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e2ee5ef0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.param.question.default"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f92224e9",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A.param.question.default"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1399e0b3",
+   "metadata": {},
+   "source": [
+    "Once the Parameterized instance is created, the attributes can continue to be modified on it as often as you like, as long as the value is allowed by the `Parameter` object involved. E.g. `question` can still be changed, while `answer` is constant and cannot be changed after the `Parameterized` object has been instantiated:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1622066a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():\n",
+    "    a.question = True\n",
+    "    a.answer = 5"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e1232083",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.question"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f9ecc506",
+   "metadata": {},
+   "source": [
+    "Note that if for some reason you do need to change the value of a constant parameter (typically inside of your Parameterized object's own code), you can do so using the `param.edit_constant` context manager:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "25f5da3e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.edit_constant(a):\n",
+    "    a.answer = 30\n",
+    "a.answer"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "252aa858",
+   "metadata": {},
+   "source": [
+    "In most cases, the only time you need to worry about the difference between a Parameter and a regular Python attribute is when you first declare it; after that it will sit there happily behaving as instructed, noticeable only when a user attempts something the declarer of that Parameter has not allowed. You can safely leave the various metadata items at their defaults most of the time, but they are all there for when your particular application requires a certain behavior.  "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0ce2b60e",
+   "metadata": {},
+   "source": [
+    "## Parameter inheritance\n",
+    "\n",
+    "`Parameter` objects and their metadata are inherited in a hierarchy of `Parameterized` objects. Let's see how that works:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3b743022",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class A(Parameterized):\n",
+    "    question = Parameter(\"What is it?\", doc=\"The question\")\n",
+    "    answer = Parameter(default=2, constant=True, doc=\"The answer\")\n",
+    "    ultimate_answer = Parameter(default=42, readonly=True, doc=\"The real answer\")\n",
+    "\n",
+    "class B(A):\n",
+    "    ultimate_answer = Parameter(default=84)\n",
+    "\n",
+    "b = B()\n",
+    "b.question"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e2171651",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A.question = \"How are you?\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "91292e0a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.question"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "17692a63",
+   "metadata": {},
+   "source": [
+    "Here you can see that B inherits `question` from A, and as long as `question` has not been set explicitly on `b`, `b.question` will report the value from where that Parameter was defined, i.e. A in this case. If `question` is subsequently set on `b`, `b.question` will no longer be affected by the value in `A`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a57b907a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.question = \"Why?\"\n",
+    "A.question = \"Who?\"\n",
+    "b.question"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fc265dfa",
+   "metadata": {},
+   "source": [
+    "As you can see, parameters not specified in B are still fully usable in it, if they were declared in a superclass. **Metadata associated with that parameter is also inherited**, if not explicitly overidden in `B`.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0917eddf",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.param.ultimate_answer.constant"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4c8c7b11",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.param.ultimate_answer.readonly"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "86039127",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.ultimate_answer"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "84dc2df9",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.param.ultimate_answer.default"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4a549ab5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.param.ultimate_answer.doc"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f6bb48df",
+   "metadata": {},
+   "source": [
+    "Looking at the metadata values of `ultimate_answer` on `b` or `B` you can see that:\n",
+    "\n",
+    "- All the default metadata values like `constant`, `allow_none`, ..., were inherited from the base `Parameter` object provided by Param\n",
+    "- The `read_only` and `doc` metadata values were inherited from `A`\n",
+    "- The `default` metadata value of `ultimate_answer` in `B` overrode the value provided in `A`.\n",
+    "\n",
+    "Parameter inheritance like this lets you (a) use a parameter in many subclasses without having to define it more than once, and (b) control the value of that parameter conveniently across the entire set of subclasses and instances, as long as that attribute has not been set on those objects already. Using inheritance in this way is a very convenient mechanism for setting default values and other \"global\" parameters, whether before a program starts executing or during it.\n",
+    "\n",
+    "`help(b)` or  `help(B)` will list all parameters. You can also prefix or suffix a Parameterized object with `?` in an IPython console/Notebook to display the help:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "dd711290-b6f0-4e9e-bbce-c400da27a3c2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "B?"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "54ecbc24-14eb-4c07-8a00-0fb79b6241da",
+   "metadata": {},
+   "source": [
+    "<img src=\"../_static/param_help.png\" alt=\"Param help\"></img>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3683dec7",
+   "metadata": {},
+   "source": [
+    "## Parameter value instantiation\n",
+    "\n",
+    "So much of the parameter metadata is there to help you control whether and how the parameter value is instantiated on Parameterized objects as they are created or new Parameterized subclasses as they are defined. Depending on how you want to use that Parameter and what values it might take, controlling instantiation can be very important when mutable values are involved. While the default behavior shown above is appropriate for **immutable attributes**, what happens if the value (unlike Python strings) is mutable? Things get a lot more complex."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b9fa3c69",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "s = [1, 2, 3]\n",
+    "\n",
+    "class C(Parameterized):\n",
+    "    s1 = Parameter(s, doc=\"A sequence\")\n",
+    "    s2 = Parameter(s, doc=\"Another sequence\")\n",
+    "\n",
+    "c = C()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fe928bac",
+   "metadata": {},
+   "source": [
+    "Here, both parameters `s1` and `s2` effectively point to the same underlying sequence `s`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ba3863a5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c.s1 is c.s2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0b9004be",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "s[1] *= 5"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "81f40ddf",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "s"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e69157b7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c.s1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "344bae37",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c.s1[2] = 'a'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "baf5b9f6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c.s1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5c87a5d6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c.s2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "08324f49",
+   "metadata": {},
+   "source": [
+    "As you can see, there is only one actual sequence here, and `s`, `s1`, and `s2` all point to it. In some cases such behavior is desirable, e.g. if the mutable object is a specific global list (e.g. a set of search paths) with a unique identity and all of the parameters are meant to point to that specific item. In other cases, it's the contents of the mutable item that are important, and no sharing of contents is intended. Luckily, Param supports that case as well, if you provide `instantiate=True` (default is `False`):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5c92d85f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "s = [1,2,3]\n",
+    "\n",
+    "class D(Parameterized):\n",
+    "    s1 = Parameter(default=s, doc=\"A sequence\", instantiate=True)\n",
+    "    s2 = Parameter(default=s, doc=\"Another sequence\", instantiate=True)\n",
+    "\n",
+    "d = D()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "325b9bbe",
+   "metadata": {},
+   "source": [
+    "Now, parameters `s1` and `s2` point to their own copies of the sequence, independent of each other and of the original argument `s`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4c245a25",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d.s1 is d.s2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "509c07ac",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "s *= 2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "311dbcba",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "s"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9e5c5336",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d.s1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f9d142d7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d.s1[2] = 'a'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3d9a12f0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d.s2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3792939f",
+   "metadata": {},
+   "source": [
+    "Of course, copying the data into each instance like that costs memory, and moreover prevents controlling all instances at once by setting a class attribute as we saw earlier, which is why `instantiate` is not True by default. As a rule of thumb, set `instantiate=True` if and only if (a) your Parameter can take mutable values, and (b) you want those values to be independent between Parameterized instances."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6cfed7ae",
+   "metadata": {},
+   "source": [
+    "## Parameter object instantiation\n",
+    "\n",
+    "`instantiate` controls how parameter _values_ behave, but similar issues arise for Parameter _objects_, which offer similar control via the `per_instance` metadata declaration. `per_instance` (`True` by default) provides a logically distinct Parameter object for every Parameterized instance, allowing each such instance to have different metadata for that parameter. For example, we can set the label separately for each instance without clobbering each other:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2f5af5da",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d1 = D()\n",
+    "d2 = D()\n",
+    "d1.param.s1.label = \"sequence 1\"\n",
+    "d2.param.s1.label = \"(sequence 1)\"\n",
+    "d2.param.s1.label"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9f224f3b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d1.param.s1.label"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5ce34483",
+   "metadata": {},
+   "source": [
+    "This capability is useful for situations with dynamically updated metadata, e.g. if you need setting one parameter's value (e.g. 'Continent') to change the allowed values of another parameter (e.g. 'Country'). The underlying Parameter objects are copied lazily (only when actually changed), so that objects are not actually multiplied unless necessary. If you do want parameters to share a single Parameter object so that you can control its behavior globally, you can achieve that with `per_instance=False`, though the effects can be confusing in the same way as `instantiate=True` for mutable objects (above):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "787e9813",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class E(Parameterized):\n",
+    "    a = Parameter(default=3.14, label=\"pi\", per_instance=False)\n",
+    "\n",
+    "e1 = E()\n",
+    "e2 = E()\n",
+    "e2.param.a.label = \"Pie\"\n",
+    "e1.param.a.label"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c2e3d4a7",
+   "metadata": {},
+   "source": [
+    "## Instantiating with shared parameters\n",
+    "\n",
+    "When creating a large collection of Parameterized objects of the same type, the overhead of having separate parameters for each object can be significant. If you want, you can create the objects to share parameter values for efficiency, and also so that you can easily change a value on all such objects at the same time. \n",
+    "\n",
+    "As an example, let's say you've defined a Parameter value to be independent, such that changing one instance's value will not affect the others:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5013fe69",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class S(param.Parameterized):\n",
+    "    l = Parameter(default=[1,2,3], instantiate=True)\n",
+    "\n",
+    "ss = [S() for i in range(10)]\n",
+    "ss[0].l[2] = 5\n",
+    "ss[1].l"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6c7195fd",
+   "metadata": {},
+   "source": [
+    "Here changing the value of `l` on `ss[0]` doesn't affect `ss[1]` or any other instances.\n",
+    "\n",
+    "What if you as a user of this class are creating a very large number of similar objects and actually do want them to share the same parameter value, either to save memory or to make it easy to change all of their values at once? In that case you can use the context manager `shared_parameters`, and any Parameterized objects created within that context will share parameter values, such that changing one of them will affect all of them:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "37e160d4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.shared_parameters():\n",
+    "    ps = [S() for i in range(10)]\n",
+    "    \n",
+    "ps[0].l[2] = 5\n",
+    "ps[1].l"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ed4e296f",
+   "metadata": {},
+   "source": [
+    "This approach can provide significant speedup and memory savings in certain cases, but should only be used for good reasons, since it can cause confusion for any code expecting instances to be independent as they have been declared."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "678b7a0e",
+   "metadata": {},
+   "source": [
+    "## Displaying Parameterized objects\n",
+    "\n",
+    "Most of the important behavior of Parameterized is to do with instantiation, getting, and setting, as described above. Parameterized also provides a few public methods for creating string representations of the Parameterized object and its parameters:\n",
+    "\n",
+    "- `Parameterized.__str__()`: A concise, non-executable representation of the name and class of this object\n",
+    "- `Parameterized.__repr__()`: A representation of this object and its parameter values as if it were Python code calling the constructor (`classname(parameter1=x,parameter2=y,...)`)\n",
+    "- `Parameterize.param._repr_html_()`: A rich HTML representation of the object with its parameters listed in a table together with their metadata.\n",
+    "- `Parameterized.param.pprint()`: Customizable, hierarchical pretty-printed representation of this Parameterized and (recursively) any of its parameters that are Parameterized objects. See [Serialization and Persistence](Serialization_and_Persistence.ipynb) for details on customizing `pprint`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0a1521ba",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import param\n",
+    "\n",
+    "class Q(param.Parameterized):\n",
+    "    a = param.Number(default=39, bounds=(0,50), doc='Number a')\n",
+    "    b = param.String(default=\"str\", doc='A string')\n",
+    "\n",
+    "class P(Q):\n",
+    "    c = param.ClassSelector(default=Q(), class_=Q, doc='An instance of Q')\n",
+    "    e = param.ClassSelector(default=param.Parameterized(), class_=param.Parameterized, doc='A Parameterized instance')\n",
+    "    f = param.Range(default=(0,1), doc='A range')\n",
+    "\n",
+    "p = P(f=(2,3), c=P(f=(42,43)), name=\"demo\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0b0d5b84",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.__str__()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e119e92a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.__repr__()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "799c1eeb-71c2-40a3-ad06-fd3ed8eda501",
+   "metadata": {},
+   "source": [
+    "The HTML representation of a `Parameterized` instance or class is displayed when you call `<obj>.param` in a Notebook."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4c17a53b-3acc-4e6e-ab93-e5d09728e1c5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.param"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "64628d11-7f2c-4718-bd8a-7a381e282047",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "P.param"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2ed3a3f0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.param.pprint(separator=\"\\n\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b0acf461",
+   "metadata": {},
+   "source": [
+    "Notice that in the case of a circular reference (`p.c = P(c=p)`) the representation will show an ellipsis (`...`) rather than recursively printing the subobject:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "22b09e5d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.c=P(c=p)\n",
+    "p.param.pprint()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3830ace8",
+   "metadata": {},
+   "source": [
+    "## Parameterized namespace\n",
+    "\n",
+    "Param allows you to create Parameterized objects by inheriting from the `Parameterized` base class. Param has evolved over time to reduce its footprint and reserve as few as possible attributes on this namespace, to reduce the risk of name clashes and allow you to freely define your attribute names. Param reserves a few names that are described below, make sure not to override, unless it is stated it is allowed:\n",
+    "\n",
+    "- Public attributes:\n",
+    "    - `name`: Parameterized classes and instances have a name `String` Parameter, that by default is set to the class name when accessed from the class and to the class name appended with a 5 digit when accessed from the instance. You can override this Parameter by your own `String` Parameter if you need to.\n",
+    "    - `param`: Property that helps keep the Parameterized namespace clean and disambiguate between Parameter objects and parameter values, it gives access to a namespace that offers various methods (see the section below) to update and inspect the Parameterized object at hand.\n",
+    "- Private attributes:\n",
+    "    - `_param__parameters`: Store the object returned by `.param` on the class\n",
+    "    - `_param__private`: Store various internal data on Parameterized class and instances"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "01759e1b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class P(param.Parameterized):\n",
+    "    a = param.Number()\n",
+    "    b = param.String()\n",
+    "\n",
+    "p = P()\n",
+    "print(f'{P.name=}, {p.name=}')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e802c7c7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def namespace(obj):\n",
+    "    return [o for o in dir(obj) if not o.startswith('__')]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5c702205",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "namespace(P)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b74fb157",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "namespace(p)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "23979d82",
+   "metadata": {},
+   "source": [
+    "## Other Parameterized methods\n",
+    "\n",
+    "Like `.param.pprint`, the remaining \"utility\" or convenience methods available for a `Parameterized` class or object are provided via the `.param` subobject:\n",
+    "\n",
+    "- `.param.update(**kwargs)`: Set parameter values from the given `param=value` keyword arguments (or a dict or iterable), delaying watching and dependency handling until all have been updated. `.param.update` can also be used as a context manager to temporarily set values, that are restored to their original values when the context manager exits."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1779f544",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.param.update(a=0, b='start');\n",
+    "print(p.a, p.b)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f1508201",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with p.param.update(a=1, b='temp'):\n",
+    "    print(f'In the context manager: {p.a=}, {p.b=}')\n",
+    "print(f'After the context manager exits: {p.a=}, {p.b=}')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0b9e1d85",
+   "metadata": {},
+   "source": [
+    "- `.param.values(onlychanged=False)`: A dict of name,value pairs for all parameters of this object"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "fd7f0eca",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.param.values()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "244a17d0",
+   "metadata": {},
+   "source": [
+    "- `.param.objects(instance=True)`: Parameter objects of this instance or class"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1baf4823",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.param.objects()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1c5085ea",
+   "metadata": {},
+   "source": [
+    "\n",
+    "- `.param.add_parameter(param_name,param_obj)`: Dynamically add a new Parameter to this object's class\n",
+    "- `.param.get_value_generator(name)`: Returns the underlying value-generating callable for this parameter, or the underlying static value if none\n",
+    "- `.param.force_new_dynamic_value(name)`: For a Dynamic parameter, generate a new value and return it\n",
+    "- `.param.inspect_value(name)`: For a Dynamic parameter, return the current value of the named attribute without modifying it.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3e8ab618",
+   "metadata": {},
+   "source": [
+    "## Specialized Parameter types\n",
+    "\n",
+    "As you can see above, a `Parameter` provides a lot of power already on its own, but in practice you will want to use much more specific parameter types that reject invalid inputs and keep your code clean and simple. A specialized Parameter acts as a \"contract\" with the users of the code you write, declaring and defending precisely what configuration is allowed and how to achieve it. If you need to accept specific inputs like that but don't add an appropriate Parameter type, you'll be stuck adding exceptions and validation code throughout your codebase, whereas anything you can express at the Parameter level will be enforced automatically without any further checks or code.\n",
+    "\n",
+    "For instance, what if you want to accept a numeric parameter, but (for some reason) can only accept numbers that are even integers? You'll need a custom Parameter class to express a restriction like that. In this case you can do it by overriding the `_validate_value` method of the `Parameter` class:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "89c1d341",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numbers\n",
+    "\n",
+    "class EvenInteger(param.Parameter):\n",
+    "    \"\"\"Integer Parameter that must be even\"\"\"\n",
+    "\n",
+    "    def _validate_value(self, val, allow_None):\n",
+    "        super()._validate_value(val, allow_None)\n",
+    "        if not isinstance(val, numbers.Number):\n",
+    "            raise ValueError(\n",
+    "                f\"EvenInteger parameter {self.name!r} must be a number, not {val!r}.\"\n",
+    "            )\n",
+    "        \n",
+    "        if not (val % 2 == 0):\n",
+    "            raise ValueError(\n",
+    "                f\"EvenInteger parameter {self.name!r} must be even, not {val!r}.\"\n",
+    "            )\n",
+    "\n",
+    "class P(param.Parameterized):\n",
+    "    n = param.Number()\n",
+    "    b = EvenInteger()\n",
+    "    \n",
+    "p=P()\n",
+    "P(n=5, b=4)\n",
+    "P(b=4, n=5, name='P00003')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "80fbb171",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():\n",
+    "    P(n=5, b=\"four\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "980b932b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():\n",
+    "    P(n=5, b=5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cc659490",
+   "metadata": {},
+   "source": [
+    "Luckily, you don't often need to write a custom Parameter class like this, because the most common cases are already provided in Param, as listed in the [Parameter Types](Parameter_Types.ipynb) manual. If you need something more specific than the existing types, start with the one that comes closest to restricting its value to the desired set of values without excluding any allowable values. In this case all integer powers of 2 are also integers, so you'd start with `param.Integer` rather than `param.Parameterized` as above. You can then make a new subclass and add validation as above to further restrict the values to precisely what you allow. Here if you inherited from `param.Integer` you would no longer need to check if the input is a number, as `param.Integer` already does that as long as you call `super` as above. Your custom type can override any aspects of the Parameter if needed, e.g. to accept different items in the constructor, store additional data, add additional constraints, and so on. The existing Parameter types in `param/__init__.py` act as a rich source of examples for you to start with and crib from."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

@@ -1,0 +1,1244 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Serialization and Persistence &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="../_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="../_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="../_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="../_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="../_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=16656018"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="../_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/Serialization_and_Persistence';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Outputs" href="Outputs.html" />
+    <link rel="prev" title="Generators" href="Generators.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="../_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameters.html">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Generators.html">Generators</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Serializatio...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="serialization-and-persistence">
+<h1>Serialization and Persistence<a class="headerlink" href="#serialization-and-persistence" title="Link to this heading">#</a></h1>
+<p>Parameterized objects are declarative, explicitly defining a set of values for their parameters. This set of values constitutes the (parameter) state of the object, and this state can be saved (“serialized”), transmitted (if appropriate), and restored (“deserialized”) in various ways, so that object state can be sent from one Python session to another, restored from disk, configured using a text file, and so on.</p>
+<p>Param offers several independent serialization mechanisms for a Parameterized object, each used for very different purposes:</p>
+<ul class="simple">
+<li><p><strong>Pickle</strong>: creates a Python <a class="reference external" href="https://docs.python.org/3/library/pickle.html">pickle</a> file containing not just the Parameters, but potentially any other state of the object. A pickle file is not human readable, and is not always portable between different python versions, but it is highly complete, capturing both parameter values and also non-Parameter attributes of an object. Useful for saving the entire state of a complex object and restoring it. All objects used in pickling need to be restorable, which puts some restrictions on Parameter values (e.g. requiring named functions, not lambdas).</p></li>
+<li><p><strong>JSON</strong>: captures the state as a JSON text string. Currently and probably always limited in what can be represented, but human readable and easily exchanged with other languages. Useful for sending over a network connection, saving simple state to disk for restoring later, etc.</p></li>
+<li><p><strong>script_repr</strong>: generates a string representation in the form of Python code that, when executed, will instantiate Parameterized objects having similar state. Useful for capturing the current state in a compact, human-readable form suitable for manual editing to create a Python file. Not all Parameters will have values representable in this way (e.g. functions defined in the current namespace will not show their function definition), but this representation is generally a reasonable human-readable starting point for hand editing.</p></li>
+</ul>
+<section id="pickling-parameterized-objects">
+<h2>Pickling Parameterized objects<a class="headerlink" href="#pickling-parameterized-objects" title="Link to this heading">#</a></h2>
+<p>Param supports Python’s native <a class="reference external" href="https://docs.python.org/3/library/pickle.html">pickle</a> serialization format. Pickling converts a Python object into a binary stream of bytes that can be stored on disk, and unpickling converts a previously pickled byte stream into an instantiated Python object in the same or a new Python session. Pickling does not capture the actual Python source code or bytecode for functions or classes; instead, it assumes you will have the same Python source tree available for importing those definitions during unpickling and only stores the fully qualified path to those definitions. Thus pickling requires that you use named functions defined in separate importable modules rather than lambdas (unnamed functions) or other objects whose code is defined only in the main namespace or in a non-importable python script.</p>
+<p>Apart from such limitations, pickling is the most rich and <em>fully featured</em> serialization option, capable of capturing the full state of an object even beyond its Parameter values. Pickling is also inherently the <em>least portable</em> option, because it does include all the details of this internal state. The resulting .pkl files are not human readable and are not normally usable outside of Python or even across Python versions in some cases. Pickling is thus most useful for “snapshots” (e.g. for checkpoint-and-restore support) for a particular software installation, rather than for exporting, archiving, or configuration. See the <a class="reference external" href="https://docs.python.org/3/library/pickle.html#comparison-with-json">comparison with JSON</a> to help understand some of the tradeoffs involved in using pickles.</p>
+<section id="using-pickling">
+<h3>Using pickling<a class="headerlink" href="#using-pickling" title="Link to this heading">#</a></h3>
+<p>Let’s look at an example of pickling and unpickling a Parameterized object:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span><span class="o">,</span><span class="w"> </span><span class="nn">pickle</span><span class="o">,</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">param.parameterized</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_label_formatter</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="mi">39</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">List</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span><span class="s2">&quot;b&quot;</span><span class="p">])</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span><span class="n">class_</span><span class="o">=</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    
+<span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;e&quot;</span><span class="p">,[</span><span class="mi">2</span><span class="p">]],</span> <span class="n">o</span><span class="o">=</span><span class="n">default_label_formatter</span><span class="o">.</span><span class="n">instance</span><span class="p">())</span>
+<span class="n">a</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">timestamp</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(A(l=[1, &#39;e&#39;, [2]], n=5, name=&#39;A00003&#39;, o=default_label_formatter(capitalize=True, name=&#39;default_label_formatter00002&#39;, overrides={}, replace_underscores=True)),
+ 1749654025.303653)
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here we created a Parameterized object <code class="docutils literal notranslate"><span class="pre">a</span></code> containing another Parameterized object nested in parameter <code class="docutils literal notranslate"><span class="pre">o</span></code>, with state in <code class="docutils literal notranslate"><span class="pre">self.timestamp</span></code> and not just in the Parameter values. To save this state to a file on disk, we can do a pickle “dump” and then delete the object so that we are sure it’s no longer around:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;data.pickle&#39;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    
+<span class="k">del</span> <span class="n">a</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>To reload the state of <code class="docutils literal notranslate"><span class="pre">a</span></code> from disk, we do a pickle “load”:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;data.pickle&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    
+<span class="n">a</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">timestamp</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(A(l=[1, &#39;e&#39;, [2]], n=5, name=&#39;A00003&#39;, o=default_label_formatter(capitalize=True, name=&#39;default_label_formatter00002&#39;, overrides={}, replace_underscores=True)),
+ 1749654025.303653)
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, it restored not just the Parameter values, but the timestamp (stored in the object’s dictionary) as well.</p>
+<p>Here we are depending on the class definition of <code class="docutils literal notranslate"><span class="pre">A</span></code> actually being in memory. If we delete that definition and try to unpickle the object again, it will fail:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">del</span> <span class="n">A</span>
+
+<span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;data.pickle&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>AttributeError: Can&#39;t get attribute &#39;A&#39; on &lt;module &#39;__main__&#39;&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Notice how the pickle has stored the fact that class <code class="docutils literal notranslate"><span class="pre">A</span></code> is defined in the main namespace, but because <code class="docutils literal notranslate"><span class="pre">__main__</span></code> is not an importable module, unpickling fails. Had <code class="docutils literal notranslate"><span class="pre">A</span></code> been defined in a module available for importing, unpickling would have succeeded here even if A had never previously been loaded.</p>
+<p>To use pickling in practice, you’ll need to ensure that all functions and classes are named (not lambdas) and defined in some importable module, not just inline here in a notebook or script or command prompt. Even so, pickling can be very useful as a way to save and restore state of complex Parameterized objects.</p>
+</section>
+<section id="pickling-limitations-and-workarounds">
+<h3>Pickling limitations and workarounds<a class="headerlink" href="#pickling-limitations-and-workarounds" title="Link to this heading">#</a></h3>
+<p>As you develop a module using Param, you’ll need to pay attention to a few technical issues if you want to support pickling:</p>
+<ol class="arabic simple">
+<li><p><strong>Callable parameter values</strong>: If you provide any <code class="docutils literal notranslate"><span class="pre">param.Callable</span></code>, <code class="docutils literal notranslate"><span class="pre">param.Hooklist</span></code>, or other parameters that can accept callable objects to your users, you will need to warn them that none of those can be set to unnamed (lambda) functions or to one-off functions defined in the main namespace if they want to use pickling. Of course, you can accept such values during initial development when you may not care about pickling, but once things are working, move the one-off function to a proper importable module and then it will be safe to use as a picklable value. One way to make this work smoothly is to create <code class="docutils literal notranslate"><span class="pre">param.ParameterizedFunction</span></code> objects or other “function object” classes (classes whose instances are callable like functions but which may have state and are fully picklable); see e.g. the <code class="docutils literal notranslate"><span class="pre">numbergen</span></code> module for examples.</p></li>
+<li><p><strong>Skipping Parameters that should not be pickled</strong>: In some cases, you may not <em>want</em> the value of a given Parameter to be pickled and restored even while other state is being serialized. For instance, a Parameter whose value is set to a particular file path might cause errors if that path is restored when the pickle is loaded on a different system or once the file no longer exists. To cover such rare but potentially important cases, the Parameter can be defined with <code class="docutils literal notranslate"><span class="pre">pickle_default_value=False</span></code> (normally <code class="docutils literal notranslate"><span class="pre">True</span></code>), so that the instantaneous value is usable but won’t be saved and restored with pickle.</p></li>
+<li><p><strong>Customizing settting and getting state</strong>: You may find that your Parameter or Parameterized objects have other state that you need to handle specially, whether that’s to save and restore data that isn’t otherwise picklable, or to ignore state that should <em>not</em> be pickled. For instance, if your object’s dictionary contains some object that doesn’t support pickling, then you can add code to omit that or to serialize it in some special way that allows it to be restored, e.g. by extracting a state dictionary fom it and then restoring it from the dictionary later. See the <a class="reference external" href="https://docs.python.org/3/library/pickle.html#pickle-state">pickle docs</a> for the <code class="docutils literal notranslate"><span class="pre">__getstate__</span></code> and <code class="docutils literal notranslate"><span class="pre">__setstate__</span></code> methods that you can implement on your Parameter or Parameterized objects to override this behavior. Be sure to call <code class="docutils literal notranslate"><span class="pre">super(YourClass,self).__setstate__(state)</span></code> or the getstate equivalent so that you also store parameters and dictionary values as usual, if desired.</p></li>
+<li><p><strong>Loading old pickle files</strong>: If you use pickles extensively, you may find yourself wanting to support pickle files generated by an older version of your own code, even though your code has since changed (with renamed modules, classes, or parameters, or options that are no longer supported, etc.). By default, unpickling will raise an exception if it finds information in your pickle file that does not match the current Python source code, but it is possible to add custom handling to translate old definitions to match current code, discard no-longer-used options, map from a previous approach into the current approach, etc. You can use <code class="docutils literal notranslate"><span class="pre">__getstate__</span></code> and <code class="docutils literal notranslate"><span class="pre">__setstate__</span></code> on your top-level object or on specific other classes to do just about anything like this, though it can get complicated to reason about. Best practice is to store the module version number or other suitable identifier as an attribute or Parameter on the top-level object to declare what version of the code was used to create the file, and you can then read this identifier later to determine whether you need to apply such conversions on reloading.</p></li>
+</ol>
+</section>
+</section>
+<section id="serializing-with-json">
+<h2>Serializing with JSON<a class="headerlink" href="#serializing-with-json" title="Link to this heading">#</a></h2>
+<p>JSON is a human-readable string representation for nested dictionaries of key-value pairs. Compared to pickle, JSON is a much more limited representation, using a fixed set of types mapped to string values, and not natively supporting Python-specific types like tuples or custom Python objects. However, it is widely accepted across computer languages, and because it is human readable and editable and omits the detailed internal state of objects (unlike pickle), JSON works well as an interchange or configuration format.</p>
+<p>Param’s JSON support is currently fairly limited, with support for serializing and deserializing individual (not nested) Parameterized objects. It is currently primarily used for synchronizing state “across the wire”, e.g. between multiple apps running on different machines that communicate changes to shared state (e.g. for a remote GUI), but as proposed in <a class="reference external" href="https://github.com/holoviz/param/issues/520">issue#520</a> it could be extended to be a general configuration and specification mechanism by adding conventions for specifying a Parameterized type for an object and its nested objects.</p>
+<p>To see how it currently works, let’s start with a Parameterized object containing Parameters of different types:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span><span class="o">,</span><span class="w"> </span><span class="nn">datetime</span><span class="o">,</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;B&#39;</span><span class="p">:[</span><span class="mf">1.1</span><span class="p">,</span><span class="mf">2.2</span><span class="p">,</span><span class="mf">3.3</span><span class="p">]})</span>
+
+<span class="n">simple_list</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Integer</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;Int&#39;</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">30</span><span class="p">),</span> <span class="n">inclusive_bounds</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">List</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">class_</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Date</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Range</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="mf">1.1</span><span class="p">,</span><span class="mf">2.3</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="n">allow_None</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span> <span class="n">rows</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">29</span><span class="p">)</span>
+<span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/tmp/ipykernel_3928/2877059514.py:9: ParamFutureWarning: The &#39;class_&#39; attribute on &#39;List&#39; is deprecated. Use instead &#39;item_type&#39;
+  e = param.List([1,2,3], class_=int)
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P(a=29, e=[1, 2, 3], g=datetime.datetime(2025, 6, 11, 15, 0, 25, 539838), l=(1.1, 2.3), m=&#39;baz&#39;, name=&#39;P00004&#39;, s=   A    B
+0  1  1.1
+1  2  2.2
+2  3  3.3)
+</pre></div>
+</div>
+</div>
+</div>
+<p>To serialize this Parameterized object to a JSON string, call <code class="docutils literal notranslate"><span class="pre">.serialize_parameters()</span></code> on it:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">serialize_parameters</span><span class="p">()</span>
+<span class="n">s</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;{&quot;name&quot;: &quot;P00004&quot;, &quot;a&quot;: 29, &quot;e&quot;: [1, 2, 3], &quot;g&quot;: &quot;2025-06-11T15:00:25.539838&quot;, &quot;l&quot;: [1.1, 2.3], &quot;m&quot;: &quot;baz&quot;, &quot;s&quot;: [{&quot;A&quot;: 1, &quot;B&quot;: 1.1}, {&quot;A&quot;: 2, &quot;B&quot;: 2.2}, {&quot;A&quot;: 3, &quot;B&quot;: 3.3}]}&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Notice that the serialization includes not just the values set specifically on this instance (<code class="docutils literal notranslate"><span class="pre">a=29</span></code>), but also all the default values inherited from the class definition.</p>
+<p>You can easily select only a subset to serialize, if you wish:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">serialize_parameters</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="s1">&#39;m&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;{&quot;a&quot;: 29, &quot;m&quot;: &quot;baz&quot;}&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>The JSON string can be saved to disk, sent via a network connection, stored in a database, or for any other usage suitable for a string.</p>
+<p>Once you are ready to deserialize the string into a Parameterized object, you’ll need to know the class it came from (here <code class="docutils literal notranslate"><span class="pre">P</span></code>) and can then call its <code class="docutils literal notranslate"><span class="pre">deserialize_parameters</span></code> method to get parameter values to use in <code class="docutils literal notranslate"><span class="pre">P</span></code>’s constructor:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p2</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="o">**</span><span class="n">P</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">deserialize_parameters</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+<span class="n">p2</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P(a=29, e=[1, 2, 3], g=datetime.datetime(2025, 6, 11, 15, 0, 25, 539838), l=(1.1, 2.3), m=&#39;baz&#39;, name=&#39;P00004&#39;, s=   A    B
+0  1  1.1
+1  2  2.2
+2  3  3.3)
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, we have successfully serialized our original object <code class="docutils literal notranslate"><span class="pre">p</span></code> into a new object <code class="docutils literal notranslate"><span class="pre">p2</span></code>, which could be in a different Python process on a different machine or at a different date.</p>
+<section id="json-limitations-and-workarounds">
+<h3>JSON limitations and workarounds<a class="headerlink" href="#json-limitations-and-workarounds" title="Link to this heading">#</a></h3>
+<p>To see the limitations on Param’s JSON support, let’s look at how it works in more detail. Because the result of serialization (<code class="docutils literal notranslate"><span class="pre">s</span></code> above) is a valid JSON string, we can use the <code class="docutils literal notranslate"><span class="pre">json</span></code> library to unpack it without any knowledge of what Parameterized class it came from:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="n">dj</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">dj</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{&#39;name&#39;: &#39;P00004&#39;,
+ &#39;a&#39;: 29,
+ &#39;e&#39;: [1, 2, 3],
+ &#39;g&#39;: &#39;2025-06-11T15:00:25.539838&#39;,
+ &#39;l&#39;: [1.1, 2.3],
+ &#39;m&#39;: &#39;baz&#39;,
+ &#39;s&#39;: [{&#39;A&#39;: 1, &#39;B&#39;: 1.1}, {&#39;A&#39;: 2, &#39;B&#39;: 2.2}, {&#39;A&#39;: 3, &#39;B&#39;: 3.3}]}
+</pre></div>
+</div>
+</div>
+</div>
+<p>The result is a Python dictionary of name:value pairs, some of which you can recognize as the original type (e.g. <code class="docutils literal notranslate"><span class="pre">a=29</span></code>), others that have changed type (e.g. <code class="docutils literal notranslate"><span class="pre">l=(1.1,2.3)</span></code> or <code class="docutils literal notranslate"><span class="pre">s=pd.DataFrame({'A':[1,2,3],</span> <span class="pre">'B':[1.1,2.2,3.3]})</span></code>), and others that are still a string encoding of that type (e.g. <code class="docutils literal notranslate"><span class="pre">g=datetime.datetime(...)</span></code>)). If you try to pass this dictionary to your Parameterized constructor, any such value will be rejected as invalid by the corresponding Parameter:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">P</span><span class="p">(</span><span class="o">**</span><span class="n">dj</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Date parameter &#39;P.g&#39; only takes datetime and date types, not &lt;class &#39;str&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<p>That’s why instead of simply <code class="docutils literal notranslate"><span class="pre">json.loads(s)</span></code>, we do <code class="docutils literal notranslate"><span class="pre">P.param.deserialize_parameters(s)</span></code>, which uses the knowledge that <code class="docutils literal notranslate"><span class="pre">P.l</span></code> is a tuple parameter to convert the resulting list <code class="docutils literal notranslate"><span class="pre">[1.1,</span> <span class="pre">2.3]</span></code> into a Python tuple <code class="docutils literal notranslate"><span class="pre">(1.1,</span> <span class="pre">2.3)</span></code> as required for such a parameter:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dj</span><span class="p">[</span><span class="s1">&#39;l&#39;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">p2</span><span class="o">.</span><span class="n">l</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1.1, 2.3]
+(1.1, 2.3)
+</pre></div>
+</div>
+</div>
+</div>
+<p>Similarly, parameters of type <code class="docutils literal notranslate"><span class="pre">param.Array</span></code> will unpack the list representation into a NumPy array, <code class="docutils literal notranslate"><span class="pre">param.DataFrame</span></code> unpacks the list of dicts of list into a Pandas DataFrame, etc. So, the encoding for your Parameterized object will always be standard JSON, but to <em>deserialize</em> it fully into a Parameterized, you’ll need to know the class it came from, or Param will not know that the list it finds was originally a tuple, dataframe, etc.</p>
+<p>For this reason, any Parameter that itself contains a Parameterized object will not be able to be JSON deserialized, since even if we knew what class it was (e.g. for <code class="docutils literal notranslate"><span class="pre">param.ClassSelector(class_=param.Number)</span></code>, it could be some subclass of that class. Because the class name is not currently stored in the JSON serialization, there is no way to restore it. Thus there is currently no support for JSON serializing or deserializing nested Parameterized objects.</p>
+<p>We do expect to add support for nested objects using something like the convention for datetime objects; see <a class="reference external" href="https://github.com/holoviz/param/issues/520">issue#520</a>.</p>
+</section>
+<section id="json-schemas">
+<h3>JSON Schemas<a class="headerlink" href="#json-schemas" title="Link to this heading">#</a></h3>
+<p>If you want to use your JSON representation in a separate process where Param is not available or perhaps in a different language altogether, Param can provide a <a class="reference external" href="https://json-schema.org/">JSON schema</a> that specifies what type you are expecting for each Parameter. The schema for a given Parameterized can be obtained using the <code class="docutils literal notranslate"><span class="pre">schema</span></code> method:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">schema</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{&#39;name&#39;: {&#39;anyOf&#39;: [{&#39;type&#39;: &#39;string&#39;}, {&#39;type&#39;: &#39;null&#39;}],
+  &#39;description&#39;: &#39;String identifier for this object.&#39;,
+  &#39;title&#39;: &#39;Name&#39;},
+ &#39;a&#39;: {&#39;type&#39;: &#39;integer&#39;,
+  &#39;minimum&#39;: 2,
+  &#39;exclusiveMaximum&#39;: 30,
+  &#39;description&#39;: &#39;Int&#39;,
+  &#39;title&#39;: &#39;A&#39;},
+ &#39;e&#39;: {&#39;type&#39;: &#39;array&#39;, &#39;items&#39;: {&#39;type&#39;: &#39;integer&#39;}, &#39;title&#39;: &#39;E&#39;},
+ &#39;g&#39;: {&#39;type&#39;: &#39;string&#39;, &#39;format&#39;: &#39;date-time&#39;, &#39;title&#39;: &#39;G&#39;},
+ &#39;l&#39;: {&#39;type&#39;: &#39;array&#39;,
+  &#39;minItems&#39;: 2,
+  &#39;maxItems&#39;: 2,
+  &#39;additionalItems&#39;: {&#39;type&#39;: &#39;number&#39;, &#39;minimum&#39;: 1, &#39;maximum&#39;: 3},
+  &#39;title&#39;: &#39;L&#39;},
+ &#39;m&#39;: {&#39;anyOf&#39;: [{&#39;type&#39;: &#39;string&#39;}, {&#39;type&#39;: &#39;null&#39;}], &#39;title&#39;: &#39;M&#39;},
+ &#39;s&#39;: {&#39;type&#39;: &#39;array&#39;,
+  &#39;items&#39;: {&#39;type&#39;: &#39;object&#39;, &#39;minItems&#39;: 1, &#39;maxItems&#39;: 4},
+  &#39;minItems&#39;: 2,
+  &#39;maxItems&#39;: 5,
+  &#39;title&#39;: &#39;S&#39;}}
+</pre></div>
+</div>
+</div>
+</div>
+<p>Once you have the schema, you can validate that a given JSON string matches the schema, i.e. that all values included therein match the constraints listed in the schema:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jsonschema</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">full_schema</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;properties&quot;</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">schema</span><span class="p">()}</span>
+<span class="n">validate</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">d</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">full_schema</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>If one of the parameter values fails to match the provided schema, you’ll get an exception:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d2</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">d2</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;astring&#39;</span>
+
+<span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">validate</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">d2</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">full_schema</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValidationError: &#39;astring&#39; is not of type &#39;integer&#39;
+
+Failed validating &#39;type&#39; in schema[&#39;properties&#39;][&#39;a&#39;]:
+    {&#39;type&#39;: &#39;integer&#39;,
+     &#39;minimum&#39;: 2,
+     &#39;exclusiveMaximum&#39;: 30,
+     &#39;description&#39;: &#39;Int&#39;,
+     &#39;title&#39;: &#39;A&#39;}
+
+On instance[&#39;a&#39;]:
+    &#39;astring&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">param.schema()</span></code> call accepts the same <code class="docutils literal notranslate"><span class="pre">subset</span></code> argument as <code class="docutils literal notranslate"><span class="pre">.param.serialize_parameters()</span></code>, letting you serialize and check only a subset of the parameters if appropriate.</p>
+<p>You can also supply a <code class="docutils literal notranslate"><span class="pre">safe=True</span></code> argument that checks that all parameter values are <em>guaranteed</em> to be serializable and follow the given schema. This lets you detect if there are any containers or parameters whose type is not fully specified:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">full2</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;properties&quot;</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">safe</span><span class="o">=</span><span class="kc">True</span><span class="p">)}</span>
+    <span class="n">validate</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">d</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">full2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>UnsafeserializableException: DataFrame is not guaranteed to be safe for serialization as the column dtypes are unknown
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="script-repr">
+<h2>script_repr<a class="headerlink" href="#script-repr" title="Link to this heading">#</a></h2>
+<p>Parameterized objects can be constructed through a series of interactive actions, either in a GUI or command line, or as the result of automated scripts and object-construction functions. Any parameter values can also be changed at any moment once that object has been created. If you want to capture the resulting Parameterized object with any such additions and changes, you can use the <code class="docutils literal notranslate"><span class="pre">param.script_repr()</span></code> function. <code class="docutils literal notranslate"><span class="pre">script_repr</span></code> returns a representation of that object and all nested Parameterized or other supported objects as Python code that can recreate the full object later. This approach lets you go flexibly from an interactive or indirect way of creating or modifying objects, to being able to recreate that specific object again for later use. Programs with a GUI interface can use <code class="docutils literal notranslate"><span class="pre">script_repr()</span></code> as a way of exporting a runnable version of what a user created interactively in the GUI.</p>
+<p>For example, let’s construct a Parameterized object <code class="docutils literal notranslate"><span class="pre">p</span></code> containing Parameters whose values are themselves Parameterized objects with their own Parameters:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Q</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="mi">39</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">50</span><span class="p">))</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="s2">&quot;str&quot;</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">Q</span><span class="p">(),</span> <span class="n">class_</span><span class="o">=</span><span class="n">Q</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">(),</span> <span class="n">class_</span><span class="o">=</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Range</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+    
+<span class="n">q</span> <span class="o">=</span> <span class="n">Q</span><span class="p">(</span><span class="n">b</span><span class="o">=</span><span class="s2">&quot;new&quot;</span><span class="p">)</span>
+<span class="n">p</span><span class="o">=</span><span class="n">P</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P(c=Q(a=39, b=&#39;new&#39;, name=&#39;Q00048&#39;), d=Parameterized(name=&#39;Parameterized00051&#39;), e=(2, 3), name=&#39;P00049&#39;)
+</pre></div>
+</div>
+</div>
+</div>
+<p>We can get a script representation for this object by calling <code class="docutils literal notranslate"><span class="pre">script_repr(p)</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">script_repr</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>import __main__
+import param
+import param.parameterized
+
+__main__.P(c=__main__.Q(b=&#39;new&#39;),
+
+        d=param.parameterized.Parameterized(),
+
+        e=(2,3))
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, this representation encodes the fact that <code class="docutils literal notranslate"><span class="pre">P</span></code> was defined in the main namespace, generated inside this notebook. As you might expect, this representation has the same limitation as for <code class="docutils literal notranslate"><span class="pre">pickle</span></code> – only classes that are in importable modules will be runnable; you’ll need to save the source code to your classes in a proper Python module if you want the resulting script to be runnable. But once you have done that, you can use the <code class="docutils literal notranslate"><span class="pre">script_repr</span></code> to get a runnable version of your Parameterized object no matter how you created it, whether it was by selecting options in a GUI, adding items via a loop in a script, and so on.</p>
+<section id="script-repr-limitations-and-workarounds">
+<h3>script_repr limitations and workarounds<a class="headerlink" href="#script-repr-limitations-and-workarounds" title="Link to this heading">#</a></h3>
+<p>Apart from making sure your functions and classes are all defined in their own importable modules, there are various considerations and limitations to keep in mind if you want to support using <code class="docutils literal notranslate"><span class="pre">script_repr</span></code>.</p>
+<p>Normally, script_repr prints only parameter values that have changed from their defaults; it is designed to generate a script as close as is practical to one that a user would have typed to create the given object. If you want a record of the <em>complete</em> set of parameter values, including all defaults, you can enable that behavior:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param.parameterized</span>
+<span class="n">param</span><span class="o">.</span><span class="n">parameterized</span><span class="o">.</span><span class="n">script_repr_suppress_defaults</span><span class="o">=</span><span class="kc">True</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>The resulting output is then suitable for archiving the full parameter state of that object, even if some default later gets changed in the source code. Note that Param is not able to detect all cases where a default value is unchanged, e.g. for Parameters with <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code>, which will always be treated as changed since each instance has a copy of that Parameter value independent of the original default value.</p>
+<p>You can control <code class="docutils literal notranslate"><span class="pre">script_repr</span></code> with keyword arguments:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">imports=[]</span></code>: If desired, a list of imports that can be built up over multiple script_repr calls to collect a full set of imports required for a script. Useful with <code class="docutils literal notranslate"><span class="pre">show_imports=False</span></code> except on the last script_repr call. Can be an empty list or a list containing some hard-coded imports needed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prefix=&quot;\n</span>&#160;&#160;&#160; <span class="pre">&quot;</span></code>: Optional prefix to use before a nested object.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">qualify=True</span></code>: Whether the class’s path will be included (e.g. “a.b.C()”), otherwise only the class will appear (“C()”).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">unknown_value=None</span></code>: determines what to do where a representation cannot be generated for something required to recreate the object. Such things include non-parameter positional and keyword arguments, and certain values of parameters (e.g. some random state objects). Supplying an <code class="docutils literal notranslate"><span class="pre">unknown_value</span></code> of <code class="docutils literal notranslate"><span class="pre">None</span></code> causes unrepresentable things to be silently ignored. If <code class="docutils literal notranslate"><span class="pre">unknown_value</span></code> is a string, that string will appear in place of any unrepresentable things. If <code class="docutils literal notranslate"><span class="pre">unknown_value</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>, an Exception will be raised if an unrepresentable value is encountered.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">separator=&quot;\n&quot;</span></code>: Separator to use between parameters.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">show_imports=True</span></code>: Whether to include import statements in the output.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">script_repr</span></code> behavior for a particular type, whether it’s a Parameterized object or not, can be overridden to provide any functionality needed. Such overrides are stored in <code class="docutils literal notranslate"><span class="pre">param.parameterized.script_repr_reg</span></code>, which already contains handling for list and tuple containers, various objects with random state, functions, and modules. See examples in
+<code class="docutils literal notranslate"><span class="pre">param.parameterized</span></code>.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Generators.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Generators</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Outputs.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Outputs</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pickling-parameterized-objects">Pickling Parameterized objects</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-pickling">Using pickling</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pickling-limitations-and-workarounds">Pickling limitations and workarounds</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#serializing-with-json">Serializing with JSON</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#json-limitations-and-workarounds">JSON limitations and workarounds</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#json-schemas">JSON Schemas</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#script-repr">script_repr</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#script-repr-limitations-and-workarounds">script_repr limitations and workarounds</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/user_guide/Serialization_and_Persistence.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

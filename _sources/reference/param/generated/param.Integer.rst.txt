@@ -1,0 +1,56 @@
+﻿param.Integer
+=============
+
+.. currentmodule:: param
+
+.. autoclass:: Integer
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Integer.__init__
+      ~Integer.crop_to_bounds
+      ~Integer.deserialize
+      ~Integer.get_soft_bounds
+      ~Integer.schema
+      ~Integer.serialize
+      ~Integer.set_in_bounds
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Integer.allow_None
+      ~Integer.allow_refs
+      ~Integer.bounds
+      ~Integer.constant
+      ~Integer.default
+      ~Integer.doc
+      ~Integer.inclusive_bounds
+      ~Integer.instantiate
+      ~Integer.label
+      ~Integer.name
+      ~Integer.nested_refs
+      ~Integer.owner
+      ~Integer.per_instance
+      ~Integer.pickle_default_value
+      ~Integer.precedence
+      ~Integer.readonly
+      ~Integer.rx
+      ~Integer.set_hook
+      ~Integer.softbounds
+      ~Integer.step
+      ~Integer.time_dependent
+      ~Integer.time_fn
+      ~Integer.watchers
+   
+   

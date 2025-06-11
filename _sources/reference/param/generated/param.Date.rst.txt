@@ -1,0 +1,56 @@
+﻿param.Date
+==========
+
+.. currentmodule:: param
+
+.. autoclass:: Date
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Date.__init__
+      ~Date.crop_to_bounds
+      ~Date.deserialize
+      ~Date.get_soft_bounds
+      ~Date.schema
+      ~Date.serialize
+      ~Date.set_in_bounds
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Date.allow_None
+      ~Date.allow_refs
+      ~Date.bounds
+      ~Date.constant
+      ~Date.default
+      ~Date.doc
+      ~Date.inclusive_bounds
+      ~Date.instantiate
+      ~Date.label
+      ~Date.name
+      ~Date.nested_refs
+      ~Date.owner
+      ~Date.per_instance
+      ~Date.pickle_default_value
+      ~Date.precedence
+      ~Date.readonly
+      ~Date.rx
+      ~Date.set_hook
+      ~Date.softbounds
+      ~Date.step
+      ~Date.time_dependent
+      ~Date.time_fn
+      ~Date.watchers
+   
+   

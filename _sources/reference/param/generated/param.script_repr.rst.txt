@@ -1,0 +1,6 @@
+﻿param.script\_repr
+==================
+
+.. currentmodule:: param
+
+.. autofunction:: script_repr

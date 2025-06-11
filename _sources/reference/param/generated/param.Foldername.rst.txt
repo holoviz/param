@@ -1,0 +1,48 @@
+﻿param.Foldername
+================
+
+.. currentmodule:: param
+
+.. autoclass:: Foldername
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Foldername.__init__
+      ~Foldername.deserialize
+      ~Foldername.schema
+      ~Foldername.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Foldername.allow_None
+      ~Foldername.allow_refs
+      ~Foldername.check_exists
+      ~Foldername.constant
+      ~Foldername.default
+      ~Foldername.doc
+      ~Foldername.instantiate
+      ~Foldername.label
+      ~Foldername.name
+      ~Foldername.nested_refs
+      ~Foldername.owner
+      ~Foldername.per_instance
+      ~Foldername.pickle_default_value
+      ~Foldername.precedence
+      ~Foldername.readonly
+      ~Foldername.rx
+      ~Foldername.search_paths
+      ~Foldername.watchers
+   
+   

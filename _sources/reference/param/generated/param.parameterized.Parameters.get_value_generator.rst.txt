@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.get\_value\_generator
+====================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.get_value_generator

@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.add\_parameter
+=============================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.add_parameter

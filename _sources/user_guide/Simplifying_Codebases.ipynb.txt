@@ -1,0 +1,356 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Simplifying Codebases\n",
+    "\n",
+    "Param's just a Python library, and so anything you can do with Param you can do \"manually\". So, why use Param?\n",
+    "\n",
+    "The most immediate benefit to using Param is that it allows you to greatly simplify your codebases, making them much more clear, readable, and maintainable, while simultaneously providing robust handling against error conditions.\n",
+    "\n",
+    "Param does this by letting a programmer explicitly declare the types and values of parameters accepted by the code. Param then ensures that only suitable values of those parameters ever make it through to the underlying code, removing the need to handle any of those conditions explicitly.\n",
+    "\n",
+    "To see how this works, let's create a Python class with some attributes without using Param:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class OrdinaryClass(object):\n",
+    "    def __init__(self, a=2, b=3, title=\"sum\"):\n",
+    "        self.a = a\n",
+    "        self.b = b\n",
+    "        self.title = title\n",
+    "    \n",
+    "    def __call__(self):\n",
+    "        return self.title + \": \" + str(self.a + self.b)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "As this is just standard Python, we can of course instantiate this class, modify its variables, and call it:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "o1 = OrdinaryClass(b=4, title=\"Sum\")\n",
+    "o1.a=4\n",
+    "o1()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The same code written using Param would look like:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import param\n",
+    "        \n",
+    "class ParamClass(param.Parameterized):\n",
+    "    a = param.Integer(2, bounds=(0,1000), doc=\"First addend\")\n",
+    "    b = param.Integer(3, bounds=(0,1000), doc=\"Second addend\")\n",
+    "    title = param.String(default=\"sum\", doc=\"Title for the result\")\n",
+    "    \n",
+    "    def __call__(self):\n",
+    "        return self.title + \": \" + str(self.a + self.b)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "o2 = ParamClass(b=4, title=\"Sum\")\n",
+    "o2()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "As you can see, the Parameters here are used precisely like normal attributes once they are defined, so the code for `__call__` and for invoking the constructor are the same in both cases. It's thus generally quite straightforward to migrate an existing class into Param. So, why do that?\n",
+    "\n",
+    "Well, with fewer lines of code than the ordinary class, you've now unlocked a whole wealth of features and better behavior! For instance, what happens if a user tries to supply some inappropriate data? With Param, such errors will be caught immediately:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():    \n",
+    "    o3 = ParamClass()\n",
+    "    o3.b = -5"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Of course, you could always add more code to an ordinary Python class to check for errors like that, but it quickly gets unwieldy:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class OrdinaryClass2(object):\n",
+    "    def __init__(self, a=2, b=3, title=\"sum\"):\n",
+    "        if type(a) is not int:\n",
+    "            raise ValueError(\"'a' must be an integer\")\n",
+    "        if type(b) is not int:\n",
+    "            raise ValueError(\"'b' must be an integer\")\n",
+    "        if a<0:\n",
+    "            raise ValueError(\"'a' must be at least `0`\")\n",
+    "        if b<0:\n",
+    "            raise ValueError(\"'b' must be at least `0`\")\n",
+    "        if type(title) is not str:\n",
+    "            raise ValueError(\"'title' must be a string\")          \n",
+    "        \n",
+    "        self.a = a\n",
+    "        self.b = b\n",
+    "        self.title = title\n",
+    "    \n",
+    "    def __call__(self):\n",
+    "        return self.title + \": \" + str(self.a + self.b)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():    \n",
+    "    OrdinaryClass2(a=\"f\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Unfortunately, catching errors in the constructor like that won't help if someone modifies the attribute directly, which won't be detected as an error:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "o4 = OrdinaryClass2()\n",
+    "o4.a = \"four\""
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Python will happily accept this incorrect value and will continue processing. It may only be much later, in a very different part of your code, that you see a mysterious error message that's then very difficult to relate back to the actual problem you need to fix:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():    \n",
+    "    o4()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Here there's no problem with the code in the cell above; `o4()` is fully valid Python; the real problem is in the preceding cell, which could have been in a completely different file or library. The error message is also obscure and confusing at this level, because the user of `o4` may have no idea why strings and integers are getting concatenated.\n",
+    "\n",
+    "To get a better error message, you _could_ move those checks into the `__call__` method, which would make sure that errors are always eventually detected:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class OrdinaryClass3(object):\n",
+    "    def __init__(self, a=2, b=3, title=\"sum\"):        \n",
+    "        self.a = a\n",
+    "        self.b = b\n",
+    "        self.title = title\n",
+    "    \n",
+    "    def __call__(self):\n",
+    "        if type(self.a) is not int:\n",
+    "            raise ValueError(\"'a' must be an integer\")\n",
+    "        if type(self.b) is not int:\n",
+    "            raise ValueError(\"'b' must be an integer\")\n",
+    "        if self.a<0:\n",
+    "            raise ValueError(\"'a' must be at least `0`\")\n",
+    "        if self.b<0:\n",
+    "            raise ValueError(\"'b' must be at least `0`\")\n",
+    "        if type(self.title) is not str:\n",
+    "            raise ValueError(\"'title' must be a string\")          \n",
+    "\n",
+    "        return self.title + \": \" + str(self.a + self.b)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "o5 = OrdinaryClass3()\n",
+    "o5.a = \"four\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():    \n",
+    "    o5()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "But you'd now have to check for errors in _every_ _single_ _method_ that might use those parameters. Worse, you still only detect the problem very late, far from where it was first introduced. Any distance between the error and the error report makes it much more difficult to address, as the user then has to track down where in the code `a` might have gotten set to a non-integer.\n",
+    "\n",
+    "With Param you can catch such problems at their start, as soon as an incorrect value is provided, when it is still simple to detect and correct it. To get those same features in hand-written Python code, you would need to provide explicit getters and setters, which is made easier with Python properties and decorators, but is still quite unwieldy:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class OrdinaryClass4(object):\n",
+    "    def __init__(self, a=2, b=3, title=\"sum\"):\n",
+    "        self.a = a\n",
+    "        self.b = b\n",
+    "        self.title = title\n",
+    "    \n",
+    "    @property\n",
+    "    def a(self): return self.__a\n",
+    "    @a.setter\n",
+    "    def a(self, a):\n",
+    "        if type(a) is not int:\n",
+    "            raise ValueError(\"'a' must be an integer\")\n",
+    "        if a < 0:\n",
+    "            raise ValueError(\"'a' must be at least `0`\")\n",
+    "        self.__a = a\n",
+    "        \n",
+    "    @property\n",
+    "    def b(self): return self.__b\n",
+    "    @b.setter\n",
+    "    def b(self, b):\n",
+    "        if type(b) is not int:\n",
+    "            raise ValueError(\"'a' must be an integer\")\n",
+    "        if b < 0:\n",
+    "            raise ValueError(\"'a' must be at least `0`\")\n",
+    "        self.__b = b\n",
+    "\n",
+    "    @property\n",
+    "    def title(self): return self.__title\n",
+    "    def title(self, b):\n",
+    "        if type(title) is not string:\n",
+    "            raise ValueError(\"'title' must be a string\")\n",
+    "        self.__title = title\n",
+    "\n",
+    "    def __call__(self):\n",
+    "        return self.title + \": \" + str(self.a + self.b)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "o5=OrdinaryClass4()\n",
+    "o5()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with param.exceptions_summarized():    \n",
+    "    o5=OrdinaryClass4()\n",
+    "    o5.b=-6"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that this code has an easily overlooked mistake in it, reporting `a` rather than `b` as the problem. This sort of error is extremely common in copy-pasted validation code of this type, because tests rarely exercise all of the error conditions involved.\n",
+    "\n",
+    "As you can see, even getting close to the automatic validation already provided by Param requires 8 methods and >30 highly repetitive lines of code, even when using relatively esoteric Python features like properties and decorators, and still doesn't yet implement other Param features like automatic documentation, attribute inheritance, or dynamic values. With Param, the corresponding `ParamClass` code only requires 6 lines and no fancy techniques beyond Python classes. Most importantly, the Param version lets readers and program authors focus directly on what this code actually does, which is to compute a function from three provided parameters:\n",
+    "\n",
+    "```\n",
+    "class ParamClass(param.Parameterized):\n",
+    "    a = param.Integer(2, bounds=(0,1000), doc=\"First addend\")\n",
+    "    b = param.Integer(3, bounds=(0,1000), doc=\"Second addend\")\n",
+    "    title = param.String(default=\"sum\", doc=\"Title for the result\")\n",
+    "    \n",
+    "    def __call__(self):\n",
+    "        return self.title + \": \" + str(self.a + self.b)\n",
+    "```\n",
+    "\n",
+    "Even a quick skim of this code reveals what parameters are available, what values they will accept, what the default values are, and how those parameters will be used in the method. Plus the actual code of the method stands out immediately, as all the code is either parameters or actual functionality. In contrast, users of OrdinaryClass3 will have to read through dozens of lines of code to discern even basic information about usage, or else authors of the code will need to create and maintain docstrings that may or may not match the actual code over time and will further increase the amount of text to write and maintain."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Programming contracts\n",
+    "\n",
+    "If you think about the examples above, you can see how Param makes it simple for programmers to make a contract with their users, being explicit and clear what will be accepted and rejected, while also allowing programmers to make safe assumptions about what inputs the code may ever receive. There is no need for `__call__` _ever_ to check for the type of one of its parameters, whether it's in the range allowed, or any other property that can be enforced by Param. Your custom code can then be much more linear and straightforward, getting right to work with the actual task at hand, without having to have reams of `if` statements and `asserts()` that disrupt the flow of the source file and make the reader get sidetracked in error-handling code. Param lets you once and for all declare what this code accepts, which is both clear documentation to the user and a guarantee that the programmer can forget about any other possible value a user might someday supply.\n",
+    "\n",
+    "Crucially, these contracts apply not just between the user and a given piece of code, but also between components of the system itself. When validation code is expensive, as in ordinary Python, programmers will typically do it only at the edges of the system, where input from the user is accepted. But expressing types and ranges is so easy in Param, it can be done for any major component in the system.  The Parameter list declares very clearly what that component accepts, which lets the code for that component ignore all potential inputs that are disallowed by the Parameter specifications, while correctly advertising to the rest of the codebase what inputs are allowed. Programmers can thus focus on their particular components of interest, knowing precisely what inputs will ever be let through, without having to reason about the flow of configuration and data throughout the whole system.\n",
+    "\n",
+    "Without Param, you should expect Python code to be full of confusing error checking and handling of different input types, while still only catching a small fraction of the possible incorrect inputs that could be provided. But Param-based code should be dramatically easier to read, easier to maintain, easier to develop, and nearly bulletproof against mistaken or even malicious usage. "
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

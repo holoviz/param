@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.print\_param\_defaults
+=====================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.print_param_defaults

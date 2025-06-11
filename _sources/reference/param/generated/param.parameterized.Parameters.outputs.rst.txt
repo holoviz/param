@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.outputs
+======================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.outputs

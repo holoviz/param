@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.watch\_values
+============================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.watch_values

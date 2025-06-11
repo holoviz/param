@@ -1,0 +1,46 @@
+﻿param.Event
+===========
+
+.. currentmodule:: param
+
+.. autoclass:: Event
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Event.__init__
+      ~Event.deserialize
+      ~Event.schema
+      ~Event.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Event.allow_None
+      ~Event.allow_refs
+      ~Event.constant
+      ~Event.default
+      ~Event.doc
+      ~Event.instantiate
+      ~Event.label
+      ~Event.name
+      ~Event.nested_refs
+      ~Event.owner
+      ~Event.per_instance
+      ~Event.pickle_default_value
+      ~Event.precedence
+      ~Event.readonly
+      ~Event.rx
+      ~Event.watchers
+   
+   

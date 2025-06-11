@@ -1,0 +1,56 @@
+﻿param.Magnitude
+===============
+
+.. currentmodule:: param
+
+.. autoclass:: Magnitude
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Magnitude.__init__
+      ~Magnitude.crop_to_bounds
+      ~Magnitude.deserialize
+      ~Magnitude.get_soft_bounds
+      ~Magnitude.schema
+      ~Magnitude.serialize
+      ~Magnitude.set_in_bounds
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Magnitude.allow_None
+      ~Magnitude.allow_refs
+      ~Magnitude.bounds
+      ~Magnitude.constant
+      ~Magnitude.default
+      ~Magnitude.doc
+      ~Magnitude.inclusive_bounds
+      ~Magnitude.instantiate
+      ~Magnitude.label
+      ~Magnitude.name
+      ~Magnitude.nested_refs
+      ~Magnitude.owner
+      ~Magnitude.per_instance
+      ~Magnitude.pickle_default_value
+      ~Magnitude.precedence
+      ~Magnitude.readonly
+      ~Magnitude.rx
+      ~Magnitude.set_hook
+      ~Magnitude.softbounds
+      ~Magnitude.step
+      ~Magnitude.time_dependent
+      ~Magnitude.time_fn
+      ~Magnitude.watchers
+   
+   

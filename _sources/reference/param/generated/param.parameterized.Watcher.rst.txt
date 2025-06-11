@@ -1,0 +1,38 @@
+﻿param.parameterized.Watcher
+===========================
+
+.. currentmodule:: param.parameterized
+
+.. autoclass:: Watcher
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Watcher.__init__
+      ~Watcher.count
+      ~Watcher.index
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Watcher.cls
+      ~Watcher.fn
+      ~Watcher.inst
+      ~Watcher.mode
+      ~Watcher.onlychanged
+      ~Watcher.parameter_names
+      ~Watcher.precedence
+      ~Watcher.queued
+      ~Watcher.what
+   
+   

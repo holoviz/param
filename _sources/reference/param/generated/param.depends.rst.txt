@@ -1,0 +1,6 @@
+﻿param.depends
+=============
+
+.. currentmodule:: param
+
+.. autofunction:: depends

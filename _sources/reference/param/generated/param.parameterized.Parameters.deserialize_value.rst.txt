@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.deserialize\_value
+=================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.deserialize_value

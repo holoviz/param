@@ -1,0 +1,6 @@
+﻿param.reactive.reactive\_ops.is\_
+=================================
+
+.. currentmodule:: param.reactive
+
+.. automethod:: reactive_ops.is_

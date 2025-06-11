@@ -1,0 +1,52 @@
+﻿param.DataFrame
+===============
+
+.. currentmodule:: param
+
+.. autoclass:: DataFrame
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~DataFrame.__init__
+      ~DataFrame.deserialize
+      ~DataFrame.get_range
+      ~DataFrame.schema
+      ~DataFrame.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~DataFrame.rows
+      ~DataFrame.columns
+      ~DataFrame.ordered
+      ~DataFrame.allow_None
+      ~DataFrame.allow_refs
+      ~DataFrame.class_
+      ~DataFrame.constant
+      ~DataFrame.default
+      ~DataFrame.doc
+      ~DataFrame.instantiate
+      ~DataFrame.is_instance
+      ~DataFrame.label
+      ~DataFrame.name
+      ~DataFrame.nested_refs
+      ~DataFrame.owner
+      ~DataFrame.per_instance
+      ~DataFrame.pickle_default_value
+      ~DataFrame.precedence
+      ~DataFrame.readonly
+      ~DataFrame.rx
+      ~DataFrame.watchers
+   
+   

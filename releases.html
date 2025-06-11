@@ -1,0 +1,1659 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Releases &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=16656018"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'releases';</script>
+    <link rel="icon" href="_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Upgrade guide" href="upgrade_guide.html" />
+    <link rel="prev" title="Numbergen API reference" href="reference/numbergen.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="user_guide/index.html">User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Parameters.html">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="user_guide/ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Releases</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="releases">
+<h1>Releases<a class="headerlink" href="#releases" title="Link to this heading">#</a></h1>
+<section id="version-2-2-1">
+<h2>Version 2.2.1<a class="headerlink" href="#version-2-2-1" title="Link to this heading">#</a></h2>
+<p>Date: 2025-06-11</p>
+<p>This patch release contains a bug fix for nested references. Thanks to &#64;philippjfr for their contribution.</p>
+<p>Bug Fixes:</p>
+<ul class="simple">
+<li><p>Do not remove nested_refs when updating another ref (<a class="reference external" href="https://github.com/holoviz/param/pull/1061">#1061</a>)</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v2.2.0...v2.2.1"><em>Full Changelog</em></a></p>
+</section>
+<section id="version-2-2-0">
+<h2>Version 2.2.0<a class="headerlink" href="#version-2-2-0" title="Link to this heading">#</a></h2>
+<p>Date: 2024-12-16</p>
+<p>This minor release brings a few enhancements and bugfixes. Importantly, it includes some breaking changes, removing deprecated APIs or raising errors during unsafe operations which would previously only emit warnings. Many thanks to &#64;gandhis1 and &#64;JRRudy1 for their first contributions, and to &#64;hoxbro, &#64;maximlt,and &#64;MarcSkovMadsen for their continued maintenance and development efforts.</p>
+<p>Enhancements:</p>
+<ul class="simple">
+<li><p>Annotate <code class="docutils literal notranslate"><span class="pre">depends</span></code> and <code class="docutils literal notranslate"><span class="pre">accept_arguments</span></code> decorators (<a class="reference external" href="https://github.com/holoviz/param/pull/962">#962</a>)</p></li>
+<li><p>Stop directly importing numpy and add <code class="docutils literal notranslate"><span class="pre">gen_types</span></code> decorator (<a class="reference external" href="https://github.com/holoviz/param/pull/966">#966</a>)</p></li>
+</ul>
+<p>Bug Fixes:</p>
+<ul class="simple">
+<li><p>Added missing <code class="docutils literal notranslate"><span class="pre">super().__init_subclass__</span></code> call in <code class="docutils literal notranslate"><span class="pre">_ParameterBase.__init_subclass__</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/969">#969</a>)</p></li>
+<li><p>Remove <code class="docutils literal notranslate"><span class="pre">_dict_update</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/980">#980</a>)</p></li>
+</ul>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Improve some docstrings and set up <code class="docutils literal notranslate"><span class="pre">ruff</span></code> to validate them (<a class="reference external" href="https://github.com/holoviz/param/pull/977">#977</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/982">#982</a>, and <a class="reference external" href="https://github.com/holoviz/param/pull/983">#983</a>)</p></li>
+</ul>
+<p>Breaking changes / Deprecations:</p>
+<ul class="simple">
+<li><p>Remove <code class="docutils literal notranslate"><span class="pre">_param_watchers</span></code>, raise <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> on unsafe ops during init, and failed validation of a parameter default after inheritance (<a class="reference external" href="https://github.com/holoviz/param/pull/973">#973</a>)</p></li>
+<li><p>Promote many deprecation warnings to future warnings (<a class="reference external" href="https://github.com/holoviz/param/pull/974">#974</a>)</p></li>
+</ul>
+<p>Compatibility:</p>
+<ul class="simple">
+<li><p>Test Python 3.13 (<a class="reference external" href="https://github.com/holoviz/param/pull/971">#971</a>)</p></li>
+<li><p>Drop Python 3.8 support (<a class="reference external" href="https://github.com/holoviz/param/pull/986">#986</a>)</p></li>
+</ul>
+<p>Infrastructure / Tests:</p>
+<ul class="simple">
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">hatch</span></code> with <code class="docutils literal notranslate"><span class="pre">pixi</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/971">#971</a>)</p></li>
+<li><p>Fix reactive tests failing intermittently on Windows (<a class="reference external" href="https://github.com/holoviz/param/pull/971">#971</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/967">#967</a>)</p></li>
+<li><p>Change linting to <code class="docutils literal notranslate"><span class="pre">ruff</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/978">#978</a>)</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v2.1.1...v2.2.0"><em>Full Changelog</em></a></p>
+</section>
+<section id="version-2-1-1">
+<h2>Version 2.1.1<a class="headerlink" href="#version-2-1-1" title="Link to this heading">#</a></h2>
+<p>Date: 2024-06-25</p>
+<p>This minor release contains bug fixes for reactive expressions and a few minor documentation improvements. Thanks to &#64;jrycw for their first contribution! And to &#64;ahuang11, &#64;maximlt, and &#64;philippjfr for their continued maintenance and development efforts.</p>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Ensure <code class="docutils literal notranslate"><span class="pre">rx._callback</span></code> resolves accessors (<a class="reference external" href="https://github.com/holoviz/param/pull/949">#949</a>)</p></li>
+<li><p>Ensure refs can be updated by watcher of the same parameter (<a class="reference external" href="https://github.com/holoviz/param/pull/929">#929</a>)</p></li>
+<li><p>Recursively resolve references on args and kwargs passed to a reactive operation (<a class="reference external" href="https://github.com/holoviz/param/pull/944">#944</a>)</p></li>
+<li><p>Only override the name of a Parameterized instance on Parameter instantiation when <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/938">#938</a>)</p></li>
+</ul>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Various minor documentation improvements (<a class="reference external" href="https://github.com/holoviz/param/pull/933">#933</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/935">#935</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/941">#941</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/947">#947</a>)</p></li>
+</ul>
+<p>Maintenance:</p>
+<ul class="simple">
+<li><p>Fix <code class="docutils literal notranslate"><span class="pre">test_reactive_logic_unary_ops</span></code> on Python 3.12 (<a class="reference external" href="https://github.com/holoviz/param/pull/946">#946</a>)</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v2.1.0...v2.1.1"><em>Full Changelog</em></a></p>
+</section>
+<section id="version-2-1-0">
+<h2>Version 2.1.0<a class="headerlink" href="#version-2-1-0" title="Link to this heading">#</a></h2>
+<p>Date: 2024-03-22</p>
+<p>This minor release focuses on improving reactive expressions and support for asynchronous (and synchronous) generators. Many thanks to &#64;maximlt, &#64;Hoxbro and &#64;philippjfr for their continued maintenance and development efforts.</p>
+<p>Enhancements:</p>
+<ul class="simple">
+<li><p>Improvements for synchronous and asychronous generators (<a class="reference external" href="https://github.com/holoviz/param/pull/908">#908</a>)</p></li>
+<li><p>Additions to the .rx namespace including <code class="docutils literal notranslate"><span class="pre">and_</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">map</span></code>, <code class="docutils literal notranslate"><span class="pre">not_</span></code>, <code class="docutils literal notranslate"><span class="pre">or_</span></code> and <code class="docutils literal notranslate"><span class="pre">updating</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/906">#906</a>)</p></li>
+<li><p>Add support for adding asynchronous watcher to <code class="docutils literal notranslate"><span class="pre">rx</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/917">#917</a>)</p></li>
+<li><p>Make it possible to resolve reactive expressions recursively with <code class="docutils literal notranslate"><span class="pre">.rx.resolve</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/918">#918</a>)</p></li>
+<li><p>Add support for async and generator functions in <code class="docutils literal notranslate"><span class="pre">.rx.pipe</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/924">#924</a>)</p></li>
+</ul>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Ensure that <code class="docutils literal notranslate"><span class="pre">.param.update</span></code> context manager restore refs (<a class="reference external" href="https://github.com/holoviz/param/pull/915">#915</a>)</p></li>
+<li><p>Avoid overeager root invalidation on <code class="docutils literal notranslate"><span class="pre">rx</span></code> leading to unnecessary evaluation (<a class="reference external" href="https://github.com/holoviz/param/pull/919">#919</a>)</p></li>
+</ul>
+<p>Deprecations:</p>
+<ul class="simple">
+<li><p>Passing positional arguments to <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> now raises a <code class="docutils literal notranslate"><span class="pre">ParamDeprecationWarning</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/921">#921</a>)</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v2.0.2...v2.1.0"><em>Full Changelog</em></a></p>
+</section>
+<section id="version-2-0-2">
+<h2>Version 2.0.2<a class="headerlink" href="#version-2-0-2" title="Link to this heading">#</a></h2>
+<p>Date: 2024-01-17</p>
+<p>This patch release fixes a few bugs and introduces a performance enhancement. Many thanks to &#64;alfredocarella for their first contribution, and to the maintainers &#64;maximlt and &#64;philippjfr for contributing to this release.</p>
+<p>Optimization:</p>
+<ul class="simple">
+<li><p>Minor optimizations in hot codepaths accessing class parameters (<a class="reference external" href="https://github.com/holoviz/param/pull/893">#893</a>)</p></li>
+</ul>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Unpack partial callables in <code class="docutils literal notranslate"><span class="pre">iscoroutinefunction</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/894">#894</a>)</p></li>
+<li><p>Fix building Param with <code class="docutils literal notranslate"><span class="pre">setuptools-scm&lt;7</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/903">#903</a>)</p></li>
+</ul>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Replace <em>Google Analytics</em> with <em>GoatCounter</em> (<a class="reference external" href="https://github.com/holoviz/param/pull/895">#895</a>)</p></li>
+<li><p>Fix a typo in <code class="docutils literal notranslate"><span class="pre">Outputs.ipynb</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/892">#892</a>)</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v2.0.1...v2.0.2"><em>Full Changelog</em></a></p>
+</section>
+<section id="version-2-0-1">
+<h2>Version 2.0.1<a class="headerlink" href="#version-2-0-1" title="Link to this heading">#</a></h2>
+<p>Date: 2023-11-08</p>
+<p>This minor release fixes a number of bugs, including a regression introduced by the replacement of the build backend (<code class="docutils literal notranslate"><span class="pre">setuptools</span></code> for <code class="docutils literal notranslate"><span class="pre">hatchling</span></code>) which led to the <code class="docutils literal notranslate"><span class="pre">doc</span></code> folder being wrongly packaged. Many thanks to &#64;SultanOrazbayev for their first contribution, to &#64;musicinmybrain for spotting the regression and submitting fixes, and to the maintainers &#64;Hoxbro, &#64;jbednar and &#64;maximlt for contributing to this release.</p>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Do not install <code class="docutils literal notranslate"><span class="pre">doc</span></code> folder in <em>site-packages</em> (<a class="reference external" href="https://github.com/holoviz/param/pull/878">#878</a>)</p></li>
+<li><p>Drop the <code class="docutils literal notranslate"><span class="pre">feather-format</span></code> test dependency (<a class="reference external" href="https://github.com/holoviz/param/pull/879">#879</a>)</p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">tables</span></code> to the <code class="docutils literal notranslate"><span class="pre">tests-deser</span></code> extra (<a class="reference external" href="https://github.com/holoviz/param/pull/880">#880</a>)</p></li>
+<li><p>Fix <code class="docutils literal notranslate"><span class="pre">_state_push</span></code> and <code class="docutils literal notranslate"><span class="pre">_state_pop</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/884">#884</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">version.py</span></code>: new process should not create a window on Windows (<a class="reference external" href="https://github.com/holoviz/param/pull/882">#882</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/886">#886</a>)</p></li>
+<li><p>Don’t import <code class="docutils literal notranslate"><span class="pre">setuptools_scm</span></code> if the <code class="docutils literal notranslate"><span class="pre">.git</span></code> folder doesn’t exist (<a class="reference external" href="https://github.com/holoviz/param/pull/885">#885</a>)</p></li>
+</ul>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Add migration guide to Param 2.0 (<a class="reference external" href="https://github.com/holoviz/param/pull/883">#883</a>)</p></li>
+<li><p>Update Parameter API reference (<a class="reference external" href="https://github.com/holoviz/param/pull/881">#881</a>)</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v2.0.0...v2.0.1"><em>Full Changelog</em></a></p>
+</section>
+<section id="version-2-0-0">
+<h2>Version 2.0.0<a class="headerlink" href="#version-2-0-0" title="Link to this heading">#</a></h2>
+<p>Date: 2023-10-24</p>
+<p>20 years after its creation, Param has reached version 2.0! Can you guess when Param 3.0 will be released?</p>
+<p>Param 2.0 is a major new release available for Python 3.8 and above, significantly streamlining, simplifying, and improving the Param API. Many long-supported but also long-obsolete functions, methods, and usages will now warn loudly so that you can make sure your code is only using the fully supported and safe current approaches. Because upgrading to Param 2 is likely to reveal compatibility issues with older codebases, new releases in the 1.x series are expected to continue for some time, focused on compatibility with the ecosystem rather than adding new features. Thus you can keep using Param 1.x with your older code, but Param 2 is the future!</p>
+<p>We would like to thank &#64;minimav for their first contribution, and &#64;droumis, &#64;Hoxbro, &#64;jbednar, &#64;maximlt, &#64;philippjfr and &#64;sdrobert for their contributions. We would also like to thank &#64;ceball, who made the first plans for Param 2.0 quite a few years ago, and we are glad to be delivering on them at last!</p>
+<section id="major-enhancements-and-features">
+<h3>Major enhancements and features<a class="headerlink" href="#major-enhancements-and-features" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Parameter slot values are now all inherited correctly across a hierarchy of Parameterized classes, making their behavior much clearer and more consistent. Let’s say we have class <code class="docutils literal notranslate"><span class="pre">B</span></code> being a subclass of <code class="docutils literal notranslate"><span class="pre">A</span></code>, itself being a subclass of <code class="docutils literal notranslate"><span class="pre">param.Parameterized</span></code>. If <code class="docutils literal notranslate"><span class="pre">A</span></code> defines <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Number(1,</span> <span class="pre">bounds=(0,</span> <span class="pre">10))</span></code> and <code class="docutils literal notranslate"><span class="pre">B</span></code> defines <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Number(2)</span></code>, <code class="docutils literal notranslate"><span class="pre">B.param['x'].bounds</span></code> is now going to be inherited from <code class="docutils literal notranslate"><span class="pre">A</span></code> and equal to <code class="docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">10)</span></code> as you would expect. Parameterized classes have always supported inheritance, but the previous mechanism was based on using <code class="docutils literal notranslate"><span class="pre">None</span></code> to indicate which values should be inherited, which was highly problematic because <code class="docutils literal notranslate"><span class="pre">None</span></code> was also a valid value for many slots. All Parameter slot signatures now default to the new <code class="docutils literal notranslate"><span class="pre">Undefined</span></code> sentinel, finally allowing <code class="docutils literal notranslate"><span class="pre">None</span></code> to be inherited where appropriate. (<a class="reference external" href="https://github.com/holoviz/param/pull/605">#605</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/771">#771</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/791">#791</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/874">#874</a>)</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">objects</span></code> slot of a Selector was previously highly confusing, because it accepted either a dictionary or a list for initialization but then was accessible only as a list, making it difficult to watch or update the objects. There is now a <code class="docutils literal notranslate"><span class="pre">ListProxy</span></code> wrapper around <code class="docutils literal notranslate"><span class="pre">Selector.objects</span></code> (with forward and backward compatibility) to easily update <code class="docutils literal notranslate"><span class="pre">objects</span></code> and watch <code class="docutils literal notranslate"><span class="pre">objects</span></code> updates (<a class="reference external" href="https://github.com/holoviz/param/pull/598">#598</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/825">#825</a>)</p></li>
+<li><p>Parameterized classes and instances now have a rich HTML representation that is displayed automatically in a Jupyter/IPython notebook. For a class or instance <code class="docutils literal notranslate"><span class="pre">p</span></code>, just return <code class="docutils literal notranslate"><span class="pre">p.param</span></code> in a notebook cell to see a table of all the Parameters of the class/instance, their state, type, and range, plus the docstring on hover. It is likely we will improve the content and design of this repr based on feedback, so please let us know what you think! (<a class="reference external" href="https://github.com/holoviz/param/pull/425">#425</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/781">#781</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/821">#821</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/831">#831</a>)</p></li>
+<li><p>Parameters have all gained the <code class="docutils literal notranslate"><span class="pre">allow_refs</span></code> and <code class="docutils literal notranslate"><span class="pre">nested_refs</span></code> attributes, bringing an exceptionally useful feature that was available in Panel since version 1.2 to Param. Declaring a Parameter with <code class="docutils literal notranslate"><span class="pre">allow_refs=True</span></code> (<code class="docutils literal notranslate"><span class="pre">False</span></code> by default) allows setting this Parameter value with a <em>reference</em> to automatically mirror the value of the reference. Supported references include class/instance Parameter objects, functions/methods decorated with <code class="docutils literal notranslate"><span class="pre">param.depends</span></code>, reactive functions and expressions, asynchronous generators and custom objects transformed into a valid reference with a hook registered with <code class="docutils literal notranslate"><span class="pre">param.parameterized.register_reference_transform</span></code>. <code class="docutils literal notranslate"><span class="pre">nested_refs</span></code> indicate whether references should be resolved even when they are nested inside a container (<a class="reference external" href="https://github.com/holoviz/param/pull/843">#843</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/845">#845</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/849">#849</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/865">#865</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/862">#862</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/876">#876</a>)</p></li>
+<li><p>Experimental new <code class="docutils literal notranslate"><span class="pre">rx</span></code> reactive expressions: Param is widely used for building web apps in the HoloViz ecosystem, where packages have added various mechanisms for dynamic updates (e.g. <code class="docutils literal notranslate"><span class="pre">pn.bind</span></code> and <code class="docutils literal notranslate"><span class="pre">pn.depends</span></code> in Panel, and <code class="docutils literal notranslate"><span class="pre">.interactive</span></code> in hvPlot). These mechanisms were already built on Param and can be used far more widely than just in those packages, so that functionality has now been generalized, streamlined, and moved into Param. Nearly any Python expression can now be made reactive with <code class="docutils literal notranslate"><span class="pre">param.rx()</span></code>, at which point it will collect and be able to replay any operations (e.g. method calls) performed on them. This reactive programming approach lets you take just about any existing Python workflow and replace attributes with widgets or other reactive values, creating an app with fine-grained user control without having to design callbacks, event handlers, or any other complex logic! <code class="docutils literal notranslate"><span class="pre">rx</span></code> support is still experimental while we get feedback about the API, packaging, and documentation, but it’s fully ready to try out and give us suggestions!
+(<a class="reference external" href="https://github.com/holoviz/param/pull/460">#460</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/842">#842</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/841">#841</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/844">#844</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/846">#846</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/847">#847</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/850">#850</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/851">#851</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/856">#856</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/860">#860</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/854">#854</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/859">#859</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/858">#858</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/873">#873</a>)</p></li>
+</ul>
+</section>
+<section id="enhancements">
+<h3>Enhancements<a class="headerlink" href="#enhancements" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Parameter slot values that are set to mutable containers (e.g. <code class="docutils literal notranslate"><span class="pre">Selector(objects=a_list)</span></code>) will now be shallow-copied on instantiation, so that the container is no longer confusingly shared between the class and its subclasses and instances (<a class="reference external" href="https://github.com/holoviz/param/pull/826">#826</a>)</p></li>
+<li><p>To further clean up the Parameterized namespace (first started in version 1.7.0), the remaining private attributes haven been collected under two private namespaces <code class="docutils literal notranslate"><span class="pre">_param__private</span></code> and <code class="docutils literal notranslate"><span class="pre">_param__parameters</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/766">#766</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/790">#790</a>)</p></li>
+<li><p>You can now use <code class="docutils literal notranslate"><span class="pre">.param.update</span></code> as a context manager for applying temporary updates (<a class="reference external" href="https://github.com/holoviz/param/pull/779">#779</a>)</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">name</span></code> Parameter has always had special behavior dating to its use in labeling objects in a GUI context, but this behavior is now able to be overriden at the class and instance level (<a class="reference external" href="https://github.com/holoviz/param/pull/740">#740</a>)</p></li>
+<li><p>Improved Parameter signatures for static and dynamic code analysis (<a class="reference external" href="https://github.com/holoviz/param/pull/742">#742</a>)</p></li>
+<li><p>Removed inferred Parameterized docstring signature and add basic <code class="docutils literal notranslate"><span class="pre">__signature__</span></code> support (<a class="reference external" href="https://github.com/holoviz/param/pull/802">#802</a>)</p></li>
+<li><p>For speed, only generate the Parameter docstring in an IPython context (<a class="reference external" href="https://github.com/holoviz/param/pull/774">#774</a>)</p></li>
+<li><p>Improve Parameter validation error messages (<a class="reference external" href="https://github.com/holoviz/param/pull/808">#808</a>)</p></li>
+<li><p>Support for deserialization of file types into <code class="docutils literal notranslate"><span class="pre">Array</span></code> and <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/482">#482</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Integer</span></code> now accepts <code class="docutils literal notranslate"><span class="pre">numpy.integer</span></code> values (<a class="reference external" href="https://github.com/holoviz/param/pull/735">#735</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Range</span></code> now does stricter validation of the slot values (<a class="reference external" href="https://github.com/holoviz/param/pull/725">#725</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/824">#824</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Path</span></code> now has <code class="docutils literal notranslate"><span class="pre">check_exists</span></code> attribute, leading it to raise an error if <code class="docutils literal notranslate"><span class="pre">path</span></code> is not found on parameter instantiation (<a class="reference external" href="https://github.com/holoviz/param/pull/800">#800</a>)</p></li>
+<li><p>Add top-level <code class="docutils literal notranslate"><span class="pre">__all__</span></code> and move Parameter classes to <code class="docutils literal notranslate"><span class="pre">parameters.py</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/853">#853</a>)</p></li>
+</ul>
+</section>
+<section id="bug-fixes">
+<h3>Bug fixes<a class="headerlink" href="#bug-fixes" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Allow type change for <code class="docutils literal notranslate"><span class="pre">DateRange</span></code> and <code class="docutils literal notranslate"><span class="pre">Date</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/733">#733</a>)</p></li>
+<li><p>Ensure class watchers are not inherited by instance parameter (<a class="reference external" href="https://github.com/holoviz/param/pull/833">#833</a>)</p></li>
+<li><p>Fix multi-level indirection in Parameters access (<a class="reference external" href="https://github.com/holoviz/param/pull/840">#840</a>)</p></li>
+<li><p>Ensure non-function types are not resolved as empty function declarations (<a class="reference external" href="https://github.com/holoviz/param/pull/753">#753</a>)</p></li>
+<li><p>Fix watchers support when the Parameterized instance is falsy (<a class="reference external" href="https://github.com/holoviz/param/pull/769">#769</a>)</p></li>
+<li><p>Fix depending on the method of a sub-parameter object (<a class="reference external" href="https://github.com/holoviz/param/pull/765">#765</a>)</p></li>
+<li><p>Raise an error on bad non-watched references (<a class="reference external" href="https://github.com/holoviz/param/pull/777">#777</a>)</p></li>
+<li><p>Ensure that the root dependency can be resolved, and error otherwise (<a class="reference external" href="https://github.com/holoviz/param/pull/813">#813</a>)</p></li>
+<li><p>Fix basic pickling (<a class="reference external" href="https://github.com/holoviz/param/pull/783">#783</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/792">#792</a>)</p></li>
+<li><p>Validate that <code class="docutils literal notranslate"><span class="pre">self</span></code> is present in the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> signature of a Parameterized class (<a class="reference external" href="https://github.com/holoviz/param/pull/786">#786</a>)</p></li>
+<li><p>No longer force <code class="docutils literal notranslate"><span class="pre">instantiate</span></code> to True when <code class="docutils literal notranslate"><span class="pre">constant</span></code> is True (<a class="reference external" href="https://github.com/holoviz/param/pull/776">#776</a>)</p></li>
+<li><p>Instantiate default Parameter values based on all the Parameters available (<a class="reference external" href="https://github.com/holoviz/param/pull/798">#798</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Array</span></code>: fix <code class="docutils literal notranslate"><span class="pre">param.pprint</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/795">#795</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Array</span></code>: don’t hard-code <code class="docutils literal notranslate"><span class="pre">allow_None</span></code> to <code class="docutils literal notranslate"><span class="pre">True</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/726">#726</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Boolean</span></code>: validate the default type (<a class="reference external" href="https://github.com/holoviz/param/pull/722">#722</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FileSelector</span></code>: made more consistent with <code class="docutils literal notranslate"><span class="pre">Selector</span></code> by defaulting to the first globbed path (<a class="reference external" href="https://github.com/holoviz/param/pull/801">#801</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FileSelector</span></code>: ensure path separators are consistent on Windows (<a class="reference external" href="https://github.com/holoviz/param/pull/805">#805</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Path</span></code>: raise a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> if set to <code class="docutils literal notranslate"><span class="pre">None</span></code> while not allowed (<a class="reference external" href="https://github.com/holoviz/param/pull/799">#799</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Selector</span></code>: populate <code class="docutils literal notranslate"><span class="pre">objects</span></code> when <code class="docutils literal notranslate"><span class="pre">check_on_set</span></code> is False and <code class="docutils literal notranslate"><span class="pre">default</span></code> is not in <code class="docutils literal notranslate"><span class="pre">objects</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/794">#794</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/817">#817</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">File/MultiFileSelector</span></code>: updating <code class="docutils literal notranslate"><span class="pre">path</span></code> updates <code class="docutils literal notranslate"><span class="pre">objects</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/814">#814</a>)</p></li>
+</ul>
+</section>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Build the site with <code class="docutils literal notranslate"><span class="pre">sphinx</span></code> directly and refactor the API reference (<a class="reference external" href="https://github.com/holoviz/param/pull/810">#810</a>)</p></li>
+<li><p>Update to the latest version of <code class="docutils literal notranslate"><span class="pre">pydata-sphinx-theme</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/752">#752</a>)</p></li>
+<li><p>Update to Google Analytics 4 (<a class="reference external" href="https://github.com/holoviz/param/pull/758">#758</a>)</p></li>
+<li><p>Fix minor errors in the Getting Started (<a class="reference external" href="https://github.com/holoviz/param/pull/787">#787</a>)</p></li>
+<li><p>Add OpenCollective sponsor link on the repository page (<a class="reference external" href="https://github.com/holoviz/param/pull/811">#811</a>)</p></li>
+</ul>
+</section>
+<section id="infrastructure">
+<h3>Infrastructure<a class="headerlink" href="#infrastructure" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Increase the test suite coverage (<a class="reference external" href="https://github.com/holoviz/param/pull/716">#716</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/717">#717</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/719">#719</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/720">#720</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/739">#739</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/775">#775</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/778">#778</a>)</p></li>
+<li><p>Turn warnings into exceptions in the test suite (<a class="reference external" href="https://github.com/holoviz/param/pull/738">#738</a>)</p></li>
+<li><p>Add notebook smoke tests (<a class="reference external" href="https://github.com/holoviz/param/pull/750">#750</a>)</p></li>
+<li><p>Upgrades to leverage <code class="docutils literal notranslate"><span class="pre">hatch</span></code>, <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> and <code class="docutils literal notranslate"><span class="pre">pre-commit</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/749">#749</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/772">#772</a>)</p></li>
+<li><p>Add basic benchmark suite using <code class="docutils literal notranslate"><span class="pre">asv</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/788">#788</a>)</p></li>
+<li><p>Reduce the number of tested Python versions (<a class="reference external" href="https://github.com/holoviz/param/pull/732">#732</a>)</p></li>
+<li><p>Run the tests with Python 3.12 (<a class="reference external" href="https://github.com/holoviz/param/pull/863">#863</a>)</p></li>
+</ul>
+</section>
+<section id="compatibility">
+<h3>Compatibility<a class="headerlink" href="#compatibility" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Drop support for Python 2.7, 3.6, and 3.7 and upgrade the code base accordingly (<a class="reference external" href="https://github.com/holoviz/param/pull/741">#741</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/784">#784</a>)</p></li>
+</ul>
+</section>
+<section id="breaking-changes">
+<h3>Breaking changes<a class="headerlink" href="#breaking-changes" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>While it’s a major improvement to the definition of Parameters, properly inheriting Parameter slots can result in some Parameter slot values being different in Param 2, because Param 1 was sometimes silently not inheriting slot values.</p></li>
+<li><p>User-defined <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> classes should be updated to use <code class="docutils literal notranslate"><span class="pre">Undefined</span></code> as the formal default for any new slots, with the actual default defined on the new <code class="docutils literal notranslate"><span class="pre">_slot_defaults</span></code> dictionary. Otherwise, any new slot will fail to support inheritance, even if it was set to <code class="docutils literal notranslate"><span class="pre">None</span></code>, which would previously support inheritance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> methods that were deprecated since Param 1.7.0 have finally been removed. These are now mostly available on the <code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace (<a class="reference external" href="https://github.com/holoviz/param/pull/592">#592</a>)</p></li>
+<li><p>No longer supports setting non-Parameter class attributes during initialization, and no longer warns when setting non-Parameter class attributes directly (<a class="reference external" href="https://github.com/holoviz/param/pull/729">#729</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.watchers</span></code> no longer returns the transient dict of watchers but instead returns the instance watchers, as the now deprecated <code class="docutils literal notranslate"><span class="pre">instance._param_watchers</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/797">#797</a>)</p></li>
+<li><p>Removed deprecated <code class="docutils literal notranslate"><span class="pre">Parameterized.pprint</span></code>, <code class="docutils literal notranslate"><span class="pre">Parameterized._pprint</span></code>, <code class="docutils literal notranslate"><span class="pre">Parameterized.script_repr</span></code>, <code class="docutils literal notranslate"><span class="pre">ParameterizedFunction.script_repr</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/767">#767</a>)</p></li>
+<li><p>Removed <code class="docutils literal notranslate"><span class="pre">Time.next</span></code> method needed only for Python 2, and moved <code class="docutils literal notranslate"><span class="pre">Parameterized.state_pop</span></code> and <code class="docutils literal notranslate"><span class="pre">Parameterized.state_push</span></code> to the <code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace (<a class="reference external" href="https://github.com/holoviz/param/pull/767">#767</a>)</p></li>
+<li><p>Some removals were considered harmless and thus implemented immediately without a deprecation period:</p>
+<ul>
+<li><p>Removed unused <code class="docutils literal notranslate"><span class="pre">bounds</span></code> slot from <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> and <code class="docutils literal notranslate"><span class="pre">Event</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/744">#744</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/755">#755</a>)</p></li>
+<li><p>Removed private Parameter <code class="docutils literal notranslate"><span class="pre">_internal_name</span></code> slot (<a class="reference external" href="https://github.com/holoviz/param/pull/796">#796</a>)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="deprecations">
+<h3>Deprecations<a class="headerlink" href="#deprecations" title="Link to this heading">#</a></h3>
+<p>This section lists functionality that is expected to be removed sometime in the next couple of 2.x releases, so if you use Param 2, please take care of these warnings as soon as you encounter them, and certainly before you upgrade to the next release!</p>
+<p>Param 2.0 adds a validation step of the <em>default</em> value of a Parameter after the inheritance mechanism has completed if its type has changed (e.g. <code class="docutils literal notranslate"><span class="pre">x</span></code> in class <code class="docutils literal notranslate"><span class="pre">A</span></code> is a <code class="docutils literal notranslate"><span class="pre">Number</span></code> and in class <code class="docutils literal notranslate"><span class="pre">B(A)</span></code> is an <code class="docutils literal notranslate"><span class="pre">Integer</span></code>) or one of its slot values has changed (<a class="reference external" href="https://github.com/holoviz/param/pull/812">#812</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/820">#820</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/857">#857</a>). We have decided to only emit a warning when this validation fails to make your life easier when upgrading your code from Param 1 to 2, as the validation is performed on class creation which means that any validation error breaks importing your code. You should definitely take care of these warnings, they indicate a Parameter is in an invalid state!</p>
+<p>We continue to clean up Param’s API (<a class="reference external" href="https://github.com/holoviz/param/pull/734">#734</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/751">#751</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/768">#768</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/797">#797</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/834">#834</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/838">#838</a>) but have decided to do it in a gentle way, emitting deprecation warnings for a period of time before proceeding with removals. You will find below the complete list of deprecation warnings added in Param 2.0.</p>
+<ul class="simple">
+<li><p>Parameter signature:</p>
+<ul>
+<li><p>Instantiating most parameters with positional arguments beyond <code class="docutils literal notranslate"><span class="pre">default</span></code> is deprecated:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">String('prefix-test',</span> <span class="pre">'^prefix')</span></code>: deprecated!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">String('prefix-test',</span> <span class="pre">regex='^prefix')</span></code>: OK</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">String(default='prefix-test',</span> <span class="pre">regex='^prefix')</span></code>: OK</p></li>
+</ul>
+</li>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">Selector</span></code> parameters that accept <code class="docutils literal notranslate"><span class="pre">objects</span></code> as first positional argument, and <code class="docutils literal notranslate"><span class="pre">ClassSelector</span></code> parameters that accept <code class="docutils literal notranslate"><span class="pre">class_</span></code> as first positional argument, passing any argument by position is deprecated:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Selector([1,</span> <span class="pre">2])</span></code>: deprecated!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Selector(objects=[1,</span> <span class="pre">2])</span></code>: OK</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ClassSelector((str,</span> <span class="pre">int))</span></code>: deprecated!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ClassSelector(class_=(str,</span> <span class="pre">int))</span></code>: OK</p></li>
+<li><p>It’s possible that in the future the signature of these two parameters will be aligned with the other parameters to accept <code class="docutils literal notranslate"><span class="pre">default</span></code> as first and only positional argument, but for now please use an explicit keyword so that your code will be compatible with all versions.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Parameter slots:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">List._class</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">item_type</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Number.set_hook</span></code>: no replacement</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.__init__</span></code> module:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.produce_value</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.as_unicode</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.is_ordered_dict</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.is_ordered_dict</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.hashable</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.named_objs</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.normalize_path</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.abbreviate_paths</span></code>: no replacement</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized</span></code> module:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.all_equal</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.add_metaclass</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.batch_watch</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">batch_call_watchers</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.recursive_repr</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.overridable_property</span></code>: no replacement</p></li>
+</ul>
+</li>
+<li><p>Parameterized <code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace; many of these methods have been deprecated since version 1.12.0, however, this was just announced in the release notes and we realised many users missed them, sometimes even us included! They now all emit deprecation warnings when executed and are clearly marked as deprecated in the API reference:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.set_default</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param._add_parameter</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.add_parameter</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.params</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> or <code class="docutils literal notranslate"><span class="pre">.param['param']</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.set_param</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.update</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.get_param_values</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.values().items()</span></code> (or <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> for the common case of <code class="docutils literal notranslate"><span class="pre">dict(....param.get_param_values())</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.params_depended_on</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.method_dependencies</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.defaults</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">{k:v.default</span> <span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items()}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.print_param_defaults</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.print_param_values</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.message</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.MESSAGE,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.verbose</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.VERBOSE,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.debug</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.DEBUG,</span> <span class="pre">...)</span></code></p></li>
+</ul>
+</li>
+<li><p>Running unsafe operations <strong>during Parameterized instance initialization</strong>, instead run these operations after having called <code class="docutils literal notranslate"><span class="pre">super().__init__(**params)</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.objects(instance=True)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.trigger(&quot;&lt;param_name&gt;&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.watch(callback,</span> <span class="pre">&quot;&lt;param_name&gt;&quot;)</span></code></p></li>
+</ul>
+</li>
+<li><p>Parameterized namespace:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance._param_watchers</span></code> (getter and setter): use instead the property <code class="docutils literal notranslate"><span class="pre">inst.param.watchers</span></code></p></li>
+</ul>
+</li>
+</ul>
+<p><a class="reference external" href="https://github.com/holoviz/param/compare/v1.13.0...v2.0.0"><em>Full Changelog</em></a></p>
+</section>
+</section>
+<section id="version-1-13-0">
+<h2>Version 1.13.0<a class="headerlink" href="#version-1-13-0" title="Link to this heading">#</a></h2>
+<p>Date: 2023-03-14</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">1.13.0</span></code> is the last release of Param before the 2.0 release. However, Param 1.13 is meant to receive long-term support; security patches and fixes to critical bugs are planned to be backported to the 1.13.x series.</p>
+<p>This release includes a new <code class="docutils literal notranslate"><span class="pre">Bytes</span></code> <em>Parameter</em> and a few important bug fixes. This release is also marked by the adoption of a formal project governance, ensuring Param’s future as a healthy open-source project. Many thanks to &#64;ovidner and &#64;droumis for their first contributions! And to &#64;maximlt, &#64;Hoxbro, &#64;jlstevens, &#64;philippjfr and &#64;jbednar for their continuing support to fixing and improving Param.</p>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Fix copying when having watchers on e.g. bounds on inherited Parameter types (<a class="reference external" href="https://github.com/holoviz/param/pull/675">#675</a>)</p></li>
+<li><p>Allow JSON serialization to work with <code class="docutils literal notranslate"><span class="pre">json.dumps</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/655">#655</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ListSelector</span></code> restricted to <code class="docutils literal notranslate"><span class="pre">list</span></code> type objects (<a class="reference external" href="https://github.com/holoviz/param/pull/531">#531</a>)</p></li>
+<li><p>Fix <code class="docutils literal notranslate"><span class="pre">depends</span></code> async wrapper (<a class="reference external" href="https://github.com/holoviz/param/pull/684">#684</a>)</p></li>
+<li><p>Allow named colors to be any case (<a class="reference external" href="https://github.com/holoviz/param/pull/711">#711</a>)</p></li>
+</ul>
+<p>New features:</p>
+<ul class="simple">
+<li><p>Add Bytes parameter (<a class="reference external" href="https://github.com/holoviz/param/pull/542">#542</a>)</p></li>
+</ul>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Fix param module link (<a class="reference external" href="https://github.com/holoviz/param/pull/682">#682</a>)</p></li>
+</ul>
+<p>Project governance:</p>
+<ul class="simple">
+<li><p>Create initial project governance docs (<a class="reference external" href="https://github.com/holoviz/param/pull/674">#674</a>)</p></li>
+</ul>
+<p>Maintenance:</p>
+<ul class="simple">
+<li><p>Rename <code class="docutils literal notranslate"><span class="pre">master</span></code> branch to <code class="docutils literal notranslate"><span class="pre">main</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/672">#672</a>)</p></li>
+<li><p>Add more tests (<a class="reference external" href="https://github.com/holoviz/param/pull/710">#710</a>)</p></li>
+<li><p>Various CI related fixes (<a class="reference external" href="https://github.com/holoviz/param/pull/680">#680</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/683">#683</a> and <a class="reference external" href="https://github.com/holoviz/param/pull/709">#709</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-12-3">
+<h2>Version 1.12.3<a class="headerlink" href="#version-1-12-3" title="Link to this heading">#</a></h2>
+<p>Date: 2022-12-06</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">1.12.3</span></code> release adds support for Python 3.11. Many thanks to &#64;musicinmybrain (first contribution!) and &#64;maximlt for contributing to this release.</p>
+<p>Enhancements:</p>
+<ul class="simple">
+<li><p>Preserve existing Random seed behavior in Python 3.11 (<a class="reference external" href="https://github.com/holoviz/param/pull/638">#638</a>)</p></li>
+<li><p>Add support for Python 3.11 (<a class="reference external" href="https://github.com/holoviz/param/pull/658">#658</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-12-2">
+<h2>Version 1.12.2<a class="headerlink" href="#version-1-12-2" title="Link to this heading">#</a></h2>
+<p>Date: 2022-06-14</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">1.12.2</span></code> release fixes a number of bugs and adds support again for Python 2.7, which was unfortunately no longer supported in the last release. Note however that Param 2.0 will still drop support of Python 2.7 as already announced. Many thanks to &#64;Hoxbro and the maintainers &#64;jbednar, &#64;jlstevens, &#64;maximlt and &#64;philippjfr for contributing to this release.</p>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Match against complete spec name when determining dynamic watchers (<a class="reference external" href="https://github.com/holoviz/param/pull/615">#615</a>)</p></li>
+<li><p>Ensure async functionality does not cause python2 syntax errors (<a class="reference external" href="https://github.com/holoviz/param/pull/624">#624</a>)</p></li>
+<li><p>Allow (de)serializing <code class="docutils literal notranslate"><span class="pre">CalendarRange</span></code> and <code class="docutils literal notranslate"><span class="pre">DateRange</span></code> <code class="docutils literal notranslate"><span class="pre">Parameters</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/625">#625</a>)</p></li>
+<li><p>Improve <code class="docutils literal notranslate"><span class="pre">DateRange</span></code> validation (<a class="reference external" href="https://github.com/holoviz/param/pull/627">#627</a>)</p></li>
+<li><p>Fix regression in <code class="docutils literal notranslate"><span class="pre">&#64;param.depends</span></code> execution ordering (<a class="reference external" href="https://github.com/holoviz/param/pull/628">#628</a>)</p></li>
+<li><p>Ensure <code class="docutils literal notranslate"><span class="pre">named_objs</span></code> does not fail on unhashable objects (<a class="reference external" href="https://github.com/holoviz/param/pull/632">#632</a>)</p></li>
+<li><p>Support comparing date-like objects (<a class="reference external" href="https://github.com/holoviz/param/pull/629">#629</a>)</p></li>
+<li><p>Fixed <code class="docutils literal notranslate"><span class="pre">BinaryPower</span></code> example in the docs to use the correct name <code class="docutils literal notranslate"><span class="pre">EvenInteger</span></code>(<a class="reference external" href="https://github.com/holoviz/param/pull/634">#634</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-12-1">
+<h2>Version 1.12.1<a class="headerlink" href="#version-1-12-1" title="Link to this heading">#</a></h2>
+<p>The 1.12.1 release fixes a number of bugs related to async callback handling when using <code class="docutils literal notranslate"><span class="pre">param.depends</span></code> and <code class="docutils literal notranslate"><span class="pre">.param.watch</span></code> and a number of documentation and error messages. Many thanks to &#64;HoxBro and the maintainers &#64;jbednar, &#64;jlstevens, &#64;maximlt and &#64;philippjfr for contributing to this release.</p>
+<p>Error handling and documentation:</p>
+<ul class="simple">
+<li><p>Fixed description of shared_parameters (<a class="reference external" href="https://github.com/holoviz/param/pull/568">#568</a>)</p></li>
+<li><p>Improve the error messages of Date and DateRange (<a class="reference external" href="https://github.com/holoviz/param/pull/579">#579</a>)</p></li>
+<li><p>Clarified step error messages and other docs and links (<a class="reference external" href="https://github.com/holoviz/param/pull/604">#604</a>)</p></li>
+</ul>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Make iscoroutinefunction more robust (<a class="reference external" href="https://github.com/holoviz/param/pull/572">#572</a>)</p></li>
+<li><p>Fix for handling misspelled parameter (<a class="reference external" href="https://github.com/holoviz/param/pull/575">#575</a>)</p></li>
+<li><p>Handle None serialization for Date, CalendarDate, Tuple, Array, and DataFrame (<a class="reference external" href="https://github.com/holoviz/param/pull/582">#582</a>)</p></li>
+<li><p>Support async coroutines in param.depends (<a class="reference external" href="https://github.com/holoviz/param/pull/591">#591</a>)</p></li>
+<li><p>Handle async functions in depends with watch=True (<a class="reference external" href="https://github.com/holoviz/param/pull/611">#611</a>)</p></li>
+<li><p>Avoid equality check on Watcher (<a class="reference external" href="https://github.com/holoviz/param/pull/612">#612</a>)</p></li>
+</ul>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Fix binder (<a class="reference external" href="https://github.com/holoviz/param/pull/564">#564</a>)</p></li>
+<li><p>Fixed description of shared_parameters (<a class="reference external" href="https://github.com/holoviz/param/pull/568">#568</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-12-0">
+<h2>Version 1.12.0<a class="headerlink" href="#version-1-12-0" title="Link to this heading">#</a></h2>
+<p>Version 1.12.0 introduces a complete user manual and website (for the first time since 2003!) along with extensive API improvements gearing up for the 2.0 release (which will be Python3 only).</p>
+<p>The pre-2.0 API is still being preserved and no new warnings are added in this release, so the older API can continue to be used with this release, but the next 1.x release is expected to enable warnings for deprecated API. If you have older code using the deprecated Param features below, please update your API calls as described below to be compatible with the 2.0 release when it comes out (or pin to param&lt;2 if you don’t need any new Param features). For new users, just use the API documented on the website, and you should be ready to go for either 1.12+ or 2.0+.</p>
+<p>Thanks to James A. Bednar for the user guide and 2.0 API support, to Philipp Rudiger for improvements and new capabilities for handling dependencies on subobjects, and to Maxime Liquet and Philipp Rudiger for extensive improvements to the website/docs/package-building/testing.</p>
+<p>New features:</p>
+<ul class="simple">
+<li><p>Added future-facing API for certain Parameterized().param methods (see Compatibility below; <a class="reference external" href="https://github.com/holoviz/param/pull/556">#556</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/558">#558</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p>New option <code class="docutils literal notranslate"><span class="pre">on_init=True</span></code> for <code class="docutils literal notranslate"><span class="pre">&#64;depends</span></code> decorator, to run the method in the constructor to ensure initial state is consistent when appropriate (<a class="reference external" href="https://github.com/holoviz/param/pull/540">#540</a>)</p></li>
+<li><p>Now resolves subobject dependencies dynamically, allowing dependencies on internal parameters of subobjects to resolve appropriately as those objects are replaced. (<a class="reference external" href="https://github.com/holoviz/param/pull/552">#552</a>)</p></li>
+<li><p>Added prettyprinting for numbergen expressions (<a class="reference external" href="https://github.com/holoviz/param/pull/525">#525</a>)</p></li>
+<li><p>Improved JSON schema generation (<a class="reference external" href="https://github.com/holoviz/param/pull/458">#458</a>)</p></li>
+<li><p>Added more-usable script_repr command, availabie in param namespace, with default values, and showing imports (<a class="reference external" href="https://github.com/holoviz/param/pull/522">#522</a>)</p></li>
+<li><p>Added Parameterized.param.pprint(); underlying implementation of script_repr but with defaults suitable for interactive usage rather than generating a .py script. (<a class="reference external" href="https://github.com/holoviz/param/pull/522">#522</a>)</p></li>
+<li><p>Watchers can now declare precedence so that events are triggered in the desired order (<a class="reference external" href="https://github.com/holoviz/param/pull/552">#552</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/557">#557</a>)</p></li>
+</ul>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Fix bug setting attributes in some cases before class is initialized (<a class="reference external" href="https://github.com/holoviz/param/pull/544">#544</a>)</p></li>
+<li><p>Ensure None is supported on ListSelector (<a class="reference external" href="https://github.com/holoviz/param/pull/511">#511</a>)</p></li>
+<li><p>Switched from deprecated <code class="docutils literal notranslate"><span class="pre">inspect.getargspec</span></code> to the py3 version <code class="docutils literal notranslate"><span class="pre">inspect.getfullargspec</span></code>, which is similar but splits <code class="docutils literal notranslate"><span class="pre">keyword</span></code> args into <code class="docutils literal notranslate"><span class="pre">varkw</span></code> (**) and kw-only args. Falls back to getargspec on Python2. (<a class="reference external" href="https://github.com/holoviz/param/pull/521">#521</a>)</p></li>
+</ul>
+<p>Doc improvements (including complete user guide for the first time!):</p>
+<ul class="simple">
+<li><p>Misc comments/docstrings/docs cleanup (<a class="reference external" href="https://github.com/holoviz/param/pull/507">#507</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/518">#518</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/528">#528</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/553">#553</a>)</p></li>
+<li><p>Added comparison with pydantic (<a class="reference external" href="https://github.com/holoviz/param/pull/523">#523</a>)</p></li>
+<li><p>Added new user guide sections:</p>
+<ul>
+<li><p>Dependencies_and_Watchers user guide (<a class="reference external" href="https://github.com/holoviz/param/pull/536">#536</a>)</p></li>
+<li><p>Dynamic Parameters (<a class="reference external" href="https://github.com/holoviz/param/pull/525">#525</a>)</p></li>
+<li><p>Outputs (<a class="reference external" href="https://github.com/holoviz/param/pull/523">#523</a>)</p></li>
+<li><p>Serialization and Persistence (<a class="reference external" href="https://github.com/holoviz/param/pull/523">#523</a>)</p></li>
+</ul>
+</li>
+</ul>
+<p>Infrastructure:</p>
+<ul class="simple">
+<li><p>Added testing on Python 3.10 and on Mac OS X and removed slow PyPy/pandas/numpy tests (<a class="reference external" href="https://github.com/holoviz/param/pull/548">#548</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/549">#549</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/526">#526</a>)</p></li>
+<li><p>Docs/tests/build infrastructure improvements (<a class="reference external" href="https://github.com/holoviz/param/pull/509">#509</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/521">#521</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/529">#529</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/530">#530</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/537">#537</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/538">#538</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/539">#539</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/547">#547</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/548">#548</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/555">#555</a>)</p></li>
+</ul>
+<p>Compatibility (see <a class="reference external" href="https://github.com/holoviz/param/pull/543">#543</a> for the complete list):</p>
+<ul class="simple">
+<li><p>Calendardate now accepts date values only (<a class="reference external" href="https://github.com/holoviz/param/pull/517">#517</a>)</p></li>
+<li><p>No longer allows modifying name of a Parameter once it is in a Parameterized class, to avoid confusion (<a class="reference external" href="https://github.com/holoviz/param/pull/541">#541</a>)</p></li>
+<li><p>Renamed (with old name still accepted for compatibility until 2.0):</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param._add_parameter()</span></code>: Now public <code class="docutils literal notranslate"><span class="pre">.param.add_parameter()</span></code>; too useful to keep private! (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.params_depended_on</span></code>: Now <code class="docutils literal notranslate"><span class="pre">.param.method_dependencies</span></code> to indicate that it accepts a method name and returns its dependencies (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.pprint</span></code>: Now private <code class="docutils literal notranslate"><span class="pre">._pprint</span></code>; use public <code class="docutils literal notranslate"><span class="pre">.param.pprint</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">batch_watch</span></code>: Now <code class="docutils literal notranslate"><span class="pre">batch_call_watchers</span></code>, to declare that it does not set up watching, it just invokes it. Removed unused operation argument  (<a class="reference external" href="https://github.com/holoviz/param/pull/536">#536</a>)</p></li>
+</ul>
+</li>
+<li><p>Deprecated (but not yet warning unless noted):</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.debug()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">.param.log(param.DEBUG,</span> <span class="pre">...)</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/556">#556</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.verbose()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">.param.log(param.VERBOSE,</span> <span class="pre">...)</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/556">#556</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.message()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">.param.log(param.MESSAGE,</span> <span class="pre">...)</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/556">#556</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.defaults()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">{k:v.default</span> <span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items()}</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.deprecate()</span></code>:  To be repurposed or deleted after 2.0 (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.params()</span></code>:  Use <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> or <code class="docutils literal notranslate"><span class="pre">.param['param']</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.print_param_defaults()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.print_param_values()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.values().items():</span> <span class="pre">print(f&quot;{p.name}.{k}={v}&quot;)</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.set_default()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">p.param.default=</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.set_param()</span></code>: Had tricky API; use <code class="docutils literal notranslate"><span class="pre">.param.update</span></code> instead (<a class="reference external" href="https://github.com/holoviz/param/pull/558">#558</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.get_param_values()</span></code>: Use <code class="docutils literal notranslate"><span class="pre">.param.values().items()</span></code> instead (or <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> for the common case of <code class="docutils literal notranslate"><span class="pre">dict(....param.get_param_values())</span></code>) (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.state_pop()</span></code>: Will be renamed to <code class="docutils literal notranslate"><span class="pre">._state_pop</span></code> to make private</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.state_push()</span></code>: Will be renamed to <code class="docutils literal notranslate"><span class="pre">._state_push</span></code> to make private</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.initialized</span></code>: Will be renamed to <code class="docutils literal notranslate"><span class="pre">._initialized</span></code> to make private</p></li>
+<li><p>Most methods on Parameterized itself have already been deprecated and warning for some time now; see <a class="reference external" href="https://github.com/holoviz/param/pull/543">#543</a> for the list. Use the corresponding method on the <code class="docutils literal notranslate"><span class="pre">.param</span></code> accessor instead.</p></li>
+</ul>
+</li>
+<li><p>Added:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.watchers</span></code>: Read-only version of private <code class="docutils literal notranslate"><span class="pre">_watchers</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/559">#559</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.log()</span></code>: Subsumes .debug/verbose/message; all are logging calls. (<a class="reference external" href="https://github.com/holoviz/param/pull/556">#556</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.update()</span></code>: Dictionary-style updates to parameter values, as a drop-in replacement for <code class="docutils literal notranslate"><span class="pre">set_param</span></code> except for its optional legacy positional-arg syntax (<a class="reference external" href="https://github.com/holoviz/param/pull/558">#558</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.values()</span></code>: Dictionary of name:value pairs for parameter values, replacing <code class="docutils literal notranslate"><span class="pre">get_param_values</span></code> but now a dict since python3 preserves order (<a class="reference external" href="https://github.com/holoviz/param/pull/558">#558</a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.log()</span></code>: General-purpose interface to the logging module functionailty; replaces .debug, .verbose, .message (<a class="reference external" href="https://github.com/holoviz/param/pull/556">#556</a>)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="version-1-11-1">
+<h2>Version 1.11.1<a class="headerlink" href="#version-1-11-1" title="Link to this heading">#</a></h2>
+<p>(including changes in 1.11.0; 1.11.1 adds only a minor change to fix <code class="docutils literal notranslate"><span class="pre">param.List(None)</span></code>.)</p>
+<p>Version 1.11 contains entirely new <a class="reference external" href="https://param.holoviz.org">documentation</a>, plus various enhancements and bugfixess. Thanks to James A. Bednar for the documentation, Philipp Rudiger for the website setup and for many of the other fixes and improvements below, and others as noted below.</p>
+<p>Documentation:</p>
+<ul class="simple">
+<li><p>Brand-new website, with getting started, user manual, reference manual, and more! Some user guide sections are still under construction. (<a class="reference external" href="https://github.com/holoviz/param/pull/428">#428</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/464">#464</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/479">#479</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/483">#483</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/501">#501</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/502">#502</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/503">#503</a>,<a class="reference external" href="https://github.com/holoviz/param/pull/504">#504</a>)</p></li>
+<li><p>New intro video with examples/Promo.ipynb notebook, thanks to Marc Skov Madsen and Egbert Ammicht (<a class="reference external" href="https://github.com/holoviz/param/pull/488">#488</a>)</p></li>
+<li><p>Sort docstring by definition order and precedence, thanks to Andrew Huang (<a class="reference external" href="https://github.com/holoviz/param/pull/445">#445</a>)</p></li>
+</ul>
+<p>Enhancements:</p>
+<ul class="simple">
+<li><p>Allow printing representations for recursively nested Parameterized objects (<a class="reference external" href="https://github.com/holoviz/param/pull/499">#499</a>)</p></li>
+<li><p>Allow named colors for param.Color (<a class="reference external" href="https://github.com/holoviz/param/pull/472">#472</a>)</p></li>
+<li><p>Allow FileSelector and MultiFileSelector to accept initial values (<a class="reference external" href="https://github.com/holoviz/param/pull/497">#497</a>)</p></li>
+<li><p>Add Step slot to Range, thanks to Simon Hansen (<a class="reference external" href="https://github.com/holoviz/param/pull/467">#467</a>)</p></li>
+<li><p>Update FileSelector and MultiFileSelector parameters when setting path (<a class="reference external" href="https://github.com/holoviz/param/pull/476">#476</a>)</p></li>
+<li><p>Improved error messages (<a class="reference external" href="https://github.com/holoviz/param/pull/475">#475</a>)</p></li>
+</ul>
+<p>Bug Fixes:</p>
+<ul class="simple">
+<li><p>Fix Path to allow folders, as documented but previously not supported (<a class="reference external" href="https://github.com/holoviz/param/pull/495">#495</a>)</p></li>
+<li><p>Fix previously unimplemented Parameter._on_set (<a class="reference external" href="https://github.com/holoviz/param/pull/484">#484</a>)</p></li>
+<li><p>Fix Python2 IPython output parameter precedence (<a class="reference external" href="https://github.com/holoviz/param/pull/477">#477</a>)</p></li>
+<li><p>Fix allow_None for param.Series and param.DataFrame (<a class="reference external" href="https://github.com/holoviz/param/pull/473">#473</a>)</p></li>
+<li><p>Fix behavior when both <code class="docutils literal notranslate"><span class="pre">instantiate</span></code> and <code class="docutils literal notranslate"><span class="pre">constant</span></code> are <code class="docutils literal notranslate"><span class="pre">True</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/474">#474</a>)</p></li>
+<li><p>Fix for versioning when param is inside a separate git-controlled repo (port of fix from autover/pull/67) (<a class="reference external" href="https://github.com/holoviz/param/pull/469">#469</a>)</p></li>
+</ul>
+<p>Compatibility:</p>
+<ul class="simple">
+<li><p>Swapped ObjectSelector and Selector in the inheritance hierarchy, to allow ObjectSelector to be deprecated.  (<a class="reference external" href="https://github.com/holoviz/param/pull/497">#497</a>)</p></li>
+<li><p>Now <code class="docutils literal notranslate"><span class="pre">get_soft_bounds</span></code>silently crops softbounds to any hard bounds supplied ; previously soft bounds would be returned even if they were outside the hard bounds (<a class="reference external" href="https://github.com/holoviz/param/pull/498">#498</a>)</p></li>
+<li><p>Rename <code class="docutils literal notranslate"><span class="pre">class_</span></code> to <code class="docutils literal notranslate"><span class="pre">item_type</span></code> in List parameter, to avoid clashing semantics with ClassSelector and others with a <code class="docutils literal notranslate"><span class="pre">class_</span></code> slot. <code class="docutils literal notranslate"><span class="pre">class_</span></code> is still accepted as a keyword but is stored in <code class="docutils literal notranslate"><span class="pre">item_type</span></code>. (<a class="reference external" href="https://github.com/holoviz/param/pull/456">#456</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-10-1">
+<h2>Version 1.10.1<a class="headerlink" href="#version-1-10-1" title="Link to this heading">#</a></h2>
+<p>Minor release for Panel-related bugfixes and minor features, from &#64;philippjfr.</p>
+<ul class="simple">
+<li><p>Fix serialization of Tuple, for use in Panel (<a class="reference external" href="https://github.com/holoviz/param/pull/446">#446</a>)</p></li>
+<li><p>Declare asynchronous executor for Panel to use (<a class="reference external" href="https://github.com/holoviz/param/pull/449">#449</a>)</p></li>
+<li><p>Switch to GitHub Actions (<a class="reference external" href="https://github.com/holoviz/param/pull/450">#450</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-10-0">
+<h2>Version 1.10.0<a class="headerlink" href="#version-1-10-0" title="Link to this heading">#</a></h2>
+</section>
+<section id="version-1-9-3">
+<h2>Version 1.9.3<a class="headerlink" href="#version-1-9-3" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Fixed ClassSelector.get_range when a tuple of types is supplied (<a class="reference external" href="https://github.com/holoviz/param/pull/360">#360</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-9-2">
+<h2>Version 1.9.2<a class="headerlink" href="#version-1-9-2" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Compatibility with Python 3.8</p></li>
+<li><p>Add eager option to watch calls (<a class="reference external" href="https://github.com/holoviz/param/pull/351">#351</a>)</p></li>
+<li><p>Add Calendar and CalendarDateRange for real date types (<a class="reference external" href="https://github.com/holoviz/param/pull/348">#348</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-9-1">
+<h2>Version 1.9.1<a class="headerlink" href="#version-1-9-1" title="Link to this heading">#</a></h2>
+<p>Enhancements:</p>
+<ul class="simple">
+<li><p>Allow param.depends to annotate functions (<a class="reference external" href="https://github.com/holoviz/param/pull/334">#334</a>)</p></li>
+<li><p>Add context managers to manage events and edit constant parameters</p></li>
+</ul>
+<p>Bug fixes:</p>
+<ul class="simple">
+<li><p>Ensure that Select constructor does not rely on truthiness (<a class="reference external" href="https://github.com/holoviz/param/pull/337">#337</a>)</p></li>
+<li><p>Ensure that param.depends allows mixed Parameter types (<a class="reference external" href="https://github.com/holoviz/param/pull/338">#338</a>)</p></li>
+<li><p>Date and DateRange now allow dt.date type (<a class="reference external" href="https://github.com/holoviz/param/pull/341">#341</a>)</p></li>
+<li><p>Ensure events aren’t dropped in batched mode (<a class="reference external" href="https://github.com/holoviz/param/pull/343">#343</a>)</p></li>
+</ul>
+</section>
+<section id="version-1-9-0">
+<h2>Version 1.9.0<a class="headerlink" href="#version-1-9-0" title="Link to this heading">#</a></h2>
+<p>Full release with new functionality and some fixes.  New features:</p>
+<ul class="simple">
+<li><p>Added support for instance parameters, allowing parameter metadata to be modified per instance and allowing parameter objects to be passed to Panel objects (<a class="reference external" href="https://github.com/holoviz/param/pull/306">#306</a>)</p></li>
+<li><p>Added label slot to Parameter, to allow overriding attribute name for display (<a class="reference external" href="https://github.com/holoviz/param/pull/319">#319</a>)</p></li>
+<li><p>Added step slot to Parameter, e.g. to control Panel widget step size (<a class="reference external" href="https://github.com/holoviz/param/pull/326">#326</a>)</p></li>
+<li><p>Added keywords_to_params utility for deducing Parameter types and ranges automatically (<a class="reference external" href="https://github.com/holoviz/param/pull/317">#317</a>)</p></li>
+<li><p>Added support for multiple outputs from a Parameterized (<a class="reference external" href="https://github.com/holoviz/param/pull/312">#312</a>)</p></li>
+<li><p>Added Selector as a more user-friendly version of ObjectSelector, accepting a list of options as a positional argument (<a class="reference external" href="https://github.com/holoviz/param/pull/316">#316</a>)</p></li>
+</ul>
+<p>Changes affecting backwards compatibility:</p>
+<ul class="simple">
+<li><p>Changed from root logger to a param-specific logger; no change to API but will change format of error and warning messages (<a class="reference external" href="https://github.com/holoviz/param/pull/330">#330</a>)</p></li>
+<li><p>Old abstract class Selector renamed to SelectorBase; should be no change unless user code added custom classes inherited from Selector without providing a constructor (<a class="reference external" href="https://github.com/holoviz/param/pull/316">#316</a>)</p></li>
+</ul>
+<p>Bugfixes and other improvements:</p>
+<ul class="simple">
+<li><p>Various bugfixes (<a class="reference external" href="https://github.com/holoviz/param/pull/320">#320</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/323">#323</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/327">#327</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/329">#329</a>)</p></li>
+<li><p>Other improvements (<a class="reference external" href="https://github.com/holoviz/param/pull/315">#315</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/325">#325</a>)</p></li>
+</ul>
+<p>For more details, you can see a <a class="reference external" href="https://github.com/holoviz/param/compare/v1.8.2...v1.9.0">full list of changes since the previous release</a>.</p>
+</section>
+<section id="version-1-8-2">
+<h2>Version 1.8.2<a class="headerlink" href="#version-1-8-2" title="Link to this heading">#</a></h2>
+<p>Minor release:</p>
+<ul class="simple">
+<li><p>Added output decorator and outputs lookup method (<a class="reference external" href="https://github.com/holoviz/param/pull/299">#299</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/312">#312</a>)</p></li>
+</ul>
+<p>For more details, you can see a <a class="reference external" href="https://github.com/holoviz/param/compare/v1.8.2...v1.8.1">full list of changes since the previous release</a>.</p>
+</section>
+<section id="version-1-8-1">
+<h2>Version 1.8.1<a class="headerlink" href="#version-1-8-1" title="Link to this heading">#</a></h2>
+<p>Minor release:</p>
+<ul class="simple">
+<li><p>Added positional default arguments for nearly all Parameter subclasses (apart from ClassSelector)</p></li>
+<li><p>Minor bugfixes for watching callbacks</p></li>
+</ul>
+<p>For more details, you can see a <a class="reference external" href="https://github.com/holoviz/param/compare/v1.8.1...v1.8.0">full list of changes since the previous release</a>.</p>
+</section>
+<section id="version-1-8-0">
+<h2>Version 1.8.0<a class="headerlink" href="#version-1-8-0" title="Link to this heading">#</a></h2>
+<p>Major new feature set: comprehensive support for events, watching, callbacks, and dependencies</p>
+<ul class="simple">
+<li><p>Parameterized methods can now declare <code class="docutils literal notranslate"><span class="pre">&#64;depends(p,q)</span></code> to indicate that they depend on parameters <code class="docutils literal notranslate"><span class="pre">p</span></code> and <code class="docutils literal notranslate"><span class="pre">q</span></code> (defaulting to all parameters)</p></li>
+<li><p>Parameterized methods can depend on subobjects with <code class="docutils literal notranslate"><span class="pre">&#64;depends(p.param,q.param.r)</span></code>, where <code class="docutils literal notranslate"><span class="pre">p.param</span></code> indicates dependencies on all parameters of <code class="docutils literal notranslate"><span class="pre">p</span></code> and <code class="docutils literal notranslate"><span class="pre">q.param.r</span></code> indicates a dependency on parameter <code class="docutils literal notranslate"><span class="pre">r</span></code> of <code class="docutils literal notranslate"><span class="pre">q</span></code>.</p></li>
+<li><p>Functions and methods can <code class="docutils literal notranslate"><span class="pre">watch</span></code> parameter values, re-running when those values change or when an explicit trigger is issued, and can unwatch them later if needed.</p></li>
+<li><p>Multiple events can be batched to trigger callbacks only once for a coordinated set of changes</p></li>
+</ul>
+<p>Other new features:</p>
+<ul class="simple">
+<li><p>Added support in ObjectSelector for selecting lists and dicts (<a class="reference external" href="https://github.com/holoviz/param/pull/268">#268</a>)</p></li>
+<li><p>Added pandas DataFrame and Series parameter types (<a class="reference external" href="https://github.com/holoviz/param/pull/285">#285</a>)</p></li>
+<li><p>Added support for regular expression validation to String Parameter (<a class="reference external" href="https://github.com/holoviz/param/pull/241">#241</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/245">#245</a>)</p></li>
+</ul>
+<p>For more details, you can see a <a class="reference external" href="https://github.com/holoviz/param/compare/v1.8.0...v1.7.0">full list of changes since the previous release</a>.</p>
+</section>
+<section id="version-1-7-0">
+<h2>Version 1.7.0<a class="headerlink" href="#version-1-7-0" title="Link to this heading">#</a></h2>
+<p>Since the previous release (1.6.1), there should be no changes that affect existing code, only additions:</p>
+<ul class="simple">
+<li><p>A new param namespace object, which in future will allow subclasses of Parameterized to have much cleaner namespaces (<a class="reference external" href="https://github.com/holoviz/param/pull/230">#230</a>).</p></li>
+<li><p>Started testing on python 3.7-dev (<a class="reference external" href="https://github.com/holoviz/param/pull/223">#223</a>).</p></li>
+<li><p>param.version now provides functions to simplify dependants’ setup.py/setup.cfg files (see https://github.com/holoviz-dev/autover/pull/49).</p></li>
+</ul>
+<p>Although param should still work on python 3.3, we are no longer testing against it (unsupported by our test environment; <a class="reference external" href="https://github.com/holoviz/param/pull/234">#234</a>).</p>
+<p>For more details, you can see a <a class="reference external" href="https://github.com/holoviz/param/compare/v1.6.1...v1.7.0">full list of changes since the previous release</a>.</p>
+</section>
+<section id="version-1-6-1">
+<h2>Version 1.6.1<a class="headerlink" href="#version-1-6-1" title="Link to this heading">#</a></h2>
+<p>Restores support for the previous versioning system (pre 1.6; see <a class="reference external" href="https://github.com/holoviz/param/pull/225">#225</a>), and fixes a number of issues with the new versioning system:</p>
+<ul class="simple">
+<li><p>Allow package name to differ from repository name (https://github.com/holoviz-dev/autover/pull/39)</p></li>
+<li><p>Allow develop install to work when repository is dirty (https://github.com/holoviz-dev/autover/pull/41)</p></li>
+<li><p>Fixed failure to report dirty when commit count is 0 (https://github.com/holoviz-dev/autover/pull/44)</p></li>
+</ul>
+</section>
+<section id="version-1-6-0">
+<h2>Version 1.6.0<a class="headerlink" href="#version-1-6-0" title="Link to this heading">#</a></h2>
+<p>Notable changes, fixes, and additions since the previous release (1.5.1) are listed below. You can also see a <a class="reference external" href="https://github.com/holoviz/param/compare/v1.5.1...v1.6.0">full list of changes since the previous release</a>.</p>
+<p>Changes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.__version__</span></code> is now a string</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.version.Version</span></code> now supports a tag-based versioning workflow; if using the <code class="docutils literal notranslate"><span class="pre">Version</span></code> class, you will need to update your workflow (see <a class="reference external" href="https://github.com/holoviz-dev/autover">autover</a> for more details).</p></li>
+<li><p>Dropped support for python 2.6 (<a class="reference external" href="https://github.com/holoviz/param/pull/175">#175</a>).</p></li>
+<li><p>No longer attempt to cythonize param during installation via pip (<a class="reference external" href="https://github.com/holoviz/param/pull/166">#166</a>, <a class="reference external" href="https://github.com/holoviz/param/pull/194">#194</a>).</p></li>
+</ul>
+<p>Fixes:</p>
+<ul class="simple">
+<li><p>Allow <code class="docutils literal notranslate"><span class="pre">get_param_values()</span></code> to work on class (<a class="reference external" href="https://github.com/holoviz/param/pull/162">#162</a>).</p></li>
+<li><p>Fixed incorrect default value for <code class="docutils literal notranslate"><span class="pre">param.Integer</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/151">#151</a>).</p></li>
+<li><p>Allow a <code class="docutils literal notranslate"><span class="pre">String</span></code> to be <code class="docutils literal notranslate"><span class="pre">None</span></code> if its default is <code class="docutils literal notranslate"><span class="pre">None</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/104">#104</a>).</p></li>
+<li><p>Fixed <code class="docutils literal notranslate"><span class="pre">ListSelector.compute_default()</span></code> (<a class="reference external" href="https://github.com/holoviz/param/pull/212">#212</a>).</p></li>
+<li><p>Fixed checks for <code class="docutils literal notranslate"><span class="pre">None</span></code> in various <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> subclasses (<a class="reference external" href="https://github.com/holoviz/param/pull/208">#208</a>); fixes problems for subclasses of <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> that define a custom <code class="docutils literal notranslate"><span class="pre">__nonzero__</span></code> or <code class="docutils literal notranslate"><span class="pre">__len__</span></code>.</p></li>
+</ul>
+<p>Additions:</p>
+<ul class="simple">
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">DateRange</span></code> parameter.</p></li>
+</ul>
+<p>Miscellaneous:</p>
+<ul class="simple">
+<li><p>No longer tested on python 3.2 (unsupported by our test environment; <a class="reference external" href="https://github.com/holoviz/param/pull/218">#218</a>).</p></li>
+</ul>
+</section>
+<section id="version-1-5-1">
+<h2>Version 1.5.1<a class="headerlink" href="#version-1-5-1" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Fixed error messages for ClassSelector with tuple of classes</p></li>
+<li><p>Added get and contains methods for ParamOverrides</p></li>
+</ul>
+<p>A full list of changes since the previous release is available <a class="reference external" href="https://github.com/holoviz/param/compare/v1.5.0...v1.5.1">here</a>.</p>
+</section>
+<section id="version-1-5-0">
+<h2>Version 1.5.0<a class="headerlink" href="#version-1-5-0" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Added Range, Color, and Date parameters</p></li>
+<li><p>Improved ObjectSelector error messages</p></li>
+<li><p>Minor bugfixes</p></li>
+</ul>
+<p>A full list of changes since the previous release is available <a class="reference external" href="https://github.com/holoviz/param/compare/v1.4.2...v1.5.0">here</a>.</p>
+</section>
+<section id="version-1-4-2">
+<h2>Version 1.4.2<a class="headerlink" href="#version-1-4-2" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Improved version reporting from version module</p></li>
+<li><p>Minor bugfixes</p></li>
+</ul>
+<p>A full list of changes since the previous release is available <a class="reference external" href="https://github.com/holoviz/param/compare/v1.4.1...v1.4.2">here</a>.</p>
+</section>
+<section id="version-1-4-1">
+<h2>Version 1.4.1<a class="headerlink" href="#version-1-4-1" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Selector parameters now respect order of options supplied</p></li>
+<li><p>Allowed softbounds to be accessed like an attribute</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.4.0...v1.4.1">on GitHub</a>.</p>
+</section>
+<section id="version-1-4-0-2016-07">
+<h2>Version 1.4.0 (2016/07)<a class="headerlink" href="#version-1-4-0-2016-07" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Added support for new <a class="reference external" href="https://github.com/ioam/paramnb">ParamNB</a> project</p></li>
+<li><p>Added new parameter types Action, FileSelector, and ListSelector</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.3.2...v1.4.0">on GitHub</a>.</p>
+</section>
+<section id="version-1-3-2-2015-04">
+<h2>Version 1.3.2 (2015/04)<a class="headerlink" href="#version-1-3-2-2015-04" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Added Unicode support for param.String.</p></li>
+<li><p>Minor bugfixes.</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.3.1...v1.3.2">on GitHub</a>.</p>
+</section>
+<section id="version-1-3-1-2015-03">
+<h2>Version 1.3.1 (2015/03)<a class="headerlink" href="#version-1-3-1-2015-03" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Minor bugfix release to restore pre-1.3.0 script_repr behavior
+(accidentally changed in 1.3.0) and to fix issues with logging.</p></li>
+<li><p>Param’s logging interface now matches that of Python’s logging
+module, making it simpler to use logging (see Python’s logging
+module for details). Note therefore that Param’s logging methods (a)
+no longer call functions that are passed as arguments (instead,
+Python’s logging module does lazy string merges), and (b) no longer
+automatically combine strings passed as arguments (instead, Python’s
+logging module supports string formatting).</p></li>
+<li><p>Improved set_param() method, now allowing multiple parameters to be
+set easily via keyword arguments (as on initialization).</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.3.0...v1.3.1">on GitHub</a>.</p>
+</section>
+<section id="version-1-3-0-2015-03">
+<h2>Version 1.3.0 (2015/03)<a class="headerlink" href="#version-1-3-0-2015-03" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Added ‘allow_None’ support to all Parameters. Any subclass of
+Parameter that checks types and/or values should be modified to add
+appropriate handling of allow_None.</p></li>
+<li><p>Improved pretty printing (script_repr) of Parameterized instances,
+and made available via the pprint method. The script_repr name will
+be removed in a future release.</p></li>
+<li><p>Added (reproducible) time-dependent random streams
+(numbergen.TimeAwareRandomState).</p></li>
+<li><p>Added label and unit parameters to param.Time class.</p></li>
+<li><p>Improved optional IPython extension.</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.2.1...v1.3.0">on GitHub</a>.</p>
+</section>
+<section id="version-1-2-1-2014-06">
+<h2>Version 1.2.1 (2014/06)<a class="headerlink" href="#version-1-2-1-2014-06" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Minor bugfix release to fix issues with version when param is
+installed in a foreign git repository</p></li>
+<li><p>Made version module optional</p></li>
+<li><p>Improved ClassSelector and ParamOverrides</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.2.0...v1.2.1">on GitHub</a>.</p>
+</section>
+<section id="version-1-2-0-2014-06">
+<h2>Version 1.2.0 (2014/06)<a class="headerlink" href="#version-1-2-0-2014-06" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Added support for Python 3 (thanks to Marco Elver).</p></li>
+<li><p>Dropped support for Python 2.5.</p></li>
+<li><p>Added version module.</p></li>
+<li><p>Added optional numbergen package.</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.1.0...v1.2.0">on GitHub</a>.</p>
+</section>
+<section id="version-1-1-0-2014-05">
+<h2>Version 1.1.0 (2014/05)<a class="headerlink" href="#version-1-1-0-2014-05" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Switched to Python’s own logging module.</p></li>
+<li><p>Improved support for time when using Dynamic parameters.</p></li>
+<li><p>Optional extension for IPython users.</p></li>
+</ul>
+<p>A full list of changes since the previous release is available
+<a class="reference external" href="https://github.com/holoviz/param/compare/v1.0.0...v1.1.0">on GitHub</a>.</p>
+</section>
+<section id="version-1-0-0-2012-07">
+<h2>Version 1.0.0 (2012/07)<a class="headerlink" href="#version-1-0-0-2012-07" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>First standalone release.</p></li>
+</ul>
+</section>
+<section id="pre-1-0-2003">
+<h2>Pre-1.0 (2003)<a class="headerlink" href="#pre-1-0-2003" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Param was originally developed as part of <a class="reference external" href="http://ioam.github.io/topographica/">Topographica</a>, and has been in heavy usage as part of that project since 2003.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="reference/numbergen.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Numbergen API reference</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="upgrade_guide.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Upgrade guide</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-2-1">Version 2.2.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-2-0">Version 2.2.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-1-1">Version 2.1.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-1-0">Version 2.1.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-0-2">Version 2.0.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-0-1">Version 2.0.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-0-0">Version 2.0.0</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#major-enhancements-and-features">Major enhancements and features</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#enhancements">Enhancements</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#bug-fixes">Bug fixes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation">Documentation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#infrastructure">Infrastructure</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#compatibility">Compatibility</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#breaking-changes">Breaking changes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deprecations">Deprecations</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-13-0">Version 1.13.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-12-3">Version 1.12.3</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-12-2">Version 1.12.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-12-1">Version 1.12.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-12-0">Version 1.12.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-11-1">Version 1.11.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-10-1">Version 1.10.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-10-0">Version 1.10.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-9-3">Version 1.9.3</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-9-2">Version 1.9.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-9-1">Version 1.9.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-9-0">Version 1.9.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-8-2">Version 1.8.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-8-1">Version 1.8.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-8-0">Version 1.8.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-7-0">Version 1.7.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-6-1">Version 1.6.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-6-0">Version 1.6.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-5-1">Version 1.5.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-5-0">Version 1.5.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-4-2">Version 1.4.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-4-1">Version 1.4.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-4-0-2016-07">Version 1.4.0 (2016/07)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-3-2-2015-04">Version 1.3.2 (2015/04)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-3-1-2015-03">Version 1.3.1 (2015/03)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-3-0-2015-03">Version 1.3.0 (2015/03)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-2-1-2014-06">Version 1.2.1 (2014/06)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-2-0-2014-06">Version 1.2.0 (2014/06)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-1-0-2014-05">Version 1.1.0 (2014/05)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-0-0-2012-07">Version 1.0.0 (2012/07)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pre-1-0-2003">Pre-1.0 (2003)</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="_sources/releases.md.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,47 @@
+﻿param.Tuple
+===========
+
+.. currentmodule:: param
+
+.. autoclass:: Tuple
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Tuple.__init__
+      ~Tuple.deserialize
+      ~Tuple.schema
+      ~Tuple.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Tuple.length
+      ~Tuple.allow_None
+      ~Tuple.allow_refs
+      ~Tuple.constant
+      ~Tuple.default
+      ~Tuple.doc
+      ~Tuple.instantiate
+      ~Tuple.label
+      ~Tuple.name
+      ~Tuple.nested_refs
+      ~Tuple.owner
+      ~Tuple.per_instance
+      ~Tuple.pickle_default_value
+      ~Tuple.precedence
+      ~Tuple.readonly
+      ~Tuple.rx
+      ~Tuple.watchers
+   
+   

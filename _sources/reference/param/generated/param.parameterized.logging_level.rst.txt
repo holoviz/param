@@ -1,0 +1,6 @@
+﻿param.parameterized.logging\_level
+==================================
+
+.. currentmodule:: param.parameterized
+
+.. autofunction:: logging_level

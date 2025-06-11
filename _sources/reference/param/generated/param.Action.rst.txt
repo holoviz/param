@@ -1,0 +1,46 @@
+﻿param.Action
+============
+
+.. currentmodule:: param
+
+.. autoclass:: Action
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Action.__init__
+      ~Action.deserialize
+      ~Action.schema
+      ~Action.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Action.allow_None
+      ~Action.allow_refs
+      ~Action.constant
+      ~Action.default
+      ~Action.doc
+      ~Action.instantiate
+      ~Action.label
+      ~Action.name
+      ~Action.nested_refs
+      ~Action.owner
+      ~Action.per_instance
+      ~Action.pickle_default_value
+      ~Action.precedence
+      ~Action.readonly
+      ~Action.rx
+      ~Action.watchers
+   
+   

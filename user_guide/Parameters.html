@@ -1,0 +1,2138 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Parameters and Parameterized objects &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="../_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="../_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="../_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="../_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="../_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=16656018"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="../_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/Parameters';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Parameter types" href="Parameter_Types.html" />
+    <link rel="prev" title="Simplifying Codebases" href="Simplifying_Codebases.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="../_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Parameters...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="parameters-and-parameterized-objects">
+<h1>Parameters and Parameterized objects<a class="headerlink" href="#parameters-and-parameterized-objects" title="Link to this heading">#</a></h1>
+<p>Fundamentally, what Param does is allow you to control how certain user-visible attributes (“parameters”) of a Python class or instance will behave when their value is get or set. A user of that class can set those attributes to control the class, but only if the mechanisms provided by Param and configured by the programmer allow it. In this way, Param allows the author of a class to implement and constrain what a user can do with that class or an instance of it, setting up a clear contract of what is and is not allowed, and how that attribute will behave. To do this, Param provides two main new types of Python object: <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> objects, and <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> objects.</p>
+<p>A parameter is a special kind of Python class attribute.  Setting a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> class attribute to be a Parameter instance causes that attribute of the class (and the class’s instances) to be treated as a parameter, not just an ordinary attribute. Parameters support special behavior, including dynamically generated parameter values, documentation strings, constant and read-only parameters, type or range checking at assignment time, and values dependent on those of other parameters.</p>
+<p>More concretely, a Python <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object inherits from <code class="docutils literal notranslate"><span class="pre">param.Parameter</span></code> and stores various metadata attributes describing how a corresponding Python attribute of a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> object should behave. By convention, we will use a capital ‘P’ Parameter to refer to the Parameter object itself, and a lower-case ‘p’ parameter to refer to the Python attribute it controls (i.e., the Parameter’s “value”).</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> class is a Python class that inherits from <code class="docutils literal notranslate"><span class="pre">param.Parameterized</span></code> and can accept <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> objects as class attributes. A <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> class or instance uses the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> objects to determine how the corresponding attribute should behave.</p>
+<p>There are many specific types of <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> with different behavior, discussed in <a class="reference internal" href="Parameter_Types.html"><span class="std std-doc">Parameter Types</span></a>, but here we will cover the common behavior between <em>all</em> Parameter types when used in a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> object.</p>
+<section id="parameter-metadata">
+<h2>Parameter metadata<a class="headerlink" href="#parameter-metadata" title="Link to this heading">#</a></h2>
+<p>Each Parameter type can define additional behavior and associated metadata, but the metadata supported for all Parameter types includes:</p>
+<ul class="simple">
+<li><p><strong>default</strong>: Default value for this parameter at the class level, which will also be the value at the Parameterized instance level if it hasn’t been set separately on the instance.</p></li>
+<li><p><strong>name</strong>: String <strong>name</strong> of this parameter, which is typically determined by the attribute name of this Parameter in the owning Parameterized object, and is not set directly by a programmer.</p></li>
+<li><p><strong>label</strong>: Optional long name used for a verbose listing; defaults to the <strong>name</strong>.</p></li>
+<li><p><strong>allow_None</strong>: Whether this parameter accepts None as an allowed value, in addition to whatever other types it accepts. Automatically set to True if the default value of this Parameter is None.</p></li>
+<li><p><strong>doc</strong>: Docstring describing this parameter, which can be used by automatic documentation systems.</p></li>
+<li><p><strong>constant</strong>: Parameter whose value can only be changed at the class level or in a Parameterized constructor. Once the Parameterized instance has been created, the value is constant except in the context of <code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">param.edit_constant(obj)</span></code> (see below).</p></li>
+<li><p><strong>readonly</strong>: Parameter whose value cannot be set by a user either on an instance or at the class level. Can still be changed inside a codebase by temporarily overriding this value, e.g. to report internal state.</p></li>
+<li><p><strong>instantiate</strong>: Whether to deepcopy the default value into a Parameterized instance when it is created. False by default for Parameter and most of its subtypes, but some Parameter types commonly used with mutable containers default to <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code> to avoid interaction between separate Parameterized instances, and users can control this when declaring the Parameter (see below).</p></li>
+<li><p><strong>per_instance</strong>: whether a separate Parameter instance will be created for every Parameterized instance created. Similar to <code class="docutils literal notranslate"><span class="pre">instantiate</span></code>, but applies to the Parameter object rather than to its value.</p></li>
+<li><p><strong>precedence</strong>: Optional numeric value controlling whether this parameter is visible in a listing and if so in what order.</p></li>
+<li><p><strong>allow_refs</strong>: Whether to allow the Parameter to accept references to other Parameters that will be dynamically resolved.</p></li>
+<li><p><strong>nested_refs</strong>: Whether references should be resolved even when they are nested inside a container.</p></li>
+</ul>
+<p>Most of these settings (apart from <strong>name</strong>) are accepted as keyword arguments to the Parameter’s constructor, with <code class="docutils literal notranslate"><span class="pre">default</span></code> mostly also accepted as the only positional argument:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">param</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">Parameterized</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The answer&quot;</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">default</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>42
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">allow_None</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>False
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">doc</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;The answer&#39;
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="parameter-objects-and-instances">
+<h2>Parameter objects and instances<a class="headerlink" href="#parameter-objects-and-instances" title="Link to this heading">#</a></h2>
+<p>In most cases, a Parameter will not be declared on its own as above; the Parameter object by itself is little more than a container for the metadata above. Until it is put into a class, most of those declarations are not meaningful, because what the Parameter object does is to specify how the corresponding Python attribute of that class should be handled. For example, we can define a Parameterized class with a couple of Parameter objects, and we’ll then be able to access the corresponding attributes of that class:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">question</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;What is it?&quot;</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The question&quot;</span><span class="p">)</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The answer&quot;</span><span class="p">)</span>
+    <span class="n">ultimate_answer</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The real answer&quot;</span><span class="p">)</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">question</span><span class="o">=</span><span class="s2">&quot;How is it?&quot;</span><span class="p">,</span> <span class="n">answer</span><span class="o">=</span><span class="s2">&quot;6&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here, we created a Parameterized class <code class="docutils literal notranslate"><span class="pre">A</span></code>, with parameters <code class="docutils literal notranslate"><span class="pre">question</span></code> and <code class="docutils literal notranslate"><span class="pre">answer</span></code>, each with default values. We then instantiated a Python object <code class="docutils literal notranslate"><span class="pre">a</span></code> of type <code class="docutils literal notranslate"><span class="pre">A</span></code>. Without having to write a constructor for <code class="docutils literal notranslate"><span class="pre">A</span></code>, we were able to provide our own values for <code class="docutils literal notranslate"><span class="pre">question</span></code> and <code class="docutils literal notranslate"><span class="pre">answer</span></code>, while inheriting the default value of <code class="docutils literal notranslate"><span class="pre">ultimate_answer</span></code>. This approach gives a lot of (but not too much!) configurability to the user of this class, without much effort by the class author. Any values we provide at instantiation need to be allowed by the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> declaration; e.g. here we could not provide a value for <code class="docutils literal notranslate"><span class="pre">ultimate_answer</span></code> when declaring <code class="docutils literal notranslate"><span class="pre">a</span></code>, because that parameter is declared read only:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">A</span><span class="p">(</span><span class="n">ultimate_answer</span><span class="o">=</span><span class="s2">&quot;no&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>TypeError: Read-only parameter &#39;ultimate_answer&#39; cannot be modified
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now that we have a Parameterized instance <code class="docutils literal notranslate"><span class="pre">a</span></code>, we can access the attributes we defined just as if they were normal Python instance attributes, and we’ll get the values we provided:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;How is it?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">answer</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;6&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Meanwhile, the <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> <em>class</em> <code class="docutils literal notranslate"><span class="pre">A</span></code> (not the instance <code class="docutils literal notranslate"><span class="pre">a</span></code>) still has the default values, accessible as class attributes and used for any future objects instantiated of type <code class="docutils literal notranslate"><span class="pre">A</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;What is it?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="o">.</span><span class="n">answer</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span> <span class="o">=</span> <span class="n">A</span><span class="p">()</span>
+<span class="n">b</span><span class="o">.</span><span class="n">answer</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+<p>If accessing the attribute always gives us a value whether on the instance or the class, what happened to the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> objects? They are stored on the Parameterized instance or class, and are accessible via a special <code class="docutils literal notranslate"><span class="pre">param</span></code> accessor object at either the instance or class levels, via attribute or key:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="p">[</span><span class="s1">&#39;question&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;param.parameterized.Parameter at 0x7f69c8d22ac0&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;param.parameterized.Parameter at 0x7f69c8d22ac0&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">question</span><span class="o">.</span><span class="n">name</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;question&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">question</span><span class="o">.</span><span class="n">default</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;What is it?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">question</span><span class="o">.</span><span class="n">default</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;What is it?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Once the Parameterized instance is created, the attributes can continue to be modified on it as often as you like, as long as the value is allowed by the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object involved. E.g. <code class="docutils literal notranslate"><span class="pre">question</span></code> can still be changed, while <code class="docutils literal notranslate"><span class="pre">answer</span></code> is constant and cannot be changed after the <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> object has been instantiated:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">question</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">answer</span> <span class="o">=</span> <span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>TypeError: Constant parameter &#39;answer&#39; cannot be modified
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+<p>Note that if for some reason you do need to change the value of a constant parameter (typically inside of your Parameterized object’s own code), you can do so using the <code class="docutils literal notranslate"><span class="pre">param.edit_constant</span></code> context manager:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">edit_constant</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">answer</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">a</span><span class="o">.</span><span class="n">answer</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>30
+</pre></div>
+</div>
+</div>
+</div>
+<p>In most cases, the only time you need to worry about the difference between a Parameter and a regular Python attribute is when you first declare it; after that it will sit there happily behaving as instructed, noticeable only when a user attempts something the declarer of that Parameter has not allowed. You can safely leave the various metadata items at their defaults most of the time, but they are all there for when your particular application requires a certain behavior.</p>
+</section>
+<section id="parameter-inheritance">
+<h2>Parameter inheritance<a class="headerlink" href="#parameter-inheritance" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Parameter</span></code> objects and their metadata are inherited in a hierarchy of <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> objects. Let’s see how that works:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">question</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;What is it?&quot;</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The question&quot;</span><span class="p">)</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The answer&quot;</span><span class="p">)</span>
+    <span class="n">ultimate_answer</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;The real answer&quot;</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">B</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+    <span class="n">ultimate_answer</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">84</span><span class="p">)</span>
+
+<span class="n">b</span> <span class="o">=</span> <span class="n">B</span><span class="p">()</span>
+<span class="n">b</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;What is it?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="o">.</span><span class="n">question</span> <span class="o">=</span> <span class="s2">&quot;How are you?&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;How are you?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here you can see that B inherits <code class="docutils literal notranslate"><span class="pre">question</span></code> from A, and as long as <code class="docutils literal notranslate"><span class="pre">question</span></code> has not been set explicitly on <code class="docutils literal notranslate"><span class="pre">b</span></code>, <code class="docutils literal notranslate"><span class="pre">b.question</span></code> will report the value from where that Parameter was defined, i.e. A in this case. If <code class="docutils literal notranslate"><span class="pre">question</span></code> is subsequently set on <code class="docutils literal notranslate"><span class="pre">b</span></code>, <code class="docutils literal notranslate"><span class="pre">b.question</span></code> will no longer be affected by the value in <code class="docutils literal notranslate"><span class="pre">A</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">question</span> <span class="o">=</span> <span class="s2">&quot;Why?&quot;</span>
+<span class="n">A</span><span class="o">.</span><span class="n">question</span> <span class="o">=</span> <span class="s2">&quot;Who?&quot;</span>
+<span class="n">b</span><span class="o">.</span><span class="n">question</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;Why?&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, parameters not specified in B are still fully usable in it, if they were declared in a superclass. <strong>Metadata associated with that parameter is also inherited</strong>, if not explicitly overidden in <code class="docutils literal notranslate"><span class="pre">B</span></code>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">ultimate_answer</span><span class="o">.</span><span class="n">constant</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>False
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">ultimate_answer</span><span class="o">.</span><span class="n">readonly</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">ultimate_answer</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>84
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">ultimate_answer</span><span class="o">.</span><span class="n">default</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>84
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">ultimate_answer</span><span class="o">.</span><span class="n">doc</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;The real answer&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Looking at the metadata values of <code class="docutils literal notranslate"><span class="pre">ultimate_answer</span></code> on <code class="docutils literal notranslate"><span class="pre">b</span></code> or <code class="docutils literal notranslate"><span class="pre">B</span></code> you can see that:</p>
+<ul class="simple">
+<li><p>All the default metadata values like <code class="docutils literal notranslate"><span class="pre">constant</span></code>, <code class="docutils literal notranslate"><span class="pre">allow_none</span></code>, …, were inherited from the base <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object provided by Param</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">read_only</span></code> and <code class="docutils literal notranslate"><span class="pre">doc</span></code> metadata values were inherited from <code class="docutils literal notranslate"><span class="pre">A</span></code></p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">default</span></code> metadata value of <code class="docutils literal notranslate"><span class="pre">ultimate_answer</span></code> in <code class="docutils literal notranslate"><span class="pre">B</span></code> overrode the value provided in <code class="docutils literal notranslate"><span class="pre">A</span></code>.</p></li>
+</ul>
+<p>Parameter inheritance like this lets you (a) use a parameter in many subclasses without having to define it more than once, and (b) control the value of that parameter conveniently across the entire set of subclasses and instances, as long as that attribute has not been set on those objects already. Using inheritance in this way is a very convenient mechanism for setting default values and other “global” parameters, whether before a program starts executing or during it.</p>
+<p><code class="docutils literal notranslate"><span class="pre">help(b)</span></code> or  <code class="docutils literal notranslate"><span class="pre">help(B)</span></code> will list all parameters. You can also prefix or suffix a Parameterized object with <code class="docutils literal notranslate"><span class="pre">?</span></code> in an IPython console/Notebook to display the help:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>B<span class="o">?</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><img src="../_static/param_help.png" alt="Param help"></img></p>
+</section>
+<section id="parameter-value-instantiation">
+<h2>Parameter value instantiation<a class="headerlink" href="#parameter-value-instantiation" title="Link to this heading">#</a></h2>
+<p>So much of the parameter metadata is there to help you control whether and how the parameter value is instantiated on Parameterized objects as they are created or new Parameterized subclasses as they are defined. Depending on how you want to use that Parameter and what values it might take, controlling instantiation can be very important when mutable values are involved. While the default behavior shown above is appropriate for <strong>immutable attributes</strong>, what happens if the value (unlike Python strings) is mutable? Things get a lot more complex.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">C</span><span class="p">(</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">s1</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;A sequence&quot;</span><span class="p">)</span>
+    <span class="n">s2</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;Another sequence&quot;</span><span class="p">)</span>
+
+<span class="n">c</span> <span class="o">=</span> <span class="n">C</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here, both parameters <code class="docutils literal notranslate"><span class="pre">s1</span></code> and <code class="docutils literal notranslate"><span class="pre">s2</span></code> effectively point to the same underlying sequence <code class="docutils literal notranslate"><span class="pre">s</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">s1</span> <span class="ow">is</span> <span class="n">c</span><span class="o">.</span><span class="n">s2</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 10, 3]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">s1</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 10, 3]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">s1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;a&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">s1</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 10, &#39;a&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">s2</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 10, &#39;a&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, there is only one actual sequence here, and <code class="docutils literal notranslate"><span class="pre">s</span></code>, <code class="docutils literal notranslate"><span class="pre">s1</span></code>, and <code class="docutils literal notranslate"><span class="pre">s2</span></code> all point to it. In some cases such behavior is desirable, e.g. if the mutable object is a specific global list (e.g. a set of search paths) with a unique identity and all of the parameters are meant to point to that specific item. In other cases, it’s the contents of the mutable item that are important, and no sharing of contents is intended. Luckily, Param supports that case as well, if you provide <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code> (default is <code class="docutils literal notranslate"><span class="pre">False</span></code>):</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">D</span><span class="p">(</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">s1</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;A sequence&quot;</span><span class="p">,</span> <span class="n">instantiate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">s2</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;Another sequence&quot;</span><span class="p">,</span> <span class="n">instantiate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">d</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now, parameters <code class="docutils literal notranslate"><span class="pre">s1</span></code> and <code class="docutils literal notranslate"><span class="pre">s2</span></code> point to their own copies of the sequence, independent of each other and of the original argument <code class="docutils literal notranslate"><span class="pre">s</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d</span><span class="o">.</span><span class="n">s1</span> <span class="ow">is</span> <span class="n">d</span><span class="o">.</span><span class="n">s2</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>False
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">*=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 2, 3, 1, 2, 3]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d</span><span class="o">.</span><span class="n">s1</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 2, 3]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d</span><span class="o">.</span><span class="n">s1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;a&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d</span><span class="o">.</span><span class="n">s2</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 2, 3]
+</pre></div>
+</div>
+</div>
+</div>
+<p>Of course, copying the data into each instance like that costs memory, and moreover prevents controlling all instances at once by setting a class attribute as we saw earlier, which is why <code class="docutils literal notranslate"><span class="pre">instantiate</span></code> is not True by default. As a rule of thumb, set <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code> if and only if (a) your Parameter can take mutable values, and (b) you want those values to be independent between Parameterized instances.</p>
+</section>
+<section id="parameter-object-instantiation">
+<h2>Parameter object instantiation<a class="headerlink" href="#parameter-object-instantiation" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">instantiate</span></code> controls how parameter <em>values</em> behave, but similar issues arise for Parameter <em>objects</em>, which offer similar control via the <code class="docutils literal notranslate"><span class="pre">per_instance</span></code> metadata declaration. <code class="docutils literal notranslate"><span class="pre">per_instance</span></code> (<code class="docutils literal notranslate"><span class="pre">True</span></code> by default) provides a logically distinct Parameter object for every Parameterized instance, allowing each such instance to have different metadata for that parameter. For example, we can set the label separately for each instance without clobbering each other:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d1</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+<span class="n">d2</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+<span class="n">d1</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">s1</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;sequence 1&quot;</span>
+<span class="n">d2</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">s1</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;(sequence 1)&quot;</span>
+<span class="n">d2</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">s1</span><span class="o">.</span><span class="n">label</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;(sequence 1)&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d1</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">s1</span><span class="o">.</span><span class="n">label</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;sequence 1&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>This capability is useful for situations with dynamically updated metadata, e.g. if you need setting one parameter’s value (e.g. ‘Continent’) to change the allowed values of another parameter (e.g. ‘Country’). The underlying Parameter objects are copied lazily (only when actually changed), so that objects are not actually multiplied unless necessary. If you do want parameters to share a single Parameter object so that you can control its behavior globally, you can achieve that with <code class="docutils literal notranslate"><span class="pre">per_instance=False</span></code>, though the effects can be confusing in the same way as <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code> for mutable objects (above):</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">E</span><span class="p">(</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mf">3.14</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;pi&quot;</span><span class="p">,</span> <span class="n">per_instance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">e1</span> <span class="o">=</span> <span class="n">E</span><span class="p">()</span>
+<span class="n">e2</span> <span class="o">=</span> <span class="n">E</span><span class="p">()</span>
+<span class="n">e2</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;Pie&quot;</span>
+<span class="n">e1</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">label</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;Pie&#39;
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="instantiating-with-shared-parameters">
+<h2>Instantiating with shared parameters<a class="headerlink" href="#instantiating-with-shared-parameters" title="Link to this heading">#</a></h2>
+<p>When creating a large collection of Parameterized objects of the same type, the overhead of having separate parameters for each object can be significant. If you want, you can create the objects to share parameter values for efficiency, and also so that you can easily change a value on all such objects at the same time.</p>
+<p>As an example, let’s say you’ve defined a Parameter value to be independent, such that changing one instance’s value will not affect the others:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">S</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">instantiate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">ss</span> <span class="o">=</span> <span class="p">[</span><span class="n">S</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="n">ss</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">l</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">ss</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">l</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 2, 3]
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here changing the value of <code class="docutils literal notranslate"><span class="pre">l</span></code> on <code class="docutils literal notranslate"><span class="pre">ss[0]</span></code> doesn’t affect <code class="docutils literal notranslate"><span class="pre">ss[1]</span></code> or any other instances.</p>
+<p>What if you as a user of this class are creating a very large number of similar objects and actually do want them to share the same parameter value, either to save memory or to make it easy to change all of their values at once? In that case you can use the context manager <code class="docutils literal notranslate"><span class="pre">shared_parameters</span></code>, and any Parameterized objects created within that context will share parameter values, such that changing one of them will affect all of them:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">shared_parameters</span><span class="p">():</span>
+    <span class="n">ps</span> <span class="o">=</span> <span class="p">[</span><span class="n">S</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+    
+<span class="n">ps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">l</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">ps</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">l</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[1, 2, 5]
+</pre></div>
+</div>
+</div>
+</div>
+<p>This approach can provide significant speedup and memory savings in certain cases, but should only be used for good reasons, since it can cause confusion for any code expecting instances to be independent as they have been declared.</p>
+</section>
+<section id="displaying-parameterized-objects">
+<h2>Displaying Parameterized objects<a class="headerlink" href="#displaying-parameterized-objects" title="Link to this heading">#</a></h2>
+<p>Most of the important behavior of Parameterized is to do with instantiation, getting, and setting, as described above. Parameterized also provides a few public methods for creating string representations of the Parameterized object and its parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameterized.__str__()</span></code>: A concise, non-executable representation of the name and class of this object</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameterized.__repr__()</span></code>: A representation of this object and its parameter values as if it were Python code calling the constructor (<code class="docutils literal notranslate"><span class="pre">classname(parameter1=x,parameter2=y,...)</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameterize.param._repr_html_()</span></code>: A rich HTML representation of the object with its parameters listed in a table together with their metadata.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameterized.param.pprint()</span></code>: Customizable, hierarchical pretty-printed representation of this Parameterized and (recursively) any of its parameters that are Parameterized objects. See <a class="reference internal" href="Serialization_and_Persistence.html"><span class="std std-doc">Serialization and Persistence</span></a> for details on customizing <code class="docutils literal notranslate"><span class="pre">pprint</span></code>.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Q</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">39</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">50</span><span class="p">),</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;Number a&#39;</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;A string&#39;</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">Q</span><span class="p">):</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">Q</span><span class="p">(),</span> <span class="n">class_</span><span class="o">=</span><span class="n">Q</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;An instance of Q&#39;</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">(),</span> <span class="n">class_</span><span class="o">=</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;A Parameterized instance&#39;</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Range</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;A range&#39;</span><span class="p">)</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">c</span><span class="o">=</span><span class="n">P</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span><span class="mi">43</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;demo&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;&lt;P demo&gt;&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&quot;P(a=39, b=&#39;str&#39;, c=P(a=39, b=&#39;str&#39;, c=Q(a=39, b=&#39;str&#39;, name=&#39;Q00034&#39;), e=Parameterized(name=&#39;Parameterized00035&#39;), f=(42, 43), name=&#39;P00033&#39;), e=Parameterized(name=&#39;Parameterized00038&#39;), f=(2, 3), name=&#39;demo&#39;)&quot;
+</pre></div>
+</div>
+</div>
+</div>
+<p>The HTML representation of a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> instance or class is displayed when you call <code class="docutils literal notranslate"><span class="pre">&lt;obj&gt;.param</span></code> in a Notebook.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details  open>
+ <summary style="display:list-item; outline:none;">
+  <tt>P()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="Number a">a</p></td>  <td style="max-width: 200px; text-align:left;">39</td>  <td style="text-align:left;">Number</td>  <td style="max-width: 300px;">>=0, <=50</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A string">b</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;str&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="An instance of Q">c</p></td>  <td style="max-width: 200px; text-align:left;"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details >
+ <summary style="display:list-item; outline:none;">
+  <tt>P()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="Number a">a</p></td>  <td style="max-width: 200px; text-align:left;">39</td>  <td style="text-align:left;">Number</td>  <td style="max-width: 300px;">>=0, <=50</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A string">b</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;str&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="An instance of Q">c</p></td>  <td style="max-width: 200px; text-align:left;"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details >
+ <summary style="display:list-item; outline:none;">
+  <tt>Q()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="Number a">a</p></td>  <td style="max-width: 200px; text-align:left;">39</td>  <td style="text-align:left;">Number</td>  <td style="max-width: 300px;">>=0, <=50</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A string">b</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;str&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;Q00034&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</td>  <td style="text-align:left;">ClassSelector</td>  <td style="max-width: 300px;">Q</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A Parameterized instance">e</p></td>  <td style="max-width: 200px; text-align:left;"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details >
+ <summary style="display:list-item; outline:none;">
+  <tt>Parameterized()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;Parameterized00035&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</td>  <td style="text-align:left;">ClassSelector</td>  <td style="max-width: 300px;">Parameterized</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A range">f</p></td>  <td style="max-width: 200px; text-align:left;">(42, 43)</td>  <td style="text-align:left;">Range</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;P00033&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</td>  <td style="text-align:left;">ClassSelector</td>  <td style="max-width: 300px;">Q</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A Parameterized instance">e</p></td>  <td style="max-width: 200px; text-align:left;"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details >
+ <summary style="display:list-item; outline:none;">
+  <tt>Parameterized()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;Parameterized00038&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</td>  <td style="text-align:left;">ClassSelector</td>  <td style="max-width: 300px;">Parameterized</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A range">f</p></td>  <td style="max-width: 200px; text-align:left;">(2, 3)</td>  <td style="text-align:left;">Range</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;demo&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">P</span><span class="o">.</span><span class="n">param</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details  open>
+ <summary style="display:list-item; outline:none;">
+  <tt>P</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Default</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="Number a">a</p></td>  <td style="max-width: 200px; text-align:left;">39</td>  <td style="text-align:left;">Number</td>  <td style="max-width: 300px;">>=0, <=50</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A string">b</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;str&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="An instance of Q">c</p></td>  <td style="max-width: 200px; text-align:left;"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details >
+ <summary style="display:list-item; outline:none;">
+  <tt>Q()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="Number a">a</p></td>  <td style="max-width: 200px; text-align:left;">39</td>  <td style="text-align:left;">Number</td>  <td style="max-width: 300px;">>=0, <=50</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A string">b</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;str&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;Q00031&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</td>  <td style="text-align:left;">ClassSelector</td>  <td style="max-width: 300px;">Q</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A Parameterized instance">e</p></td>  <td style="max-width: 200px; text-align:left;"><style>
+.param-doc-tooltip{
+  position: relative;
+  cursor: help;
+}
+.param-doc-tooltip:hover:after{
+  content: attr(data-tooltip);
+  background-color: black;
+  color: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 100%;
+  margin-left: 10px;
+  min-width: 250px;
+}
+.param-doc-tooltip:hover:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+</style>
+<details >
+ <summary style="display:list-item; outline:none;">
+  <tt>Parameterized()</tt>
+ </summary>
+ <div style="padding-left:10px; padding-bottom:5px;">
+  <table style="max-width:100%; border:1px solid #AAAAAA;">
+   <tr><th style="text-align:left;">Name</th><th style="text-align:left;">Value</th><th style="text-align:left;">Type</th><th>Range</th></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;Parameterized00032&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</td>  <td style="text-align:left;">ClassSelector</td>  <td style="max-width: 300px;">Parameterized</td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="A range">f</p></td>  <td style="max-width: 200px; text-align:left;">(0, 1)</td>  <td style="text-align:left;">Range</td>  <td style="max-width: 300px;"></td></tr>
+<tr>  <td><p style="margin-bottom: 0px;" class="param-doc-tooltip" data-tooltip="String identifier for this object.">name</p></td>  <td style="max-width: 200px; text-align:left;">&#x27;P&#x27;</td>  <td style="text-align:left;">String</td>  <td style="max-width: 300px;"><i>nullable</i> <i>constant</i></td></tr>
+
+  </table>
+ </div>
+</details>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&quot;P(c=P(c=Q(),     e=Parameterized(),     f=(42,43)),\n e=Parameterized(),\n f=(2,3),\n name=&#39;demo&#39;)&quot;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Notice that in the case of a circular reference (<code class="docutils literal notranslate"><span class="pre">p.c</span> <span class="pre">=</span> <span class="pre">P(c=p)</span></code>) the representation will show an ellipsis (<code class="docutils literal notranslate"><span class="pre">...</span></code>) rather than recursively printing the subobject:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">c</span><span class="o">=</span><span class="n">P</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">p</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">pprint</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&quot;P(c=P(c=...,     e=Parameterized()), e=Parameterized(), f=(2,3), name=&#39;demo&#39;)&quot;
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="parameterized-namespace">
+<h2>Parameterized namespace<a class="headerlink" href="#parameterized-namespace" title="Link to this heading">#</a></h2>
+<p>Param allows you to create Parameterized objects by inheriting from the <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> base class. Param has evolved over time to reduce its footprint and reserve as few as possible attributes on this namespace, to reduce the risk of name clashes and allow you to freely define your attribute names. Param reserves a few names that are described below, make sure not to override, unless it is stated it is allowed:</p>
+<ul class="simple">
+<li><p>Public attributes:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: Parameterized classes and instances have a name <code class="docutils literal notranslate"><span class="pre">String</span></code> Parameter, that by default is set to the class name when accessed from the class and to the class name appended with a 5 digit when accessed from the instance. You can override this Parameter by your own <code class="docutils literal notranslate"><span class="pre">String</span></code> Parameter if you need to.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param</span></code>: Property that helps keep the Parameterized namespace clean and disambiguate between Parameter objects and parameter values, it gives access to a namespace that offers various methods (see the section below) to update and inspect the Parameterized object at hand.</p></li>
+</ul>
+</li>
+<li><p>Private attributes:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">_param__parameters</span></code>: Store the object returned by <code class="docutils literal notranslate"><span class="pre">.param</span></code> on the class</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_param__private</span></code>: Store various internal data on Parameterized class and instances</p></li>
+</ul>
+</li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">()</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">P</span><span class="o">.</span><span class="n">name</span><span class="si">=}</span><span class="s1">, </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="si">=}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P.name=&#39;P&#39;, p.name=&#39;P00042&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">namespace</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">o</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">o</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">namespace</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;_param__parameters&#39;, &#39;_param__private&#39;, &#39;a&#39;, &#39;b&#39;, &#39;name&#39;, &#39;param&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">namespace</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;_param__parameters&#39;, &#39;_param__private&#39;, &#39;a&#39;, &#39;b&#39;, &#39;name&#39;, &#39;param&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="other-parameterized-methods">
+<h2>Other Parameterized methods<a class="headerlink" href="#other-parameterized-methods" title="Link to this heading">#</a></h2>
+<p>Like <code class="docutils literal notranslate"><span class="pre">.param.pprint</span></code>, the remaining “utility” or convenience methods available for a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> class or object are provided via the <code class="docutils literal notranslate"><span class="pre">.param</span></code> subobject:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.update(**kwargs)</span></code>: Set parameter values from the given <code class="docutils literal notranslate"><span class="pre">param=value</span></code> keyword arguments (or a dict or iterable), delaying watching and dependency handling until all have been updated. <code class="docutils literal notranslate"><span class="pre">.param.update</span></code> can also be used as a context manager to temporarily set values, that are restored to their original values when the context manager exits.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s1">&#39;start&#39;</span><span class="p">);</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0 start
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s1">&#39;temp&#39;</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;In the context manager: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">a</span><span class="si">=}</span><span class="s1">, </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">b</span><span class="si">=}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;After the context manager exits: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">a</span><span class="si">=}</span><span class="s1">, </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">b</span><span class="si">=}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>In the context manager: p.a=1, p.b=&#39;temp&#39;
+After the context manager exits: p.a=0, p.b=&#39;start&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.values(onlychanged=False)</span></code>: A dict of name,value pairs for all parameters of this object</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{&#39;a&#39;: 0, &#39;b&#39;: &#39;start&#39;, &#39;name&#39;: &#39;P00042&#39;}
+</pre></div>
+</div>
+</div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.objects(instance=True)</span></code>: Parameter objects of this instance or class</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">objects</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{&#39;name&#39;: &lt;param.parameterized.String at 0x7f69c8d90540&gt;,
+ &#39;a&#39;: &lt;param.parameters.Number at 0x7f69c8ee9180&gt;,
+ &#39;b&#39;: &lt;param.parameterized.String at 0x7f69c8d911c0&gt;}
+</pre></div>
+</div>
+</div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.add_parameter(param_name,param_obj)</span></code>: Dynamically add a new Parameter to this object’s class</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.get_value_generator(name)</span></code>: Returns the underlying value-generating callable for this parameter, or the underlying static value if none</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.force_new_dynamic_value(name)</span></code>: For a Dynamic parameter, generate a new value and return it</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.inspect_value(name)</span></code>: For a Dynamic parameter, return the current value of the named attribute without modifying it.</p></li>
+</ul>
+</section>
+<section id="specialized-parameter-types">
+<h2>Specialized Parameter types<a class="headerlink" href="#specialized-parameter-types" title="Link to this heading">#</a></h2>
+<p>As you can see above, a <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> provides a lot of power already on its own, but in practice you will want to use much more specific parameter types that reject invalid inputs and keep your code clean and simple. A specialized Parameter acts as a “contract” with the users of the code you write, declaring and defending precisely what configuration is allowed and how to achieve it. If you need to accept specific inputs like that but don’t add an appropriate Parameter type, you’ll be stuck adding exceptions and validation code throughout your codebase, whereas anything you can express at the Parameter level will be enforced automatically without any further checks or code.</p>
+<p>For instance, what if you want to accept a numeric parameter, but (for some reason) can only accept numbers that are even integers? You’ll need a custom Parameter class to express a restriction like that. In this case you can do it by overriding the <code class="docutils literal notranslate"><span class="pre">_validate_value</span></code> method of the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> class:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">EvenInteger</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameter</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Integer Parameter that must be even&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">allow_None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_validate_value</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">allow_None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;EvenInteger parameter </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> must be a number, not </span><span class="si">{</span><span class="n">val</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">val</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;EvenInteger parameter </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> must be even, not </span><span class="si">{</span><span class="n">val</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">()</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">EvenInteger</span><span class="p">()</span>
+    
+<span class="n">p</span><span class="o">=</span><span class="n">P</span><span class="p">()</span>
+<span class="n">P</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">P</span><span class="p">(</span><span class="n">b</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;P00003&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P(b=4, n=5, name=&#39;P00003&#39;)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">P</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s2">&quot;four&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: EvenInteger parameter &#39;b&#39; must be a number, not &#39;four&#39;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">P</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: EvenInteger parameter &#39;b&#39; must be even, not 5.
+</pre></div>
+</div>
+</div>
+</div>
+<p>Luckily, you don’t often need to write a custom Parameter class like this, because the most common cases are already provided in Param, as listed in the <a class="reference internal" href="Parameter_Types.html"><span class="std std-doc">Parameter Types</span></a> manual. If you need something more specific than the existing types, start with the one that comes closest to restricting its value to the desired set of values without excluding any allowable values. In this case all integer powers of 2 are also integers, so you’d start with <code class="docutils literal notranslate"><span class="pre">param.Integer</span></code> rather than <code class="docutils literal notranslate"><span class="pre">param.Parameterized</span></code> as above. You can then make a new subclass and add validation as above to further restrict the values to precisely what you allow. Here if you inherited from <code class="docutils literal notranslate"><span class="pre">param.Integer</span></code> you would no longer need to check if the input is a number, as <code class="docutils literal notranslate"><span class="pre">param.Integer</span></code> already does that as long as you call <code class="docutils literal notranslate"><span class="pre">super</span></code> as above. Your custom type can override any aspects of the Parameter if needed, e.g. to accept different items in the constructor, store additional data, add additional constraints, and so on. The existing Parameter types in <code class="docutils literal notranslate"><span class="pre">param/__init__.py</span></code> act as a rich source of examples for you to start with and crib from.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Simplifying_Codebases.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Simplifying Codebases</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Parameter_Types.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Parameter types</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-metadata">Parameter metadata</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-objects-and-instances">Parameter objects and instances</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-inheritance">Parameter inheritance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-value-instantiation">Parameter value instantiation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-object-instantiation">Parameter object instantiation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instantiating-with-shared-parameters">Instantiating with shared parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#displaying-parameterized-objects">Displaying Parameterized objects</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameterized-namespace">Parameterized namespace</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-parameterized-methods">Other Parameterized methods</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#specialized-parameter-types">Specialized Parameter types</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/user_guide/Parameters.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

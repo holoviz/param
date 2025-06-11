@@ -1,0 +1,47 @@
+﻿param.Color
+===========
+
+.. currentmodule:: param
+
+.. autoclass:: Color
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Color.__init__
+      ~Color.deserialize
+      ~Color.schema
+      ~Color.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Color.allow_named
+      ~Color.allow_None
+      ~Color.allow_refs
+      ~Color.constant
+      ~Color.default
+      ~Color.doc
+      ~Color.instantiate
+      ~Color.label
+      ~Color.name
+      ~Color.nested_refs
+      ~Color.owner
+      ~Color.per_instance
+      ~Color.pickle_default_value
+      ~Color.precedence
+      ~Color.readonly
+      ~Color.rx
+      ~Color.watchers
+   
+   

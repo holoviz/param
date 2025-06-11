@@ -1,0 +1,53 @@
+﻿param.DateRange
+===============
+
+.. currentmodule:: param
+
+.. autoclass:: DateRange
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~DateRange.__init__
+      ~DateRange.deserialize
+      ~DateRange.get_soft_bounds
+      ~DateRange.rangestr
+      ~DateRange.schema
+      ~DateRange.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~DateRange.allow_None
+      ~DateRange.allow_refs
+      ~DateRange.bounds
+      ~DateRange.constant
+      ~DateRange.default
+      ~DateRange.doc
+      ~DateRange.inclusive_bounds
+      ~DateRange.instantiate
+      ~DateRange.label
+      ~DateRange.length
+      ~DateRange.name
+      ~DateRange.nested_refs
+      ~DateRange.owner
+      ~DateRange.per_instance
+      ~DateRange.pickle_default_value
+      ~DateRange.precedence
+      ~DateRange.readonly
+      ~DateRange.rx
+      ~DateRange.softbounds
+      ~DateRange.step
+      ~DateRange.watchers
+   
+   

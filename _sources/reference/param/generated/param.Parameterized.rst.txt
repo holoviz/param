@@ -1,0 +1,29 @@
+﻿param.Parameterized
+===================
+
+.. currentmodule:: param
+
+.. autoclass:: Parameterized
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Parameterized.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Parameterized.name
+      ~Parameterized.param
+   
+   

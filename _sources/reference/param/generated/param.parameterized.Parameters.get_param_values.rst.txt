@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.get\_param\_values
+=================================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.get_param_values

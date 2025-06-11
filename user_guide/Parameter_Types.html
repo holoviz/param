@@ -1,0 +1,2212 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Parameter types &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="../_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="../_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="../_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="../_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="../_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=16656018"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="../_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/Parameter_Types';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Dependencies and Watchers" href="Dependencies_and_Watchers.html" />
+    <link rel="prev" title="Parameters and Parameterized objects" href="Parameters.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="../_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameters.html">Parameters</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Parameter types</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="parameter-types">
+<h1>Parameter types<a class="headerlink" href="#parameter-types" title="Link to this heading">#</a></h1>
+<p>You can get some of the benefit of Param from Parameter and Parameterized alone, such as having constant or readonly parameters, parameter value inheritance, and parameter docstrings. However, you’ll typically want a more specialized Parameter type so that you can enforce type and bounds restrictions and enable suitable behavior specialized for that type of parameter. Param ships with a large set of pre-defined more-specific Parameter types, and additional custom parameters can and should be added for any domain-specific parameter types needed.</p>
+<p>The predefined types are organized into a class hierarchy where each type is a subclass of Parameter:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#strings">String</a>: String value, optionally constrained by a regular expression</p></li>
+<li><p><a class="reference internal" href="#colors">Color</a>: A hex string specifying an RGB color, or a standard named color</p></li>
+<li><p><a class="reference internal" href="#booleans">Boolean</a>: True or False (or None, if allowed)</p>
+<ul>
+<li><p><a class="reference internal" href="#invocations">Event</a>: True/False parameter used to trigger actions (see <a class="reference internal" href="Dependencies_and_Watchers.html"><span class="std std-doc">Dependencies and watchers</span></a>).</p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#numbers">Dynamic</a>: Base class for values that can be set to a callable that returns a concrete value</p>
+<ul>
+<li><p><a class="reference internal" href="#numbers">Number</a>: Any type of numeric value</p>
+<ul>
+<li><p><a class="reference internal" href="#numbers">Integer</a>: Positive or negative integer value</p></li>
+<li><p><a class="reference internal" href="#numbers">Magnitude</a>: Positive value in the inclusive range 0.0,1.0</p></li>
+<li><p><a class="reference internal" href="#numbers">Date</a>: Date or datetime type</p></li>
+<li><p><a class="reference internal" href="#numbers">CalendarDate</a>: Date (not datetime)</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#tuples">Tuple</a>: Python tuple of a fixed length and optional fixed type</p>
+<ul>
+<li><p><a class="reference internal" href="#tuples">NumericTuple</a>: Python tuple of a fixed length and a numeric type</p>
+<ul>
+<li><p><a class="reference internal" href="#tuples">XYCoordinates</a>: Position in an x,y plane</p></li>
+<li><p><a class="reference internal" href="#tuples">Range</a>: A numeric range or interval</p>
+<ul>
+<li><p><a class="reference internal" href="#tuples">DateRange</a>: A range of dates or datetimes</p></li>
+<li><p><a class="reference internal" href="#tuples">CalendarDateRange</a>: A range of dates (not datetimes)</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#lists">List</a>: A list of objects, potentially of a fixed, min, or max length</p>
+<ul>
+<li><p><a class="reference internal" href="#lists">HookList</a>: A list of callables, for calling user-defined code at a processing stage</p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#paths">Path</a>: A POSIX-style string specifying the location of a local file or folder</p>
+<ul>
+<li><p><a class="reference internal" href="#paths">Filename</a>: A POSIX-style string specifying the location of a local file</p></li>
+<li><p><a class="reference internal" href="#paths">Foldername</a>: A POSIX-style string specifying the location of a local folder</p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#selectors">SelectorBase</a>: Abstract superclass covering various selector parameter types</p>
+<ul>
+<li><p><a class="reference internal" href="#selectors">Selector</a>: One object selected out of a provided ordered list of objects</p>
+<ul>
+<li><p><a class="reference internal" href="#selectors">FileSelector</a>: One filename selected out of those matching a provided glob</p></li>
+<li><p><a class="reference internal" href="#selectors">ListSelector</a>: Multiple objects selected out of a provided list of objects</p>
+<ul>
+<li><p><a class="reference internal" href="#selectors">MultiFileSelector</a>: Multiple filenames selected out of those matching a provided glob</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#classselectors">ClassSelector</a>: An instance or class of a specified Python class or superclass</p>
+<ul>
+<li><p><a class="reference internal" href="#classselectors">Dict</a>: A Python dictionary</p></li>
+<li><p><a class="reference internal" href="#classselectors">Array</a>: NumPy array</p></li>
+<li><p><a class="reference internal" href="#classselectors">Series</a>: A Pandas Series</p></li>
+<li><p><a class="reference internal" href="#classselectors">DataFrame</a>: A Pandas DataFrame</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#invocations">Callable</a>: A callable object, such as a function.</p>
+<ul>
+<li><p><a class="reference internal" href="#invocations">Action</a>: A callable with no arguments, ready to invoke</p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#invocations">Composite</a>: A list of other attributes or parameters of this class, settable and readable as a group</p></li>
+</ul>
+<p>The full behavior of these types is covered in the <a class="reference external" href="https://param.holoviz.org/reference.html#param-module">Reference Manual</a>. Here we will discuss the major categories of Parameter type and how to use them, including examples of what each type does <em>not</em> allow (labeled <code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">param.exceptions_summarized():</span></code>).  Each of these classes is also suitable for subclassing to create more specialized types enforcing your own specific constraints.  After reading about Parameters in general, feel free to skip around in this page and only look at the Parameter types of interest to you!</p>
+<section id="strings">
+<h2>Strings<a class="headerlink" href="#strings" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../reference/param/generated/param.String.html#param.String" title="param.String"><span class="xref myst py py-class"><code class="docutils literal notranslate"><span class="pre">param.String</span></code></span></a>: String value, with optional regular expression (regex) constraints</p></li>
+</ul>
+<p>A <a class="reference internal" href="../reference/param/generated/param.String.html#param.String" title="param.String"><span class="xref myst py py-class"><code class="docutils literal notranslate"><span class="pre">param.String</span></code></span></a> may be set to any Python string value by default, or it may be constrained to match a provided regular expression <code class="docutils literal notranslate"><span class="pre">regex</span></code>. Like all other Parameters, it can optionally also <code class="docutils literal notranslate"><span class="pre">allow_None</span></code>, which will be true by default if the default value is None.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">S</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="s1">&#39;Four score&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="s1">&#39;[A-Z][a-z][a-z][a-z ]*&#39;</span><span class="p">)</span>
+
+<span class="n">s</span> <span class="o">=</span> <span class="n">S</span><span class="p">()</span>
+<span class="n">s</span><span class="o">.</span><span class="n">s</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;Four score&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: String parameter &#39;S.s&#39; only takes a string value, not value of &lt;class &#39;int&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;Forever after&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;four of spades&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: String parameter &#39;S.s&#39; value &#39;four of spades&#39; does not match regex &#39;[A-Z][a-z][a-z][a-z ]*&#39;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ip_regex</span> <span class="o">=</span> <span class="s1">&#39;^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.)</span><span class="si">{3}</span><span class="s1">(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$&#39;</span>
+<span class="n">email_regex</span> <span class="o">=</span> <span class="s1">&#39;^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$&#39;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">I</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">ip_address</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="s1">&#39;192.1.0.1&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="n">ip_regex</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="s1">&#39;example@me.com&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="n">email_regex</span><span class="p">)</span>
+<span class="n">i</span> <span class="o">=</span> <span class="n">I</span><span class="p">()</span>
+<span class="n">i</span><span class="o">.</span><span class="n">ip_address</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;192.1.0.1&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">i</span><span class="o">.</span><span class="n">ip_address</span><span class="o">=</span><span class="s2">&quot;10.0.0.2&quot;</span>
+<span class="n">i</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="s2">&quot;user@gmail.com&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">i</span><span class="o">.</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;192.x.1.x&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: String parameter &#39;I.ip_address&#39; value &#39;192.x.1.x&#39; does not match regex &#39;^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$&#39;.
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="colors">
+<h2>Colors<a class="headerlink" href="#colors" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Color</span></code>: Named color or hex RGB string (with or without a # prefix)</p></li>
+</ul>
+<p>A Color parameter specifies one of the standard <a class="reference external" href="https://www.w3.org/TR/css-color-3/#svg-color">web color names</a> or an arbitrary hex RGB string. To support only hex RGB strings, specify <code class="docutils literal notranslate"><span class="pre">allow_named=False</span></code>.</p>
+<p>lemonchiffon</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">C</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Color</span><span class="p">(</span><span class="s1">&#39;#EEFF00&#39;</span><span class="p">)</span>
+
+<span class="n">c</span> <span class="o">=</span> <span class="n">C</span><span class="p">()</span>
+<span class="n">c</span><span class="o">.</span><span class="n">c</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;#EEFF00&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="s1">&#39;lemonchiffon&#39;</span>
+<span class="n">c</span><span class="o">.</span><span class="n">c</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;lemonchiffon&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="s1">&#39;puce&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Color parameter &#39;C.c&#39; only takes RGB hex codes or named colors, received &#39;puce&#39;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="s1">&#39;#abcdefg&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Color parameter &#39;C.c&#39; only takes RGB hex codes or named colors, received &#39;#abcdefg&#39;.
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="booleans">
+<h2>Booleans<a class="headerlink" href="#booleans" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Boolean</span></code>: A True or False value (or None, if allow_None is true)</p></li>
+</ul>
+<p>A Boolean may be True or False. Like all other Parameters, it can optionally also <code class="docutils literal notranslate"><span class="pre">allow_None</span></code>, which will be true by default if the default value is None.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">B</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Boolean</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Boolean</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="n">b</span> <span class="o">=</span> <span class="n">B</span><span class="p">()</span>
+<span class="n">b</span><span class="o">.</span><span class="n">b</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">b</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Boolean parameter &#39;B.b&#39; must be True or False, not 1.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">b</span><span class="o">=</span><span class="kc">None</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Boolean parameter &#39;B.b&#39; must be True or False, not None.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">b</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="kc">None</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="numbers">
+<h2>Numbers<a class="headerlink" href="#numbers" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Number</span></code>: Python floats, int, and Numpy values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Integer</span></code>: Python and Numpy integer values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Magnitude</span></code>: Same as <code class="docutils literal notranslate"><span class="pre">param.Number(...,</span> <span class="pre">bounds=(0.0,1.0))</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Date</span></code>: Date or datetime value of type <code class="docutils literal notranslate"><span class="pre">datetime.datetime</span></code>, <code class="docutils literal notranslate"><span class="pre">datetime.date</span></code>, or <code class="docutils literal notranslate"><span class="pre">numpy.datetime64</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.CalendarDate</span></code>: Date value of type <code class="docutils literal notranslate"><span class="pre">datetime.date</span></code>.</p></li>
+</ul>
+<p>A Number is the most common type of Parameter. All Numbers in param are of class Dynamic, which allows them to be set not just to a single value but to a value that can repeatedly be drawn from a distribution or a sequence. (See <a class="reference internal" href="Dynamic_Parameters.html"><span class="std std-doc">Dynamic Parameters</span></a> for more information about using these dynamic features, which will not be further discussed here.) Any Number has a default value (potentially None if allowed) and optional bounds.</p>
+<p>There are two types of bounds: <code class="docutils literal notranslate"><span class="pre">bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">softbounds</span></code>.  <code class="docutils literal notranslate"><span class="pre">bounds</span></code> are hard bounds: the parameter must have a value within the specified range.  The default bounds are (None,None), meaning there are actually no hard bounds.  One or both bounds can be set by specifying a value (e.g. <code class="docutils literal notranslate"><span class="pre">bounds=(None,10)</span></code> means there is no lower bound, and an upper bound of 10). Bounds are inclusive by default, but exclusivity can be specified for each bound by setting inclusive_bounds (e.g. <code class="docutils literal notranslate"><span class="pre">inclusive_bounds=(True,False)</span></code> specifies an exclusive upper bound).</p>
+<p>When not being dynamically generated, <code class="docutils literal notranslate"><span class="pre">bounds</span></code> are checked whenever a Number is created or set. Using a default value outside the hard bounds, or one that is not numeric, results in an exception. When being dynamically generated, bounds are checked when the value of a Number is <em>requested</em> (since it has no specific numeric value when first set). A generated value that is not numeric, or is outside the hard bounds, results in an exception.</p>
+<p>A separate set of <code class="docutils literal notranslate"><span class="pre">softbounds</span></code> is present to indicate the <em>typical</em> range of the parameter, but these bounds are not enforced by Param. Setting the soft bounds allows a user to know what ranges of values are likely to be useful and allows a GUI to know what values to display on sliders for the Number; <code class="docutils literal notranslate"><span class="pre">softbounds</span></code> are thus suggestions or hints rather than enforced limits.</p>
+<p>Similarly, an optional <code class="docutils literal notranslate"><span class="pre">step</span></code> value can be provided to indicate the granularity of this parameter. As for <code class="docutils literal notranslate"><span class="pre">softbounds</span></code>, Param does not force values to conform to the provided step value, but (if provided) the step can be queried by user code and used for parameter sweeps (starting at the <code class="docutils literal notranslate"><span class="pre">softbounds</span></code> low and incrementing in value by <code class="docutils literal notranslate"><span class="pre">step</span></code> until the <code class="docutils literal notranslate"><span class="pre">softbounds</span></code> high), or by GUI code to determine steps on a settings dial.</p>
+<p>Several convenience methods for working with bounds are provided:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_soft_bounds()</span></code>: return the soft bounds (or hard bounds, if no soft bounds), for code that needs to know the typical range for this Parameter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">crop_to_bounds(val)</span></code>: crop the provided value to fit into the hard bounds.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_in_bounds(obj,val)</span></code>: silently crop the given value into the legal range and set to the result, for building an API or user interface that accepts free-form input.</p></li>
+</ul>
+<p>Using Number parameters:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">N</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="mf">5.6</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="kc">None</span><span class="p">),</span> <span class="n">softbounds</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="mi">50</span><span class="p">))</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Integer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">50</span><span class="p">))</span>
+    
+<span class="n">a</span> <span class="o">=</span> <span class="n">N</span><span class="p">()</span>
+<span class="n">a</span><span class="o">.</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span>
+<span class="n">a</span><span class="o">.</span><span class="n">n</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">N</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">n</span><span class="o">.</span><span class="n">set_in_bounds</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="o">-</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">n</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">n</span><span class="o">.</span><span class="n">set_in_bounds</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="o">-</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">n</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">n</span><span class="o">.</span><span class="n">set_in_bounds</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="mi">75</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">n</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>75
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">n</span><span class="o">.</span><span class="n">get_soft_bounds</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(0, 50)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="o">-</span><span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Number parameter &#39;N.n&#39; must be at least 0, not -5.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">a</span><span class="o">.</span><span class="n">n</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>500
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">i</span><span class="o">=</span><span class="mf">5.7</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Integer parameter &#39;N.i&#39; must be an integer, not &lt;class &#39;float&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">D</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">CalendarDate</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">1900</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Date</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s1">&#39;2002-12-25T00:00&#39;</span><span class="p">))</span>
+
+<span class="n">d</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+<span class="n">d</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s1">&#39;2000-01-01&#39;</span><span class="p">)</span>
+<span class="n">d</span><span class="o">.</span><span class="n">d</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>datetime.date(2000, 1, 1)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="mi">2022</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: CalendarDate parameter &#39;D.d&#39; only takes date types.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">1900</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">d</span><span class="o">.</span><span class="n">t</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>datetime.date(1900, 1, 1)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s1">&#39;2002-12-25T00:00&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: CalendarDate parameter &#39;D.d&#39; only takes date types.
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="tuples">
+<h2>Tuples<a class="headerlink" href="#tuples" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Tuple</span></code>: Python tuple of a fixed length.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.NumericTuple</span></code>: Python tuple of a fixed length, with numeric values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.XYCoordinates</span></code>: Python pair (2-tuple) of numeric values. Same as <code class="docutils literal notranslate"><span class="pre">param.NumericTuple(...,</span> <span class="pre">length=2)</span></code>, but semantically representing a 2D coordinate in a plane (e.g. for drawing programs or GUIs)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Range</span></code>: <code class="docutils literal notranslate"><span class="pre">NumericTuple</span></code> representing a numeric range with optional bounds and softbounds.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.DateRange</span></code>: <code class="docutils literal notranslate"><span class="pre">Range</span></code> where the numeric type is a date or datetime (using same date types as <code class="docutils literal notranslate"><span class="pre">param.Date</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.CalendarDateRange</span></code>: <code class="docutils literal notranslate"><span class="pre">Range</span></code> where the numeric type is a <code class="docutils literal notranslate"><span class="pre">datetime.date</span></code>.</p></li>
+</ul>
+<p>A tuple Parameter accepts a Python tuple for the value. Tuple parameters have a fixed length, typically set by the default value of the parameter but settable as the <code class="docutils literal notranslate"><span class="pre">length</span></code> if the default value is None. Only a tuple of the specified length will be accepted when a value is set.</p>
+<p>There are many tuple types as listed above, accepting either any type, numeric types, datetimes, dates, etc. <code class="docutils literal notranslate"><span class="pre">Range</span></code> types support <code class="docutils literal notranslate"><span class="pre">bounds</span></code>, <code class="docutils literal notranslate"><span class="pre">softbounds</span></code>, <code class="docutils literal notranslate"><span class="pre">inclusive_bounds</span></code>, and <code class="docutils literal notranslate"><span class="pre">step</span></code> on the numeric values in the tuple, similar to <a class="reference internal" href="#numbers">Number</a> types.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">T</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Range</span><span class="p">((</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span><span class="kc">None</span><span class="p">),</span> <span class="n">softbounds</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="mi">100</span><span class="p">))</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">T</span><span class="p">()</span>
+<span class="n">b</span><span class="o">.</span><span class="n">t</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(-10, 10)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="mf">50.2</span><span class="p">,</span><span class="mf">50.3</span><span class="p">)</span>
+<span class="n">b</span><span class="o">.</span><span class="n">t</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(50.2, 50.3)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Range parameter &#39;T.t&#39; only takes a tuple value, not &lt;class &#39;int&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Attribute &#39;length&#39; of Range parameter &#39;T.t&#39; is not of the correct length (3 instead of 2).
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="s2">&quot;5&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Range parameter &#39;T.t&#39; only takes numeric values, not &lt;class &#39;str&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">500</span><span class="p">,</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Range parameter &#39;T.t&#39; lower bound must be in range [-100, None], not -500.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">D</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">CalendarDateRange</span><span class="p">((</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s1">&#39;1900-01-01&#39;</span><span class="p">),</span>
+                                 <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="s1">&#39;1910-12-31&#39;</span><span class="p">)))</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+<span class="n">c</span><span class="o">.</span><span class="n">d</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(datetime.date(1900, 1, 1), datetime.date(1910, 12, 31))
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">d</span><span class="o">=</span><span class="p">(</span><span class="mi">1905</span><span class="p">,</span> <span class="mi">1907</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: CalendarDateRange parameter &#39;D.d&#39; only takes date types, not (1905, 1907).
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="lists">
+<h2>Lists<a class="headerlink" href="#lists" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.List</span></code>: A Python list of objects, usually of a specified type.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.HookList</span></code>: A list of callable objects, for executing user-defined code at some processing stage</p></li>
+</ul>
+<p>List Parameters accept a Python list of objects. Typically the <code class="docutils literal notranslate"><span class="pre">item_type</span></code> will be specified for those objects, so that the rest of the code does not have to further check types when it refers to those values. Where appropriate, the <code class="docutils literal notranslate"><span class="pre">bounds</span></code> of the list can be set as (<em>min_length</em>, <em>max_length</em>), defaulting to <code class="docutils literal notranslate"><span class="pre">(0,None)</span></code>. Because List parameters already have an empty value ([]), they do not support <code class="docutils literal notranslate"><span class="pre">allow_None</span></code>.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">param.HookList</span></code> is a list whose elements are callable objects (typically either functions or objects with a <code class="docutils literal notranslate"><span class="pre">__call__</span></code> method). A <code class="docutils literal notranslate"><span class="pre">HookList</span></code> is intended for providing user configurability at various stages of some processing algorithm or pipeline. At present, there is no validation that the provided callable takes any particular number or type of arguments.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">L</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">ls</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">List</span><span class="p">([</span><span class="s2">&quot;red&quot;</span><span class="p">,</span><span class="s2">&quot;green&quot;</span><span class="p">,</span><span class="s2">&quot;blue&quot;</span><span class="p">],</span> <span class="n">item_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+
+<span class="n">e</span> <span class="o">=</span> <span class="n">L</span><span class="p">()</span>
+<span class="n">e</span><span class="o">.</span><span class="n">ls</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;red&#39;, &#39;green&#39;, &#39;blue&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">e</span><span class="o">.</span><span class="n">ls</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>TypeError: List parameter &#39;L.ls&#39; items must be instances of &lt;class &#39;str&#39;&gt;, not &lt;class &#39;int&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">e</span><span class="o">.</span><span class="n">ls</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: List parameter &#39;L.ls&#39; length must be between 0 and 10 (inclusive), not 20.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">multi_stage_example</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">before</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">HookList</span><span class="p">()</span>
+    <span class="n">during</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">HookList</span><span class="p">()</span>
+    <span class="n">after</span>  <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">HookList</span><span class="p">()</span>
+    
+    <span class="n">values</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">List</span><span class="p">([</span><span class="mf">1.5</span><span class="p">,</span><span class="o">-</span><span class="mf">8.1</span><span class="p">,</span><span class="mf">6.9</span><span class="p">,</span><span class="mf">100.0</span><span class="p">],</span> <span class="n">item_type</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">before</span><span class="p">:</span> <span class="n">h</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="n">v_</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">during</span><span class="p">:</span> <span class="n">v_</span> <span class="o">=</span> <span class="n">h</span><span class="p">(</span><span class="n">v_</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">v_</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">:</span> <span class="n">h</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+<span class="n">ex</span> <span class="o">=</span> <span class="n">multi_stage_example</span><span class="p">()</span>
+<span class="n">ex</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100.3
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">validate</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Negative value found in argument&quot;</span><span class="p">)</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="n">multi_stage_example</span><span class="p">(</span><span class="n">before</span><span class="o">=</span><span class="p">[</span><span class="n">validate</span><span class="p">])</span>
+
+<span class="n">m</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Negative value found in argument
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100.3
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">fabs</span>
+
+<span class="n">ex</span><span class="o">.</span><span class="n">during</span><span class="o">=</span><span class="p">[</span><span class="nb">abs</span><span class="p">]</span>
+<span class="n">ex</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>116.5
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="paths">
+<h2>Paths<a class="headerlink" href="#paths" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Path</span></code>: A POSIX-style string specifying the location of a local file or folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Filename</span></code>: A POSIX-style string specifying the location of a local file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Foldername</span></code>: A POSIX-style string specifying the location of a local folder</p></li>
+</ul>
+<p>A Path can be set to a string specifying the path of a file or folder. In code, the string should be specified in POSIX (UNIX) style, using forward slashes / and starting from / if absolute or some other character if relative. When retrieved, the string will be in the format of the user’s operating system.</p>
+<p>Relative paths are converted to absolute paths by searching for a matching filename on the filesystem in the current working directory (obtained with <code class="docutils literal notranslate"><span class="pre">os.getcwd()</span></code>). If <code class="docutils literal notranslate"><span class="pre">search_paths</span></code> is provided and not empty, the folders in that list are searched for the given filename, in order, returning the absolute path for the first match found by appending the provided path to the search path. An IOError is raised if the file or folder is not found. If <code class="docutils literal notranslate"><span class="pre">search_paths</span></code> is empty (the default), the file or folder is expected to be in the current working directory.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">check_exists</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code> (default is <code class="docutils literal notranslate"><span class="pre">True</span></code>) the provided path can optionally exist. This is for instance useful to declare an output file path that is meant to be created at a later stage in a process. In the default case the path must exist, on Parameter instantiation and setting.</p>
+<p>Either a file or a folder name is accepted by <code class="docutils literal notranslate"><span class="pre">param.Path</span></code>, while <code class="docutils literal notranslate"><span class="pre">param.Filename</span></code> accepts only file names and <code class="docutils literal notranslate"><span class="pre">param.Foldername</span></code> accepts only folder names.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;Parameter_Types.ipynb&#39;</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Filename</span><span class="p">(</span><span class="s1">&#39;Parameter_Types.ipynb&#39;</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Foldername</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="n">search_paths</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="s1">&#39;/usr&#39;</span><span class="p">,</span><span class="s1">&#39;/share&#39;</span><span class="p">],</span> <span class="n">check_exists</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Filename</span><span class="p">(</span><span class="s1">&#39;output.txt&#39;</span><span class="p">,</span> <span class="n">check_exists</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;/home/runner/work/param/param/doc/user_guide/Parameter_Types.ipynb&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;Outputs.ipynb&#39;</span>
+<span class="n">p</span><span class="o">.</span><span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;/home/runner/work/param/param/doc/user_guide/Outputs.ipynb&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">f</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;/home/runner/work/param/param/doc/user_guide/Parameter_Types.ipynb&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="s1">&#39;/usr/lib&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>OSError: File &#39;/usr/lib&#39; not found.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">d</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;/lib&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="s1">&#39;Parameter_Types.ipynb&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">o</span>  <span class="c1"># the output file doesn&#39;t exist yet</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;output.txt&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">o</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;Param is awesome!&#39;</span><span class="p">)</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">o</span>  <span class="c1"># it now exists, getting its value resolve the full file path</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;/home/runner/work/param/param/doc/user_guide/output.txt&#39;
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="selectors">
+<h2>Selectors<a class="headerlink" href="#selectors" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Selector</span></code>: One object selected out of a provided ordered list of objects</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.ListSelector</span></code>: Multiple objects selected out of a provided list of objects</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.FileSelector</span></code>: One filename selected out of those matching a provided glob</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.MultiFileSelector</span></code>: Multiple filenames selected out of those matching a provided glob</p></li>
+</ul>
+<p>The value of a Selector is one or more items from a set of allowed values.  All Selector types must implement <code class="docutils literal notranslate"><span class="pre">get_range()</span></code>, providing a concrete list of available options for the value.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">param.Selector</span></code> accepts a list or dictionary of <code class="docutils literal notranslate"><span class="pre">objects</span></code>, and has a single default (current) value that must be one of those objects. If not otherwise specified, the default will be the first item from the list or dictionary.</p>
+<p>Providing the objects as a list is appropriate for selecting among a set of strings, or among a set of Parameterized objects that each have a “name” parameter. That way, a UI that lets users select by string will have a suitable string available for each object to let the user make a choice between them.</p>
+<p>Otherwise, the objects should be provided as a <em>name</em>:<em>value</em> dictionary, where the string name will be stored for use in such a UI, but is not otherwise accessed by Param. The values from setting and getting the parameter are always the actual underlying object, not the string names.</p>
+<p>To make it easier to modify the collection of <code class="docutils literal notranslate"><span class="pre">objects</span></code>, they are wrapped in a container that supports both list-style and dictionary-style methods. This approach ensures that there is a consistent API for updating the <code class="docutils literal notranslate"><span class="pre">objects</span></code> and that modifying the objects in place still triggers an event.</p>
+<p>If the list of available objects is not meant be exhaustive, you can specify <code class="docutils literal notranslate"><span class="pre">check_on_set=False</span></code> (which automatically applies if the initial list is empty). Objects will then be added to the <code class="docutils literal notranslate"><span class="pre">objects</span></code> list whenever they are set, including as the initial default. <code class="docutils literal notranslate"><span class="pre">check_on_set=False</span></code> can be useful when the predefined set of objects is not exhaustive, letting a user select from the existing list for convenience while also being able to supply any other suitable object they can construct. When <code class="docutils literal notranslate"><span class="pre">check_on_set=True</span></code>, the initial value (and all subsequent values) must be in the <code class="docutils literal notranslate"><span class="pre">objects</span></code> list.</p>
+<p>Because <code class="docutils literal notranslate"><span class="pre">Selector</span></code> is usually used to allow selection from a list of existing (instantiated) objects, <code class="docutils literal notranslate"><span class="pre">instantiate</span></code> is False by default, but you can specify <code class="docutils literal notranslate"><span class="pre">instantiate=True</span></code> if you want each copy of this Parameter value to be independent of other instances and superclasses.</p>
+<p>In cases where the objects in the list cannot be known when writing the Parameterized class but can be calculated at runtime, you can supply a callable (of no arguments) to <code class="docutils literal notranslate"><span class="pre">compute_default_fn</span></code>, and then ensure that at runtime you call <code class="docutils literal notranslate"><span class="pre">compute_default</span></code> on that Parameter to initialize the value.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">param.ListSelector</span></code> works just the same as a regular Selector, but the value is a <em>list</em> of valid objects from the available objects, rather than just one. Each item in the list is checked against the <code class="docutils literal notranslate"><span class="pre">objects</span></code>, and thus the current value is thus a <em>subset</em> of the <code class="docutils literal notranslate"><span class="pre">objects</span></code>, rather than just one of the objects.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">param.FileSelector</span></code> works like a regular Selector with the value being a filename and the <code class="docutils literal notranslate"><span class="pre">objects</span></code> being computed from files on a file system. The files are specified as a <code class="docutils literal notranslate"><span class="pre">path</span></code> <a class="reference external" href="https://docs.python.org/3/library/glob.html">glob</a>, and all filenames matching the glob are valid <code class="docutils literal notranslate"><span class="pre">objects</span></code> for the parameter.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">param.MultiFileSelector</span></code> is the analog of ListSelector but for files, i.e., again supporting a path glob but allowing the user to select a list of filenames rather than a single filename. The default value in this case is <em>all</em> of the matched files, not just the first one.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;red&quot;</span><span class="p">,</span><span class="s2">&quot;green&quot;</span><span class="p">,</span><span class="s2">&quot;blue&quot;</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">S</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Selector</span><span class="p">(</span><span class="n">objects</span><span class="o">=</span><span class="n">colors</span><span class="p">)</span>
+    <span class="n">ls</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ListSelector</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">objects</span><span class="o">=</span><span class="n">colors</span><span class="p">)</span>
+    
+<span class="n">s</span> <span class="o">=</span> <span class="n">S</span><span class="p">()</span>
+<span class="n">s</span><span class="o">.</span><span class="n">o</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;red&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span><span class="o">.</span><span class="n">o</span> <span class="o">=</span> <span class="s2">&quot;green&quot;</span>
+<span class="n">s</span><span class="o">.</span><span class="n">o</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;green&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">o</span> <span class="o">=</span> <span class="s2">&quot;yellow&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Selector parameter &#39;S.o&#39; does not accept &#39;yellow&#39;; valid options include: &#39;[red, green, blue]&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">o</span> <span class="o">=</span> <span class="mi">42</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Selector parameter &#39;S.o&#39; does not accept 42; valid options include: &#39;[red, green, blue]&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span><span class="o">.</span><span class="n">ls</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;red&#39;, &#39;green&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">s</span><span class="o">.</span><span class="n">ls</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;blue&#39;</span><span class="p">]</span>
+<span class="n">s</span><span class="o">.</span><span class="n">ls</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;blue&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">ls</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;red&#39;</span><span class="p">,</span><span class="s1">&#39;yellow&#39;</span><span class="p">]</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">ls</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: ListSelector parameter &#39;S.ls&#39; does not accept &#39;yellow&#39;; valid options include: &#39;[red, green, blue]&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">F</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">FileSelector</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">&#39;/usr/share/*&#39;</span><span class="p">)</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">MultiFileSelector</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">&#39;/usr/share/*&#39;</span><span class="p">)</span>
+    
+<span class="n">f</span> <span class="o">=</span> <span class="n">F</span><span class="p">()</span>
+<span class="n">f</span><span class="o">.</span><span class="n">f</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;/usr/share/ImageMagick-6&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">f</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;/usr/share/ImageMagick-6&#39;,
+ &#39;/usr/share/ModemManager&#39;,
+ &#39;/usr/share/PackageKit&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">f</span><span class="o">.</span><span class="n">fs</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">f</span><span class="o">.</span><span class="n">fs</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;/usr/share/ImageMagick-6&#39;, &#39;/usr/share/ModemManager&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="classselectors">
+<h2>ClassSelectors<a class="headerlink" href="#classselectors" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.ClassSelector</span></code>: An instance or subclass of a class or tuple of classes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Dict</span></code>: A Python dictionary</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Array</span></code>: NumPy array</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Series</span></code>: A Pandas Series</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.DataFrame</span></code>: A Pandas DataFrame</p></li>
+</ul>
+<p>A ClassSelector has a value that is either an instance or a subclass of a specified Python <code class="docutils literal notranslate"><span class="pre">class_</span></code>. By default, requires an instance of that class, but specifying <code class="docutils literal notranslate"><span class="pre">is_instance=False</span></code> means that a subclass must be selected instead.</p>
+<p>Like Selector types, all ClassSelector types implement <code class="docutils literal notranslate"><span class="pre">get_range()</span></code>, in this case providing an introspected list of all the concrete (not abstract) subclasses available for the given class. If you want a class to be treated as abstract so that it does not show up in such a list, you can have it declare <code class="docutils literal notranslate"><span class="pre">__abstract=True</span></code> as a class attribute. In a GUI, the range list allows a user to select a type of object they want to create, and they can then separately edit the new object’s parameters (if any) to configure it appropriately.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">C</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">e_instance</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="ne">ZeroDivisionError</span><span class="p">(</span><span class="s2">&quot;1/0&quot;</span><span class="p">),</span> <span class="n">class_</span><span class="o">=</span><span class="ne">ArithmeticError</span><span class="p">)</span>
+    <span class="n">e_class</span>    <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">ClassSelector</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="ne">ZeroDivisionError</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="p">(</span><span class="ne">ArithmeticError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">),</span>
+        <span class="n">is_instance</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    
+<span class="n">c</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">e_class</span><span class="o">=</span><span class="ne">OverflowError</span><span class="p">)</span>
+<span class="n">c</span><span class="o">.</span><span class="n">e_class</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">e_instance</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(OverflowError, ZeroDivisionError(&#39;1/0&#39;))
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">e_instance</span><span class="o">.</span><span class="n">get_range</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>OrderedDict([(&#39;ArithmeticError&#39;, ArithmeticError),
+             (&#39;FloatingPointError&#39;, FloatingPointError),
+             (&#39;OverflowError&#39;, OverflowError),
+             (&#39;ZeroDivisionError&#39;, ZeroDivisionError),
+             (&#39;DecimalException&#39;, decimal.DecimalException),
+             (&#39;DivisionByZero&#39;, decimal.DivisionByZero),
+             (&#39;DivisionUndefined&#39;, decimal.DivisionUndefined),
+             (&#39;Clamped&#39;, decimal.Clamped),
+             (&#39;Rounded&#39;, decimal.Rounded),
+             (&#39;Inexact&#39;, decimal.Inexact),
+             (&#39;Subnormal&#39;, decimal.Subnormal),
+             (&#39;FloatOperation&#39;, decimal.FloatOperation),
+             (&#39;InvalidOperation&#39;, decimal.InvalidOperation),
+             (&#39;Underflow&#39;, decimal.Underflow),
+             (&#39;Overflow&#39;, decimal.Overflow),
+             (&#39;ConversionSyntax&#39;, decimal.ConversionSyntax),
+             (&#39;DivisionImpossible&#39;, decimal.DivisionImpossible),
+             (&#39;InvalidContext&#39;, decimal.InvalidContext)])
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">e_class</span><span class="o">.</span><span class="n">get_range</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>OrderedDict([(&#39;ArithmeticError&#39;, ArithmeticError),
+             (&#39;FloatingPointError&#39;, FloatingPointError),
+             (&#39;OverflowError&#39;, OverflowError),
+             (&#39;ZeroDivisionError&#39;, ZeroDivisionError),
+             (&#39;DecimalException&#39;, decimal.DecimalException),
+             (&#39;DivisionByZero&#39;, decimal.DivisionByZero),
+             (&#39;DivisionUndefined&#39;, decimal.DivisionUndefined),
+             (&#39;Clamped&#39;, decimal.Clamped),
+             (&#39;Rounded&#39;, decimal.Rounded),
+             (&#39;Inexact&#39;, decimal.Inexact),
+             (&#39;Subnormal&#39;, decimal.Subnormal),
+             (&#39;FloatOperation&#39;, decimal.FloatOperation),
+             (&#39;InvalidOperation&#39;, decimal.InvalidOperation),
+             (&#39;Underflow&#39;, decimal.Underflow),
+             (&#39;Overflow&#39;, decimal.Overflow),
+             (&#39;ConversionSyntax&#39;, decimal.ConversionSyntax),
+             (&#39;DivisionImpossible&#39;, decimal.DivisionImpossible),
+             (&#39;InvalidContext&#39;, decimal.InvalidContext),
+             (&#39;LookupError&#39;, LookupError),
+             (&#39;IndexError&#39;, IndexError),
+             (&#39;KeyError&#39;, KeyError),
+             (&#39;CodecRegistryError&#39;, encodings.CodecRegistryError),
+             (&#39;NoSuchKernel&#39;, jupyter_client.kernelspec.NoSuchKernel),
+             (&#39;UnknownBackend&#39;,
+              IPython.terminal.pt_inputhooks.UnknownBackend)])
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">e_class</span> <span class="o">=</span> <span class="ne">Exception</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: ClassSelector parameter &#39;C.e_class&#39; value must be a subclass of (ArithmeticError, LookupError), not &lt;class &#39;Exception&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">e_instance</span> <span class="o">=</span> <span class="ne">ArithmeticError</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: ClassSelector parameter &#39;C.e_instance&#39; value must be an instance of ArithmeticError, not &lt;class &#39;ArithmeticError&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">e_instance</span> <span class="o">=</span> <span class="ne">ArithmeticError</span><span class="p">()</span>
+<span class="n">c</span><span class="o">.</span><span class="n">e_instance</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ArithmeticError()
+</pre></div>
+</div>
+</div>
+</div>
+<p>Various types of ClassSelector are provided for specific data types:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Dict</span></code>: <code class="docutils literal notranslate"><span class="pre">class_=dict</span></code>, accepting a Python dictionary</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Array</span></code>: <code class="docutils literal notranslate"><span class="pre">class=numpy.ndarray</span></code>, accepting a NumPy array</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Series</span></code>: <code class="docutils literal notranslate"><span class="pre">class_=pandas.Series</span></code>, a Pandas Series. Accepts constraints on the number of <code class="docutils literal notranslate"><span class="pre">rows</span></code>, either as an integer length (e.g. <code class="docutils literal notranslate"><span class="pre">rows=10</span></code>) or a range tuple <code class="docutils literal notranslate"><span class="pre">rows=(2,4)</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.DataFrame</span></code>: <code class="docutils literal notranslate"><span class="pre">class_=pandas.DataFrame</span></code>, a Pandas DataFrame. Accepts constraints on the number of <code class="docutils literal notranslate"><span class="pre">rows</span></code> (as for <code class="docutils literal notranslate"><span class="pre">param.Series</span></code>) or <code class="docutils literal notranslate"><span class="pre">columns</span></code> (with numerical or range values as for <code class="docutils literal notranslate"><span class="pre">rows</span></code> or as a list of column names (which must appear in that order) or as a set of column names (which can appear in any order)).</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span><span class="o">,</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">D</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s2">&quot;not set&quot;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;c&#39;</span><span class="p">:[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]}),</span> <span class="n">rows</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="kc">None</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="nb">set</span><span class="p">([</span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="s1">&#39;b&#39;</span><span class="p">]))</span>
+
+<span class="n">d</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+<span class="n">d</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="mi">5</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">}</span>
+<span class="n">d</span><span class="o">.</span><span class="n">d</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{5: nan}
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">d</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Dict parameter &#39;D.d&#39; value must be an instance of dict, not [(&#39;a&#39;, 1)].
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;b&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;a&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">]})</span>
+<span class="n">d</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">df</span>
+<span class="n">d</span><span class="o">.</span><span class="n">f</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>b</th>
+      <th>a</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>-2</td>
+      <td>-1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>-3</td>
+      <td>-2</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;c&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">]})</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: DataFrame parameter &#39;D.f&#39;: provided columns [&#39;a&#39;, &#39;c&#39;] does not contain required columns [&#39;a&#39;, &#39;b&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">1</span><span class="p">]})</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: DataFrame parameter &#39;D.f&#39;: row length 1 does not match declared bounds of (2, None)
+</pre></div>
+</div>
+</div>
+</div>
+<section id="classlist-and-param-descendents">
+<h3><code class="docutils literal notranslate"><span class="pre">classlist</span></code> and <code class="docutils literal notranslate"><span class="pre">param.descendents</span></code><a class="headerlink" href="#classlist-and-param-descendents" title="Link to this heading">#</a></h3>
+<p>If you are building a GUI or some other mechanism allowing the user to choose a class or an instance of a specified class in a ClassSelector, you may want to construct a list of all subclasses or superclasses of the given class. To make it easy to traverse upwards or downwards in the inheritance hierarchy in this way, param provides the <code class="docutils literal notranslate"><span class="pre">classlist</span></code> and <code class="docutils literal notranslate"><span class="pre">param.descendents</span></code> functions. <code class="docutils literal notranslate"><span class="pre">classlist</span></code> provides a list of the superclasses of the provided object, including itself, in order from least to most specific:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">param.parameterized</span><span class="w"> </span><span class="kn">import</span> <span class="n">classlist</span>
+
+<span class="n">classlist</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(object, param.parameterized.Parameterized, __main__.D)
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, <code class="docutils literal notranslate"><span class="pre">D</span></code> is a type of <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code>, and a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> is a type of Python object. Conversely (and typically more usefully), <code class="docutils literal notranslate"><span class="pre">param.descendents</span></code> provides a list of the subclasses of the provided object, including itself:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">descendents</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">SelectorBase</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[param.parameters.SelectorBase,
+ param.parameters.Selector,
+ param.parameters.ClassSelector,
+ param.parameters.ObjectSelector,
+ param.parameters.FileSelector,
+ param.parameters.ListSelector,
+ param.parameters.Dict,
+ param.parameters.Array,
+ param.parameters.DataFrame,
+ param.parameters.Series,
+ param.parameters.MultiFileSelector]
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, there are many subtypes of SelectorBase. This list is calculated from whatever subtypes are currently defined in this Python session. If you derive an additional subtype or load code that defines an additional subtype, this list will get longer, so you need to make sure that all such code has been executed before letting the user make a selection of a subtype.</p>
+</section>
+</section>
+<section id="invocations">
+<h2>Invocations<a class="headerlink" href="#invocations" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Callable</span></code>: A callable object, such as a function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Action</span></code>: A callable with no arguments, ready to invoke</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Event</span></code>: Empty action, for use in triggering events for watchers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.Composite</span></code>: Wrapper around other parameters, letting them be set as a tuple</p></li>
+</ul>
+<p>Invocation parameters are a loose group of types that either contain an executable (callable) object, are invoked to execute some other code, or are set to change the value of some other parameter(s) or attribute(s).</p>
+<p>A Callable may be set to any callable object, typically either a function or else an instance of a class that provides a <code class="docutils literal notranslate"><span class="pre">__call__</span></code> method. At present, there is no validation that the provided callable takes any particular number or type of arguments. Lambdas can be provided, but note that the resulting parameter value will no longer be picklable, so if you need to use pickling (<code class="docutils literal notranslate"><span class="pre">setstate</span></code> and <code class="docutils literal notranslate"><span class="pre">getstate</span></code>), be sure to use a named function instead.</p>
+<p>An Action is the same as a Callable, but is expected to have no arguments. In a GUI an Action is typically mapped to a button whose name or label is the name of this parameter.</p>
+<p>An Event Parameter has a Boolean value but is primarily intended for triggering events on its watchers. See <a class="reference internal" href="Dependencies_and_Watchers.html"><span class="std std-doc">Dependencies and Watchers</span></a> for the details.</p>
+<p>A Composite Parameter has a value that is looked up from the value of a list of attributes of this class (which may or may not be parameters) and that when set changes the values of those other attributes or parameters. This type of Parameter can be useful for treating a set of related values as a group for setting purposes, but as individual parameters for code that reads from them. As of Param 1.10, Composite parameters have not been tested with watchers and dependencies and may not behave appropriately for such uses.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">identity</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> <span class="k">return</span> <span class="n">x</span>
+    
+<span class="k">def</span><span class="w"> </span><span class="nf">print_time_of_day</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">())</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">transformer</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Callable</span><span class="p">(</span><span class="n">identity</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Action</span><span class="p">(</span><span class="n">print_time_of_day</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+ 
+<span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">()</span>
+<span class="n">a</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">double</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span>
+    
+<span class="n">d</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">transformer</span><span class="o">=</span><span class="n">double</span><span class="p">)</span>
+<span class="n">d</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>10
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">d</span><span class="o">.</span><span class="n">a</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2025-06-11
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">exceptions_summarized</span><span class="p">():</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ValueError: Action parameter &#39;A.a&#39; only takes a callable object, not objects of &lt;class &#39;int&#39;&gt;.
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Parameters.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Parameters and Parameterized objects</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Dependencies_and_Watchers.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Dependencies and Watchers</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#strings">Strings</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#colors">Colors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#booleans">Booleans</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numbers">Numbers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuples">Tuples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lists">Lists</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#paths">Paths</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#selectors">Selectors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#classselectors">ClassSelectors</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classlist-and-param-descendents"><code class="docutils literal notranslate"><span class="pre">classlist</span></code> and <code class="docutils literal notranslate"><span class="pre">param.descendents</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#invocations">Invocations</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/user_guide/Parameter_Types.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

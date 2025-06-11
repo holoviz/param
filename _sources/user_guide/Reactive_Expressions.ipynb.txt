@@ -1,0 +1,1112 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "3ecf9ffc-96a0-4457-bc89-43cac0099e01",
+   "metadata": {},
+   "source": [
+    "# Reactive Functions and Expressions"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9e973ee7",
+   "metadata": {},
+   "source": [
+    "In Param, multiple paradigms for dynamic behavior coexist. The [Dependencies and Watchers](Dependencies_and_Watchers.ipynb) guide delves into an imperative 'push' model, where explicit callbacks handle Parameter updates, often suited for GUI environments where user interactions drive state changes.\n",
+    "\n",
+    "Param 2.0 introduces a declarative, reactive model. Reactive expressions automatically update when their referenced Parameters change. This model encourages you to specify 'what' should happen, letting Param manage 'how,' thereby simplifying code logic and enhancing modularity. Unlike the 'push' model, which may require complex event orchestration, the reactive model emphasizes high-level relationships. This makes it versatile, scaling from simple to complex use cases. For instance, the reactive model is a good fit in data transformation pipelines and real-time dashboards, automatically updating dependent steps or visualizations when underlying Parameters change. The reactive approach allows you to focus on defining the transformation or relationship logic without worrying about the sequence of updates.\n",
+    "\n",
+    "This guide covers two main approaches to the reactive model: \n",
+    "1. **Reactive Expressions:** With `.rx`, create reactive proxies for Parameters or objects, which recompute as inputs change.\n",
+    "2. **Reactive Functions:** Using `.bind`, auto-invoked functions update when their inputs change, offering a more declarative alternative to `.watch()`."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b551f8cd",
+   "metadata": {},
+   "source": [
+    ":::{note} The code in this guide is designed to be run incrementally to observe the behavior of reactive expressions. If you're reading a rendered version online, keep in mind that the entire page will have been executed, affecting the output of earlier lines. To fully experience the live updates, download this page as a Jupyter Notebook and run through it line by line."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7be71aa1",
+   "metadata": {},
+   "source": [
+    "## Getting Started\n",
+    "\n",
+    "Param's `rx` feature allows you to create reactive values and expressions, enabling immediate updates to your results as you interactively modify values, avoiding the need for explicit callbacks or managing state manually.\n",
+    "\n",
+    "Before we dive in to discover how `rx` works behind the scenes, let's get started with a concrete example of loading some data into a [Pandas](https://pandas.pydata.org) DataFrame and then displaying it:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "eaa1f75f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "import param\n",
+    "\n",
+    "from param import rx"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4833f209",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "URL = 'https://datasets.holoviz.org/penguins/v1/penguins.csv'\n",
+    "nrows = rx(2)\n",
+    "df = rx(pd.read_csv(URL))\n",
+    "df.head(nrows)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "71463561",
+   "metadata": {},
+   "source": [
+    "Here, this is just the same code you'd normally use to make a DataFrame, except for `rx()` being used to mark `nrows` and `df` as being reactive. As you can see, the reactive DataFrame works like any other DataFrame, using `.head()` and any other DataFrame methods as usual. But now, let's see what happens if we update the value of `nrows`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e9ead350",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "nrows.rx.value += 2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "349ae1e6-d07f-4106-924f-21fbf6a4b0f7",
+   "metadata": {},
+   "source": [
+    "Whoa! As long as you are running a Jupyter notebook with a live Python process, you should have seen the dataframe \"head\" output _in_ _the_ _previous_ _cell_ update to the new value of `nrows`.  That's because the reactive `df` expression being displayed in that cell captures the full pipeline of operations, automatically re-running `head` because the `nrows` has now changed. \n",
+    "\n",
+    "We've done this without having to write any special callbacks or any new functions, instead using special Python objects that capture the operations you've invoked and replay them as needed when inputs change.\n",
+    "\n",
+    "These updates should happen immediately (not only when the code cell finishes executing):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "49b40993",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import time\n",
+    "\n",
+    "for i in range(5,10):\n",
+    "    nrows.rx.value = i\n",
+    "    time.sleep(1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "374de653",
+   "metadata": {},
+   "source": [
+    "You should see the previous `df.head` output react to each time `nrows` is changed, updating to reflect the current state.\n",
+    "\n",
+    "Next, let's explore a more intricate example. Although it involves a more complex pipeline, the code remains similar to what you'd write for a non-reactive Pandas DataFrame. To confirm, you can simply remove the `rx` calls:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "298ad9dc-7099-4e4f-bf04-d296e0433109",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "\n",
+    "style = rx('color: white; background-color: {color}')\n",
+    "color = rx('darkblue')\n",
+    "\n",
+    "def highlight_max(s, props=''):\n",
+    "    if s.dtype.kind not in 'f':\n",
+    "        return np.full_like(s, False)\n",
+    "    return np.where(s == np.nanmax(s.values), props, '')\n",
+    "\n",
+    "styled_df = df.head(nrows).style.apply(highlight_max, props=style.format(color=color), axis=0)\n",
+    "\n",
+    "styled_df"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6f837bce-a2c2-4479-9adb-0a824fd29085",
+   "metadata": {},
+   "source": [
+    "Here we've made two additional reactive values (`style` and `color`), and written a Pandas pipeline reacting to those values, using precisely the same syntax you would with a regular Pandas expression. Since `styled_df` is now a reactive Pandas expression, it will re-run whenever any of those changes. To see, try executing each of the following commands, one by one:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "16d46876-0ded-4770-bb71-fd972d8d9046",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "color.rx.value = 'red'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "aa9f36b4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "nrows.rx.value += 2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b3502bc8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "color.rx.value = 'darkblue'"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8082c9db",
+   "metadata": {},
+   "source": [
+    "In the code above, we made reactive strings, numbers, and DataFrame expressions. You can also make functions reactive, which lets you make the URL reactive as well:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "106363b4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "url = rx(URL)\n",
+    "df = rx(pd.read_csv)(url)\n",
+    "df.head(2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "30d7e585",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "url.rx.value = 'https://datasets.holoviz.org/gapminders/v1/gapminders.csv'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "742bd80f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "url.rx.value = URL"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "60db0a0a-a2be-4927-91a3-7cc8b10ea313",
+   "metadata": {},
+   "source": [
+    "In this case, `df` wraps the `read_csv` call generating the DataFrame, rather than a specific DataFrame instance. This demonstrates the flexibility of reactive expressions: you can write code as you usually would, but gain control over its reactivity.\n",
+    "\n",
+    "While we've been updating `.rx.value` manually in this notebook, you could easily replace these literals with widgets from ipywidgets or [HoloViz Panel](https://panel.holoviz.org/tutorials/basic/pn_rx.html), enabling you to create user-interactive, reactive applications with minimal effort."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1c566d1a",
+   "metadata": {},
+   "source": [
+    "## How it works\n",
+    "\n",
+    "So, how does reactive programming in Param actually work? The underlying mechanism leverage's Python's [operator overloading](https://www.geeksforgeeks.org/operator-overloading-in-python/), which allows us to redefine common operators like '`+`' to perform additional tasks. When you use these operators in reactive expressions, Param not only carries out the operation but also records it, establishing a dependency from the reactive variables involved to the resulting expression. This means that when a reactive variable is updated, Param automatically updates any expressions dependent on it.\n",
+    "\n",
+    "For instance, if you set up a reactive expression `j = i + 1`, where `i` has been made reactive, any change to `i` will automatically trigger an update in `j`, eliminating the need for manual event handling:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6a830ba9",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "i = rx(1)\n",
+    "j = i + 1\n",
+    "print(f'i = {i.rx.value}')\n",
+    "print(f'j = {j.rx.value}')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "bad87395",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "i.rx.value = 7\n",
+    "print(f'i = {i.rx.value}')\n",
+    "print(f'j = {j.rx.value}')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e089f478",
+   "metadata": {},
+   "source": [
+    "Without `rx()`, adding 1 to `i` would have immediately invoked integer addition in Python, assigning an integer 2 to `j`. However, because we made `i` a reactive expression, what happens is that `i` stores its input value on an internal attribute called `_obj`, while overloading `+` to not just calculate `i + 1`, but also return another reactive object that records the operation (`i + 1`). This stores the dependency so that whenever `i` changes, the reactive object knows that it needs to update itself by re-executing `i + 1`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c5925184",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "type(i), i._obj, j._operation"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "51aed018",
+   "metadata": {},
+   "source": [
+    "When you access the `.value` attribute of `j`, it retrieves the most recent result of the expression `i + 1`, automatically reapplying the operation if `i` has changed. For more complicated scenarios, reactive expressions can chain multiple operations and method calls together, executing them in sequence to obtain the final outcome.\n",
+    "\n",
+    "In essence, reactive expressions are specialized Python objects that wrap standard objects. They record the operations you apply, and when an underlying reactive value changes, they automatically re-execute these operations. This eliminates the need for manually tracking and updating dependent variables, making it easier to build dynamic, responsive applications."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a48adb7e-c340-49e1-bec1-30ca6cc2eca2",
+   "metadata": {},
+   "source": [
+    "## Limitations\n",
+    "\n",
+    "So does Python really allow _all_ operations to be overloaded so that a reactive expression works precisely like the underlying objects? \n",
+    "\n",
+    "Nearly, but not quite. For technical reasons, certain operations cannot be implemented in this way:\n",
+    "\n",
+    "- Python requires the `len` operation to return an integer, not a deferred reactive integer\n",
+    "- The Python `is` statement always checks the immediate identity of its two operands, so it cannot be deferred  reactively\n",
+    "- Logical operators like `and`, `or`, `not`, and `in` are required to return Boolean types rather than deferred, reactive Boolean types\n",
+    "- No overloading is available for control flow keywords like `if`, `elif`, and `else` or ternary conditional expressions (i.e. `a if condition else b`), and so those actions cannot be captured for later reactive execution\n",
+    "- Iteration keywords like `for` or `while` can only be overloaded to some extent, specifically for fixed-length collections; other types of iteration cannot be captured for later reactive execution\n",
+    "\n",
+    "However, Param's reactive expressions offer workarounds for these limitations through special methods under the `.rx` namespace to avoid confusion with the underlying object's own methods. We'll cover these methods in the next section."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "227a230b-98b2-4097-8a6d-798ddb63b74a",
+   "metadata": {},
+   "source": [
+    "## Special Methods on `.rx`\n",
+    "\n",
+    "To circumvent the limitations explained above, the `.rx` namespace provides reactive versions of the operations that can't be made reactive through overloading:\n",
+    "\n",
+    "- `.rx.and_`: Reactive version of `and`.\n",
+    "- `.rx.bool`: Reactive version of `bool()`.\n",
+    "- `.rx.in_`: Reactive version of `in`, testing if the value is in the provided collection.\n",
+    "- `.rx.is_`: Reactive version of `is`, testing the object identity against another object.\n",
+    "- `.rx.is_not`: Reactive version of `is not`, testing the absence of object identity with another object.\n",
+    "- `.rx.len`: Reactive version of `len()`, returning the length of the expression\n",
+    "- `.rx.map`: Applies a function to each item in a collection.\n",
+    "- `.rx.not_`: Reactive version of `not`.\n",
+    "- `.rx.or_`: Reactive version of `or`.\n",
+    "- `.rx.pipe`: Applies the given function (with static or reactive arguments) to this object.\n",
+    "- `.rx.updating`: Returns a boolean indicating whether the expression is currently updating.\n",
+    "- `.rx.when`: Generates a new expression that only updates when the provided dependency updates.\n",
+    "- `.rx.where`: Returns either the first or the second argument, depending on the current value of the expression.\n",
+    "\n",
+    "Unlike their corresponding standard Python equivalent, each of these returns a reactive expression that can thus be combined with other reactive expressions to make reactive pipelines."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d9aaee66-05f2-44ee-b287-c5eaf4622c3b",
+   "metadata": {},
+   "source": [
+    "#### `.rx.and_(arg)`\n",
+    "\n",
+    "Applies the `and` operator to the  output of the reactive expression and the argument returning a new expression:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0dd7a685-1d2a-4f33-81d0-8d65feee2224",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(True).rx.and_(False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6b568713-8fb0-46b7-877e-cfe4f43ebc8c",
+   "metadata": {},
+   "source": [
+    "Unlike the bitwise `and` operator (`&`) this has the same semantics as the `and` keyword."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "dcbf07d6-e53b-4658-86c7-15caf8eb540d",
+   "metadata": {},
+   "source": [
+    "#### `.rx.in_(arg)`\n",
+    "\n",
+    "Reactively checks if the current value is `.in_` the other collection"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "938583e7-c519-4c50-9f95-dc4099262a95",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(2).rx.in_([1, 2, 3])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fb3697e6-0413-44cd-916a-dae665eb263b",
+   "metadata": {},
+   "source": [
+    "#### `.rx.is_(arg)`\n",
+    "\n",
+    "Reactively checks if the identity of the current value is the same as the argument to `.is_`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0db8bc66-bf5b-4214-b3de-063ec6d53523",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(None).rx.is_(None)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "819249de-513d-4286-9a6f-ed14adba70bc",
+   "metadata": {},
+   "source": [
+    "#### `.rx.is_not(arg)`\n",
+    "\n",
+    "Reactively checks if the identity of the current value is not the same as the argument to `.is_not`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "93db5be8-2023-4a67-83f0-329d0dea69d1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(None).rx.is_not(None)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9cba7f57-bc62-47bd-9cfd-b66c13d9f0e2",
+   "metadata": {},
+   "source": [
+    "#### `.rx.len()`\n",
+    "\n",
+    "Returns the length of the object as a reactive expression"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b9552875-905a-49d8-a1a3-6a824aeb1988",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "obj = rx([1, 2, 3])\n",
+    "obj.rx.len()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9531ef4c-28d9-48cd-8707-e0658b0ecc9e",
+   "metadata": {},
+   "source": [
+    "#### `.rx.map(func, *args, **kwargs)`\n",
+    "\n",
+    "Maps the function to each item in a collection returned by the expression:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ee4cafb0-bb85-4bd3-b39f-4e705f369908",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx([1, 2, 3]).rx.map(lambda v, mul: v*mul, mul=2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2cbff9fe-e16d-427d-ab1c-35da603ad693",
+   "metadata": {},
+   "source": [
+    "#### `.rx.or_(arg)`\n",
+    "\n",
+    "Applies `or` to the output of the reactive expression and the argument:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2e8bff49-1164-4747-a704-c96f64084c44",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(False).rx.or_('A value')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f50c3ea6-aa75-4bb5-91f3-1b2b5f320465",
+   "metadata": {},
+   "source": [
+    "Unlike the bitwise `or` operator (`|`) this has the same semantics as the `or` keyword."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2bd115e5-44bd-4d4d-b78a-a552b4072562",
+   "metadata": {},
+   "source": [
+    "#### `.rx.pipe(func, *args, **kwargs)`\n",
+    "\n",
+    "Pipes the current value into a function as the first argument, passing in additional positional and keyword arguments if provided, and returning a reactive expression to replay that call as needed:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c393e1e5-e18a-4b50-b355-cb3d461c8de5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def f(a, b): return a + b\n",
+    "    \n",
+    "rx(1).rx.pipe(f, 2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ac92db62",
+   "metadata": {},
+   "source": [
+    "`.rx.pipe` can be used with any Python function. One common usage is for making type conversion functions reactive:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "34e985c6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(8.5).rx.pipe(int)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "116b865a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rx(8.5).rx.pipe(str)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "376f5b3d-8bcd-4ad3-869d-cdee176e54d8",
+   "metadata": {},
+   "source": [
+    "#### `.rx.updating()`"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9334392f-61d0-4629-aae8-0c9a7935c6fa",
+   "metadata": {},
+   "source": [
+    "Returns a new expression that is True while the original expression is updating. Useful for performing some action while an expression is running.\n",
+    "\n",
+    "Here we create a simple expression that calls a `calculate` function which emulates a long running computation:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e132793e-b5ad-49bb-88d1-378a24451055",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "expr = rx(1)\n",
+    "\n",
+    "def calculate(value):\n",
+    "    time.sleep(1)\n",
+    "    return value\n",
+    "\n",
+    "updating =  expr.rx.pipe(calculate).rx.updating()\n",
+    "\n",
+    "updating"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7eac3901-b9e6-4020-8f74-5817561a187e",
+   "metadata": {},
+   "source": [
+    "When we update the expression the `updating` expression will temporarily toggle to True and then reset:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1432d82f-4e8d-4ab0-b7f3-4a63a203b797",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "expr.rx.value += 1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "dfea7f35-f0fa-4bc0-954f-b01d5dcf9d6c",
+   "metadata": {},
+   "source": [
+    "#### `.rx.when(*conditions)`\n",
+    "\n",
+    "Useful when creating UIs to declare that the expression should only update when some other parameter changes, e.g. when a user clicks a button or triggers an expensive operation through some other mechanism.\n",
+    "\n",
+    "For instance, let's say we have some expensive function (here simulated using `time.sleep`). First, we bind parameters `a` and `b` to this function and create a reactive expression from this function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b0b7e3cc-4c31-4208-8f0a-efa05cc6e13e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import time\n",
+    "\n",
+    "def expensive_function(a, b):\n",
+    "    print(f'multiplying {a=} and {b=}')\n",
+    "    time.sleep(2)\n",
+    "    return a * b\n",
+    "\n",
+    "a = rx(1)\n",
+    "b = rx(2)\n",
+    "\n",
+    "expensive_expr = rx(expensive_function)(a, b)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "24ef7256-904b-4e74-859a-39d30d391317",
+   "metadata": {},
+   "source": [
+    "The problem we face is that if we use this `expensive_expr` whenever `a` **or** `b` are changed, then the expensive computation gets triggered *twice* if we want to change both `a` _and_ `b`. To avoid unnecessary expense, we can gate the computation behind a third variable we'll name `gate`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8396d27b-81be-4185-be83-16a7bcfe0e4f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gate = rx(False)\n",
+    "gated_expr = expensive_expr.rx.when(gate)\n",
+    "\n",
+    "gated_expr"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0b9b464b-1582-499f-b4c0-e7fe8074d8eb",
+   "metadata": {},
+   "source": [
+    "We can now safely change variables `a` and `b` separately without triggering the computation:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7f1dd442-0c57-49e2-97b5-2369adb35a7b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a.rx.value = 2\n",
+    "b.rx.value = 4\n",
+    "\n",
+    "gated_expr.rx.value"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a1443865-288a-4320-841c-586fcfea04ac",
+   "metadata": {},
+   "source": [
+    "But when we trigger the `run` parameter the expression will re-compute:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "85c2a7d1-ff76-4137-b9ce-24363177e120",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gate.rx.value = True\n",
+    "\n",
+    "gated_expr.rx.value"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d74f3645-5186-46b5-b85b-4e512cfae7bd",
+   "metadata": {},
+   "source": [
+    "#### `.rx.where(a, b)`\n",
+    "\n",
+    "Reactive ternary conditional. In non-reactive Python code you can write:\n",
+    "\n",
+    "```python\n",
+    "a if condition else b\n",
+    "``` \n",
+    "\n",
+    "to return value `a` or value `b` depending on some `condition`. However, Python does not allow overriding `if` to have special behavior for a reactive `condition`, and thus such an expression will immediately evaluate and return `a` or `b` rather than capturing this logic for later reactivity.\n",
+    "\n",
+    "So if we want to have a reactive conditional, we have to rewrite the expression using `where`. First, we will declare a reactive `condition` expression to wrap a Boolean value that we can change later:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "dd4f9569-b9a9-4d43-93cb-93ffba6ce927",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "condition = rx(True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d0dff104-a095-4a97-806b-059b4c9aa622",
+   "metadata": {},
+   "source": [
+    "Now let's say we want to return either `a` or `b` depending on whether the `condition` is True or False. We can simply pass the values to `.where()`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e9a36314-9a79-4e74-83e8-137f86655999",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a = rx(1)\n",
+    "b = rx(2)\n",
+    "\n",
+    "ternary_expr = condition.rx.where(a, b)\n",
+    "ternary_expr"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "88ef4e67-0fa4-45a7-8154-89f94183d3fe",
+   "metadata": {},
+   "source": [
+    "Since the initial value is `True` it returns the current value of `a`, which is `1`. However when we set the value to `False` it will return the value of `b`:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2a1ce24c-e5b3-497d-83bc-5ba351ece9ef",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "condition.rx.value = False\n",
+    "\n",
+    "ternary_expr.rx.value"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ddb05099-e774-4f53-a345-527e44bdb5de",
+   "metadata": {},
+   "source": [
+    "Importantly, if we now change `b` the result will be reflected by the expression, reactively unless we explicitly resolve the result:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5e275e74-1d17-40bf-9382-d02a1fed61ae",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b.rx.value = 5\n",
+    "\n",
+    "ternary_expr.rx.value"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ce3ce7b3-8163-45b9-a465-17efdbca5c21",
+   "metadata": {},
+   "source": [
+    "Here the expression value depends only on `b` thanks to the `where` condition, and thus changes to `a` will no longer trigger any downstream updates until the condition is reversed again."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4151d9d4-49aa-42b8-83fd-eea081fb127d",
+   "metadata": {},
+   "source": [
+    "#### Watching an expression\n",
+    "\n",
+    "In some cases you may want to trigger some side-effect based on the return value of an expression. The simplest way to achieve this is using the `.rx.watch` API, which mirrors the [`.param.watch` API](Dependencies_and_Watchers.ipynb#watchers). Using this API we can define a callback which runs whenever the expression outputs a new event:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b5f87127-4f6d-4806-a1cb-4e6444cc6bc8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c = rx(1)\n",
+    "\n",
+    "c.rx.watch(lambda v: print(f'Output: {v}'))\n",
+    "\n",
+    "c"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f9ddc079-3ed2-47f0-962f-0c1f6d58553d",
+   "metadata": {},
+   "source": [
+    "Now if we update the expression we will see the output run:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "cad29d4d-c893-4fb0-8f1a-11cc0c1b1c1b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "c.rx.value += 1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1c87f6a2-d108-435b-9305-0160eec628d6",
+   "metadata": {},
+   "source": [
+    "It is also possible to call `.param.watch` without any arguments, which makes the expression evaluate eagerly."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "73810468",
+   "metadata": {},
+   "source": [
+    "## Parameters and `param.bind`\n",
+    "\n",
+    "Reactive expressions are part of the [Param](https://param.holoviz.org) library, and behind the scenes, all the reactivity is implemented using Parameters and their [dependencies and watchers](https://param.holoviz.org/user_guide/Dependencies_and_Watchers.html) support. You can use reactive expressions without needing to learn about Parameters, but if you do use Parameters in your work, they interact seamlessly with reactive expressions, providing a powerful and convenient way to organize your code and your work. In this section we will show how to use Parameters and the `param.bind` function together with reactive expressions for a more structured approach to reactive programming.\n",
+    "\n",
+    "First, let's create a Parameterized class with a couple of Parameters:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f6bf6371-8dc8-4247-afaa-3ce872ed3371",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class Parameters(param.Parameterized): \n",
+    "    a = param.Number(1)\n",
+    "\n",
+    "    b = param.Number(0)\n",
+    "\n",
+    "    run = param.Event()\n",
+    "    \n",
+    "p = Parameters()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cf4c375b",
+   "metadata": {},
+   "source": [
+    "Any of the parameters can be used as reactive expressions by calling `.rx()` on their Parameter object:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f8346eea",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "expr = p.param.a.rx() + p.param.b.rx() + 3\n",
+    "expr"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5f316cfc",
+   "metadata": {},
+   "source": [
+    "Now if we update the Parameter, the result of the expression will update immediately:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2cc67793",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.b = 5\n",
+    "print(expr.rx.value)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7e5ff5e8",
+   "metadata": {},
+   "source": [
+    "You can thus use any Parameter in your reactive expressions, including Parameters from [HoloViz Panel](https://panel.holoviz.org/tutorials/basic/pn_rx.html) widgets. In fact, reactive expressions are natively supported in Panel."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "874621cc",
+   "metadata": {},
+   "source": [
+    "### Binding Parameters to Functions\n",
+    "\n",
+    "While reactive expressions with `rx` offer a flexible way to define dynamic relationships between Parameters, they operate at a fairly abstract level, encapsulating the underlying transformations. This can sometimes make it challenging to isolate specific parts of a pipeline for debugging or performance optimization.\n",
+    "\n",
+    "Enter `param.bind`, which allows you to define functions that are automatically invoked when their input Parameters change. This serves as a bridge between the reactive `rx` model and the lower-level 'push' model. Unlike the 'push' model, where you would explicitly set up watchers and callbacks, `param.bind` simplifies the process by letting Param manage the mechanics, but also making the dependencies more transparent than in a purely `rx` approach.\n",
+    "\n",
+    "In essence, `param.bind` offers the declarative nature of reactive expressions and the explicitness of the 'push' model. This makes it particularly useful for complex applications where you might want the clarity of explicit function calls for key parts of your pipeline, but also wish to retain the high-level, declarative relationships offered by reactive expressions.\n",
+    "\n",
+    "To demonstrate this concept, let's define a simple Python function for adding numbers. We'll also include print statements to make it evident when the function is invoked:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7a4bde61",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def add(a, b):\n",
+    "    print(f'add: {a}+{b}={a+b}')\n",
+    "    return a + b\n",
+    "\n",
+    "add(3, 7)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1c4434e7-9b5d-4a5b-b9de-c444dae42e36",
+   "metadata": {},
+   "source": [
+    "Now we can use `param.bind` to \"bind\" parameters `a` and `b` to the `add` function's arguments to create a reactive function:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c0a4c64e-ee64-405d-bace-605551b34234",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "reactive_add = param.bind(add, p.param.a, p.param.b)\n",
+    "\n",
+    "reactive_add"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9094768c-5a39-448e-9721-e6253a2a55cb",
+   "metadata": {},
+   "source": [
+    "As you can see, `reactive_add` works just like `add`, in that it adds two arguments, but in this case, it's taking the value of the `a` and `b` Parameters of `p`. Parameter `a` has been \"bound\" to the first argument and `b` to the second, and if either of them changes, the result changes. So if we change `p.a` to 5, the output above reacts immediately."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f7cd00ac-02a2-4e0c-bc98-7ce9739ed55b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p.a += 4"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9a0e5412-b13f-42aa-bb21-4bf6f289510b",
+   "metadata": {},
+   "source": [
+    "We can also call the reactive function explicitly to return the current result as a concrete, no longer reactive value:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1e026152-1772-4437-8165-dd9788edd1fb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "reactive_add()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "16d5e9ec",
+   "metadata": {},
+   "source": [
+    "The difference between `reactive_add` and `reactive_add()` is that the first one is a function, whose display will automatically update in IPython/Jupyter, while the second is a specific number (the result of calling that function a single time, never to be updated further):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9f1c1879",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(type(reactive_add), type(reactive_add()))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "03d62757-8b3f-4d67-b1a9-5759194408a2",
+   "metadata": {},
+   "source": [
+    "`param.bind` follows the semantics of Python's `functools.partial`, and so if you only partially bind the required arguments, you'll get a function of the remaining arguments:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "88870bf0-1d5e-42e9-9c59-b538070ad701",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "add_b = param.bind(add, p.param.a)\n",
+    "add_b"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "d516b3dc",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "add_b(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1b0ead79",
+   "metadata": {},
+   "source": [
+    "Note that you can bind any accepted type to make a reactive function, not just Parameters, but static values won't trigger reactive updates (here 38 will always be the same value, while the result will depend on the current value of `p.param.a`)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4badba81",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "param.bind(add, p.param.a, b=38)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d1f2b719-b80e-4fca-b78e-534971eee92e",
+   "metadata": {},
+   "source": [
+    "Bound functions update their outputs reactively when displayed, but what if you want to use one in a reactive expression? You can easily do that if you call `.rx()` on a fully bound function to get a reactive expression to work with:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6b4e1c1a-8d19-4e4f-beae-042f01d4e41a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "param.bind(add, p.param.a, p.param.b).rx() / 2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1272daed",
+   "metadata": {},
+   "source": [
+    "As you can see, you can use bound functions to get reactivity if you prefer to write specific functions, or you can use reactive expressions to capture computations without writing function definitions, or you can combine the two as needed. Feel free to use the approach that best meets your needs!\n",
+    "\n",
+    "And overall, hopefully, you can see that Param's reactive support provides a natural and powerful way to capture your computations in a way that can be replayed automatically whenever inputs change, making it a convenient basis for building interactive applications and computations."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

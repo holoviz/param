@@ -1,0 +1,47 @@
+﻿param.String
+============
+
+.. currentmodule:: param
+
+.. autoclass:: String
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~String.__init__
+      ~String.deserialize
+      ~String.schema
+      ~String.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~String.regex
+      ~String.allow_None
+      ~String.allow_refs
+      ~String.constant
+      ~String.default
+      ~String.doc
+      ~String.instantiate
+      ~String.label
+      ~String.name
+      ~String.nested_refs
+      ~String.owner
+      ~String.per_instance
+      ~String.pickle_default_value
+      ~String.precedence
+      ~String.readonly
+      ~String.rx
+      ~String.watchers
+   
+   

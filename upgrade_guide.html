@@ -1,0 +1,1119 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Upgrade guide &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=16656018"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'upgrade_guide';</script>
+    <link rel="icon" href="_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Comparison to other approaches" href="comparisons.html" />
+    <link rel="prev" title="Releases" href="releases.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="user_guide/index.html">User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Parameters.html">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="user_guide/ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Upgrade guide</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="upgrade-guide">
+<h1>Upgrade guide<a class="headerlink" href="#upgrade-guide" title="Link to this heading">#</a></h1>
+<p>Welcome to the Upgrade Guide for Param! When we make backward-incompatible changes, we will provide a detailed guide here on how you can update your code to be compatible with the latest changes.</p>
+<section id="version-2-0">
+<h2>Version 2.0<a class="headerlink" href="#version-2-0" title="Link to this heading">#</a></h2>
+<section id="breaking-changes">
+<h3>Breaking changes<a class="headerlink" href="#breaking-changes" title="Link to this heading">#</a></h3>
+<section id="parameter-attributes-inheritance">
+<h4>Parameter attributes inheritance<a class="headerlink" href="#parameter-attributes-inheritance" title="Link to this heading">#</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s have attributes like <code class="docutils literal notranslate"><span class="pre">default</span></code>, <code class="docutils literal notranslate"><span class="pre">doc</span></code>, <code class="docutils literal notranslate"><span class="pre">bounds</span></code>, etc. When redefining a <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> in a subclass, attributes not specified in the subclass are meant to be inherited from the superclass.
+Inheritance is not a new feature; it’s a core design of Param. You can see in the example below that the <code class="docutils literal notranslate"><span class="pre">doc</span></code> attribute of the <code class="docutils literal notranslate"><span class="pre">x</span></code> Parameter on the class <code class="docutils literal notranslate"><span class="pre">B</span></code> has been inherited from <code class="docutils literal notranslate"><span class="pre">A</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;The value of x&#39;</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">B</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">B</span><span class="p">()</span><span class="o">.</span><span class="n">param</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">doc</span><span class="p">)</span>
+<span class="c1"># The value of x</span>
+</pre></div>
+</div>
+<p>However, throughout the Param 1.x series, inheritance was broken in some subtle ways! The issues traced back to using <code class="docutils literal notranslate"><span class="pre">None</span></code> as the specific sentinel value for allowing inheritance, when <code class="docutils literal notranslate"><span class="pre">None</span></code> is also often a valid <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> value. Let’s have a look at two examples that have been fixed in Param 2.0.</p>
+<p>In this first example we want to re-set the default value of <code class="docutils literal notranslate"><span class="pre">x</span></code> to <code class="docutils literal notranslate"><span class="pre">None</span></code> in a subclass. As you can see, the explicit <code class="docutils literal notranslate"><span class="pre">None</span></code> value we provided in <code class="docutils literal notranslate"><span class="pre">B</span></code> was discarded entirely in versions before Param 2.0, while the new version now correctly re-assigns the value to <code class="docutils literal notranslate"><span class="pre">None</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">B</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">B</span><span class="p">()</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+<span class="c1"># Param &lt; 2: 5.0     :(</span>
+<span class="c1"># Param 2.0: None    :)</span>
+</pre></div>
+</div>
+<p>In this second example we want to narrow the bounds <code class="docutils literal notranslate"><span class="pre">x</span></code> in the subclass <code class="docutils literal notranslate"><span class="pre">B</span></code>. Because no default value is specified for <code class="docutils literal notranslate"><span class="pre">x</span></code> in <code class="docutils literal notranslate"><span class="pre">B</span></code>, you might reasonably have expected the default value of <code class="docutils literal notranslate"><span class="pre">5.0</span></code> to be inherited from <code class="docutils literal notranslate"><span class="pre">A</span></code>. However, prior to Param 2.0, instead the default value of the <code class="docutils literal notranslate"><span class="pre">Number</span></code> <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> (<code class="docutils literal notranslate"><span class="pre">0.0</span></code>) is used for <code class="docutils literal notranslate"><span class="pre">B.x</span></code> instead of what was declared in <code class="docutils literal notranslate"><span class="pre">A</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">B</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">B</span><span class="p">()</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+<span class="c1"># Param &lt; 2: 0.0    :(</span>
+<span class="c1"># Param 2.0: 5.0    :)</span>
+</pre></div>
+</div>
+<p>These are just two of the most common cases where inheritance changes can affect your code, but there are many other cases, affecting any attribute where <code class="docutils literal notranslate"><span class="pre">None</span></code> is a legal value.  The new behavior should be much more predictable and intuitive, avoiding subtle cases where your code would previously have behaved inappropriately without necessarily having any obvious error. Fixing this was already enough to be worth the major bump to Param 2.0!</p>
+<p>Because of all our work on making sure that Parameter attributes are properly inherited, we’ve realized that you can now more easily end up with a Parameter whose state, i.e. the combination of all of its attribute values, is invalid according to the Parameter declarations. Therefore, once class inheritance has completed as your classes get defined, we have added validation that the Parameter’s <em>default</em> value is an allowed value. For now Param 2.0 is only emitting a warning when this validation fails, to avoid breaking your code on imports! If you do see these warnings, you should address them immediately by adding a legal default value or by relaxing one of the declared constraints on the value, because the warnings indicate a Parameter is in an invalid state. In the following example, the <code class="docutils literal notranslate"><span class="pre">bounds</span></code> of <code class="docutils literal notranslate"><span class="pre">x</span></code> are narrowed down in <code class="docutils literal notranslate"><span class="pre">B</span></code> without updating the <code class="docutils literal notranslate"><span class="pre">default</span></code> value that is inherited from <code class="docutils literal notranslate"><span class="pre">A.x</span></code> of <code class="docutils literal notranslate"><span class="pre">-1</span></code>, making the Parameter <code class="docutils literal notranslate"><span class="pre">x</span></code> on <code class="docutils literal notranslate"><span class="pre">B</span></code> in an invalid state:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">B</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+<span class="c1"># Param &lt; 2: No warning and B().x == 0.0</span>
+<span class="c1"># Param 2.0: Warning and B().x == -1 / ParamFutureWarning: Number parameter &#39;B.x&#39; failed to validate its default value on class creation, this is going to raise an error in the future. The Parameter is defined with attributes which when combined with attributes inherited from its parent classes (A) make it invalid. Please fix the Parameter attributes.</span>
+</pre></div>
+</div>
+<p>Param doesn’t do any more validation that what was just explained when creating subclasses that override <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s. For instance, it doesn’t programmatically enforce that a subclass should define a <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> that is of the same type or a subtype of the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> defined in a super class. However, the best approach for you to follow is clearly to make sure that <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s defined in subclasses satisfy the <a class="reference external" href="https://en.wikipedia.org/wiki/Is-a">“is-a”</a> relationship. I.e., for an instance <code class="docutils literal notranslate"><span class="pre">b</span></code> of subclass <code class="docutils literal notranslate"><span class="pre">B</span></code> and an instance <code class="docutils literal notranslate"><span class="pre">a</span></code> of parent class <code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">b</span></code> should always be usable where <code class="docutils literal notranslate"><span class="pre">a</span></code> is. That’s the general rule for inheritance, and for <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s it’s specifically that any parameter value accepted by <code class="docutils literal notranslate"><span class="pre">B</span></code> should be a valid setting for <code class="docutils literal notranslate"><span class="pre">A</span></code>. That way any code written for <code class="docutils literal notranslate"><span class="pre">A</span></code>, including code that handles the various values of any attribute of <code class="docutils literal notranslate"><span class="pre">A</span></code>, can be trusted to work properly with any instance of <code class="docutils literal notranslate"><span class="pre">B</span></code>. In more concrete terms, it means a <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> of a subclass should not increase the range of accepted values, it should instead narrow it down, i.e. by specifying a subtype (e.g. <code class="docutils literal notranslate"><span class="pre">param.Number</span></code> to <code class="docutils literal notranslate"><span class="pre">param.Integer</span></code>) or restricting the range of accepted values (e.g. smaller <code class="docutils literal notranslate"><span class="pre">bounds</span></code>).</p>
+</section>
+<section id="defining-custom-parameters">
+<h4>Defining custom <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s<a class="headerlink" href="#defining-custom-parameters" title="Link to this heading">#</a></h4>
+<p>To implement <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> attribute inheritance correctly as described above, we have had to make some changes to how new <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> classes are declared. While the custom <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s you previously wrote for Param before 2.0 should continue to work as they always have, unless you update their definitions, they could continue to suffer from the attribute inheritance issues that have been fixed within Param itself. We now recommend custom <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s to be written following the pattern we have adopted internally. In particular, we have:</p>
+<ul class="simple">
+<li><p>introduced the <code class="docutils literal notranslate"><span class="pre">param.parameterized.Undefined</span></code> sentinel object that is used as the default value of the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> parameters in its <code class="docutils literal notranslate"><span class="pre">__init__()</span></code> method</p></li>
+<li><p>introduced the <code class="docutils literal notranslate"><span class="pre">_slot_defaults</span></code> class attribute to declare the actual default values of the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> parameters, e.g. in the example below the default value of <code class="docutils literal notranslate"><span class="pre">some_attribute</span></code> is declared to be <code class="docutils literal notranslate"><span class="pre">10</span></code></p></li>
+<li><p>leveraged <code class="docutils literal notranslate"><span class="pre">&#64;typing.overload</span></code> to expose the real default values to static type checkers and IDEs like VSCode</p></li>
+</ul>
+<p>All put together, this is now how <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s are structured internally and how we recommend writing custom <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> classes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">CustomParameter</span><span class="p">(</span><span class="n">Parameter</span><span class="p">):</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;some_attribute&#39;</span><span class="p">]</span>
+
+    <span class="n">_slot_defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Parameter</span><span class="o">.</span><span class="n">_slot_defaults</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">some_attribute</span><span class="o">=</span><span class="mi">10</span>
+    <span class="p">)</span>
+
+    <span class="nd">@typing</span><span class="o">.</span><span class="n">overload</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">some_attribute</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precedence</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">instantiate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">readonly</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pickle_default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">allow_None</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">per_instance</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">allow_refs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nested_refs</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">Undefined</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">some_attribute</span><span class="o">=</span><span class="n">Undefined</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">some_attribute</span> <span class="o">=</span> <span class="n">some_attribute</span>
+
+    <span class="o">...</span>
+
+</pre></div>
+</div>
+<p>To make Parameter attributes work as expected, we have overridden <code class="docutils literal notranslate"><span class="pre">Parameter.__getattribute__</span></code> to detect whether the attribute value has been set to something that is not <code class="docutils literal notranslate"><span class="pre">Undefined</span></code>, and if not, to fall back to returning the default value declared in <code class="docutils literal notranslate"><span class="pre">_slot_defaults</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">CustomParameter</span><span class="p">(</span><span class="n">some_attribute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">some_attribute</span><span class="p">)</span>
+<span class="c1"># 0</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">CustomParameter</span><span class="p">()</span><span class="o">.</span><span class="n">some_attribute</span><span class="p">)</span>  <span class="c1"># Fallback case</span>
+<span class="c1"># 10</span>
+</pre></div>
+</div>
+</section>
+<section id="default-value-of-name-accounted-for">
+<h4>Default value of <code class="docutils literal notranslate"><span class="pre">name</span></code> accounted for<a class="headerlink" href="#default-value-of-name-accounted-for" title="Link to this heading">#</a></h4>
+<p>Every <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> class has always been equipped with a <code class="docutils literal notranslate"><span class="pre">name</span></code> <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>, which was originally to support using a Parameterized object in a GUI context that needs a text label, but is not always needed in other contexts. At the class level the <code class="docutils literal notranslate"><span class="pre">name</span></code> value is the class name, equivalent to <code class="docutils literal notranslate"><span class="pre">&lt;class&gt;.__name__</span></code>, and at the instance level the <code class="docutils literal notranslate"><span class="pre">name</span></code> value is automatically generated as a unique string, unless you set it in the constructor:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="c1"># A</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">A</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="c1"># A00002</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">A</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;some name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="c1"># some name</span>
+</pre></div>
+</div>
+<p>However, sometimes you want to define your own default value for the <code class="docutils literal notranslate"><span class="pre">name</span></code> parameter, as in the following example. Before Param 2.0, any such default value was discarded at both the class and instance levels, but since 2.0 the provided <code class="docutils literal notranslate"><span class="pre">name</span></code> is now respected:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Person</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;Eva&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">Person</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="c1"># Param &lt; 2: Person         :(</span>
+<span class="c1"># Param 2.0: Eva            :)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">Person</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="c1"># Param &lt; 2: Person0000     :(</span>
+<span class="c1"># Param 2.0: Eva            :)</span>
+</pre></div>
+</div>
+</section>
+<section id="setting-a-non-parameter-attribute-via-the-constructor">
+<h4>Setting a non-Parameter attribute via the constructor<a class="headerlink" href="#setting-a-non-parameter-attribute-via-the-constructor" title="Link to this heading">#</a></h4>
+<p>Before Param 2.0, you could set an instance attribute that was not a <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> via the constructor, though you would get a warning if you did so. This behavior was prone to let typos slip through your code, setting the wrong instance attribute but continuing to function. Starting from Param 2.0, providing an attribute value that is not a Parameter now raises a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code>, similarly to when you call a Python callable with an incorrect parameter name:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">number</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">()</span>
+
+<span class="n">A</span><span class="p">(</span><span class="n">numbre</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>  <span class="c1"># oops typo!</span>
+<span class="c1"># Param &lt; 2: WARNING:param.A00002: Setting non-parameter attribute numbre=10 using a mechanism intended only for parameters</span>
+<span class="c1"># Param 2.0: TypeError: A.__init__() got an unexpected keyword argument &#39;numbre&#39;</span>
+</pre></div>
+</div>
+</section>
+<section id="instance-param-watchers-value-changed">
+<h4><code class="docutils literal notranslate"><span class="pre">instance.param.watchers</span></code> value changed<a class="headerlink" href="#instance-param-watchers-value-changed" title="Link to this heading">#</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">instance.param.watchers</span></code> no longer returns the transient watchers state, which was never very useful, and now instead returns what you would expect, i.e. a dictionary of the watchers set up on this instance. To access that dictionary previously, you would have had to access the private attribute <code class="docutils literal notranslate"><span class="pre">instance._param_watchers</span></code>, which is now deprecated and was never intended to be public API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">A</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">()</span>
+
+    <span class="nd">@param</span><span class="o">.</span><span class="n">depends</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">watch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">A</span><span class="p">()</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">watchers</span><span class="p">)</span>
+<span class="c1"># Param &lt; 2: []</span>
+<span class="c1"># Param 2.0: {&#39;x&#39;: {&#39;value&#39;: [Watcher(...)]}}</span>
+</pre></div>
+</div>
+</section>
+<section id="clean-up-of-the-parameterized-namespace">
+<h4>Clean-up of the <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> namespace<a class="headerlink" href="#clean-up-of-the-parameterized-namespace" title="Link to this heading">#</a></h4>
+<p>To avoid having your Parameterized object namespaces polluted with internal Param details, the methods listed below have been removed from the <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> namespace (members available to any class that inherits from <code class="docutils literal notranslate"><span class="pre">param.Parameterized</span></code>). Most of the time, a replacement method is now available from the <code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace instead:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_add_parameter</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">param.add_parameter</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">params</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> or <code class="docutils literal notranslate"><span class="pre">.param['param']</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_default</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">print_param_defaults</span></code>: <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_param</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.update</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_dynamic_time_fn</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.set_dynamic_time_fn</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_param_values</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.values().items()</span></code> (or <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> for the common case of <code class="docutils literal notranslate"><span class="pre">dict(....param.get_param_values())</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">force_new_dynamic_value</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.force_new_dynamic_value</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_value_generator</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.get_value_generator</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inspect_value</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.inspect_value</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_set_name</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">__db_print</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">warning</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.warning</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">message</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.MESSAGE,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">verbose</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.VERBOSE,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.DEBUG,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">print_param_values</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">defaults</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">{k:v.default</span> <span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items()}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pprint</span></code> and <code class="docutils literal notranslate"><span class="pre">_pprint</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.pprint</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">script_repr</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">param.parameterized.script_repr</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">state_pop</span></code>: moved to <code class="docutils literal notranslate"><span class="pre">.param._state_pop</span></code>, it might be removed in a future version, let us know if you need it!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">state_push</span></code>: moved to <code class="docutils literal notranslate"><span class="pre">.param._state_push</span></code>, it might be removed in a future version, let us know if you need it!</p></li>
+</ul>
+</section>
+<section id="parameter-clean-up">
+<h4><code class="docutils literal notranslate"><span class="pre">Parameter</span></code> clean-up<a class="headerlink" href="#parameter-clean-up" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>Removed unused <code class="docutils literal notranslate"><span class="pre">bounds</span></code> slot from <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> and <code class="docutils literal notranslate"><span class="pre">Event</span></code></p></li>
+<li><p>Removed private Parameter <code class="docutils literal notranslate"><span class="pre">_internal_name</span></code> slot</p></li>
+</ul>
+</section>
+<section id="additional-removals">
+<h4>Additional removals<a class="headerlink" href="#additional-removals" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>Removed <code class="docutils literal notranslate"><span class="pre">Time.next</span></code> method that was only needed for Python 2</p></li>
+</ul>
+</section>
+</section>
+<section id="deprecations">
+<h3>Deprecations<a class="headerlink" href="#deprecations" title="Link to this heading">#</a></h3>
+<p>Param 2.0 was originally meant to clean up even more Param’s API, except that we noticed that deprecating API in the release notes of previous versions was not enough to warn Param’s users (including ourselves!). Thus for 2.0 we decided to postpone removing some APIs, and this time properly warn Param’s users that the code is about to be deleted. We’ve also spent a lot of time looking at the code base while working on this major release, and noticed additional clean up that could be made in the future. Therefore when you upgrade to 2.0, you are likely to encounter quite a large number of deprecation warnings. Make sure you’re adapting your code as soon as you can whenever you notice one of the newly emitted warnings, because that code will not continue to be supported in later releases in the 2.x series. (Or you can pin your code to Param 1.x if you want to avoid the warnings and do not need any of the features or bugfixes from 2.0.)</p>
+<p>Here is the complete list of deprecation warnings added in Param 2.0:</p>
+<ul class="simple">
+<li><p>Parameter signature:</p>
+<ul>
+<li><p>Instantiating parameters other than <code class="docutils literal notranslate"><span class="pre">default</span></code> with positional arguments is deprecated:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">String('prefix-test',</span> <span class="pre">'^prefix')</span></code>: deprecated!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">String('prefix-test',</span> <span class="pre">regex='^prefix')</span></code>: OK</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">String(default='prefix-test',</span> <span class="pre">regex='^prefix')</span></code>: OK</p></li>
+</ul>
+</li>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">Selector</span></code> parameters that accept <code class="docutils literal notranslate"><span class="pre">objects</span></code> as first positional argument, and <code class="docutils literal notranslate"><span class="pre">ClassSelector</span></code> parameters that accept <code class="docutils literal notranslate"><span class="pre">class_</span></code> as first positional argument, passing <em>any</em> argument by position is deprecated:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Selector([1,</span> <span class="pre">2])</span></code>: deprecated!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Selector(objects=[1,</span> <span class="pre">2])</span></code>: OK</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ClassSelector((str,</span> <span class="pre">int))</span></code>: deprecated!</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ClassSelector(class_=(str,</span> <span class="pre">int))</span></code>: OK</p></li>
+<li><p>It’s possible that in the future the signature of these two parameters will be aligned with the other parameters to accept <code class="docutils literal notranslate"><span class="pre">default</span></code> as first and only positional argument, but for now please use an explicit keyword so that your code will be compatible with all versions.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Parameter slots:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">List._class</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">item_type</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Number.set_hook</span></code>: no replacement</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.__init__</span></code> module:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.produce_value</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.as_unicode</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.is_ordered_dict</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.is_ordered_dict</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.hashable</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.named_objs</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.normalize_path</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.abbreviate_paths</span></code>: no replacement</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized</span></code> module:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.all_equal</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.add_metaclass</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.batch_watch</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">batch_call_watchers</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.recursive_repr</span></code>: no replacement</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">param.parameterized.overridable_property</span></code>: no replacement</p></li>
+</ul>
+</li>
+<li><p>Parameterized <code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace; many of these methods have been deprecated since version 1.12.0, but because the deprecation was announced only in the release notes and not with runtime warnings, meany users have failed to realize the methods were deprecated, sometimes even us included! All these methods now emit deprecation warnings when executed and are now clearly marked as deprecated in the API reference:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.set_default</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param._add_parameter</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.add_parameter</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.params</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> or <code class="docutils literal notranslate"><span class="pre">.param['param']</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.set_param</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.update</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.get_param_values</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.values().items()</span></code> (or <code class="docutils literal notranslate"><span class="pre">.param.values()</span></code> for the common case of <code class="docutils literal notranslate"><span class="pre">dict(....param.get_param_values())</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.params_depended_on</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.method_dependencies</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.defaults</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">{k:v.default</span> <span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items()}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.print_param_defaults</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.print_param_values</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">k,v</span> <span class="pre">in</span> <span class="pre">p.param.objects().items():</span> <span class="pre">print(f&quot;{p.__class__.name}.{k}={repr(v.default)}&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.message</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.MESSAGE,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.verbose</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.VERBOSE,</span> <span class="pre">...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.param.debug</span></code>: use instead <code class="docutils literal notranslate"><span class="pre">.param.log(param.DEBUG,</span> <span class="pre">...)</span></code></p></li>
+</ul>
+</li>
+<li><p>Some methods now (correctly) warn that they are not safe to run in a <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> subclass constructor until you have called <code class="docutils literal notranslate"><span class="pre">super().__init__(**params)</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.objects(instance=True)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.trigger(&quot;&lt;param_name&gt;&quot;)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance.param.watch(callback,</span> <span class="pre">&quot;&lt;param_name&gt;&quot;)</span></code></p></li>
+</ul>
+</li>
+<li><p>Parameterized namespace:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">instance._param_watchers</span></code> (getter and setter): use instead the property <code class="docutils literal notranslate"><span class="pre">inst.param.watchers</span></code></p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="releases.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Releases</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="comparisons.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Comparison to other approaches</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-2-0">Version 2.0</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#breaking-changes">Breaking changes</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-attributes-inheritance">Parameter attributes inheritance</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#defining-custom-parameters">Defining custom <code class="docutils literal notranslate"><span class="pre">Parameter</span></code>s</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#default-value-of-name-accounted-for">Default value of <code class="docutils literal notranslate"><span class="pre">name</span></code> accounted for</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#setting-a-non-parameter-attribute-via-the-constructor">Setting a non-Parameter attribute via the constructor</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#instance-param-watchers-value-changed"><code class="docutils literal notranslate"><span class="pre">instance.param.watchers</span></code> value changed</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#clean-up-of-the-parameterized-namespace">Clean-up of the <code class="docutils literal notranslate"><span class="pre">Parameterized</span></code> namespace</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-clean-up"><code class="docutils literal notranslate"><span class="pre">Parameter</span></code> clean-up</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#additional-removals">Additional removals</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deprecations">Deprecations</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="_sources/upgrade_guide.md.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

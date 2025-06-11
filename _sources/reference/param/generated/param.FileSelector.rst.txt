@@ -1,0 +1,54 @@
+﻿param.FileSelector
+==================
+
+.. currentmodule:: param
+
+.. autoclass:: FileSelector
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~FileSelector.__init__
+      ~FileSelector.compute_default
+      ~FileSelector.deserialize
+      ~FileSelector.get_range
+      ~FileSelector.schema
+      ~FileSelector.serialize
+      ~FileSelector.update
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~FileSelector.path
+      ~FileSelector.allow_None
+      ~FileSelector.allow_refs
+      ~FileSelector.check_on_set
+      ~FileSelector.compute_default_fn
+      ~FileSelector.constant
+      ~FileSelector.default
+      ~FileSelector.doc
+      ~FileSelector.instantiate
+      ~FileSelector.label
+      ~FileSelector.name
+      ~FileSelector.names
+      ~FileSelector.nested_refs
+      ~FileSelector.objects
+      ~FileSelector.owner
+      ~FileSelector.per_instance
+      ~FileSelector.pickle_default_value
+      ~FileSelector.precedence
+      ~FileSelector.readonly
+      ~FileSelector.rx
+      ~FileSelector.watchers
+   
+   

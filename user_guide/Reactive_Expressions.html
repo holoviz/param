@@ -1,0 +1,1975 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Reactive Functions and Expressions &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="../_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="../_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="../_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="../_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="../_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=16656018"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="../_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/Reactive_Expressions';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Generators" href="Generators.html" />
+    <link rel="prev" title="Reactive References" href="References.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="../_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameters.html">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="References.html">References</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Reactive...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="reactive-functions-and-expressions">
+<h1>Reactive Functions and Expressions<a class="headerlink" href="#reactive-functions-and-expressions" title="Link to this heading">#</a></h1>
+<p>In Param, multiple paradigms for dynamic behavior coexist. The <a class="reference internal" href="Dependencies_and_Watchers.html"><span class="std std-doc">Dependencies and Watchers</span></a> guide delves into an imperative ‘push’ model, where explicit callbacks handle Parameter updates, often suited for GUI environments where user interactions drive state changes.</p>
+<p>Param 2.0 introduces a declarative, reactive model. Reactive expressions automatically update when their referenced Parameters change. This model encourages you to specify ‘what’ should happen, letting Param manage ‘how,’ thereby simplifying code logic and enhancing modularity. Unlike the ‘push’ model, which may require complex event orchestration, the reactive model emphasizes high-level relationships. This makes it versatile, scaling from simple to complex use cases. For instance, the reactive model is a good fit in data transformation pipelines and real-time dashboards, automatically updating dependent steps or visualizations when underlying Parameters change. The reactive approach allows you to focus on defining the transformation or relationship logic without worrying about the sequence of updates.</p>
+<p>This guide covers two main approaches to the reactive model:</p>
+<ol class="arabic simple">
+<li><p><strong>Reactive Expressions:</strong> With <code class="docutils literal notranslate"><span class="pre">.rx</span></code>, create reactive proxies for Parameters or objects, which recompute as inputs change.</p></li>
+<li><p><strong>Reactive Functions:</strong> Using <code class="docutils literal notranslate"><span class="pre">.bind</span></code>, auto-invoked functions update when their inputs change, offering a more declarative alternative to <code class="docutils literal notranslate"><span class="pre">.watch()</span></code>.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The code in this guide is designed to be run incrementally to observe the behavior of reactive expressions. If you’re reading a rendered version online, keep in mind that the entire page will have been executed, affecting the output of earlier lines. To fully experience the live updates, download this page as a Jupyter Notebook and run through it line by line.</p>
+</div>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">#</a></h2>
+<p>Param’s <code class="docutils literal notranslate"><span class="pre">rx</span></code> feature allows you to create reactive values and expressions, enabling immediate updates to your results as you interactively modify values, avoiding the need for explicit callbacks or managing state manually.</p>
+<p>Before we dive in to discover how <code class="docutils literal notranslate"><span class="pre">rx</span></code> works behind the scenes, let’s get started with a concrete example of loading some data into a <a class="reference external" href="https://pandas.pydata.org">Pandas</a> DataFrame and then displaying it:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">param</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">param</span><span class="w"> </span><span class="kn">import</span> <span class="n">rx</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">URL</span> <span class="o">=</span> <span class="s1">&#39;https://datasets.holoviz.org/penguins/v1/penguins.csv&#39;</span>
+<span class="n">nrows</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">URL</span><span class="p">))</span>
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">nrows</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>species</th>
+      <th>island</th>
+      <th>bill_length_mm</th>
+      <th>bill_depth_mm</th>
+      <th>flipper_length_mm</th>
+      <th>body_mass_g</th>
+      <th>sex</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>39.1</td>
+      <td>18.7</td>
+      <td>181.0</td>
+      <td>3750.0</td>
+      <td>male</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>39.5</td>
+      <td>17.4</td>
+      <td>186.0</td>
+      <td>3800.0</td>
+      <td>female</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>40.3</td>
+      <td>18.0</td>
+      <td>195.0</td>
+      <td>3250.0</td>
+      <td>female</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>36.7</td>
+      <td>19.3</td>
+      <td>193.0</td>
+      <td>3450.0</td>
+      <td>female</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>39.3</td>
+      <td>20.6</td>
+      <td>190.0</td>
+      <td>3650.0</td>
+      <td>male</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>38.9</td>
+      <td>17.8</td>
+      <td>181.0</td>
+      <td>3625.0</td>
+      <td>female</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>39.2</td>
+      <td>19.6</td>
+      <td>195.0</td>
+      <td>4675.0</td>
+      <td>male</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>34.1</td>
+      <td>18.1</td>
+      <td>193.0</td>
+      <td>3475.0</td>
+      <td>NaN</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>42.0</td>
+      <td>20.2</td>
+      <td>190.0</td>
+      <td>4250.0</td>
+      <td>NaN</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>37.8</td>
+      <td>17.1</td>
+      <td>186.0</td>
+      <td>3300.0</td>
+      <td>NaN</td>
+      <td>2007</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
+</div>
+<p>Here, this is just the same code you’d normally use to make a DataFrame, except for <code class="docutils literal notranslate"><span class="pre">rx()</span></code> being used to mark <code class="docutils literal notranslate"><span class="pre">nrows</span></code> and <code class="docutils literal notranslate"><span class="pre">df</span></code> as being reactive. As you can see, the reactive DataFrame works like any other DataFrame, using <code class="docutils literal notranslate"><span class="pre">.head()</span></code> and any other DataFrame methods as usual. But now, let’s see what happens if we update the value of <code class="docutils literal notranslate"><span class="pre">nrows</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nrows</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Whoa! As long as you are running a Jupyter notebook with a live Python process, you should have seen the dataframe “head” output <em>in</em> <em>the</em> <em>previous</em> <em>cell</em> update to the new value of <code class="docutils literal notranslate"><span class="pre">nrows</span></code>.  That’s because the reactive <code class="docutils literal notranslate"><span class="pre">df</span></code> expression being displayed in that cell captures the full pipeline of operations, automatically re-running <code class="docutils literal notranslate"><span class="pre">head</span></code> because the <code class="docutils literal notranslate"><span class="pre">nrows</span></code> has now changed.</p>
+<p>We’ve done this without having to write any special callbacks or any new functions, instead using special Python objects that capture the operations you’ve invoked and replay them as needed when inputs change.</p>
+<p>These updates should happen immediately (not only when the code cell finishes executing):</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">nrows</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>You should see the previous <code class="docutils literal notranslate"><span class="pre">df.head</span></code> output react to each time <code class="docutils literal notranslate"><span class="pre">nrows</span></code> is changed, updating to reflect the current state.</p>
+<p>Next, let’s explore a more intricate example. Although it involves a more complex pipeline, the code remains similar to what you’d write for a non-reactive Pandas DataFrame. To confirm, you can simply remove the <code class="docutils literal notranslate"><span class="pre">rx</span></code> calls:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">style</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="s1">&#39;color: white; background-color: </span><span class="si">{color}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">color</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="s1">&#39;darkblue&#39;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">highlight_max</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">props</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">values</span><span class="p">),</span> <span class="n">props</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+<span class="n">styled_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">nrows</span><span class="p">)</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">highlight_max</span><span class="p">,</span> <span class="n">props</span><span class="o">=</span><span class="n">style</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">styled_df</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+#T_bdde5_row2_col4, #T_bdde5_row5_col3, #T_bdde5_row7_col4, #T_bdde5_row7_col5, #T_bdde5_row9_col2 {
+  color: white;
+  background-color: red;
+  color: white;
+  background-color: darkblue;
+}
+</style>
+<table id="T_bdde5">
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_bdde5_level0_col0" class="col_heading level0 col0" >species</th>
+      <th id="T_bdde5_level0_col1" class="col_heading level0 col1" >island</th>
+      <th id="T_bdde5_level0_col2" class="col_heading level0 col2" >bill_length_mm</th>
+      <th id="T_bdde5_level0_col3" class="col_heading level0 col3" >bill_depth_mm</th>
+      <th id="T_bdde5_level0_col4" class="col_heading level0 col4" >flipper_length_mm</th>
+      <th id="T_bdde5_level0_col5" class="col_heading level0 col5" >body_mass_g</th>
+      <th id="T_bdde5_level0_col6" class="col_heading level0 col6" >sex</th>
+      <th id="T_bdde5_level0_col7" class="col_heading level0 col7" >year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_bdde5_level0_row0" class="row_heading level0 row0" >0</th>
+      <td id="T_bdde5_row0_col0" class="data row0 col0" >Adelie</td>
+      <td id="T_bdde5_row0_col1" class="data row0 col1" >Torgersen</td>
+      <td id="T_bdde5_row0_col2" class="data row0 col2" >39.100000</td>
+      <td id="T_bdde5_row0_col3" class="data row0 col3" >18.700000</td>
+      <td id="T_bdde5_row0_col4" class="data row0 col4" >181.000000</td>
+      <td id="T_bdde5_row0_col5" class="data row0 col5" >3750.000000</td>
+      <td id="T_bdde5_row0_col6" class="data row0 col6" >male</td>
+      <td id="T_bdde5_row0_col7" class="data row0 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row1" class="row_heading level0 row1" >1</th>
+      <td id="T_bdde5_row1_col0" class="data row1 col0" >Adelie</td>
+      <td id="T_bdde5_row1_col1" class="data row1 col1" >Torgersen</td>
+      <td id="T_bdde5_row1_col2" class="data row1 col2" >39.500000</td>
+      <td id="T_bdde5_row1_col3" class="data row1 col3" >17.400000</td>
+      <td id="T_bdde5_row1_col4" class="data row1 col4" >186.000000</td>
+      <td id="T_bdde5_row1_col5" class="data row1 col5" >3800.000000</td>
+      <td id="T_bdde5_row1_col6" class="data row1 col6" >female</td>
+      <td id="T_bdde5_row1_col7" class="data row1 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row2" class="row_heading level0 row2" >2</th>
+      <td id="T_bdde5_row2_col0" class="data row2 col0" >Adelie</td>
+      <td id="T_bdde5_row2_col1" class="data row2 col1" >Torgersen</td>
+      <td id="T_bdde5_row2_col2" class="data row2 col2" >40.300000</td>
+      <td id="T_bdde5_row2_col3" class="data row2 col3" >18.000000</td>
+      <td id="T_bdde5_row2_col4" class="data row2 col4" >195.000000</td>
+      <td id="T_bdde5_row2_col5" class="data row2 col5" >3250.000000</td>
+      <td id="T_bdde5_row2_col6" class="data row2 col6" >female</td>
+      <td id="T_bdde5_row2_col7" class="data row2 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row3" class="row_heading level0 row3" >3</th>
+      <td id="T_bdde5_row3_col0" class="data row3 col0" >Adelie</td>
+      <td id="T_bdde5_row3_col1" class="data row3 col1" >Torgersen</td>
+      <td id="T_bdde5_row3_col2" class="data row3 col2" >nan</td>
+      <td id="T_bdde5_row3_col3" class="data row3 col3" >nan</td>
+      <td id="T_bdde5_row3_col4" class="data row3 col4" >nan</td>
+      <td id="T_bdde5_row3_col5" class="data row3 col5" >nan</td>
+      <td id="T_bdde5_row3_col6" class="data row3 col6" >nan</td>
+      <td id="T_bdde5_row3_col7" class="data row3 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row4" class="row_heading level0 row4" >4</th>
+      <td id="T_bdde5_row4_col0" class="data row4 col0" >Adelie</td>
+      <td id="T_bdde5_row4_col1" class="data row4 col1" >Torgersen</td>
+      <td id="T_bdde5_row4_col2" class="data row4 col2" >36.700000</td>
+      <td id="T_bdde5_row4_col3" class="data row4 col3" >19.300000</td>
+      <td id="T_bdde5_row4_col4" class="data row4 col4" >193.000000</td>
+      <td id="T_bdde5_row4_col5" class="data row4 col5" >3450.000000</td>
+      <td id="T_bdde5_row4_col6" class="data row4 col6" >female</td>
+      <td id="T_bdde5_row4_col7" class="data row4 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row5" class="row_heading level0 row5" >5</th>
+      <td id="T_bdde5_row5_col0" class="data row5 col0" >Adelie</td>
+      <td id="T_bdde5_row5_col1" class="data row5 col1" >Torgersen</td>
+      <td id="T_bdde5_row5_col2" class="data row5 col2" >39.300000</td>
+      <td id="T_bdde5_row5_col3" class="data row5 col3" >20.600000</td>
+      <td id="T_bdde5_row5_col4" class="data row5 col4" >190.000000</td>
+      <td id="T_bdde5_row5_col5" class="data row5 col5" >3650.000000</td>
+      <td id="T_bdde5_row5_col6" class="data row5 col6" >male</td>
+      <td id="T_bdde5_row5_col7" class="data row5 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row6" class="row_heading level0 row6" >6</th>
+      <td id="T_bdde5_row6_col0" class="data row6 col0" >Adelie</td>
+      <td id="T_bdde5_row6_col1" class="data row6 col1" >Torgersen</td>
+      <td id="T_bdde5_row6_col2" class="data row6 col2" >38.900000</td>
+      <td id="T_bdde5_row6_col3" class="data row6 col3" >17.800000</td>
+      <td id="T_bdde5_row6_col4" class="data row6 col4" >181.000000</td>
+      <td id="T_bdde5_row6_col5" class="data row6 col5" >3625.000000</td>
+      <td id="T_bdde5_row6_col6" class="data row6 col6" >female</td>
+      <td id="T_bdde5_row6_col7" class="data row6 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row7" class="row_heading level0 row7" >7</th>
+      <td id="T_bdde5_row7_col0" class="data row7 col0" >Adelie</td>
+      <td id="T_bdde5_row7_col1" class="data row7 col1" >Torgersen</td>
+      <td id="T_bdde5_row7_col2" class="data row7 col2" >39.200000</td>
+      <td id="T_bdde5_row7_col3" class="data row7 col3" >19.600000</td>
+      <td id="T_bdde5_row7_col4" class="data row7 col4" >195.000000</td>
+      <td id="T_bdde5_row7_col5" class="data row7 col5" >4675.000000</td>
+      <td id="T_bdde5_row7_col6" class="data row7 col6" >male</td>
+      <td id="T_bdde5_row7_col7" class="data row7 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row8" class="row_heading level0 row8" >8</th>
+      <td id="T_bdde5_row8_col0" class="data row8 col0" >Adelie</td>
+      <td id="T_bdde5_row8_col1" class="data row8 col1" >Torgersen</td>
+      <td id="T_bdde5_row8_col2" class="data row8 col2" >34.100000</td>
+      <td id="T_bdde5_row8_col3" class="data row8 col3" >18.100000</td>
+      <td id="T_bdde5_row8_col4" class="data row8 col4" >193.000000</td>
+      <td id="T_bdde5_row8_col5" class="data row8 col5" >3475.000000</td>
+      <td id="T_bdde5_row8_col6" class="data row8 col6" >nan</td>
+      <td id="T_bdde5_row8_col7" class="data row8 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row9" class="row_heading level0 row9" >9</th>
+      <td id="T_bdde5_row9_col0" class="data row9 col0" >Adelie</td>
+      <td id="T_bdde5_row9_col1" class="data row9 col1" >Torgersen</td>
+      <td id="T_bdde5_row9_col2" class="data row9 col2" >42.000000</td>
+      <td id="T_bdde5_row9_col3" class="data row9 col3" >20.200000</td>
+      <td id="T_bdde5_row9_col4" class="data row9 col4" >190.000000</td>
+      <td id="T_bdde5_row9_col5" class="data row9 col5" >4250.000000</td>
+      <td id="T_bdde5_row9_col6" class="data row9 col6" >nan</td>
+      <td id="T_bdde5_row9_col7" class="data row9 col7" >2007</td>
+    </tr>
+    <tr>
+      <th id="T_bdde5_level0_row10" class="row_heading level0 row10" >10</th>
+      <td id="T_bdde5_row10_col0" class="data row10 col0" >Adelie</td>
+      <td id="T_bdde5_row10_col1" class="data row10 col1" >Torgersen</td>
+      <td id="T_bdde5_row10_col2" class="data row10 col2" >37.800000</td>
+      <td id="T_bdde5_row10_col3" class="data row10 col3" >17.100000</td>
+      <td id="T_bdde5_row10_col4" class="data row10 col4" >186.000000</td>
+      <td id="T_bdde5_row10_col5" class="data row10 col5" >3300.000000</td>
+      <td id="T_bdde5_row10_col6" class="data row10 col6" >nan</td>
+      <td id="T_bdde5_row10_col7" class="data row10 col7" >2007</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Here we’ve made two additional reactive values (<code class="docutils literal notranslate"><span class="pre">style</span></code> and <code class="docutils literal notranslate"><span class="pre">color</span></code>), and written a Pandas pipeline reacting to those values, using precisely the same syntax you would with a regular Pandas expression. Since <code class="docutils literal notranslate"><span class="pre">styled_df</span></code> is now a reactive Pandas expression, it will re-run whenever any of those changes. To see, try executing each of the following commands, one by one:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">color</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nrows</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">color</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="s1">&#39;darkblue&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>In the code above, we made reactive strings, numbers, and DataFrame expressions. You can also make functions reactive, which lets you make the URL reactive as well:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">url</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="n">URL</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">)(</span><span class="n">url</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>species</th>
+      <th>island</th>
+      <th>bill_length_mm</th>
+      <th>bill_depth_mm</th>
+      <th>flipper_length_mm</th>
+      <th>body_mass_g</th>
+      <th>sex</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>39.1</td>
+      <td>18.7</td>
+      <td>181.0</td>
+      <td>3750.0</td>
+      <td>male</td>
+      <td>2007</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Adelie</td>
+      <td>Torgersen</td>
+      <td>39.5</td>
+      <td>17.4</td>
+      <td>186.0</td>
+      <td>3800.0</td>
+      <td>female</td>
+      <td>2007</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">url</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="s1">&#39;https://datasets.holoviz.org/gapminders/v1/gapminders.csv&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">url</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">URL</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>In this case, <code class="docutils literal notranslate"><span class="pre">df</span></code> wraps the <code class="docutils literal notranslate"><span class="pre">read_csv</span></code> call generating the DataFrame, rather than a specific DataFrame instance. This demonstrates the flexibility of reactive expressions: you can write code as you usually would, but gain control over its reactivity.</p>
+<p>While we’ve been updating <code class="docutils literal notranslate"><span class="pre">.rx.value</span></code> manually in this notebook, you could easily replace these literals with widgets from ipywidgets or <a class="reference external" href="https://panel.holoviz.org/tutorials/basic/pn_rx.html">HoloViz Panel</a>, enabling you to create user-interactive, reactive applications with minimal effort.</p>
+</section>
+<section id="how-it-works">
+<h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">#</a></h2>
+<p>So, how does reactive programming in Param actually work? The underlying mechanism leverage’s Python’s <a class="reference external" href="https://www.geeksforgeeks.org/operator-overloading-in-python/">operator overloading</a>, which allows us to redefine common operators like ‘<code class="docutils literal notranslate"><span class="pre">+</span></code>’ to perform additional tasks. When you use these operators in reactive expressions, Param not only carries out the operation but also records it, establishing a dependency from the reactive variables involved to the resulting expression. This means that when a reactive variable is updated, Param automatically updates any expressions dependent on it.</p>
+<p>For instance, if you set up a reactive expression <code class="docutils literal notranslate"><span class="pre">j</span> <span class="pre">=</span> <span class="pre">i</span> <span class="pre">+</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">i</span></code> has been made reactive, any change to <code class="docutils literal notranslate"><span class="pre">i</span></code> will automatically trigger an update in <code class="docutils literal notranslate"><span class="pre">j</span></code>, eliminating the need for manual event handling:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">i</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;i = </span><span class="si">{</span><span class="n">i</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;j = </span><span class="si">{</span><span class="n">j</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>i = 1
+j = 2
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">i</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;i = </span><span class="si">{</span><span class="n">i</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;j = </span><span class="si">{</span><span class="n">j</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>i = 7
+j = 8
+</pre></div>
+</div>
+</div>
+</div>
+<p>Without <code class="docutils literal notranslate"><span class="pre">rx()</span></code>, adding 1 to <code class="docutils literal notranslate"><span class="pre">i</span></code> would have immediately invoked integer addition in Python, assigning an integer 2 to <code class="docutils literal notranslate"><span class="pre">j</span></code>. However, because we made <code class="docutils literal notranslate"><span class="pre">i</span></code> a reactive expression, what happens is that <code class="docutils literal notranslate"><span class="pre">i</span></code> stores its input value on an internal attribute called <code class="docutils literal notranslate"><span class="pre">_obj</span></code>, while overloading <code class="docutils literal notranslate"><span class="pre">+</span></code> to not just calculate <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">+</span> <span class="pre">1</span></code>, but also return another reactive object that records the operation (<code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">+</span> <span class="pre">1</span></code>). This stores the dependency so that whenever <code class="docutils literal notranslate"><span class="pre">i</span></code> changes, the reactive object knows that it needs to update itself by re-executing <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">+</span> <span class="pre">1</span></code>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">i</span><span class="o">.</span><span class="n">_obj</span><span class="p">,</span> <span class="n">j</span><span class="o">.</span><span class="n">_operation</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(param.reactive.rx,
+ 7,
+ {&#39;fn&#39;: &lt;function _operator.add(a, b, /)&gt;,
+  &#39;args&#39;: (1,),
+  &#39;kwargs&#39;: {},
+  &#39;reverse&#39;: False})
+</pre></div>
+</div>
+</div>
+</div>
+<p>When you access the <code class="docutils literal notranslate"><span class="pre">.value</span></code> attribute of <code class="docutils literal notranslate"><span class="pre">j</span></code>, it retrieves the most recent result of the expression <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">+</span> <span class="pre">1</span></code>, automatically reapplying the operation if <code class="docutils literal notranslate"><span class="pre">i</span></code> has changed. For more complicated scenarios, reactive expressions can chain multiple operations and method calls together, executing them in sequence to obtain the final outcome.</p>
+<p>In essence, reactive expressions are specialized Python objects that wrap standard objects. They record the operations you apply, and when an underlying reactive value changes, they automatically re-execute these operations. This eliminates the need for manually tracking and updating dependent variables, making it easier to build dynamic, responsive applications.</p>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Link to this heading">#</a></h2>
+<p>So does Python really allow <em>all</em> operations to be overloaded so that a reactive expression works precisely like the underlying objects?</p>
+<p>Nearly, but not quite. For technical reasons, certain operations cannot be implemented in this way:</p>
+<ul class="simple">
+<li><p>Python requires the <code class="docutils literal notranslate"><span class="pre">len</span></code> operation to return an integer, not a deferred reactive integer</p></li>
+<li><p>The Python <code class="docutils literal notranslate"><span class="pre">is</span></code> statement always checks the immediate identity of its two operands, so it cannot be deferred  reactively</p></li>
+<li><p>Logical operators like <code class="docutils literal notranslate"><span class="pre">and</span></code>, <code class="docutils literal notranslate"><span class="pre">or</span></code>, <code class="docutils literal notranslate"><span class="pre">not</span></code>, and <code class="docutils literal notranslate"><span class="pre">in</span></code> are required to return Boolean types rather than deferred, reactive Boolean types</p></li>
+<li><p>No overloading is available for control flow keywords like <code class="docutils literal notranslate"><span class="pre">if</span></code>, <code class="docutils literal notranslate"><span class="pre">elif</span></code>, and <code class="docutils literal notranslate"><span class="pre">else</span></code> or ternary conditional expressions (i.e. <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">if</span> <span class="pre">condition</span> <span class="pre">else</span> <span class="pre">b</span></code>), and so those actions cannot be captured for later reactive execution</p></li>
+<li><p>Iteration keywords like <code class="docutils literal notranslate"><span class="pre">for</span></code> or <code class="docutils literal notranslate"><span class="pre">while</span></code> can only be overloaded to some extent, specifically for fixed-length collections; other types of iteration cannot be captured for later reactive execution</p></li>
+</ul>
+<p>However, Param’s reactive expressions offer workarounds for these limitations through special methods under the <code class="docutils literal notranslate"><span class="pre">.rx</span></code> namespace to avoid confusion with the underlying object’s own methods. We’ll cover these methods in the next section.</p>
+</section>
+<section id="special-methods-on-rx">
+<h2>Special Methods on <code class="docutils literal notranslate"><span class="pre">.rx</span></code><a class="headerlink" href="#special-methods-on-rx" title="Link to this heading">#</a></h2>
+<p>To circumvent the limitations explained above, the <code class="docutils literal notranslate"><span class="pre">.rx</span></code> namespace provides reactive versions of the operations that can’t be made reactive through overloading:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.and_</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">and</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.bool</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">bool()</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.in_</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">in</span></code>, testing if the value is in the provided collection.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.is_</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">is</span></code>, testing the object identity against another object.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.is_not</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">not</span></code>, testing the absence of object identity with another object.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.len</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">len()</span></code>, returning the length of the expression</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.map</span></code>: Applies a function to each item in a collection.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.not_</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">not</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.or_</span></code>: Reactive version of <code class="docutils literal notranslate"><span class="pre">or</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.pipe</span></code>: Applies the given function (with static or reactive arguments) to this object.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.updating</span></code>: Returns a boolean indicating whether the expression is currently updating.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.when</span></code>: Generates a new expression that only updates when the provided dependency updates.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.rx.where</span></code>: Returns either the first or the second argument, depending on the current value of the expression.</p></li>
+</ul>
+<p>Unlike their corresponding standard Python equivalent, each of these returns a reactive expression that can thus be combined with other reactive expressions to make reactive pipelines.</p>
+<section id="rx-and-arg">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.and_(arg)</span></code><a class="headerlink" href="#rx-and-arg" title="Link to this heading">#</a></h3>
+<p>Applies the <code class="docutils literal notranslate"><span class="pre">and</span></code> operator to the  output of the reactive expression and the argument returning a new expression:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">and_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>False
+</pre></div>
+</div>
+</div>
+</div>
+<p>Unlike the bitwise <code class="docutils literal notranslate"><span class="pre">and</span></code> operator (<code class="docutils literal notranslate"><span class="pre">&amp;</span></code>) this has the same semantics as the <code class="docutils literal notranslate"><span class="pre">and</span></code> keyword.</p>
+</section>
+<section id="rx-in-arg">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.in_(arg)</span></code><a class="headerlink" href="#rx-in-arg" title="Link to this heading">#</a></h3>
+<p>Reactively checks if the current value is <code class="docutils literal notranslate"><span class="pre">.in_</span></code> the other collection</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">in_</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-is-arg">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.is_(arg)</span></code><a class="headerlink" href="#rx-is-arg" title="Link to this heading">#</a></h3>
+<p>Reactively checks if the identity of the current value is the same as the argument to <code class="docutils literal notranslate"><span class="pre">.is_</span></code></p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">is_</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-is-not-arg">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.is_not(arg)</span></code><a class="headerlink" href="#rx-is-not-arg" title="Link to this heading">#</a></h3>
+<p>Reactively checks if the identity of the current value is not the same as the argument to <code class="docutils literal notranslate"><span class="pre">.is_not</span></code></p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">is_not</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>False
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-len">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.len()</span></code><a class="headerlink" href="#rx-len" title="Link to this heading">#</a></h3>
+<p>Returns the length of the object as a reactive expression</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obj</span> <span class="o">=</span> <span class="n">rx</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">obj</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">len</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-map-func-args-kwargs">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.map(func,</span> <span class="pre">*args,</span> <span class="pre">**kwargs)</span></code><a class="headerlink" href="#rx-map-func-args-kwargs" title="Link to this heading">#</a></h3>
+<p>Maps the function to each item in a collection returned by the expression:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">,</span> <span class="n">mul</span><span class="p">:</span> <span class="n">v</span><span class="o">*</span><span class="n">mul</span><span class="p">,</span> <span class="n">mul</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[2, 4, 6]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-or-arg">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.or_(arg)</span></code><a class="headerlink" href="#rx-or-arg" title="Link to this heading">#</a></h3>
+<p>Applies <code class="docutils literal notranslate"><span class="pre">or</span></code> to the output of the reactive expression and the argument:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span><span class="s1">&#39;A value&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;A value&#39;
+</pre></div>
+</div>
+</div>
+</div>
+<p>Unlike the bitwise <code class="docutils literal notranslate"><span class="pre">or</span></code> operator (<code class="docutils literal notranslate"><span class="pre">|</span></code>) this has the same semantics as the <code class="docutils literal notranslate"><span class="pre">or</span></code> keyword.</p>
+</section>
+<section id="rx-pipe-func-args-kwargs">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.pipe(func,</span> <span class="pre">*args,</span> <span class="pre">**kwargs)</span></code><a class="headerlink" href="#rx-pipe-func-args-kwargs" title="Link to this heading">#</a></h3>
+<p>Pipes the current value into a function as the first argument, passing in additional positional and keyword arguments if provided, and returning a reactive expression to replay that call as needed:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span> <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+    
+<span class="n">rx</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">.rx.pipe</span></code> can be used with any Python function. One common usage is for making type conversion functions reactive:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="mf">8.5</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rx</span><span class="p">(</span><span class="mf">8.5</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&#39;8.5&#39;
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-updating">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.updating()</span></code><a class="headerlink" href="#rx-updating" title="Link to this heading">#</a></h3>
+<p>Returns a new expression that is True while the original expression is updating. Useful for performing some action while an expression is running.</p>
+<p>Here we create a simple expression that calls a <code class="docutils literal notranslate"><span class="pre">calculate</span></code> function which emulates a long running computation:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">expr</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+<span class="n">updating</span> <span class="o">=</span>  <span class="n">expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">calculate</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">updating</span><span class="p">()</span>
+
+<span class="n">updating</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>False
+</pre></div>
+</div>
+</div>
+</div>
+<p>When we update the expression the <code class="docutils literal notranslate"><span class="pre">updating</span></code> expression will temporarily toggle to True and then reset:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-when-conditions">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.when(*conditions)</span></code><a class="headerlink" href="#rx-when-conditions" title="Link to this heading">#</a></h3>
+<p>Useful when creating UIs to declare that the expression should only update when some other parameter changes, e.g. when a user clicks a button or triggers an expensive operation through some other mechanism.</p>
+<p>For instance, let’s say we have some expensive function (here simulated using <code class="docutils literal notranslate"><span class="pre">time.sleep</span></code>). First, we bind parameters <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> to this function and create a reactive expression from this function.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">expensive_function</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;multiplying </span><span class="si">{</span><span class="n">a</span><span class="si">=}</span><span class="s1"> and </span><span class="si">{</span><span class="n">b</span><span class="si">=}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="n">expensive_expr</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="n">expensive_function</span><span class="p">)(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>The problem we face is that if we use this <code class="docutils literal notranslate"><span class="pre">expensive_expr</span></code> whenever <code class="docutils literal notranslate"><span class="pre">a</span></code> <strong>or</strong> <code class="docutils literal notranslate"><span class="pre">b</span></code> are changed, then the expensive computation gets triggered <em>twice</em> if we want to change both <code class="docutils literal notranslate"><span class="pre">a</span></code> <em>and</em> <code class="docutils literal notranslate"><span class="pre">b</span></code>. To avoid unnecessary expense, we can gate the computation behind a third variable we’ll name <code class="docutils literal notranslate"><span class="pre">gate</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gate</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">gated_expr</span> <span class="o">=</span> <span class="n">expensive_expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">gate</span><span class="p">)</span>
+
+<span class="n">gated_expr</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>multiplying a=1 and b=2
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+</div>
+</div>
+<p>We can now safely change variables <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> separately without triggering the computation:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">b</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="mi">4</span>
+
+<span class="n">gated_expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+<p>But when we trigger the <code class="docutils literal notranslate"><span class="pre">run</span></code> parameter the expression will re-compute:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gate</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">gated_expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>multiplying a=2 and b=4
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="rx-where-a-b">
+<h3><code class="docutils literal notranslate"><span class="pre">.rx.where(a,</span> <span class="pre">b)</span></code><a class="headerlink" href="#rx-where-a-b" title="Link to this heading">#</a></h3>
+<p>Reactive ternary conditional. In non-reactive Python code you can write:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="k">if</span> <span class="n">condition</span> <span class="k">else</span> <span class="n">b</span>
+</pre></div>
+</div>
+<p>to return value <code class="docutils literal notranslate"><span class="pre">a</span></code> or value <code class="docutils literal notranslate"><span class="pre">b</span></code> depending on some <code class="docutils literal notranslate"><span class="pre">condition</span></code>. However, Python does not allow overriding <code class="docutils literal notranslate"><span class="pre">if</span></code> to have special behavior for a reactive <code class="docutils literal notranslate"><span class="pre">condition</span></code>, and thus such an expression will immediately evaluate and return <code class="docutils literal notranslate"><span class="pre">a</span></code> or <code class="docutils literal notranslate"><span class="pre">b</span></code> rather than capturing this logic for later reactivity.</p>
+<p>So if we want to have a reactive conditional, we have to rewrite the expression using <code class="docutils literal notranslate"><span class="pre">where</span></code>. First, we will declare a reactive <code class="docutils literal notranslate"><span class="pre">condition</span></code> expression to wrap a Boolean value that we can change later:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">condition</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now let’s say we want to return either <code class="docutils literal notranslate"><span class="pre">a</span></code> or <code class="docutils literal notranslate"><span class="pre">b</span></code> depending on whether the <code class="docutils literal notranslate"><span class="pre">condition</span></code> is True or False. We can simply pass the values to <code class="docutils literal notranslate"><span class="pre">.where()</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="n">ternary_expr</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+<span class="n">ternary_expr</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+</div>
+</div>
+<p>Since the initial value is <code class="docutils literal notranslate"><span class="pre">True</span></code> it returns the current value of <code class="docutils literal notranslate"><span class="pre">a</span></code>, which is <code class="docutils literal notranslate"><span class="pre">1</span></code>. However when we set the value to <code class="docutils literal notranslate"><span class="pre">False</span></code> it will return the value of <code class="docutils literal notranslate"><span class="pre">b</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">condition</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">ternary_expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+<p>Importantly, if we now change <code class="docutils literal notranslate"><span class="pre">b</span></code> the result will be reflected by the expression, reactively unless we explicitly resolve the result:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="n">ternary_expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here the expression value depends only on <code class="docutils literal notranslate"><span class="pre">b</span></code> thanks to the <code class="docutils literal notranslate"><span class="pre">where</span></code> condition, and thus changes to <code class="docutils literal notranslate"><span class="pre">a</span></code> will no longer trigger any downstream updates until the condition is reversed again.</p>
+</section>
+<section id="watching-an-expression">
+<h3>Watching an expression<a class="headerlink" href="#watching-an-expression" title="Link to this heading">#</a></h3>
+<p>In some cases you may want to trigger some side-effect based on the return value of an expression. The simplest way to achieve this is using the <code class="docutils literal notranslate"><span class="pre">.rx.watch</span></code> API, which mirrors the <a class="reference internal" href="Dependencies_and_Watchers.html#watchers"><span class="std std-ref"><code class="docutils literal notranslate"><span class="pre">.param.watch</span></code> API</span></a>. Using this API we can define a callback which runs whenever the expression outputs a new event:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span> <span class="o">=</span> <span class="n">rx</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">c</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">watch</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Output: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">))</span>
+
+<span class="n">c</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now if we update the expression we will see the output run:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">c</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Output: 2
+</pre></div>
+</div>
+</div>
+</div>
+<p>It is also possible to call <code class="docutils literal notranslate"><span class="pre">.param.watch</span></code> without any arguments, which makes the expression evaluate eagerly.</p>
+</section>
+</section>
+<section id="parameters-and-param-bind">
+<h2>Parameters and <code class="docutils literal notranslate"><span class="pre">param.bind</span></code><a class="headerlink" href="#parameters-and-param-bind" title="Link to this heading">#</a></h2>
+<p>Reactive expressions are part of the <a class="reference external" href="https://param.holoviz.org">Param</a> library, and behind the scenes, all the reactivity is implemented using Parameters and their <a class="reference external" href="https://param.holoviz.org/user_guide/Dependencies_and_Watchers.html">dependencies and watchers</a> support. You can use reactive expressions without needing to learn about Parameters, but if you do use Parameters in your work, they interact seamlessly with reactive expressions, providing a powerful and convenient way to organize your code and your work. In this section we will show how to use Parameters and the <code class="docutils literal notranslate"><span class="pre">param.bind</span></code> function together with reactive expressions for a more structured approach to reactive programming.</p>
+<p>First, let’s create a Parameterized class with a couple of Parameters:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Parameters</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span> 
+    <span class="n">a</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">b</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">run</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+    
+<span class="n">p</span> <span class="o">=</span> <span class="n">Parameters</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Any of the parameters can be used as reactive expressions by calling <code class="docutils literal notranslate"><span class="pre">.rx()</span></code> on their Parameter object:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">expr</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">rx</span><span class="p">()</span> <span class="o">+</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">rx</span><span class="p">()</span> <span class="o">+</span> <span class="mi">3</span>
+<span class="n">expr</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>13
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now if we update the Parameter, the result of the expression will update immediately:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">expr</span><span class="o">.</span><span class="n">rx</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>9
+</pre></div>
+</div>
+</div>
+</div>
+<p>You can thus use any Parameter in your reactive expressions, including Parameters from <a class="reference external" href="https://panel.holoviz.org/tutorials/basic/pn_rx.html">HoloViz Panel</a> widgets. In fact, reactive expressions are natively supported in Panel.</p>
+<section id="binding-parameters-to-functions">
+<h3>Binding Parameters to Functions<a class="headerlink" href="#binding-parameters-to-functions" title="Link to this heading">#</a></h3>
+<p>While reactive expressions with <code class="docutils literal notranslate"><span class="pre">rx</span></code> offer a flexible way to define dynamic relationships between Parameters, they operate at a fairly abstract level, encapsulating the underlying transformations. This can sometimes make it challenging to isolate specific parts of a pipeline for debugging or performance optimization.</p>
+<p>Enter <code class="docutils literal notranslate"><span class="pre">param.bind</span></code>, which allows you to define functions that are automatically invoked when their input Parameters change. This serves as a bridge between the reactive <code class="docutils literal notranslate"><span class="pre">rx</span></code> model and the lower-level ‘push’ model. Unlike the ‘push’ model, where you would explicitly set up watchers and callbacks, <code class="docutils literal notranslate"><span class="pre">param.bind</span></code> simplifies the process by letting Param manage the mechanics, but also making the dependencies more transparent than in a purely <code class="docutils literal notranslate"><span class="pre">rx</span></code> approach.</p>
+<p>In essence, <code class="docutils literal notranslate"><span class="pre">param.bind</span></code> offers the declarative nature of reactive expressions and the explicitness of the ‘push’ model. This makes it particularly useful for complex applications where you might want the clarity of explicit function calls for key parts of your pipeline, but also wish to retain the high-level, declarative relationships offered by reactive expressions.</p>
+<p>To demonstrate this concept, let’s define a simple Python function for adding numbers. We’ll also include print statements to make it evident when the function is invoked:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;add: </span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s1">+</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+
+<span class="n">add</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 3+7=10
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>10
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now we can use <code class="docutils literal notranslate"><span class="pre">param.bind</span></code> to “bind” parameters <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> to the <code class="docutils literal notranslate"><span class="pre">add</span></code> function’s arguments to create a reactive function:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reactive_add</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
+
+<span class="n">reactive_add</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 1+5=6
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>10
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, <code class="docutils literal notranslate"><span class="pre">reactive_add</span></code> works just like <code class="docutils literal notranslate"><span class="pre">add</span></code>, in that it adds two arguments, but in this case, it’s taking the value of the <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> Parameters of <code class="docutils literal notranslate"><span class="pre">p</span></code>. Parameter <code class="docutils literal notranslate"><span class="pre">a</span></code> has been “bound” to the first argument and <code class="docutils literal notranslate"><span class="pre">b</span></code> to the second, and if either of them changes, the result changes. So if we change <code class="docutils literal notranslate"><span class="pre">p.a</span></code> to 5, the output above reacts immediately.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">a</span> <span class="o">+=</span> <span class="mi">4</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 5+5=10
+</pre></div>
+</div>
+</div>
+</div>
+<p>We can also call the reactive function explicitly to return the current result as a concrete, no longer reactive value:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">reactive_add</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 5+5=10
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>10
+</pre></div>
+</div>
+</div>
+</div>
+<p>The difference between <code class="docutils literal notranslate"><span class="pre">reactive_add</span></code> and <code class="docutils literal notranslate"><span class="pre">reactive_add()</span></code> is that the first one is a function, whose display will automatically update in IPython/Jupyter, while the second is a specific number (the result of calling that function a single time, never to be updated further):</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">reactive_add</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">reactive_add</span><span class="p">()))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 5+5=10
+&lt;class &#39;function&#39;&gt; &lt;class &#39;int&#39;&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">param.bind</span></code> follows the semantics of Python’s <code class="docutils literal notranslate"><span class="pre">functools.partial</span></code>, and so if you only partially bind the required arguments, you’ll get a function of the remaining arguments:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">add_b</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="p">)</span>
+<span class="n">add_b</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;function param.reactive.bind.&lt;locals&gt;.wrapped(*wargs, **wkwargs)&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">add_b</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 5+5=10
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>10
+</pre></div>
+</div>
+</div>
+</div>
+<p>Note that you can bind any accepted type to make a reactive function, not just Parameters, but static values won’t trigger reactive updates (here 38 will always be the same value, while the result will depend on the current value of <code class="docutils literal notranslate"><span class="pre">p.param.a</span></code>).</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">38</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 5+38=43
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>43
+</pre></div>
+</div>
+</div>
+</div>
+<p>Bound functions update their outputs reactively when displayed, but what if you want to use one in a reactive expression? You can easily do that if you call <code class="docutils literal notranslate"><span class="pre">.rx()</span></code> on a fully bound function to get a reactive expression to work with:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">rx</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>add: 5+5=10
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>5.0
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, you can use bound functions to get reactivity if you prefer to write specific functions, or you can use reactive expressions to capture computations without writing function definitions, or you can combine the two as needed. Feel free to use the approach that best meets your needs!</p>
+<p>And overall, hopefully, you can see that Param’s reactive support provides a natural and powerful way to capture your computations in a way that can be replayed automatically whenever inputs change, making it a convenient basis for building interactive applications and computations.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="References.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Reactive References</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Generators.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Generators</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting Started</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-it-works">How it works</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#limitations">Limitations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#special-methods-on-rx">Special Methods on <code class="docutils literal notranslate"><span class="pre">.rx</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-and-arg"><code class="docutils literal notranslate"><span class="pre">.rx.and_(arg)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-in-arg"><code class="docutils literal notranslate"><span class="pre">.rx.in_(arg)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-is-arg"><code class="docutils literal notranslate"><span class="pre">.rx.is_(arg)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-is-not-arg"><code class="docutils literal notranslate"><span class="pre">.rx.is_not(arg)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-len"><code class="docutils literal notranslate"><span class="pre">.rx.len()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-map-func-args-kwargs"><code class="docutils literal notranslate"><span class="pre">.rx.map(func,</span> <span class="pre">*args,</span> <span class="pre">**kwargs)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-or-arg"><code class="docutils literal notranslate"><span class="pre">.rx.or_(arg)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-pipe-func-args-kwargs"><code class="docutils literal notranslate"><span class="pre">.rx.pipe(func,</span> <span class="pre">*args,</span> <span class="pre">**kwargs)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-updating"><code class="docutils literal notranslate"><span class="pre">.rx.updating()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-when-conditions"><code class="docutils literal notranslate"><span class="pre">.rx.when(*conditions)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rx-where-a-b"><code class="docutils literal notranslate"><span class="pre">.rx.where(a,</span> <span class="pre">b)</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#watching-an-expression">Watching an expression</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameters-and-param-bind">Parameters and <code class="docutils literal notranslate"><span class="pre">param.bind</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#binding-parameters-to-functions">Binding Parameters to Functions</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/user_guide/Reactive_Expressions.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

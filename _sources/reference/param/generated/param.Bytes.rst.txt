@@ -1,0 +1,47 @@
+﻿param.Bytes
+===========
+
+.. currentmodule:: param
+
+.. autoclass:: Bytes
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Bytes.__init__
+      ~Bytes.deserialize
+      ~Bytes.schema
+      ~Bytes.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Bytes.regex
+      ~Bytes.allow_None
+      ~Bytes.allow_refs
+      ~Bytes.constant
+      ~Bytes.default
+      ~Bytes.doc
+      ~Bytes.instantiate
+      ~Bytes.label
+      ~Bytes.name
+      ~Bytes.nested_refs
+      ~Bytes.owner
+      ~Bytes.per_instance
+      ~Bytes.pickle_default_value
+      ~Bytes.precedence
+      ~Bytes.readonly
+      ~Bytes.rx
+      ~Bytes.watchers
+   
+   

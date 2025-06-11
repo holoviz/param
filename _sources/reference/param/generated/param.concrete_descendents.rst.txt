@@ -1,0 +1,6 @@
+﻿param.concrete\_descendents
+===========================
+
+.. currentmodule:: param
+
+.. autofunction:: concrete_descendents

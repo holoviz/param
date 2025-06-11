@@ -1,0 +1,1913 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Dynamic parameter values &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="../_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="../_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="../_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="../_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="../_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=16656018"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="../_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/Dynamic_Parameters';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How Param Works" href="How_Param_Works.html" />
+    <link rel="prev" title="ParameterizedFunctions" href="ParameterizedFunctions.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="../_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameters.html">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/index.html">API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../reference/param/index.html">Param</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/param/reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/param/generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/param/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Dynamic...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="dynamic-parameter-values">
+<h1>Dynamic parameter values<a class="headerlink" href="#dynamic-parameter-values" title="Link to this heading">#</a></h1>
+<p>When developing your own Python code using Parameters, there are a variety of different programming models you can use:</p>
+<ol class="arabic simple">
+<li><p><strong>Parameters as fancy Python attributes</strong>: making use of Param’s semantic type checking, inheritance of default values and docstrings, etc., but not using any dynamic or event-handling features of Param. When Parameter values need to change, users change them explicitly, using their own Python code in separate methods and functions invoked from outside of Param.</p></li>
+<li><p><strong>“Push” model</strong>: Using Param’s <a class="reference internal" href="Dependencies_and_Watchers.html"><span class="std std-doc">Dependencies and Watchers</span></a> so that Param invokes user-written code to change Parameter values based on events that Param detects (typically chaining from changes in some other parameter values) and using <a class="reference internal" href="Generators.html"><span class="std std-doc">Generators</span></a> you can periodically emit new data to generate new events. A “push” model is typical for event-driven GUI applications, where a user interacts with a GUI widget to change some Parameter value, prompting Param to execute chained dependencies in response.</p></li>
+<li><p><strong>“Pull” model</strong>: Using Dynamic parameter values (described here) where the value of each dynamic parameter is computed when the parameter is read, potentially computing it from some global state values. A “pull” model is typical for simulations with a global clock, making it easy to use value <em>a1</em> at time 1, value <em>a2</em> at times 2-100, value <em>a3</em> for 100-, etc.</p></li>
+</ol>
+<p>Each of these models has advantages and disadvantages that make them appropriate for different situations, so it’s important to understand all three models so that you can choose the right one(s) for your system. Here, we’ll discuss the third model, using <code class="docutils literal notranslate"><span class="pre">Dynamic</span></code> parameters.</p>
+<section id="param-dynamic">
+<h2><code class="docutils literal notranslate"><span class="pre">param.Dynamic</span></code><a class="headerlink" href="#param-dynamic" title="Link to this heading">#</a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">Dynamic</span></code> parameter of type <code class="docutils literal notranslate"><span class="pre">t</span></code> is one that accepts <em>either</em> a value of type <code class="docutils literal notranslate"><span class="pre">t</span></code>, <em>or</em> a callable returning a value of type <code class="docutils literal notranslate"><span class="pre">t</span></code>. If a user passes a callable, the callable will be invoked to get the actual value when the parameter value is accessed. All of Param’s numeric parameter types are <code class="docutils literal notranslate"><span class="pre">Dynamic</span></code> because their base class <code class="docutils literal notranslate"><span class="pre">param.Number</span></code> inherits from <code class="docutils literal notranslate"><span class="pre">param.Dynamic</span></code>. New non-numeric types can be defined and made dynamic by inheriting from <code class="docutils literal notranslate"><span class="pre">param.Dynamic</span></code>, and having dynamic string and selector parameters would be a nice addition to the current dynamic numeric parameter support.</p>
+<p>To see how it works, let’s make a Parameterized class with some numeric Parameters:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">param</span><span class="o">,</span><span class="w"> </span><span class="nn">random</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">P</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">Parameterized</span><span class="p">):</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Integer</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Integer</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Integer</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="o">-</span><span class="mf">13.6</span><span class="p">)</span>
+
+<span class="n">P</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mf">9.8</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P(i=6, j=5, k=8, name=&#39;P00002&#39;, x=9.8)
+</pre></div>
+</div>
+</div>
+</div>
+<p>Here we can set <code class="docutils literal notranslate"><span class="pre">p.i</span></code> and <code class="docutils literal notranslate"><span class="pre">p.x</span></code> to any supported numeric values, illustrating programming model 1. But we can also set them to dynamic values, for model 3:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">35</span><span class="p">,</span><span class="mi">99</span><span class="p">),</span> <span class="n">x</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())</span>
+<span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>P(i=&lt;function &lt;lambda&gt; at 0x7fb164976e80&gt;, j=5, k=8, name=&#39;P00003&#39;, x=&lt;function &lt;lambda&gt; at 0x7fb164976f20&gt;)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(40, 56, 49)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">x</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(0.8926533075456644, 0.18532937406258854, 0.9476599746585437)
+</pre></div>
+</div>
+</div>
+</div>
+<p>As you can see, each time you access a parameter with a dynamic value, it computes a new value and returns it. If you want to inspect the current value without changing it, you can use a special method for that:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">inspect_value</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">),</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">inspect_value</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">),</span> <span class="n">p</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">inspect_value</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(0.9476599746585437, 0.9476599746585437, 0.9476599746585437)
+</pre></div>
+</div>
+</div>
+</div>
+<p>Of course, dynamic parameters don’t have to be random; e.g. you can set a parameter to a counter:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Count</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="o">=</span><span class="n">start</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span>
+    
+<span class="n">c</span> <span class="o">=</span> <span class="n">Count</span><span class="p">()</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">j</span> <span class="o">=</span> <span class="n">c</span>
+<span class="n">p</span><span class="o">.</span><span class="n">j</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">j</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">j</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(1, 2, 3)
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="using-a-global-time-variable">
+<h2>Using a global time variable<a class="headerlink" href="#using-a-global-time-variable" title="Link to this heading">#</a></h2>
+<p>As you can see, dynamic parameters are <em>very</em> dynamic by default, changing every single time they are accessed. What if you want a “somewhat dynamic” value that changes only in certain well-defined situations? For instance, what if you are running a simulation, and you want a new dynamic value whenever time <code class="docutils literal notranslate"><span class="pre">t</span></code> changes, but otherwise the value should be constant so that no matter how many times the parameter is read at that time <code class="docutils literal notranslate"><span class="pre">t</span></code>, the result is the same? Or you are running a training or annealing or sampling or similar process that has many different iterations or runs, and you want values to change only when the iteration or run number changes, and otherwise to have the same value for a given iteration or run?</p>
+<p>To support simulations and other applications controlled by a central counter or state value like this, <code class="docutils literal notranslate"><span class="pre">Dynamic</span></code> supports a <code class="docutils literal notranslate"><span class="pre">time_dependent</span></code> mode where new values will be generated only if <code class="docutils literal notranslate"><span class="pre">param.Dynamic.time_fn</span></code> has changed in value since a number was last generated:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_dependent</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(65, 65, 65)
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">time_fn</span></code> is a callable object that will return the current value if called:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">time_fn</span></code> can be incremented using <code class="docutils literal notranslate"><span class="pre">+=</span></code> or changed to a specific value by calling with that value:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span> <span class="o">+=</span><span class="mi">1</span>
+<span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(81, 81, 81)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span> <span class="o">+=</span><span class="mi">10</span>
+<span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(81, 81, 81)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>6
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(51, 51, 51)
+</pre></div>
+</div>
+</div>
+</div>
+<p>The global <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> provides a convenient way to compute values that are fixed functions of the time value:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="mi">100</span><span class="o">+</span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span><span class="p">()</span><span class="o">**</span><span class="mi">2</span>
+<span class="n">p</span><span class="o">.</span><span class="n">k</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>136
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span> <span class="o">+=</span><span class="mi">10</span>
+<span class="n">p</span><span class="o">.</span><span class="n">k</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>356
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Reset to the default, to support out of order execution of this notebook</span>
+<span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_dependent</span> <span class="o">=</span> <span class="kc">False</span> 
+</pre></div>
+</div>
+</div>
+</div>
+<p>See <code class="docutils literal notranslate"><span class="pre">help(param.Time)</span></code> for detailed information about using the <code class="docutils literal notranslate"><span class="pre">time_fn</span></code>, including:</p>
+<ul class="simple">
+<li><p>how to use <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> as a context manager to test results at different times without disrupting the current time</p></li>
+<li><p>how and why to use time types other than the integer default</p></li>
+<li><p>how to set an upper limit on the time to bound a simulation run</p></li>
+<li><p>how to declare the time units and time label</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> is not required to be of type <code class="docutils literal notranslate"><span class="pre">param.Time</span></code>, but a lot of the features here do depend on that particular model of time.</p>
+<p>If there are any Parameterized objects that should <em>not</em> respect the global time value or should respect a different time value, you can call <code class="docutils literal notranslate"><span class="pre">obj.param.set_dynamic_time_fn()</span></code> to override the time on those objects and any of their subobjects.</p>
+<p>You can see <a class="reference external" href="https://github.com/ioam/topographica">topographica</a> for an example of a complex simulator built on Param’s time support, including a <a class="reference external" href="https://github.com/ioam/topographica/blob/master/topo/base/simulation.py">general-purpose event-driven simulation engine</a> capable of simulating any phenomena that can be simulated by updating at discrete times (whether on a fixed global timebase or not).</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#help(param.Time)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="numbergen">
+<h2>Numbergen<a class="headerlink" href="#numbergen" title="Link to this heading">#</a></h2>
+<p>As you can see above, you can pass any callable object to a Dynamic parameter, including unnamed functions (lambdas), named functions, and custom objects with a <code class="docutils literal notranslate"><span class="pre">__call__</span></code> method. However, each of those approaches has limitations:</p>
+<ul class="simple">
+<li><p>lambdas cannot easily be pickled for saving and restoring state (though see <a class="reference external" href="https://github.com/cloudpipe/cloudpickle">cloudpickle</a> for an alternative to pickle that does support lambdas)</p></li>
+<li><p>named functions don’t support internal state and need to be stored in a named module somewhere for them to be picklable, potentially resulting in a large number of one-off functions to keep track of</p></li>
+<li><p>making a new object with a <code class="docutils literal notranslate"><span class="pre">__call__</span></code> method is verbose and error-prone, and again needs to be stored in a formal module if it is to be picklable.</p></li>
+</ul>
+<p>To make using Dynamic parameters more convenient, Param includes a separate module <a class="reference external" href="https://github.com/holoviz/param/blob/main/numbergen/__init__.py">Numbergen</a> that provides ready-to-use, picklable, composable, and interchangeable callable objects producing numeric values. Numbergen relies only on Param and the Python standard library, so it should be easy to add to any project.</p>
+<p>Numbergen objects are designed to work seamlessly as Dynamic parameter values, providing easy access to various temporal distributions, along with tools for combining and configuring number generators without having to write custom functions or classes. Moreover, because all of these objects are Parameterized objects sharing the same usage interface (each provides a numeric value when called, regardless of how many or which parameters are required to configure that distribution), using them together with Param’s Dynamic support provides a huge amount of power over the values parameters take over time, without requiring any extra complexity in your program. Without Dynamic support and numbergen, your Parameterized classes could of course provide their own support for e.g. a normal random distribution by accepting a mean and variance, but it would then be limited to that specific random distribution, whereas Dynamic parameters can accept <em>any</em> current or future number generator object as configured by a user for their own purposes, neatly separating your Parameterized’s requirements (“a positive integer value”) from the user’s requirements (“let’s see what happens when the value starts at 1 and doubles every iteration”).</p>
+<p>Numbergen objects all inherit from <code class="docutils literal notranslate"><span class="pre">ng.NumberGenerator</span></code>, which defines the callable interface and adds <a class="reference internal" href="#operations-on-number-generators">operator support</a> as described below. Each type of object then further inherits from either TimeAware (having basic time support) or TimeDependent (TimeAware objects having values that are a strict function of time).</p>
+<section id="timedependent-number-generators">
+<h3>TimeDependent number generators<a class="headerlink" href="#timedependent-number-generators" title="Link to this heading">#</a></h3>
+<p>If you have a global clock, TimeDependent number generators are easy to reason about: their value is a strict function of the time value returned by their <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> parameter. If the generator has a value <code class="docutils literal notranslate"><span class="pre">v</span></code> at time <code class="docutils literal notranslate"><span class="pre">t</span></code>, then if time is advanced by 10 units to <code class="docutils literal notranslate"><span class="pre">t+10</span></code>, rolled back 5 units to <code class="docutils literal notranslate"><span class="pre">t+5</span></code>, and rolled back 5 more units to <code class="docutils literal notranslate"><span class="pre">t</span></code>, the value of the generator will again be <code class="docutils literal notranslate"><span class="pre">v</span></code>. These generators typically calculate their values directly from the <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> value. TimeDependent objects provide a <code class="docutils literal notranslate"><span class="pre">time_dependent</span></code> parameter that is always True; the only mode they support is to be dependent on the global time. TimeDependent number generators include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.ScaledTime(factor=1.0)</span></code>: Simple multiplicative function of the global time value.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.ExponentialDecay(starting_value=1.0,</span> <span class="pre">ending_value=0.0,</span> <span class="pre">time_constant=10000,</span> <span class="pre">base=e)</span></code>: Returns <code class="docutils literal notranslate"><span class="pre">starting_value*base^(-time_fn()/time_constant)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.BoxCar(onset=0.0,</span> <span class="pre">duration=None)</span></code>: 1.0 in the exclusive interval (onset, onset+duration); zero at all other times. Default is a step function with no offset.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.SquareWave(onset=0.0,</span> <span class="pre">duration=1.0,</span> <span class="pre">off_duration=None)</span></code>: Alternating between 1.0 and 0.0 starting at the onset with a frequency (duration+off_duration) with a duty cycle determined by duration:off_duration (50% by default; off_duration defaults to the initial on duration).</p></li>
+</ul>
+<p>To demonstrate these objects, let’s write a helper function that samples the distribution at different time values:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numbergen</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ng</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_dependent</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">precision</span><span class="o">=</span><span class="mi">3</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">timesample</span><span class="p">(</span><span class="n">ng</span><span class="p">,</span> <span class="n">ts</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">time_fn</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_fn</span><span class="p">):</span>
+    <span class="n">ss</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ts</span><span class="p">:</span>
+        <span class="n">time_fn</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">ng</span><span class="p">()</span>
+        <span class="n">ss</span> <span class="o">+=</span> <span class="p">[(</span><span class="n">t</span><span class="p">,</span><span class="n">s</span><span class="p">)]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">ss</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">,</span><span class="s1">&#39;s&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">set_caption</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">unknown_value</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now we can see how each of these objects behaves as <code class="docutils literal notranslate"><span class="pre">t</span></code> changes:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">ScaledTime</span><span class="p">(</span><span class="n">factor</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_294d0">
+  <caption>ScaledTime(factor=2.0)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_294d0_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_294d0_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_294d0_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_294d0_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_294d0_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_294d0_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_294d0_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_294d0_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_294d0_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_294d0_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_294d0_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_294d0_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_294d0_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_294d0_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_294d0_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_294d0_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_294d0_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_294d0_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_294d0_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_294d0_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_294d0_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_294d0_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_294d0_row1_col0" class="data row1 col0" >0.000000</td>
+      <td id="T_294d0_row1_col1" class="data row1 col1" >2.000000</td>
+      <td id="T_294d0_row1_col2" class="data row1 col2" >4.000000</td>
+      <td id="T_294d0_row1_col3" class="data row1 col3" >6.000000</td>
+      <td id="T_294d0_row1_col4" class="data row1 col4" >8.000000</td>
+      <td id="T_294d0_row1_col5" class="data row1 col5" >10.000000</td>
+      <td id="T_294d0_row1_col6" class="data row1 col6" >12.000000</td>
+      <td id="T_294d0_row1_col7" class="data row1 col7" >14.000000</td>
+      <td id="T_294d0_row1_col8" class="data row1 col8" >16.000000</td>
+      <td id="T_294d0_row1_col9" class="data row1 col9" >18.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">ExponentialDecay</span><span class="p">(</span><span class="n">time_constant</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_e5d73">
+  <caption>ExponentialDecay(base=4, time_constant=2)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_e5d73_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_e5d73_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_e5d73_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_e5d73_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_e5d73_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_e5d73_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_e5d73_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_e5d73_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_e5d73_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_e5d73_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_e5d73_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_e5d73_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_e5d73_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_e5d73_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_e5d73_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_e5d73_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_e5d73_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_e5d73_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_e5d73_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_e5d73_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_e5d73_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_e5d73_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_e5d73_row1_col0" class="data row1 col0" >1.000000</td>
+      <td id="T_e5d73_row1_col1" class="data row1 col1" >0.500000</td>
+      <td id="T_e5d73_row1_col2" class="data row1 col2" >0.250000</td>
+      <td id="T_e5d73_row1_col3" class="data row1 col3" >0.125000</td>
+      <td id="T_e5d73_row1_col4" class="data row1 col4" >0.062500</td>
+      <td id="T_e5d73_row1_col5" class="data row1 col5" >0.031250</td>
+      <td id="T_e5d73_row1_col6" class="data row1 col6" >0.015625</td>
+      <td id="T_e5d73_row1_col7" class="data row1 col7" >0.007812</td>
+      <td id="T_e5d73_row1_col8" class="data row1 col8" >0.003906</td>
+      <td id="T_e5d73_row1_col9" class="data row1 col9" >0.001953</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">BoxCar</span><span class="p">(</span><span class="n">onset</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_59e0f">
+  <caption>BoxCar(duration=3)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_59e0f_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_59e0f_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_59e0f_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_59e0f_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_59e0f_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_59e0f_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_59e0f_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_59e0f_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_59e0f_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_59e0f_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_59e0f_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_59e0f_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_59e0f_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_59e0f_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_59e0f_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_59e0f_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_59e0f_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_59e0f_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_59e0f_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_59e0f_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_59e0f_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_59e0f_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_59e0f_row1_col0" class="data row1 col0" >0.000000</td>
+      <td id="T_59e0f_row1_col1" class="data row1 col1" >1.000000</td>
+      <td id="T_59e0f_row1_col2" class="data row1 col2" >1.000000</td>
+      <td id="T_59e0f_row1_col3" class="data row1 col3" >1.000000</td>
+      <td id="T_59e0f_row1_col4" class="data row1 col4" >0.000000</td>
+      <td id="T_59e0f_row1_col5" class="data row1 col5" >0.000000</td>
+      <td id="T_59e0f_row1_col6" class="data row1 col6" >0.000000</td>
+      <td id="T_59e0f_row1_col7" class="data row1 col7" >0.000000</td>
+      <td id="T_59e0f_row1_col8" class="data row1 col8" >0.000000</td>
+      <td id="T_59e0f_row1_col9" class="data row1 col9" >0.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">SquareWave</span><span class="p">(</span><span class="n">onset</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">off_duration</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_8ba74">
+  <caption>SquareWave(off_duration=2.0)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_8ba74_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_8ba74_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_8ba74_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_8ba74_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_8ba74_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_8ba74_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_8ba74_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_8ba74_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_8ba74_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_8ba74_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_8ba74_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_8ba74_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_8ba74_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_8ba74_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_8ba74_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_8ba74_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_8ba74_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_8ba74_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_8ba74_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_8ba74_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_8ba74_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_8ba74_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_8ba74_row1_col0" class="data row1 col0" >1.000000</td>
+      <td id="T_8ba74_row1_col1" class="data row1 col1" >0.000000</td>
+      <td id="T_8ba74_row1_col2" class="data row1 col2" >0.000000</td>
+      <td id="T_8ba74_row1_col3" class="data row1 col3" >1.000000</td>
+      <td id="T_8ba74_row1_col4" class="data row1 col4" >0.000000</td>
+      <td id="T_8ba74_row1_col5" class="data row1 col5" >0.000000</td>
+      <td id="T_8ba74_row1_col6" class="data row1 col6" >1.000000</td>
+      <td id="T_8ba74_row1_col7" class="data row1 col7" >0.000000</td>
+      <td id="T_8ba74_row1_col8" class="data row1 col8" >0.000000</td>
+      <td id="T_8ba74_row1_col9" class="data row1 col9" >1.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="timeaware-random-number-generators">
+<h3>TimeAware random number generators<a class="headerlink" href="#timeaware-random-number-generators" title="Link to this heading">#</a></h3>
+<p>A TimeAware object also has access to a <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> and has a <code class="docutils literal notranslate"><span class="pre">time_dependent</span></code> parameter, but either sets <code class="docutils literal notranslate"><span class="pre">time_dependent=False</span></code> (indicating that values are never a strict function of time) or allows either True or False (switching into and out of a time dependent mode). All current <code class="docutils literal notranslate"><span class="pre">TimeAware</span></code> NumberGenerator objects are random number generators that support both possible values of <code class="docutils literal notranslate"><span class="pre">time_dependent</span></code>. For <code class="docutils literal notranslate"><span class="pre">time_dependent=False</span></code> (the default), they return a new value on each call, while for <code class="docutils literal notranslate"><span class="pre">time_dependent=True</span></code>, they return pseudorandom values that follow the indicated distribution but are also a strict function of the time, in that the same number will be returned for a given time value even if time skips ahead or backwards.</p>
+<p>These random values are thus very tightly controlled to allow reproducible, repeatable results, with values determined by both a seed value (to choose the overall set of random values) and by the current time. Effectively, when <code class="docutils literal notranslate"><span class="pre">time_dependent=True</span></code>, these numbers provide a random value seeded by the generator’s <code class="docutils literal notranslate"><span class="pre">name</span></code> parameter, the global <code class="docutils literal notranslate"><span class="pre">param.random_seed</span></code>, the <code class="docutils literal notranslate"><span class="pre">seed</span></code> parameter of the NumberGenerator, <em>and</em> the NumberGenerator’s current <code class="docutils literal notranslate"><span class="pre">time_fn()</span></code> value.  The resulting generated values should be the same for a given object and a given <code class="docutils literal notranslate"><span class="pre">time_fn</span></code> value, even across platforms and machine-word sizes (see the <a class="reference external" href="https://github.com/holoviz/param/blob/f5208aaac55cf7717e507988e0e733cf2a46e981/numbergen/__init__.py#L201">Hash</a>, TimeAwareRandomState, and RandomDistribution classes for more details).</p>
+<p>For best results, you should provide an explicit unique name to any such generator and preserve that name over time, so that results will be reproducible across program runs. By default, the underlying random numbers are generated using Python’s <a class="reference external" href="https://docs.python.org/3/library/random.html">random</a> module (which see for details of the number generation), but you can substitute an instance of <code class="docutils literal notranslate"><span class="pre">numpy.random.RandomState</span></code> or similar compatible object for <code class="docutils literal notranslate"><span class="pre">self.random_generator</span></code> for higher performance or to generate time-dependent array values.</p>
+<p>RandomDistributions (all TimeAware and supporting <code class="docutils literal notranslate"><span class="pre">time_dependent</span></code>) include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.UniformRandom(lbound=0.0,</span> <span class="pre">ubound=1.0)</span></code>: Uniform random float in the range [lbound, ubound).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.UniformRandomOffset(mean=0,</span> <span class="pre">range=1.0)</span></code>: Same as UniformRandom, but returns a random float in the range [mean - range/2, mean + range/2).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.UniformRandomInt(lbound=0,</span> <span class="pre">ubound=1000)</span></code>: Uniform random integer in the (inclusive) range [lbound, ubound].</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.Choice(choices=[0,1])</span></code>: Random value from a provided list of choices.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.NormalRandom(mu=0.0,</span> <span class="pre">sigma=1.0)</span></code>: Normally distributed (Gaussian) random number with mean mu and standard deviation sigma.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.VonMisesRandom(mu=0,kappa=1)</span></code>: Circularly normal distributed random number centered around <code class="docutils literal notranslate"><span class="pre">mu</span></code> with inverse variance <code class="docutils literal notranslate"><span class="pre">kappa</span></code>; for <code class="docutils literal notranslate"><span class="pre">kappa=0</span></code> the result is uniformly distributed from 0 to 2*pi, and for narrow kappa it approaches the normal distribution with variance 1/kappa.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">UniformRandom</span><span class="p">(</span><span class="n">lbound</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ubound</span><span class="o">=</span><span class="mf">10.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_046b4">
+  <caption>UniformRandom(ubound=10.0)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_046b4_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_046b4_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_046b4_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_046b4_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_046b4_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_046b4_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_046b4_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_046b4_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_046b4_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_046b4_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_046b4_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_046b4_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_046b4_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_046b4_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_046b4_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_046b4_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_046b4_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_046b4_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_046b4_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_046b4_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_046b4_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_046b4_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_046b4_row1_col0" class="data row1 col0" >1.599917</td>
+      <td id="T_046b4_row1_col1" class="data row1 col1" >3.041244</td>
+      <td id="T_046b4_row1_col2" class="data row1 col2" >2.744528</td>
+      <td id="T_046b4_row1_col3" class="data row1 col3" >3.253061</td>
+      <td id="T_046b4_row1_col4" class="data row1 col4" >6.192674</td>
+      <td id="T_046b4_row1_col5" class="data row1 col5" >8.358465</td>
+      <td id="T_046b4_row1_col6" class="data row1 col6" >7.361856</td>
+      <td id="T_046b4_row1_col7" class="data row1 col7" >0.558766</td>
+      <td id="T_046b4_row1_col8" class="data row1 col8" >4.654112</td>
+      <td id="T_046b4_row1_col9" class="data row1 col9" >8.346723</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">UniformRandomOffset</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_a250b">
+  <caption>UniformRandomOffset(mean=100, range=3)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_a250b_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_a250b_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_a250b_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_a250b_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_a250b_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_a250b_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_a250b_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_a250b_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_a250b_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_a250b_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_a250b_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_a250b_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_a250b_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_a250b_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_a250b_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_a250b_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_a250b_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_a250b_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_a250b_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_a250b_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_a250b_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_a250b_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_a250b_row1_col0" class="data row1 col0" >100.905697</td>
+      <td id="T_a250b_row1_col1" class="data row1 col1" >100.719286</td>
+      <td id="T_a250b_row1_col2" class="data row1 col2" >99.046114</td>
+      <td id="T_a250b_row1_col3" class="data row1 col3" >101.037145</td>
+      <td id="T_a250b_row1_col4" class="data row1 col4" >101.359356</td>
+      <td id="T_a250b_row1_col5" class="data row1 col5" >101.215710</td>
+      <td id="T_a250b_row1_col6" class="data row1 col6" >99.557479</td>
+      <td id="T_a250b_row1_col7" class="data row1 col7" >100.160418</td>
+      <td id="T_a250b_row1_col8" class="data row1 col8" >100.985532</td>
+      <td id="T_a250b_row1_col9" class="data row1 col9" >100.711529</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">UniformRandomInt</span><span class="p">(</span><span class="n">lbound</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ubound</span><span class="o">=</span><span class="mi">1000</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_64709">
+  <caption>UniformRandomInt()</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_64709_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_64709_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_64709_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_64709_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_64709_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_64709_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_64709_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_64709_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_64709_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_64709_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_64709_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_64709_row0_col0" class="data row0 col0" >0</td>
+      <td id="T_64709_row0_col1" class="data row0 col1" >1</td>
+      <td id="T_64709_row0_col2" class="data row0 col2" >2</td>
+      <td id="T_64709_row0_col3" class="data row0 col3" >3</td>
+      <td id="T_64709_row0_col4" class="data row0 col4" >4</td>
+      <td id="T_64709_row0_col5" class="data row0 col5" >5</td>
+      <td id="T_64709_row0_col6" class="data row0 col6" >6</td>
+      <td id="T_64709_row0_col7" class="data row0 col7" >7</td>
+      <td id="T_64709_row0_col8" class="data row0 col8" >8</td>
+      <td id="T_64709_row0_col9" class="data row0 col9" >9</td>
+    </tr>
+    <tr>
+      <th id="T_64709_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_64709_row1_col0" class="data row1 col0" >977</td>
+      <td id="T_64709_row1_col1" class="data row1 col1" >917</td>
+      <td id="T_64709_row1_col2" class="data row1 col2" >505</td>
+      <td id="T_64709_row1_col3" class="data row1 col3" >813</td>
+      <td id="T_64709_row1_col4" class="data row1 col4" >108</td>
+      <td id="T_64709_row1_col5" class="data row1 col5" >647</td>
+      <td id="T_64709_row1_col6" class="data row1 col6" >910</td>
+      <td id="T_64709_row1_col7" class="data row1 col7" >976</td>
+      <td id="T_64709_row1_col8" class="data row1 col8" >621</td>
+      <td id="T_64709_row1_col9" class="data row1 col9" >619</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">Choice</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="mf">3.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">95</span><span class="p">,</span> <span class="mi">7</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_08ccb">
+  <caption>Choice(choices=[3.1,-95,7])</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_08ccb_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_08ccb_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_08ccb_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_08ccb_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_08ccb_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_08ccb_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_08ccb_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_08ccb_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_08ccb_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_08ccb_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_08ccb_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_08ccb_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_08ccb_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_08ccb_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_08ccb_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_08ccb_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_08ccb_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_08ccb_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_08ccb_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_08ccb_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_08ccb_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_08ccb_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_08ccb_row1_col0" class="data row1 col0" >-95.000000</td>
+      <td id="T_08ccb_row1_col1" class="data row1 col1" >3.100000</td>
+      <td id="T_08ccb_row1_col2" class="data row1 col2" >-95.000000</td>
+      <td id="T_08ccb_row1_col3" class="data row1 col3" >7.000000</td>
+      <td id="T_08ccb_row1_col4" class="data row1 col4" >-95.000000</td>
+      <td id="T_08ccb_row1_col5" class="data row1 col5" >3.100000</td>
+      <td id="T_08ccb_row1_col6" class="data row1 col6" >7.000000</td>
+      <td id="T_08ccb_row1_col7" class="data row1 col7" >7.000000</td>
+      <td id="T_08ccb_row1_col8" class="data row1 col8" >3.100000</td>
+      <td id="T_08ccb_row1_col9" class="data row1 col9" >7.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">NormalRandom</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">5.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_ca300">
+  <caption>NormalRandom(mu=50.0, sigma=5.0)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_ca300_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_ca300_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_ca300_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_ca300_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_ca300_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_ca300_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_ca300_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_ca300_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_ca300_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_ca300_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_ca300_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_ca300_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_ca300_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_ca300_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_ca300_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_ca300_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_ca300_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_ca300_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_ca300_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_ca300_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_ca300_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_ca300_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_ca300_row1_col0" class="data row1 col0" >51.661216</td>
+      <td id="T_ca300_row1_col1" class="data row1 col1" >50.128063</td>
+      <td id="T_ca300_row1_col2" class="data row1 col2" >42.868347</td>
+      <td id="T_ca300_row1_col3" class="data row1 col3" >47.140309</td>
+      <td id="T_ca300_row1_col4" class="data row1 col4" >43.466006</td>
+      <td id="T_ca300_row1_col5" class="data row1 col5" >49.197093</td>
+      <td id="T_ca300_row1_col6" class="data row1 col6" >54.944451</td>
+      <td id="T_ca300_row1_col7" class="data row1 col7" >57.024850</td>
+      <td id="T_ca300_row1_col8" class="data row1 col8" >61.627005</td>
+      <td id="T_ca300_row1_col9" class="data row1 col9" >50.524313</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">VonMisesRandom</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">kappa</span><span class="o">=</span><span class="mi">500</span><span class="p">))</span> <span class="c1"># small variance around 0 (aka 2pi)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_62e22">
+  <caption>VonMisesRandom(kappa=500)</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_62e22_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_62e22_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_62e22_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_62e22_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_62e22_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_62e22_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_62e22_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_62e22_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_62e22_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_62e22_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_62e22_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_62e22_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_62e22_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_62e22_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_62e22_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_62e22_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_62e22_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_62e22_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_62e22_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_62e22_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_62e22_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_62e22_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_62e22_row1_col0" class="data row1 col0" >6.266379</td>
+      <td id="T_62e22_row1_col1" class="data row1 col1" >6.242965</td>
+      <td id="T_62e22_row1_col2" class="data row1 col2" >6.205831</td>
+      <td id="T_62e22_row1_col3" class="data row1 col3" >6.260517</td>
+      <td id="T_62e22_row1_col4" class="data row1 col4" >0.019822</td>
+      <td id="T_62e22_row1_col5" class="data row1 col5" >6.215266</td>
+      <td id="T_62e22_row1_col6" class="data row1 col6" >6.235521</td>
+      <td id="T_62e22_row1_col7" class="data row1 col7" >0.013082</td>
+      <td id="T_62e22_row1_col8" class="data row1 col8" >6.229525</td>
+      <td id="T_62e22_row1_col9" class="data row1 col9" >6.247790</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="operations-on-number-generators">
+<h3>Operations on number generators<a class="headerlink" href="#operations-on-number-generators" title="Link to this heading">#</a></h3>
+<p>Numbergen also provides a couple of NumberGenerators that accept other NumberGenerator objects and filter or modify their values:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.TimeSampledFn(period=1.0,</span> <span class="pre">offset=1.0,</span> <span class="pre">fn=None)</span></code>: Discretizes the given time-dependent NumberGenerator to give discrete values held constant over the given period, changing a continuous function of time into a series of discrete steps starting at the indicated offset and changing at the indicated period.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ng.BoundedNumber(generator=None,</span> <span class="pre">bounds=(None,None))</span></code>: Wrapper around another number generator (any callable returning a number) that silently crops the result to the given bounds.</p></li>
+</ul>
+<p>It also provides a set of unary (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">+</span> <span class="pre">abs()</span></code>) and binary (<code class="docutils literal notranslate"><span class="pre">+</span> <span class="pre">-</span> <span class="pre">*</span> <span class="pre">%</span> <span class="pre">**</span> <span class="pre">/</span> <span class="pre">//</span></code>) mathematical operators that make it simple to adapt the output for usage in practice without having to define one-off functions. For instance:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="o">-</span><span class="nb">abs</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">ScaledTime</span><span class="p">(</span><span class="n">factor</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">//</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_847ff">
+  <caption>BinaryOperator()</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_847ff_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_847ff_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_847ff_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_847ff_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_847ff_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_847ff_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_847ff_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_847ff_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_847ff_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_847ff_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_847ff_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_847ff_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_847ff_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_847ff_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_847ff_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_847ff_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_847ff_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_847ff_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_847ff_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_847ff_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_847ff_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_847ff_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_847ff_row1_col0" class="data row1 col0" >-1.000000</td>
+      <td id="T_847ff_row1_col1" class="data row1 col1" >-1.000000</td>
+      <td id="T_847ff_row1_col2" class="data row1 col2" >-2.000000</td>
+      <td id="T_847ff_row1_col3" class="data row1 col3" >-2.000000</td>
+      <td id="T_847ff_row1_col4" class="data row1 col4" >-3.000000</td>
+      <td id="T_847ff_row1_col5" class="data row1 col5" >-3.000000</td>
+      <td id="T_847ff_row1_col6" class="data row1 col6" >-4.000000</td>
+      <td id="T_847ff_row1_col7" class="data row1 col7" >-4.000000</td>
+      <td id="T_847ff_row1_col8" class="data row1 col8" >-5.000000</td>
+      <td id="T_847ff_row1_col9" class="data row1 col9" >-5.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="n">ng</span><span class="o">.</span><span class="n">UniformRandom</span><span class="p">()</span><span class="o">%</span><span class="k">0</span>.2)
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_0ce5f">
+  <caption>BinaryOperator()</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_0ce5f_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_0ce5f_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_0ce5f_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_0ce5f_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_0ce5f_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_0ce5f_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_0ce5f_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_0ce5f_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_0ce5f_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_0ce5f_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_0ce5f_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_0ce5f_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_0ce5f_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_0ce5f_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_0ce5f_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_0ce5f_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_0ce5f_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_0ce5f_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_0ce5f_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_0ce5f_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_0ce5f_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_0ce5f_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_0ce5f_row1_col0" class="data row1 col0" >0.032922</td>
+      <td id="T_0ce5f_row1_col1" class="data row1 col1" >0.059014</td>
+      <td id="T_0ce5f_row1_col2" class="data row1 col2" >0.147137</td>
+      <td id="T_0ce5f_row1_col3" class="data row1 col3" >0.199918</td>
+      <td id="T_0ce5f_row1_col4" class="data row1 col4" >0.046277</td>
+      <td id="T_0ce5f_row1_col5" class="data row1 col5" >0.100509</td>
+      <td id="T_0ce5f_row1_col6" class="data row1 col6" >0.190454</td>
+      <td id="T_0ce5f_row1_col7" class="data row1 col7" >0.135657</td>
+      <td id="T_0ce5f_row1_col8" class="data row1 col8" >0.129331</td>
+      <td id="T_0ce5f_row1_col9" class="data row1 col9" >0.172299</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">timesample</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ng</span><span class="o">.</span><span class="n">SquareWave</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style type="text/css">
+</style>
+<table id="T_18082">
+  <caption>BinaryOperator()</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_18082_level0_col0" class="col_heading level0 col0" >0</th>
+      <th id="T_18082_level0_col1" class="col_heading level0 col1" >1</th>
+      <th id="T_18082_level0_col2" class="col_heading level0 col2" >2</th>
+      <th id="T_18082_level0_col3" class="col_heading level0 col3" >3</th>
+      <th id="T_18082_level0_col4" class="col_heading level0 col4" >4</th>
+      <th id="T_18082_level0_col5" class="col_heading level0 col5" >5</th>
+      <th id="T_18082_level0_col6" class="col_heading level0 col6" >6</th>
+      <th id="T_18082_level0_col7" class="col_heading level0 col7" >7</th>
+      <th id="T_18082_level0_col8" class="col_heading level0 col8" >8</th>
+      <th id="T_18082_level0_col9" class="col_heading level0 col9" >9</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_18082_level0_row0" class="row_heading level0 row0" >t</th>
+      <td id="T_18082_row0_col0" class="data row0 col0" >0.000000</td>
+      <td id="T_18082_row0_col1" class="data row0 col1" >1.000000</td>
+      <td id="T_18082_row0_col2" class="data row0 col2" >2.000000</td>
+      <td id="T_18082_row0_col3" class="data row0 col3" >3.000000</td>
+      <td id="T_18082_row0_col4" class="data row0 col4" >4.000000</td>
+      <td id="T_18082_row0_col5" class="data row0 col5" >5.000000</td>
+      <td id="T_18082_row0_col6" class="data row0 col6" >6.000000</td>
+      <td id="T_18082_row0_col7" class="data row0 col7" >7.000000</td>
+      <td id="T_18082_row0_col8" class="data row0 col8" >8.000000</td>
+      <td id="T_18082_row0_col9" class="data row0 col9" >9.000000</td>
+    </tr>
+    <tr>
+      <th id="T_18082_level0_row1" class="row_heading level0 row1" >s</th>
+      <td id="T_18082_row1_col0" class="data row1 col0" >1.000000</td>
+      <td id="T_18082_row1_col1" class="data row1 col1" >-1.000000</td>
+      <td id="T_18082_row1_col2" class="data row1 col2" >1.000000</td>
+      <td id="T_18082_row1_col3" class="data row1 col3" >-1.000000</td>
+      <td id="T_18082_row1_col4" class="data row1 col4" >1.000000</td>
+      <td id="T_18082_row1_col5" class="data row1 col5" >-1.000000</td>
+      <td id="T_18082_row1_col6" class="data row1 col6" >1.000000</td>
+      <td id="T_18082_row1_col7" class="data row1 col7" >-1.000000</td>
+      <td id="T_18082_row1_col8" class="data row1 col8" >1.000000</td>
+      <td id="T_18082_row1_col9" class="data row1 col9" >-1.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+</section>
+<section id="using-numbergen-objects-for-parameter-values">
+<h2>Using numbergen objects for parameter values<a class="headerlink" href="#using-numbergen-objects-for-parameter-values" title="Link to this heading">#</a></h2>
+<p>Any of the above objects can be supplied for any <code class="docutils literal notranslate"><span class="pre">param.Number</span></code> Parameter type. For instance, instead of the lambdas in the first examples in this guide, you can use Numbergen objects:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">param</span><span class="o">.</span><span class="n">Dynamic</span><span class="o">.</span><span class="n">time_dependent</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">ng</span><span class="o">.</span><span class="n">UniformRandomInt</span><span class="p">(</span><span class="n">lbound</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">ubound</span><span class="o">=</span><span class="mi">99</span><span class="p">),</span> 
+      <span class="n">x</span><span class="o">=</span><span class="n">ng</span><span class="o">.</span><span class="n">UniformRandom</span><span class="p">())</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(36, 97, 47)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">x</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(0.02828954155224228, 0.9151530353699837, 0.2580812851341854)
+</pre></div>
+</div>
+</div>
+</div>
+<p>Notice that the decision to use a particular distribution is up to the <em>user</em> of class <code class="docutils literal notranslate"><span class="pre">P</span></code>, not the author of <code class="docutils literal notranslate"><span class="pre">P</span></code>. The author of <code class="docutils literal notranslate"><span class="pre">P</span></code> just needs to know that <code class="docutils literal notranslate"><span class="pre">i</span></code> will be an integer and that <code class="docutils literal notranslate"><span class="pre">x</span></code> will be a float (with bounds if specified); the user is then free to set those values to be static or any type of dynamic value as needed. Using Param with this “pull” model thus provides users with easy ways to control how parameters change their value over time (for some model of time), without additional work by the Parameterized class author. You can see extensive examples of this approach at the <a class="reference external" href="https://imagen.holoviz.org">imagen</a> website, which shows how Numbergen objects can be used to create flexible streams of generated image objects without needing any special support for such streams in the Parameterized objects in that library.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="ParameterizedFunctions.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">ParameterizedFunctions</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="How_Param_Works.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">How Param Works</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#param-dynamic"><code class="docutils literal notranslate"><span class="pre">param.Dynamic</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-global-time-variable">Using a global time variable</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numbergen">Numbergen</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#timedependent-number-generators">TimeDependent number generators</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#timeaware-random-number-generators">TimeAware random number generators</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#operations-on-number-generators">Operations on number generators</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-numbergen-objects-for-parameter-values">Using numbergen objects for parameter values</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/user_guide/Dynamic_Parameters.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

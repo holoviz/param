@@ -1,0 +1,53 @@
+﻿param.Range
+===========
+
+.. currentmodule:: param
+
+.. autoclass:: Range
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Range.__init__
+      ~Range.deserialize
+      ~Range.get_soft_bounds
+      ~Range.rangestr
+      ~Range.schema
+      ~Range.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Range.bounds
+      ~Range.inclusive_bounds
+      ~Range.softbounds
+      ~Range.step
+      ~Range.allow_None
+      ~Range.allow_refs
+      ~Range.constant
+      ~Range.default
+      ~Range.doc
+      ~Range.instantiate
+      ~Range.label
+      ~Range.length
+      ~Range.name
+      ~Range.nested_refs
+      ~Range.owner
+      ~Range.per_instance
+      ~Range.pickle_default_value
+      ~Range.precedence
+      ~Range.readonly
+      ~Range.rx
+      ~Range.watchers
+   
+   

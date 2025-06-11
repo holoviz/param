@@ -1,0 +1,1472 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Param API reference &#8212; param v2.2.1</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsite.css?v=d9d93254" />
+    <link rel="stylesheet" type="text/css" href="../../_static/notebook.css?v=19946987" />
+    <link rel="stylesheet" type="text/css" href="../../_static/gallery.css?v=0a3248cd" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alert.css?v=c26666be" />
+    <link rel="stylesheet" type="text/css" href="../../_static/dataframe.css?v=a0f274c1" />
+    <link rel="stylesheet" type="text/css" href="../../_static/scroller.css?v=2dcde208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/hv-sidebar-dropdown.css?v=3e2b0152" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=16656018"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>
+    window.goatcounter = {
+        path: function(p) { return location.host + p }
+    }
+</script>
+    <script async="async" data-goatcounter="https://holoviz.goatcounter.com/count" src="../../_static/js/goatcounter.js?v=f53f84b8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/param/index';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="author" title="About these documents" href="../../about.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="param.bind" href="generated/param.bind.html" />
+    <link rel="prev" title="API reference" href="../index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="2025-06-11"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo_horizontal.png" class="logo__image only-light" alt="param v2.2.1 - Home"/>
+    <script>document.write(`<img src="../../_static/logo_horizontal.png" class="logo__image only-dark" alt="param v2.2.1 - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../about.html">
+    About
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../releases.html">
+    Releases
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../upgrade_guide.html">
+    Upgrade Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../comparisons.html">
+    Comparisons
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../developer_guide.html">
+    Developer Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../about.html">
+    About
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/holoviz/param" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/holoviz_org" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-twitter-square fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discourse.holoviz.org/" title="Discourse" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discourse fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discourse</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://discord.gg/AXRHnJU6sP" title="Discord" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-discord fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Discord</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><!-- Adapted from sidebar-nav-bs.html (1.15.2) with the following changes
+
+  - Commented out the tag that adds the "Section Navigation" title
+  - Call generate_toctree_html with startdepth=0
+
+Please update this file when required when bumping the max pin of pydata-sphinx-theme.
+-->
+
+
+<nav class="bd-docs-nav bd-links"
+      aria-label="Section Navigation">
+  <!-- <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p> -->
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../user_guide/index.html">User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/index.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Simplifying_Codebases.html">Simplifying Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Parameters.html">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Parameter_Types.html">Parameter Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Dependencies_and_Watchers.html">Dependencies and Watchers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/References.html">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Reactive_Expressions.html">Reactive Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Generators.html">Generators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Serialization_and_Persistence.html">Serialization and Persistence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Outputs.html">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Logging_and_Warnings.html">Logging and Warnings</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/ParameterizedFunctions.html">ParameterizedFunctions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/Dynamic_Parameters.html">Dynamic Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user_guide/How_Param_Works.html">How Param Works</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="current reference internal" href="#">Param</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="reactive.html">Reactive API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.bool.html">param.reactive.reactive_ops.bool</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.in_.html">param.reactive.reactive_ops.in_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.is_.html">param.reactive.reactive_ops.is_</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.is_not.html">param.reactive.reactive_ops.is_not</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.len.html">param.reactive.reactive_ops.len</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.pipe.html">param.reactive.reactive_ops.pipe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.updating.html">param.reactive.reactive_ops.updating</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.when.html">param.reactive.reactive_ops.when</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.where.html">param.reactive.reactive_ops.where</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.value.html">param.reactive.reactive_ops.value</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/param.reactive.reactive_ops.watch.html">param.reactive.reactive_ops.watch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="parameterized_objects.html">Parameterized objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parameterized_helpers.html">Parameterized helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parameters.html">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parameter_helpers.html">Parameter helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="param_namespace.html">Param namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../numbergen.html">Numbergen</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../releases.html">Releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../upgrade_guide.html">Upgrade Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comparisons.html">Comparisons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer_guide.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../about.html">About</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<div class="hv-sb-dd">
+  <div class="btn-group">
+    
+    <a href="https://holoviz.org" class="btn hv-sb-dd-value" target="_blank">HoloViz.org<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a>
+    
+    <button type="button" class="btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="visually-hidden"></span>
+    </button>
+    <ul class="dropdown-menu">
+      
+      
+        <li><a class="dropdown-item" href="https://param.holoviz.org" target="_blank" title="Assembling objects from many different libraries into a layout or app, whether in a Jupyter notebook or in a standalone servable dashboard">Panel<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://hvplot.holoviz.org" target="_blank" title="Quickly return interactive HoloViews, GeoViews, or Panel objects from Pandas, Xarray, or other data structures">hvPlot<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://holoviews.org" target="_blank" title="Declarative objects for instantly visualizable data, building Bokeh plots from convenient high-level specifications">HoloViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://geoviews.org" target="_blank" title="Visualizable geographic data that that can be mixed and matched with HoloViews objects">GeoViews<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://datashader.org" target="_blank" title="Rasterizing huge datasets quickly as fixed-size images">Datashader<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      
+      
+        <li><a class="dropdown-item" href="https://lumen.holoviz.org" target="_blank" title="Framework for visual analytics that allows users to build data-driven dashboards from a simple YAML specification">Lumen<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+        <li><a class="dropdown-item" href="https://colorcet.holoviz.org" target="_blank" title="A wide range of perceptually uniform continuous colormaps and perceptually based categorical color sets for use with the other libraries">Colorcet<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><hr class="dropdown-divider"></li>
+      
+      
+      <li><a class="dropdown-item" href="https://examples.holoviz.org" target="_blank" title=" Visualization-focused examples using HoloViz for specific topics ">Examples Gallery<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+      <li><a class="dropdown-item" href="https://blog.holoviz.org" target="_blank" title="HoloViz blog">Blog<i class="fa fa-external-link hv-icon" aria-hidden="true"></i></a></li>
+      
+      
+      
+    </ul>
+  </div>
+</div>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Param API reference</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="param-api-reference">
+<h1>Param API reference<a class="headerlink" href="#param-api-reference" title="Link to this heading">#</a></h1>
+<section id="reactive-api">
+<h2>Reactive API<a class="headerlink" href="#reactive-api" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.bind.html#param.bind" title="param.bind"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bind</span></code></a>(function, *args[, watch])</p></td>
+<td><p>Given a function, returns a wrapper function that binds the values of some or all arguments to Parameter values and expresses Param dependencies on those values, so that the function can be invoked whenever the underlying values change and the output will reflect those updated values.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><a class="reference internal" href="generated/param.rx.html"><span class="doc std std-doc">rx</span></a>: <em>rx</em> allows wrapping objects and then operating on them interactively while recording any operations applied to them.</p>
+<p>These methods and properties are available under the <code class="docutils literal notranslate"><span class="pre">.rx</span></code> namespace
+of reactive expressions (<a class="reference internal" href="generated/param.rx.html#param.rx" title="param.rx"><code class="xref py py-class docutils literal notranslate"><span class="pre">rx</span></code></a>).</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.bool.html#param.reactive.reactive_ops.bool" title="param.reactive.reactive_ops.bool"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>()</p></td>
+<td><p>__bool__ cannot be implemented so it is provided as a method.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.in_.html#param.reactive.reactive_ops.in_" title="param.reactive.reactive_ops.in_"><code class="xref py py-obj docutils literal notranslate"><span class="pre">in_</span></code></a>(other)</p></td>
+<td><p>Replacement for the <code class="docutils literal notranslate"><span class="pre">in</span></code> statement.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.is_.html#param.reactive.reactive_ops.is_" title="param.reactive.reactive_ops.is_"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_</span></code></a>(other)</p></td>
+<td><p>Replacement for the <code class="docutils literal notranslate"><span class="pre">is</span></code> statement.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.is_not.html#param.reactive.reactive_ops.is_not" title="param.reactive.reactive_ops.is_not"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_not</span></code></a>(other)</p></td>
+<td><p>Replacement for the <code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">not</span></code> statement.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.len.html#param.reactive.reactive_ops.len" title="param.reactive.reactive_ops.len"><code class="xref py py-obj docutils literal notranslate"><span class="pre">len</span></code></a>()</p></td>
+<td><p>__len__ cannot be implemented so it is provided as a method.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.pipe.html#param.reactive.reactive_ops.pipe" title="param.reactive.reactive_ops.pipe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe</span></code></a>(func, /, *args, **kwargs)</p></td>
+<td><p>Apply chainable functions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.updating.html#param.reactive.reactive_ops.updating" title="param.reactive.reactive_ops.updating"><code class="xref py py-obj docutils literal notranslate"><span class="pre">updating</span></code></a>()</p></td>
+<td><p>Returns a new expression that is True while the expression is updating.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.when.html#param.reactive.reactive_ops.when" title="param.reactive.reactive_ops.when"><code class="xref py py-obj docutils literal notranslate"><span class="pre">when</span></code></a>(*dependencies[, initial])</p></td>
+<td><p>Returns a reactive expression that emits the contents of this expression only when the dependencies change.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.where.html#param.reactive.reactive_ops.where" title="param.reactive.reactive_ops.where"><code class="xref py py-obj docutils literal notranslate"><span class="pre">where</span></code></a>(x, y)</p></td>
+<td><p>Returns either x or y depending on the current state of the expression, i.e. replaces a ternary if statement.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.value.html#param.reactive.reactive_ops.value" title="param.reactive.reactive_ops.value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">value</span></code></a></p></td>
+<td><p>Returns the current state of the reactive expression by evaluating the pipeline.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.reactive.reactive_ops.watch.html#param.reactive.reactive_ops.watch" title="param.reactive.reactive_ops.watch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">watch</span></code></a>([fn, onlychanged, queued, precedence])</p></td>
+<td><p>Adds a callable that observes the output of the pipeline.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="parameterized-objects">
+<h2>Parameterized objects<a class="headerlink" href="#parameterized-objects" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Parameterized.html#param.Parameterized" title="param.Parameterized"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Parameterized</span></code></a></p></td>
+<td><p>Base class for named objects that support Parameters and message formatting.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.ParameterizedFunction.html#param.ParameterizedFunction" title="param.ParameterizedFunction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ParameterizedFunction</span></code></a></p></td>
+<td><p>Acts like a Python function, but with arguments that are Parameters.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="parameterized-helpers">
+<h2>Parameterized helpers<a class="headerlink" href="#parameterized-helpers" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Event.html#param.parameterized.Event" title="param.parameterized.Event"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.Event</span></code></a>(what, name, obj, ...)</p></td>
+<td><p>Object representing an event that triggers a Watcher.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Watcher.html#param.parameterized.Watcher" title="param.parameterized.Watcher"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.Watcher</span></code></a>(*args, **kwargs)</p></td>
+<td><p>Object declaring a callback function to invoke when an Event is triggered on a watched item.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.batch_watch.html#param.batch_watch" title="param.batch_watch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch_watch</span></code></a>(parameterized[, enable, run])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.batch_call_watchers.html#param.parameterized.batch_call_watchers" title="param.parameterized.batch_call_watchers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.batch_call_watchers</span></code></a>(...)</p></td>
+<td><p>Context manager to batch events to provide to Watchers on a parameterized object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.concrete_descendents.html#param.concrete_descendents" title="param.concrete_descendents"><code class="xref py py-obj docutils literal notranslate"><span class="pre">concrete_descendents</span></code></a>(parentclass)</p></td>
+<td><p>Return a dictionary containing all subclasses of the specified parentclass, including the parentclass.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.depends.html#param.depends" title="param.depends"><code class="xref py py-obj docutils literal notranslate"><span class="pre">depends</span></code></a>()</p></td>
+<td><p>Annotates a function or Parameterized method to express its dependencies.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.discard_events.html#param.discard_events" title="param.discard_events"><code class="xref py py-obj docutils literal notranslate"><span class="pre">discard_events</span></code></a>(parameterized)</p></td>
+<td><p>Context manager that discards any events within its scope triggered on the supplied parameterized object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.edit_constant.html#param.edit_constant" title="param.edit_constant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">edit_constant</span></code></a>(parameterized)</p></td>
+<td><p>Temporarily set parameters on Parameterized object to constant=False to allow editing them.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.output.html#param.output" title="param.output"><code class="xref py py-obj docutils literal notranslate"><span class="pre">output</span></code></a>(func, *output, **kw)</p></td>
+<td><p>output allows annotating a method on a Parameterized class to declare that it returns an output of a specific type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.register_reference_transform.html#param.parameterized.register_reference_transform" title="param.parameterized.register_reference_transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.register_reference_transform</span></code></a>(...)</p></td>
+<td><p>Appends a transform to extract potential parameter dependencies from an object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.resolve_ref.html#param.parameterized.resolve_ref" title="param.parameterized.resolve_ref"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.resolve_ref</span></code></a>(reference[, ...])</p></td>
+<td><p>Resolves all parameters a dynamic reference depends on.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.resolve_value.html#param.parameterized.resolve_value" title="param.parameterized.resolve_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.resolve_value</span></code></a>(value[, ...])</p></td>
+<td><p>Resolves the current value of a dynamic reference.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.script_repr.html#param.script_repr" title="param.script_repr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">script_repr</span></code></a>(val[, imports, prefix, ...])</p></td>
+<td><p>Variant of pprint() designed for generating a (nearly) runnable script.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Parameter.html#param.Parameter" title="param.Parameter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Parameter</span></code></a></p></td>
+<td><p>An attribute descriptor for declaring parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.String.html#param.String" title="param.String"><code class="xref py py-obj docutils literal notranslate"><span class="pre">String</span></code></a></p></td>
+<td><p>A String Parameter, with a default value and optional regular expression (regex) matching.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Bytes.html#param.Bytes" title="param.Bytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Bytes</span></code></a></p></td>
+<td><p>A Bytes Parameter, with a default value and optional regular expression (regex) matching.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Color.html#param.Color" title="param.Color"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Color</span></code></a></p></td>
+<td><p>Color parameter defined as a hex RGB string with an optional # prefix or (optionally) as a CSS3 color name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Boolean.html#param.Boolean" title="param.Boolean"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Boolean</span></code></a></p></td>
+<td><p>Binary or tristate Boolean Parameter.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Event.html#param.Event" title="param.Event"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Event</span></code></a></p></td>
+<td><p>An Event Parameter is one whose value is intimately linked to the triggering of events for watchers to consume.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Dynamic.html#param.Dynamic" title="param.Dynamic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dynamic</span></code></a></p></td>
+<td><p>Parameter whose value can be generated dynamically by a callable object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Number.html#param.Number" title="param.Number"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Number</span></code></a></p></td>
+<td><p>A numeric Dynamic Parameter, with a default value and optional bounds.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Integer.html#param.Integer" title="param.Integer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Integer</span></code></a></p></td>
+<td><p>Numeric Parameter required to be an Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Magnitude.html#param.Magnitude" title="param.Magnitude"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Magnitude</span></code></a></p></td>
+<td><p>Numeric Parameter required to be in the range [0.0-1.0].</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Tuple.html#param.Tuple" title="param.Tuple"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Tuple</span></code></a></p></td>
+<td><p>A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.NumericTuple.html#param.NumericTuple" title="param.NumericTuple"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NumericTuple</span></code></a></p></td>
+<td><p>A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.XYCoordinates.html#param.XYCoordinates" title="param.XYCoordinates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">XYCoordinates</span></code></a></p></td>
+<td><p>A NumericTuple for an X,Y coordinate.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Range.html#param.Range" title="param.Range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Range</span></code></a></p></td>
+<td><p>A numeric range with optional bounds and softbounds.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Date.html#param.Date" title="param.Date"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Date</span></code></a></p></td>
+<td><p>Date parameter of datetime or date type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.DateRange.html#param.DateRange" title="param.DateRange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DateRange</span></code></a></p></td>
+<td><p>A datetime or date range specified as (start, end).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.CalendarDate.html#param.CalendarDate" title="param.CalendarDate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CalendarDate</span></code></a></p></td>
+<td><p>Parameter specifically allowing dates (not datetimes).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.CalendarDateRange.html#param.CalendarDateRange" title="param.CalendarDateRange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CalendarDateRange</span></code></a></p></td>
+<td><p>A date range specified as (start_date, end_date).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.List.html#param.List" title="param.List"><code class="xref py py-obj docutils literal notranslate"><span class="pre">List</span></code></a></p></td>
+<td><p>Parameter whose value is a list of objects, usually of a specified type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.HookList.html#param.HookList" title="param.HookList"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HookList</span></code></a></p></td>
+<td><p>Parameter whose value is a list of callable objects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Path.html#param.Path" title="param.Path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code></a></p></td>
+<td><p>Parameter that can be set to a string specifying the path of a file or folder.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Filename.html#param.Filename" title="param.Filename"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Filename</span></code></a></p></td>
+<td><p>Parameter that can be set to a string specifying the path of a file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Foldername.html#param.Foldername" title="param.Foldername"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Foldername</span></code></a></p></td>
+<td><p>Parameter that can be set to a string specifying the path of a folder.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Selector.html#param.Selector" title="param.Selector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Selector</span></code></a></p></td>
+<td><p>Parameter whose value must be one object from a list of possible objects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.FileSelector.html#param.FileSelector" title="param.FileSelector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FileSelector</span></code></a></p></td>
+<td><p>Given a path glob, allows one file to be selected from those matching.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.ListSelector.html#param.ListSelector" title="param.ListSelector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ListSelector</span></code></a></p></td>
+<td><p>Variant of Selector where the value can be multiple objects from a list of possible objects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.MultiFileSelector.html#param.MultiFileSelector" title="param.MultiFileSelector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MultiFileSelector</span></code></a></p></td>
+<td><p>Given a path glob, allows multiple files to be selected from the list of matches.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.ClassSelector.html#param.ClassSelector" title="param.ClassSelector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ClassSelector</span></code></a></p></td>
+<td><p>Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Dict.html#param.Dict" title="param.Dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dict</span></code></a></p></td>
+<td><p>Parameter whose value is a dictionary.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Array.html#param.Array" title="param.Array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Array</span></code></a></p></td>
+<td><p>Parameter whose value is a numpy array.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Series.html#param.Series" title="param.Series"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Series</span></code></a></p></td>
+<td><p>Parameter whose value is a pandas Series.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.DataFrame.html#param.DataFrame" title="param.DataFrame"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DataFrame</span></code></a></p></td>
+<td><p>Parameter whose value is a pandas DataFrame.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Callable.html#param.Callable" title="param.Callable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a></p></td>
+<td><p>Parameter holding a value that is a callable object, such as a function.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.Action.html#param.Action" title="param.Action"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Action</span></code></a></p></td>
+<td><p>A user-provided function that can be invoked like a class or object method using ().</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.Composite.html#param.Composite" title="param.Composite"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Composite</span></code></a></p></td>
+<td><p>A Parameter that is a composite of a set of other attributes of the class.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="parameter-helpers">
+<h2>Parameter helpers<a class="headerlink" href="#parameter-helpers" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.get_soft_bounds.html#param.get_soft_bounds" title="param.get_soft_bounds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_soft_bounds</span></code></a>(bounds, softbounds)</p></td>
+<td><p>For each soft bound (upper and lower), if there is a defined bound (not equal to None) and does not exceed the hard bound, then it is returned.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.guess_bounds.html#param.guess_bounds" title="param.guess_bounds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">guess_bounds</span></code></a>(params, **overrides)</p></td>
+<td><p>Given a dictionary of Parameter instances, return a corresponding set of copies with the bounds appropriately set.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.guess_param_types.html#param.guess_param_types" title="param.guess_param_types"><code class="xref py py-obj docutils literal notranslate"><span class="pre">guess_param_types</span></code></a>(**kwargs)</p></td>
+<td><p>Given a set of keyword literals, promote to the appropriate parameter type based on some simple heuristics.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.param_union.html#param.param_union" title="param.param_union"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param_union</span></code></a>(*parameterizeds[, warn])</p></td>
+<td><p>Given a set of Parameterized objects, returns a dictionary with the union of all param name,value pairs across them.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.ParamOverrides.html#param.ParamOverrides" title="param.ParamOverrides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ParamOverrides</span></code></a>(overridden, dict_[, ...])</p></td>
+<td><p>A dictionary that returns the attribute of a specified object if that attribute is not present in itself.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="param-namespace">
+<h2><code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace<a class="headerlink" href="#param-namespace" title="Link to this heading">#</a></h2>
+<p>These methods and properties are available under the <code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace
+of <a class="reference internal" href="generated/param.Parameterized.html#param.Parameterized" title="param.Parameterized"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parameterized</span></code></a> classes and instances.</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.add_parameter.html#param.parameterized.Parameters.add_parameter" title="param.parameterized.Parameters.add_parameter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_parameter</span></code></a>(param_name, param_obj)</p></td>
+<td><p>Add a new Parameter object to this class.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.debug.html#param.parameterized.Parameters.debug" title="param.parameterized.Parameters.debug"><code class="xref py py-obj docutils literal notranslate"><span class="pre">debug</span></code></a>(msg, *args, **kw)</p></td>
+<td><p>Print msg merged with args as a debugging statement.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.defaults.html#param.parameterized.Parameters.defaults" title="param.parameterized.Parameters.defaults"><code class="xref py py-obj docutils literal notranslate"><span class="pre">defaults</span></code></a>()</p></td>
+<td><p>Return {parameter_name:parameter.default} for all non-constant Parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.deserialize_parameters.html#param.parameterized.Parameters.deserialize_parameters" title="param.parameterized.Parameters.deserialize_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">deserialize_parameters</span></code></a>(serialization[, ...])</p></td>
+<td><p>Deserialize the given serialized data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.deserialize_value.html#param.parameterized.Parameters.deserialize_value" title="param.parameterized.Parameters.deserialize_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">deserialize_value</span></code></a>(pname, value[, mode])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.force_new_dynamic_value.html#param.parameterized.Parameters.force_new_dynamic_value" title="param.parameterized.Parameters.force_new_dynamic_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">force_new_dynamic_value</span></code></a>(name)</p></td>
+<td><p>Force a new value to be generated for the dynamic attribute name, and return it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.get_param_values.html#param.parameterized.Parameters.get_param_values" title="param.parameterized.Parameters.get_param_values"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_param_values</span></code></a>([onlychanged])</p></td>
+<td><p>Return a list of name,value pairs for all Parameters of this object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.get_value_generator.html#param.parameterized.Parameters.get_value_generator" title="param.parameterized.Parameters.get_value_generator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_value_generator</span></code></a>(name)</p></td>
+<td><p>Return the value or value-generating object of the named attribute.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.inspect_value.html#param.parameterized.Parameters.inspect_value" title="param.parameterized.Parameters.inspect_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inspect_value</span></code></a>(name)</p></td>
+<td><p>Return the current value of the named attribute without modifying it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.log.html#param.parameterized.Parameters.log" title="param.parameterized.Parameters.log"><code class="xref py py-obj docutils literal notranslate"><span class="pre">log</span></code></a>(level, msg, *args, **kw)</p></td>
+<td><p>Print msg merged with args as a message at the indicated logging level.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.message.html#param.parameterized.Parameters.message" title="param.parameterized.Parameters.message"><code class="xref py py-obj docutils literal notranslate"><span class="pre">message</span></code></a>(msg, *args, **kw)</p></td>
+<td><p>Print msg merged with args as a message.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.method_dependencies.html#param.parameterized.Parameters.method_dependencies" title="param.parameterized.Parameters.method_dependencies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">method_dependencies</span></code></a>(name[, intermediate])</p></td>
+<td><p>Given the name of a method, returns a PInfo object for each dependency of this method.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.objects.html#param.parameterized.Parameters.objects" title="param.parameterized.Parameters.objects"><code class="xref py py-obj docutils literal notranslate"><span class="pre">objects</span></code></a>([instance])</p></td>
+<td><p>Returns the Parameters of this instance or class</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.outputs.html#param.parameterized.Parameters.outputs" title="param.parameterized.Parameters.outputs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">outputs</span></code></a>()</p></td>
+<td><p>Returns a mapping between any declared outputs and a tuple of the declared Parameter type, the output method, and the index into the output if multiple outputs are returned.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.params.html#param.parameterized.Parameters.params" title="param.parameterized.Parameters.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a>([parameter_name])</p></td>
+<td><p>Return the Parameters of this class as the dictionary {name: parameter_object}</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.params_depended_on.html#param.parameterized.Parameters.params_depended_on" title="param.parameterized.Parameters.params_depended_on"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params_depended_on</span></code></a>(*args, **kwargs)</p></td>
+<td><p>Given the name of a method, returns a PInfo object for each dependency of this method.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.pprint.html#param.parameterized.Parameters.pprint" title="param.parameterized.Parameters.pprint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pprint</span></code></a>([imports, prefix, unknown_value, ...])</p></td>
+<td><p>(Experimental) Pretty printed representation that may be evaluated with eval.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.print_param_defaults.html#param.parameterized.Parameters.print_param_defaults" title="param.parameterized.Parameters.print_param_defaults"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_param_defaults</span></code></a>()</p></td>
+<td><p>Print the default values of all cls's Parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.print_param_values.html#param.parameterized.Parameters.print_param_values" title="param.parameterized.Parameters.print_param_values"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_param_values</span></code></a>()</p></td>
+<td><p>Print the values of all this object's Parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.schema.html#param.parameterized.Parameters.schema" title="param.parameterized.Parameters.schema"><code class="xref py py-obj docutils literal notranslate"><span class="pre">schema</span></code></a>([safe, subset, mode])</p></td>
+<td><p>Returns a schema for the parameters on this Parameterized object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.set_default.html#param.parameterized.Parameters.set_default" title="param.parameterized.Parameters.set_default"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_default</span></code></a>(param_name, value)</p></td>
+<td><p>Set the default value of param_name.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.set_dynamic_time_fn.html#param.parameterized.Parameters.set_dynamic_time_fn" title="param.parameterized.Parameters.set_dynamic_time_fn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_dynamic_time_fn</span></code></a>(time_fn[, sublistattr])</p></td>
+<td><p>Set time_fn for all Dynamic Parameters of this class or instance object that are currently being dynamically generated.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.set_param.html#param.parameterized.Parameters.set_param" title="param.parameterized.Parameters.set_param"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_param</span></code></a>(*args, **kwargs)</p></td>
+<td><p>For each param=value keyword argument, sets the corresponding parameter of this object or class to the given value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.serialize_parameters.html#param.parameterized.Parameters.serialize_parameters" title="param.parameterized.Parameters.serialize_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serialize_parameters</span></code></a>([subset, mode])</p></td>
+<td><p>Return the serialized parameters of the Parameterized object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.serialize_value.html#param.parameterized.Parameters.serialize_value" title="param.parameterized.Parameters.serialize_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serialize_value</span></code></a>(pname[, mode])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.trigger.html#param.parameterized.Parameters.trigger" title="param.parameterized.Parameters.trigger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trigger</span></code></a>(*param_names)</p></td>
+<td><p>Trigger watchers for the given set of parameter names.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.unwatch.html#param.parameterized.Parameters.unwatch" title="param.parameterized.Parameters.unwatch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unwatch</span></code></a>(watcher)</p></td>
+<td><p>Remove the given Watcher object (from <cite>watch</cite> or <cite>watch_values</cite>) from this object's list.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.update.html#param.parameterized.Parameters.update" title="param.parameterized.Parameters.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>([arg])</p></td>
+<td><p>Update multiple parameters of this object or class before triggering events.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.values.html#param.parameterized.Parameters.values" title="param.parameterized.Parameters.values"><code class="xref py py-obj docutils literal notranslate"><span class="pre">values</span></code></a>([onlychanged])</p></td>
+<td><p>Return a dictionary of name,value pairs for the Parameters of this object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.verbose.html#param.parameterized.Parameters.verbose" title="param.parameterized.Parameters.verbose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">verbose</span></code></a>(msg, *args, **kw)</p></td>
+<td><p>Print msg merged with args as a verbose message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.warning.html#param.parameterized.Parameters.warning" title="param.parameterized.Parameters.warning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">warning</span></code></a>(msg, *args, **kw)</p></td>
+<td><p>Print msg merged with args as a warning, unless module variable warnings_as_exceptions is True, then raise an Exception containing the arguments.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.watch.html#param.parameterized.Parameters.watch" title="param.parameterized.Parameters.watch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">watch</span></code></a>(fn, parameter_names[, what, ...])</p></td>
+<td><p>Register the given callback function <cite>fn</cite> to be invoked for events on the indicated parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.watch_values.html#param.parameterized.Parameters.watch_values" title="param.parameterized.Parameters.watch_values"><code class="xref py py-obj docutils literal notranslate"><span class="pre">watch_values</span></code></a>(fn, parameter_names[, what, ...])</p></td>
+<td><p>Easier-to-use version of <cite>watch</cite> specific to watching for changes in parameter values.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.Parameters.watchers.html#param.parameterized.Parameters.watchers" title="param.parameterized.Parameters.watchers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">watchers</span></code></a></p></td>
+<td><p>Dictionary of instance watchers.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/param.parameterized.get_logger.html#param.parameterized.get_logger" title="param.parameterized.get_logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.get_logger</span></code></a>([name])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/param.parameterized.logging_level.html#param.parameterized.logging_level" title="param.parameterized.logging_level"><code class="xref py py-obj docutils literal notranslate"><span class="pre">param.parameterized.logging_level</span></code></a>(level)</p></td>
+<td><p>Temporarily modify param's logging level.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-param.serializer">
+<span id="serialization"></span><h2>Serialization<a class="headerlink" href="#module-param.serializer" title="Link to this heading">#</a></h2>
+<p>Classes used to support string serialization of Parameters and
+Parameterized objects.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="param.serializer.JSONNullable">
+<span class="sig-prename descclassname"><span class="pre">param.serializer.</span></span><span class="sig-name descname"><span class="pre">JSONNullable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">json_type</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L15-L17"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONNullable" title="Link to this definition">#</a></dt>
+<dd><p>Express a JSON schema type as nullable to easily support Parameters that allow_None</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">param.serializer.</span></span><span class="sig-name descname"><span class="pre">JSONSerialization</span></span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L55-L322"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization" title="Link to this definition">#</a></dt>
+<dd><p>Class responsible for specifying JSON serialization, deserialization
+and JSON schemas for Parameters and Parameterized classes and
+objects.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.array_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">array_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L154-L160"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.array_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.calendardate_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calendardate_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L178-L180"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.calendardate_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.class__schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">class__schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">class_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L142-L152"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.class__schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.classselector_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">classselector_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L162-L164"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.classselector_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.dataframe_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dataframe_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L284-L322"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.dataframe_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.date_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">date_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L174-L176"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.date_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.declare_numeric_bounds">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">declare_numeric_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">schema</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inclusive_bounds</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L195-L206"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.declare_numeric_bounds" title="Link to this definition">#</a></dt>
+<dd><p>Given an applicable numeric schema, augment with bounds information</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.deserialize_parameter_value">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deserialize_parameter_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L135-L138"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.deserialize_parameter_value" title="Link to this definition">#</a></dt>
+<dd><p>Deserialize a single parameter value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.deserialize_parameters">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deserialize_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialization</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L100-L109"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.deserialize_parameters" title="Link to this definition">#</a></dt>
+<dd><p>Deserialize a serialized object representing one or
+more Parameters into a dictionary of parameter values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.dict_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dict_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L166-L172"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.dict_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.dumps">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dumps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L73-L75"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.dumps" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.integer_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">integer_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L208-L210"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.integer_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.json_schema_literal_types">
+<span class="sig-name descname"><span class="pre">json_schema_literal_types</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{&lt;class</span> <span class="pre">'NoneType'&gt;:</span> <span class="pre">'null',</span> <span class="pre">&lt;class</span> <span class="pre">'float'&gt;:</span> <span class="pre">'number',</span> <span class="pre">&lt;class</span> <span class="pre">'int'&gt;:</span> <span class="pre">'integer',</span> <span class="pre">&lt;class</span> <span class="pre">'str'&gt;:</span> <span class="pre">'string'}</span></em><a class="headerlink" href="#param.serializer.JSONSerialization.json_schema_literal_types" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.list_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">list_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L230-L239"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.list_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.listselector_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">listselector_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L271-L282"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.listselector_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.loads">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">loads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">serialized</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L69-L71"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.loads" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.number_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">number_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L190-L193"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.number_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.numerictuple_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">numerictuple_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L212-L216"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.numerictuple_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.objectselector_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">objectselector_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L241-L254"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.objectselector_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.param_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">param_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ptype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L119-L128"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.param_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.range_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">range_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L222-L228"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.range_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L77-L88"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.selector_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">selector_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L256-L269"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.selector_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.serialize_parameter_value">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">serialize_parameter_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pname</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L130-L133"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.serialize_parameter_value" title="Link to this definition">#</a></dt>
+<dd><p>Serialize a single parameter value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.serialize_parameters">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">serialize_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L90-L98"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.serialize_parameters" title="Link to this definition">#</a></dt>
+<dd><p>Serialize the parameters on a Parameterized object into a
+single serialized object, e.g. a JSON string.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.tuple_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tuple_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L182-L188"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.tuple_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.unserializable_parameter_types">
+<span class="sig-name descname"><span class="pre">unserializable_parameter_types</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['Callable']</span></em><a class="headerlink" href="#param.serializer.JSONSerialization.unserializable_parameter_types" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.JSONSerialization.xycoordinates_schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">xycoordinates_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">safe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L218-L220"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.JSONSerialization.xycoordinates_schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="param.serializer.Serialization">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">param.serializer.</span></span><span class="sig-name descname"><span class="pre">Serialization</span></span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L21-L52"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.Serialization" title="Link to this definition">#</a></dt>
+<dd><p>Base class used to implement different types of serialization.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.Serialization.deserialize_parameter_value">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deserialize_parameter_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L49-L52"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.Serialization.deserialize_parameter_value" title="Link to this definition">#</a></dt>
+<dd><p>Deserialize a single parameter value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.Serialization.deserialize_parameters">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deserialize_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialized</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L36-L42"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.Serialization.deserialize_parameters" title="Link to this definition">#</a></dt>
+<dd><p>Deserialize a serialized object representing one or
+more Parameters into a dictionary of parameter values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.Serialization.schema">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L24-L26"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.Serialization.schema" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.Serialization.serialize_parameter_value">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">serialize_parameter_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pname</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L44-L47"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.Serialization.serialize_parameter_value" title="Link to this definition">#</a></dt>
+<dd><p>Serialize a single parameter value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="param.serializer.Serialization.serialize_parameters">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">serialize_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L28-L34"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.Serialization.serialize_parameters" title="Link to this definition">#</a></dt>
+<dd><p>Serialize the parameters on a Parameterized object into a
+single serialized object, e.g. a JSON string.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="param.serializer.UnsafeserializableException">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">param.serializer.</span></span><span class="sig-name descname"><span class="pre">UnsafeserializableException</span></span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L12-L13"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.UnsafeserializableException" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="param.serializer.UnserializableException">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">param.serializer.</span></span><span class="sig-name descname"><span class="pre">UnserializableException</span></span><a class="reference external" href="https://github.com/holoviz/param/blob/v2.2.1/param/serializer.py#L9-L10"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#param.serializer.UnserializableException" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">API reference</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="generated/param.bind.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">param.bind</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reactive-api">Reactive API</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameterized-objects">Parameterized objects</a><ul class="simple nav section-nav flex-column">
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameterized-helpers">Parameterized helpers</a><ul class="simple nav section-nav flex-column">
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameters">Parameters</a><ul class="simple nav section-nav flex-column">
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameter-helpers">Parameter helpers</a><ul class="simple nav section-nav flex-column">
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#param-namespace"><code class="docutils literal notranslate"><span class="pre">.param</span></code> namespace</a><ul class="simple nav section-nav flex-column">
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#logging">Logging</a><ul class="simple nav section-nav flex-column">
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-param.serializer">Serialization</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONNullable"><code class="docutils literal notranslate"><span class="pre">JSONNullable()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization"><code class="docutils literal notranslate"><span class="pre">JSONSerialization</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.array_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.array_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.calendardate_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.calendardate_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.class__schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.class__schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.classselector_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.classselector_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.dataframe_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.dataframe_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.date_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.date_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.declare_numeric_bounds"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.declare_numeric_bounds()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.deserialize_parameter_value"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.deserialize_parameter_value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.deserialize_parameters"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.deserialize_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.dict_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.dict_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.dumps"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.dumps()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.integer_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.integer_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.json_schema_literal_types"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.json_schema_literal_types</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.list_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.list_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.listselector_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.listselector_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.loads"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.loads()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.number_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.number_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.numerictuple_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.numerictuple_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.objectselector_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.objectselector_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.param_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.param_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.range_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.range_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.selector_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.selector_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.serialize_parameter_value"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.serialize_parameter_value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.serialize_parameters"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.serialize_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.tuple_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.tuple_schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.unserializable_parameter_types"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.unserializable_parameter_types</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.JSONSerialization.xycoordinates_schema"><code class="docutils literal notranslate"><span class="pre">JSONSerialization.xycoordinates_schema()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.Serialization"><code class="docutils literal notranslate"><span class="pre">Serialization</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.Serialization.deserialize_parameter_value"><code class="docutils literal notranslate"><span class="pre">Serialization.deserialize_parameter_value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.Serialization.deserialize_parameters"><code class="docutils literal notranslate"><span class="pre">Serialization.deserialize_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.Serialization.schema"><code class="docutils literal notranslate"><span class="pre">Serialization.schema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.Serialization.serialize_parameter_value"><code class="docutils literal notranslate"><span class="pre">Serialization.serialize_parameter_value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.Serialization.serialize_parameters"><code class="docutils literal notranslate"><span class="pre">Serialization.serialize_parameters()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.UnsafeserializableException"><code class="docutils literal notranslate"><span class="pre">UnsafeserializableException</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#param.serializer.UnserializableException"><code class="docutils literal notranslate"><span class="pre">UnserializableException</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/reference/param/index.md.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2003-2025 Holoviz contributors.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item"><p class="last-updated">
+  Last updated on 2025-06-11.
+  <br/>
+</p></div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

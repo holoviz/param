@@ -1,0 +1,6 @@
+﻿param.parameterized.Parameters.pprint
+=====================================
+
+.. currentmodule:: param.parameterized
+
+.. automethod:: Parameters.pprint

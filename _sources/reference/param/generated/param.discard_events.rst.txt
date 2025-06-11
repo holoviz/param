@@ -1,0 +1,6 @@
+﻿param.discard\_events
+=====================
+
+.. currentmodule:: param
+
+.. autofunction:: discard_events

@@ -1,0 +1,47 @@
+﻿param.XYCoordinates
+===================
+
+.. currentmodule:: param
+
+.. autoclass:: XYCoordinates
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~XYCoordinates.__init__
+      ~XYCoordinates.deserialize
+      ~XYCoordinates.schema
+      ~XYCoordinates.serialize
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~XYCoordinates.allow_None
+      ~XYCoordinates.allow_refs
+      ~XYCoordinates.constant
+      ~XYCoordinates.default
+      ~XYCoordinates.doc
+      ~XYCoordinates.instantiate
+      ~XYCoordinates.label
+      ~XYCoordinates.length
+      ~XYCoordinates.name
+      ~XYCoordinates.nested_refs
+      ~XYCoordinates.owner
+      ~XYCoordinates.per_instance
+      ~XYCoordinates.pickle_default_value
+      ~XYCoordinates.precedence
+      ~XYCoordinates.readonly
+      ~XYCoordinates.rx
+      ~XYCoordinates.watchers
+   
+   

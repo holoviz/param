@@ -1,0 +1,6 @@
+﻿param.output
+============
+
+.. currentmodule:: param
+
+.. autofunction:: output

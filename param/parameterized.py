@@ -2011,7 +2011,7 @@ class Parameters:
             dep_obj.param.unwatch(watcher)
         self_.self._param__private.ref_watchers = []
         refs = dict(self_.self._param__private.refs, **{name: ref})
-        deps = {name: resolve_ref(ref) for name, ref in refs.items()}
+        deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
 

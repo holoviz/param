@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import collections
 import contextvars
 import datetime as dt
@@ -255,12 +254,15 @@ def iscoroutinefunction(function):
 
 async def _to_thread(func, /, *args, **kwargs):
     """Polyfill for asyncio.to_thread in Python < 3.9."""
+    import asyncio
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
     return await loop.run_in_executor(None, func_call)
 
 async def _to_async_gen(sync_gen):
+    import asyncio
+
     done = object()
 
     def safe_next():
@@ -664,7 +666,7 @@ def exceptions_summarized():
 
 def _in_ipython():
     try:
-        get_ipython()
+        get_ipython
         return True
     except NameError:
         return False
@@ -672,6 +674,7 @@ def _in_ipython():
 _running_tasks = set()
 
 def async_executor(func):
+    import asyncio
     try:
         event_loop = asyncio.get_running_loop()
     except RuntimeError:

@@ -88,7 +88,6 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 """
 from __future__ import annotations
 
-import asyncio
 import inspect
 import math
 import operator
@@ -569,6 +568,7 @@ class reactive_ops:
                 "or coroutine functions are permitted."
             )
         if inspect.iscoroutinefunction(func):
+            import asyncio
             async def apply(vs, *args, **kwargs):
                 return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
         else:
@@ -1622,6 +1622,7 @@ class rx:
         self._error_state = None
 
     async def _resolve_async(self, obj):
+        import asyncio
         self._current_task = task = asyncio.current_task()
         if inspect.isasyncgen(obj):
             async for val in obj:
@@ -1938,6 +1939,19 @@ class rx:
         items = self._apply_operator(list)
         for i in range(len(self._current)):
             yield items[i]
+
+    def __bool__(self):
+        # Implemented otherwise truth value testing (e.g. if rx: ...)
+        # defers to __len__ which raises an error.
+        return True
+
+    def __len__(self):
+        raise TypeError(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
 
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']

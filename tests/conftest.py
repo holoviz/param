@@ -1,3 +1,7 @@
+import os
+
+os.environ["PARAM_PARAMETER_SIGNATURE"] = "1"  # To force signature in _ParameterBase.__init_subclass__
+
 import param
 import pytest
 

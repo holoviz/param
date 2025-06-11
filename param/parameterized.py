@@ -12,11 +12,10 @@ import abc
 import asyncio
 import copy
 import datetime as dt
-import html
 import inspect
-import logging
 import numbers
 import operator
+import os
 import re
 import sys
 import types
@@ -27,14 +26,18 @@ from inspect import getfullargspec
 from collections import defaultdict, namedtuple, OrderedDict
 from collections.abc import Callable, Iterable
 from functools import partial, wraps, reduce
-from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+CRITICAL = 50
+ERROR = 40
+WARNING = 30
+INFO = 20
+DEBUG = 10
+VERBOSE = INFO - 1
 
 from . import serializer
 from ._utils import (
@@ -51,7 +54,7 @@ from ._utils import (
     _validate_error_prefix,
     accept_arguments,
     iscoroutinefunction,
-    descendents,
+    descendents,  # noqa: F401
     gen_types,
 )
 
@@ -83,8 +86,6 @@ def _int_types():
     if np := sys.modules.get("numpy"):
         yield np.integer
 
-VERBOSE = INFO - 1
-logging.addLevelName(VERBOSE, "VERBOSE")
 
 # Get the appropriate logging.Logger instance. If `logger` is None, a
 # logger named `"param"` will be instantiated. If `name` is set, a descendant
@@ -92,7 +93,9 @@ logging.addLevelName(VERBOSE, "VERBOSE")
 # ``logger.name + ".<name>"``)
 logger = None
 def get_logger(name=None):
+    import logging
     if logger is None:
+        logging.addLevelName(VERBOSE, "VERBOSE")
         root_logger = logging.getLogger('param')
         if not root_logger.handlers:
             root_logger.setLevel(logging.INFO)
@@ -341,15 +344,23 @@ def edit_constant(parameterized):
     Temporarily set parameters on Parameterized object to constant=False
     to allow editing them.
     """
-    params = parameterized.param.objects('existing').values()
-    constants = [p.constant for p in params]
-    for p in params:
-        p.constant = False
+    kls_params = parameterized.param.objects(instance=False)
+    inst_params = parameterized._param__private.params
+    updated = []
+    for pname, pobj in (kls_params | inst_params).items():
+        if pobj.constant:
+            pobj.constant = False
+            updated.append(pname)
     try:
         yield
     finally:
-        for (p, const) in zip(params, constants):
-            p.constant = const
+        for pname in updated:
+            # Some operations trigger a parameter instantiation (copy),
+            # we ensure both the class and instance parameters are reset.
+            if pname in kls_params:
+                type(parameterized).param[pname].constant=True
+            if pname in inst_params:
+                parameterized.param[pname].constant = True
 
 
 @contextmanager
@@ -974,6 +985,9 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
+_UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+
+
 class _ParameterBase(metaclass=ParameterMetaclass):
     """
     Base Parameter class used to dynamically update the signature of all
@@ -989,6 +1003,8 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
+        if not _UDPATE_PARAMETER_SIGNATURE:
+            return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere
         # so wrapping this in a loose try/except.
@@ -1304,7 +1320,10 @@ class Parameter(_ParameterBase):
         self.precedence = precedence
         self.default = default
         self.doc = doc
-        self.constant = constant is True or readonly is True # readonly => constant
+        if constant is True or readonly is True:  # readonly => constant
+            self.constant = True
+        else:
+            self.constant = constant
         self.readonly = readonly
         self._label = label
         self._set_instantiate(instantiate)
@@ -2188,6 +2207,7 @@ class Parameters:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
 
+        import asyncio
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
         if running_task is None:
@@ -3264,6 +3284,8 @@ class Parameters:
             if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
                 value = cls_or_slf._param__private.values[name]
+            elif not callable(param_obj.default):
+                value = getattr(cls_or_slf, name)
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default
@@ -4796,12 +4818,14 @@ dbprint_prefix=None
 
 def truncate(str_, maxlen = 30):
     """Return HTML-safe truncated version of given string."""
+    import html
     rep = (str_[:(maxlen-2)] + '..') if (len(str_) > (maxlen-2)) else str_
     return html.escape(rep)
 
 
 def _get_param_repr(key, val, p, vallen=30, doclen=40):
     """HTML representation for a single Parameter object and its value."""
+    import html
     if isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         value = val.param._repr_html_(open=False)
     elif hasattr(val, "_repr_html_"):
@@ -4842,7 +4866,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
     if getattr(p, 'allow_None', False):
         range_ = ' '.join(s for s in ['<i>nullable</i>', range_] if s)
 
-    tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
+    tooltip = f' class="param-doc-tooltip" data-tooltip="{html.escape(p.doc.strip())}"' if p.doc else ''
 
     return (
         f'<tr>'
@@ -5305,20 +5329,6 @@ class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMetaclass):
         super().__init_subclass__(**kwargs)
 
 
-def print_all_param_defaults():
-    """Print the default values for all imported Parameters."""
-    print("_______________________________________________________________________________")
-    print("")
-    print("                           Parameter Default Values")
-    print("")
-    classes = descendents(Parameterized)
-    classes.sort(key=lambda x:x.__name__)
-    for c in classes:
-        c.print_param_defaults()
-    print("_______________________________________________________________________________")
-
-
-
 # As of Python 2.6+, a fn's **args no longer has to be a
 # dictionary. This might allow us to use a decorator to simplify using
 # ParamOverrides (if that does indeed make them simpler to use).
@@ -5474,7 +5484,7 @@ class ParameterizedFunction(Parameterized):
         else:                 inst.__name__ = self_or_cls.name
         return inst
 
-    def __new__(class_,*args,**params):
+    def __new__(class_,*args,**params) -> Any:
         # Create and __call__() an instance of this class.
         inst = class_.instance()
         inst.param._set_name(class_.__name__)

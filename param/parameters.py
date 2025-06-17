@@ -877,6 +877,11 @@ class Integer(Number[T]):
                 f"None or an integer value, not {type(step)}."
             )
 
+    def __set__(self, obj, val: T | int) -> None:
+        if typing.TYPE_CHECKING:
+            val = typing.cast("T", val)
+        super().__set__(obj, val)
+
 
 class Magnitude(Number[T]):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
@@ -1526,7 +1531,7 @@ class Action(Callable):
 # Composite
 #-----------------------------------------------------------------------------
 
-class Composite(Parameter):
+class Composite(Parameter[T]):
     """
     A Parameter that is a composite of a set of other attributes of the class.
 

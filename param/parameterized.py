@@ -27,7 +27,7 @@ from functools import partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
-from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
+from typing import Any, Union, Literal, Generic, TypeVar  # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
 CRITICAL = 50

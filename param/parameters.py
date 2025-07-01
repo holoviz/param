@@ -849,7 +849,7 @@ class Number(Dynamic[T]):
 
 
 class Integer(Number[T]):
-    """Numeric Parameter required to be an Integer"""
+    """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
 

@@ -12,15 +12,22 @@ from .utils import check_defaults
 # TODO: tests copied from testobjectselector could use assertRaises
 # context manager (and could be updated in testobjectselector too).
 
+class Obj: pass
+class SubObj1(Obj): pass
+class SubObj2(Obj): pass
+class DiffObj: pass
+
 class TestListParameters(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
+
         class P(param.Parameterized):
             e = param.List([5,6,7], item_type=int)
             l = param.List(["red","green","blue"], item_type=str, bounds=(0,10))
             m = param.List([1, 2, 3], bounds=(3, None))
             n = param.List([1], bounds=(None, 3))
+            o = param.List([SubObj1, SubObj2], item_type=Obj, is_instance=False)
 
         self.P = P
 
@@ -31,6 +38,7 @@ class TestListParameters(unittest.TestCase):
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True
+        assert p.is_instance is True
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -85,6 +93,22 @@ class TestListParameters(unittest.TestCase):
             match=re.escape("List parameter 'P.n' length must be at most 3, not 4.")
         ):
             p.n = [6] * 4
+
+    def test_set_object_wrong_is_instance(self):
+        p = self.P()
+        with pytest.raises(
+            TypeError,
+            match=re.escape("List parameter 'P.o' items must be subclasses of <class 'tests.testlist.Obj'>, not")
+        ):
+            p.o = [SubObj1()]
+
+    def test_set_object_wrong_is_instance_type(self):
+        p = self.P()
+        with pytest.raises(
+            TypeError,
+            match=re.escape("List parameter 'P.o' items must be subclasses of <class 'tests.testlist.Obj'>, not")
+        ):
+            p.o = [DiffObj]
 
     def test_set_object_wrong_type(self):
         p = self.P()

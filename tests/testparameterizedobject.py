@@ -19,6 +19,7 @@ from param.parameterized import (
     ParamOverrides,
     Undefined,
     default_label_formatter,
+    edit_constant,
     no_instance_params,
     shared_parameters,
 )
@@ -270,7 +271,7 @@ class TestParameterized(unittest.TestCase):
     def test_constant_parameter_modify_class_before(self):
         """
         Test you can set on class and the new default is picked up
-        by new instances
+        by new instances.
         """
         TestPO.const=9
         testpo = TestPO()
@@ -279,7 +280,7 @@ class TestParameterized(unittest.TestCase):
     def test_constant_parameter_modify_class_after_init(self):
         """
         Test that setting the value on the class doesn't update the instance value
-        even when the instance value hasn't yet been set
+        even when the instance value hasn't yet been set.
         """
         oobj = []
         class P(param.Parameterized):
@@ -312,6 +313,17 @@ class TestParameterized(unittest.TestCase):
         TestPO.const=9
         testpo = TestPO()
         self.assertEqual(testpo.const,9)
+
+    def test_edit_constant(self):
+        testpo = TestPO(const=670)
+        # Checking no parameter was already instantiated
+        assert not testpo._param__private.params
+        with edit_constant(testpo):
+            testpo.const = 891
+        assert testpo.const == 891
+        assert testpo.param['const'].constant
+        assert TestPO.param['const'].constant
+        assert TestPO.param['const'].default not in (670, 891)
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""
@@ -541,6 +553,14 @@ class TestParameterized(unittest.TestCase):
         # name not ignored when set
         assert param.Parameterized(name='foo').param.values(onlychanged=True)['name'] == 'foo'
 
+    def test_values_dyn(self):
+        # See https://github.com/holoviz/param/issues/1057
+        t = TestPO()
+        orig_default = t.param.dyn.default
+        t.param.dyn.default = 3290432424
+        values = t.param.values()
+        assert values['dyn'] == orig_default
+
     def test_param_iterator(self):
         self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn',
                                              'ro', 'ro2', 'ro_label', 'ro_format'})
@@ -658,6 +678,14 @@ class TestParameterized(unittest.TestCase):
         assert t.param.inspect_value('dyn')!=orig
         t.param._state_pop()
         assert t.param.inspect_value('dyn')==orig
+
+    def test_get_value_generator_dyn(self):
+        # See https://github.com/holoviz/param/issues/1057
+        t = TestPO()
+        orig_default = t.param.dyn.default
+        t.param.dyn.default = 9594323423
+        vg = t.param.get_value_generator('dyn')
+        assert vg == orig_default
 
     def test_label(self):
         t = TestPO()
@@ -1135,6 +1163,8 @@ def test_inheritance_default_is_None_in_sub():
 
 def test_inheritance_diamond_not_supported():
     """
+    Test that Parameters don't respect diamond inheritance.
+
     In regular Python, the value of the class attribute p on D is resolved
     to 2:
 
@@ -1274,7 +1304,7 @@ def test_inheritance_instantiate_behavior():
     assert b.param.p.instantiate is True
 
 
-def test_inheritance_constant_behavior():
+def test_inheritance_readonly_behavior():
     class A(param.Parameterized):
         p = param.Parameter(readonly=True)
 
@@ -1282,13 +1312,28 @@ def test_inheritance_constant_behavior():
         p = param.Parameter()
 
 
-    # Normally, param.Parameter(readonly=True) ends up with constant being
-    # True.
-    assert B.param.p.constant is False
+    assert B.param.p.readonly is True
+    assert B.param.p.constant is True
 
     b = B()
 
-    assert b.param.p.constant is False
+    assert b.param.p.readonly is True
+    assert b.param.p.constant is True
+
+
+def test_inheritance_constant_behavior():
+    class A(param.Parameterized):
+        p = param.Parameter(constant=True)
+
+    class B(A):
+        p = param.Parameter()
+
+
+    assert B.param.p.constant is True
+
+    b = B()
+
+    assert b.param.p.constant is True
 
 
 def test_inheritance_set_Parameter_instantiate_constant_before_instantation():

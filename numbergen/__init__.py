@@ -133,24 +133,35 @@ operator_symbols = {
 }
 
 def pprint(x, *args, **kwargs):
-    """Pretty-print the provided item, translating operators to their symbols"""
+    """Pretty-print the provided item, translating operators to their symbols."""
     return x.pprint(*args, **kwargs) if hasattr(x,'pprint') else operator_symbols.get(x, repr(x))
 
 
 class BinaryOperator(NumberGenerator):
-    """Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator."""
+    """
+    Applies any binary operator to NumberGenerators or numbers to yield a NumberGenerator.
 
-    def __init__(self,lhs,rhs,operator,reverse=False,**args):
-        """
-        Accepts two NumberGenerator operands, an operator, and
-        optional arguments to be provided to the operator when calling
-        it on the two operands.
-        """
-        # Note that it's currently not possible to set
-        # parameters in the superclass when creating an instance,
-        # because **args is used by this class itself.
+    Parameters
+    ----------
+    lhs: NumberGenerator or Number
+        The left-hand side operand, which can be a NumberGenerator or a number.
+    rhs: NumberGenerator or Number
+        The right-hand side operand, which can be a NumberGenerator or a number.
+    operator :  callable
+        The binary operator to apply to the operands.
+    reverse : bool, optional
+        If `True`, swaps the left and right operands. Defaults to `False`.
+    **args:
+        Optional keyword arguments to pass to the operator when it is called.
+
+    Notes
+    -----
+    It is currently not possible to set parameters in the superclass during
+    initialization because `**args` is used by this class itself.
+    """
+
+    def __init__(self,lhs, rhs, operator, reverse=False, **args):
         super().__init__()
-
         if reverse:
             self.lhs=rhs
             self.rhs=lhs
@@ -171,17 +182,25 @@ class BinaryOperator(NumberGenerator):
 
 
 class UnaryOperator(NumberGenerator):
-    """Applies any unary operator to a NumberGenerator to yield another NumberGenerator."""
+    """
+    Applies any unary operator to a NumberGenerator to yield another NumberGenerator.
 
-    def __init__(self,operand,operator,**args):
-        """
-        Accepts a NumberGenerator operand, an operator, and
-        optional arguments to be provided to the operator when calling
-        it on the operand.
-        """
-        # Note that it's currently not possible to set
-        # parameters in the superclass when creating an instance,
-        # because **args is used by this class itself.
+    Parameters
+    ----------
+    operand : NumberGenerator
+        The NumberGenerator to which the operator is applied.
+    operator : callable
+        The unary operator to apply to the operand.
+    **args:
+        Optional keyword arguments to pass to the operator when it is called.
+
+    Notes
+    -----
+    It is currently not possible to set parameters in the superclass during
+    initialization because `**args` is used by this class itself.
+    """
+
+    def __init__(self, operand, operator, **args):
         super().__init__()
 
         self.operand=operand
@@ -228,7 +247,11 @@ class Hash:
             numer, denom = val, 1
         elif isinstance(val, fractions.Fraction):
             numer, denom = val.numerator, val.denominator
+        elif hasattr(val, 'numerator') and hasattr(val, 'denominator'):
+            # gmpy2 mpq objects have these attributes
+            numer, denom = val.numerator, val.denominator
         elif hasattr(val, 'numer'):
+            # I think this branch supports gmpy (i.e. not gmpy2)
             (numer, denom) = (int(val.numer()), int(val.denom()))
         else:
             param.main.param.log(param.WARNING, "Casting type '%s' to Fraction.fraction"
@@ -237,14 +260,12 @@ class Hash:
             numer, denom = frac.numerator, frac.denominator
         return numer % I32, denom % I32
 
-
     def __getstate__(self):
-        """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)"""
+        """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)."""
         d = self.__dict__.copy()
         d.pop('_digest')
         d.pop('_hash_struct')
         return d
-
 
     def __setstate__(self, d):
         self._digest = hashlib.md5()
@@ -253,14 +274,13 @@ class Hash:
         self._hash_struct = struct.Struct( "!" +" ".join(["I"] * (input_count * 2)))
         self.__dict__.update(d)
 
-
     def __call__(self, *vals):
         """
         Given integer or rational inputs, generate a cross-platform,
         architecture-independent 32-bit integer hash.
         """
         # Convert inputs to (numer, denom) pairs with integers
-        # becoming (int, 1) pairs to match gmpy.mpqs for int values.
+        # becoming (int, 1) pairs to match gmpy2.mpqs for int values.
         pairs = [self._rational(val) for val in vals]
         # Unpack pairs and fill struct with ints to update md5 hash
         ints = [el for pair in pairs for el in pair]
@@ -330,7 +350,9 @@ class TimeAwareRandomState(TimeAware):
 
     def _initialize_random_state(self, seed=None, shared=True, name=None):
         """
-        Initialization method to be called in the constructor of
+        Initialize the random state correctly.
+
+        Method to be called in the constructor of
         subclasses to initialize the random state correctly.
 
         If seed is None, there is no control over the random stream
@@ -427,7 +449,7 @@ class RandomDistribution(NumberGenerator, TimeAwareRandomState):
 
     __abstract = True
 
-    def __init__(self,**params):
+    def __init__(self, **params):
         """
         Initialize a new Random() instance and store the supplied
         positional and keyword arguments.

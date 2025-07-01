@@ -197,7 +197,7 @@ class ParamPager:
 
     def _tabulate(self, info_list, col_widths, changed, order, bounds_dict):
         """
-        Returns the supplied information as a table suitable for
+        Return the supplied information as a table suitable for
         printing or paging.
 
         info_list:  List of the parameters name, type and mode.
@@ -320,13 +320,27 @@ def load_ipython_extension(ip, verbose=True):
 
         @line_magic
         def params(self, parameter_s='', namespaces=None):
-            """
-            The %params line magic accepts a single argument which is a
-            handle on the parameterized object to be inspected. If the
-            object can be found in the active namespace, information about
-            the object's parameters is displayed in the IPython pager.
+            """Display information about a parameterized object in the IPython pager.
 
-            Usage: %params <parameterized class or object>
+            The `%params` line magic takes a single argument, which is a reference to
+            a parameterized object or class to be inspected. If the object is found in
+            the active namespace, information about its parameters is displayed in the
+            IPython pager.
+
+            Usage:
+                %params <parameterized class or object>
+
+            Parameters
+            ----------
+            parameter_s : str, optional
+                The name of the parameterized object to inspect. Defaults to an empty string.
+            namespaces : dict, optional
+                Additional namespaces to search for the object.
+
+            Returns
+            -------
+            None:
+                Outputs the parameter information or error messages to stdout.
             """
             if parameter_s=='':
                 print("Please specify an object to inspect.")

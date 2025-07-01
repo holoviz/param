@@ -1,5 +1,17 @@
 # Releases
 
+## Version 2.2.1
+
+Date: 2025-06-11
+
+This patch release contains a bug fix for nested references. Thanks to @philippjfr for their contribution.
+
+Bug Fixes:
+
+- Do not remove nested_refs when updating another ref ([#1061](https://github.com/holoviz/param/pull/1061))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.2.0...v2.2.1)
+
 ## Version 2.2.0
 
 Date: 2024-12-16

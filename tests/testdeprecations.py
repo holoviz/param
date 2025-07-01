@@ -7,7 +7,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def specific_filter():
-    """Used to make sure warnings are set up with the right stacklevel."""
+    """Make sure warnings are set up with the right stacklevel."""
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         warnings.filterwarnings('error', module=__name__)

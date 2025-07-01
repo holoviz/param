@@ -2,9 +2,9 @@ import asyncio
 import math
 import operator
 import os
+import re
 import unittest
 import time
-from textwrap import dedent
 
 try:
     import numpy as np
@@ -25,8 +25,8 @@ except ModuleNotFoundError:
 import param
 import pytest
 
-from param.parameterized import Skip, Parameter
-from param.reactive import bind, rx, reactive_ops
+from param.parameterized import Skip
+from param.reactive import bind, rx
 
 from .utils import async_wait_until
 
@@ -293,7 +293,7 @@ def test_reactive_len():
     l = i.rx.len()
     assert l.rx.value == 3
     i.rx.value = [1, 2]
-    assert l == 2
+    assert l.rx.value == 2
 
 def test_reactive_bool():
     i = rx(1)
@@ -769,7 +769,19 @@ def test_reactive_callback_resolve_accessor():
     out = dfx["name"].str._callback()
     assert out is df["name"].str
 
-def test_docstrings_in_sync():
-    # The docstring needs to be explicitly written to work with LSP.
-    assert dedent(reactive_ops.__doc__) == dedent(Parameter.rx.__doc__)
-    assert dedent(reactive_ops.__doc__) == dedent(rx.rx.__doc__)
+
+def test_reactive_dunder_len_error():
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
+    ):
+        len(rx([1, 2]))
+
+
+def test_reactive_dunder_bool():
+    assert bool(rx([1, 2]))

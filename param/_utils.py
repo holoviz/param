@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import collections
 import contextvars
 import datetime as dt
@@ -34,11 +33,11 @@ DEFAULT_SIGNATURE = inspect.Signature([
 MUTABLE_TYPES = (abc.MutableSequence, abc.MutableSet, abc.MutableMapping)
 
 class ParamWarning(Warning):
-    """Base Param Warning"""
+    """Base Param Warning."""
 
 class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
     """
-    Param PendingDeprecationWarning
+    Param PendingDeprecationWarning.
 
     This warning type is useful when the warning is not meant to be displayed
     to REPL/notebooks users, as DeprecationWarning are displayed when triggered
@@ -48,7 +47,7 @@ class ParamPendingDeprecationWarning(ParamWarning, PendingDeprecationWarning):
 
 class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
     """
-    Param DeprecationWarning
+    Param DeprecationWarning.
 
     Ignored by default except when triggered by code in __main__
     """
@@ -56,17 +55,34 @@ class ParamDeprecationWarning(ParamWarning, DeprecationWarning):
 
 class ParamFutureWarning(ParamWarning, FutureWarning):
     """
-    Param FutureWarning
+    Param FutureWarning.
 
     Always displayed.
     """
 
+
 class Skip(Exception):
     """Exception that allows skipping an update when resolving a reference."""
 
+
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
     def decorator(func):
-        """Internal decorator used to mark functions/methods as deprecated."""
+        """Mark a function or method as deprecated.
+
+        This internal decorator issues a warning when the decorated function
+        or method is called, indicating that it has been deprecated and will
+        be removed in a future version.
+
+        Parameters
+        ----------
+        func: FunctionType | MethodType
+            The function or method to mark as deprecated.
+
+        Returns
+        -------
+        callable:
+            The wrapped function that issues a deprecation warning.
+        """
         @functools.wraps(func)
         def inner(*args, **kwargs):
             msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
@@ -81,11 +97,22 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
 
 
 def _deprecate_positional_args(func):
-    """
-    Internal decorator for methods that issues warnings for positional arguments
-    Using the keyword-only argument syntax in pep 3102, arguments after the
-    ``*`` will issue a warning when passed as a positional argument.
-    Adapted from scikit-learn
+    """Issue warnings for methods using deprecated positional arguments.
+
+    This internal decorator warns when arguments after the `*` separator
+    are passed as positional arguments, in accordance with PEP 3102.
+    It adapts the behavior from scikit-learn.
+
+    Parameters
+    ----------
+    func: FunctionType | MethodType
+        The function to wrap with positional argument deprecation warnings.
+
+    Returns
+    -------
+    callable:
+        The wrapped function that issues warnings for deprecated
+        positional arguments.
     """
     signature = inspect.signature(func)
 
@@ -124,7 +151,7 @@ def _deprecate_positional_args(func):
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
 def _recursive_repr(fillvalue='...'):
-    """Decorator to make a repr function return fillvalue for a recursive call"""
+    """Decorate a repr function to return a fill value for recursive calls."""
 
     def decorating_function(user_function):
         repr_running = set()
@@ -199,19 +226,19 @@ def _validate_error_prefix(parameter, attribute=None):
             pass
     return ' '.join(out)
 
-
 def _is_mutable_container(value):
-    """True for mutable containers, which typically need special handling when being copied"""
+    """Determine if the value is a mutable container.
+
+    Mutable containers typically require special handling when being copied.
+    """
     return isinstance(value, MUTABLE_TYPES)
 
-
 def full_groupby(l, key=lambda x: x):
-    """Groupby implementation which does not require a prior sort"""
+    """Groupby implementation which does not require a prior sort."""
     d = defaultdict(list)
     for item in l:
         d[key(item)].append(item)
     return d.items()
-
 
 def iscoroutinefunction(function):
     """Whether the function is an asynchronous generator or a coroutine."""
@@ -225,13 +252,16 @@ def iscoroutinefunction(function):
     )
 
 async def _to_thread(func, /, *args, **kwargs):
-    """Polyfill for asyncio.to_thread in Python < 3.9"""
+    """Polyfill for asyncio.to_thread in Python < 3.9."""
+    import asyncio
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
     return await loop.run_in_executor(None, func_call)
 
 async def _to_async_gen(sync_gen):
+    import asyncio
+
     done = object()
 
     def safe_next():
@@ -281,7 +311,7 @@ def flatten(line):
 def accept_arguments(
     f: Callable[Concatenate[CallableT, P], R]
 ) -> Callable[P, Callable[[CallableT], R]]:
-    """Decorator for decorators that accept arguments"""
+    """Decorate a decorator to accept arguments."""
     @functools.wraps(f)
     def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
@@ -289,10 +319,9 @@ def accept_arguments(
 
 
 def _produce_value(value_obj):
-    """
-    A helper function that produces an actual parameter from a stored
-    object: if the object is callable, call it, otherwise return the
-    object.
+    """Produce an actual value from a stored object.
+
+    If the object is callable, call it; otherwise, return the object.
     """
     if callable(value_obj):
         return value_obj()
@@ -303,10 +332,9 @@ def _produce_value(value_obj):
 # PARAM3_DEPRECATION
 @_deprecated(warning_cat=ParamFutureWarning)
 def produce_value(value_obj):
-    """
-    A helper function that produces an actual parameter from a stored
-    object: if the object is callable, call it, otherwise return the
-    object.
+    """Produce an actual value from a stored object.
+
+    If the object is callable, call it; otherwise, return the object.
 
     .. deprecated:: 2.0.0
     """
@@ -330,7 +358,7 @@ def as_unicode(obj):
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, and vanilla Python dictionaries are ordered for Python 3.6+
+    ordered, and vanilla Python dictionaries are ordered for Python 3.6+.
 
     .. deprecated:: 2.0.0
     """
@@ -485,37 +513,69 @@ def _deserialize_from_path(ext_to_routine, path, type_name):
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
-    # found in numpy, gmpy, etc.
+    # found in numpy, gmpy2, etc.
     elif (hasattr(obj, '__int__') and hasattr(obj, '__add__')): return True
     # This is for older versions of gmpy
     elif hasattr(obj, 'qdiv'): return True
     else: return False
 
 
-def _is_abstract(class_):
+def _is_abstract(class_: type) -> bool:
+    if inspect.isabstract(class_):
+        return True
     try:
         return class_.abstract
     except AttributeError:
         return False
 
 
-def descendents(class_):
+def descendents(class_: type, concrete: bool = False) -> list[type]:
     """
-    Return a list of the class hierarchy below (and including) the given class.
+    Return a list of all descendant classes of a given class.
 
-    The list is ordered from least- to most-specific.  Can be useful for
-    printing the contents of an entire class hierarchy.
+    This function performs a breadth-first traversal of the class hierarchy,
+    collecting all subclasses of `class_`. The result includes `class_` itself
+    and all of its subclasses. If `concrete=True`, abstract base classes
+    are excluded from the result.
+
+    Parameters
+    ----------
+    class_ : type
+        The base class whose descendants should be found.
+    concrete : bool, optional
+        If `True`, exclude abstract classes from the result. Default is `False`.
+
+    Returns
+    -------
+    list of type
+        A list of descendant classes, ordered from the most base to the most derived.
+
+    Examples
+    --------
+    >>> class A: pass
+    >>> class B(A): pass
+    >>> class C(A): pass
+    >>> class D(B): pass
+    >>> descendents(A)
+    [A, B, C, D]
     """
-    assert isinstance(class_,type)
+    if not isinstance(class_, type):
+        raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")
     q = [class_]
     out = []
     while len(q):
         x = q.pop(0)
-        out.insert(0,x)
-        for b in x.__subclasses__():
+        out.insert(0, x)
+        try:
+            subclasses = x.__subclasses__()
+        except TypeError:
+            # TypeError raised when __subclasses__ is called on unbound methods,
+            # on `type` for example.
+            continue
+        for b in subclasses:
             if b not in q and b not in out:
                 q.append(b)
-    return out[::-1]
+    return [kls for kls in out if not (concrete and _is_abstract(kls))][::-1]
 
 
 # Could be a method of ClassSelector.
@@ -556,9 +616,21 @@ def abbreviate_paths(pathspec,named_paths):
 
 
 def _to_datetime(x):
-    """
-    Internal function that will convert date objs to datetime objs, used
-    for comparing date and datetime objects without error.
+    """Convert a date object to a datetime object for comparison.
+
+    This internal function ensures that date and datetime objects can be
+    compared without errors by converting date objects to datetime objects.
+
+    Parameters
+    ----------
+    x: Any
+        The object to convert, which may be a `date` or `datetime` object.
+
+    Returns
+    -------
+    datetime.datetime:
+        A datetime object if the input was a date object;
+        otherwise, the input is returned unchanged.
     """
     if isinstance(x, dt.date) and not isinstance(x, dt.datetime):
         return dt.datetime(*x.timetuple()[:6])
@@ -567,9 +639,21 @@ def _to_datetime(x):
 
 @contextmanager
 def exceptions_summarized():
-    """
-    Useful utility for writing docs that need to show expected errors.
-    Shows exception only, concisely, without a traceback.
+    """Context manager to display exceptions concisely without tracebacks.
+
+    This utility is useful for writing documentation or examples where
+    only the exception type and message are needed, without the full
+    traceback.
+
+    Yields
+    ------
+    None:
+        Allows the code inside the context to execute.
+
+    Prints
+    ------
+    A concise summary of any exception raised, including the exception
+    type and message, to `sys.stderr`.
     """
     try:
         yield
@@ -581,7 +665,7 @@ def exceptions_summarized():
 
 def _in_ipython():
     try:
-        get_ipython()
+        get_ipython
         return True
     except NameError:
         return False
@@ -589,6 +673,7 @@ def _in_ipython():
 _running_tasks = set()
 
 def async_executor(func):
+    import asyncio
     try:
         event_loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -616,9 +701,25 @@ class _GeneratorIs(metaclass=_GeneratorIsMeta):
         yield from cls.types()
 
 def gen_types(gen_func):
-    """
-    Decorator which takes a generator function which yields difference types
-    make it so it can be called with isinstance and issubclass.
+    """Decorate a generator function to support type checking.
+
+    This decorator modifies a generator function that yields different types
+    so that it can be used with `isinstance` and `issubclass`.
+
+    Parameters
+    ----------
+    gen_func : GeneratorType
+        The generator function to decorate.
+
+    Returns
+    -------
+    type:
+        A new type that supports `isinstance` and `issubclass` checks
+        based on the generator function's yielded types.
+
+    Raises
+    ------
+    TypeError: If the provided function is not a generator function.
     """
     if not inspect.isgeneratorfunction(gen_func):
         msg = "gen_types decorator can only be applied to generator"

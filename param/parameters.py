@@ -37,7 +37,7 @@ from contextlib import contextmanager
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
-    _int_types, _identity_hook, T
+    _int_types, _identity_hook, T, _TUndefined
 )
 from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
@@ -847,8 +847,12 @@ class Number(Dynamic[T]):
         super().__setstate__(state)
 
 
+import typing as t
+# int = t.TypeVar("_TInteger", bound="int")
+# int = t.TypeVar("_TInteger", bound="int")
+_TNone = t.Literal[None]
 
-class Integer(Number[T]):
+class Integer(Number[int]):
     """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
@@ -856,16 +860,51 @@ class Integer(Number[T]):
     @typing.overload
     def __init__(
         self,
-        default: T = 0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default: int = 0,
+        *args,
+        allow_None: typing.Literal[False] = ...,
+        **kwargs
+    ) -> None: ...
+
+    @typing.overload
+    def __init__(
+        self,
+        default: int | _TNone = 0,
+        *args,
+        allow_None: typing.Literal[True] = ...,
+        **kwargs
+    ) -> None: ...
+
+    @typing.overload
+    def __init__(
+        self,
+        default: int | _TNone = None,
+        *args,
+        allow_None: typing.Literal[True] = True,
+        **kwargs
+    ) -> None: ...
+
+    @typing.overload
+    def __init__(
+        self,
+        default: int = 0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
-    def __init__(self, default: T = Undefined, *args, **kwargs):
+    def __init__(self, default: int | _TNone | _TUndefined = Undefined, *args, allow_None = False, **kwargs):
+        if typing.TYPE_CHECKING:
+            # self.__allow_None = allow_None
+            if isinstance(default, _TUndefined):
+                default = 0
+
         super().__init__(default=default, *args, **kwargs)
 
+        # if typing.TYPE_CHECKING:
+        #     self.__allow_None = allow_None
+        #
     def _validate_value(self, val, allow_None):
         if callable(val):
             return
@@ -886,9 +925,17 @@ class Integer(Number[T]):
                 f"None or an integer value, not {type(step)}."
             )
 
-    def __set__(self, obj, val: T | int) -> None:
-        if typing.TYPE_CHECKING:
-            val = typing.cast("T", val)
+    def __set__(self, obj, val: int | None) -> None:
+        # if typing.TYPE_CHECKING:
+        #     if val is None and not self.__allow_None:
+        #             raise TypeError("None is not allowed")
+        #         # else:
+        #         #     value = typing.cast("_TNone", value)
+        #     if val is not None:
+        #         if type(val) is not int:
+        #             raise TypeError("Only int allowed")
+        #         # else:
+        #         #     value = typing.cast("int", val)
         super().__set__(obj, val)
 
 

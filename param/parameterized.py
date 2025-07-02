@@ -231,7 +231,7 @@ def _identity_hook(obj, val):
     return val
 
 
-class _Undefined:
+class _TUndefined:
     """
     Dummy value to signal completely undefined values rather than
     simple None values.
@@ -247,7 +247,7 @@ class _Undefined:
         return '<Undefined>'
 
 
-Undefined = _Undefined()
+Undefined = _TUndefined()
 
 
 @contextmanager

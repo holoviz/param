@@ -54,6 +54,18 @@ class TestStringParameters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exception):
             a.s = None  # because allow_None should be False
 
+    def test_reject_none_custom_metaclass(self):
+        """Test that custom metaclass names don't appear in error messages (issue #1063)"""
+        class ReactiveESMMetaclass(param.parameterized.ParameterizedMetaclass):
+            pass
+
+        class Avatar(param.Parameterized, metaclass=ReactiveESMMetaclass):
+            object = param.String(allow_None=False)
+
+        exception = "String parameter 'Avatar.object' only takes a string value, not value of <class 'NoneType'>."
+        with self.assertRaisesRegex(ValueError, exception):
+            Avatar(object=None)
+
     def test_default_none(self):
         class A(param.Parameterized):
             s = param.String(None, regex=ip_regex)

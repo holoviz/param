@@ -387,7 +387,7 @@ def test_error_prefix_set_instance():
     with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
         p.x = 'wrong'
 
-def test_reject_none_custom_metaclass():
+def test_error_prefix_custom_metaclass_instance():
     """Test that custom metaclass names don't appear in error messages (issue #1063)."""
     class ReactiveESMMetaclass(param.parameterized.ParameterizedMetaclass):
         pass
@@ -396,12 +396,9 @@ def test_reject_none_custom_metaclass():
         object = param.String(allow_None=False)
 
     exception = "String parameter 'Avatar.object' only takes a string value, not value of <class 'NoneType'>."
-    try:
+    with pytest.raises(ValueError, match="String parameter 'Avatar.object' only"):
         Avatar(object=None)
-    except ValueError as e:
-        assert exception in str(e)
-    else:
-        raise AssertionError("ValueError not raised")
+
 
 @pytest.mark.parametrize(
         ('obj,ismutable'),

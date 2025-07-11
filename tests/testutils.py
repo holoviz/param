@@ -56,6 +56,9 @@ if pd:
         'Series': (pd.Series([1, 2]), param.Series),
     })
 
+class CustomMetaclass(param.parameterized.ParameterizedMetaclass): pass
+
+
 @pytest.mark.parametrize('val,p', guess_param_types_data.values(), ids=guess_param_types_data.keys())
 def test_guess_param_types(val, p):
     input = {'key': val}
@@ -387,17 +390,36 @@ def test_error_prefix_set_instance():
     with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
         p.x = 'wrong'
 
-def test_error_prefix_custom_metaclass_instance():
-    """Test that custom metaclass names don't appear in error messages (issue #1063)."""
-    class ReactiveESMMetaclass(param.parameterized.ParameterizedMetaclass):
-        pass
 
-    class Avatar(param.Parameterized, metaclass=ReactiveESMMetaclass):
-        object = param.String(allow_None=False)
+def test_error_prefix_custom_metaclass_before_class_creation():
+    with pytest.raises(ValueError, match="Number parameter 'x' only"):
+        class P(param.Parameterized, metaclass=CustomMetaclass):
+            x = param.Number('wrong')
 
-    exception = "String parameter 'Avatar.object' only takes a string value, not value of <class 'NoneType'>."
-    with pytest.raises(ValueError, match="String parameter 'Avatar.object' only"):
-        Avatar(object=None)
+
+def test_error_prefix_custom_metaclass_set_class():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P.x = 'wrong'
+
+
+def test_error_prefix_custom_metaclass_instantiate():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P(x='wrong')
+
+
+def test_error_prefix_custom_metaclass_set_instance():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    p = P()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        p.x = 'wrong'
 
 
 @pytest.mark.parametrize(

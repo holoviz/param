@@ -200,7 +200,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
     pclass = type(parameter).__name__
     if parameter.owner is not None:
-        if type(parameter.owner) is ParameterizedMetaclass:
+        if issubclass(type(parameter.owner), ParameterizedMetaclass):
             powner = parameter.owner.__name__
         else:
             powner = type(parameter.owner).__name__

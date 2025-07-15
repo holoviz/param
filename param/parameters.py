@@ -33,10 +33,11 @@ import warnings
 from collections import OrderedDict
 from collections.abc import Iterable
 from contextlib import contextmanager
+from typing import Literal
 
 from .parameterized import (
-    G, Parameterized, Parameter, ParameterizedFunction, ParamOverrides, S, String,
-    Undefined, get_logger, instance_descriptor, _dt_types,
+    G, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
+    S, String, Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
 from ._utils import (
@@ -482,14 +483,14 @@ class Dynamic(Parameter[G, S]):
 
     @t.overload
     def __init__(
-        self: Dynamic[t.Any, t.Any], default: t.Any = None, *,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
+        self: Dynamic[t.Any, t.Any],
+        default: t.Any = None,
+        **kwargs: t.Unpack[ParameterKwargs]
+    ) -> None:
         ...
 
-    def __init__(self, default: t.Any = Undefined, **params):
+    @_deprecate_positional_args
+    def __init__(self, default: t.Any = Undefined, **params: t.Unpack[ParameterKwargs]):
         """
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
@@ -619,6 +620,14 @@ class __compute_set_hook:
 
 _compute_set_hook = __compute_set_hook()
 
+class NumberKwargs(ParameterKwargs):
+    bounds: tuple[t.Any | None, t.Any | None] | None
+    softbounds: tuple[t.Any | None, t.Any | None] | None
+    inclusive_bounds: tuple[bool, bool]
+    step: t.Any | None
+    set_hook: Callable | None
+    allow_None: bool
+
 
 class Number(Dynamic[G, S]):
     """
@@ -674,53 +683,51 @@ class Number(Dynamic[G, S]):
 
     @t.overload
     def __init__(
-        self: Number[float | int, float | int],
-        default: float | int = 0.0,
+        self: Number[float, float],
+        default: float = 0.0,
         *,
-        bounds: tuple[float | int | None, float | int | None] | None = None,
-        softbounds: tuple[float | int | None, float | int | None] | None = None,
-        inclusive_bounds: tuple[bool, bool] = (True,True),
-        step: float | int | None = None,
-        set_hook: Callable | None = None,
-        doc: str | None = ...,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
+        allow_None: Literal[False] = False,
+        **kwargs: t.Unpack[NumberKwargs]
     ) -> None:
         ...
 
     @t.overload
     def __init__(
-        self: Number[float | int | None, float | int | None],
-        default: float | int | None = None,
+        self: Number[float | None, float | None],
+        default: float | None = 0.0,
         *,
-        bounds: tuple[float | int | None, float | int | None] | None = None,
-        softbounds: tuple[float | int | None, float | int | None] | None = None,
-        inclusive_bounds: tuple[bool, bool] = (True,True),
-        step: float | int | None = None,
-        set_hook: Callable | None = None,
-        doc: str | None = ...,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = True,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
+        allow_None: Literal[True] = True,
+        **kwargs: t.Unpack[NumberKwargs]
     ) -> None:
         ...
 
+    @t.overload
     def __init__(
-        self, default: t.Any = Undefined, *, bounds: tuple[float | int | None, float | int | None] = Undefined,
+        self: Number[float | None, float | None],
+        default: float | None = None,
+        *,
+        bounds: tuple[float | None, float | None] | None = None,
+        softbounds: tuple[float | None, float | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: float | int | None = None,
+        set_hook: Callable | None = None,
+        allow_None: Literal[False] = False,
+        **kwargs: t.Unpack[ParameterKwargs]
+    ) -> None:
+        ...
+
+    @_deprecate_positional_args
+    def __init__(
+        self,
+        default: t.Any = Undefined,
+        *,
+        bounds: tuple[float | int | None, float | int | None] = Undefined,
         softbounds: tuple[float | int | None, float | int | None] = Undefined,
-        inclusive_bounds: tuple[bool, bool] = Undefined, step: float | int | None = Undefined,
-        set_hook: Callable = Undefined, **params: t.Any):
+        inclusive_bounds: tuple[bool, bool] = Undefined,
+        step: float | int | None = Undefined,
+        set_hook: Callable = Undefined,
+        **params: t.Unpack[ParameterKwargs]
+    ) -> None:
         """
         Initialize this parameter object and store the bounds.
 
@@ -908,16 +915,16 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
+    _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0, 1.0))
 
     @t.overload
     def __init__(
         self,
-        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
+        default: float = 1.0,
+        *,
+        bounds: tuple[float, float] = (0.0, 1.0),
+        **kwargs: t.Unpack[NumberKwargs]
+    ) -> None:
         ...
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
@@ -936,10 +943,8 @@ class Date(Number):
     @t.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=None,
+        **kwargs: t.Unpack[NumberKwargs]
     ):
         ...
 
@@ -995,10 +1000,8 @@ class CalendarDate(Number):
     @t.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=None,
+        **kwargs: t.Unpack[NumberKwargs]
     ):
         ...
 
@@ -1049,10 +1052,8 @@ class Boolean(Parameter):
     @t.overload
     def __init__(
         self,
-        default=False, *,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=False,
+        **kwargs: t.Unpack[ParameterKwargs]
     ):
         ...
 
@@ -1165,7 +1166,7 @@ class __compute_length_of_default:
 _compute_length_of_default = __compute_length_of_default()
 
 
-class Tuple(Parameter):
+class Tuple(Parameter[G, S]):
     """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
 
     __slots__ = ['length']
@@ -1174,16 +1175,16 @@ class Tuple(Parameter):
 
     @t.overload
     def __init__(
-        self,
-        default=(0,0), *, length=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
+        self: Tuple[tuple[t.Any, ...], tuple[t.Any, ...]],
+        default: tuple[t.Any, ...] = (0, 0),
+        *,
+        length: int | None = None,
+        **kwargs: t.Unpack[ParameterKwargs]
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, length=Undefined, **params):
+    def __init__(self, default: t.Any = Undefined, *, length: int | None = Undefined, **params: t.Unpack[ParameterKwargs]):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -1287,10 +1288,14 @@ class Range(NumericTuple):
     @t.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=None,
+        *,
+        bounds: tuple[t.Any, t.Any] | None = None,
+        softbounds: tuple[t.Any, t.Any] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: t.Any | None = None,
+        length: int | None = None,
+        **kwargs: t.Unpack[ParameterKwargs]
     ):
         ...
 

@@ -15,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import annotations
 
 import collections
 import copy
@@ -26,7 +27,7 @@ import os.path
 import pathlib
 import re
 import sys
-import typing
+import typing as t
 import warnings
 
 from collections import OrderedDict
@@ -34,7 +35,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 
 from .parameterized import (
-    Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
+    G, Parameterized, Parameter, ParameterizedFunction, ParamOverrides, S, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
@@ -451,7 +452,7 @@ class Time(Parameterized):
 #-----------------------------------------------------------------------------
 
 
-class Dynamic(Parameter):
+class Dynamic(Parameter[G, S]):
     """
     Parameter whose value can be generated dynamically by a callable
     object.
@@ -479,16 +480,16 @@ class Dynamic(Parameter):
     time_fn = Time()
     time_dependent = False
 
-    @typing.overload
+    @t.overload
     def __init__(
-        self, default=None, *,
+        self: Dynamic[t.Any, t.Any], default: t.Any = None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
-    def __init__(self, default=Undefined, **params):
+    def __init__(self, default: t.Any = Undefined, **params):
         """
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
@@ -515,7 +516,7 @@ class Dynamic(Parameter):
         gen._saved_Dynamic_time = []
 
 
-    def __get__(self,obj,objtype):
+    def __get__(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized]) -> G:
         """
         Call the superclass's __get__; if the result is not dynamic
         return that result, otherwise ask that result to produce a
@@ -528,9 +529,8 @@ class Dynamic(Parameter):
         else:
             return self._produce_value(gen)
 
-
     @instance_descriptor
-    def __set__(self,obj,val):
+    def __set__(self, obj: Parameterized | type[Parameterized], val: S):
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -544,8 +544,7 @@ class Dynamic(Parameter):
         if dynamic: self._initialize_generator(val,obj)
         if obj is None: self._set_instantiate(dynamic)
 
-
-    def _produce_value(self,gen,force=False):
+    def _produce_value(self, gen, force=False):
         """
         Return a value from gen.
 
@@ -578,14 +577,12 @@ class Dynamic(Parameter):
 
         return value
 
-
     def _value_is_dynamic(self,obj,objtype=None):
         """
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
         return hasattr(super().__get__(obj,objtype),'_Dynamic_last')
-
 
     def _inspect(self,obj,objtype=None):
         """Return the last generated value for this parameter."""
@@ -595,7 +592,6 @@ class Dynamic(Parameter):
             return gen._Dynamic_last
         else:
             return gen
-
 
     def _force(self,obj,objtype=None):
         """Force a new value to be generated, and return it."""
@@ -624,7 +620,7 @@ class __compute_set_hook:
 _compute_set_hook = __compute_set_hook()
 
 
-class Number(Dynamic):
+class Number(Dynamic[G, S]):
     """
     A numeric Dynamic Parameter, with a default value and optional bounds.
 
@@ -676,19 +672,55 @@ class Number(Dynamic):
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
-        self,
-        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
+        self: Number[float | int, float | int],
+        default: float | int = 0.0,
+        *,
+        bounds: tuple[float | int | None, float | int | None] | None = None,
+        softbounds: tuple[float | int | None, float | int | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True,True),
+        step: float | int | None = None,
+        set_hook: Callable | None = None,
+        doc: str | None = ...,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+    ) -> None:
         ...
 
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+    @t.overload
+    def __init__(
+        self: Number[float | int | None, float | int | None],
+        default: float | int | None = None,
+        *,
+        bounds: tuple[float | int | None, float | int | None] | None = None,
+        softbounds: tuple[float | int | None, float | int | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True,True),
+        step: float | int | None = None,
+        set_hook: Callable | None = None,
+        doc: str | None = ...,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = True,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+    ) -> None:
+        ...
+
+    def __init__(
+        self, default: t.Any = Undefined, *, bounds: tuple[float | int | None, float | int | None] = Undefined,
+        softbounds: tuple[float | int | None, float | int | None] = Undefined,
+        inclusive_bounds: tuple[bool, bool] = Undefined, step: float | int | None = Undefined,
+        set_hook: Callable = Undefined, **params: t.Any):
         """
         Initialize this parameter object and store the bounds.
 
@@ -878,7 +910,7 @@ class Magnitude(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -901,7 +933,7 @@ class Date(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -960,7 +992,7 @@ class CalendarDate(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -1014,7 +1046,7 @@ class Boolean(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, default=False)
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=False, *,
@@ -1067,7 +1099,7 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=False, *,
@@ -1140,7 +1172,7 @@ class Tuple(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=(0,0), *, length=None,
@@ -1228,7 +1260,7 @@ class XYCoordinates(NumericTuple):
 
     _slot_defaults = dict(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=(0.0, 0.0), *, length=None,
@@ -1252,7 +1284,7 @@ class Range(NumericTuple):
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
@@ -1483,7 +1515,7 @@ class Callable(Parameter):
     2.4, so instantiate must be False for those values.
     """
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *,
@@ -1538,7 +1570,7 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         *, attribs=None,
@@ -1851,7 +1883,7 @@ class Selector(SelectorBase, _SignatureSelector):
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         *, objects=[], default=None, instantiate=False, compute_default_fn=None,
@@ -1974,7 +2006,7 @@ class ObjectSelector(Selector):
     historical reasons.
     """
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, objects=[], instantiate=False, compute_default_fn=None,
@@ -1999,7 +2031,7 @@ class FileSelector(Selector):
         Selector._slot_defaults, path="",
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
@@ -2047,7 +2079,7 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, objects=[], instantiate=False, compute_default_fn=None,
@@ -2108,7 +2140,7 @@ class MultiFileSelector(ListSelector):
         Selector._slot_defaults, path="",
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, path="", objects=[], compute_default_fn=None,
@@ -2157,7 +2189,7 @@ class ClassSelector(SelectorBase):
 
     _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         *, class_, default=None, instantiate=True, is_instance=True,
@@ -2217,7 +2249,7 @@ class ClassSelector(SelectorBase):
 class Dict(ClassSelector):
     """Parameter whose value is a dictionary."""
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, is_instance=True,
@@ -2234,7 +2266,7 @@ class Dict(ClassSelector):
 class Array(ClassSelector):
     """Parameter whose value is a numpy array."""
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, is_instance=True,
@@ -2293,7 +2325,7 @@ class DataFrame(ClassSelector):
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
@@ -2409,7 +2441,7 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, rows=None, allow_None=False, is_instance=True,
@@ -2474,7 +2506,7 @@ class List(Parameter):
         instantiate=True, default=[], is_instance=True,
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
@@ -2722,7 +2754,7 @@ class Path(Parameter):
         Parameter._slot_defaults, check_exists=True,
     )
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, search_paths=None, check_exists=True,
@@ -2880,7 +2912,7 @@ class Color(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=None, *, allow_named=True,
@@ -2944,8 +2976,7 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
-
-    @typing.overload
+    @t.overload
     def __init__(
         self,
         default=b"", *, regex=None, allow_None=False,

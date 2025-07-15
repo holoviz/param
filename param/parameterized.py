@@ -1060,6 +1060,17 @@ class _ParameterBase(metaclass=ParameterMetaclass):
 G = t.TypeVar("G")
 S = t.TypeVar("S")
 
+class ParameterKwargs(t.TypedDict, total=False):
+    doc: str | None
+    instantiate: bool
+    constant: bool
+    readonly: bool
+    pickle_default_value: bool
+    allow_None: bool
+    per_instance: bool
+    allow_refs: bool
+    nested_refs: bool
+
 
 class Parameter(_ParameterBase, t.Generic[G, S]):
     """
@@ -1224,16 +1235,7 @@ class Parameter(_ParameterBase, t.Generic[G, S]):
     def __init__(
         self: Parameter[G, S],
         default: t.Any = "",
-        *,
-        doc: str | None = ...,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
+        **kwargs: t.Unpack[ParameterKwargs]
     ) -> None:
         ...
 
@@ -1746,16 +1748,8 @@ class String(Parameter[G, S]):
         self: String[str, str],
         default: str = "",
         *,
-        regex: str | None = None,
-        doc: str | None = ...,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
+        allow_None: Literal[False] = False,
+        **kwargs: t.Unpack[ParameterKwargs]
     ) -> None:
         ...
 
@@ -1765,15 +1759,8 @@ class String(Parameter[G, S]):
         default: str | None = None,
         *,
         regex: str | None = None,
-        doc: str | None = ...,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
+        allow_None: Literal[False] = False,
+        **kwargs: t.Unpack[ParameterKwargs]
     ) -> None:
         ...
 
@@ -1783,15 +1770,8 @@ class String(Parameter[G, S]):
         default: str | None = "",
         *,
         regex: str | None = None,
-        doc: str | None = ...,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = True,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
+        allow_None: Literal[True] = True,
+        **kwargs: t.Unpack[ParameterKwargs]
     ) -> None:
         ...
 

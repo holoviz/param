@@ -170,7 +170,10 @@ def guess_bounds(params, **overrides):
     return guessed
 
 
-def get_soft_bounds(bounds, softbounds):
+def get_soft_bounds(
+    bounds: tuple[t.Any | None, t.Any | None] | None,
+    softbounds: tuple[t.Any | None, t.Any | None] | None
+) -> tuple[t.Any | None, t.Any | None]:
     """
     For each soft bound (upper and lower), if there is a defined bound
     (not equal to None) and does not exceed the hard bound, then it is
@@ -349,13 +352,11 @@ class Time(Parameterized):
         Typical values for the parameter are 'seconds' (the SI unit
         for time) or subdivisions thereof (e.g. 'milliseconds').""")
 
-
     def __init__(self, **params):
         super().__init__(**params)
         self._time = self.time_type(0)
         self._exhausted = None
         self._pushed_state = []
-
 
     def __eq__(self, other):
         if not isinstance(other, Time):
@@ -366,13 +367,10 @@ class Time(Parameterized):
             return False
         return True
 
-
     def __ne__(self, other):
         return not (self == other)
 
-
     def __iter__(self): return self
-
 
     def __next__(self):
         timestep = self.time_type(self.timestep)
@@ -410,27 +408,22 @@ class Time(Parameterized):
 
         return self._time
 
-
     def advance(self, val):
         self += val
-
 
     def __iadd__(self, other):
         self._time = self._time + self.time_type(other)
         return self
 
-
     def __isub__(self, other):
         self._time = self._time - self.time_type(other)
         return self
-
 
     def __enter__(self):
         """Enter the context and push the current state."""
         self._pushed_state.append((self._time, self.timestep, self.until))
         self.in_context = True
         return self
-
 
     def __exit__(self, exc, *args):
         """
@@ -485,7 +478,17 @@ class Dynamic(Parameter[G, S]):
     def __init__(
         self: Dynamic[t.Any, t.Any],
         default: t.Any = None,
-        **kwargs: t.Unpack[ParameterKwargs]
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ) -> None:
         ...
 
@@ -545,7 +548,7 @@ class Dynamic(Parameter[G, S]):
         if dynamic: self._initialize_generator(val,obj)
         if obj is None: self._set_instantiate(dynamic)
 
-    def _produce_value(self, gen, force=False):
+    def _produce_value(self, gen, force: bool = False):
         """
         Return a value from gen.
 
@@ -578,14 +581,14 @@ class Dynamic(Parameter[G, S]):
 
         return value
 
-    def _value_is_dynamic(self,obj,objtype=None):
+    def _value_is_dynamic(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> bool:
         """
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
         return hasattr(super().__get__(obj,objtype),'_Dynamic_last')
 
-    def _inspect(self,obj,objtype=None):
+    def _inspect(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> t.Any:
         """Return the last generated value for this parameter."""
         gen=super().__get__(obj,objtype)
 
@@ -594,7 +597,7 @@ class Dynamic(Parameter[G, S]):
         else:
             return gen
 
-    def _force(self,obj,objtype=None):
+    def _force(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> t.Any:
         """Force a new value to be generated, and return it."""
         gen=super().__get__(obj,objtype)
 
@@ -681,25 +684,37 @@ class Number(Dynamic[G, S]):
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
 
-    @t.overload
-    def __init__(
-        self: Number[float, float],
-        default: float = 0.0,
-        *,
-        allow_None: Literal[False] = False,
-        **kwargs: t.Unpack[NumberKwargs]
-    ) -> None:
-        ...
+    if t.TYPE_CHECKING:
 
-    @t.overload
-    def __init__(
-        self: Number[float | None, float | None],
-        default: float | None = 0.0,
-        *,
-        allow_None: Literal[True] = True,
-        **kwargs: t.Unpack[NumberKwargs]
-    ) -> None:
-        ...
+        @t.overload
+        def __init__(
+            self: Number[float, float],
+            default: float = 0.0,
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Number[float | None, float | None],
+            default: float | None = 0.0,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Number[float | None, float | None],
+            default: float | None = None,
+            *,
+            allow_None: bool = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
 
     @t.overload
     def __init__(
@@ -711,8 +726,17 @@ class Number(Dynamic[G, S]):
         inclusive_bounds: tuple[bool, bool] = (True, True),
         step: float | int | None = None,
         set_hook: Callable | None = None,
-        allow_None: Literal[False] = False,
-        **kwargs: t.Unpack[ParameterKwargs]
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ) -> None:
         ...
 
@@ -741,7 +765,7 @@ class Number(Dynamic[G, S]):
         self.step = step
         self._validate(self.default)
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized]) -> G:
         """Retrieve the value of the attribute, checking bounds if dynamically generated.
 
         Arguments
@@ -764,7 +788,7 @@ class Number(Dynamic[G, S]):
             self._validate(result)
         return result
 
-    def set_in_bounds(self,obj,val):
+    def set_in_bounds(self, obj: Parameterized | type[Parameterized], val: t.Any) -> None:
         """
         Set to the given value, but cropped to be within the legal bounds.
         All objects are accepted, and no exceptions will be raised.  See
@@ -776,7 +800,7 @@ class Number(Dynamic[G, S]):
             bounded_val = val
         super().__set__(obj, bounded_val)
 
-    def crop_to_bounds(self, val):
+    def crop_to_bounds(self, val: t.Any) -> t.Any:
         """
         Return the given value cropped to be within the hard bounds
         for this parameter.
@@ -816,7 +840,12 @@ class Number(Dynamic[G, S]):
 
         return val
 
-    def _validate_bounds(self, val, bounds, inclusive_bounds):
+    def _validate_bounds(
+        self,
+        val: t.Any,
+        bounds: tuple[t.Any | None, t.Any | None] | None,
+        inclusive_bounds: tuple[bool, bool]
+    ) -> None:
         if bounds is None or (val is None and self.allow_None) or callable(val):
             return
         vmin, vmax = bounds
@@ -849,7 +878,7 @@ class Number(Dynamic[G, S]):
                         f"{vmin}, not {val}."
                     )
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
         if (allow_None and val is None) or (callable(val) and not inspect.isgeneratorfunction(val)):
             return
 
@@ -859,14 +888,14 @@ class Number(Dynamic[G, S]):
                 f"not {type(val)}."
             )
 
-    def _validate_step(self, val, step):
+    def _validate_step(self, val: t.Any, step: t.Any) -> None:
         if step is not None and not _is_number(step):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be "
                 f"None or a numeric value, not {type(step)}."
             )
 
-    def _validate(self, val):
+    def _validate(self, val: t.Any) -> None:
         """
         Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
@@ -878,20 +907,52 @@ class Number(Dynamic[G, S]):
     def get_soft_bounds(self):
         return get_soft_bounds(self.bounds, self.softbounds)
 
-    def __setstate__(self,state):
+    def __setstate__(self, state: dict[str, t.Any]) -> None:
+        # Pickling backward compatibility
         if 'step' not in state:
             state['step'] = None
 
         super().__setstate__(state)
 
 
-
-class Integer(Number):
+class Integer(Number[G, S]):
     """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
 
-    def _validate_value(self, val, allow_None):
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Integer[int, int],
+            default: int = 0,
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Integer[int | None, int | None],
+            default: int | None = 0,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Integer[int | None, int | None],
+            default: int | None = None,
+            *,
+            allow_None: bool = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
         if callable(val):
             return
 
@@ -904,7 +965,7 @@ class Integer(Number):
                 f"not {type(val)}."
             )
 
-    def _validate_step(self, val, step):
+    def _validate_step(self, val: t.Any, step: t.Any) -> None:
         if step is not None and not isinstance(step, int):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be "
@@ -917,16 +978,63 @@ class Magnitude(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0, 1.0))
 
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Magnitude[float, float],
+            default: float = 1.0,
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Magnitude[float | None, float | None],
+            default: float | None = 1.0,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Magnitude[float | None, float | None],
+            default: float | None = None,
+            *,
+            allow_None: bool = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
     @t.overload
     def __init__(
         self,
         default: float = 1.0,
         *,
         bounds: tuple[float, float] = (0.0, 1.0),
-        **kwargs: t.Unpack[NumberKwargs]
+        softbounds: tuple[float | None, float | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: float | int | None = None,
+        set_hook: Callable | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ) -> None:
         ...
 
+    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
         super().__init__(
@@ -935,23 +1043,62 @@ class Magnitude(Number):
         )
 
 
-class Date(Number):
+class Date(Number[G, S]):
     """Date parameter of datetime or date type."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Date[dt.datetime | dt.date, dt.datetime | dt.date],
+            default: dt.datetime | dt.date | None = None,
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Date[dt.datetime | dt.date | None, dt.datetime | dt.date | None],
+            default: dt.datetime | dt.date | None = None,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
 
     @t.overload
     def __init__(
         self,
         default=None,
-        **kwargs: t.Unpack[NumberKwargs]
+        *,
+        bounds: tuple[t.Any | None, t.Any | None] | None = None,
+        softbounds: tuple[t.Any | None, t.Any | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: t.Any | None = None,
+        set_hook: Callable | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ):
         ...
 
-    def __init__(self, default=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
         super().__init__(default=default, **kwargs)
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
         """
         Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
@@ -965,20 +1112,20 @@ class Date(Number):
                 f"date types, not {type(val)}."
             )
 
-    def _validate_step(self, val, step):
+    def _validate_step(self, val: t.Any, step: t.Any) -> None:
         if step is not None and not isinstance(step, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
                 f"a datetime or date type, not {type(step)}."
             )
 
-    def _validate_bounds(self, val, bounds, inclusive_bounds):
+    def _validate_bounds(self, val: t.Any, bounds: tuple[t.Any | None, t.Any | None] | None, inclusive_bounds: tuple[bool, bool]) -> None:
         val = _to_datetime(val)
         bounds = None if bounds is None else map(_to_datetime, bounds)
         return super()._validate_bounds(val, bounds, inclusive_bounds)
 
     @classmethod
-    def serialize(cls, value):
+    def serialize(cls, value: dt.datetime | dt.date | None) -> str | None:
         if value is None:
             return None
         if not isinstance(value, (dt.datetime, dt.date)): # i.e np.datetime64
@@ -986,26 +1133,65 @@ class Date(Number):
         return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     @classmethod
-    def deserialize(cls, value):
+    def deserialize(cls, value: str | None) -> dt.datetime | None:
         if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
-class CalendarDate(Number):
+class CalendarDate(Number[G, S]):
     """Parameter specifically allowing dates (not datetimes)."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: CalendarDate[dt.date, dt.date],
+            default: dt.date | None = None,
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: CalendarDate[dt.date | None, dt.date | None],
+            default: dt.date | None = None,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[NumberKwargs]
+        ) -> None:
+            ...
 
     @t.overload
     def __init__(
         self,
         default=None,
-        **kwargs: t.Unpack[NumberKwargs]
+        *,
+        bounds: tuple[t.Any | None, t.Any | None] | None = None,
+        softbounds: tuple[t.Any | None, t.Any | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: dt.date | None = None,
+        set_hook: Callable | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ):
         ...
 
-    def __init__(self, default=Undefined, **kwargs):
+    @_deprecate_positional_args
+    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
         super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val, allow_None):
@@ -1021,7 +1207,7 @@ class CalendarDate(Number):
                 f"{_validate_error_prefix(self)} only takes date types."
             )
 
-    def _validate_step(self, val, step):
+    def _validate_step(self, val: t.Any, step: t.Any) -> None:
         if step is not None and not isinstance(step, dt.date):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None or "
@@ -1029,13 +1215,13 @@ class CalendarDate(Number):
             )
 
     @classmethod
-    def serialize(cls, value):
+    def serialize(cls, value: dt.date | None) -> str | None:
         if value is None:
             return None
         return value.strftime("%Y-%m-%d")
 
     @classmethod
-    def deserialize(cls, value):
+    def deserialize(cls, value: str | None) -> dt.date | None:
         if value == 'null' or value is None:
             return None
         return dt.datetime.strptime(value, "%Y-%m-%d").date()
@@ -1044,16 +1230,58 @@ class CalendarDate(Number):
 # Boolean
 #-----------------------------------------------------------------------------
 
-class Boolean(Parameter):
+class Boolean(Parameter[G, S]):
     """Binary or tristate Boolean Parameter."""
 
     _slot_defaults = dict(Parameter._slot_defaults, default=False)
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Boolean[bool, bool],
+            default: bool = False,
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Boolean[bool | None, bool | None],
+            default: bool | None = False,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Boolean[bool | None, bool | None],
+            default: bool | None = None,
+            *,
+            allow_None: bool = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     @t.overload
     def __init__(
         self,
         default=False,
-        **kwargs: t.Unpack[ParameterKwargs]
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ):
         ...
 
@@ -1062,7 +1290,7 @@ class Boolean(Parameter):
         super().__init__(default=default, **params)
         self._validate(self.default)
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
         if allow_None:
             if not isinstance(val, bool) and val is not None:
                 raise ValueError(
@@ -1075,7 +1303,7 @@ class Boolean(Parameter):
                 f"not {val!r}."
             )
 
-    def _validate(self, val):
+    def _validate(self, val: t.Any) -> None:
         self._validate_value(val, self.allow_None)
 
 
@@ -1103,15 +1331,23 @@ class Event(Boolean):
     @t.overload
     def __init__(
         self,
-        default=False, *,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self,default=False,**params):
+    def __init__(self, default=False, **params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
         self._mode = 'set-reset'
@@ -1173,13 +1409,57 @@ class Tuple(Parameter[G, S]):
 
     _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Tuple[tuple[t.Any, ...], tuple[t.Any, ...]],
+            default: tuple[t.Any, ...] = (0, 0),
+            *,
+            length: int | None = None,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Tuple[tuple[t.Any, ...] | None, tuple[t.Any, ...] | None],
+            default: tuple[t.Any, ...] | None = (0, 0),
+            *,
+            length: int | None = None,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Tuple[tuple[t.Any, ...] | None, tuple[t.Any, ...] | None],
+            default: tuple[t.Any, ...] | None = None,
+            *,
+            length: int | None = None,
+            allow_None: bool = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
     @t.overload
     def __init__(
         self: Tuple[tuple[t.Any, ...], tuple[t.Any, ...]],
         default: tuple[t.Any, ...] = (0, 0),
         *,
         length: int | None = None,
-        **kwargs: t.Unpack[ParameterKwargs]
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ):
         ...
 
@@ -1240,8 +1520,41 @@ class Tuple(Parameter[G, S]):
         return tuple(value) # As JSON has no tuple representation
 
 
-class NumericTuple(Tuple):
+class NumericTuple(Tuple[G, S]):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: NumericTuple[tuple[float, ...], tuple[float, ...]],
+            default: tuple[float, ...] = (0.0, 0.0),
+            *,
+            length: int | None = None,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: NumericTuple[tuple[float, ...] | None, tuple[float, ...] | None],
+            default: tuple[float, ...] | None = (0.0, 0.0),
+            *,
+            length: int | None = None,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: NumericTuple[tuple[float, ...] | None, tuple[float, ...] | None],
+            default: tuple[float, ...] | None = None,
+            *,
+            length: int | None = None,
+            allow_None: bool = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)

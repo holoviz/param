@@ -1235,7 +1235,18 @@ class Parameter(_ParameterBase, t.Generic[G, S]):
     def __init__(
         self: Parameter[G, S],
         default: t.Any = "",
-        **kwargs: t.Unpack[ParameterKwargs]
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ) -> None:
         ...
 

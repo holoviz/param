@@ -1743,26 +1743,39 @@ class String(Parameter[G, S]):
 
     _slot_defaults = dict(Parameter._slot_defaults, default="", regex=None)
 
-    @t.overload
-    def __init__(
-        self: String[str, str],
-        default: str = "",
-        *,
-        allow_None: Literal[False] = False,
-        **kwargs: t.Unpack[ParameterKwargs]
-    ) -> None:
-        ...
+    if t.TYPE_CHECKING:
 
-    @t.overload
-    def __init__(
-        self: String[str | None, str | None],
-        default: str | None = None,
-        *,
-        regex: str | None = None,
-        allow_None: Literal[False] = False,
-        **kwargs: t.Unpack[ParameterKwargs]
-    ) -> None:
-        ...
+        @t.overload
+        def __init__(
+            self: String[str, str],
+            default: str = "",
+            *,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: String[str | None, str | None],
+            default: str | None = None,
+            *,
+            regex: str | None = None,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: String[str | None, str | None],
+            default: str | None = "",
+            *,
+            regex: str | None = None,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     @t.overload
     def __init__(
@@ -1770,8 +1783,17 @@ class String(Parameter[G, S]):
         default: str | None = "",
         *,
         regex: str | None = None,
-        allow_None: Literal[True] = True,
-        **kwargs: t.Unpack[ParameterKwargs]
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False
     ) -> None:
         ...
 

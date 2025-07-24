@@ -59,6 +59,13 @@ from ._utils import (
 # Utilities
 #-----------------------------------------------------------------------------
 
+T = t.TypeVar('T')
+
+if t.TYPE_CHECKING:
+    from typing_extensions import Literal
+
+    K = t.TypeVar("K", default=t.Hashable)
+    V = t.TypeVar("V", default=t.Any)
 
 def param_union(*parameterizeds, warn=True):
     """
@@ -1935,7 +1942,7 @@ class Composite(Parameter):
 # Selector
 #-----------------------------------------------------------------------------
 
-class SelectorBase(Parameter):
+class SelectorBase(Parameter[G, S]):
     """
     Parameter whose value must be chosen from a list of possibilities.
 
@@ -2495,7 +2502,7 @@ class MultiFileSelector(ListSelector):
         return _abbreviate_paths(self.path,super().get_range())
 
 
-class ClassSelector(SelectorBase):
+class ClassSelector(SelectorBase[G, S]):
     """
     Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.
     By default, requires an instance, but if is_instance=False, accepts a class instead.
@@ -2507,13 +2514,47 @@ class ClassSelector(SelectorBase):
 
     _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: ClassSelector[T, T],
+            *,
+            class_: type[T],
+            default: T | None = None,
+            instantiate: bool = True,
+            is_instance: bool = True,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[T, T],
+            *,
+            class_: type[T],
+            default: T | None = None,
+            instantiate: bool = True,
+            is_instance: bool = True,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
     @t.overload
     def __init__(
         self,
-        *, class_, default=None, instantiate=True, is_instance=True,
-        allow_None=False, doc=None, label=None, precedence=None,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        *,
+        class_: type[T],
+        default: T | None = None,
+        instantiate: bool = True,
+        is_instance: bool = True,
+        allow_None: bool = False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        constant: bool = False,
+        readonly: bool = False,
     ):
         ...
 
@@ -2564,19 +2605,50 @@ class ClassSelector(SelectorBase):
         return d
 
 
-class Dict(ClassSelector):
+class Dict(ClassSelector[G, S]):
     """Parameter whose value is a dictionary."""
+
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: Dict[dict[K, V], dict[K, V]],
+            *,
+            default: dict[K, V] | Literal[Undefined] = Undefined,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Dict[dict[K, V] | None, dict[K, V] | None],
+            *,
+            default: dict[K, V] | None = None,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     @t.overload
     def __init__(
         self,
-        default=None, *, is_instance=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=Undefined, *,
+        is_instance: bool = True,
+        allow_None: bool = False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = True,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
     ):
         ...
 
+    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, class_=dict, **params)
 
@@ -2803,7 +2875,7 @@ class Series(ClassSelector):
 # List
 #-----------------------------------------------------------------------------
 
-class List(Parameter):
+class List(Parameter[G, S]):
     """
     Parameter whose value is a list of objects, usually of a specified type.
 
@@ -2824,19 +2896,61 @@ class List(Parameter):
         instantiate=True, default=[], is_instance=True,
     )
 
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: List[list[T], list[T]],
+            default: list[T] = [],
+            *,
+            item_type: type[T],
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: List[list[T] | None, list[T] | None],
+            default: list[T] | None = None,
+            *,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
     @t.overload
     def __init__(
         self,
-        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
-        is_instance=True, allow_None=False, doc=None, label=None, precedence=None,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=[],
+        class_: type[T] = None,
+        item_type: type[T] = None,
+        instantiate: bool = True,
+        bounds: tuple[int, int] = (0, None),
+        is_instance: bool = True,
+        allow_None: bool = False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
     ):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
-                 instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
+    def __init__(
+        self,
+        default=Undefined, *,
+        class_: type[T] = Undefined,
+        item_type: type[T] = Undefined,
+        instantiate: bool = Undefined,
+        bounds: tuple[int, int] = Undefined,
+        is_instance: bool = Undefined,
+        **params
+    ):
         if class_ is not Undefined:
             # PARAM3_DEPRECATION
             warnings.warn(
@@ -3063,7 +3177,6 @@ class Path(Parameter):
     check_exists: boolean, default=True
         If True (default) the path must exist on instantiation and set,
         otherwise the path can optionally exist.
-
     """
 
     __slots__ = ['search_paths', 'check_exists']
@@ -3072,13 +3185,48 @@ class Path(Parameter):
         Parameter._slot_defaults, check_exists=True,
     )
 
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: Path[pathlib.PurePath | str, pathlib.PurePath | str],
+            default: pathlib.PurePath | None = None,
+            *,
+            search_paths: list[str] | None = None,
+            check_exists: bool = True,
+            allow_None: Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Path[pathlib.PurePath | str | None, pathlib.PurePath | str | None],
+            default: pathlib.PurePath | str | None = None,
+            *,
+            search_paths: list[str] | None = None,
+            check_exists: bool = True,
+            allow_None: Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
     @t.overload
     def __init__(
         self,
-        default=None, *, search_paths=None, check_exists=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        default=None, *,
+        search_paths: list[str] | None = None,
+        check_exists: bool = True,
+        allow_None: bool = False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
     ):
         ...
 

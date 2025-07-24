@@ -2295,7 +2295,10 @@ class Parameters:
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
                 obj._param__private.dynamic_watchers[method].append(watcher)
         for m in init_methods:
-            m()
+            if iscoroutinefunction(m):
+                async_executor(m)
+            else:
+                m()
 
     def _resolve_dynamic_deps(self, obj, dynamic_dep, param_dep, attribute):
         """

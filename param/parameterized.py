@@ -27,7 +27,7 @@ from functools import partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
-from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
+from typing import Any, Union, Literal, Generic, TypeVar  # When python 3.9 support is dropped replace Union with |
 
 from contextlib import contextmanager
 CRITICAL = 50
@@ -55,6 +55,8 @@ from ._utils import (
     descendents,  # noqa: F401
     gen_types,
 )
+
+T = TypeVar("T")
 
 # Ideally setting param_pager would be in __init__.py but param_pager is
 # needed on import to create the Parameterized class, so it'd need to precede
@@ -229,7 +231,7 @@ def _identity_hook(obj, val):
     return val
 
 
-class _Undefined:
+class _TUndefined:
     """
     Dummy value to signal completely undefined values rather than
     simple None values.
@@ -245,7 +247,7 @@ class _Undefined:
         return '<Undefined>'
 
 
-Undefined = _Undefined()
+Undefined = _TUndefined()
 
 
 @contextmanager
@@ -1056,7 +1058,9 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig
 
 
-class Parameter(_ParameterBase):
+
+
+class Parameter(Generic[T], _ParameterBase):
     """
     An attribute descriptor for declaring parameters.
 
@@ -1493,7 +1497,7 @@ class Parameter(_ParameterBase):
         values, after the slot values have been set in the inheritance procedure.
         """
 
-    def __get__(self, obj, objtype): # pylint: disable-msg=W0613
+    def __get__(self, obj, objtype) -> T:
         """
         Return the value for this Parameter.
 
@@ -1517,7 +1521,7 @@ class Parameter(_ParameterBase):
         return result
 
     @instance_descriptor
-    def __set__(self, obj, val):
+    def __set__(self, obj, val: T) -> None:
         """
         Set the value for this Parameter.
 
@@ -1700,7 +1704,7 @@ class Parameter(_ParameterBase):
 
 
 # Define one particular type of Parameter that is used in this file
-class String(Parameter):
+class String(Parameter[T]):
     r"""
     A String Parameter, with a default value and optional regular expression (regex) matching.
 
@@ -1721,7 +1725,7 @@ class String(Parameter):
     @typing.overload
     def __init__(
         self,
-        default="", *, regex=None,
+        default: T = "", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -1729,7 +1733,7 @@ class String(Parameter):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
+    def __init__(self, default: T = Undefined, *, regex=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
         self._validate(self.default)

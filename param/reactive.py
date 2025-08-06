@@ -230,7 +230,7 @@ class reactive_ops:
     def __call__(self) -> 'rx':
         """Create a reactive expression."""
         rxi = self._reactive
-        return rxi if isinstance(rx, rx) else rx(rxi)
+        return rxi if isinstance(rxi, rx) else rx(rxi)
 
     def and_(self, other) -> 'rx':
         """

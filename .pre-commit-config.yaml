@@ -12,9 +12,9 @@ repos:
         exclude: (\.min\.js$|\.svg$)
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.3
+    rev: v0.12.8
     hooks:
-      - id: ruff
+      - id: ruff-check
         exclude: \.ipynb
   - repo: https://github.com/hoxbro/clean_notebook
     rev: v0.1.15

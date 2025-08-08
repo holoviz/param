@@ -597,7 +597,7 @@ def recursive_repr(fillvalue='...'):
 @accept_arguments
 def output(func, *output, **kw):
     """
-    output allows annotating a method on a Parameterized class to
+    Output allows annotating a method on a Parameterized class to
     declare that it returns an output of a specific type. The outputs
     of a Parameterized class can be queried using the
     Parameterized.param.outputs method. By default the output will
@@ -1936,7 +1936,7 @@ class Parameters:
 
     def __init__(self_, cls: type[Parameterized], self: Parameterized | None = None) -> None:
         """
-        cls is the Parameterized class which is always set.
+        Cls is the Parameterized class which is always set.
         self is the instance if set.
         """
         self_.cls = cls
@@ -1988,7 +1988,7 @@ class Parameters:
         self_.self._param__private.watchers = value
 
     @property
-    def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
+    def self_or_cls(self_) -> Parameterized |  type[Parameterized]:
         return self_.cls if self_.self is None else self_.self
 
     def __setstate__(self, state):
@@ -2897,7 +2897,7 @@ class Parameters:
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_, subset: Union[Iterable[str], None]=None, mode='json'):
+    def serialize_parameters(self_, subset: Iterable[str] | None = None, mode='json'):
         """
         Return the serialized parameters of the Parameterized object.
 
@@ -2996,7 +2996,7 @@ class Parameters:
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
-    def deserialize_parameters(self_, serialization, subset: Union[Iterable[str], None]=None, mode: str='json') -> dict:
+    def deserialize_parameters(self_, serialization, subset: Iterable[str] | None = None, mode: str='json') -> dict:
         """
         Deserialize the given serialized data. This data can be used to create a
         `Parameterized` object or update the parameters of an existing `Parameterized` object.
@@ -3100,7 +3100,7 @@ class Parameters:
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
-    def schema(self_, safe: bool=False, subset: Union[Iterable[str], None]=None, mode: str='json'):
+    def schema(self_, safe: bool=False, subset: Iterable[str] | None = None, mode: str='json'):
         """
         Generate a schema for the parameters on this Parameterized object.
 
@@ -3633,7 +3633,7 @@ class Parameters:
     def watch(
         self_,
         fn,
-        parameter_names: Union[str, list[str]],
+        parameter_names: str | list[str],
         what: str = 'value',
         onlychanged: bool = True,
         queued: bool = False,
@@ -3787,7 +3787,7 @@ class Parameters:
     def watch_values(
         self_,
         fn: Callable,
-        parameter_names: Union[str, list[str]],
+        parameter_names: str | list[str],
         what: Literal["value"] = 'value',
         onlychanged: bool = True,
         queued: bool = False,
@@ -4107,7 +4107,7 @@ class Parameters:
 
     def pprint(
         self_,
-        imports: Union[list[str], None]=None,
+        imports: list[str] | None = None,
         prefix: str = " ",
         unknown_value: str = "<?>",
         qualify: bool = False,

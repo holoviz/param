@@ -1516,7 +1516,7 @@ class Parameter(_ParameterBase, Generic[_T]):
         values, after the slot values have been set in the inheritance procedure.
         """
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Self]) -> _T: # pylint: disable-msg=W0613
+    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> _T: # pylint: disable-msg=W0613
         """
         Return the value for this Parameter.
 
@@ -1748,13 +1748,11 @@ class String(Parameter[_T]):
         self: String[str], default: str = "", *, allow_None: Literal[False] = False,
         regex: str | re.Pattern[str] | None = None, **kwargs: Unpack[PCommon]
     ) -> None: ...
-
     @overload
     def __init__(  # [default="…"], allow_None=True → str | None
         self: String[str | None], default: str = "", *, allow_None: Literal[True],
         regex: str | re.Pattern[str] | None = None, **kwargs: Unpack[PCommon]
     ) -> None: ...
-
     @overload
     def __init__(  # default=None, [allow_None=<ignored>] → str | None
         self: String[str | None], default: None, *, allow_None: bool = False,

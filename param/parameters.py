@@ -2841,7 +2841,7 @@ class Foldername(Path):
 # Color
 #-----------------------------------------------------------------------------
 
-class Color(Parameter):
+class Color(Parameter[_T]):
     """
     Color parameter defined as a hex RGB string with an optional #
     prefix or (optionally) as a CSS3 color name.
@@ -2888,15 +2888,23 @@ class Color(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
+    allow_named: bool
+
     @overload
-    def __init__(
-        self,
-        default=None, *, allow_named=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
+    def __init__(  # [default=None, allow_None=<ignored>] → str | None
+        self: Color[str | None], default: str | None = None, *, allow_None: bool = False,
+        allow_named: bool = True, **kwargs: Unpack[PCommon]
+    ) -> None: ...
+    @overload
+    def __init__(  # default="…", allow_None=True → str | None
+        self: Color[str | None], default: str, *, allow_None: Literal[True],
+        allow_named: bool = True, **kwargs: Unpack[PCommon]
+    ) -> None: ...
+    @overload
+    def __init__(  # default="…", [allow_None=False] → str
+        self: Color[str], default: str, *, allow_None: Literal[False] = False,
+        allow_named: bool = True, **kwargs: Unpack[PCommon]
+    ) -> None: ...
 
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
@@ -2904,11 +2912,11 @@ class Color(Parameter):
         self.allow_named = allow_named
         self._validate(self.default)
 
-    def _validate(self, val):
+    def _validate(self, val: object) -> None:
         self._validate_value(val, self.allow_None)
         self._validate_allow_named(val, self.allow_named)
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, val: object, allow_None: bool) -> None:
         if (allow_None and val is None):
             return
         if not isinstance(val, str):
@@ -2917,11 +2925,11 @@ class Color(Parameter):
                 f"not an object of {type(val)}."
             )
 
-    def _validate_allow_named(self, val, allow_named):
-        if (val is None and self.allow_None):
+    def _validate_allow_named(self, val: str | None, allow_named: bool) -> None:
+        if val is None:
             return
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
-        if self.allow_named:
+        if allow_named:
             if not is_hex and val.lower() not in self._named_colors:
                 raise ValueError(
                     f"{_validate_error_prefix(self)} only takes RGB hex codes "
@@ -2959,13 +2967,11 @@ class Bytes(Parameter[_T]):
         self: Bytes[bytes], default: bytes = b"", *, allow_None: Literal[False] = False,
         regex: bytes | re.Pattern[bytes] | None = None, **kwargs: Unpack[PCommon]
     ) -> None: ...
-
     @overload
     def __init__(  # [default=b"…"], allow_None=True → bytes | None
         self: Bytes[bytes | None], default: bytes = b"", *, allow_None: Literal[True],
         regex: bytes | re.Pattern[bytes] | None = None, **kwargs: Unpack[PCommon]
     ) -> None: ...
-
     @overload
     def __init__(  # default=None, [allow_None=<ignored>] → bytes | None
         self: Bytes[bytes | None], default: None, *, allow_None: bool = False,

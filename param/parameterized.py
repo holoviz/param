@@ -1760,15 +1760,14 @@ class String(Parameter[_T]):
     ) -> None: ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, regex: str | re.Pattern[str] | None = None, **kwargs) -> None:
+    def __init__(self, default=Undefined, *, regex: str | re.Pattern[str] | _Undefined = Undefined, **kwargs) -> None:
         super().__init__(default=default, **kwargs)
         self.regex = re.compile(regex) if isinstance(regex, str) else regex
         self._validate(self.default)
 
     def _validate_regex(self, val: str | None, regex: re.Pattern[str] | None) -> None:
-        if (val is None and self.allow_None):
+        if val is None:
             return
-        assert val is not None
         if regex is not None and regex.match(val) is None:
             raise ValueError(
                 f'{_validate_error_prefix(self)} value {val!r} does not '
@@ -1784,7 +1783,7 @@ class String(Parameter[_T]):
                 f'not value of {type(val)}.'
             )
 
-    def _validate(self, val: str | None) -> None:
+    def _validate(self, val: object) -> None:
         self._validate_value(val, self.allow_None)
         self._validate_regex(val, self.regex)
 

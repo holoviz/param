@@ -35,7 +35,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, overload
 
 from .parameterized import (
-    Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
+    _Undefined, Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
@@ -2971,21 +2971,21 @@ class Bytes(Parameter[_T]):
     ) -> None: ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
+    def __init__(self, default=Undefined, *, regex: bytes | re.Pattern[bytes] | _Undefined = Undefined, **kwargs) -> None:
         super().__init__(default=default, **kwargs)
-        self.regex = regex
+        self.regex = re.compile(regex) if isinstance(regex, bytes) else regex
         self._validate(self.default)
 
-    def _validate_regex(self, val, regex):
-        if (val is None and self.allow_None):
+    def _validate_regex(self, val: bytes | None, regex: re.Pattern[bytes] | None) -> None:
+        if val is None:
             return
-        if regex is not None and re.match(regex, val) is None:
+        if regex is not None and regex.match(val) is None:
             raise ValueError(
                 f"{_validate_error_prefix(self)} value {val!r} "
                 f"does not match regex {regex!r}."
             )
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, val: object, allow_None: bool) -> None:
         if allow_None and val is None:
             return
         if not isinstance(val, bytes):
@@ -2994,6 +2994,6 @@ class Bytes(Parameter[_T]):
                 f"not value of {type(val)}."
             )
 
-    def _validate(self, val):
+    def _validate(self, val: object) -> None:
         self._validate_value(val, self.allow_None)
         self._validate_regex(val, self.regex)

@@ -15,6 +15,7 @@ This file contains subclasses of Parameter, implementing specific
 parameter types (e.g. Number), and also imports the definition of
 Parameters and Parameterized classes.
 """
+from __future__ import annotations
 
 import collections
 import copy
@@ -26,12 +27,12 @@ import os.path
 import pathlib
 import re
 import sys
-import typing
 import warnings
 
 from collections import OrderedDict
 from collections.abc import Iterable
 from contextlib import contextmanager
+from typing import TYPE_CHECKING, overload
 
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
@@ -52,6 +53,13 @@ from ._utils import (
     _abbreviate_paths,
     _to_datetime,
 )
+
+if TYPE_CHECKING:
+    from typing import Literal, TypeVar, Unpack
+
+    from .parameterized import PCommon
+
+    _T = TypeVar("_T")
 
 #-----------------------------------------------------------------------------
 # Utilities
@@ -479,7 +487,7 @@ class Dynamic(Parameter):
     time_fn = Time()
     time_dependent = False
 
-    @typing.overload
+    @overload
     def __init__(
         self, default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
@@ -676,7 +684,7 @@ class Number(Dynamic):
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -878,7 +886,7 @@ class Magnitude(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -901,7 +909,7 @@ class Date(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -960,7 +968,7 @@ class CalendarDate(Number):
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
@@ -1014,7 +1022,7 @@ class Boolean(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, default=False)
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=False, *,
@@ -1067,7 +1075,7 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=False, *,
@@ -1140,7 +1148,7 @@ class Tuple(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=(0,0), *, length=None,
@@ -1228,7 +1236,7 @@ class XYCoordinates(NumericTuple):
 
     _slot_defaults = dict(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=(0.0, 0.0), *, length=None,
@@ -1252,7 +1260,7 @@ class Range(NumericTuple):
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, length=None,
@@ -1483,7 +1491,7 @@ class Callable(Parameter):
     2.4, so instantiate must be False for those values.
     """
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *,
@@ -1538,7 +1546,7 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         *, attribs=None,
@@ -1851,7 +1859,7 @@ class Selector(SelectorBase, _SignatureSelector):
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         *, objects=[], default=None, instantiate=False, compute_default_fn=None,
@@ -1974,7 +1982,7 @@ class ObjectSelector(Selector):
     historical reasons.
     """
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, objects=[], instantiate=False, compute_default_fn=None,
@@ -1999,7 +2007,7 @@ class FileSelector(Selector):
         Selector._slot_defaults, path="",
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
@@ -2047,7 +2055,7 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, objects=[], instantiate=False, compute_default_fn=None,
@@ -2108,7 +2116,7 @@ class MultiFileSelector(ListSelector):
         Selector._slot_defaults, path="",
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, path="", objects=[], compute_default_fn=None,
@@ -2157,7 +2165,7 @@ class ClassSelector(SelectorBase):
 
     _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         *, class_, default=None, instantiate=True, is_instance=True,
@@ -2217,7 +2225,7 @@ class ClassSelector(SelectorBase):
 class Dict(ClassSelector):
     """Parameter whose value is a dictionary."""
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, is_instance=True,
@@ -2234,7 +2242,7 @@ class Dict(ClassSelector):
 class Array(ClassSelector):
     """Parameter whose value is a numpy array."""
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, is_instance=True,
@@ -2293,7 +2301,7 @@ class DataFrame(ClassSelector):
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
@@ -2409,7 +2417,7 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, rows=None, allow_None=False, is_instance=True,
@@ -2474,7 +2482,7 @@ class List(Parameter):
         instantiate=True, default=[], is_instance=True,
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
@@ -2722,7 +2730,7 @@ class Path(Parameter):
         Parameter._slot_defaults, check_exists=True,
     )
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, search_paths=None, check_exists=True,
@@ -2880,7 +2888,7 @@ class Color(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
-    @typing.overload
+    @overload
     def __init__(
         self,
         default=None, *, allow_named=True,
@@ -2929,7 +2937,7 @@ class Color(Parameter):
 # Bytes
 #-----------------------------------------------------------------------------
 
-class Bytes(Parameter):
+class Bytes(Parameter[_T]):
     """
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
@@ -2944,16 +2952,23 @@ class Bytes(Parameter):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
+    @overload
+    def __init__(  # [default=b"…", allow_None=False] → bytes (only)
+        self: Bytes[bytes], default: bytes = b"", *, allow_None: Literal[False] = False,
+        regex: bytes | re.Pattern[bytes] | None = None, **kwargs: Unpack[PCommon]
+    ) -> None: ...
 
-    @typing.overload
-    def __init__(
-        self,
-        default=b"", *, regex=None, allow_None=False,
-        doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
+    @overload
+    def __init__(  # [default=b"…"], allow_None=True → bytes | None
+        self: Bytes[bytes | None], default: bytes = b"", *, allow_None: Literal[True],
+        regex: bytes | re.Pattern[bytes] | None = None, **kwargs: Unpack[PCommon]
+    ) -> None: ...
+
+    @overload
+    def __init__(  # default=None, [allow_None=<ignored>] → bytes | None
+        self: Bytes[bytes | None], default: None, *, allow_None: bool = False,
+        regex: bytes | re.Pattern[bytes] | None = None, **kwargs: Unpack[PCommon]
+    ) -> None: ...
 
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):

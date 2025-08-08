@@ -8,6 +8,8 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
+from __future__ import annotations
+
 import copy
 import datetime as dt
 import inspect
@@ -16,26 +18,17 @@ import operator
 import os
 import re
 import sys
-import types
-import typing
 import warnings
+from typing import TYPE_CHECKING, Generic, overload
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
-from collections.abc import Callable, Iterable
 from functools import partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
-from types import FunctionType, MethodType
-from typing import Any, Union, Literal  # When python 3.9 support is dropped replace Union with |
+from types import AsyncGeneratorType, FunctionType, MethodType
 
 from contextlib import contextmanager
-CRITICAL = 50
-ERROR = 40
-WARNING = 30
-INFO = 20
-DEBUG = 10
-VERBOSE = INFO - 1
 
 from . import serializer
 from ._utils import (
@@ -70,16 +63,48 @@ else:
     from ._utils import async_executor
     param_pager = None
 
+if TYPE_CHECKING:
+    import numpy as np
+
+    from collections.abc import Callable, Iterable
+    from typing import Any, Literal, TypeVar, TypedDict, Unpack
+    from logging import Logger
+
+    _Transform = Callable[[object], object]
+    _T = TypeVar("_T")
+
+    class PCommon(TypedDict, total=False):
+        """Common Parameter kwargs except for `allow_None`."""
+
+        doc: str | None  # = None
+        label: str | None  # = None
+        precedence: float | None  # = None
+        instantiate: bool  # = False
+        constant: bool  # = False
+        readonly: bool  # = False
+        pickle_default_value: bool  # = True
+        per_instance: bool  # = True
+        allow_refs: bool  # = False
+        nested_refs: bool  # = False
+
+
+CRITICAL = 50
+ERROR = 40
+WARNING = 30
+INFO = 20
+DEBUG = 10
+VERBOSE = INFO - 1
+
 
 @gen_types
-def _dt_types():
+def _dt_types() -> Iterable[type[dt.datetime | dt.date | np.datetime64]]:
     yield dt.datetime
     yield dt.date
     if np := sys.modules.get("numpy"):
         yield np.datetime64
 
 @gen_types
-def _int_types():
+def _int_types() -> Iterable[type[int | np.integer]]:
     yield int
     if np := sys.modules.get("numpy"):
         yield np.integer
@@ -90,7 +115,7 @@ def _int_types():
 # logger with the name ``"param.<name>"`` is returned (or
 # ``logger.name + ".<name>"``)
 logger = None
-def get_logger(name=None):
+def get_logger(name: str | None = None) -> Logger:
     import logging
     if logger is None:
         logging.addLevelName(VERBOSE, "VERBOSE")
@@ -121,9 +146,9 @@ object_count = 0
 warning_count = 0
 
 # Hook to apply to depends and bind arguments to turn them into valid parameters
-_reference_transforms = []
+_reference_transforms: list[_Transform] = []
 
-def register_reference_transform(transform):
+def register_reference_transform(transform: _Transform) -> None:
     """
     Append a transform to extract potential parameter dependencies
     from an object.
@@ -135,7 +160,7 @@ def register_reference_transform(transform):
     """
     return _reference_transforms.append(transform)
 
-def transform_reference(arg):
+def transform_reference(arg: object) -> object:
     """
     Apply transforms to turn objects which should be treated like
     a parameter reference into a valid reference that can be resolved
@@ -166,7 +191,7 @@ def eval_function_with_deps(function):
             kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items()}
     return function(*args, **kwargs)
 
-def resolve_value(value, recursive=True):
+def resolve_value(value, recursive: bool = True):
     """Resolve the current value of a dynamic reference."""
     if not recursive:
         pass
@@ -1056,7 +1081,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig
 
 
-class Parameter(_ParameterBase):
+class Parameter(_ParameterBase, Generic[_T]):
     """
     An attribute descriptor for declaring parameters.
 
@@ -1215,15 +1240,12 @@ class Parameter(_ParameterBase):
                             'constant', 'pickle_default_value',
                             'watchers', 'owner']
 
-    @typing.overload
+    allow_None: bool
+
+    @overload
     def __init__(
-        self,
-        default=None, *,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
+        self, default: _T = None, *, allow_None: bool = False, **kwargs: Unpack[PCommon]
+    ) -> None: ...
 
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, doc=Undefined, # pylint: disable-msg=R0913
@@ -1700,7 +1722,7 @@ class Parameter(_ParameterBase):
 
 
 # Define one particular type of Parameter that is used in this file
-class String(Parameter):
+class String(Parameter[_T]):
     r"""
     A String Parameter, with a default value and optional regular expression (regex) matching.
 
@@ -1718,32 +1740,41 @@ class String(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, default="", regex=None)
 
-    @typing.overload
-    def __init__(
-        self,
-        default="", *, regex=None,
-        doc=None, label=None, precedence=None, instantiate=False, constant=False,
-        readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
-    ):
-        ...
+    @overload
+    def __init__(  # [default="…", allow_None=False] → str (only)
+        self: String[str], default: str = "", *, allow_None: Literal[False] = False,
+        regex: str | re.Pattern[str] | None = None, **kwargs: Unpack[PCommon]
+    ) -> None: ...
+
+    @overload
+    def __init__(  # [default="…"], allow_None=True → str | None
+        self: String[str | None], default: str = "", *, allow_None: Literal[True],
+        regex: str | re.Pattern[str] | None = None, **kwargs: Unpack[PCommon]
+    ) -> None: ...
+
+    @overload
+    def __init__(  # default=None, [allow_None=<ignored>] → str | None
+        self: String[str | None], default: None, *, allow_None: bool = False,
+        regex: str | re.Pattern[str] | None = None, **kwargs: Unpack[PCommon]
+    ) -> None: ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
+    def __init__(self, default=Undefined, *, regex: str | re.Pattern[str] | None = None, **kwargs) -> None:
         super().__init__(default=default, **kwargs)
-        self.regex = regex
+        self.regex = re.compile(regex) if isinstance(regex, str) else regex
         self._validate(self.default)
 
-    def _validate_regex(self, val, regex):
+    def _validate_regex(self, val: str | None, regex: re.Pattern[str] | None) -> None:
         if (val is None and self.allow_None):
             return
-        if regex is not None and re.match(regex, val) is None:
+        assert val is not None
+        if regex is not None and regex.match(val) is None:
             raise ValueError(
                 f'{_validate_error_prefix(self)} value {val!r} does not '
                 f'match regex {regex!r}.'
             )
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, val: object, allow_None: bool) -> None:
         if allow_None and val is None:
             return
         if not isinstance(val, str):
@@ -1752,7 +1783,7 @@ class String(Parameter):
                 f'not value of {type(val)}.'
             )
 
-    def _validate(self, val):
+    def _validate(self, val: str | None) -> None:
         self._validate_value(val, self.allow_None)
         self._validate_regex(val, self.regex)
 
@@ -1903,7 +1934,7 @@ class Parameters:
     https://param.holoviz.org/user_guide/Parameters.html#parameterized-namespace
     """
 
-    def __init__(self_, cls: type['Parameterized'], self: Union['Parameterized', None]=None):
+    def __init__(self_, cls: type[Parameterized], self: Parameterized | None = None) -> None:
         """
         cls is the Parameterized class which is always set.
         self is the instance if set.
@@ -2213,7 +2244,7 @@ class Parameters:
         elif current_task is not running_task:
             self_.self._param__private.async_refs[pname].cancel()
         try:
-            if isinstance(awaitable, types.AsyncGeneratorType):
+            if isinstance(awaitable, AsyncGeneratorType):
                 async for new_obj in awaitable:
                     with _syncing(self_.self, (pname,)):
                         self_.update({pname: new_obj})

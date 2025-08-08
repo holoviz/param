@@ -2952,6 +2952,8 @@ class Bytes(Parameter[_T]):
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 
+    regex: re.Pattern[bytes] | None
+
     @overload
     def __init__(  # [default=b"…", allow_None=False] → bytes (only)
         self: Bytes[bytes], default: bytes = b"", *, allow_None: Literal[False] = False,

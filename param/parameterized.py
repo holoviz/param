@@ -1741,6 +1741,8 @@ class String(Parameter[_T]):
 
     _slot_defaults = dict(Parameter._slot_defaults, default="", regex=None)
 
+    regex: re.Pattern[str] | None
+
     @overload
     def __init__(  # [default="…", allow_None=False] → str (only)
         self: String[str], default: str = "", *, allow_None: Literal[False] = False,

@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     import numpy as np
 
     from collections.abc import Callable, Iterable
-    from typing import Any, Literal, TypeVar, TypedDict, Unpack
+    from typing import Any, Literal, Self, TypeVar, TypedDict, Unpack
     from logging import Logger
 
     _Transform = Callable[[object], object]
@@ -1241,6 +1241,7 @@ class Parameter(_ParameterBase, Generic[_T]):
                             'watchers', 'owner']
 
     allow_None: bool
+    default: _T
 
     @overload
     def __init__(
@@ -1515,7 +1516,7 @@ class Parameter(_ParameterBase, Generic[_T]):
         values, after the slot values have been set in the inheritance procedure.
         """
 
-    def __get__(self, obj, objtype): # pylint: disable-msg=W0613
+    def __get__(self, obj: Parameterized | None, objtype: type[Self]) -> _T: # pylint: disable-msg=W0613
         """
         Return the value for this Parameter.
 
@@ -1539,7 +1540,7 @@ class Parameter(_ParameterBase, Generic[_T]):
         return result
 
     @instance_descriptor
-    def __set__(self, obj, val):
+    def __set__(self, obj: Parameterized | None, val: _T) -> None:
         """
         Set the value for this Parameter.
 

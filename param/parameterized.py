@@ -4439,7 +4439,9 @@ class Parameters:
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
         return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
-
+@t.dataclass_transform(
+    field_specifiers=(Parameter,),
+)
 class ParameterizedMetaclass(type):
     """
     The metaclass of Parameterized (and all its descendents).
@@ -5438,10 +5440,14 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     name = String(default=None, constant=True, doc="""
         String identifier for this object.""")
 
-    _param__private: PrivateNS
-    _param__private_storage: _InstancePrivate | None
-    param: NS
-    _param__parameters: Parameters
+    _param__private: t.ClassVar[PrivateNS]
+    param: t.ClassVar[NS]
+    _param__parameters: t.ClassVar[Parameters]
+
+    if t.TYPE_CHECKING:
+        _param__private: _InstancePrivate
+        _param__parameters: Parameters
+        param: NS
 
     def __init__(self, **params):
         """
@@ -5483,6 +5489,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         refs, deps = self.param._setup_params(**params)
         object_count += 1
 
+        self._param__private_storage: _InstancePrivate | None = None
         self._param__private.initialized = True
 
         self.param._setup_refs(deps)
@@ -5804,13 +5811,13 @@ class ParameterizedFunction(Parameterized, Generic[P, R], metaclass=Parameterize
 class default_label_formatter(ParameterizedFunction):
     """Default formatter to turn parameter names into appropriate widget labels."""
 
-    capitalize = Parameter(default=True, doc="""
+    capitalize: Parameter[bool] = Parameter(default=True, doc="""
         Whether or not the label should be capitalized.""")
 
-    replace_underscores = Parameter(default=True, doc="""
+    replace_underscores: Parameter[bool] = Parameter(default=True, doc="""
         Whether or not underscores should be replaced with spaces.""")
 
-    overrides = Parameter(default={}, doc="""
+    overrides: Parameter[dict[str, str]] = Parameter(default={}, doc="""
         Allows custom labels to be specified for specific parameter
         names using a dictionary where key is the parameter name and the
         value is the desired label.""")

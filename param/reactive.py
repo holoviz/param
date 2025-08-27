@@ -110,13 +110,13 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 class Wrapper(Parameterized):
     """Helper class to allow updating literal values easily."""
 
-    object = Parameter(allow_refs=False)
+    object: Parameter[Any] = Parameter(allow_refs=False)
 
 
 class GenWrapper(Parameterized):
     """Helper class to allow streaming from generator functions."""
 
-    object = Parameter(allow_refs=True)
+    object: Parameter[Any] = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
@@ -132,11 +132,11 @@ class Trigger(Parameterized):
 class Resolver(Parameterized):
     """Helper class to allow (recursively) resolving references."""
 
-    object = Parameter(allow_refs=True)
+    object: Parameter[Any] = Parameter(allow_refs=True)
 
     recursive = Boolean(default=False)
 
-    value = Parameter()
+    value: Parameter[Any] = Parameter()
 
     def __init__(self, **params):
         self._watchers = []
@@ -174,7 +174,7 @@ class Resolver(Parameterized):
 
 class NestedResolver(Resolver):
 
-    object = Parameter(allow_refs=True, nested_refs=True)
+    object: Parameter[Any] = Parameter(allow_refs=True, nested_refs=True)
 
 
 class reactive_ops:

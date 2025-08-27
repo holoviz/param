@@ -17,7 +17,6 @@ Parameters and Parameterized classes.
 """
 from __future__ import annotations
 
-import collections
 import copy
 import datetime as dt
 import glob
@@ -31,13 +30,13 @@ import typing as t
 import warnings
 
 from collections import OrderedDict
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from typing import Literal
 
 from .parameterized import (
-    G, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
-    S, String, Undefined, get_logger, instance_descriptor, _dt_types,
+    T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
+    String, Undefined, UndefinedType, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
 from ._utils import (
@@ -58,8 +57,6 @@ from ._utils import (
 #-----------------------------------------------------------------------------
 # Utilities
 #-----------------------------------------------------------------------------
-
-T = t.TypeVar('T')
 
 if t.TYPE_CHECKING:
     from typing_extensions import Literal
@@ -94,7 +91,7 @@ def param_union(*parameterizeds, warn=True):
     return d
 
 
-def guess_param_types(**kwargs):
+def guess_param_types(**kwargs) -> dict[str, Parameter]:
     """
     Given a set of keyword literals, promote to the appropriate
     parameter type based on some simple heuristics.
@@ -146,17 +143,23 @@ def guess_param_types(**kwargs):
     return params
 
 
-def parameterized_class(name, params, bases=Parameterized):
+def parameterized_class(
+    name: str,
+    params: dict[str, Parameter],
+    bases: type[Parameterized] | tuple[type[Parameterized], ...] = Parameterized
+) -> type[Parameterized]:
     """
     Dynamically create a parameterized class with the given name and the
     supplied parameters, inheriting from the specified base(s).
     """
-    if not isinstance(bases, (list, tuple)):
-        bases=[bases]
-    return type(name, tuple(bases), params)
+    if isinstance(bases, type):
+        basecls = (bases,)
+    else:
+        basecls = tuple(bases)
+    return type(name, basecls, params)
 
 
-def guess_bounds(params, **overrides):
+def guess_bounds(params: dict[str, Parameter], **overrides: tuple[t.Any, t.Any]):
     """
     Given a dictionary of Parameter instances, return a corresponding
     set of copies with the bounds appropriately set.
@@ -298,11 +301,10 @@ class Time(Parameterized):
 
     forever = Infinity()
 
-    label= String(default='Time', doc="""
+    label = String(default='Time', doc="""
          The label given to the Time object. Can be used to convey
          more specific notions of time as appropriate. For instance,
          the label could be 'Simulation Time' or 'Duration'.""")
-
 
     time_type = Parameter(default=int, constant=True, doc="""
         Callable that Time will use to convert user-specified time
@@ -407,6 +409,8 @@ class Time(Parameterized):
             raise Exception("Please specify a value for the new time_type.")
         if time_type:
             type_param = self.param.objects('existing').get('time_type')
+            if type_param is None:
+                raise ValueError("time_type parameter not found")
             type_param.constant = False
             self.time_type = time_type
             type_param.constant = True
@@ -453,7 +457,7 @@ class Time(Parameterized):
 #-----------------------------------------------------------------------------
 
 
-class Dynamic(Parameter[G, S]):
+class Dynamic(Parameter[T]):
     """
     Parameter whose value can be generated dynamically by a callable
     object.
@@ -483,7 +487,7 @@ class Dynamic(Parameter[G, S]):
 
     @t.overload
     def __init__(
-        self: Dynamic[t.Any, t.Any],
+        self: Dynamic[t.Any],
         default: t.Any = None,
         doc: str | None = None,
         label: str | None = None,
@@ -500,12 +504,18 @@ class Dynamic(Parameter[G, S]):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default: t.Any = Undefined, **params: t.Unpack[ParameterKwargs]):
+    def __init__(
+        self,
+        default: t.Any = Undefined,
+        *,
+        allow_None: bool | UndefinedType = Undefined,
+        **params: t.Unpack[ParameterKwargs]
+    ) -> None:
         """
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
         """
-        super().__init__(default=default, **params)
+        super().__init__(default=default, allow_None=allow_None, **params)
 
         if callable(self.default):
             self._set_instantiate(True)
@@ -527,13 +537,13 @@ class Dynamic(Parameter[G, S]):
         gen._saved_Dynamic_time = []
 
 
-    def __get__(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized]) -> G:
+    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
         """
         Call the superclass's __get__; if the result is not dynamic
         return that result, otherwise ask that result to produce a
         value and return it.
         """
-        gen = super().__get__(obj,objtype)
+        gen = super().__get__(obj, objtype)
 
         if not hasattr(gen,'_Dynamic_last'):
             return gen
@@ -541,7 +551,7 @@ class Dynamic(Parameter[G, S]):
             return self._produce_value(gen)
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized | type[Parameterized], val: S):
+    def __set__(self, obj: Parameterized | type[Parameterized], val: T):
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -639,7 +649,7 @@ class NumberKwargs(ParameterKwargs):
     allow_None: bool
 
 
-class Number(Dynamic[G, S]):
+class Number(Dynamic[T]):
     """
     A numeric Dynamic Parameter, with a default value and optional bounds.
 
@@ -695,7 +705,7 @@ class Number(Dynamic[G, S]):
 
         @t.overload
         def __init__(
-            self: Number[float, float],
+            self: Number[float],
             default: float = 0.0,
             *,
             allow_None: Literal[False] = False,
@@ -705,7 +715,7 @@ class Number(Dynamic[G, S]):
 
         @t.overload
         def __init__(
-            self: Number[float | None, float | None],
+            self: Number[float | None],
             default: float | None = 0.0,
             *,
             allow_None: Literal[True] = True,
@@ -715,7 +725,7 @@ class Number(Dynamic[G, S]):
 
         @t.overload
         def __init__(
-            self: Number[float | None, float | None],
+            self: Number[float | None],
             default: float | None = None,
             *,
             allow_None: bool = False,
@@ -725,7 +735,7 @@ class Number(Dynamic[G, S]):
 
     @t.overload
     def __init__(
-        self: Number[float | None, float | None],
+        self: Number[float | None],
         default: float | None = None,
         *,
         bounds: tuple[float | None, float | None] | None = None,
@@ -772,7 +782,7 @@ class Number(Dynamic[G, S]):
         self.step = step
         self._validate(self.default)
 
-    def __get__(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized]) -> G:
+    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
         """Retrieve the value of the attribute, checking bounds if dynamically generated.
 
         Arguments
@@ -922,7 +932,7 @@ class Number(Dynamic[G, S]):
         super().__setstate__(state)
 
 
-class Integer(Number[G, S]):
+class Integer(Number[T]):
     """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = dict(Number._slot_defaults, default=0)
@@ -980,7 +990,7 @@ class Integer(Number[G, S]):
             )
 
 
-class Magnitude(Number):
+class Magnitude(Number[T]):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
     _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0, 1.0))
@@ -989,7 +999,7 @@ class Magnitude(Number):
 
         @t.overload
         def __init__(
-            self: Magnitude[float, float],
+            self: Magnitude[float],
             default: float = 1.0,
             *,
             allow_None: Literal[False] = False,
@@ -999,7 +1009,7 @@ class Magnitude(Number):
 
         @t.overload
         def __init__(
-            self: Magnitude[float | None, float | None],
+            self: Magnitude[float | None],
             default: float | None = 1.0,
             *,
             allow_None: Literal[True] = True,
@@ -1009,7 +1019,7 @@ class Magnitude(Number):
 
         @t.overload
         def __init__(
-            self: Magnitude[float | None, float | None],
+            self: Magnitude[float | None],
             default: float | None = None,
             *,
             allow_None: bool = False,
@@ -1050,7 +1060,7 @@ class Magnitude(Number):
         )
 
 
-class Date(Number[G, S]):
+class Date(Number[T]):
     """Date parameter of datetime or date type."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
@@ -1059,7 +1069,7 @@ class Date(Number[G, S]):
 
         @t.overload
         def __init__(
-            self: Date[dt.datetime | dt.date, dt.datetime | dt.date],
+            self: Date[dt.datetime | dt.date],
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: Literal[False] = False,
@@ -1069,7 +1079,7 @@ class Date(Number[G, S]):
 
         @t.overload
         def __init__(
-            self: Date[dt.datetime | dt.date | None, dt.datetime | dt.date | None],
+            self: Date[dt.datetime | dt.date | None],
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: Literal[True] = True,
@@ -1146,7 +1156,7 @@ class Date(Number[G, S]):
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
-class CalendarDate(Number[G, S]):
+class CalendarDate(Number[T]):
     """Parameter specifically allowing dates (not datetimes)."""
 
     _slot_defaults = dict(Number._slot_defaults, default=None)
@@ -1237,7 +1247,7 @@ class CalendarDate(Number[G, S]):
 # Boolean
 #-----------------------------------------------------------------------------
 
-class Boolean(Parameter[G, S]):
+class Boolean(Parameter[T]):
     """Binary or tristate Boolean Parameter."""
 
     _slot_defaults = dict(Parameter._slot_defaults, default=False)
@@ -1246,7 +1256,7 @@ class Boolean(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: Boolean[bool, bool],
+            self: Boolean[bool],
             default: bool = False,
             *,
             allow_None: Literal[False] = False,
@@ -1256,7 +1266,7 @@ class Boolean(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: Boolean[bool | None, bool | None],
+            self: Boolean[bool | None],
             default: bool | None = False,
             *,
             allow_None: Literal[True] = True,
@@ -1266,7 +1276,7 @@ class Boolean(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: Boolean[bool | None, bool | None],
+            self: Boolean[bool | None],
             default: bool | None = None,
             *,
             allow_None: bool = False,
@@ -1409,7 +1419,7 @@ class __compute_length_of_default:
 _compute_length_of_default = __compute_length_of_default()
 
 
-class Tuple(Parameter[G, S]):
+class Tuple(Parameter[T]):
     """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
 
     __slots__ = ['length']
@@ -1420,7 +1430,7 @@ class Tuple(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: Tuple[tuple[t.Any, ...], tuple[t.Any, ...]],
+            self: Tuple[tuple[t.Any, ...]],
             default: tuple[t.Any, ...] = (0, 0),
             *,
             length: int | None = None,
@@ -1430,7 +1440,7 @@ class Tuple(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: Tuple[tuple[t.Any, ...] | None, tuple[t.Any, ...] | None],
+            self: Tuple[tuple[t.Any, ...] | None],
             default: tuple[t.Any, ...] | None = (0, 0),
             *,
             length: int | None = None,
@@ -1441,7 +1451,7 @@ class Tuple(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: Tuple[tuple[t.Any, ...] | None, tuple[t.Any, ...] | None],
+            self: Tuple[tuple[t.Any, ...] | None],
             default: tuple[t.Any, ...] | None = None,
             *,
             length: int | None = None,
@@ -1452,7 +1462,7 @@ class Tuple(Parameter[G, S]):
 
     @t.overload
     def __init__(
-        self: Tuple[tuple[t.Any, ...], tuple[t.Any, ...]],
+        self: Tuple[tuple[t.Any, ...]],
         default: tuple[t.Any, ...] = (0, 0),
         *,
         length: int | None = None,
@@ -1471,20 +1481,20 @@ class Tuple(Parameter[G, S]):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default: t.Any = Undefined, *, length: int | None = Undefined, **params: t.Unpack[ParameterKwargs]):
+    def __init__(self, default: t.Any = Undefined, *, length = Undefined, allow_None = Undefined, **params: t.Unpack[ParameterKwargs]):
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
         value, if any, and must be supplied explicitly otherwise.  The
         length is not allowed to change after instantiation.
         """
-        super().__init__(default=default, **params)
+        super().__init__(default=default, allow_None=allow_None, **params)
         if length is Undefined and self.default is None:
             raise ValueError(
                 f"{_validate_error_prefix(self, 'length')} must be "
                 "specified if no default is supplied."
             )
-        elif default is not Undefined and default:
+        elif not isinstance(default, UndefinedType) and default:
             self.length = len(default)
         else:
             self.length = length
@@ -1527,13 +1537,13 @@ class Tuple(Parameter[G, S]):
         return tuple(value) # As JSON has no tuple representation
 
 
-class NumericTuple(Tuple[G, S]):
+class NumericTuple(Tuple[T]):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: NumericTuple[tuple[float, ...], tuple[float, ...]],
+            self: NumericTuple[tuple[float, ...]],
             default: tuple[float, ...] = (0.0, 0.0),
             *,
             length: int | None = None,
@@ -1543,7 +1553,7 @@ class NumericTuple(Tuple[G, S]):
 
         @t.overload
         def __init__(
-            self: NumericTuple[tuple[float, ...] | None, tuple[float, ...] | None],
+            self: NumericTuple[tuple[float, ...] | None],
             default: tuple[float, ...] | None = (0.0, 0.0),
             *,
             length: int | None = None,
@@ -1554,7 +1564,7 @@ class NumericTuple(Tuple[G, S]):
 
         @t.overload
         def __init__(
-            self: NumericTuple[tuple[float, ...] | None, tuple[float, ...] | None],
+            self: NumericTuple[tuple[float, ...] | None],
             default: tuple[float, ...] | None = None,
             *,
             length: int | None = None,
@@ -1605,6 +1615,11 @@ class Range(NumericTuple):
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
 
+    bounds: tuple[t.Any, t.Any] | None
+    inclusive_bounds: tuple[bool, bool]
+    softbounds: tuple[t.Any, t.Any] | None
+    step: t.Any | None
+
     @t.overload
     def __init__(
         self,
@@ -1622,11 +1637,11 @@ class Range(NumericTuple):
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
-        self.bounds = bounds
-        self.inclusive_bounds = inclusive_bounds
-        self.softbounds = softbounds
-        self.step = step
-        super().__init__(default=default,length=2,**params)
+        self.bounds = bounds  # type: ignore[attr-defined]
+        self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined]
+        self.softbounds = softbounds  # type: ignore[attr-defined]
+        self.step = step  # type: ignore[attr-defined]
+        super().__init__(default=default, length=2, **params)
 
     def _validate(self, val):
         super()._validate(val)
@@ -1895,6 +1910,9 @@ class Composite(Parameter):
 
     __slots__ = ['attribs', 'objtype']
 
+    attribs: list[str]
+    objtype: type[Parameterized]
+
     @t.overload
     def __init__(
         self,
@@ -1910,9 +1928,9 @@ class Composite(Parameter):
         if attribs is Undefined:
             attribs = []
         super().__init__(default=Undefined, **kw)
-        self.attribs = attribs
+        self.attribs = attribs  # type: ignore[attr-defined]
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
         """Return the values of all the attribs, as a list."""
         if obj is None:
             return [getattr(objtype, a) for a in self.attribs]
@@ -1942,7 +1960,7 @@ class Composite(Parameter):
 # Selector
 #-----------------------------------------------------------------------------
 
-class SelectorBase(Parameter[G, S]):
+class SelectorBase(Parameter[T]):
     """
     Parameter whose value must be chosen from a list of possibilities.
 
@@ -1963,7 +1981,7 @@ class ListProxy(list):
     items).
     """
 
-    def __init__(self, iterable, parameter=None):
+    def __init__(self, iterable, parameter: Selector):
         super().__init__(iterable)
         self._parameter = parameter
 
@@ -2106,7 +2124,7 @@ class ListProxy(list):
         objects = objects.items() if isinstance(objects, dict) else objects
         with self._trigger():
             for i, o in enumerate(objects):
-                if not isinstance(o, collections.abc.Sequence):
+                if not isinstance(o, Sequence):
                     raise TypeError(
                         f'cannot convert dictionary update sequence element #{i} to a sequence'
                     )
@@ -2208,6 +2226,11 @@ class Selector(SelectorBase, _SignatureSelector):
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
 
+    _objects: list[t.Any]
+    compute_default_fn: t.Callable[[], t.Any] | None
+    check_on_set: bool
+    names: Mapping[str, t.Any]
+
     @t.overload
     def __init__(
         self,
@@ -2226,7 +2249,7 @@ class Selector(SelectorBase, _SignatureSelector):
                  allow_None=Undefined, empty_default=False, **params):
 
         autodefault = Undefined
-        if objects is not Undefined and objects:
+        if not isinstance(objects, UndefinedType) and objects:
             if isinstance(objects, dict):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, list):
@@ -2235,13 +2258,12 @@ class Selector(SelectorBase, _SignatureSelector):
         default = autodefault if (not empty_default and default is Undefined) else default
 
         self.objects = objects
-        self.compute_default_fn = compute_default_fn
-        self.check_on_set = check_on_set
+        self.compute_default_fn = compute_default_fn  # type: ignore[attr-defined]
+        self.check_on_set = check_on_set  # type: ignore[attr-defined]
 
-        super().__init__(
-            default=default, instantiate=instantiate, **params)
+        super().__init__(default=default, instantiate=instantiate, **params)
         # Required as Parameter sets allow_None=True if default is None
-        if allow_None is Undefined:
+        if isinstance(allow_None, UndefinedType):
             self.allow_None = self._slot_defaults['allow_None']
         else:
             self.allow_None = allow_None
@@ -2259,7 +2281,7 @@ class Selector(SelectorBase, _SignatureSelector):
 
     @objects.setter
     def objects(self, objects):
-        if isinstance(objects, collections.abc.Mapping):
+        if isinstance(objects, Mapping):
             self.names = objects
             self._objects = list(objects.values())
         else:
@@ -2502,7 +2524,7 @@ class MultiFileSelector(ListSelector):
         return _abbreviate_paths(self.path,super().get_range())
 
 
-class ClassSelector(SelectorBase[G, S]):
+class ClassSelector(SelectorBase[T]):
     """
     Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.
     By default, requires an instance, but if is_instance=False, accepts a class instead.
@@ -2514,12 +2536,15 @@ class ClassSelector(SelectorBase[G, S]):
 
     _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
+    instantiate: bool
+    is_instance: bool
+
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: ClassSelector[T, T],
+            self: ClassSelector[T],
             *,
-            class_: type[T],
+            class_: type[T] | tuple[type[T], ...],
             default: T | None = None,
             instantiate: bool = True,
             is_instance: bool = True,
@@ -2530,9 +2555,9 @@ class ClassSelector(SelectorBase[G, S]):
 
         @t.overload
         def __init__(
-            self: ClassSelector[T, T],
+            self: ClassSelector[T],
             *,
-            class_: type[T],
+            class_: type[T] | tuple[type[T], ...],
             default: T | None = None,
             instantiate: bool = True,
             is_instance: bool = True,
@@ -2561,15 +2586,15 @@ class ClassSelector(SelectorBase[G, S]):
     @_deprecate_positional_args
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
-        self.is_instance = is_instance
-        super().__init__(default=default,instantiate=instantiate,**params)
+        self.is_instance = is_instance  # type: ignore
+        super().__init__(default=default, instantiate=instantiate, **params)
         self._validate(self.default)
 
     def _validate(self, val):
         super()._validate(val)
         self._validate_class_(val, self.class_, self.is_instance)
 
-    def _validate_class_(self, val, class_, is_instance):
+    def _validate_class_(self, val: t.Any, class_: type[T] | tuple[type[T], ...], is_instance: bool):
         if (val is None and self.allow_None):
             return
         if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
@@ -2605,13 +2630,13 @@ class ClassSelector(SelectorBase[G, S]):
         return d
 
 
-class Dict(ClassSelector[G, S]):
+class Dict(ClassSelector[T]):
     """Parameter whose value is a dictionary."""
 
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: Dict[dict[K, V], dict[K, V]],
+            self: Dict[dict[K, V]],
             *,
             default: dict[K, V] | Literal[Undefined] = Undefined,
             allow_None: Literal[False] = False,
@@ -2621,7 +2646,7 @@ class Dict(ClassSelector[G, S]):
 
         @t.overload
         def __init__(
-            self: Dict[dict[K, V] | None, dict[K, V] | None],
+            self: Dict[dict[K, V] | None],
             *,
             default: dict[K, V] | None = None,
             allow_None: Literal[True] = True,
@@ -2875,7 +2900,7 @@ class Series(ClassSelector):
 # List
 #-----------------------------------------------------------------------------
 
-class List(Parameter[G, S]):
+class List(Parameter[T]):
     """
     Parameter whose value is a list of objects, usually of a specified type.
 
@@ -2899,10 +2924,10 @@ class List(Parameter[G, S]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: List[list[T], list[T]],
+            self: List[list[T]],
             default: list[T] = [],
             *,
-            item_type: type[T],
+            item_type: type[T] | tuple[type[T], ...],
             allow_None: Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
@@ -2910,7 +2935,7 @@ class List(Parameter[G, S]):
 
         @t.overload
         def __init__(
-            self: List[list[T] | None, list[T] | None],
+            self: List[list[T] | None],
             default: list[T] | None = None,
             *,
             allow_None: Literal[True] = True,
@@ -2922,8 +2947,8 @@ class List(Parameter[G, S]):
     def __init__(
         self,
         default=[],
-        class_: type[T] = None,
-        item_type: type[T] = None,
+        class_: type[T] | tuple[type[T], ...] | None = None,
+        item_type: type[T] | tuple[type[T], ...] | None = None,
         instantiate: bool = True,
         bounds: tuple[int, int] = (0, None),
         is_instance: bool = True,
@@ -3188,7 +3213,7 @@ class Path(Parameter):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: Path[pathlib.PurePath | str, pathlib.PurePath | str],
+            self: Path[pathlib.PurePath | str],
             default: pathlib.PurePath | None = None,
             *,
             search_paths: list[str] | None = None,
@@ -3200,7 +3225,7 @@ class Path(Parameter):
 
         @t.overload
         def __init__(
-            self: Path[pathlib.PurePath | str | None, pathlib.PurePath | str | None],
+            self: Path[pathlib.PurePath | str | None],
             default: pathlib.PurePath | str | None = None,
             *,
             search_paths: list[str] | None = None,
@@ -3258,9 +3283,9 @@ class Path(Parameter):
                 if self.check_exists:
                     raise OSError(e.args[0]) from None
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
         """Return an absolute, normalized path (see resolve_path)."""
-        raw_path = super().__get__(obj,objtype)
+        raw_path = super().__get__(obj, objtype)
         if raw_path is None:
             path = None
         else:

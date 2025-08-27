@@ -49,7 +49,7 @@ from .parameterized import (
     ParamOverrides, Undefined, get_logger
 )
 from .parameterized import (batch_watch, output, script_repr,
-                            discard_events, edit_constant)
+                            discard_events, edit_constant, serializer)
 from .parameterized import shared_parameters
 from .parameterized import logging_level
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
@@ -152,8 +152,7 @@ except (ImportError, LookupError, FileNotFoundError):
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
-main=Parameterized(name="main")
-
+main = Parameterized(name="main")
 
 # A global random seed (integer or rational) available for controlling
 # the behaviour of Parameterized objects with random state.

@@ -91,7 +91,7 @@ def _int_types():
 
 logger = None
 
-def get_logger(name: Union[str,None]=None)->logging.Logger:
+def get_logger(name: Union[str,None]=None)->"logging.Logger":
     """
     Retrieve a logger instance for use with the `param` library.
 

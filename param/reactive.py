@@ -394,7 +394,7 @@ class reactive_ops:
     def set(self, value):
         """
         Sets the input of the pipeline to a new value. Equivalent
-        to ``.rx.value = value``.
+        to `.rx.value = value`.
         """
         self.value = value
 

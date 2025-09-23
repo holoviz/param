@@ -77,14 +77,14 @@ class Skip(Exception):
     ...    run = param.Event()
     >>> w = W(a=0, b=2)
 
-    Lets define a function:
+    Let's define a function:
 
     >>> def add(a, b, run):
     ...    if not run:
     ...        raise param.Skip
     ...    return a + b
 
-    Lets use the function as a reference:
+    Let's use the function as a reference:
 
     >>> v = W(b=param.bind(add, w.param.a, w.param.b, w.param.run))
 

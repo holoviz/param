@@ -28,7 +28,7 @@ from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 # When python 3.9 support is dropped replace Union with |
-from typing import Any, Type, Union, Literal, TypeVar, Optional, TYPE_CHECKING
+from typing import Any, Union, Literal, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import logging
@@ -91,7 +91,7 @@ def _int_types():
 
 logger = None
 
-def get_logger(name: Union[str,None]=None)->"logging.Logger":
+def get_logger(name: Optional[str] = None)->"logging.Logger":
     """
     Retrieve a logger instance for use with the `param` library.
 
@@ -304,11 +304,6 @@ def logging_level(level: str) -> Generator[None, None, None]:
     None
         A context where the logging level is temporarily modified.
 
-    Raises
-    ------
-    Exception
-        If the specified `level` is not one of the supported logging levels.
-
     Examples
     --------
     Temporarily set the logging level to `DEBUG`:
@@ -408,7 +403,8 @@ def _syncing(parameterized, parameters):
 @contextmanager
 def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]:
     """
-    Context manager to temporarily set parameters on a Parameterized object to `constant=False`.
+    Context manager to temporarily set parameters on a Parameterized object
+    to `constant=False` to allow editing them.
 
     The `edit_constant` context manager allows temporarily disabling the `constant`
     property of all parameters on the given `Parameterized` object, enabling them
@@ -459,9 +455,10 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
 
 
 @contextmanager
-def discard_events(parameterized: 'Parameterized')->Generator[None, None, None]:
+def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None]:
     """
-    Context manager to temporarily suppress events triggered on a Parameterized object.
+    Context manager that discards any events within its scope triggered on the
+    supplied Parameterized object.
 
     The `discard_events` context manager ensures that any events triggered
     on the supplied `Parameterized` object during its scope are discarded.
@@ -1258,61 +1255,15 @@ class Parameter(_ParameterBase):
     """
     Base Parameter type to hold any type of Python object.
 
-    Parameters are a specialized type of class attribute. Setting a
-    Parameterized class attribute to a `Parameter` instance enables enhanced
-    functionality, including type and range validation at assignment, support for constant and
-    read-only parameters, documentation strings and dynamic parameter values.
+    Parameters are a special kind of class attribute implemented as descriptor.
+    Setting a Parameterized class attribute to a `Parameter` instance enables
+    enhanced functionality, including type and range validation at assignment,
+    support for constant and read-only parameters, documentation strings and
+    dynamic parameter values.
 
     Parameters can only be used as class attributes of `Parameterized` classes.
     Using them in standalone contexts or with non-`Parameterized` classes will
     not provide the described behavior.
-
-    Parameters
-    ----------
-    default : Any, optional
-        The default value for the parameter, which can be overridden by
-        instances. Default is `Undefined`.
-    doc : str | None, optional
-        A documentation string describing the purpose of the parameter.
-        Default is `Undefined`.
-    label : str | None, optional
-        An optional text label used when displaying this parameter, such as in
-        a listing. If not specified, the parameter's attribute name in the
-        owning `Parameterized` object is used. Default is `Undefined`.
-    precedence : float | None, optional
-        A numeric value that determines the order of the parameter in a
-        listing or user interface. A negative value hides the parameter.
-        Default is `Undefined`.
-    instantiate : bool, optional
-        Whether to create a new copy of the parameter's value for each instance
-        of the `Parameterized` object (`True`), or share the same value across
-        instances (`False`). Default is `Undefined`.
-    constant : bool, optional
-        If `True`, the parameter value can only be set at the class level or
-        during the construction of a `Parameterized` instance. Default is
-        `Undefined`.
-    readonly : bool, optional
-        If `True`, the parameter value cannot be modified at the class or
-        instance level. Default is `Undefined`.
-    pickle_default_value : bool, optional
-        Whether the default value should be pickled. Set to `False` in rare
-        cases, such as system-specific file paths. Default is `Undefined`.
-    allow_None : bool, optional
-        If `True`, allows `None` as a valid parameter value. If the default
-        value is `None`, this is automatically set to `True`. Default is
-        `Undefined`.
-    per_instance : bool, optional
-        Whether to create a separate `Parameter` object for each instance of
-        the `Parameterized` class (`True`), or share the same `Parameter`
-        object across all instances (`False`). Default is `Undefined`.
-    allow_refs : bool, optional
-        If `True`, allows linking parameter references to this parameter,
-        meaning the value will reflect the current value of the reference.
-        Default is `Undefined`.
-    nested_refs : bool, optional
-        If `True` and `allow_refs=True`, inspects nested objects (e.g.,
-        dictionaries, lists) for references and resolves them automatically.
-        Default is `Undefined`.
 
     Notes
     -----
@@ -1462,7 +1413,7 @@ class Parameter(_ParameterBase):
     def __init__(
         self,
         default=None, *,
-        doc=None, label=None, precedence =None, instantiate=False, constant=False,
+        doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
@@ -1473,17 +1424,17 @@ class Parameter(_ParameterBase):
         self,
         default=Undefined,
         *,
-        doc = Undefined,
-        label = Undefined,
-        precedence = Undefined,
-        instantiate = Undefined,
-        constant = Undefined,
-        readonly = Undefined,
-        pickle_default_value = Undefined,
-        allow_None = Undefined,
-        per_instance = Undefined,
-        allow_refs = Undefined,
-        nested_refs = Undefined
+        doc=Undefined,
+        label=Undefined,
+        precedence=Undefined,
+        instantiate=Undefined,
+        constant=Undefined,
+        readonly=Undefined,
+        pickle_default_value=Undefined,
+        allow_None=Undefined,
+        per_instance=Undefined,
+        allow_refs=Undefined,
+        nested_refs=Undefined,
     ):
         """
         Initialize a new `Parameter` object with the specified attributes.
@@ -1491,57 +1442,69 @@ class Parameter(_ParameterBase):
         Parameters
         ----------
         default : Any, optional
-            The default value for the parameter, which can be overridden by
-            instances. Default is `Undefined`.
+            The owning class's value for the attribute represented by this
+            parameter, which can be overridden in an instance.
+            Default is `None`.
         doc : str | None, optional
             A documentation string describing the purpose of the parameter.
-            Default is `Undefined`.
+            Default is `None`.
         label : str | None, optional
-            An optional text label used when displaying this parameter, such as in
-            a listing. If not specified, the parameter's attribute name in the
-            owning `Parameterized` object is used. Default is `Undefined`.
+            An optional text label used when displaying this parameter, such as
+            in a listing. If not specified, the parameter's attribute name in
+            the owning `Parameterized` object is used.
         precedence : float | None, optional
-            A numeric value that determines the order of the parameter in a
-            listing or user interface. A negative value hides the parameter.
-            Default is `Undefined`.
+            A numeric value, usually in the range 0.0 to 1.0, that determines
+            the order of the parameter in a listing or user interface. A negative
+            precedence indicates a parameter that should be hidden in such
+            listings. Default is `None`.
         instantiate : bool, optional
-            Whether to create a new copy of the parameter's value for each instance
-            of the `Parameterized` object (`True`), or share the same value across
-            instances (`False`). Default is `Undefined`.
+            Whether the default value of this parameter will be deepcopied when
+            a `Parameterized` object is instantiated (`True`), or if the single
+            default value will be shared by all Parameterized instances
+            (`False`, the default).
+            For an immutable `Parameter` value, it is best to leave `instantiate`
+            at the default of `False`, so that a user can choose to change the
+            value at the `Parameterized` instance level (affecting only that
+            instance) or at the `Parameterized` class or superclass level
+            (affecting all existing and future instances of that class or
+            superclass). For a mutable `Parameter` value, the default of `False`
+            is also appropriate if you want all instances to share the same
+            value state, e.g. if they are each simply referring to a single
+            global object like a singleton. If instead each `Parameterized`
+            should have its own independently mutable value, instantiate should
+            be set to `True`, but note that there is then no simple way to
+            change the value of this parameter at the class or superclass
+            level, because each instance, once created, will then have an
+            independently deepcopied value. Default is `False`.
         constant : bool, optional
-            If `True`, the parameter value can only be set at the class level or
-            during the construction of a `Parameterized` instance. Default is
-            `Undefined`.
+            If `True`, the parameter value can only be set at the class level
+            or in a `Parameterized` constructor call. The value is otherwise
+            constant on the `Parameterized` instance, once it has been
+            constructed. Default is `False`.
         readonly : bool, optional
             If `True`, the parameter value cannot be modified at the class or
-            instance level. Default is `Undefined`.
+            instance level. Default is `False`.
         pickle_default_value : bool, optional
             Whether the default value should be pickled. Set to `False` in rare
-            cases, such as system-specific file paths. Default is `Undefined`.
+            cases, such as system-specific file paths.
         allow_None : bool, optional
             If `True`, allows `None` as a valid parameter value. If the default
             value is `None`, this is automatically set to `True`. Default is
-            `Undefined`.
+            `False`.
         per_instance : bool, optional
             Whether to create a separate `Parameter` object for each instance of
             the `Parameterized` class (`True`), or share the same `Parameter`
-            object across all instances (`False`). Default is `Undefined`.
+            object across all instances (`False`). See also `instantiate`,
+            which is conceptually similar but affects the parameter value
+            rather than the parameter object. Default is `True`.
         allow_refs : bool, optional
             If `True`, allows linking parameter references to this parameter,
-            meaning the value will reflect the current value of the reference.
-            Default is `Undefined`.
+            meaning the value will automatically reflect the current value of
+            the reference that is passed in. Default is `False`.
         nested_refs : bool, optional
             If `True` and `allow_refs=True`, inspects nested objects (e.g.,
-            dictionaries, lists) for references and resolves them automatically.
-            Default is `Undefined`.
-
-        Notes
-        -----
-        - `default`, `doc`, and `precedence` all default to `Undefined`, allowing
-        their values to be inherited from the owning class's hierarchy via
-        `ParameterizedMetaclass`.
-        - Use `instantiate=True` for mutable parameter values that need to be
-        unique per instance. Otherwise, leave it as `False`.
+            dictionaries, lists, slices, tuples) for references and resolves
+            them automatically. Default is `False`.
 
         Examples
         --------
@@ -1592,7 +1555,12 @@ class Parameter(_ParameterBase):
         """Given a serializable Python value, return a value that the parameter can be set to."""
         return value
 
-    def schema(self, safe: bool=False, subset: Union[Iterable[str], None]=None, mode: str='json') -> dict[str, Any]:
+    def schema(
+            self,
+            safe: bool = False,
+            subset: Optional[Iterable[str]] = None,
+            mode: str = 'json',
+        ) -> dict[str, Any]:
         """
         Generate a schema for the parameters of the `Parameterized` object.
 
@@ -1617,12 +1585,6 @@ class Parameter(_ParameterBase):
         dict[str, Any]
             A schema dictionary representing the parameters of the object and their
             associated metadata.
-
-        Raises
-        ------
-        KeyError
-            If the specified `mode` is not found in the available serialization
-            formats.
 
         Examples
         --------
@@ -1689,7 +1651,7 @@ class Parameter(_ParameterBase):
         return reactive_ops(self)
 
     @property
-    def label(self)->str:
+    def label(self) -> str:
         """
         Get the label for this parameter.
 
@@ -2050,25 +2012,25 @@ class String(Parameter):
 
     >>> import param
     >>> class MyClass(param.Parameterized):
-    ...     name = param.String(default="John Doe", regex=r"^[A-Za-z ]+$", doc="Name of a person.")
+    ...     user_name = param.String(default="John Doe", regex=r"^[A-Za-z ]+$", doc="Name of a person.")
     >>> instance = MyClass()
 
     Access the default value:
 
-    >>> instance.name
+    >>> instance.user_name
     'John Doe'
 
     Set a valid value:
 
-    >>> instance.name = "Jane Smith"
-    >>> instance.name
+    >>> instance.user_name = "Jane Smith"
+    >>> instance.user_name
     'Jane Smith'
 
     Attempt to set an invalid value (non-alphabetic characters):
 
-    >>> instance.name = "Jane123"
+    >>> instance.user_name = "Jane123"
     ...
-    ValueError: String parameter 'MyClass.name' value 'Jane123' does not match regex '^[A-Za-z ]+$'.
+    ValueError: String parameter 'MyClass.user_name' value 'Jane123' does not match regex '^[A-Za-z ]+$'.
     """
 
     __slots__ = ['regex']
@@ -2347,7 +2309,7 @@ class Parameters:
         -------
         Parameter
             The Parameter associated with the given key. If accessed on an instance,
-            the method returns the instantiated parameter.
+            the method returns the instantiated (copied) parameter.
         """
         inst = self_.self
         if inst is None:
@@ -3041,9 +3003,12 @@ class Parameters:
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
             raise RuntimeError(
-                'Cannot access instance parameters before the Parameterized instance '
-                'is fully initialized. Ensure `super().__init__(**params)` is called, or '
-                'use `.param.objects(instance=False)` for class parameters.'
+                'Looking up instance Parameter objects (`.param.objects()`) until '
+                'the Parameterized instance has been fully initialized is not allowed. '
+                'Ensure you have called `super().__init__(**params)` in your Parameterized '
+                'constructor before trying to access instance Parameter objects, or '
+                'looking up the class Parameter objects with `.param.objects(instance=False)` '
+                'may be enough for your use case.',
             )
 
         pdict = self_._cls_parameters
@@ -5545,8 +5510,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     """
 
     name = String(default=None, constant=True, doc="""
-        String identifier for this object.
-        Default is the object's class name plus a unique integer""")
+        String identifier for this object. Default is the object's class name
+        plus a unique integer""")
 
     def __init__(self, **params):
         """
@@ -5920,18 +5885,13 @@ class ParamOverrides(dict):
 def _new_parameterized(cls):
     return Parameterized.__new__(cls)
 
-PF = TypeVar("PF", bound="ParameterizedFunction")
 
 class ParameterizedFunction(Parameterized):
     """
-    A callable object with parameterized arguments.
+    Acts like a Python function, but with arguments that are Parameters.
 
-    The `ParameterizedFunction` class provides a mechanism to define callable objects
-    with parameterized arguments. It extends the functionality of the `Parameterized`
-    class, offering features such as argument validation, documentation, and dynamic
-    parameter updates. Unlike standard classes, when a `ParameterizedFunction` is
-    instantiated, it automatically calls its `__call__` method and returns the result,
-    acting like a Python function.
+    When a `ParameterizedFunction` is instantiated, it automatically calls
+    its `__call__` method and returns the result, acting like a Python function.
 
     Features
     --------
@@ -5962,7 +5922,7 @@ class ParameterizedFunction(Parameterized):
     ...     def __call__(self, x):
     ...         return x * self.multiplier
 
-    Call the function:
+    Instantiating the parameterized function calls it immediately:
 
     >>> result = Scale(5)
     >>> result
@@ -5989,7 +5949,7 @@ class ParameterizedFunction(Parameterized):
         return self.__class__.__name__+"()"
 
     @bothmethod
-    def instance(self_or_cls: Union[Type[PF], PF],**params)->PF:
+    def instance(self_or_cls,**params):
         """
         Create and return an instance of this class.
 

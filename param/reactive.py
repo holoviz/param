@@ -1106,7 +1106,7 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
-def bind(function, *args, watch: bool=False, **kwargs):
+def bind(function, *args, watch: bool = False, **kwargs):
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
 

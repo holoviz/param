@@ -2155,7 +2155,7 @@ class Parameters:
             dep_obj.param.unwatch(watcher)
         self_.self._param__private.ref_watchers = []
         refs = dict(self_.self._param__private.refs, **{name: ref})
-        deps = {name: resolve_ref(ref) for name, ref in refs.items()}
+        deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
 
@@ -2207,7 +2207,6 @@ class Parameters:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
 
-        import asyncio
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
         if running_task is None:
@@ -2297,7 +2296,10 @@ class Parameters:
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
                 obj._param__private.dynamic_watchers[method].append(watcher)
         for m in init_methods:
-            m()
+            if iscoroutinefunction(m):
+                async_executor(m)
+            else:
+                m()
 
     def _resolve_dynamic_deps(self, obj, dynamic_dep, param_dep, attribute):
         """

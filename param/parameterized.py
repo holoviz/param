@@ -1489,6 +1489,8 @@ class Parameter(_ParameterBase):
         pickle_default_value : bool, optional
             Whether the default value should be pickled. Set to `False` in rare
             cases, such as system-specific file paths.
+
+            .. deprecated:: 2.3.0
         allow_None : bool, optional
             If `True`, allows `None` as a valid parameter value. If the default
             value is `None`, this is automatically set to `True`. Default is

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import collections
 import contextvars
 import datetime as dt
@@ -201,7 +200,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
     pclass = type(parameter).__name__
     if parameter.owner is not None:
-        if type(parameter.owner) is ParameterizedMetaclass:
+        if issubclass(type(parameter.owner), ParameterizedMetaclass):
             powner = parameter.owner.__name__
         else:
             powner = type(parameter.owner).__name__
@@ -254,12 +253,15 @@ def iscoroutinefunction(function):
 
 async def _to_thread(func, /, *args, **kwargs):
     """Polyfill for asyncio.to_thread in Python < 3.9."""
+    import asyncio
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
     return await loop.run_in_executor(None, func_call)
 
 async def _to_async_gen(sync_gen):
+    import asyncio
+
     done = object()
 
     def safe_next():
@@ -511,37 +513,69 @@ def _deserialize_from_path(ext_to_routine, path, type_name):
 def _is_number(obj):
     if isinstance(obj, numbers.Number): return True
     # The extra check is for classes that behave like numbers, such as those
-    # found in numpy, gmpy, etc.
+    # found in numpy, gmpy2, etc.
     elif (hasattr(obj, '__int__') and hasattr(obj, '__add__')): return True
     # This is for older versions of gmpy
     elif hasattr(obj, 'qdiv'): return True
     else: return False
 
 
-def _is_abstract(class_):
+def _is_abstract(class_: type) -> bool:
+    if inspect.isabstract(class_):
+        return True
     try:
         return class_.abstract
     except AttributeError:
         return False
 
 
-def descendents(class_):
+def descendents(class_: type, concrete: bool = False) -> list[type]:
     """
-    Return a list of the class hierarchy below (and including) the given class.
+    Return a list of all descendant classes of a given class.
 
-    The list is ordered from least- to most-specific.  Can be useful for
-    printing the contents of an entire class hierarchy.
+    This function performs a breadth-first traversal of the class hierarchy,
+    collecting all subclasses of `class_`. The result includes `class_` itself
+    and all of its subclasses. If `concrete=True`, abstract base classes
+    are excluded from the result.
+
+    Parameters
+    ----------
+    class_ : type
+        The base class whose descendants should be found.
+    concrete : bool, optional
+        If `True`, exclude abstract classes from the result. Default is `False`.
+
+    Returns
+    -------
+    list of type
+        A list of descendant classes, ordered from the most base to the most derived.
+
+    Examples
+    --------
+    >>> class A: pass
+    >>> class B(A): pass
+    >>> class C(A): pass
+    >>> class D(B): pass
+    >>> descendents(A)
+    [A, B, C, D]
     """
-    assert isinstance(class_,type)
+    if not isinstance(class_, type):
+        raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")
     q = [class_]
     out = []
     while len(q):
         x = q.pop(0)
-        out.insert(0,x)
-        for b in x.__subclasses__():
+        out.insert(0, x)
+        try:
+            subclasses = x.__subclasses__()
+        except TypeError:
+            # TypeError raised when __subclasses__ is called on unbound methods,
+            # on `type` for example.
+            continue
+        for b in subclasses:
             if b not in q and b not in out:
                 q.append(b)
-    return out[::-1]
+    return [kls for kls in out if not (concrete and _is_abstract(kls))][::-1]
 
 
 # Could be a method of ClassSelector.
@@ -631,7 +665,7 @@ def exceptions_summarized():
 
 def _in_ipython():
     try:
-        get_ipython()
+        get_ipython
         return True
     except NameError:
         return False
@@ -639,6 +673,7 @@ def _in_ipython():
 _running_tasks = set()
 
 def async_executor(func):
+    import asyncio
     try:
         event_loop = asyncio.get_running_loop()
     except RuntimeError:

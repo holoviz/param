@@ -30,18 +30,18 @@ import typing
 import warnings
 
 from collections import OrderedDict
+from collections.abc import Iterable
 from contextlib import contextmanager
 
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
-    Undefined, get_logger, instance_descriptor, dt_types,
+    Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types, _identity_hook
 )
 from ._utils import (
-    ParamDeprecationWarning as _ParamDeprecationWarning,
+    ParamFutureWarning as _ParamFutureWarning,
     _deprecate_positional_args,
     _deprecated,
-    _dict_update,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -73,6 +73,7 @@ def param_union(*parameterizeds, warn=True):
     -------
     dict
         Union of all param name,value pairs
+
     """
     d = {}
     for o in parameterizeds:
@@ -94,7 +95,7 @@ def guess_param_types(**kwargs):
         kws = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
-        elif isinstance(v, dt_types):
+        elif isinstance(v, _dt_types):
             params[k] = Date(**kws)
         elif isinstance(v, bool):
             params[k] = Boolean(**kws)
@@ -109,7 +110,7 @@ def guess_param_types(**kwargs):
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
                 params[k] = NumericTuple(**kws)
-            elif all(isinstance(el, dt_types) for el in v) and len(v)==2:
+            elif len(v) == 2 and all(isinstance(el, _dt_types) for el in v):
                 params[k] = DateRange(**kws)
             else:
                 params[k] = Tuple(**kws)
@@ -141,7 +142,7 @@ def parameterized_class(name, params, bases=Parameterized):
     Dynamically create a parameterized class with the given name and the
     supplied parameters, inheriting from the specified base(s).
     """
-    if not (isinstance(bases, list) or isinstance(bases, tuple)):
+    if not isinstance(bases, (list, tuple)):
         bases=[bases]
     return type(name, tuple(bases), params)
 
@@ -201,7 +202,7 @@ class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
     Python's float('inf') value, this object can be safely compared
-    with gmpy numeric types across different gmpy versions.
+    with gmpy2 numeric types across different gmpy2 versions.
 
     All operators on Infinity() return Infinity(), apart from the
     comparison and equality operators. Equality works by checking
@@ -321,11 +322,11 @@ class Time(Parameterized):
            times in decimal notation, but very slow and needs to be
            installed separately.
 
-         - gmpy.mpq: Allows a natural representation of times in
+         - gmpy2.mpq: Allows a natural representation of times in
            decimal notation, and very fast because it uses the GNU
            Multi-Precision library, but needs to be installed
-           separately and depends on a non-Python library.  gmpy.mpq
-           is gmpy's rational type.
+           separately and depends on a non-Python library.  gmpy2.mpq
+           is gmpy2's rational type.
         """)
 
     timestep = Parameter(default=1.0,doc="""
@@ -395,7 +396,6 @@ class Time(Parameterized):
         the current state remains consistent, this is normally the only
         way to change the time_type of an existing Time instance.
         """
-
         if time_type and val is None:
             raise Exception("Please specify a value for the new time_type.")
         if time_type:
@@ -501,9 +501,7 @@ class Dynamic(Parameter):
 
 
     def _initialize_generator(self,gen,obj=None):
-        """
-        Add 'last time' and 'last value' attributes to the generator.
-        """
+        """Add 'last time' and 'last value' attributes to the generator."""
         # Could use a dictionary to hold these things.
         if hasattr(obj,"_Dynamic_time_fn"):
             gen._Dynamic_time_fn = obj._Dynamic_time_fn
@@ -559,7 +557,6 @@ class Dynamic(Parameter):
         value will be produced and returned. Otherwise, the last value
         gen produced will be returned.
         """
-
         if hasattr(gen,"_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:
@@ -611,7 +608,8 @@ class Dynamic(Parameter):
 
 
 class __compute_set_hook:
-    """Remove when set_hook is removed"""
+    """Remove when set_hook is removed."""
+
     def __call__(self, p):
         return _identity_hook
 
@@ -673,7 +671,7 @@ class Number(Dynamic):
 
     __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
         inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
     )
@@ -705,9 +703,18 @@ class Number(Dynamic):
         self._validate(self.default)
 
     def __get__(self, obj, objtype):
-        """
-        Same as the superclass's __get__, but if the value was
-        dynamically generated, check the bounds.
+        """Retrieve the value of the attribute, checking bounds if dynamically generated.
+
+        Arguments
+        ---------
+        obj: Parameterized | None
+            The instance the attribute is accessed on, or `None` for class access.
+        objtype: type[Parameterized]
+            The class that owns the attribute.
+
+        Returns
+        -------
+        The value of the attribute, potentially after applying bounds checks.
         """
         result = super().__get__(obj, objtype)
 
@@ -822,7 +829,7 @@ class Number(Dynamic):
 
     def _validate(self, val):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         self._validate_value(val, self.allow_None)
@@ -841,9 +848,9 @@ class Number(Dynamic):
 
 
 class Integer(Number):
-    """Numeric Parameter required to be an Integer"""
+    """Numeric Parameter required to be an Integer."""
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=0)
+    _slot_defaults = dict(Number._slot_defaults, default=0)
 
     def _validate_value(self, val, allow_None):
         if callable(val):
@@ -869,7 +876,7 @@ class Integer(Number):
 class Magnitude(Number):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
+    _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
     @typing.overload
     def __init__(
@@ -890,11 +897,9 @@ class Magnitude(Number):
 
 
 class Date(Number):
-    """
-    Date parameter of datetime or date type.
-    """
+    """Date parameter of datetime or date type."""
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+    _slot_defaults = dict(Number._slot_defaults, default=None)
 
     @typing.overload
     def __init__(
@@ -911,20 +916,20 @@ class Date(Number):
 
     def _validate_value(self, val, allow_None):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         if self.allow_None and val is None:
             return
 
-        if not isinstance(val, dt_types) and not (allow_None and val is None):
+        if not isinstance(val, _dt_types) and not (allow_None and val is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
                 f"date types, not {type(val)}."
             )
 
     def _validate_step(self, val, step):
-        if step is not None and not isinstance(step, dt_types):
+        if step is not None and not isinstance(step, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self, 'step')} can only be None, "
                 f"a datetime or date type, not {type(step)}."
@@ -951,11 +956,9 @@ class Date(Number):
 
 
 class CalendarDate(Number):
-    """
-    Parameter specifically allowing dates (not datetimes).
-    """
+    """Parameter specifically allowing dates (not datetimes)."""
 
-    _slot_defaults = _dict_update(Number._slot_defaults, default=None)
+    _slot_defaults = dict(Number._slot_defaults, default=None)
 
     @typing.overload
     def __init__(
@@ -972,7 +975,7 @@ class CalendarDate(Number):
 
     def _validate_value(self, val, allow_None):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         if self.allow_None and val is None:
@@ -1009,7 +1012,7 @@ class CalendarDate(Number):
 class Boolean(Parameter):
     """Binary or tristate Boolean Parameter."""
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=False)
+    _slot_defaults = dict(Parameter._slot_defaults, default=False)
 
     @typing.overload
     def __init__(
@@ -1135,7 +1138,7 @@ class Tuple(Parameter):
 
     __slots__ = ['length']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
+    _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
     @typing.overload
     def __init__(
@@ -1223,7 +1226,7 @@ class NumericTuple(Tuple):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    _slot_defaults = _dict_update(NumericTuple._slot_defaults, default=(0.0, 0.0))
+    _slot_defaults = dict(NumericTuple._slot_defaults, default=(0.0, 0.0))
 
     @typing.overload
     def __init__(
@@ -1240,13 +1243,11 @@ class XYCoordinates(NumericTuple):
 
 
 class Range(NumericTuple):
-    """
-    A numeric range with optional bounds and softbounds.
-    """
+    """A numeric range with optional bounds and softbounds."""
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         NumericTuple._slot_defaults, default=None, bounds=None,
         inclusive_bounds=(True,True), softbounds=None, step=None
     )
@@ -1355,7 +1356,7 @@ class DateRange(Range):
     """
 
     def _validate_bound_type(self, value, position, kind):
-        if not isinstance(value, dt_types):
+        if not isinstance(value, _dt_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} {position} {kind} can only be "
                 f"None or a date/datetime value, not {type(value)}."
@@ -1379,7 +1380,7 @@ class DateRange(Range):
                 f"not {type(val)}."
             )
         for n in val:
-            if isinstance(n, dt_types):
+            if isinstance(n, _dt_types):
                 continue
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes date/datetime "
@@ -1403,7 +1404,7 @@ class DateRange(Range):
             if not isinstance(v, (dt.datetime, dt.date)): # i.e np.datetime64
                 v = v.astype(dt.datetime)
             # Separate date and datetime to deserialize to the right type.
-            if type(v) == dt.date:
+            if type(v) is dt.date:
                 v = v.strftime("%Y-%m-%d")
             else:
                 v = v.strftime("%Y-%m-%dT%H:%M:%S.%f")
@@ -1427,9 +1428,8 @@ class DateRange(Range):
 
 
 class CalendarDateRange(Range):
-    """
-    A date range specified as (start_date, end_date).
-    """
+    """A date range specified as (start_date, end_date)."""
+
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
             return
@@ -1556,9 +1556,7 @@ class Composite(Parameter):
         self.attribs = attribs
 
     def __get__(self, obj, objtype):
-        """
-        Return the values of all the attribs, as a list.
-        """
+        """Return the values of all the attribs, as a list."""
         if obj is None:
             return [getattr(objtype, a) for a in self.attribs]
         else:
@@ -1779,6 +1777,7 @@ class __compute_selector_default:
     then the object in _slot_defaults would itself be updated and the next Selector
     instance created wouldn't have [] as the default but a populated list.
     """
+
     def __call__(self, p):
         return []
 
@@ -1808,7 +1807,7 @@ _compute_selector_checking_default = __compute_selector_checking_default()
 
 class _SignatureSelector(Parameter):
     # Needs docstring; why is this a separate mixin?
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         SelectorBase._slot_defaults, _objects=_compute_selector_default,
         compute_default_fn=None, check_on_set=_compute_selector_checking_default,
         allow_None=None, instantiate=False, default=None,
@@ -1957,7 +1956,7 @@ class Selector(SelectorBase, _SignatureSelector):
         Subclasses can override if they support multiple items on a list,
         to check each item instead.
         """
-        if not (val in self.objects):
+        if val not in self.objects:
             self._objects.append(val)
 
     def get_range(self):
@@ -1992,12 +1991,11 @@ class ObjectSelector(Selector):
 
 
 class FileSelector(Selector):
-    """
-    Given a path glob, allows one file to be selected from those matching.
-    """
+    """Given a path glob, allows one file to be selected from those matching."""
+
     __slots__ = ['path']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Selector._slot_defaults, path="",
     )
 
@@ -2102,12 +2100,11 @@ class ListSelector(Selector):
 
 
 class MultiFileSelector(ListSelector):
-    """
-    Given a path glob, allows multiple files to be selected from the list of matches.
-    """
+    """Given a path glob, allows multiple files to be selected from the list of matches."""
+
     __slots__ = ['path']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Selector._slot_defaults, path="",
     )
 
@@ -2158,7 +2155,7 @@ class ClassSelector(SelectorBase):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = _dict_update(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
+    _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
 
     @typing.overload
     def __init__(
@@ -2184,18 +2181,18 @@ class ClassSelector(SelectorBase):
     def _validate_class_(self, val, class_, is_instance):
         if (val is None and self.allow_None):
             return
-        if isinstance(class_, tuple):
-            class_name = ('(%s)' % ', '.join(cl.__name__ for cl in class_))
+        if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
+            return
+
+        if isinstance(class_, Iterable):
+            class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_)))
         else:
             class_name = class_.__name__
-        if is_instance:
-            if not (isinstance(val, class_)):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be an instance of {class_name}, not {val!r}.")
-        else:
-            if not (issubclass(val, class_)):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)} value must be a subclass of {class_name}, not {val}.")
+
+        raise ValueError(
+            f"{_validate_error_prefix(self)} value must be "
+            f"{'an instance' if is_instance else 'a subclass'} of {class_name}, not {val!r}."
+        )
 
     def get_range(self):
         """
@@ -2218,9 +2215,7 @@ class ClassSelector(SelectorBase):
 
 
 class Dict(ClassSelector):
-    """
-    Parameter whose value is a dictionary.
-    """
+    """Parameter whose value is a dictionary."""
 
     @typing.overload
     def __init__(
@@ -2237,9 +2232,7 @@ class Dict(ClassSelector):
 
 
 class Array(ClassSelector):
-    """
-    Parameter whose value is a numpy array.
-    """
+    """Parameter whose value is a numpy array."""
 
     @typing.overload
     def __init__(
@@ -2296,7 +2289,7 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
     )
 
@@ -2412,7 +2405,7 @@ class Series(ClassSelector):
 
     __slots__ = ['rows']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
@@ -2466,25 +2459,26 @@ class List(Parameter):
 
     The bounds allow a minimum and/or maximum length of
     list to be enforced.  If the item_type is non-None, all
-    items in the list are checked to be of that type.
+    items in the list are checked to be instances of that type if
+    is_instance is True (default) or subclasses of that type when False.
 
     `class_` is accepted as an alias for `item_type`, but is
     deprecated due to conflict with how the `class_` slot is
     used in Selector classes.
     """
 
-    __slots__ = ['bounds', 'item_type', 'class_']
+    __slots__ = ['bounds', 'item_type', 'class_', 'is_instance']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
-        instantiate=True, default=[],
+        instantiate=True, default=[], is_instance=True,
     )
 
     @typing.overload
     def __init__(
         self,
         default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
-        allow_None=False, doc=None, label=None, precedence=None,
+        is_instance=True, allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
@@ -2492,12 +2486,12 @@ class List(Parameter):
 
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
-                 instantiate=Undefined, bounds=Undefined, **params):
+                 instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
         if class_ is not Undefined:
             # PARAM3_DEPRECATION
             warnings.warn(
                 message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamDeprecationWarning,
+                category=_ParamFutureWarning,
                 stacklevel=3,
             )
         if item_type is not Undefined and class_ is not Undefined:
@@ -2506,6 +2500,7 @@ class List(Parameter):
             self.item_type = class_
         else:
             self.item_type = item_type
+        self.is_instance = is_instance
         self.class_ = self.item_type
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
@@ -2514,15 +2509,15 @@ class List(Parameter):
 
     def _validate(self, val):
         """
-        Checks that the value is numeric and that it is within the hard
+        Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
         self._validate_value(val, self.allow_None)
         self._validate_bounds(val, self.bounds)
-        self._validate_item_type(val, self.item_type)
+        self._validate_item_type(val, self.item_type, self.is_instance)
 
     def _validate_bounds(self, val, bounds):
-        "Checks that the list is of the right length and has the right contents."
+        """Check that the list is of the right length and has the right contents."""
         if bounds is None or (val is None and self.allow_None):
             return
         min_length, max_length = bounds
@@ -2555,16 +2550,22 @@ class List(Parameter):
                 f"object of {type(val)}."
             )
 
-    def _validate_item_type(self, val, item_type):
+    def _validate_item_type(self, val, item_type, is_instance):
         if item_type is None or (self.allow_None and val is None):
             return
+        err_kind = None
         for v in val:
-            if isinstance(v, item_type):
-                continue
-            raise TypeError(
-                f"{_validate_error_prefix(self)} items must be instances "
-                f"of {item_type!r}, not {type(v)}."
-            )
+            if is_instance and not isinstance(v, item_type):
+                err_kind = "instances"
+                obj_display = lambda v: type(v)
+            elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
+                err_kind = "subclasses"
+                obj_display = lambda v: v
+            if err_kind:
+                raise TypeError(
+                    f"{_validate_error_prefix(self)} items must be {err_kind} "
+                    f"of {item_type!r}, not {obj_display(v)}."
+                )
 
 
 class HookList(List):
@@ -2575,6 +2576,7 @@ class HookList(List):
     for users to register a set of commands to be called at a
     specified place in some sequence of processing steps.
     """
+
     __slots__ = ['class_', 'bounds']
 
     def _validate_value(self, val, allow_None):
@@ -2658,7 +2660,7 @@ class resolve_path(ParameterizedFunction):
 
 
 # PARAM3_DEPRECATION
-@_deprecated()
+@_deprecated(warning_cat=_ParamFutureWarning)
 class normalize_path(ParameterizedFunction):
     """
     Convert a UNIX-style path to the current OS's format,
@@ -2686,7 +2688,8 @@ class normalize_path(ParameterizedFunction):
 
 
 class Path(Parameter):
-    """Parameter that can be set to a string specifying the path of a file or folder.
+    """
+    Parameter that can be set to a string specifying the path of a file or folder.
 
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
@@ -2710,11 +2713,12 @@ class Path(Parameter):
     check_exists: boolean, default=True
         If True (default) the path must exist on instantiation and set,
         otherwise the path can optionally exist.
+
     """
 
     __slots__ = ['search_paths', 'check_exists']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Parameter._slot_defaults, check_exists=True,
     )
 
@@ -2757,9 +2761,7 @@ class Path(Parameter):
                     raise OSError(e.args[0]) from None
 
     def __get__(self, obj, objtype):
-        """
-        Return an absolute, normalized path (see resolve_path).
-        """
+        """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj,objtype)
         if raw_path is None:
             path = None
@@ -2876,7 +2878,7 @@ class Color(Parameter):
 
     __slots__ = ['allow_named']
 
-    _slot_defaults = _dict_update(Parameter._slot_defaults, allow_named=True)
+    _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
     @typing.overload
     def __init__(
@@ -2938,7 +2940,7 @@ class Bytes(Parameter):
 
     __slots__ = ['regex']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
 

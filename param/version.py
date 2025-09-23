@@ -18,7 +18,9 @@ See https://github.com/holoviz/autover for more information.
 
 __author__ = 'Jean-Luc Stevens'
 
-import os, subprocess, json
+import os
+import subprocess
+import json
 
 def run_cmd(args, cwd=None):
     kwargs = {}
@@ -81,7 +83,8 @@ class Version:
     obtained via git describe. This later portion is only shown if the
     commit count since the last tag is non zero. Instead of '.post', an
     alternate valid prefix such as '.rev', '_rev', '_r' or '.r' may be
-    supplied."""
+    supplied.
+    """
 
     def __new__(cls,**kw):
         # If called in the old way, provide the previous class. Means
@@ -131,28 +134,28 @@ class Version:
 
     @property
     def release(self):
-        "Return the release tuple"
+        """Return the release tuple."""
         return self.fetch()._release
 
     @property
     def commit(self):
-        "A specification for this particular VCS version, e.g. a short git SHA"
+        """A specification for this particular VCS version, e.g. a short git SHA."""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        "Return the number of commits since the last release"
+        """Return the number of commits since the last release."""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        "True if there are uncommited changes, False otherwise"
+        """True if there are uncommited changes, False otherwise."""
         return self.fetch()._dirty
 
 
     def fetch(self):
         """
-        Returns a tuple of the major version together with the
+        Return a tuple of the major version together with the
         appropriate SHA and dirty bit (for development version only).
         """
         if self._release is not None:
@@ -192,7 +195,7 @@ class Version:
                         output = self._output_from_file()
                         if output is not None:
                             self._update_from_vcs(output)
-                    except: pass
+                    except Exception: pass
             if output is None:
                 # glob pattern (not regexp) matching vX.Y.Z* tags
                 output = run_cmd([cmd, 'describe', '--long', '--match',
@@ -225,6 +228,8 @@ class Version:
 
     def _known_stale(self):
         """
+        Return whether the commit is know to be stale or not.
+
         The commit is known to be from a file (and therefore stale) if a
         SHA is supplied by git archive and doesn't match the parsed commit.
         """
@@ -251,12 +256,12 @@ class Version:
             vfile = os.path.join(os.path.dirname(self.fpath), '.version')
             with open(vfile) as f:
                 return json.loads(f.read()).get(entry, None)
-        except: # File may be missing if using pip + git archive
+        except Exception: # File may be missing if using pip + git archive
             return None
 
 
     def _update_from_vcs(self, output):
-        "Update state based on the VCS state e.g the output of git describe"
+        """Update state based on the VCS state e.g the output of git describe."""
         split = output[1:].split('-')
         dot_split = split[0].split('.')
         for prefix in ['a','b','rc']:
@@ -325,9 +330,7 @@ class Version:
         return str(self)
 
     def abbrev(self):
-        """
-        Abbreviated string representation of just the release number.
-        """
+        """Abbreviated string representation of just the release number."""
         return '.'.join(str(el) for el in self.release)
 
     def verify(self, string_version=None):
@@ -360,7 +363,7 @@ class Version:
     def get_setup_version(cls, setup_path, reponame, describe=False,
                           dirty='report', pkgname=None, archive_commit=None):
         """
-        Helper for use in setup.py to get the version from the .version file (if available)
+        Get the version from the .version file (if available)
         or more up-to-date information from git describe (if available).
 
         Assumes the __init__.py will be found in the directory
@@ -427,7 +430,7 @@ class Version:
 
             if git_describe is not None:
                 info['git_describe'] = git_describe
-        except: pass
+        except Exception: pass
 
         if git_describe is None:
             extracted_directory_tag = Version.extract_directory_tag(setup_path, reponame)
@@ -436,7 +439,7 @@ class Version:
             try:
                 with open(os.path.join(setup_path, pkgname, '.version'), 'w') as f:
                     f.write(json.dumps({'extracted_directory_tag':extracted_directory_tag}))
-            except:
+            except Exception:
                 print('Error in setup_version: could not write .version file.')
 
 
@@ -449,7 +452,7 @@ class Version:
         try:
             with open(os.path.join(setup_path, pkgname, '.version'), 'w') as f:
                 f.write(json.dumps(info))
-        except:
+        except Exception:
             print('Error in setup_version: could not write .version file.')
 
         return info['version_string']
@@ -457,8 +460,9 @@ class Version:
 
 
 def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
-    """Helper for use in setup.py to get the current version from either
-    git describe or the .version file (if available).
+    """
+    Get the current version from either git describe or the
+    .version file (if available).
 
     Set pkgname to the package name if it is different from the
     repository name.
@@ -480,7 +484,8 @@ def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
 
 
 def get_setupcfg_version():
-    """As get_setup_version(), but configure via setup.cfg.
+    """
+    As get_setup_version(), but configure via setup.cfg.
 
     If your project uses setup.cfg to configure setuptools, and hence has
     at least a "name" key in the [metadata] section, you can
@@ -515,10 +520,7 @@ def get_setupcfg_version():
     parse setup.cfg...but then git export-subst would not work.
 
     """
-    try:
-        import configparser
-    except ImportError:
-        import ConfigParser as configparser # python2 (also prevents dict-like access)
+    import configparser
     import re
     cfg = "setup.cfg"
     autover_section = 'tool:autover'
@@ -599,28 +601,28 @@ class OldDeprecatedVersion:
 
     @property
     def release(self):
-        "Return the release tuple"
+        """Return the release tuple."""
         return self.fetch()._release
 
     @property
     def commit(self):
-        "A specification for this particular VCS version, e.g. a short git SHA"
+        """A specification for this particular VCS version, e.g. a short git SHA."""
         return self.fetch()._commit
 
     @property
     def commit_count(self):
-        "Return the number of commits since the last release"
+        """Return the number of commits since the last release."""
         return self.fetch()._commit_count
 
     @property
     def dirty(self):
-        "True if there are uncommited changes, False otherwise"
+        """True if there are uncommited changes, False otherwise."""
         return self.fetch()._dirty
 
 
     def fetch(self):
         """
-        Returns a tuple of the major version together with the
+        Return a tuple of the major version together with the
         appropriate SHA and dirty bit (for development version only).
         """
         if self._release is not None:
@@ -667,7 +669,7 @@ class OldDeprecatedVersion:
         self._update_from_vcs(output)
 
     def _update_from_vcs(self, output):
-        "Update state based on the VCS state e.g the output of git describe"
+        """Update state based on the VCS state e.g the output of git describe."""
         split = output[1:].split('-')
         if 'dev' in split[0]:
             dev_split = split[0].split('dev')

@@ -7,11 +7,11 @@ from param.parameterized import Comparator
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     np = None
 try:
     import pandas as pd
-except ImportError:
+except ModuleNotFoundError:
     pd = None
 
 _now = datetime.datetime.now()

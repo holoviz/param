@@ -5,15 +5,15 @@ import pytest
 
 try:
     import cloudpickle
-except ImportError:
+except ModuleNotFoundError:
     cloudpickle = None
 try:
     import numpy as np
-except:
+except ModuleNotFoundError:
     np = None
 try:
     import pandas as pd
-except:
+except ModuleNotFoundError:
     pd = None
 
 

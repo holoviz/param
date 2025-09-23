@@ -2,12 +2,13 @@ import asyncio
 import math
 import operator
 import os
+import re
 import unittest
 import time
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_NUMPY','0') == '1':
         raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
     else:
@@ -15,7 +16,7 @@ except ImportError:
 
 try:
     import pandas as pd
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_PANDAS','0') == '1':
         raise ImportError("PARAM_TEST_PANDAS=1 but pandas not available.")
     else:
@@ -298,7 +299,7 @@ def test_reactive_len():
     l = i.rx.len()
     assert l.rx.value == 3
     i.rx.value = [1, 2]
-    assert l == 2
+    assert l.rx.value == 2
 
 def test_reactive_bool():
     i = rx(1)
@@ -596,7 +597,7 @@ async def test_reactive_gen():
 async def test_reactive_gen_pipe():
     def gen(val):
         yield val+1
-        time.sleep(0.05)
+        time.sleep(0.1)
         yield val+2
 
     rxv = rx(0)
@@ -614,7 +615,7 @@ async def test_reactive_gen_pipe():
 async def test_reactive_gen_with_dep():
     def gen(i):
         yield i+1
-        time.sleep(0.05)
+        time.sleep(0.1)
         yield i+2
 
     irx = rx(0)
@@ -630,7 +631,7 @@ async def test_reactive_gen_with_dep():
 async def test_reactive_gen_pipe_with_dep():
     def gen(value, i):
         yield value+i+1
-        time.sleep(0.05)
+        time.sleep(0.1)
         yield value+i+2
 
     irx = rx(0)
@@ -773,3 +774,20 @@ def test_reactive_callback_resolve_accessor():
     dfx = rx(df)
     out = dfx["name"].str._callback()
     assert out is df["name"].str
+
+
+def test_reactive_dunder_len_error():
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
+    ):
+        len(rx([1, 2]))
+
+
+def test_reactive_dunder_bool():
+    assert bool(rx([1, 2]))

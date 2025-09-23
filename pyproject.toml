@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Make your Python code clearer and more reliable by declaring Parameters."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [
     { name = "HoloViz", email = "developers@holoviz.org" },
 ]
@@ -23,11 +23,11 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
@@ -39,15 +39,10 @@ examples = [
     "pandas",
     "panel",
 ]
-doc = [
-    "param[examples]",
-    "nbsite ==0.8.4",
-    "sphinx-remove-toctrees",
-]
 tests = [
-    "coverage[toml]",
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
 ]
 tests-deser = [
     "xlrd",
@@ -63,6 +58,14 @@ tests-examples = [
     "nbval",
     "param[examples]",
 ]
+# Set of dependencies that work with pypy and are quick to install.
+tests-pypy = [
+    "cloudpickle",
+    "ipython",
+    "jsonschema",
+    "nest-asyncio",
+    "numpy",
+]
 tests-full = [
     "param[tests]",
     "param[tests-examples]",
@@ -71,18 +74,12 @@ tests-full = [
     "pandas",
     "ipython",
     "jsonschema",
-    "gmpy",
+    "gmpy2",
     "cloudpickle",
     "nest_asyncio",
 ]
-lint = [
-    "flake8",
-    "pre-commit",
-]
 all = [
     "param[tests-full]",
-    "param[doc]",
-    "param[lint]",
 ]
 
 [project.urls]
@@ -94,6 +91,7 @@ HoloViz = "https://holoviz.org/"
 
 [tool.hatch.version]
 source = "vcs"
+raw-options = { version_scheme = "no-guess-dev" }
 
 [tool.hatch.build.targets.wheel]
 include = [
@@ -111,118 +109,43 @@ include = [
 [tool.hatch.build.hooks.vcs]
 version-file = "param/_version.py"
 
-[tool.hatch.envs.default]
-dependencies = [
-    # Linters
-    "param[lint]",
-    # Base tests dependencies
-    "param[tests]",
-    # Examples tests dependencies
-    "param[tests-examples]",
-    # Deserializatoin dependencies
-    "param[tests-deser]",
-    # Additional tests dependencies, not including gmpy as
-    # it's tricky to install.
-    "ipython",
-    "jsonschema",
-    "numpy",
-    "pandas",
-    "cloudpickle",
-    "nest_asyncio",
-    # To keep __version__ up-to-date in editable installs
-    "setuptools_scm",
-]
-post-install-commands = [
-  "python -m pip install pre-commit",
-  "pre-commit install",
-]
-
-[tool.hatch.envs.default.scripts]
-tests = "pytest {args:tests}"
-examples = "pytest -n logical --dist loadscope --nbval-lax {args:doc}"
-
-[tool.hatch.envs.docs]
-template = "docs"
-features = ["doc"]
-python = "3.9"
-
-[tool.hatch.envs.docs.scripts]
-build = [
-    "sphinx-build -b html doc builtdocs",
-]
-
-[tool.hatch.envs.tests]
-template = "tests"
-dependencies = [
-    "param[tests]",
-    "ipython",
-    "jsonschema",
-]
-
-[[tool.hatch.envs.tests.matrix]]
-python = [
-    "3.8",
-    "3.9",
-    "3.10",
-    "3.11",
-    "3.12",
-    "pypy3.9",
-]
-
-[tool.hatch.envs.tests.scripts]
-tests = "pytest {args:tests}"
-with_coverage = [
-    "coverage run --source=numbergen,param -m pytest -v {args:tests}",
-    "coverage report",
-    "coverage xml",
-]
-
-[tool.hatch.envs.tests.overrides]
-# Only install these on non PyPy environments
-name."^(?!pypy).*".dependencies = [
-    "numpy",
-    "pandas",
-    "xlrd",
-    "openpyxl",
-    "odfpy",
-    "pyarrow",
-    "cloudpickle",
-    "nest_asyncio",
-]
-# Only install gmpy on Linux on these version
-# Only install tables (deser HDF5) on Linux on these version
-matrix.python.dependencies = [
-    { value = "gmpy", if = ["3.8", "3.9", "3.10"], platform = ["linux"] },
-    { value = "tables", if = ["3.8", "3.9", "3.10", "3.11", "3.12"], platform = ["linux"] },
-]
-
-[tool.hatch.envs.tests_examples]
-template = "tests_examples"
-dependencies = [
-    "param[tests-examples]",
-    "ipython",
-    "jsonschema",
-]
-
-[[tool.hatch.envs.tests_examples.matrix]]
-python = [
-    "3.8",
-    "3.9",
-    "3.10",
-    "3.11",
-    "3.12",
-]
-
-[tool.hatch.envs.tests_examples.scripts]
-examples = "pytest -v -n logical --dist loadscope --nbval-lax {args:doc}"
-
 [tool.pytest.ini_options]
+addopts = "--color=yes"
 python_files = "test*.py"
 filterwarnings = [
   "error",
 ]
 xfail_strict = "true"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
-omit = ["param/version.py"]
+omit = ["param/version.py", "tests/testimports.py"]
+
+[tool.ruff]
+fix = true
+include = ["*.py"]
+exclude = ["version.py"]
+
+[tool.ruff.lint]
+select = ["D", "W", "E", "F"]
+ignore = [
+    "D100", # Missing docstring in public module"
+    "D101", # Missing docstring in public class"
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D105", # Missing docstring in magic method"
+    "D205", # 1 blank line required between summary line and description
+    "D415", # First line should end with a period, question mark, or exclamation point
+    "D417", # Missing argument description in the docstring for `param_union`: `*parameterizeds`
+    "E402", # Module level import not at top of file
+    "E501", # Line too long
+    "E701", # Multiple statements on one line
+    "E712", # Comparison to true should be is
+    "E731", # Do not assign a lambda expression, use a def
+    "E741", # Ambiguous variable name
+    "F405", # From star imports
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

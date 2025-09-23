@@ -1,6 +1,4 @@
-"""
-Unit tests for DateRange parameter.
-"""
+"""Unit tests for DateRange parameter."""
 import datetime as dt
 import re
 import unittest
@@ -12,7 +10,7 @@ from .utils import check_defaults
 
 try:
     import numpy as np
-except:
+except ModuleNotFoundError:
     np = None
 
 # Assuming tests of range parameter cover most of what's needed to

@@ -136,6 +136,20 @@ def test_nested_list_parameter_ref():
     p2.string_list = [p3.param.string, 'another']
     assert p2.string_list == ['foo', 'another']
 
+def test_nested_nested_parameter_ref_not_overwritten():
+    # Ensure refs are not removed when updating another ref
+    p = Parameters(string='bar')
+    p2 = Parameters(string='foo')
+    p3 = Parameters(string=p.param.string, string_list=[p2.param.string, 'other'])
+    p4 = Parameters()
+
+    assert p3.string_list == ['foo', 'other']
+    p3.string = p4.param.string
+    p.string = 'fizz'
+    p2.string = 'buzz'
+    assert p3.string == 'string'
+    assert p3.string_list == ['buzz', 'other']
+
 def test_nested_dict_key_parameter_ref():
     p = Parameters()
     p2 = Parameters(dictionary={p.param.string: 'value'})

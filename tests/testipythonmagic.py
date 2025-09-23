@@ -1,6 +1,4 @@
-"""
-Unit test for the IPython magic
-"""
+"""Unit test for the IPython magic."""
 import re
 import sys
 import unittest
@@ -9,7 +7,7 @@ import param
 
 try:
     import IPython # noqa
-except ImportError:
+except ModuleNotFoundError:
     import os
     if os.getenv('PARAM_TEST_IPYTHON','0') == '1':
         raise ImportError("PARAM_TEST_IPYTHON=1 but ipython not available.")

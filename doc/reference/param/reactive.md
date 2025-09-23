@@ -9,8 +9,9 @@
   :toctree: generated/
 
   bind
-  rx
 ```
+
+[rx](./generated/param.rx): *rx* allows wrapping objects and then operating on them interactively while recording any operations applied to them.
 
 These methods and properties are available under the `.rx` namespace
 of reactive expressions ({py:class}`rx`).

@@ -1,6 +1,4 @@
-"""
-Unit test for param.output.
-"""
+"""Unit test for param.output."""
 import unittest
 
 import param

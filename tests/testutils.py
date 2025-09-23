@@ -1,24 +1,30 @@
 import datetime as dt
 import os
 
+from collections.abc import Iterable
 from functools import partial
 
 import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod
-from param._utils import _is_mutable_container, iscoroutinefunction
+from param.parameterized import bothmethod, Parameterized
+from param._utils import (
+    _is_mutable_container,
+    descendents,
+    iscoroutinefunction,
+    gen_types,
+)
 
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     np = None
 
 try:
     import pandas as pd
-except ImportError:
+except ModuleNotFoundError:
     pd = None
 
 now = dt.datetime.now()
@@ -50,6 +56,9 @@ if pd:
         'Series': (pd.Series([1, 2]), param.Series),
     })
 
+class CustomMetaclass(param.parameterized.ParameterizedMetaclass): pass
+
+
 @pytest.mark.parametrize('val,p', guess_param_types_data.values(), ids=guess_param_types_data.keys())
 def test_guess_param_types(val, p):
     input = {'key': val}
@@ -59,7 +68,7 @@ def test_guess_param_types(val, p):
     assert 'key' in output
     out_param = output['key']
     assert isinstance(out_param, p)
-    if not type(out_param) == param.Parameter:
+    if type(out_param) is not param.Parameter:
         assert out_param.default is val
         assert out_param.constant
 
@@ -382,6 +391,37 @@ def test_error_prefix_set_instance():
         p.x = 'wrong'
 
 
+def test_error_prefix_custom_metaclass_before_class_creation():
+    with pytest.raises(ValueError, match="Number parameter 'x' only"):
+        class P(param.Parameterized, metaclass=CustomMetaclass):
+            x = param.Number('wrong')
+
+
+def test_error_prefix_custom_metaclass_set_class():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P.x = 'wrong'
+
+
+def test_error_prefix_custom_metaclass_instantiate():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P(x='wrong')
+
+
+def test_error_prefix_custom_metaclass_set_instance():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    p = P()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        p.x = 'wrong'
+
+
 @pytest.mark.parametrize(
         ('obj,ismutable'),
         [
@@ -421,3 +461,48 @@ def test_iscoroutinefunction_asyncgen():
 def test_iscoroutinefunction_partial_asyncgen():
     pagen = partial(partial(agen))
     assert iscoroutinefunction(pagen)
+
+def test_gen_types():
+    @gen_types
+    def _int_types():
+        yield int
+
+    assert isinstance(1, (str, _int_types))
+    assert isinstance(5, _int_types)
+    assert isinstance(5.0, _int_types) is False
+
+    assert issubclass(int, (str, _int_types))
+    assert issubclass(int, _int_types)
+    assert issubclass(float, _int_types) is False
+
+    assert next(iter(_int_types())) is int
+    assert next(iter(_int_types)) is int
+    assert isinstance(_int_types, Iterable)
+
+
+def test_descendents_object():
+    # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
+    assert descendents(object)
+
+
+def test_descendents_bad_type():
+    with pytest.raises(
+        TypeError,
+        match="descendents expected a class object, not int"
+    ):
+        descendents(1)
+
+class A(Parameterized):
+    __abstract = True
+class B(A): pass
+class C(A): pass
+class X(B): pass
+class Y(B): pass
+
+
+def test_descendents():
+    assert descendents(A) == [A, B, C, X, Y]
+
+
+def test_descendents_concrete():
+    assert descendents(A, concrete=True) == [B, C, X, Y]

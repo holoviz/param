@@ -2,6 +2,7 @@ import asyncio
 import math
 import operator
 import os
+import re
 import unittest
 import time
 
@@ -158,10 +159,16 @@ def test_reactive_empty_construct():
     i.rx.value = 2
     assert i.rx.value == 2
 
-def test_reactive_set_new_value():
+def test_reactive_set_new_value_assignment():
     i = rx(1)
     assert i.rx.value == 1
     i.rx.value = 2
+    assert i.rx.value == 2
+
+def test_reactive_set_new_value_method():
+    i = rx(1)
+    assert i.rx.value == 1
+    i.rx.set(2)
     assert i.rx.value == 2
 
 def test_reactive_increment_value():
@@ -292,7 +299,7 @@ def test_reactive_len():
     l = i.rx.len()
     assert l.rx.value == 3
     i.rx.value = [1, 2]
-    assert l == 2
+    assert l.rx.value == 2
 
 def test_reactive_bool():
     i = rx(1)
@@ -767,3 +774,26 @@ def test_reactive_callback_resolve_accessor():
     dfx = rx(df)
     out = dfx["name"].str._callback()
     assert out is df["name"].str
+
+
+def test_reactive_dunder_len_error():
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
+    ):
+        len(rx([1, 2]))
+
+
+def test_reactive_dunder_bool():
+    assert bool(rx([1, 2]))
+
+
+def test_reactive_set_value_attributeerror():
+    x = rx(1)
+    with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
+        x.value = 1

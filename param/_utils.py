@@ -62,7 +62,43 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
 
 
 class Skip(Exception):
-    """Exception that allows skipping an update when resolving a reference."""
+    """Exception that allows skipping an update when resolving a reference.
+
+    Documentation
+    -------------
+    https://param.holoviz.org/user_guide/References.html#skipping-reference-updates
+
+    Examples
+    --------
+    >>> import param
+    >>> class W(param.Parameterized):
+    ...    a = param.Number()
+    ...    b = param.Number(allow_refs=True)
+    ...    run = param.Event()
+    >>> w = W(a=0, b=2)
+
+    Let's define a function:
+
+    >>> def add(a, b, run):
+    ...    if not run:
+    ...        raise param.Skip
+    ...    return a + b
+
+    Let's use the function as a reference:
+
+    >>> v = W(b=param.bind(add, w.param.a, w.param.b, w.param.run))
+
+    We can see that b has not yet been resolved:
+
+    >>> v.b
+    0.0
+
+    Let's trigger `w.param.run` and check `v.b` has been resolved:
+
+    >>> w.param.trigger('run')
+    >>> v.b
+    2
+    """
 
 
 def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):

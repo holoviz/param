@@ -159,10 +159,16 @@ def test_reactive_empty_construct():
     i.rx.value = 2
     assert i.rx.value == 2
 
-def test_reactive_set_new_value():
+def test_reactive_set_new_value_assignment():
     i = rx(1)
     assert i.rx.value == 1
     i.rx.value = 2
+    assert i.rx.value == 2
+
+def test_reactive_set_new_value_method():
+    i = rx(1)
+    assert i.rx.value == 1
+    i.rx.set(2)
     assert i.rx.value == 2
 
 def test_reactive_increment_value():

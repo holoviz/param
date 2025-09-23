@@ -934,6 +934,18 @@ class reactive_ops:
 
     # Operations to get the output and set the input of an expression
 
+    def set(self, value):
+        """
+        Set the input of the pipeline to a new value. Equivalent
+        to `.rx.value = value`.
+
+        Parameters
+        ----------
+        value : object
+            The value to set the pipeline input to.
+        """
+        self.value = value
+
     @property
     def value(self):
         """

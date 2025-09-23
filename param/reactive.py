@@ -1987,6 +1987,17 @@ class rx:
             obj = fn(obj, *resolved_args, **resolved_kwargs)
         return obj
 
+    def __setattr__(self, name, value):
+        # Setting value instead of rx.value is a common user mistake.
+        # They are more but we don't want to restrict __setattr__ too much
+        # so only catch value, for now.
+        if name == "value":
+            raise AttributeError(
+                "'rx' has no attribute 'value', try "
+                "'<reactive_expr>.rx.value = <val>'."
+            )
+        super().__setattr__(name, value)
+
 
 def _rx_transform(obj):
     if not isinstance(obj, rx):

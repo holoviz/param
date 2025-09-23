@@ -791,3 +791,9 @@ def test_reactive_dunder_len_error():
 
 def test_reactive_dunder_bool():
     assert bool(rx([1, 2]))
+
+
+def test_reactive_set_value_attributeerror():
+    x = rx(1)
+    with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
+        x.value = 1

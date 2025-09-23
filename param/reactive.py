@@ -938,6 +938,11 @@ class reactive_ops:
         """
         Set the input of the pipeline to a new value. Equivalent
         to `.rx.value = value`.
+
+        Parameters
+        ----------
+        value : object
+            The value to set the pipeline input to.
         """
         self.value = value
 

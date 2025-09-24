@@ -229,3 +229,25 @@ class TestDeprecateParameters:
 
         with pytest.raises(param._utils.ParamFutureWarning):
             p.param.debug('test')
+
+
+class TestDeprecateVersion:
+    def test_deprecate_Version(self):
+        with pytest.raises(FutureWarning):
+            param.version.Version()
+
+    def test_deprecate_OldDeprecatedVersion(self):
+        with pytest.raises(FutureWarning):
+            param.version.OldDeprecatedVersion()
+
+    def test_deprecate_run_cmd(self):
+        with pytest.raises(FutureWarning):
+            param.version.run_cmd(['echo', 'test'])
+
+    def test_deprecate_get_setup_version(self):
+        with pytest.raises(FutureWarning):
+            param.version.get_setup_version('dummy', 'dummy')
+
+    def test_deprecate_get_setupcfg_version(self):
+        with pytest.raises(FutureWarning):
+            param.version.get_setupcfg_version()

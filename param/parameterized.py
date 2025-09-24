@@ -45,6 +45,7 @@ VERBOSE = INFO - 1
 from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
+    ParamDeprecationWarning as _ParamDeprecationWarning,
     ParamFutureWarning as _ParamFutureWarning,
     ParamPendingDeprecationWarning as _ParamPendingDeprecationWarning,
     Skip,
@@ -1489,6 +1490,8 @@ class Parameter(_ParameterBase):
         pickle_default_value : bool, optional
             Whether the default value should be pickled. Set to `False` in rare
             cases, such as system-specific file paths.
+
+            .. deprecated:: 2.3.0
         allow_None : bool, optional
             If `True`, allows `None` as a valid parameter value. If the default
             value is `None`, this is automatically set to `True`. Default is
@@ -1542,6 +1545,12 @@ class Parameter(_ParameterBase):
         self.readonly = readonly
         self._label = label
         self._set_instantiate(instantiate)
+        if pickle_default_value is False:
+            warnings.warn(
+                'pickle_default_value has been deprecated.',
+                category=_ParamDeprecationWarning,
+                stacklevel=3,
+            )
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
         self.watchers = {}

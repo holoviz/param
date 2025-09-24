@@ -32,6 +32,11 @@ class TestDeprecateParameter:
         with pytest.raises(param._utils.ParamFutureWarning):
             p.n = 1
 
+    def test_deprecate_Parameter_pickle_default_value(self):
+        with pytest.raises(param._utils.ParamDeprecationWarning):
+            param.Parameter(pickle_default_value=False)
+
+
 
 class TestDeprecateInitModule:
 

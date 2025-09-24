@@ -8,6 +8,7 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
+import abc
 import copy
 import datetime as dt
 import inspect
@@ -5718,6 +5719,22 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __str__(self):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
+
+
+class ParameterizedABCMetaclass(abc.ABCMeta, ParameterizedMetaclass):
+    """Metaclass for abstract base classes using Parameterized.
+
+    Ensures compatibility between ABCMeta and ParameterizedMetaclass.
+    """
+
+
+class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMetaclass):
+    """Base class for user-defined ABCs that extends Parameterized."""
+
+    def __init_subclass__(cls, **kwargs):
+        if cls.__bases__ and cls.__bases__[0] is ParameterizedABC:
+            setattr(cls, f'_{cls.__name__}__abstract', True)
+        super().__init_subclass__(**kwargs)
 
 
 # As of Python 2.6+, a fn's **args no longer has to be a

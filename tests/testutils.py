@@ -8,8 +8,9 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod, Parameterized
+from param.parameterized import bothmethod, Parameterized, ParameterizedABC
 from param._utils import (
+    _is_abstract,
     _is_mutable_container,
     descendents,
     iscoroutinefunction,
@@ -492,6 +493,7 @@ def test_descendents_bad_type():
     ):
         descendents(1)
 
+
 class A(Parameterized):
     __abstract = True
 class B(A): pass
@@ -506,3 +508,27 @@ def test_descendents():
 
 def test_descendents_concrete():
     assert descendents(A, concrete=True) == [B, C, X, Y]
+
+
+def test_is_abstract_false():
+    class A: pass
+    class B(Parameterized): pass
+    assert not _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_attribute():
+    class A(Parameterized):
+        __abstract = True
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_abc():
+    class A(ParameterizedABC): pass
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)

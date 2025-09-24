@@ -112,6 +112,17 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamPendingDeprecationWarning):
             P()
 
+    def test_deprecate_watch_values_keyword_what(self):
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                super().__init__(**params)
+                self.param.watch_values(lambda _: None, ['x'], 'doc')
+
+        with pytest.raises(param._utils.ParamFutureWarning):
+            P()
+
 
 class TestDeprecateParameters:
 

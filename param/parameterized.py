@@ -8,6 +8,7 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
+import abc
 import copy
 import datetime as dt
 import inspect
@@ -3914,7 +3915,11 @@ class Parameters:
             deps.append(info)
         return deps, dynamic_deps
 
-    def _register_watcher(self_, action, watcher, what='value'):
+    def _register_watcher(
+        self_,
+        action: Literal['append', 'remove'],
+        watcher: Watcher, what: str = 'value',
+    ):
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
                 '(Un)registering a watcher on a partially initialized Parameterized instance '
@@ -3934,12 +3939,19 @@ class Parameters:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
                     watchers[parameter_name][what] = []
-                getattr(watchers[parameter_name][what], action)(watcher)
+                method = getattr(watchers[parameter_name][what], action)
             else:
                 watchers = self_[parameter_name].watchers
                 if what not in watchers:
                     watchers[what] = []
-                getattr(watchers[what], action)(watcher)
+                method = getattr(watchers[what], action)
+            try:
+                method(watcher)
+            except ValueError:
+                # ValueError raised when attempting to remove an already
+                # removed watcher. Error swallowed as unwatch is idempotent.
+                if action != 'remove':
+                    raise
 
     def watch(
         self_,
@@ -4049,7 +4061,8 @@ class Parameters:
 
         This method unregisters a previously registered `Watcher` object,
         effectively stopping it from being triggered by events on the associated
-        parameters.
+        parameters. Calling unwatch with an already unregistered watcher
+        is a no-op.
 
         Parameters
         ----------
@@ -4089,11 +4102,12 @@ class Parameters:
         No callback is triggered after removing the watcher:
 
         >>> instance.a = 20  # No output
+
+        Calling unwatch() again has no effect:
+
+        >>> instance.param.unwatch(watcher)
         """
-        try:
-            self_._register_watcher('remove', watcher, what=watcher.what)
-        except Exception:
-            self_.warning(f'No such watcher {str(watcher)} to remove.')
+        self_._register_watcher('remove', watcher, what=watcher.what)
 
     def watch_values(
         self_,
@@ -4123,6 +4137,8 @@ class Parameters:
             name, a list of parameter names, or a tuple of parameter names.
         what : str, optional
             The type of change to watch for. Must be 'value'. Default is 'value'.
+
+            .. deprecated:: 2.3.0
         onlychanged : bool, optional
             If True (default), the callback is only invoked when the parameter value
             changes. If False, the callback is invoked even when the parameter is
@@ -4188,6 +4204,13 @@ class Parameters:
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
+        if what != 'value':
+            warnings.warn(
+                'The keyword "what" is deprecated and will be removed in a '
+                'future version.',
+                category=_ParamFutureWarning,
+                stacklevel=3,
+            )
         assert what == 'value'
         if isinstance(parameter_names, list):
             parameter_names = tuple(parameter_names)
@@ -5705,6 +5728,22 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     def __str__(self):
         """Return a short representation of the name and class of this object."""
         return f"<{self.__class__.__name__} {self.name}>"
+
+
+class ParameterizedABCMetaclass(abc.ABCMeta, ParameterizedMetaclass):
+    """Metaclass for abstract base classes using Parameterized.
+
+    Ensures compatibility between ABCMeta and ParameterizedMetaclass.
+    """
+
+
+class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMetaclass):
+    """Base class for user-defined ABCs that extends Parameterized."""
+
+    def __init_subclass__(cls, **kwargs):
+        if cls.__bases__ and cls.__bases__[0] is ParameterizedABC:
+            setattr(cls, f'_{cls.__name__}__abstract', True)
+        super().__init_subclass__(**kwargs)
 
 
 # As of Python 2.6+, a fn's **args no longer has to be a

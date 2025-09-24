@@ -8,7 +8,7 @@ import pytest
 
 from param.parameterized import Skip, discard_events
 
-from .utils import MockLoggingHandler, warnings_as_excepts
+from .utils import MockLoggingHandler
 
 
 class Accumulator:
@@ -250,15 +250,8 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         watcher = obj.param.watch(accumulator, 'a')
         obj.param.unwatch(watcher)
-        with warnings_as_excepts(match='No such watcher'):
-            obj.param.unwatch(watcher)
-        try:
-            param.parameterized.warnings_as_exceptions = False
-            obj.param.unwatch(watcher)
-            self.log_handler.assertEndsWith('WARNING',
-                                ' to remove.')
-        finally:
-            param.parameterized.warnings_as_exceptions = True
+        # Idempotent, not error raised.
+        obj.param.unwatch(watcher)
 
     def test_simple_batched_watch_setattr(self):
 
@@ -719,6 +712,14 @@ class TestWatch(unittest.TestCase):
 
         P()
 
+
+    def test_watch_raises_bad_parameter(self):
+        obj = SimpleWatchExample()
+        with pytest.raises(
+            ValueError,
+            match="does_not_exist parameter was not found in list of parameters of class SimpleWatchExample"
+        ):
+            obj.param.watch(lambda e: print(e), 'does_not_exist')
 
 
 class TestWatchMethod(unittest.TestCase):

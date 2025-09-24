@@ -1,4 +1,5 @@
 """Unit test for Parameterized."""
+import abc
 import inspect
 import re
 import unittest
@@ -17,7 +18,9 @@ import random
 
 from param import parameterized, Parameter
 from param.parameterized import (
+    ParameterizedABC,
     ParamOverrides,
+    ParameterizedMetaclass,
     Undefined,
     default_label_formatter,
     edit_constant,
@@ -378,11 +381,28 @@ class TestParameterized(unittest.TestCase):
         assert t.param['instPO'].instantiate is True
         assert isinstance(t.instPO,AnotherTestPO)
 
-    def test_abstract_class(self):
+    def test_abstract_class_attribute(self):
         """Check that a class declared abstract actually shows up as abstract."""
         self.assertEqual(TestAbstractPO.abstract, True)
         self.assertEqual(_AnotherAbstractPO.abstract, True)
         self.assertEqual(TestPO.abstract, False)
+        # Test subclasses are not abstract
+        class A(param.Parameterized):
+            __abstract = True
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
+
+    def test_abstract_class_abc(self):
+        """Check that an ABC class actually shows up as abstract."""
+        class A(ParameterizedABC): pass
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
 
     def test_override_class_param_validation(self):
         test = TestPOValidation()
@@ -1850,3 +1870,70 @@ def test_inheritance_with_changing_class_():
     ):
         class C(B):
             p = param.ClassSelector(class_=str)
+
+
+class MyABC(ParameterizedABC):
+
+    x = param.Number()
+
+    @abc.abstractmethod
+    def method(self): pass
+
+    @property
+    @abc.abstractmethod
+    def property(self): pass
+    # Other methods like abc.abstractproperty are deprecated and can be
+    # replaced by combining @abc.abstracmethod with other decorators, like
+    # @property, @classmethod, etc. No need to test them all.
+
+
+def test_abc_insintance_metaclass():
+    assert isinstance(MyABC, ParameterizedMetaclass)
+
+
+def test_abc_param_abstract():
+    assert MyABC.abstract
+
+
+def test_abc_error_when_interface_not_implemented():
+    class Bad(MyABC):
+        def wrong_method(self): pass
+
+    with pytest.raises(TypeError, match="Can't instantiate abstract class Bad"):
+        Bad()
+
+def test_abc_basic_checks():
+    # Some very basic tests to check the concrete class works as expected.
+    class GoodConcrete(MyABC):
+        l = param.List()
+
+        def method(self):
+            return 'foo'
+
+        @property
+        def property(self):
+            return 'bar'
+
+        @param.depends('x', watch=True, on_init=True)
+        def on_x(self):
+            self.l.append(self.x)
+
+    assert issubclass(GoodConcrete, param.Parameterized)
+    assert not GoodConcrete.abstract
+
+    assert GoodConcrete.name == 'GoodConcrete'
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Number parameter 'MyABC.x' only takes numeric values, not <class 'str'>."),
+    ):
+        GoodConcrete(x='bad')
+
+    gc = GoodConcrete(x=10)
+    assert isinstance(gc, param.Parameterized)
+    assert gc.method() == 'foo'
+    assert gc.property == 'bar'
+    assert gc.name.startswith('GoodConcrete0')
+    assert gc.l == [10]
+    gc.x += 1
+    assert gc.l == [10, 11]

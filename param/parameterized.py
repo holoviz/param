@@ -4114,6 +4114,8 @@ class Parameters:
             name, a list of parameter names, or a tuple of parameter names.
         what : str, optional
             The type of change to watch for. Must be 'value'. Default is 'value'.
+
+            .. deprecated:: 2.3.0
         onlychanged : bool, optional
             If True (default), the callback is only invoked when the parameter value
             changes. If False, the callback is invoked even when the parameter is
@@ -4179,6 +4181,13 @@ class Parameters:
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
+        if what != 'value':
+            warnings.warn(
+                'The keyword "what" is deprecated and will be removed in a '
+                'future version.',
+                category=_ParamFutureWarning,
+                stacklevel=3,
+            )
         assert what == 'value'
         if isinstance(parameter_names, list):
             parameter_names = tuple(parameter_names)

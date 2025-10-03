@@ -51,6 +51,7 @@ from ._utils import (
     Skip,
     _deprecated,
     _deprecate_positional_args,
+    _find_stack_level,
     _in_ipython,
     _is_auto_name,
     _is_mutable_container,
@@ -704,7 +705,7 @@ def recursive_repr(fillvalue='...'):
     warnings.warn(
         'recursive_repr has been deprecated and will be removed in a future version.',
         category=_ParamFutureWarning,
-        stacklevel=2,
+        stacklevel=_find_stack_level(),
     )
     return _recursive_repr(fillvalue=fillvalue)
 
@@ -1549,7 +1550,7 @@ class Parameter(_ParameterBase):
             warnings.warn(
                 'pickle_default_value has been deprecated.',
                 category=_ParamDeprecationWarning,
-                stacklevel=3,
+                stacklevel=_find_stack_level(),
             )
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
@@ -1864,7 +1865,7 @@ class Parameter(_ParameterBase):
                 warnings.warn(
                     'Number.set_hook has been deprecated.',
                     category=_ParamFutureWarning,
-                    stacklevel=6,
+                    stacklevel=_find_stack_level(),
                 )
 
         self._validate(val)
@@ -1898,7 +1899,7 @@ class Parameter(_ParameterBase):
                         "a future version. Ensure the value is set after calling "
                         "`super().__init__(**params)` in the constructor.",
                         category=_ParamPendingDeprecationWarning,
-                        stacklevel=4,
+                        stacklevel=_find_stack_level(),
                     )
                     obj._param__private = _InstancePrivate(
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs
@@ -2456,7 +2457,7 @@ class Parameters:
                             "Parameter definition to declare whether references "
                             "should be resolved or not.",
                             category=_ParamFutureWarning,
-                            stacklevel=4,
+                            stacklevel=_find_stack_level(),
                         )
                 setattr(self, name, val)
                 continue
@@ -4209,7 +4210,7 @@ class Parameters:
                 'The keyword "what" is deprecated and will be removed in a '
                 'future version.',
                 category=_ParamFutureWarning,
-                stacklevel=3,
+                stacklevel=_find_stack_level(),
             )
         assert what == 'value'
         if isinstance(parameter_names, list):
@@ -6165,7 +6166,7 @@ class overridable_property:
         warnings.warn(
             message="overridable_property has been deprecated.",
             category=_ParamFutureWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
         self.fget = fget
         self.fset = fset

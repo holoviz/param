@@ -42,6 +42,7 @@ from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
     _deprecate_positional_args,
     _deprecated,
+    _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -2492,7 +2493,7 @@ class List(Parameter):
             warnings.warn(
                 message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
                 category=_ParamFutureWarning,
-                stacklevel=3,
+                stacklevel=_find_stack_level(),
             )
         if item_type is not Undefined and class_ is not Undefined:
             self.item_type = item_type

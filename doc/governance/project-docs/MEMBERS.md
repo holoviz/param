@@ -7,5 +7,6 @@ The Param Project’s equivalently named documents take precedence over any exte
 | **NAME** | **Role** | **GitHub Handle** |
 | --- | --- | --- |
 | James Bednar | Project Director | [jbednar](https://github.com/jbednar) |
+| Maxime Liquet | Maintainer | [maximlt](https://github.com/maximlt) |
 | Jean-Luc Stevens | Maintainer | [jlstevens](https://github.com/jlstevens) |
 | Philipp Rudiger | Maintainer | [philippjfr](https://github.com/philippjfr) |

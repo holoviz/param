@@ -16,6 +16,7 @@ test-311 = ["py311", "test-core", "test", "example", "test-example"]
 test-312 = ["py312", "test-core", "test", "example", "test-example"]
 test-313 = ["py313", "test-core", "test", "example", "test-example"]
 test-314 = ["py314", "test-core", "test", "example", "test-example"]
+test-314t = ["py314t", "test-core", "test-314t"]
 test-core = ["py314", "test-core"]
 docs = ["py311", "example", "doc"]
 build = ["py311", "build"]
@@ -52,6 +53,9 @@ python = "3.14.*"
 [feature.py314.activation.env]
 COVERAGE_CORE = "sysmon"
 
+[feature.py314t.dependencies]
+python-freethreading = "3.14.*"
+
 [feature.example.dependencies]
 aiohttp = "*"
 pandas = "*"
@@ -82,6 +86,20 @@ pyarrow = "*"
 pytables = "*"
 xlrd = "*"
 gmpy2 = "*"
+
+[feature.test-314t.dependencies]
+cloudpickle = "*"
+ipython = "*"
+# jsonschema = "*"
+nest-asyncio = "*"
+numpy = "*"
+odfpy = "*"
+# openpyxl = "*"
+# pandas = "*"
+# pyarrow = "*"
+# pytables = "*"
+xlrd = "*"
+# gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'

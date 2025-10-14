@@ -15,7 +15,8 @@ test-310 = ["py310", "test-core", "test", "example", "test-example"]
 test-311 = ["py311", "test-core", "test", "example", "test-example"]
 test-312 = ["py312", "test-core", "test", "example", "test-example"]
 test-313 = ["py313", "test-core", "test", "example", "test-example"]
-test-core = ["py313", "test-core"]
+test-314 = ["py314", "test-core", "test", "example", "test-example"]
+test-core = ["py314", "test-core"]
 docs = ["py311", "example", "doc"]
 build = ["py311", "build"]
 lint = ["py311", "lint"]
@@ -43,6 +44,12 @@ COVERAGE_CORE = "sysmon"
 python = "3.13.*"
 
 [feature.py313.activation.env]
+COVERAGE_CORE = "sysmon"
+
+[feature.py314.dependencies]
+python = "3.14.*"
+
+[feature.py314.activation.env]
 COVERAGE_CORE = "sysmon"
 
 [feature.example.dependencies]

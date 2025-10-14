@@ -486,6 +486,7 @@ def test_descendents_object():
     assert descendents(object)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_bad_type():
     with pytest.raises(
         TypeError,

@@ -481,11 +481,13 @@ def test_gen_types():
     assert isinstance(_int_types, Iterable)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_object():
     # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
     assert descendents(object)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_bad_type():
     with pytest.raises(
         TypeError,

@@ -86,6 +86,7 @@ pyarrow = "*"
 pytables = "*"
 xlrd = "*"
 gmpy2 = "*"
+ipykernel = "!=7.0.0"  # temp pin: https://github.com/ipython/ipykernel/issues/1445
 
 [feature.test-314t.dependencies]
 cloudpickle = "*"

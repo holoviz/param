@@ -1,7 +1,7 @@
 default_stages: [pre-commit]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-builtin-literals
       - id: check-case-conflict
@@ -12,11 +12,11 @@ repos:
         exclude: (\.min\.js$|\.svg$)
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.3
+    rev: v0.14.0
     hooks:
-      - id: ruff
+      - id: ruff-check
         exclude: \.ipynb
   - repo: https://github.com/hoxbro/clean_notebook
-    rev: v0.1.15
+    rev: v0.1.17
     hooks:
       - id: clean-notebook

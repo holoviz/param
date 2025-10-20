@@ -2248,7 +2248,7 @@ class Parameters:
 
     def __init__(self_, cls: type['Parameterized'], self: Union['Parameterized', None]=None):
         """
-        cls is the Parameterized class which is always set.
+        `cls` is the Parameterized class which is always set.
         self is the instance if set.
         """
         self_.cls = cls

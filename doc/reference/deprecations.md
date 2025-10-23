@@ -4,6 +4,7 @@ List of currently deprecated APIs:
 
 | Warning | Description |
 |-|-|
+| `FutureWarning` since `2.3.0` | The whole `param.Version` module is deprecated, use tools like `setuptools-scm`. |
 | `ParamDeprecationWarning` since `2.3.0` | Parameter slots / `Parameter.pickle_default_value`: no replacement |
 | `ParamFutureWarning` since `2.3.0` | Parameterized `.param` namespace / `.param.watch_values`: the keyword `what` is deprecated |
 | `ParamPendingDeprecationWarning` since `2.3.0` | `param.parameterized` module / Setting a parameter value before full instance initialization |

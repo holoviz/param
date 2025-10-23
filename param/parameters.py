@@ -202,7 +202,7 @@ class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
     Python's float('inf') value, this object can be safely compared
-    with gmpy numeric types across different gmpy versions.
+    with gmpy2 numeric types across different gmpy2 versions.
 
     All operators on Infinity() return Infinity(), apart from the
     comparison and equality operators. Equality works by checking
@@ -322,11 +322,11 @@ class Time(Parameterized):
            times in decimal notation, but very slow and needs to be
            installed separately.
 
-         - gmpy.mpq: Allows a natural representation of times in
+         - gmpy2.mpq: Allows a natural representation of times in
            decimal notation, and very fast because it uses the GNU
            Multi-Precision library, but needs to be installed
-           separately and depends on a non-Python library.  gmpy.mpq
-           is gmpy's rational type.
+           separately and depends on a non-Python library.  gmpy2.mpq
+           is gmpy2's rational type.
         """)
 
     timestep = Parameter(default=1.0,doc="""
@@ -2459,25 +2459,26 @@ class List(Parameter):
 
     The bounds allow a minimum and/or maximum length of
     list to be enforced.  If the item_type is non-None, all
-    items in the list are checked to be of that type.
+    items in the list are checked to be instances of that type if
+    is_instance is True (default) or subclasses of that type when False.
 
     `class_` is accepted as an alias for `item_type`, but is
     deprecated due to conflict with how the `class_` slot is
     used in Selector classes.
     """
 
-    __slots__ = ['bounds', 'item_type', 'class_']
+    __slots__ = ['bounds', 'item_type', 'class_', 'is_instance']
 
     _slot_defaults = dict(
         Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
-        instantiate=True, default=[],
+        instantiate=True, default=[], is_instance=True,
     )
 
     @typing.overload
     def __init__(
         self,
         default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
-        allow_None=False, doc=None, label=None, precedence=None,
+        is_instance=True, allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
@@ -2485,7 +2486,7 @@ class List(Parameter):
 
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
-                 instantiate=Undefined, bounds=Undefined, **params):
+                 instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
         if class_ is not Undefined:
             # PARAM3_DEPRECATION
             warnings.warn(
@@ -2499,6 +2500,7 @@ class List(Parameter):
             self.item_type = class_
         else:
             self.item_type = item_type
+        self.is_instance = is_instance
         self.class_ = self.item_type
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
@@ -2512,7 +2514,7 @@ class List(Parameter):
         """
         self._validate_value(val, self.allow_None)
         self._validate_bounds(val, self.bounds)
-        self._validate_item_type(val, self.item_type)
+        self._validate_item_type(val, self.item_type, self.is_instance)
 
     def _validate_bounds(self, val, bounds):
         """Check that the list is of the right length and has the right contents."""
@@ -2548,16 +2550,22 @@ class List(Parameter):
                 f"object of {type(val)}."
             )
 
-    def _validate_item_type(self, val, item_type):
+    def _validate_item_type(self, val, item_type, is_instance):
         if item_type is None or (self.allow_None and val is None):
             return
+        err_kind = None
         for v in val:
-            if isinstance(v, item_type):
-                continue
-            raise TypeError(
-                f"{_validate_error_prefix(self)} items must be instances "
-                f"of {item_type!r}, not {type(v)}."
-            )
+            if is_instance and not isinstance(v, item_type):
+                err_kind = "instances"
+                obj_display = lambda v: type(v)
+            elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
+                err_kind = "subclasses"
+                obj_display = lambda v: v
+            if err_kind:
+                raise TypeError(
+                    f"{_validate_error_prefix(self)} items must be {err_kind} "
+                    f"of {item_type!r}, not {obj_display(v)}."
+                )
 
 
 class HookList(List):
@@ -2610,11 +2618,11 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = List(default=[os.getcwd()], pickle_default_value=False, doc="""
+    search_paths = List(default=[os.getcwd()], pickle_default_value=None, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=False,
+    path_to_file = Boolean(default=True, pickle_default_value=None,
                            allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a
         'Folder'. If None, the path may point to *either* a 'File' *or*
@@ -2665,7 +2673,7 @@ class normalize_path(ParameterizedFunction):
     prefix rather than os.getcwd).
     """
 
-    prefix = String(default=os.getcwd(),pickle_default_value=False,doc="""
+    prefix = String(default=os.getcwd(),pickle_default_value=None,doc="""
         Prepended to the specified path, if that path is not
         absolute.""")
 

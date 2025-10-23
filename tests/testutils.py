@@ -8,8 +8,14 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod
-from param._utils import _is_mutable_container, iscoroutinefunction, gen_types
+from param.parameterized import bothmethod, Parameterized, ParameterizedABC
+from param._utils import (
+    _is_abstract,
+    _is_mutable_container,
+    descendents,
+    iscoroutinefunction,
+    gen_types,
+)
 
 
 try:
@@ -50,6 +56,9 @@ if pd:
         'DataFrame': (pd.DataFrame(data=dict(a=[1])), param.DataFrame),
         'Series': (pd.Series([1, 2]), param.Series),
     })
+
+class CustomMetaclass(param.parameterized.ParameterizedMetaclass): pass
+
 
 @pytest.mark.parametrize('val,p', guess_param_types_data.values(), ids=guess_param_types_data.keys())
 def test_guess_param_types(val, p):
@@ -383,6 +392,37 @@ def test_error_prefix_set_instance():
         p.x = 'wrong'
 
 
+def test_error_prefix_custom_metaclass_before_class_creation():
+    with pytest.raises(ValueError, match="Number parameter 'x' only"):
+        class P(param.Parameterized, metaclass=CustomMetaclass):
+            x = param.Number('wrong')
+
+
+def test_error_prefix_custom_metaclass_set_class():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P.x = 'wrong'
+
+
+def test_error_prefix_custom_metaclass_instantiate():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P(x='wrong')
+
+
+def test_error_prefix_custom_metaclass_set_instance():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    p = P()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        p.x = 'wrong'
+
+
 @pytest.mark.parametrize(
         ('obj,ismutable'),
         [
@@ -439,3 +479,58 @@ def test_gen_types():
     assert next(iter(_int_types())) is int
     assert next(iter(_int_types)) is int
     assert isinstance(_int_types, Iterable)
+
+
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
+def test_descendents_object():
+    # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
+    assert descendents(object)
+
+
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
+def test_descendents_bad_type():
+    with pytest.raises(
+        TypeError,
+        match="descendents expected a class object, not int"
+    ):
+        descendents(1)
+
+
+class A(Parameterized):
+    __abstract = True
+class B(A): pass
+class C(A): pass
+class X(B): pass
+class Y(B): pass
+
+
+def test_descendents():
+    assert descendents(A) == [A, B, C, X, Y]
+
+
+def test_descendents_concrete():
+    assert descendents(A, concrete=True) == [B, C, X, Y]
+
+
+def test_is_abstract_false():
+    class A: pass
+    class B(Parameterized): pass
+    assert not _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_attribute():
+    class A(Parameterized):
+        __abstract = True
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_abc():
+    class A(ParameterizedABC): pass
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)

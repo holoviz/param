@@ -88,7 +88,6 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 """
 from __future__ import annotations
 
-import asyncio
 import inspect
 import math
 import operator
@@ -231,7 +230,7 @@ class reactive_ops:
     def __call__(self) -> 'rx':
         """Create a reactive expression."""
         rxi = self._reactive
-        return rxi if isinstance(rx, rx) else rx(rxi)
+        return rxi if isinstance(rxi, rx) else rx(rxi)
 
     def and_(self, other) -> 'rx':
         """
@@ -569,6 +568,7 @@ class reactive_ops:
                 "or coroutine functions are permitted."
             )
         if inspect.iscoroutinefunction(func):
+            import asyncio
             async def apply(vs, *args, **kwargs):
                 return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
         else:
@@ -934,6 +934,18 @@ class reactive_ops:
 
     # Operations to get the output and set the input of an expression
 
+    def set(self, value):
+        """
+        Set the input of the pipeline to a new value. Equivalent
+        to `.rx.value = value`.
+
+        Parameters
+        ----------
+        value : object
+            The value to set the pipeline input to.
+        """
+        self.value = value
+
     @property
     def value(self):
         """
@@ -1106,7 +1118,7 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
-def bind(function, *args, watch=False, **kwargs):
+def bind(function, *args, watch: bool = False, **kwargs):
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
 
@@ -1622,6 +1634,7 @@ class rx:
         self._error_state = None
 
     async def _resolve_async(self, obj):
+        import asyncio
         self._current_task = task = asyncio.current_task()
         if inspect.isasyncgen(obj):
             async for val in obj:
@@ -1939,6 +1952,19 @@ class rx:
         for i in range(len(self._current)):
             yield items[i]
 
+    def __bool__(self):
+        # Implemented otherwise truth value testing (e.g. if rx: ...)
+        # defers to __len__ which raises an error.
+        return True
+
+    def __len__(self):
+        raise TypeError(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
+
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
@@ -1960,6 +1986,17 @@ class rx:
         else:
             obj = fn(obj, *resolved_args, **resolved_kwargs)
         return obj
+
+    def __setattr__(self, name, value):
+        # Setting value instead of rx.value is a common user mistake.
+        # They are more but we don't want to restrict __setattr__ too much
+        # so only catch value, for now.
+        if name == "value":
+            raise AttributeError(
+                "'rx' has no attribute 'value', try "
+                "'<reactive_expr>.rx.value = <val>'."
+            )
+        super().__setattr__(name, value)
 
 
 def _rx_transform(obj):

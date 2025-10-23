@@ -28,6 +28,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
@@ -42,6 +43,7 @@ examples = [
 tests = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
 ]
 tests-deser = [
     "xlrd",
@@ -57,6 +59,14 @@ tests-examples = [
     "nbval",
     "param[examples]",
 ]
+# Set of dependencies that work with pypy and are quick to install.
+tests-pypy = [
+    "cloudpickle",
+    "ipython",
+    "jsonschema",
+    "nest-asyncio",
+    "numpy",
+]
 tests-full = [
     "param[tests]",
     "param[tests-examples]",
@@ -65,7 +75,7 @@ tests-full = [
     "pandas",
     "ipython",
     "jsonschema",
-    "gmpy",
+    "gmpy2",
     "cloudpickle",
     "nest_asyncio",
 ]
@@ -106,12 +116,12 @@ python_files = "test*.py"
 filterwarnings = [
   "error",
 ]
-xfail_strict = "true"
+xfail_strict = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
-omit = ["param/version.py"]
+omit = ["param/version.py", "tests/testimports.py"]
 
 [tool.ruff]
 fix = true

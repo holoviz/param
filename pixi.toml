@@ -114,14 +114,14 @@ nbval = "*"
 # =================== DOCS ====================
 # =============================================
 [feature.doc]
-channels = ["pyviz"]
+channels = ["pyviz/label/tooling_dev"]
 
 [feature.doc.activation.env]
 PARAM_PARAMETER_SIGNATURE = "1"
 
 [feature.doc.dependencies]
 graphviz = "*"
-nbsite = ">=0.8.4,<0.9.0"
+nbsite = ">=0.9.0a12"
 sphinx-remove-toctrees = "*"
 
 [feature.doc.tasks.docs-build]

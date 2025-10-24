@@ -308,10 +308,10 @@ async def test_generator_ref_cancelled():
             time.sleep(0.01)
 
     p = Parameters(string=gen_strings1)
-    task1 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
+    task1 = await wait_for_async_ref(p, 'string', delay=0.03, timeout=0.1)
     assert p.string is not None
     p.string = gen_strings2
-    task2 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
+    task2 = await wait_for_async_ref(p, 'string', delay=0.03, timeout=0.1)
     assert task1 is not task2
     assert task1.done()
     assert not task2.done()

@@ -8,6 +8,19 @@ This guide describes how to install and configure development environments.
 
 If you have any problems with the steps here, please reach out in the `dev` channel on [Discord](https://discord.gg/rb6gPXbdAr) or on [Discourse](https://discourse.holoviz.org/).
 
+
+## TL;DR
+
+0. Open an [issue on Github](https://github.com/holoviz/param/issues) if needed
+1. Fork and clone [Param's Github repository](https://github.com/holoviz/param)
+2. Install [`pixi`](https://pixi.sh)
+3. Run `pixi run setup-dev` to create your development environment
+4. Make some changes and run:
+  - `pixi run test-unit` if you updated the source code to run the unit tests
+  - `pixi run test-example` if you updated the notebooks to run them
+  - `pixi run docs-build` if you need to build the website locally
+5. Open a Pull Request
+
 ## Preliminaries
 
 ### Basic understanding of how to contribute to Open Source
@@ -72,50 +85,84 @@ git push --tags
 
 ## Start developing
 
-To start developing, run the following command
+To start developing, run the following command, this will create an environment called `default` (in `.pixi/envs`), install Param in [editable mode](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs), and install `pre-commit`:
 
 ```bash
-pixi install
-```
-
-The first time you run it, it will create a `pixi.lock` file with information for all available environments. This command will take a minute or so to run.
-
-All available tasks can be found by running `pixi task list`, the following sections will give a brief introduction to the most common tasks.
-
-### Editable install
-
-It can be advantageous to install Param in [editable mode](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
-
-```bash
-pixi run install
+pixi run setup-dev
 ```
 
 :::{admonition} Note
 :class: info
 
-Currently, this needs to be run for each environment. So, if you want to install in the `test-312` environment, you can add `--environment` / `-e` to the command:
+The first time you run it, it will create a `pixi.lock` file with information for all available environments.
+This command will take a minute or so to run.
+:::
+
+All available tasks can be found by running `pixi task list`, the following sections will give a brief introduction to the most common tasks.
+
+### Syncing Git tags with upstream repository
+
+If you are working from a forked repository of Param, you will need to sync the tags with the upstream repository.
+This is needed because the Param version number depends on [`git tags`](https://git-scm.com/book/en/v2/Git-Basics-Tagging).
+Syncing the git tags can be done with:
 
 ```bash
-pixi run -e test-313 install
+pixi run sync-git-tags
 ```
 
-You can find the list of environments in the **pixi.toml** file or via the command `pixi info`.
+## Developer Environment
 
-:::
+The `default` environment is meant to provide all the tools needed to develop Param.
+
+This environment is created by running `pixi run setup-dev`. Run `pixi shell` to activate it; this is equivalent to `source venv/bin/activate` in a Python virtual environment or `conda activate` in a conda environment.
+
+If you need to run a command directly instead of via `pixi`, activate the environment and run the command (e.g. `pixi shell` and `pytest param/tests/<somefile.py>`).
+
+### VS Code
+
+This environment can also be selected in your IDE. In VS Code, this can be done by running the command `Python: Select Interpreter` and choosing `{'default': Pixi}`.
+
+<p style="text-align: center">
+  <img
+    src="https://assets.holoviews.org/static/dev_guide/001.png"
+    alt="001"
+    style="width: 45%; display: inline-block"
+  />
+  <img
+    src="https://assets.holoviews.org/static/dev_guide/002.png"
+    alt="002"
+    style="width: 45%; display: inline-block"
+  />
+</p>
+
+To confirm you are using this dev environment, check the bottom right corner:
+
+![003](https://assets.holoviews.org/static/dev_guide/003.png)
+
+### Jupyter Lab
+
+You can launch Jupyter lab with the `default` environment with `pixi run lab`. This can be advantageous when you need to edit the documentation or debug an example notebook.
 
 ## Linting
 
-Param uses [pre-commit](https://pre-commit.com/) to apply linting to Param code. Linting can be run for all the files with:
+Param uses [`pre-commit`](https://pre-commit.com/) to lint and format the source code. `pre-commit` is installed automatically when running `pixi run setup-dev`; it can also be installed with `pixi run lint-install`.
+`pre-commit` runs all the linters when a commit is made locally. Linting can be forced to run for all the files with:
 
 ```bash
 pixi run lint
 ```
 
-Linting can also be set up to run automatically with each commit; this is the recommended way because if linting is not passing, the [Continuous Integration](https://en.wikipedia.org/wiki/Continuous_integration) (CI) will also fail.
+:::{admonition} Note
+:class: info
+
+Alternatively, if you have `pre-commit` installed elsewhere you can run:
 
 ```bash
-pixi run lint-install
+pre-commit install  # To install
+pre-commit run --all-files  # To run on all files
 ```
+
+:::
 
 ## Testing
 
@@ -134,7 +181,7 @@ pixi run test-unit
 
 The task is available in the following environments:
 
-1. `test-39`, `test-310`, `test-311`, `test-312`, and `test-313`.
+1. `test-39`, `test-310`, `test-311`, `test-312`, `test-313`, and `test-314`.
 1. `test-core`
 
 Where the first ones have the same environments except for different Python versions. `test-core` only has a core set of dependencies.
@@ -181,8 +228,3 @@ GitHub Actions provides free build workers for open-source projects. A few consi
 - Run the tests locally before opening or pushing to an opened PR.
 
 - Group commits to meaningful chunks of work before pushing to GitHub (i.e., don't push on every commit).
-
-## Useful Links
-
-- [Dev version of Param Site](https://holoviz-dev.github.io/param)
-  - Use this to explore new, not yet released features and docs

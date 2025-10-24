@@ -3,15 +3,13 @@ name = "param"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
 
-[tasks]
-install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
-
 [activation.env]
 PYTHONIOENCODING = "utf-8"
 
 [environments]
 default = [
     "py312",
+    "required",
     "test-core",
     "test",
     "example",
@@ -22,52 +20,55 @@ default = [
 ]
 
 [environments.test-39]
-features = ["py39", "test-core", "test", "example", "test-example"]
+features = ["py39", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-310]
-features = ["py310", "test-core", "test", "example", "test-example"]
+features = ["py310", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-311]
-features = ["py311", "test-core", "test", "example", "test-example"]
+features = ["py311", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-312]
-features = ["py312", "test-core", "test", "example", "test-example"]
+features = ["py312", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-313]
-features = ["py313", "test-core", "test", "example", "test-example"]
+features = ["py313", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-314]
-features = ["py314", "test-core", "test", "example", "test-example"]
+features = ["py314", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-314t]
-features = ["py314t", "test-core", "test-314t"]
+features = ["py314t", "required", "test-core", "test-314t"]
 no-default-feature = true
 
 [environments.test-core]
-features = ["py314", "test-core"]
+features = ["py314", "required", "test-core"]
 no-default-feature = true
 
 [environments.docs]
-features = ["py313", "example", "doc"]
+features = ["py313", "required", "example", "doc"]
 no-default-feature = true
 
 [environments.build]
-features = ["py313", "build"]
+features = ["py313", "required", "build"]
 no-default-feature = true
 
 [environments.lint]
 features = ["py313", "lint"]
 no-default-feature = true
 
-[dependencies]
+[feature.required.dependencies]
 nomkl = "*"
 pip = "*"
+
+[feature.required.tasks]
+install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
 
 [feature.py39.dependencies]
 python = "3.9.*"

@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "param"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
@@ -10,17 +10,60 @@ install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
 PYTHONIOENCODING = "utf-8"
 
 [environments]
-test-39 = ["py39", "test-core", "test", "example", "test-example"]
-test-310 = ["py310", "test-core", "test", "example", "test-example"]
-test-311 = ["py311", "test-core", "test", "example", "test-example"]
-test-312 = ["py312", "test-core", "test", "example", "test-example"]
-test-313 = ["py313", "test-core", "test", "example", "test-example"]
-test-314 = ["py314", "test-core", "test", "example", "test-example"]
-test-314t = ["py314t", "test-core", "test-314t"]
-test-core = ["py314", "test-core"]
-docs = ["py311", "example", "doc"]
-build = ["py311", "build"]
-lint = ["py311", "lint"]
+default = [
+    "py312",
+    "test-core",
+    "test",
+    "example",
+    "test-example",
+    "lint",
+    "doc",
+    "dev",
+]
+
+[environments.test-39]
+features = ["py39", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-310]
+features = ["py310", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-311]
+features = ["py311", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-312]
+features = ["py312", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-313]
+features = ["py313", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-314]
+features = ["py314", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-314t]
+features = ["py314t", "test-core", "test-314t"]
+no-default-feature = true
+
+[environments.test-core]
+features = ["py314", "test-core"]
+no-default-feature = true
+
+[environments.docs]
+features = ["py313", "example", "doc"]
+no-default-feature = true
+
+[environments.build]
+features = ["py313", "build"]
+no-default-feature = true
+
+[environments.lint]
+features = ["py313", "lint"]
+no-default-feature = true
 
 [dependencies]
 nomkl = "*"
@@ -60,6 +103,17 @@ python-freethreading = "3.14.*"
 aiohttp = "*"
 pandas = "*"
 panel = "*"
+
+# =================== DEV ===================
+
+[feature.dev.dependencies]
+jupyterlab = "*"
+setuptools_scm = ">=6"
+
+[feature.dev.tasks]
+lab = 'jupyter lab'
+sync-git-tags = 'python scripts/sync_git_tags.py param'
+setup-dev = { depends-on = ["install", "lint-install"] }
 
 # =============================================
 # =================== TESTS ===================

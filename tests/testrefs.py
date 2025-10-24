@@ -8,6 +8,29 @@ import pytest
 from param.parameterized import Skip, resolve_ref
 from param.reactive import bind, rx
 
+
+async def wait_for_async_ref(obj, name, *, delay=0.0, timeout=0.5, interval=0.005):
+    if delay:
+        await asyncio.sleep(delay)
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        task = obj._param__private.async_refs.get(name)
+        if task is not None:
+            return task
+        await asyncio.sleep(interval)
+    pytest.fail(f"Async ref {name!r} was not registered within {timeout} seconds")
+
+
+async def wait_for_value(obj, attr, expected, *, delay=0.0, timeout=0.5, interval=0.005):
+    if delay:
+        await asyncio.sleep(delay)
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if getattr(obj, attr) == expected:
+            return
+        await asyncio.sleep(interval)
+    pytest.fail(f"{attr} on {type(obj).__name__} never became {expected!r}")
+
 class Parameters(param.Parameterized):
 
     string = param.String(default="string", allow_refs=True)
@@ -225,10 +248,8 @@ async def test_async_generator_ref():
 
     p = Parameters(string=gen_strings)
 
-    await asyncio.sleep(0.01)
-    assert p.string == 'string?'
-    await asyncio.sleep(0.1)
-    assert p.string == 'string!'
+    await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
+    await wait_for_value(p, 'string', 'string!', delay=0.1, timeout=0.1)
 
 async def test_generator_ref():
     def gen_strings():
@@ -238,13 +259,8 @@ async def test_generator_ref():
 
     p = Parameters(string=gen_strings)
 
-    await asyncio.sleep(0.02)
-    assert p.string == 'string?'
-    for _ in range(5):
-        await asyncio.sleep(0.05)
-        if p.string == 'string!':
-            break
-    assert p.string == 'string!'
+    await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
+    await wait_for_value(p, 'string', 'string!', delay=0.05, timeout=0.1)
 
 async def test_async_generator_ref_cancelled():
     tasks = []
@@ -263,14 +279,16 @@ async def test_async_generator_ref_cancelled():
             await asyncio.sleep(0.01)
 
     p = Parameters(string=gen_strings1)
-    await asyncio.sleep(0.02)
+    task1 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
     assert p.string is not None
     p.string = gen_strings2
-    await asyncio.sleep(0.02)
+    task2 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
     assert len(tasks) == 2
-    task1, task2 = tasks
-    assert task1.done()
-    assert not task2.done()
+    async_task1, async_task2 = tasks
+    assert async_task1.done()
+    assert not async_task2.done()
+    assert task1 is async_task1
+    assert task2 is async_task2
     assert p._param__private.async_refs['string'] is task2
 
 async def test_generator_ref_cancelled():
@@ -290,12 +308,10 @@ async def test_generator_ref_cancelled():
             time.sleep(0.01)
 
     p = Parameters(string=gen_strings1)
-    await asyncio.sleep(0.02)
-    task1 = p._param__private.async_refs['string']
+    task1 = await wait_for_async_ref(p, 'string', delay=0.03, timeout=0.1)
     assert p.string is not None
     p.string = gen_strings2
-    await asyncio.sleep(0.02)
-    task2 = p._param__private.async_refs['string']
+    task2 = await wait_for_async_ref(p, 'string', delay=0.03, timeout=0.1)
     assert task1 is not task2
     assert task1.done()
     assert not task2.done()

@@ -1,4 +1,25 @@
-# `.param` namespace
+# Parameterized
+
+## Core objects
+
+```{eval-rst}
+.. currentmodule:: param
+```
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
+
+  Parameterized
+  parameterized.Event
+  parameterized.Watcher
+  ParameterizedABC
+  ParameterizedFunction
+  ParamOverrides
+```
+
+## `.param` namespace
 
 These methods and properties are available under the `.param` namespace
 of {py:class}`Parameterized` classes and instances.
@@ -45,4 +66,28 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.watch
   ~Parameters.watch_values
   ~Parameters.watchers
+```
+
+## Helpers
+
+```{eval-rst}
+.. currentmodule:: param
+```
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
+  batch_watch
+  parameterized.batch_call_watchers
+  concrete_descendents
+  depends
+  descendents
+  discard_events
+  edit_constant
+  output
+  parameterized.register_reference_transform
+  parameterized.resolve_ref
+  parameterized.resolve_value
+  script_repr
 ```

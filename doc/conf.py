@@ -7,6 +7,39 @@ param.parameterized.docstring_describe_params = False
 
 from nbsite.shared_conf import *  # noqa
 
+
+def patch_autosummary():
+    # See https://github.com/sphinx-doc/sphinx/issues/13991
+    import sphinx.ext.autosummary
+
+
+    def patch_get_import_prefixes_from_env(env) -> list[str | None]:
+        """Obtain current Python import prefixes (for `import_by_name`)
+        from ``document.env``.
+        """
+        prefixes: list[str | None] = [None]
+
+        currmodule = env.ref_context.get('py:module')
+        if currmodule:
+            prefixes.insert(0, currmodule)
+
+        # Commenting out this bit to remove the prefix that messes up
+        # documenting the rx class that has the rx property.
+
+        # currclass = env.ref_context.get('py:class')
+        # if currclass:
+        #     if currmodule:
+        #         prefixes.insert(0, f'{currmodule}.{currclass}')
+        #     else:
+        #         prefixes.insert(0, currclass)
+
+        return prefixes
+
+    sphinx.ext.autosummary.get_import_prefixes_from_env = patch_get_import_prefixes_from_env
+
+patch_autosummary()
+
+
 project = 'param'
 authors = 'HoloViz developers'
 copyright_years['start_year'] = '2003'  # noqa
@@ -76,6 +109,13 @@ remove_from_toctrees = ["reference/param/generated/*"]
 
 nbsite_analytics = {
     'goatcounter_holoviz': True,
+}
+
+rediraffe_redirects = {
+    # API docs re-org
+    'reference/param/parameter_helpers': 'reference/param/parameters',
+    'reference/param/parameterized_helpers': 'reference/param/parameterized',
+    'reference/param/parameterized_objects': 'reference/param/parameterized',
 }
 
 # Override the Sphinx default title that appends `documentation`

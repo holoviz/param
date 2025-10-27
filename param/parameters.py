@@ -44,7 +44,8 @@ from ._utils import (
     _produce_value,
     _get_min_max_value,
     _is_number,
-    concrete_descendents,
+    concrete_descendents,  # noqa: F401
+    descendents as _descendents,
     _abbreviate_paths,
     _to_datetime,
 )
@@ -2166,16 +2167,19 @@ class ClassSelector(SelectorBase):
         """
         Return the possible types for this parameter's value.
 
-        (I.e. return `{name: <class>}` for all classes that are
-        concrete_descendents() of `self.class_`.)
+        (I.e. return ``{name: <class>}`` for all classes that are
+        :func:`param.parameterized.descendents` of ``self.class_``.)
 
         Only classes from modules that have been imported are added
-        (see concrete_descendents()).
+        (see :func:`param.parameterized.descendents`).
         """
         classes = self.class_ if isinstance(self.class_, tuple) else (self.class_,)
         all_classes = {}
         for cls in classes:
-            all_classes.update(concrete_descendents(cls))
+            desc = _descendents(cls, concrete=True)
+            # This will clobber separate classes with identical names.
+            # Known historical issue, see https://github.com/holoviz/param/pull/1035
+            all_classes.update({c.__name__: c for c in desc})
         d = OrderedDict((name, class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None'] = None

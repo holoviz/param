@@ -433,29 +433,30 @@ def _is_abstract(class_: type) -> bool:
 
 def descendents(class_: type, concrete: bool = False) -> list[type]:
     """
-    Return a list of all descendant classes of a given class.
+    Return a list of all descendent classes of a given class.
 
     This function performs a breadth-first traversal of the class hierarchy,
-    collecting all subclasses of `class_`. The result includes `class_` itself
-    and all of its subclasses. If `concrete=True`, abstract base classes
-    are excluded from the result.
+    collecting all subclasses of ``class_``. The result includes ``class_`` itself
+    and all of its subclasses. If ``concrete=True``, abstract base classes
+    are excluded from the result, including :class:`Parameterized` abstract
+    classes declared with ``__abstract = True``.
 
     Parameters
     ----------
     class_ : type
         The base class whose descendants should be found.
     concrete : bool, optional
-        If `True`, exclude abstract classes from the result. Default is `False`.
+        If ``True``, exclude abstract classes from the result. Default is ``False``.
 
         .. versionadded:: 2.3.0
 
-        Added to encourage users to use `descendents` in favor of
-        `concrete_descendents` that clobbers classes sharing the same name.
+        Added to encourage users to use :func:`descendents` in favor of
+        :func:`concrete_descendents` that clobbers classes sharing the same name.
 
     Returns
     -------
-    list of type
-        A list of descendant classes, ordered from the most base to the most derived.
+    list[type]
+        A list of descendent classes, ordered from the most base to the most derived.
 
     Examples
     --------
@@ -489,12 +490,19 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
 def concrete_descendents(parentclass: type) -> dict[str, type]:
     """
     Return a dictionary containing all subclasses of the specified
-    parentclass, including the parentclass.  Only classes that are
-    defined in scripts that have been run or modules that have been
-    imported are included, so the caller will usually first do ``from
-    package import *``.
+    parentclass, including the parentclass (prefer :func:`descendents`).
+
+    Only classes that are defined in scripts that have been run or modules
+    that have been imported are included, so the caller will usually first
+    do ``from package import *``.
 
     Only non-abstract classes will be included.
+
+    Warns
+    -----
+    ParamWarning
+        ``concrete_descendents`` overrides descendents that share the same
+        class name. To avoid this, use :func:`descendents` with ``concrete=True``.
     """
     desc = descendents(parentclass, concrete=True)
     concrete_desc = {c.__name__: c for c in desc}
@@ -506,7 +514,7 @@ def concrete_descendents(parentclass: type) -> dict[str, type]:
             '`concrete_descendents` overrides descendents that share the same '
             'class name. Other descendents with the same name as the following '
             f'classes exist but were not returned: {clobbered!r}\n'
-            'Use `concrete(parentclass, concrete=True)` instead.',
+            'Use `descendents(parentclass, concrete=True)` instead.',
             ParamWarning,
         )
     return concrete_desc

@@ -2635,20 +2635,6 @@ class Parameters:
 
     # Classmethods
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
-    def print_param_defaults(self_):
-        """
-        Print the default values of all cls's Parameters.
-
-        .. deprecated:: 1.12.0
-            Use instead ``for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")``
-        """
-        cls = self_.cls
-        for key,val in cls.__dict__.items():
-            if isinstance(val,Parameter):
-                print(cls.__name__+'.'+key+ '='+ repr(val.default))
-
     def add_parameter(self_, param_name: str, param_obj: Parameter):
         """
         Add a new :class:`Parameter` object to this class.

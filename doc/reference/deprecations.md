@@ -8,7 +8,6 @@ List of currently deprecated APIs:
 | `ParamDeprecationWarning` since `2.3.0` | Parameter slots / `Parameter.pickle_default_value`: no replacement |
 | `ParamFutureWarning` since `2.3.0` | Parameterized `.param` namespace / `.param.watch_values`: the keyword `what` is deprecated |
 | `ParamPendingDeprecationWarning` since `2.3.0` | `param.parameterized` module / Setting a parameter value before full instance initialization |
-| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.print_param_defaults`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")` |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.print_param_values`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")` |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.message`: use instead `.param.log(param.MESSAGE, ...)` |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.verbose`: use instead `.param.log(param.VERBOSE, ...)` |

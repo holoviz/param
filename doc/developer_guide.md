@@ -181,7 +181,7 @@ pixi run test-unit
 
 The task is available in the following environments:
 
-1. `test-39`, `test-310`, `test-311`, `test-312`, `test-313`, and `test-314`.
+1. `test-310`, `test-311`, `test-312`, `test-313`, and `test-314`.
 1. `test-core`
 
 Where the first ones have the same environments except for different Python versions. `test-core` only has a core set of dependencies.

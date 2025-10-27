@@ -638,21 +638,6 @@ def get_method_owner(method):
     return method.__self__
 
 
-# PARAM3_DEPRECATION
-def recursive_repr(fillvalue='...'):
-    """
-    Decorate to make a repr function return fillvalue for a recursive call.
-
-    .. deprecated:: 1.12.0
-    """
-    warnings.warn(
-        'recursive_repr has been deprecated and will be removed in a future version.',
-        category=_ParamFutureWarning,
-        stacklevel=_find_stack_level(),
-    )
-    return _recursive_repr(fillvalue=fillvalue)
-
-
 @accept_arguments
 def output(func, *output, **kw):
     """

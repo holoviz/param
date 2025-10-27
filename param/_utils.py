@@ -130,59 +130,6 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
     return decorator
 
 
-def _deprecate_positional_args(func):
-    """Issue warnings for methods using deprecated positional arguments.
-
-    This internal decorator warns when arguments after the `*` separator
-    are passed as positional arguments, in accordance with PEP 3102.
-    It adapts the behavior from scikit-learn.
-
-    Parameters
-    ----------
-    func: FunctionType | MethodType
-        The function to wrap with positional argument deprecation warnings.
-
-    Returns
-    -------
-    callable:
-        The wrapped function that issues warnings for deprecated
-        positional arguments.
-    """
-    signature = inspect.signature(func)
-
-    pos_or_kw_args = []
-    kwonly_args = []
-    for name, param in signature.parameters.items():
-        if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
-            pos_or_kw_args.append(name)
-        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
-            kwonly_args.append(name)
-
-    @functools.wraps(func)
-    def inner(*args, **kwargs):
-        name = func.__qualname__.split('.')[0]
-        n_extra_args = len(args) - len(pos_or_kw_args)
-        if n_extra_args > 0:
-            extra_args = ", ".join(kwonly_args[:n_extra_args])
-
-            warnings.warn(
-                f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
-                "has been deprecated since Param 2.0.0 and will raise an error in a future version, "
-                "please pass them as keyword arguments.",
-                ParamFutureWarning,
-                stacklevel=_find_stack_level(),
-            )
-
-            zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
-            kwargs.update({name: arg for name, arg in zip_args})
-
-            return func(*args[:-n_extra_args], **kwargs)
-
-        return func(*args, **kwargs)
-
-    return inner
-
-
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
 def _recursive_repr(fillvalue='...'):
     """Decorate a repr function to return a fill value for recursive calls."""

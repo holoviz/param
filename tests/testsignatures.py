@@ -92,22 +92,3 @@ def test_signature_position_keywords():
                 p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
                 for p in parameters.values()
             )
-
-
-def test_signature_warning_by_position():
-    # Simple test as it's tricky to automatically test all the Parameters
-    with pytest.warns(
-        param._utils.ParamFutureWarning,
-        match=r"Passing 'objects' as positional argument\(s\) to 'param.Selector' has been deprecated since Param 2.0.0 and will raise an error in a future version, please pass them as keyword arguments"
-    ):
-        param.Selector([0, 1])  # objects
-    with pytest.warns(
-        param._utils.ParamFutureWarning,
-        match=r"Passing 'class_' as positional argument\(s\) to 'param.ClassSelector' has been deprecated since Param 2.0.0 and will raise an error in a future version, please pass them as keyword arguments"
-    ):
-        param.ClassSelector(int)  # class_
-    with pytest.warns(
-        param._utils.ParamFutureWarning,
-        match=r"Passing 'bounds, softbounds' as positional argument\(s\) to 'param.Number' has been deprecated since Param 2.0.0 and will raise an error in a future version, please pass them as keyword arguments"
-    ):
-        param.Number(1, (0, 2), (0, 2))  # default (OK), bounds (not OK), softbounds (not OK)

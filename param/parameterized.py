@@ -49,7 +49,6 @@ from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
     ParamPendingDeprecationWarning as _ParamPendingDeprecationWarning,
     Skip,
-    _deprecate_positional_args,
     _find_stack_level,
     _in_ipython,
     _is_auto_name,
@@ -1347,7 +1346,6 @@ class Parameter(_ParameterBase):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__( # pylint: disable-msg=R0913
         self,
         default=Undefined,
@@ -1979,7 +1977,6 @@ class String(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex

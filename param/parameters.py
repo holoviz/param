@@ -38,7 +38,6 @@ from .parameterized import (
     _int_types
 )
 from ._utils import (
-    _deprecate_positional_args,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -666,7 +665,6 @@ class Number(Dynamic):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         """
@@ -1003,7 +1001,6 @@ class Boolean(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1057,7 +1054,6 @@ class Event(Boolean):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
@@ -1130,7 +1126,6 @@ class Tuple(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
@@ -1242,7 +1237,6 @@ class Range(NumericTuple):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
@@ -1473,7 +1467,6 @@ class Callable(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1528,7 +1521,6 @@ class Composite(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
@@ -1843,7 +1835,6 @@ class Selector(SelectorBase, _SignatureSelector):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    @_deprecate_positional_args
     def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
@@ -1964,7 +1955,6 @@ class ObjectSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
                          empty_default=True, **kwargs)
@@ -1989,7 +1979,6 @@ class FileSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2037,7 +2026,6 @@ class ListSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
@@ -2099,7 +2087,6 @@ class MultiFileSelector(ListSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2149,7 +2136,6 @@ class ClassSelector(SelectorBase):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
@@ -2285,7 +2271,6 @@ class DataFrame(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
@@ -2401,7 +2386,6 @@ class Series(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
@@ -2462,7 +2446,6 @@ class List(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
         if item_type is not Undefined:
@@ -2668,7 +2651,6 @@ class Path(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, search_paths=Undefined, check_exists=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
@@ -2820,7 +2802,6 @@ class Color(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
@@ -2885,7 +2866,6 @@ class Bytes(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex

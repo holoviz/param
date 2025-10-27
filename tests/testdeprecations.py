@@ -16,10 +16,6 @@ def specific_filter():
 
 class TestDeprecateParameter:
 
-    def test_deprecate_posargs_Parameter(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.Parameter(1, 'doc')
-
     def test_deprecate_Parameter_pickle_default_value(self):
         with pytest.raises(param._utils.ParamDeprecationWarning):
             param.Parameter(pickle_default_value=False)

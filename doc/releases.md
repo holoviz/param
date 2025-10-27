@@ -261,7 +261,6 @@ We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pul
   - `param.produce_value`: no replacement
   - `param.as_unicode`: no replacement
   - `param.is_ordered_dict`: no replacement
-  - `param.is_ordered_dict`: no replacement
   - `param.hashable`: no replacement
   - `param.named_objs`: no replacement
   - `param.normalize_path`: no replacement

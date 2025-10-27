@@ -243,7 +243,6 @@ Here is the complete list of deprecation warnings added in Param 2.0:
   - `param.produce_value`: no replacement
   - `param.as_unicode`: no replacement
   - `param.is_ordered_dict`: no replacement
-  - `param.is_ordered_dict`: no replacement
   - `param.hashable`: no replacement
   - `param.named_objs`: no replacement
   - `param.normalize_path`: no replacement

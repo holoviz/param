@@ -7,7 +7,6 @@ import inspect
 import numbers
 import os
 import re
-import sys
 import traceback
 import warnings
 from collections import OrderedDict, abc, defaultdict
@@ -351,20 +350,6 @@ def _produce_value(value_obj):
         return value_obj()
     else:
         return value_obj
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def is_ordered_dict(d):
-    """
-    Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, and vanilla Python dictionaries are ordered for Python 3.6+.
-
-    .. deprecated:: 2.0.0
-    """
-    py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
-    vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
-    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
 
 
 def _hashable(x):

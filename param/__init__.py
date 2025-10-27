@@ -102,7 +102,6 @@ from .parameters import (
 )
 from .reactive import bind, rx
 from ._utils import (
-    is_ordered_dict,
     hashable,
     named_objs,
     descendents,
@@ -226,7 +225,6 @@ __all__ = (
     'guess_bounds',
     'guess_param_types',
     'hashable',
-    'is_ordered_dict',
     'logging_level',
     'main',
     'named_objs',

@@ -553,31 +553,6 @@ def get_occupied_slots(instance):
             if hasattr(instance,slot)]
 
 
-# PARAM3_DEPRECATION
-# The syntax to use a metaclass changed incompatibly between 2 and
-# 3. The add_metaclass() class decorator below creates a class using a
-# specified metaclass in a way that works on both 2 and 3. For 3, can
-# remove this decorator and specify metaclasses in a simpler way
-# (https://docs.python.org/3/reference/datamodel.html#customizing-class-creation)
-#
-# Code from six (https://bitbucket.org/gutworth/six; version 1.4.1).
-@_deprecated(warning_cat=_ParamFutureWarning)
-def add_metaclass(metaclass):
-    """
-    Class decorator for creating a class with a metaclass.
-
-    .. deprecated:: 2.0.0
-    """
-    def wrapper(cls):
-        orig_vars = cls.__dict__.copy()
-        orig_vars.pop('__dict__', None)
-        orig_vars.pop('__weakref__', None)
-        for slots_var in orig_vars.get('__slots__', ()):
-            orig_vars.pop(slots_var)
-        return metaclass(cls.__name__, cls.__bases__, orig_vars)
-    return wrapper
-
-
 class bothmethod:
     """
     'optional @classmethod'.

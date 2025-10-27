@@ -60,7 +60,7 @@ from ._utils import (
 
 def param_union(*parameterizeds, warn=True):
     """
-    Given a set of Parameterized objects, returns a dictionary
+    Given a set of :class:`Parameterized` objects, returns a dictionary
     with the union of all param name,value pairs across them.
 
     Parameters
@@ -149,7 +149,7 @@ def parameterized_class(name, params, bases=Parameterized):
 
 def guess_bounds(params, **overrides):
     """
-    Given a dictionary of Parameter instances, return a corresponding
+    Given a dictionary of :class:`Parameter` instances, return a corresponding
     set of copies with the bounds appropriately set.
 
 
@@ -463,14 +463,14 @@ class Dynamic(Parameter):
     Note that at present, the callable object must allow attributes
     to be set on itself.
 
-    If set as time_dependent, setting the Dynamic.time_fn allows the
+    If set as ``time_dependent``, setting the ``Dynamic.time_fn`` allows the
     production of dynamic values to be controlled: a new value will be
-    produced only if the current value of time_fn is different from
+    produced only if the current value of ``time_fn`` is different from
     what it was the last time the parameter value was requested.
 
-    By default, the Dynamic parameters are not time_dependent so that
+    By default, the Dynamic parameters are not ``time_dependent`` so that
     new values are generated on every call regardless of the time. The
-    default time_fn used when time_dependent is a single Time instance
+    default ``time_fn`` used when ``time_dependent`` is a single :class:`Time` instance
     that allows general manipulations of time. It may be set to some
     other callable as required so long as a number is returned on each
     call.
@@ -626,22 +626,22 @@ _compute_set_hook = __compute_set_hook()
 
 class Number(Dynamic):
     """
-    A numeric Dynamic Parameter, with a default value and optional bounds.
+    A numeric :class:`Dynamic` Parameter, with a default value and optional bounds.
 
     There are two types of bounds: ``bounds`` and
     ``softbounds``.  ``bounds`` are hard bounds: the parameter must
     have a value within the specified range.  The default bounds are
-    (None,None), meaning there are actually no hard bounds.  One or
+    ``(None, None)``, meaning there are actually no hard bounds. One or
     both bounds can be set by specifying a value
-    (e.g. bounds=(None,10) means there is no lower bound, and an upper
+    (e.g. ``bounds=(None, 10)`` means there is no lower bound, and an upper
     bound of 10). Bounds are inclusive by default, but exclusivity
     can be specified for each bound by setting inclusive_bounds
-    (e.g. inclusive_bounds=(True,False) specifies an exclusive upper
+    (e.g. ``inclusive_bounds=(True, False)`` specifies an exclusive upper
     bound).
 
-    Number is also a type of Dynamic parameter, so its value
+    Number is also a type of :class:`Dynamic` parameter, so its value
     can be set to a callable to get a dynamically generated
-    number (see Dynamic).
+    number.
 
     When not being dynamically generated, bounds are checked when a
     Number is created or set. Using a default value outside the hard
@@ -650,11 +650,11 @@ class Number(Dynamic):
     of a Number is requested. A generated value that is not numeric,
     or is outside the hard bounds, results in an exception.
 
-    As a special case, if allow_None=True (which is true by default if
-    the parameter has a default of None when declared) then a value
-    of None is also allowed.
+    As a special case, if ``allow_None=True`` (which is true by default if
+    the parameter has a default of ``None`` when declared) then a value
+    of ``None`` is also allowed.
 
-    A separate function set_in_bounds() is provided that will
+    A separate method :meth:`set_in_bounds` is provided that will
     silently crop the given value into the legal range, for use
     in, for instance, a GUI.
 
@@ -874,7 +874,7 @@ class Integer(Number):
 
 
 class Magnitude(Number):
-    """Numeric Parameter required to be in the range [0.0-1.0]."""
+    """Numeric Parameter required to be in the range ``[0.0-1.0]``."""
 
     _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
@@ -1049,17 +1049,18 @@ class Boolean(Parameter):
 class Event(Boolean):
     """
     An Event Parameter is one whose value is intimately linked to the
-    triggering of events for watchers to consume. Event has a Boolean
-    value, which when set to True triggers the associated watchers (as
+    triggering of events for watchers to consume. Event has a boolean
+    value, which when set to ``True`` triggers the associated watchers (as
     any Parameter does) and then is automatically set back to
-    False. Conversely, if events are triggered directly via `.trigger`,
-    the value is transiently set to True (so that it's clear which of
+    ``False``. Conversely, if events are triggered directly via
+    :meth:`~parameterized.Parameters.trigger`, the value is transiently set
+    to ``True`` (so that it's clear which of
     many parameters being watched may have changed), then restored to
-    False when the triggering completes. An Event parameter is thus like
-    a momentary switch or pushbutton with a transient True value that
-    serves only to launch some other action (e.g. via a param.depends
+    ``False`` when the triggering completes. An Event parameter is thus like
+    a momentary switch or pushbutton with a transient ``True`` value that
+    serves only to launch some other action (e.g. via a :func:`depends`
     decorator), rather than encapsulating the action itself as
-    param.Action does.
+    :class:`param.Action` does.
     """
 
     # _autotrigger_value specifies the value used to set the parameter
@@ -1134,7 +1135,7 @@ _compute_length_of_default = __compute_length_of_default()
 
 
 class Tuple(Parameter):
-    """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
+    """A tuple Parameter (e.g. ``('a', 7.6, [3,5])``) with a fixed tuple length."""
 
     __slots__ = ['length']
 
@@ -1208,7 +1209,7 @@ class Tuple(Parameter):
 
 
 class NumericTuple(Tuple):
-    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+    """A numeric tuple Parameter (e.g. ``(4.5, 7.6, 3)``) with a fixed tuple length."""
 
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)
@@ -1350,9 +1351,9 @@ class Range(NumericTuple):
 
 class DateRange(Range):
     """
-    A datetime or date range specified as (start, end).
+    A datetime or date range specified as ``(start, end)``.
 
-    Bounds must be specified as datetime or date types (see param.dt_types).
+    Bounds must be specified as datetime or date types (see ``param._dt_types``).
     """
 
     def _validate_bound_type(self, value, position, kind):
@@ -1428,7 +1429,7 @@ class DateRange(Range):
 
 
 class CalendarDateRange(Range):
-    """A date range specified as (start_date, end_date)."""
+    """A date range specified as ``(start_date, end_date)``."""
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
@@ -1477,7 +1478,7 @@ class Callable(Parameter):
     """
     Parameter holding a value that is a callable object, such as a function.
 
-    A keyword argument instantiate=True should be provided when a
+    A keyword argument ``instantiate=True`` should be provided when a
     function object is used that might have state.  On the other hand,
     regular standalone functions cannot be deepcopied as of Python
     2.4, so instantiate must be False for those values.
@@ -1525,7 +1526,7 @@ class Composite(Parameter):
     """
     A Parameter that is a composite of a set of other attributes of the class.
 
-    The constructor argument 'attribs' takes a list of attribute
+    The constructor argument ``attribs`` takes a list of attribute
     names, which may or may not be Parameters.  Getting the parameter
     returns a list of the values of the constituents of the composite,
     in the order specified.  Likewise, setting the parameter takes a
@@ -1828,25 +1829,25 @@ class Selector(SelectorBase, _SignatureSelector):
     the provided set of objects, as long as the objects are in an
     ordered data collection.
 
-    check_on_set restricts the value to be among the current list of
+    ``check_on_set`` restricts the value to be among the current list of
     objects. By default, if objects are initially supplied,
-    check_on_set is True, whereas if no objects are initially
-    supplied, check_on_set is False. This can be overridden by
+    ``check_on_set`` is ``True``, whereas if no objects are initially
+    supplied, ``check_on_set`` is ``False``. This can be overridden by
     explicitly specifying check_on_set initially.
 
-    If check_on_set is True (either because objects are supplied
+    If ``check_on_set`` is ``True`` (either because objects are supplied
     initially, or because it is explicitly specified), the default
     (initial) value must be among the list of objects (unless the
-    default value is None).
+    default value is ``None``).
 
     The list of objects can be supplied as a list (appropriate for
     selecting among a set of strings, or among a set of objects with a
-    "name" parameter), or as a (preferably ordered) dictionary from
+    ``name`` parameter), or as a (preferably ordered) dictionary from
     names to objects.  If a dictionary is supplied, the objects
     will need to be hashable so that their names can be looked
     up from the object value.
 
-    empty_default is an internal argument that does not have a slot.
+    ``empty_default`` is an internal argument that does not have a slot.
     """
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
@@ -2043,7 +2044,7 @@ class FileSelector(Selector):
 
 class ListSelector(Selector):
     """
-    Variant of Selector where the value can be multiple objects from
+    Variant of :class:`Selector` where the value can be multiple objects from
     a list of possible objects.
     """
 
@@ -2147,10 +2148,12 @@ class MultiFileSelector(ListSelector):
 
 class ClassSelector(SelectorBase):
     """
-    Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.
-    By default, requires an instance, but if is_instance=False, accepts a class instead.
-    Both class and instance values respect the instantiate slot, though it matters only
-    for is_instance=True.
+    Parameter allowing selection of either a subclass or an instance of a class
+    or tuple of classes.
+
+    By default, requires an instance, but if ``is_instance=False``, accepts a
+    class instead. Both class and instance values respect the ``instantiate``
+    slot, though it matters only for ``is_instance=True``.
     """
 
     __slots__ = ['class_', 'is_instance']
@@ -2270,15 +2273,15 @@ class Array(ClassSelector):
 
 class DataFrame(ClassSelector):
     """
-    Parameter whose value is a pandas DataFrame.
+    Parameter whose value is a pandas ``DataFrame``.
 
     The structure of the DataFrame can be constrained by the rows and
     columns arguments:
 
-    rows: If specified, may be a number or an integer bounds tuple to
+    ``rows``: If specified, may be a number or an integer bounds tuple to
     constrain the allowable number of rows.
 
-    columns: If specified, may be a number, an integer bounds tuple, a
+    ``columns``: If specified, may be a number, an integer bounds tuple, a
     list or a set. If the argument is numeric, constrains the number of
     columns using the same semantics as used for rows. If either a list
     or set of strings, the column names will be validated. If a set is
@@ -2396,7 +2399,7 @@ class DataFrame(ClassSelector):
 
 class Series(ClassSelector):
     """
-    Parameter whose value is a pandas Series.
+    Parameter whose value is a pandas ``Series``.
 
     The structure of the Series can be constrained by the rows argument
     which may be a number or an integer bounds tuple to constrain the
@@ -2458,13 +2461,13 @@ class List(Parameter):
     Parameter whose value is a list of objects, usually of a specified type.
 
     The bounds allow a minimum and/or maximum length of
-    list to be enforced.  If the item_type is non-None, all
+    list to be enforced.  If the ``item_type`` is non-None, all
     items in the list are checked to be instances of that type if
-    is_instance is True (default) or subclasses of that type when False.
+    ``is_instance`` is ``True`` (default) or subclasses of that type when False.
 
-    `class_` is accepted as an alias for `item_type`, but is
-    deprecated due to conflict with how the `class_` slot is
-    used in Selector classes.
+    ``class_`` is accepted as an alias for `item_type`, but is
+    deprecated due to conflict with how the ``class_`` slot is
+    used in :class:`Selector` classes.
     """
 
     __slots__ = ['bounds', 'item_type', 'class_', 'is_instance']
@@ -2572,7 +2575,7 @@ class HookList(List):
     """
     Parameter whose value is a list of callable objects.
 
-    This type of List Parameter is typically used to provide a place
+    This type of :class:`List` Parameter is typically used to provide a place
     for users to register a set of commands to be called at a
     specified place in some sequence of processing steps.
     """
@@ -2693,18 +2696,15 @@ class Path(Parameter):
 
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
-    the Filename or Foldername Parameters if you require discrimination
+    the :class:`Filename` or :class:`Foldername` Parameters if you require discrimination
     between the two possibilities.
 
     The specified path can be absolute, or relative to either:
 
-    * any of the paths specified in the search_paths attribute (if
-       search_paths is not None);
-
-    or
-
-    * any of the paths searched by resolve_path() (if search_paths
-      is None).
+    * any of the paths specified in the ``search_paths`` attribute (if
+      ``search_paths`` is not ``None``);
+    * any of the paths searched by :func:`resolve_path` (if ``search_paths``
+      is ``None``).
 
     Parameters
     ----------
@@ -2795,13 +2795,10 @@ class Filename(Path):
 
     The specified path can be absolute, or relative to either:
 
-    * any of the paths specified in the search_paths attribute (if
-      search_paths is not None);
-
-    or
-
-    * any of the paths searched by resolve_path() (if search_paths
-      is None).
+    * any of the paths specified in the ``search_paths`` attribute (if
+      ``search_paths`` is not ``None``);
+    * any of the paths searched by :func:`resolve_path` (if ``search_paths``
+      is ``None``).
     """
 
     def _resolve(self, path):
@@ -2817,13 +2814,10 @@ class Foldername(Path):
 
     The specified path can be absolute, or relative to either:
 
-    * any of the paths specified in the search_paths attribute (if
-      search_paths is not None);
-
-    or
-
-    * any of the paths searched by resolve_dir_path() (if search_paths
-      is None).
+    * any of the paths specified in the ``search_paths`` attribute (if
+      ``search_paths`` is not ``None``);
+    * any of the paths searched by resolve_dir_path() (if ``search_paths``
+      is ``None``).
     """
 
     def _resolve(self, path):
@@ -2835,7 +2829,7 @@ class Foldername(Path):
 
 class Color(Parameter):
     """
-    Color parameter defined as a hex RGB string with an optional #
+    Color parameter defined as a hex RGB string with an optional ``#``
     prefix or (optionally) as a CSS3 color name.
     """
 
@@ -2934,8 +2928,8 @@ class Bytes(Parameter):
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
 
-    Similar to the String parameter, but instead of type string
-    this parameter only allows objects of type bytes (e.g. b'bytes').
+    Similar to the :class:`String` parameter, but instead of type string
+    this parameter only allows objects of type bytes (e.g. ``b'bytes'``).
     """
 
     __slots__ = ['regex']

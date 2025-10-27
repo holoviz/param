@@ -10,8 +10,8 @@ Param is well-suited for use in scientific computing, data analysis tools,
 graphical user interfaces (GUIs), and any Python application where well-defined,
 validated parameters are needed.
 
-Documentation
--------------
+References
+----------
 For detailed documentation, see https://param.holoviz.org/.
 
 Examples

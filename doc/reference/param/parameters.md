@@ -48,7 +48,7 @@
   Composite
 ```
 
-## Helper functions
+## Helpers
 
 ```{eval-rst}
 .. currentmodule:: param
@@ -62,4 +62,6 @@
   guess_bounds
   guess_param_types
   param_union
+  parameters.Time
+  resolve_path
 ```

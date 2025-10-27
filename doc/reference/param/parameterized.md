@@ -90,4 +90,8 @@ of {py:class}`Parameterized` classes and instances.
   parameterized.resolve_ref
   parameterized.resolve_value
   script_repr
+  parameterized.DInfo
+  parameterized.MInfo
+  parameterized.PInfo
+  parameterized.warnings_as_exceptions
 ```

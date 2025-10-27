@@ -64,8 +64,8 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
 class Skip(Exception):
     """Exception that allows skipping an update when resolving a reference.
 
-    Documentation
-    -------------
+    References
+    ----------
     https://param.holoviz.org/user_guide/References.html#skipping-reference-updates
 
     Examples

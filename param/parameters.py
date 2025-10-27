@@ -1565,8 +1565,6 @@ class SelectorBase(Parameter):
     Subclasses must implement get_range().
     """
 
-    __abstract = True
-
     def get_range(self):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
 

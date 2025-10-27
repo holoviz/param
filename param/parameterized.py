@@ -363,14 +363,6 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
             parameterized.param._batch_call_watchers()
 
 
-# PARAM3_DEPRECATION
-@_deprecated(extra_msg="Use instead `batch_call_watchers`.", warning_cat=_ParamFutureWarning)
-@contextmanager
-def batch_watch(parameterized, enable=True, run=True):
-    with _batch_call_watchers(parameterized, enable, run):
-        yield
-
-
 @contextmanager
 def batch_call_watchers(parameterized):
     """

@@ -48,7 +48,7 @@ from .parameterized import (
     Parameterized, Parameter, Skip, String, ParameterizedFunction,
     ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
-from .parameterized import (batch_watch, output, script_repr,
+from .parameterized import (output, script_repr,
                             discard_events, edit_constant)
 from .parameterized import shared_parameters
 from .parameterized import logging_level
@@ -207,7 +207,6 @@ __all__ = (
     'XYCoordinates',
     '__version__',
     '_is_number',
-    'batch_watch',
     'bind',
     'concrete_descendents',
     'depends',

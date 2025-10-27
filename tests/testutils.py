@@ -10,8 +10,10 @@ import pytest
 from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod, Parameterized, ParameterizedABC
 from param._utils import (
+    ParamWarning,
     _is_abstract,
     _is_mutable_container,
+    concrete_descendents,
     descendents,
     iscoroutinefunction,
     gen_types,
@@ -534,3 +536,26 @@ def test_is_abstract_abc():
 
     assert _is_abstract(A)
     assert not _is_abstract(B)
+
+
+def test_concrete_descendents():
+    assert concrete_descendents(A) == {
+        'B': B,
+        'C': C,
+        'X': X,
+        'Y': Y,
+    }
+
+
+def test_concrete_descendents_same_name_warns():
+    class X: pass
+    class Y(X): pass
+    y = Y  # noqa
+    class Y(X): pass
+    with pytest.warns(
+        ParamWarning,
+        match=r".*\['Y'\]"
+    ):
+        cd = concrete_descendents(X)
+    # y not returned
+    assert cd == {'X': X, 'Y': Y}

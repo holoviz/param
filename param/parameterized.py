@@ -364,11 +364,12 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
 @contextmanager
 def batch_call_watchers(parameterized):
     """
-    Context manager to batch events to provide to Watchers on a
-    parameterized object.  This context manager queues any events
-    triggered by setting a parameter on the supplied parameterized
-    object, saving them up to dispatch them all at once when the
-    context manager exits.
+    Context manager to batch events to provide to :class:`Watchers` on a
+    parameterized object.
+
+    This context manager queues any events triggered by setting a parameter value
+    on the supplied :class:`Parameterized` object, saving them up to dispatch
+    them all at once when the context manager exits.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
@@ -394,22 +395,22 @@ def _syncing(parameterized, parameters):
 def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]:
     """
     Context manager to temporarily set parameters on a Parameterized object
-    to `constant=False` to allow editing them.
+    to ``constant=False`` to allow editing them.
 
-    The `edit_constant` context manager allows temporarily disabling the `constant`
-    property of all parameters on the given `Parameterized` object, enabling them
-    to be modified. Once the context exits, the original `constant` states are restored.
+    The ``edit_constant`` context manager allows temporarily disabling the ``constant``
+    property of all parameters on the given :class:`Parameterized` object, enabling them
+    to be modified. Once the context exits, the original ``constant`` states are restored.
 
     Parameters
     ----------
     parameterized : Parameterized
-        The `Parameterized` object whose parameters will have their `constant`
+        The :class:`Parameterized` object whose parameters will have their ``constant``
         property temporarily disabled.
 
     Yields
     ------
     None
-        A context where all parameters of the `Parameterized` object can be modified.
+        A context where all parameters of the :class:`Parameterized` object can be modified.
 
     Examples
     --------
@@ -418,7 +419,7 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
     ...     constant_param = param.Number(default=10, constant=True)
     >>> p = MyClass()
 
-    Use `edit_constant` to modify the constant parameter:
+    Use ``edit_constant`` to modify the constant parameter:
 
     >>> with param.edit_constant(p):
     ...     p.constant_param = 20
@@ -450,8 +451,8 @@ def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None
     Context manager that discards any events within its scope triggered on the
     supplied Parameterized object.
 
-    The `discard_events` context manager ensures that any events triggered
-    on the supplied `Parameterized` object during its scope are discarded.
+    The ``discard_events`` context manager ensures that any events triggered
+    on the supplied :class:`Parameterized` object during its scope are discarded.
     This allows for silent changes to dependent parameters, making it useful
     for initialization or setup phases where changes should not propagate
     to watchers or dependencies.
@@ -464,12 +465,12 @@ def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None
     Parameters
     ----------
     parameterized : Parameterized
-        The `Parameterized` object whose events will be suppressed.
+        The :class:`Parameterized` object whose events will be suppressed.
 
     Yields
     ------
     None
-        A context where events on the supplied `Parameterized` object are discarded.
+        A context where events on the supplied :class:`Parameterized` object are discarded.
 
     References
     ----------
@@ -483,12 +484,15 @@ def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None
     >>> import param
     >>> class MyClass(param.Parameterized):
     ...     a = param.Number(default=1)
+    ...
+    ...     @param.depends('a', watch=True)
+    ...     def on_a(self):
+    ...         print(self.a)
     >>> p = MyClass()
-    >>> param.bind(print, p.param.a, watch=True)
-    >>> p.a=2
+    >>> p.a = 2
     2
 
-    Use `discard_events` to suppress events:
+    Use ``discard_events`` to suppress events:
 
     >>> with param.parameterized.discard_events(p):
     ...     p.a = 3
@@ -510,7 +514,7 @@ def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
 
-    Same as `inspect.getmro(class_)[::-1]`
+    Same as ``inspect.getmro(class_)[::-1]``
     """
     return inspect.getmro(class_)[::-1]
 
@@ -641,9 +645,9 @@ def output(func, *output, **kw):
     """
     Annotate a method to declare its outputs with specific types.
 
-    The `output` decorator allows annotating a method in a `Parameterized` class
+    The ``output`` decorator allows annotating a method in a :class:`Parameterized` class
     to declare the types of the values it returns. This provides metadata for the
-    method's outputs, which can be queried using the `Parameterized.param.outputs`
+    method's outputs, which can be queried using the :meth:`~Parameters.outputs`
     method. Outputs can be declared as unnamed, named, or typed, and the decorator
     supports multiple outputs.
 
@@ -653,13 +657,15 @@ def output(func, *output, **kw):
         The method being annotated.
     *output : tuple or Parameter or type, optional
         Positional arguments to declare outputs. Can include:
-        - `Parameter` instances or Python object types (e.g., `int`, `str`).
-        - Tuples of the form `(name, type)` to declare named outputs.
+
+        - :class:`Parameter` instances or Python object types (e.g., :class:`int`, :class:`str`).
+        - Tuples of the form ``(name, type)`` to declare named outputs.
         - Multiple such tuples for declaring multiple outputs.
     **kw : dict, optional
         Keyword arguments mapping output names to types. Types can be:
-        - `Parameter` instances.
-        - Python object types, which will be converted to `ClassSelector`.
+
+        - :class:`Parameter` instances.
+        - Python object types, which will be converted to :class:`ClassSelector`.
 
     Returns
     -------
@@ -669,14 +675,13 @@ def output(func, *output, **kw):
     Raises
     ------
     ValueError
-        If:
-        - An invalid type is provided for an output.
-        - Duplicate names are used for multiple outputs.
+        If an invalid type is provided for an output or duplicate names are
+        used for multiple outputs.
 
     Notes
     -----
     - Unnamed outputs default to the method name.
-    - Python types are converted to `ClassSelector` instances.
+    - Python types are converted to :class:`ClassSelector` instances.
     - If no arguments are provided, the output is assumed to be an object
       without a specific type.
 

@@ -5,7 +5,7 @@ import typing
 import param
 import pytest
 
-from param import concrete_descendents, Parameter
+from param import descendents, Parameter
 
 
 SKIP_UPDATED = [
@@ -18,8 +18,8 @@ SKIP_UPDATED = [
 
 def custom_concrete_descendents(kls):
     return {
-        pname: ptype
-        for pname, ptype in concrete_descendents(kls).items()
+        ptype.__name__: ptype
+        for ptype in descendents(kls)
         if ptype.__module__.startswith('param')
     }
 

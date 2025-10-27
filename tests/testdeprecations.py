@@ -28,10 +28,6 @@ class TestDeprecateParameter:
 
 class TestDeprecateInitModule:
 
-    def test_deprecate_normalize_path(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.normalize_path()
-
     def test_deprecate_abbreviate_path(self):
         with pytest.raises(param._utils.ParamFutureWarning):
             param.abbreviate_paths()

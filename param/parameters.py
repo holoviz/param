@@ -38,9 +38,7 @@ from .parameterized import (
     _int_types
 )
 from ._utils import (
-    ParamFutureWarning as _ParamFutureWarning,
     _deprecate_positional_args,
-    _deprecated,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -2568,8 +2566,7 @@ class HookList(List):
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
 #   - use resolve_path(path_to_file=True) for paths to existing files to be read,
-#   - use resolve_path(path_to_file=False) for paths to existing folders to be read,
-#     and normalize_path() for paths to new files to be written.
+#   - use resolve_path(path_to_file=False) for paths to existing folders to be read.
 
 class resolve_path(ParameterizedFunction):
     """
@@ -2627,34 +2624,6 @@ class resolve_path(ParameterizedFunction):
                 paths_tried.append(try_path)
 
             raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=_ParamFutureWarning)
-class normalize_path(ParameterizedFunction):
-    """
-    Convert a UNIX-style path to the current OS's format,
-    typically for creating a new file or directory.
-
-    If the path is not already absolute, it will be made absolute
-    (using the prefix parameter).
-
-    Should do the same as Python's os.path.abspath(), except using
-    prefix rather than os.getcwd).
-    """
-
-    prefix = String(default=os.getcwd(),pickle_default_value=None,doc="""
-        Prepended to the specified path, if that path is not
-        absolute.""")
-
-    def __call__(self,path="",**params):
-        p = ParamOverrides(self,params)
-
-        if not os.path.isabs(path):
-            path = os.path.join(os.path.normpath(p.prefix),path)
-
-        return os.path.normpath(path)
-
 
 
 class Path(Parameter):

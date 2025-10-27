@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import contextvars
 import datetime as dt
 import functools
 import inspect
@@ -287,14 +286,6 @@ def iscoroutinefunction(function):
         inspect.iscoroutinefunction(function)
     )
 
-async def _to_thread(func, /, *args, **kwargs):
-    """Polyfill for asyncio.to_thread in Python < 3.9."""
-    import asyncio
-    loop = asyncio.get_running_loop()
-    ctx = contextvars.copy_context()
-    func_call = functools.partial(ctx.run, func, *args, **kwargs)
-    return await loop.run_in_executor(None, func_call)
-
 async def _to_async_gen(sync_gen):
     import asyncio
 
@@ -309,10 +300,7 @@ async def _to_async_gen(sync_gen):
             return done
 
     while True:
-        if sys.version_info >= (3, 9):
-            value = await asyncio.to_thread(safe_next)
-        else:
-            value = await _to_thread(safe_next)
+        value = await asyncio.to_thread(safe_next)
         if value is done:
             break
         yield value

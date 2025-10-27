@@ -402,20 +402,6 @@ def _named_objs(objlist, namesdict=None):
     return objs
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def named_objs(objlist, namesdict=None):
-    """
-    Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself. Accepts
-    an optional name,obj dictionary, which will override any other
-    name if that item is present in the dictionary.
-
-    .. deprecated:: 2.0.0
-    """
-    return _named_objs(objlist, namesdict=namesdict)
-
-
 def _get_min_max_value(min, max, value=None, step=None):
     """Return min, max, value given input values with possible None."""
     # Either min and max need to be given, or value needs to be given

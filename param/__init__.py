@@ -102,7 +102,6 @@ from .parameters import (
 )
 from .reactive import bind, rx
 from ._utils import (
-    named_objs,
     descendents,
     concrete_descendents,
     abbreviate_paths,
@@ -225,7 +224,6 @@ __all__ = (
     'guess_param_types',
     'logging_level',
     'main',
-    'named_objs',
     'normalize_path',
     'output',
     'param_union',

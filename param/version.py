@@ -1,4 +1,6 @@
 """
+This module is deprecated and will be removed in a future release.
+
 Provide consistent and up-to-date ``__version__`` strings for
 Python packages.
 
@@ -21,8 +23,14 @@ __author__ = 'Jean-Luc Stevens'
 import os
 import subprocess
 import json
+import warnings
 
 def run_cmd(args, cwd=None):
+    warnings.warn(
+        'param.version.run_cmd has been deprecated and will be removed in a future version.',
+        FutureWarning,
+        stacklevel=2
+    )
     kwargs = {}
     if os.name == 'nt':
         kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
@@ -105,6 +113,11 @@ class Version:
         :fpath:        Set to ``__file__`` to access version control information
         :reponame:     Used to verify VCS repository name.
         """
+        warnings.warn(
+            'param.version.Version has been deprecated and will be removed in a future version.',
+            FutureWarning,
+            stacklevel=2
+        )
         self.fpath = fpath
         self._expected_commit = commit
 
@@ -477,6 +490,11 @@ def get_setup_version(location, reponame, pkgname=None, archive_commit=None):
 
     """
     import warnings
+    warnings.warn(
+        'param.version.get_setup_version has been deprecated and will be removed in a future version.',
+        FutureWarning,
+        stacklevel=2
+    )
     pkgname = reponame if pkgname is None else pkgname
     if archive_commit is None:
         warnings.warn("No archive commit available; git archives will not contain version information")
@@ -522,6 +540,11 @@ def get_setupcfg_version():
     """
     import configparser
     import re
+    warnings.warn(
+        'param.version.get_setupcfg_version has been deprecated and will be removed in a future version.',
+        FutureWarning,
+        stacklevel=2
+    )
     cfg = "setup.cfg"
     autover_section = 'tool:autover'
     config = configparser.ConfigParser()
@@ -588,6 +611,11 @@ class OldDeprecatedVersion:
         :dev:          Development version number. None if not a development version.
         :commit_count  Commits since last release. Set for dev releases.
         """
+        warnings.warn(
+            'param.version.OldDeprecatedVersion has been deprecated and will be removed in a future version.',
+            FutureWarning,
+            stacklevel=2
+        )
         self.fpath = fpath
         self._expected_commit = commit
         self.expected_release = release

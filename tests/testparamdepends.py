@@ -268,6 +268,25 @@ class TestParamDepends:
         a.a = True
         assert a.value == 2
 
+    async def test_param_depends_async_on_init(self):
+        class A(param.Parameterized):
+
+            a = param.Parameter()
+
+            value = param.Integer()
+
+            @param.depends('a', watch=True, on_init=True)
+            async def callback(self):
+                self.value += 1
+
+        a = A()
+        await asyncio.sleep(0.01)
+        assert a.value == 1
+
+        a.a = True
+        await asyncio.sleep(0.01)
+        assert a.value == 2
+
     def test_param_nested_depends_value_unchanged(self):
         class A(param.Parameterized):
 

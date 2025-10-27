@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Make your Python code clearer and more reliable by declaring Parameters."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "HoloViz", email = "developers@holoviz.org" },
 ]
@@ -23,11 +23,11 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
@@ -115,12 +115,12 @@ python_files = "test*.py"
 filterwarnings = [
   "error",
 ]
-xfail_strict = "true"
+xfail_strict = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
-omit = ["param/version.py"]
+omit = ["param/version.py", "tests/testimports.py"]
 
 [tool.ruff]
 fix = true

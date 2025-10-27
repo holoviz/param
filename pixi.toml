@@ -19,10 +19,6 @@ default = [
     "dev",
 ]
 
-[environments.test-39]
-features = ["py39", "required", "test-core", "test", "example", "test-example"]
-no-default-feature = true
-
 [environments.test-310]
 features = ["py310", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
@@ -69,9 +65,6 @@ pip = "*"
 
 [feature.required.tasks]
 install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
-
-[feature.py39.dependencies]
-python = "3.9.*"
 
 [feature.py310.dependencies]
 python = "3.10.*"

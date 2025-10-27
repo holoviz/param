@@ -369,22 +369,6 @@ def _hashable(x):
         return x
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def hashable(x):
-    """
-    Return a hashable version of the given object x, with lists and
-    dictionaries converted to tuples.  Allows mutable objects to be
-    used as a lookup key in cases where the object has not actually
-    been mutated. Lookup will fail (appropriately) in cases where some
-    part of the object has changed.  Does not (currently) recursively
-    replace mutable subobjects.
-
-    .. deprecated:: 2.0.0
-    """
-    return _hashable(x)
-
-
 def _named_objs(objlist, namesdict=None):
     """
     Given a list of objects, returns a dictionary mapping from

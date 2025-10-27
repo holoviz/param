@@ -102,7 +102,6 @@ from .parameters import (
 )
 from .reactive import bind, rx
 from ._utils import (
-    hashable,
     named_objs,
     descendents,
     concrete_descendents,
@@ -224,7 +223,6 @@ __all__ = (
     'get_soft_bounds',
     'guess_bounds',
     'guess_param_types',
-    'hashable',
     'logging_level',
     'main',
     'named_objs',

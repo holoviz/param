@@ -28,10 +28,6 @@ class TestDeprecateParameter:
 
 class TestDeprecateInitModule:
 
-    def test_deprecate_hasbable(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.hashable('s')
-
     def test_deprecate_named_objs(self):
         with pytest.raises(param._utils.ParamFutureWarning):
             param.named_objs(dict())

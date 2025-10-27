@@ -36,10 +36,6 @@ class TestDeprecateInitModule:
         with pytest.raises(param._utils.ParamFutureWarning):
             param.is_ordered_dict(dict())
 
-    def test_deprecate_produce_value(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.produce_value(1)
-
     def test_deprecate_hasbable(self):
         with pytest.raises(param._utils.ParamFutureWarning):
             param.hashable('s')

@@ -355,18 +355,6 @@ def _produce_value(value_obj):
 
 # PARAM3_DEPRECATION
 @_deprecated(warning_cat=ParamFutureWarning)
-def produce_value(value_obj):
-    """Produce an actual value from a stored object.
-
-    If the object is callable, call it; otherwise, return the object.
-
-    .. deprecated:: 2.0.0
-    """
-    return _produce_value(value_obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
 def as_unicode(obj):
     """
     Safely casts any object to unicode including regular string

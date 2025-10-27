@@ -102,7 +102,6 @@ from .parameters import (
 )
 from .reactive import bind, rx
 from ._utils import (
-    produce_value,
     as_unicode,
     is_ordered_dict,
     hashable,
@@ -237,7 +236,6 @@ __all__ = (
     'output',
     'param_union',
     'parameterized_class',
-    'produce_value',
     'random_seed',
     'resolve_path',
     'rx',

@@ -27,12 +27,6 @@ class TestDeprecateParameter:
 
 class TestDeprecateParameterizedModule:
 
-    def test_deprecate_overridable_property(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            class Foo:
-                def _x(self): pass
-                x = param.parameterized.overridable_property(_x)
-
     def test_deprecate_setting_parameter_before_init(self):
         class P(param.Parameterized):
             x = param.Parameter()

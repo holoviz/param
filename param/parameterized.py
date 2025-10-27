@@ -2810,30 +2810,6 @@ class Parameters:
             p._mode = 'set-reset'
         return restore
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.update`", warning_cat=_ParamFutureWarning)
-    def set_param(self_, *args,**kwargs):
-        """
-        For each param=value keyword argument, sets the corresponding
-        parameter of this object or class to the given value.
-
-        For backwards compatibility, also accepts
-        set_param("param",value) for a single parameter value using
-        positional arguments, but the keyword interface is preferred
-        because it is more compact and can set multiple values.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.update``
-        """
-        self_or_cls = self_.self_or_cls
-        if args:
-            if len(args) == 2 and args[0] not in kwargs and not kwargs:
-                kwargs[args[0]] = args[1]
-            else:
-                raise ValueError("Invalid positional arguments for %s.set_param" %
-                                 (self_or_cls.name))
-        return self_.update(kwargs)
-
     @property
     def _cls_parameters(self_):
         """

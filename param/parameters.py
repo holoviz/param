@@ -1074,7 +1074,7 @@ class Event(Boolean):
         # This _mode attribute is one of the few places where a specific
         # parameter has a special behavior that is relied upon by the
         # core functionality implemented in
-        # parameterized.py. Specifically, the set_param method
+        # parameterized.py. Specifically, the ``update`` method
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
         super().__init__(default=default,**params)

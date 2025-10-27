@@ -51,15 +51,6 @@ class TestDeprecateParameterizedModule:
 
 class TestDeprecateParameters:
 
-    def test_deprecate_message(self):
-        class P(param.Parameterized):
-            x = param.Parameter()
-
-        p = P()
-
-        with pytest.raises(param._utils.ParamFutureWarning):
-            p.param.message('test')
-
     def test_deprecate_verbose(self):
         class P(param.Parameterized):
             x = param.Parameter()

@@ -42,7 +42,6 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.get_value_generator
   ~Parameters.inspect_value
   ~Parameters.log
-  ~Parameters.message
   ~Parameters.method_dependencies
   ~Parameters.objects
   ~Parameters.outputs

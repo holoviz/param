@@ -4059,19 +4059,6 @@ class Parameters:
         self_.log(WARNING, msg, *args, **kw)
 
     # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.MESSAGE, ...)`", warning_cat=_ParamFutureWarning)
-    def message(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a message.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.log(param.MESSAGE, ...)``
-        """
-        self_.__db_print(INFO,msg,*args,**kw)
-
-    # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.log(param.VERBOSE, ...)`", warning_cat=_ParamFutureWarning)
     def verbose(self_,msg,*args,**kw):
         """

@@ -103,7 +103,6 @@ from .reactive import bind, rx
 from ._utils import (
     descendents,
     concrete_descendents,
-    abbreviate_paths,
     exceptions_summarized,
     _is_number,
 )
@@ -208,7 +207,6 @@ __all__ = (
     'XYCoordinates',
     '__version__',
     '_is_number',
-    'abbreviate_paths',
     'batch_watch',
     'bind',
     'concrete_descendents',

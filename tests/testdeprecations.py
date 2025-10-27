@@ -25,14 +25,6 @@ class TestDeprecateParameter:
             param.Parameter(pickle_default_value=False)
 
 
-
-class TestDeprecateInitModule:
-
-    def test_deprecate_abbreviate_path(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.abbreviate_paths()
-
-
 class TestDeprecateParameterizedModule:
 
     def test_deprecate_overridable_property(self):

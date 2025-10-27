@@ -558,18 +558,6 @@ def _abbreviate_paths(pathspec,named_paths):
     return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def abbreviate_paths(pathspec,named_paths):
-    """
-    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
-    Helps keep menu items short yet unambiguous.
-
-    .. deprecated:: 2.0.0
-    """
-    return _abbreviate_paths(pathspec, named_paths)
-
-
 def _to_datetime(x):
     """Convert a date object to a datetime object for comparison.
 

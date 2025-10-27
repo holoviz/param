@@ -8,7 +8,6 @@ List of currently deprecated APIs:
 | `ParamDeprecationWarning` since `2.3.0` | Parameter slots / `Parameter.pickle_default_value`: no replacement |
 | `ParamFutureWarning` since `2.3.0` | Parameterized `.param` namespace / `.param.watch_values`: the keyword `what` is deprecated |
 | `ParamPendingDeprecationWarning` since `2.3.0` | `param.parameterized` module / Setting a parameter value before full instance initialization |
-| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.abbreviate_paths`: no replacement |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.all_equal`: no replacement |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.add_metaclass`: no replacement |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.batch_watch`: use instead `batch_call_watchers` |

@@ -2649,20 +2649,6 @@ class Parameters:
             if isinstance(val,Parameter):
                 print(cls.__name__+'.'+key+ '='+ repr(val.default))
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `p.param.default =`", warning_cat=_ParamFutureWarning)
-    def set_default(self_,param_name,value):
-        """
-        Set the default value of param_name.
-
-        Equivalent to setting param_name on the class.
-
-        .. deprecated:: 1.12.0
-             Use instead ``p.param.default =``
-        """
-        cls = self_.cls
-        setattr(cls,param_name,value)
-
     def add_parameter(self_, param_name: str, param_obj: Parameter):
         """
         Add a new :class:`Parameter` object to this class.

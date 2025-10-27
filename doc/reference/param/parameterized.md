@@ -35,7 +35,6 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.__contains__
   ~Parameters.__getattr__
   ~Parameters.add_parameter
-  ~Parameters.debug
   ~Parameters.deserialize_parameters
   ~Parameters.deserialize_value
   ~Parameters.force_new_dynamic_value

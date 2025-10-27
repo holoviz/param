@@ -49,7 +49,6 @@ from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
     ParamPendingDeprecationWarning as _ParamPendingDeprecationWarning,
     Skip,
-    _deprecated,
     _deprecate_positional_args,
     _find_stack_level,
     _in_ipython,
@@ -4057,19 +4056,6 @@ class Parameters:
         See Python's logging module for details of message formatting.
         """
         self_.log(WARNING, msg, *args, **kw)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.DEBUG, ...)`", warning_cat=_ParamFutureWarning)
-    def debug(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a debugging statement.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.log(param.DEBUG, ...)``
-        """
-        self_.__db_print(DEBUG,msg,*args,**kw)
 
     def log(self_, level: int, msg: str, *args, **kw) -> None:
         """

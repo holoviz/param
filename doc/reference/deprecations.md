@@ -8,7 +8,6 @@ List of currently deprecated APIs:
 | `ParamDeprecationWarning` since `2.3.0` | Parameter slots / `Parameter.pickle_default_value`: no replacement |
 | `ParamFutureWarning` since `2.3.0` | Parameterized `.param` namespace / `.param.watch_values`: the keyword `what` is deprecated |
 | `ParamPendingDeprecationWarning` since `2.3.0` | `param.parameterized` module / Setting a parameter value before full instance initialization |
-| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.debug`: use instead `.param.log(param.DEBUG, ...)` |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.1.0`, `ParamPendingDeprecationWarning` since `2.0.0` | Instantiating most parameters with positional arguments beyond `default` is deprecated |
 | `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.1.0`, `ParamPendingDeprecationWarning` since `2.0.0` | For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing any argument by position is deprecated. |
 

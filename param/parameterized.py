@@ -2228,9 +2228,9 @@ class _ParametersRestorer:
 
 class Parameters:
     """
-    Object that holds the `.param` namespace and implementation of Parameterized
-    methods as well as any state that is not in __slots__ or the
-    Parameters themselves.
+    Object that holds the ``.param`` namespace and implementation of
+    :class:`Parameterized` methods as well as any state that is not in
+    ``__slots__`` or the Parameters themselves.
 
     Exists at both the metaclass level (instantiated by the metaclass)
     and at the instance level. Can contain state specific to either the
@@ -2311,19 +2311,19 @@ class Parameters:
 
     def __getitem__(self_, key: str) -> Parameter:
         """
-        Retrieve a Parameter by its key.
+        Retrieve a :class:`Parameter` by its key.
 
-        This method allows access to a class or instance Parameter using its name.
+        This method allows access to a class or instance :class:`Parameter` using its name.
 
         Parameters
         ----------
         key : str
-            The name of the Parameter to retrieve.
+            The name of the :class:`Parameter` to retrieve.
 
         Returns
         -------
         Parameter
-            The Parameter associated with the given key. If accessed on an instance,
+            The :class:`Parameter` associated with the given key. If accessed on an instance,
             the method returns the instantiated (copied) parameter.
         """
         inst = self_.self
@@ -2350,11 +2350,11 @@ class Parameters:
         return param in self_._cls_parameters
 
     def __getattr__(self_, attr):
-        """Handle attribute access for parameter objects.
+        """Handle attribute access for :class:`Parameter` objects.
 
-        This method extends standard attribute access to support parameters
+        This method extends standard attribute access to support Parameters
         defined in the object. If the requested attribute corresponds to a
-        parameter, it retrieves the parameter value.
+        Parameter, it retrieves the Parameter value.
 
         Parameters
         ----------
@@ -2363,7 +2363,7 @@ class Parameters:
 
         Returns
         -------
-        The value of the parameter if it exists.
+        The value of the Parameter if it exists.
 
         Raises
         ------
@@ -5508,7 +5508,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     ----------
     name : str
         Class/instance name.
-    param :
+    param : Parameters
         ``.param`` namespace.
 
     References

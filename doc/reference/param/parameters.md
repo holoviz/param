@@ -1,6 +1,6 @@
 # Parameters
 
-## All objects
+## Base
 
 ```{eval-rst}
 .. currentmodule:: param
@@ -12,6 +12,28 @@
   :nosignatures:
 
   Parameter
+```
+
+## `Parameter` methods and properties
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
+  Parameter.label
+  Parameter.rx
+  Parameter.schema
+  Parameter.deserialize
+  Parameter.serialize
+```
+
+## `Parameter` subclasses
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
+
   String
   Bytes
   Color

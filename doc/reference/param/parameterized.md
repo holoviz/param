@@ -1,6 +1,6 @@
 # Parameterized
 
-## Core objects
+## `Parameterized`
 
 ```{eval-rst}
 .. currentmodule:: param
@@ -12,11 +12,7 @@
   :nosignatures:
 
   Parameterized
-  parameterized.Event
-  parameterized.Watcher
   ParameterizedABC
-  ParameterizedFunction
-  ParamOverrides
 ```
 
 ## `.param` namespace
@@ -32,6 +28,12 @@ of {py:class}`Parameterized` classes and instances.
 .. autosummary::
   :toctree: generated/
 
+  ~Parameters
+  ~Parameters.__getitem__
+  ~Parameters.__dir__
+  ~Parameters.__iter__
+  ~Parameters.__contains__
+  ~Parameters.__getattr__
   ~Parameters.add_parameter
   ~Parameters.debug
   ~Parameters.defaults
@@ -68,6 +70,37 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.watchers
 ```
 
+## Event-related classes
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
+
+  Event
+  Watcher
+  PInfo
+```
+
+## `ParameterizedFunction`
+
+```{eval-rst}
+.. currentmodule:: param
+```
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
+  ParameterizedFunction
+  ParameterizedFunction.name
+  ParameterizedFunction.instance
+  ParamOverrides
+  ParamOverrides.extra_keywords
+  ParamOverrides.param_keywords
+  ParamOverrides.get
+```
+
 ## Helpers
 
 ```{eval-rst}
@@ -90,8 +123,13 @@ of {py:class}`Parameterized` classes and instances.
   parameterized.resolve_ref
   parameterized.resolve_value
   script_repr
-  parameterized.DInfo
-  parameterized.MInfo
-  parameterized.PInfo
+```
+
+## Module variables
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
   parameterized.warnings_as_exceptions
 ```

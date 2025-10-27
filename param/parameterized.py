@@ -554,26 +554,6 @@ def get_occupied_slots(instance):
 
 
 # PARAM3_DEPRECATION
-@_deprecated(warning_cat=_ParamFutureWarning)
-def all_equal(arg1,arg2):
-    """
-    Return a single boolean for arg1==arg2, even for numpy arrays
-    using element-wise comparison.
-
-    Uses all(arg1==arg2) for sequences, and arg1==arg2 otherwise.
-
-    If both objects have an '_infinitely_iterable' attribute, they are
-    not be zipped together and are compared directly instead.
-    """
-    if all(hasattr(el, '_infinitely_iterable') for el in [arg1,arg2]):
-        return arg1==arg2
-    try:
-        return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
-    except TypeError:
-        return arg1==arg2
-
-
-# PARAM3_DEPRECATION
 # The syntax to use a metaclass changed incompatibly between 2 and
 # 3. The add_metaclass() class decorator below creates a class using a
 # specified metaclass in a way that works on both 2 and 3. For 3, can

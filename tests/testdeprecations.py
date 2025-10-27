@@ -54,10 +54,6 @@ class TestDeprecateParameterizedModule:
         with pytest.raises(param._utils.ParamFutureWarning):
             param.parameterized.recursive_repr(lambda: '')
 
-    def test_deprecate_all_equal(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.parameterized.all_equal(1, 1)
-
     def test_deprecate_setting_parameter_before_init(self):
         class P(param.Parameterized):
             x = param.Parameter()

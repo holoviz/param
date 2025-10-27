@@ -2697,16 +2697,6 @@ class Parameters:
         cls._param__private.params.clear()
 
     # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.add_parameter`", warning_cat=_ParamFutureWarning)
-    def _add_parameter(self_,param_name, param_obj):
-        """
-        Add a new :class:`Parameter` object into this object's class.
-
-        .. deprecated :: 1.12.0
-        """
-        return self_.add_parameter(param_name, param_obj)
-
-    # PARAM3_DEPRECATION
     @_deprecated(extra_msg="Use instead `.param.values()` or `.param['param']`", warning_cat=_ParamFutureWarning)
     def params(self_, parameter_name=None):
         """

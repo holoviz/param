@@ -126,7 +126,7 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
                 em = dedent(extra_msg)
                 em = em.strip().replace('\n', ' ')
                 msg = msg + ' ' + em
-            warnings.warn(msg, category=warning_cat, stacklevel=2)
+            warnings.warn(msg, category=warning_cat, stacklevel=_find_stack_level())
             return func(*args, **kwargs)
         return inner
     return decorator
@@ -172,7 +172,7 @@ def _deprecate_positional_args(func):
                 "has been deprecated since Param 2.0.0 and will raise an error in a future version, "
                 "please pass them as keyword arguments.",
                 ParamFutureWarning,
-                stacklevel=2,
+                stacklevel=_find_stack_level(),
             )
 
             zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
@@ -761,3 +761,33 @@ def gen_types(gen_func):
         msg = "gen_types decorator can only be applied to generator"
         raise TypeError(msg)
     return type(gen_func.__name__, (_GeneratorIs,), {"types": staticmethod(gen_func)})
+
+
+def _find_stack_level() -> int:
+    """
+    Find the first place in the stack that is not inside numbergen and param.
+
+    Inspired by: pandas.util._exceptions.find_stack_level.
+    """
+    import numbergen
+    import param
+
+    ng_dir = os.path.dirname(numbergen.__file__)
+    param_dir = os.path.dirname(param.__file__)
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    try:
+        n = 0
+        while frame:
+            filename = inspect.getfile(frame)
+            if filename.startswith((ng_dir, param_dir)):
+                frame = frame.f_back
+                n += 1
+            else:
+                break
+    finally:
+        # See note in
+        # https://docs.python.org/3/library/inspect.html#inspect.Traceback
+        del frame
+    return n

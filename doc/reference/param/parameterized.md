@@ -47,7 +47,6 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.objects
   ~Parameters.outputs
   ~Parameters.pprint
-  ~Parameters.print_param_values
   ~Parameters.schema
   ~Parameters.set_dynamic_time_fn
   ~Parameters.serialize_parameters

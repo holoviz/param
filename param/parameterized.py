@@ -4048,19 +4048,6 @@ class Parameters:
 
             get_logger(name=self_or_cls.name).log(level, msg, *args, **kw)
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
-    def print_param_values(self_):
-        """
-        Print the values of all this object's Parameters.
-
-        .. deprecated:: 1.12.0
-            Use instead ``for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")``
-        """
-        self = self_.self
-        for name, val in self.param.values().items():
-            print(f'{self.name}.{name} = {val}')
-
     def warning(self_, msg,*args,**kw):
         """
         Print msg merged with args as a warning, unless module variable

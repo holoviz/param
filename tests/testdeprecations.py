@@ -20,10 +20,6 @@ class TestDeprecateParameter:
         with pytest.raises(param._utils.ParamFutureWarning):
             param.Parameter(1, 'doc')
 
-    def test_deprecate_List_class_(self):
-        with pytest.raises(param._utils.ParamFutureWarning):
-            param.List(class_=int)
-
     def test_deprecate_Number_set_hook(self):
         class P(param.Parameterized):
             n = param.Number(set_hook=lambda obj, val: val)

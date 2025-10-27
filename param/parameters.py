@@ -27,7 +27,6 @@ import pathlib
 import re
 import sys
 import typing
-import warnings
 
 from collections import OrderedDict
 from collections.abc import Iterable
@@ -42,7 +41,6 @@ from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
     _deprecate_positional_args,
     _deprecated,
-    _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -2465,23 +2463,19 @@ class List(Parameter):
     list to be enforced.  If the ``item_type`` is non-None, all
     items in the list are checked to be instances of that type if
     ``is_instance`` is ``True`` (default) or subclasses of that type when False.
-
-    ``class_`` is accepted as an alias for `item_type`, but is
-    deprecated due to conflict with how the ``class_`` slot is
-    used in :class:`Selector` classes.
     """
 
-    __slots__ = ['bounds', 'item_type', 'class_', 'is_instance']
+    __slots__ = ['bounds', 'item_type', 'is_instance']
 
     _slot_defaults = dict(
-        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
+        Parameter._slot_defaults, item_type=None, bounds=(0, None),
         instantiate=True, default=[], is_instance=True,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
+        default=[], *, item_type=None, instantiate=True, bounds=(0, None),
         is_instance=True, allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -2489,23 +2483,13 @@ class List(Parameter):
         ...
 
     @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
+    def __init__(self, default=Undefined, *, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
-        if class_ is not Undefined:
-            # PARAM3_DEPRECATION
-            warnings.warn(
-                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamFutureWarning,
-                stacklevel=_find_stack_level(),
-            )
-        if item_type is not Undefined and class_ is not Undefined:
+        if item_type is not Undefined:
             self.item_type = item_type
-        elif item_type is Undefined or item_type is None:
-            self.item_type = class_
         else:
             self.item_type = item_type
         self.is_instance = is_instance
-        self.class_ = self.item_type
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
                            **params)
@@ -2581,7 +2565,7 @@ class HookList(List):
     specified place in some sequence of processing steps.
     """
 
-    __slots__ = ['class_', 'bounds']
+    __slots__ = ['bounds']
 
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)

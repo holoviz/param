@@ -575,7 +575,7 @@ class TestParameterized(unittest.TestCase):
     def test_values_name_ignored_for_instances_and_onlychanged(self):
         default_inst = param.Parameterized()
         assert 'Parameterized' in default_inst.name
-        # name ignored when automatically computed (behavior inherited from all_equal)
+        # name ignored when automatically computed (behavior inherited from is_equal)
         assert 'name' not in default_inst.param.values(onlychanged=True)
         # name not ignored when set
         assert param.Parameterized(name='foo').param.values(onlychanged=True)['name'] == 'foo'

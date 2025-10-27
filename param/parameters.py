@@ -27,7 +27,6 @@ import pathlib
 import re
 import sys
 import typing
-import warnings
 
 from collections import OrderedDict
 from collections.abc import Iterable
@@ -36,13 +35,9 @@ from contextlib import contextmanager
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
-    _int_types, _identity_hook
+    _int_types
 )
 from ._utils import (
-    ParamFutureWarning as _ParamFutureWarning,
-    _deprecate_positional_args,
-    _deprecated,
-    _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -608,23 +603,6 @@ class Dynamic(Parameter):
             return gen
 
 
-class __compute_set_hook:
-    """Remove when set_hook is removed."""
-
-    def __call__(self, p):
-        return _identity_hook
-
-    def __repr__(self):
-        return repr(self.sig)
-
-    @property
-    def sig(self):
-        return None
-
-
-_compute_set_hook = __compute_set_hook()
-
-
 class Number(Dynamic):
     """
     A numeric :class:`Dynamic` Parameter, with a default value and optional bounds.
@@ -670,33 +648,31 @@ class Number(Dynamic):
 
     """
 
-    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
+    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'step']
 
     _slot_defaults = dict(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
-        inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
+        inclusive_bounds=(True,True), step=None,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
         super().__init__(default=default, **params)
-        self.set_hook = set_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -882,7 +858,7 @@ class Magnitude(Number):
     @typing.overload
     def __init__(
         self,
-        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -890,10 +866,10 @@ class Magnitude(Number):
         ...
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         super().__init__(
             default=default, bounds=bounds, softbounds=softbounds,
-            inclusive_bounds=inclusive_bounds, step=step, set_hook=set_hook, **params
+            inclusive_bounds=inclusive_bounds, step=step, **params
         )
 
 
@@ -905,7 +881,7 @@ class Date(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -964,7 +940,7 @@ class CalendarDate(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -1025,7 +1001,6 @@ class Boolean(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1079,7 +1054,6 @@ class Event(Boolean):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
@@ -1096,7 +1070,7 @@ class Event(Boolean):
         # This _mode attribute is one of the few places where a specific
         # parameter has a special behavior that is relied upon by the
         # core functionality implemented in
-        # parameterized.py. Specifically, the set_param method
+        # parameterized.py. Specifically, the ``update`` method
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
         super().__init__(default=default,**params)
@@ -1152,7 +1126,6 @@ class Tuple(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
@@ -1264,7 +1237,6 @@ class Range(NumericTuple):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
@@ -1495,7 +1467,6 @@ class Callable(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1550,7 +1521,6 @@ class Composite(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
@@ -1865,7 +1835,6 @@ class Selector(SelectorBase, _SignatureSelector):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    @_deprecate_positional_args
     def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
@@ -1986,7 +1955,6 @@ class ObjectSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
                          empty_default=True, **kwargs)
@@ -2011,7 +1979,6 @@ class FileSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2059,7 +2026,6 @@ class ListSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
@@ -2121,7 +2087,6 @@ class MultiFileSelector(ListSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2171,7 +2136,6 @@ class ClassSelector(SelectorBase):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
@@ -2307,7 +2271,6 @@ class DataFrame(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
@@ -2423,7 +2386,6 @@ class Series(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
@@ -2465,47 +2427,32 @@ class List(Parameter):
     list to be enforced.  If the ``item_type`` is non-None, all
     items in the list are checked to be instances of that type if
     ``is_instance`` is ``True`` (default) or subclasses of that type when False.
-
-    ``class_`` is accepted as an alias for `item_type`, but is
-    deprecated due to conflict with how the ``class_`` slot is
-    used in :class:`Selector` classes.
     """
 
-    __slots__ = ['bounds', 'item_type', 'class_', 'is_instance']
+    __slots__ = ['bounds', 'item_type', 'is_instance']
 
     _slot_defaults = dict(
-        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
+        Parameter._slot_defaults, item_type=None, bounds=(0, None),
         instantiate=True, default=[], is_instance=True,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
+        default=[], *, item_type=None, instantiate=True, bounds=(0, None),
         is_instance=True, allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
+    def __init__(self, default=Undefined, *, item_type=Undefined,
                  instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
-        if class_ is not Undefined:
-            # PARAM3_DEPRECATION
-            warnings.warn(
-                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamFutureWarning,
-                stacklevel=_find_stack_level(),
-            )
-        if item_type is not Undefined and class_ is not Undefined:
+        if item_type is not Undefined:
             self.item_type = item_type
-        elif item_type is Undefined or item_type is None:
-            self.item_type = class_
         else:
             self.item_type = item_type
         self.is_instance = is_instance
-        self.class_ = self.item_type
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
                            **params)
@@ -2581,7 +2528,7 @@ class HookList(List):
     specified place in some sequence of processing steps.
     """
 
-    __slots__ = ['class_', 'bounds']
+    __slots__ = ['bounds']
 
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)
@@ -2602,8 +2549,7 @@ class HookList(List):
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
 #   - use resolve_path(path_to_file=True) for paths to existing files to be read,
-#   - use resolve_path(path_to_file=False) for paths to existing folders to be read,
-#     and normalize_path() for paths to new files to be written.
+#   - use resolve_path(path_to_file=False) for paths to existing folders to be read.
 
 class resolve_path(ParameterizedFunction):
     """
@@ -2663,34 +2609,6 @@ class resolve_path(ParameterizedFunction):
             raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=_ParamFutureWarning)
-class normalize_path(ParameterizedFunction):
-    """
-    Convert a UNIX-style path to the current OS's format,
-    typically for creating a new file or directory.
-
-    If the path is not already absolute, it will be made absolute
-    (using the prefix parameter).
-
-    Should do the same as Python's os.path.abspath(), except using
-    prefix rather than os.getcwd).
-    """
-
-    prefix = String(default=os.getcwd(),pickle_default_value=None,doc="""
-        Prepended to the specified path, if that path is not
-        absolute.""")
-
-    def __call__(self,path="",**params):
-        p = ParamOverrides(self,params)
-
-        if not os.path.isabs(path):
-            path = os.path.join(os.path.normpath(p.prefix),path)
-
-        return os.path.normpath(path)
-
-
-
 class Path(Parameter):
     """
     Parameter that can be set to a string specifying the path of a file or folder.
@@ -2733,7 +2651,6 @@ class Path(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, search_paths=Undefined, check_exists=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
@@ -2885,7 +2802,6 @@ class Color(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
@@ -2950,7 +2866,6 @@ class Bytes(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex

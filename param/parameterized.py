@@ -49,8 +49,6 @@ from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
     ParamPendingDeprecationWarning as _ParamPendingDeprecationWarning,
     Skip,
-    _deprecated,
-    _deprecate_positional_args,
     _find_stack_level,
     _in_ipython,
     _is_auto_name,
@@ -265,10 +263,6 @@ def resolve_ref(reference, recursive=False):
         return [reference]
     return []
 
-def _identity_hook(obj, val):
-    """To be removed when set_hook is removed."""
-    return val
-
 
 class _Undefined:
     """
@@ -365,14 +359,6 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
         parameterized.param._BATCH_WATCH = BATCH_WATCH
         if run and not BATCH_WATCH:
             parameterized.param._batch_call_watchers()
-
-
-# PARAM3_DEPRECATION
-@_deprecated(extra_msg="Use instead `batch_call_watchers`.", warning_cat=_ParamFutureWarning)
-@contextmanager
-def batch_watch(parameterized, enable=True, run=True):
-    with _batch_call_watchers(parameterized, enable, run):
-        yield
 
 
 @contextmanager
@@ -557,51 +543,6 @@ def get_occupied_slots(instance):
             if hasattr(instance,slot)]
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=_ParamFutureWarning)
-def all_equal(arg1,arg2):
-    """
-    Return a single boolean for arg1==arg2, even for numpy arrays
-    using element-wise comparison.
-
-    Uses all(arg1==arg2) for sequences, and arg1==arg2 otherwise.
-
-    If both objects have an '_infinitely_iterable' attribute, they are
-    not be zipped together and are compared directly instead.
-    """
-    if all(hasattr(el, '_infinitely_iterable') for el in [arg1,arg2]):
-        return arg1==arg2
-    try:
-        return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
-    except TypeError:
-        return arg1==arg2
-
-
-# PARAM3_DEPRECATION
-# The syntax to use a metaclass changed incompatibly between 2 and
-# 3. The add_metaclass() class decorator below creates a class using a
-# specified metaclass in a way that works on both 2 and 3. For 3, can
-# remove this decorator and specify metaclasses in a simpler way
-# (https://docs.python.org/3/reference/datamodel.html#customizing-class-creation)
-#
-# Code from six (https://bitbucket.org/gutworth/six; version 1.4.1).
-@_deprecated(warning_cat=_ParamFutureWarning)
-def add_metaclass(metaclass):
-    """
-    Class decorator for creating a class with a metaclass.
-
-    .. deprecated:: 2.0.0
-    """
-    def wrapper(cls):
-        orig_vars = cls.__dict__.copy()
-        orig_vars.pop('__dict__', None)
-        orig_vars.pop('__weakref__', None)
-        for slots_var in orig_vars.get('__slots__', ()):
-            orig_vars.pop(slots_var)
-        return metaclass(cls.__name__, cls.__bases__, orig_vars)
-    return wrapper
-
-
 class bothmethod:
     """
     'optional @classmethod'.
@@ -693,21 +634,6 @@ def get_method_owner(method):
     if isinstance(method, partial):
         method = method.func
     return method.__self__
-
-
-# PARAM3_DEPRECATION
-def recursive_repr(fillvalue='...'):
-    """
-    Decorate to make a repr function return fillvalue for a recursive call.
-
-    .. deprecated:: 1.12.0
-    """
-    warnings.warn(
-        'recursive_repr has been deprecated and will be removed in a future version.',
-        category=_ParamFutureWarning,
-        stacklevel=_find_stack_level(),
-    )
-    return _recursive_repr(fillvalue=fillvalue)
 
 
 @accept_arguments
@@ -1420,7 +1346,6 @@ class Parameter(_ParameterBase):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__( # pylint: disable-msg=R0913
         self,
         default=Undefined,
@@ -1854,17 +1779,6 @@ class Parameter(_ParameterBase):
             if is_async or val is Undefined:
                 return
 
-        # Deprecated Number set_hook called here to avoid duplicating setter
-        if hasattr(self, 'set_hook'):
-            val = self.set_hook(obj, val)
-            if self.set_hook is not _identity_hook:
-                # PARAM3_DEPRECATION
-                warnings.warn(
-                    'Number.set_hook has been deprecated.',
-                    category=_ParamFutureWarning,
-                    stacklevel=_find_stack_level(),
-                )
-
         self._validate(val)
 
         _old = NotImplemented
@@ -2063,7 +1977,6 @@ class String(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
@@ -2718,34 +2631,6 @@ class Parameters:
 
     # Classmethods
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
-    def print_param_defaults(self_):
-        """
-        Print the default values of all cls's Parameters.
-
-        .. deprecated:: 1.12.0
-            Use instead ``for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")``
-        """
-        cls = self_.cls
-        for key,val in cls.__dict__.items():
-            if isinstance(val,Parameter):
-                print(cls.__name__+'.'+key+ '='+ repr(val.default))
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `p.param.default =`", warning_cat=_ParamFutureWarning)
-    def set_default(self_,param_name,value):
-        """
-        Set the default value of param_name.
-
-        Equivalent to setting param_name on the class.
-
-        .. deprecated:: 1.12.0
-             Use instead ``p.param.default =``
-        """
-        cls = self_.cls
-        setattr(cls,param_name,value)
-
     def add_parameter(self_, param_name: str, param_obj: Parameter):
         """
         Add a new :class:`Parameter` object to this class.
@@ -2792,35 +2677,6 @@ class Parameters:
         ParameterizedMetaclass._initialize_parameter(cls, param_name, param_obj)
         # delete cached params()
         cls._param__private.params.clear()
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.add_parameter`", warning_cat=_ParamFutureWarning)
-    def _add_parameter(self_,param_name, param_obj):
-        """
-        Add a new :class:`Parameter` object into this object's class.
-
-        .. deprecated :: 1.12.0
-        """
-        return self_.add_parameter(param_name, param_obj)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.values()` or `.param['param']`", warning_cat=_ParamFutureWarning)
-    def params(self_, parameter_name=None):
-        """
-        Return the Parameters of this class as the
-        dictionary {name: parameter_object}.
-
-        Includes Parameters from this class and its
-        superclasses.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.values()` or `.param['param']``
-        """
-        pdict = self_.objects(instance='existing')
-        if parameter_name is None:
-            return pdict
-        else:
-            return pdict[parameter_name]
 
     # Bothmethods
 
@@ -2935,30 +2791,6 @@ class Parameters:
             setattr(self_or_cls, tp, p._autotrigger_reset_value)
             p._mode = 'set-reset'
         return restore
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.update`", warning_cat=_ParamFutureWarning)
-    def set_param(self_, *args,**kwargs):
-        """
-        For each param=value keyword argument, sets the corresponding
-        parameter of this object or class to the given value.
-
-        For backwards compatibility, also accepts
-        set_param("param",value) for a single parameter value using
-        positional arguments, but the keyword interface is preferred
-        because it is more compact and can set multiple values.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.update``
-        """
-        self_or_cls = self_.self_or_cls
-        if args:
-            if len(args) == 2 and args[0] not in kwargs and not kwargs:
-                kwargs[args[0]] = args[1]
-            else:
-                raise ValueError("Invalid positional arguments for %s.set_param" %
-                                 (self_or_cls.name))
-        return self_.update(kwargs)
 
     @property
     def _cls_parameters(self_):
@@ -3477,28 +3309,6 @@ class Parameters:
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    # PARAM3_DEPRECATION
-    # same as values() but returns list, not dict
-    @_deprecated(extra_msg="""
-        Use `.param.values().items()` instead (or `.param.values()` for the
-        common case of `dict(....param.get_param_values())`)
-    """, warning_cat=_ParamFutureWarning)
-    def get_param_values(self_, onlychanged=False):
-        """
-        Return a list of name,value pairs for all Parameters of this
-        object.
-
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
-
-        .. deprecated:: 1.12.0
-            Use ``.param.values().items()`` instead (or ``.param.values()`` for the
-            common case of ``dict(....param.get_param_values())``)
-        """
-        vals = self_.values(onlychanged)
-        return [(k, v) for k, v in vals.items()]
-
     def values(self_, onlychanged: bool = False) -> dict[str, Any]:
         """
         Retrieve a dictionary of parameter names and their current values.
@@ -3744,22 +3554,6 @@ class Parameters:
             return deps
         return _resolve_mcs_deps(
             self_.self, deps, dynamic, intermediate=intermediate)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg='Use instead `.param.method_dependencies`', warning_cat=_ParamFutureWarning)
-    def params_depended_on(self_, *args, **kwargs):
-        """
-        Given the name of a method, returns a PInfo object for each dependency
-        of this method. See help(PInfo) for the contents of these objects.
-
-        By default intermediate dependencies on sub-objects are not
-        returned as these are primarily useful for internal use to
-        determine when a sub-object dependency has to be updated.
-
-        .. deprecated: 2.0.0
-            Use instead ``.param.method_dependencies``
-        """
-        return self_.method_dependencies(*args, **kwargs)
 
     def outputs(self_) -> dict[str,tuple]:
         """
@@ -4232,29 +4026,6 @@ class Parameters:
 
     # Instance methods
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `{k:v.default for k,v in p.param.objects().items()}`", warning_cat=_ParamFutureWarning)
-    def defaults(self_):
-        """
-        Return {parameter_name:parameter.default} for all non-constant
-        Parameters.
-
-        Note that a Parameter for which instantiate==True has its default
-        instantiated.
-
-        .. deprecated:: 1.12.0
-            Use instead ``{k:v.default for k,v in p.param.objects().items()}``
-        """
-        self = self_.self
-        d = {}
-        for param_name, param in self.param.objects('existing').items():
-            if param.constant:
-                pass
-            if param.instantiate:
-                self.param._instantiate_param(param, dict_=d, key=param_name)
-            d[param_name] = param.default
-        return d
-
     # Designed to avoid any processing unless the print
     # level is high enough, though not all callers of message(),
     # verbose(), debug(), etc are taking advantage of this.
@@ -4273,19 +4044,6 @@ class Parameters:
 
             get_logger(name=self_or_cls.name).log(level, msg, *args, **kw)
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
-    def print_param_values(self_):
-        """
-        Print the values of all this object's Parameters.
-
-        .. deprecated:: 1.12.0
-            Use instead ``for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")``
-        """
-        self = self_.self
-        for name, val in self.param.values().items():
-            print(f'{self.name}.{name} = {val}')
-
     def warning(self_, msg,*args,**kw):
         """
         Print msg merged with args as a warning, unless module variable
@@ -4295,45 +4053,6 @@ class Parameters:
         See Python's logging module for details of message formatting.
         """
         self_.log(WARNING, msg, *args, **kw)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.MESSAGE, ...)`", warning_cat=_ParamFutureWarning)
-    def message(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a message.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.log(param.MESSAGE, ...)``
-        """
-        self_.__db_print(INFO,msg,*args,**kw)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.VERBOSE, ...)`", warning_cat=_ParamFutureWarning)
-    def verbose(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a verbose message.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.log(param.VERBOSE, ...)``
-        """
-        self_.__db_print(VERBOSE,msg,*args,**kw)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.DEBUG, ...)`", warning_cat=_ParamFutureWarning)
-    def debug(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a debugging statement.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.log(param.DEBUG, ...)``
-        """
-        self_.__db_print(DEBUG,msg,*args,**kw)
 
     def log(self_, level: int, msg: str, *args, **kw) -> None:
         """
@@ -6153,59 +5872,3 @@ class default_label_formatter(ParameterizedFunction):
 
 
 label_formatter = default_label_formatter
-
-
-# PARAM3_DEPRECATION: Should be able to remove this; was originally
-# adapted from OProperty from
-# infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
-# but since python 2.6 the getter, setter, and deleter attributes of
-# a property should provide similar functionality already.
-class overridable_property:
-    """
-    The same as Python's "property" attribute, but allows the accessor
-    methods to be overridden in subclasses.
-
-    .. deprecated:: 2.0.0
-    """
-
-    # Delays looking up the accessors until they're needed, rather
-    # than finding them when the class is first created.
-
-    # Based on the emulation of PyProperty_Type() in Objects/descrobject.c
-
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
-        warnings.warn(
-            message="overridable_property has been deprecated.",
-            category=_ParamFutureWarning,
-            stacklevel=_find_stack_level(),
-        )
-        self.fget = fget
-        self.fset = fset
-        self.fdel = fdel
-        self.__doc__ = doc
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self
-        if self.fget is None:
-            raise AttributeError("unreadable attribute")
-        if self.fget.__name__ == '<lambda>' or not self.fget.__name__:
-            return self.fget(obj)
-        else:
-            return getattr(obj, self.fget.__name__)()
-
-    def __set__(self, obj, value):
-        if self.fset is None:
-            raise AttributeError("can't set attribute")
-        if self.fset.__name__ == '<lambda>' or not self.fset.__name__:
-            self.fset(obj, value)
-        else:
-            getattr(obj, self.fset.__name__)(value)
-
-    def __delete__(self, obj):
-        if self.fdel is None:
-            raise AttributeError("can't delete attribute")
-        if self.fdel.__name__ == '<lambda>' or not self.fdel.__name__:
-            self.fdel(obj)
-        else:
-            getattr(obj, self.fdel.__name__)()

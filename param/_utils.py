@@ -7,7 +7,6 @@ import inspect
 import numbers
 import os
 import re
-import sys
 import traceback
 import warnings
 from collections import OrderedDict, abc, defaultdict
@@ -129,59 +128,6 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
             return func(*args, **kwargs)
         return inner
     return decorator
-
-
-def _deprecate_positional_args(func):
-    """Issue warnings for methods using deprecated positional arguments.
-
-    This internal decorator warns when arguments after the `*` separator
-    are passed as positional arguments, in accordance with PEP 3102.
-    It adapts the behavior from scikit-learn.
-
-    Parameters
-    ----------
-    func: FunctionType | MethodType
-        The function to wrap with positional argument deprecation warnings.
-
-    Returns
-    -------
-    callable:
-        The wrapped function that issues warnings for deprecated
-        positional arguments.
-    """
-    signature = inspect.signature(func)
-
-    pos_or_kw_args = []
-    kwonly_args = []
-    for name, param in signature.parameters.items():
-        if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
-            pos_or_kw_args.append(name)
-        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
-            kwonly_args.append(name)
-
-    @functools.wraps(func)
-    def inner(*args, **kwargs):
-        name = func.__qualname__.split('.')[0]
-        n_extra_args = len(args) - len(pos_or_kw_args)
-        if n_extra_args > 0:
-            extra_args = ", ".join(kwonly_args[:n_extra_args])
-
-            warnings.warn(
-                f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
-                "has been deprecated since Param 2.0.0 and will raise an error in a future version, "
-                "please pass them as keyword arguments.",
-                ParamFutureWarning,
-                stacklevel=_find_stack_level(),
-            )
-
-            zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
-            kwargs.update({name: arg for name, arg in zip_args})
-
-            return func(*args[:-n_extra_args], **kwargs)
-
-        return func(*args, **kwargs)
-
-    return inner
 
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
@@ -353,44 +299,6 @@ def _produce_value(value_obj):
         return value_obj
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def produce_value(value_obj):
-    """Produce an actual value from a stored object.
-
-    If the object is callable, call it; otherwise, return the object.
-
-    .. deprecated:: 2.0.0
-    """
-    return _produce_value(value_obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def as_unicode(obj):
-    """
-    Safely casts any object to unicode including regular string
-    (i.e. bytes) types in python 2.
-
-    .. deprecated:: 2.0.0
-    """
-    return str(obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def is_ordered_dict(d):
-    """
-    Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, and vanilla Python dictionaries are ordered for Python 3.6+.
-
-    .. deprecated:: 2.0.0
-    """
-    py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
-    vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
-    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
-
-
 def _hashable(x):
     """
     Return a hashable version of the given object x, with lists and
@@ -406,22 +314,6 @@ def _hashable(x):
         return tuple([(k,v) for k,v in x.items()])
     else:
         return x
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def hashable(x):
-    """
-    Return a hashable version of the given object x, with lists and
-    dictionaries converted to tuples.  Allows mutable objects to be
-    used as a lookup key in cases where the object has not actually
-    been mutated. Lookup will fail (appropriately) in cases where some
-    part of the object has changed.  Does not (currently) recursively
-    replace mutable subobjects.
-
-    .. deprecated:: 2.0.0
-    """
-    return _hashable(x)
 
 
 def _named_objs(objlist, namesdict=None):
@@ -455,20 +347,6 @@ def _named_objs(objlist, namesdict=None):
             k = str(obj)
         objs[k] = obj
     return objs
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def named_objs(objlist, namesdict=None):
-    """
-    Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself. Accepts
-    an optional name,obj dictionary, which will override any other
-    name if that item is present in the dictionary.
-
-    .. deprecated:: 2.0.0
-    """
-    return _named_objs(objlist, namesdict=namesdict)
 
 
 def _get_min_max_value(min, max, value=None, step=None):
@@ -625,18 +503,6 @@ def _abbreviate_paths(pathspec,named_paths):
 
     prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
     return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def abbreviate_paths(pathspec,named_paths):
-    """
-    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
-    Helps keep menu items short yet unambiguous.
-
-    .. deprecated:: 2.0.0
-    """
-    return _abbreviate_paths(pathspec, named_paths)
 
 
 def _to_datetime(x):

@@ -3327,28 +3327,6 @@ class Parameters:
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    # PARAM3_DEPRECATION
-    # same as values() but returns list, not dict
-    @_deprecated(extra_msg="""
-        Use `.param.values().items()` instead (or `.param.values()` for the
-        common case of `dict(....param.get_param_values())`)
-    """, warning_cat=_ParamFutureWarning)
-    def get_param_values(self_, onlychanged=False):
-        """
-        Return a list of name,value pairs for all Parameters of this
-        object.
-
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
-
-        .. deprecated:: 1.12.0
-            Use ``.param.values().items()`` instead (or ``.param.values()`` for the
-            common case of ``dict(....param.get_param_values())``)
-        """
-        vals = self_.values(onlychanged)
-        return [(k, v) for k, v in vals.items()]
-
     def values(self_, onlychanged: bool = False) -> dict[str, Any]:
         """
         Retrieve a dictionary of parameter names and their current values.

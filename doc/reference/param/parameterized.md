@@ -40,7 +40,6 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.deserialize_parameters
   ~Parameters.deserialize_value
   ~Parameters.force_new_dynamic_value
-  ~Parameters.get_param_values
   ~Parameters.get_value_generator
   ~Parameters.inspect_value
   ~Parameters.log

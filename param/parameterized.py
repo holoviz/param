@@ -4044,29 +4044,6 @@ class Parameters:
 
     # Instance methods
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `{k:v.default for k,v in p.param.objects().items()}`", warning_cat=_ParamFutureWarning)
-    def defaults(self_):
-        """
-        Return {parameter_name:parameter.default} for all non-constant
-        Parameters.
-
-        Note that a Parameter for which instantiate==True has its default
-        instantiated.
-
-        .. deprecated:: 1.12.0
-            Use instead ``{k:v.default for k,v in p.param.objects().items()}``
-        """
-        self = self_.self
-        d = {}
-        for param_name, param in self.param.objects('existing').items():
-            if param.constant:
-                pass
-            if param.instantiate:
-                self.param._instantiate_param(param, dict_=d, key=param_name)
-            d[param_name] = param.default
-        return d
-
     # Designed to avoid any processing unless the print
     # level is high enough, though not all callers of message(),
     # verbose(), debug(), etc are taking advantage of this.

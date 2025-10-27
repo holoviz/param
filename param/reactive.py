@@ -182,9 +182,9 @@ class reactive_ops:
     The reactive operations namespace.
 
     Provides reactive versions of operations that cannot be made reactive through
-    operator overloading. This includes operations such as `.rx.and_` and `.rx.bool`.
+    operator overloading. This includes operations such as ``.rx.and_`` and ``.rx.bool``.
 
-    Calling this namespace (`()`) creates and returns a reactive expression, enabling
+    Calling this namespace (``()``) creates and returns a reactive expression, enabling
     dynamic updates and computation tracking.
 
     Returns
@@ -192,7 +192,7 @@ class reactive_ops:
     rx
         A reactive expression representing the operation applied to the current value.
 
-    User Guide
+    References
     ----------
     For more details, see the user guide:
     https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
@@ -236,7 +236,7 @@ class reactive_ops:
         """
         Perform a logical AND operation with the given operand.
 
-        This method computes a logical AND (`and`) operation between the current
+        This method computes a logical AND (``and``) operation between the current
         value of the reactive expression and the provided operand. The result is
         returned as a new reactive expression.
 
@@ -252,7 +252,7 @@ class reactive_ops:
 
         Examples
         --------
-        Create two reactive expressions and combine them using `and_`:
+        Create two reactive expressions and combine them using ``and_``:
 
         >>> import param
         >>> a = param.rx(True)
@@ -303,10 +303,10 @@ class reactive_ops:
 
     def buffer(self, n) -> 'rx':
         """
-        Collect the last `n` items emitted by the reactive expression.
+        Collect the last ``n`` items emitted by the reactive expression.
 
         This method creates a new reactive expression that maintains a buffer of the
-        most recent `n` items emitted by the current reactive expression. As new values
+        most recent ``n`` items emitted by the current reactive expression. As new values
         are emitted, older values are discarded to keep the buffer size constant.
 
         Parameters
@@ -349,7 +349,7 @@ class reactive_ops:
         """
         Check if the current object is contained "in" the given operand.
 
-        This method performs a containment check, equivalent to the `in` keyword in Python,
+        This method performs a containment check, equivalent to the ``in`` keyword in Python,
         but within a reactive expression. The result is returned as a new reactive expression.
 
         Parameters
@@ -478,7 +478,7 @@ class reactive_ops:
         """
         Return the length of the current object as a reactive expression.
 
-        Since the `__len__` method cannot be overloaded reactively, this method
+        Since the ``__len__`` method cannot be overloaded reactively, this method
         provides a way to compute the length of the current reactive expression.
         The result is returned as a new reactive expression.
 
@@ -531,13 +531,13 @@ class reactive_ops:
         Returns
         -------
         rx
-            A new reactive expression containing the results of applying `func`
+            A new reactive expression containing the results of applying ``func``
             to each item.
 
         Raises
         ------
         TypeError
-            If `func` is a generator or asynchronous generator function, which
+            If ``func`` is a generator or asynchronous generator function, which
             are not supported.
 
         Examples
@@ -580,7 +580,7 @@ class reactive_ops:
         """
         Perform a logical NOT operation on the current reactive value.
 
-        This method computes the logical negation (`not`) of the current reactive
+        This method computes the logical negation (``not``) of the current reactive
         expression and returns the result as a new reactive expression.
 
         Returns
@@ -610,7 +610,7 @@ class reactive_ops:
         """
         Perform a logical OR operation with the given operand.
 
-        This method computes a logical OR (`or`) operation between the current
+        This method computes a logical OR (``or``) operation between the current
         reactive value and the provided operand. The result is returned as a new
         reactive expression.
 
@@ -669,7 +669,7 @@ class reactive_ops:
         Returns
         -------
         rx
-            A new reactive expression representing the result of applying `func`.
+            A new reactive expression representing the result of applying ``func``.
 
         Examples
         --------
@@ -748,16 +748,16 @@ class reactive_ops:
         """
         Return a new expression that indicates whether the current expression is updating.
 
-        This method creates a reactive expression that evaluates to `True` while the
-        current expression is in the process of updating and `False` otherwise. This
+        This method creates a reactive expression that evaluates to ``True`` while the
+        current expression is in the process of updating and ``False`` otherwise. This
         can be useful for tracking or reacting to the update state of an expression,
         such as displaying loading indicators or triggering conditional logic.
 
         Returns
         -------
         ReactiveExpression
-            A reactive expression that is `True` while the current expression is updating
-            and `False` otherwise.
+            A reactive expression that is ``True`` while the current expression is updating
+            and ``False`` otherwise.
 
         Examples
         --------
@@ -789,16 +789,16 @@ class reactive_ops:
 
         This method creates a new reactive expression that emits the value of the
         current expression only when one of the provided dependencies changes. If
-        all dependencies are of type `param.Event` and an initial value is provided,
+        all dependencies are of type :class:`param.Event` and an initial value is provided,
         the expression will not be evaluated until the first event is triggered.
 
         Parameters
         ----------
-        dependencies : param.Parameter or reactive expression rx
+        dependencies : Parameter or reactive expression rx
             Dependencies that trigger an update in the reactive expression.
         initial : object, optional
             A placeholder value that is used until a dependency event is triggered.
-            Defaults to `Undefined`.
+            Defaults to ``Undefined``.
 
         Returns
         -------
@@ -807,7 +807,7 @@ class reactive_ops:
 
         Examples
         --------
-        Use `.when` to control when a reactive expression updates:
+        Use ``.when`` to control when a reactive expression updates:
 
         >>> import param
         >>> from param import rx
@@ -832,7 +832,7 @@ class reactive_ops:
 
         >>> state = State()
 
-        Create a gated reactive expression that only updates when the `submit` event is triggered:
+        Create a gated reactive expression that only updates when the ``submit`` event is triggered:
 
         >>> gated_expr = rx(expensive_function)(a, b).rx.when(state.param.submit, initial="Initial Value")
         >>> gated_expr.rx.value
@@ -858,34 +858,34 @@ class reactive_ops:
 
     def where(self, x, y) -> 'rx':
         """
-        Return either `x` or `y` depending on the current state of the expression.
+        Return either ``x`` or ``y`` depending on the current state of the expression.
 
         This method implements a reactive version of a ternary conditional expression.
-        It evaluates the current reactive expression as a condition and returns `x`
-        if the condition is `True`, or `y` if the condition is `False`.
+        It evaluates the current reactive expression as a condition and returns ``x``
+        if the condition is ``True``, or ``y`` if the condition is ``False``.
 
         Parameters
         ----------
         x : object
-            The value to return if the reactive condition evaluates to `True`.
+            The value to return if the reactive condition evaluates to ``True``.
         y : object
-            The value to return if the reactive condition evaluates to `False`.
+            The value to return if the reactive condition evaluates to ``False``.
 
         Returns
         -------
         rx
-            A reactive expression that evaluates to `x` or `y` based on the current
+            A reactive expression that evaluates to ``x`` or ``y`` based on the current
             state of the condition.
 
         Examples
         --------
-        Use `.where` to implement a reactive conditional:
+        Use ``.where`` to implement a reactive conditional:
 
         >>> import param
         >>> rx_value = param.rx(True)
         >>> rx_result = rx_value.rx.where("Condition is True", "Condition is False")
 
-        Check the result when the condition is `True`:
+        Check the result when the condition is ``True``:
 
         >>> rx_result.rx.value
         'Condition is True'
@@ -896,7 +896,7 @@ class reactive_ops:
         >>> rx_result.rx.value
         'Condition is False'
 
-        Combine `.where` with reactive expressions for dynamic updates:
+        Combine ``.where`` with reactive expressions for dynamic updates:
 
         >>> rx_num = param.rx(10)
         >>> rx_condition = rx_num > 5
@@ -937,7 +937,7 @@ class reactive_ops:
     def set(self, value):
         """
         Set the input of the pipeline to a new value. Equivalent
-        to `.rx.value = value`.
+        to ``.rx.value = value``.
 
         Parameters
         ----------
@@ -1055,7 +1055,7 @@ class reactive_ops:
         """
         Add a callback to observe changes in the reactive expression's output.
 
-        This method allows you to attach a callable function (`fn`) that will be
+        This method allows you to attach a callable function (``fn``) that will be
         invoked whenever the output of the reactive expression changes. The callback
         can be either a regular or asynchronous function. If no callable is provided,
         the expression is eagerly evaluated whenever it updates.
@@ -1064,16 +1064,14 @@ class reactive_ops:
         ----------
         fn : callable or coroutine function, optional
             The function to be called whenever the reactive expression changes.
-            For function should accept a single argument, which is
-            the new value of the reactive expression.
-            If no function provided, the expression is simply evaluated eagerly.
-
-        Other arguments have no effect. See https://github.com/holoviz/param/issues/996.
+            For function should accept a single argument, which is the new value
+            of the reactive expression. If no function provided, the expression
+            is simply evaluated eagerly.
 
         Raises
         ------
         ValueError
-            If `precedence` is negative, as negative precedences are reserved
+            If ``precedence`` is negative, as negative precedences are reserved
             for internal watchers.
 
         Examples
@@ -1122,14 +1120,14 @@ def bind(function, *args, watch: bool = False, **kwargs):
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
 
-    This function creates a wrapper around the given `function`, binding some or
-    all of its arguments to constant values, `param.Parameter` objects, or
+    This function creates a wrapper around the given ``function``, binding some or
+    all of its arguments to constant values, :class:`Parameter` objects, or
     reactive expressions. The resulting function automatically reflects updates
     to any bound parameters or reactive expressions, ensuring that its output
     remains up-to-date.
 
-    Similar to `functools.partial`, arguments can also be bound to constants,
-    leaving a simple callable object. When `watch=True`, the function is
+    Similar to :func:`functools.partial`, arguments can also be bound to constants,
+    leaving a simple callable object. When ``watch=True``, the function is
     automatically evaluated whenever any bound parameter or reactive expression changes.
 
     Parameters
@@ -1137,17 +1135,18 @@ def bind(function, *args, watch: bool = False, **kwargs):
     function : callable, generator, async generator, or coroutine
         The function or coroutine to bind constant, dynamic, or reactive arguments to.
         It can be:
+
         - A standard callable (e.g., a regular function).
         - A generator function (producing iterables).
         - An async generator function (producing asynchronous iterables).
         - A coroutine function (producing awaitables).
-    *args : object, param.Parameter, bound function or reactive expression rx
+    *args : object, Parameter, bound function or reactive expression rx
         Positional arguments to bind to the function. These can be constants,
         `param.Parameter` objects, bound functions or reactive expressions.
     watch : bool, optional
         If `True`, the function is automatically evaluated whenever a bound
         parameter or reactive expression changes. Defaults to `False`.
-    **kwargs : object, param.Parameter, bound function or reactive expression rx
+    **kwargs : object, Parameter, bound function or reactive expression rx
         Keyword arguments to bind to the function. These can also be constants,
         `param.Parameter` objects, bound functions or reactive expressions.
 
@@ -1304,9 +1303,9 @@ class rx:
     """
     A class for creating reactive expressions by wrapping objects.
 
-    The `rx` class allows you to wrap objects and operate on them interactively,
+    The ``rx`` class allows you to wrap objects and operate on them interactively,
     recording any operations applied. These recorded operations form a pipeline
-    that can be replayed dynamically when an operand changes. This makes `rx`
+    that can be replayed dynamically when an operand changes. This makes ``rx``
     particularly useful for building reactive workflows, such as real-time data
     processing or dynamic user interfaces.
 
@@ -1316,14 +1315,14 @@ class rx:
         The object to wrap, such as a number, string, list, or any supported
         data structure.
 
-    User Guide
+    References
     ----------
     For more details, see the user guide:
     https://param.holoviz.org/user_guide/Reactive_Expressions.html
 
     Examples
     --------
-    Instantiate `rx` from an object:
+    Instantiate :class:`rx` from an object:
 
     >>> from param import rx
     >>> reactive_float = rx(3.14)
@@ -1362,7 +1361,7 @@ class rx:
         predicate: Optional[Callable[[Any], bool]] = None
     ):
         """
-        Register an accessor that extends rx with custom behavior.
+        Register an accessor that extends ``rx`` with custom behavior.
 
         Parameters
         ----------
@@ -1370,7 +1369,7 @@ class rx:
           The name of the accessor will be attribute-accessible under.
         accessor: Callable[[rx], any]
           A callable that will return the accessor namespace object
-          given the rx object it is registered on.
+          given the ``rx`` object it is registered on.
         predicate: Callable[[Any], bool] | None
 
         """
@@ -1495,9 +1494,9 @@ class rx:
         The reactive operations namespace.
 
         Provides reactive versions of operations that cannot be made reactive through
-        operator overloading. This includes operations such as `.rx.and_` and `.rx.bool`.
+        operator overloading. This includes operations such as ``.rx.and_`` and ``.rx.bool``.
 
-        User Guide
+        References
         ----------
         For more details, see the user guide:
         https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx

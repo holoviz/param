@@ -3573,22 +3573,6 @@ class Parameters:
         return _resolve_mcs_deps(
             self_.self, deps, dynamic, intermediate=intermediate)
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg='Use instead `.param.method_dependencies`', warning_cat=_ParamFutureWarning)
-    def params_depended_on(self_, *args, **kwargs):
-        """
-        Given the name of a method, returns a PInfo object for each dependency
-        of this method. See help(PInfo) for the contents of these objects.
-
-        By default intermediate dependencies on sub-objects are not
-        returned as these are primarily useful for internal use to
-        determine when a sub-object dependency has to be updated.
-
-        .. deprecated: 2.0.0
-            Use instead ``.param.method_dependencies``
-        """
-        return self_.method_dependencies(*args, **kwargs)
-
     def outputs(self_) -> dict[str,tuple]:
         """
         Retrieve a mapping of declared outputs for the Parameterized object.

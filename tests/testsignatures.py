@@ -19,7 +19,7 @@ SKIP_UPDATED = [
 def custom_concrete_descendents(kls):
     return {
         ptype.__name__: ptype
-        for ptype in descendents(kls).items()
+        for ptype in descendents(kls)
         if ptype.__module__.startswith('param')
     }
 

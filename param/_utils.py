@@ -355,18 +355,6 @@ def _produce_value(value_obj):
 
 # PARAM3_DEPRECATION
 @_deprecated(warning_cat=ParamFutureWarning)
-def as_unicode(obj):
-    """
-    Safely casts any object to unicode including regular string
-    (i.e. bytes) types in python 2.
-
-    .. deprecated:: 2.0.0
-    """
-    return str(obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
 def is_ordered_dict(d):
     """
     Predicate checking for ordered dictionaries. OrderedDict is always

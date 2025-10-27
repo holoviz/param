@@ -102,7 +102,6 @@ from .parameters import (
 )
 from .reactive import bind, rx
 from ._utils import (
-    as_unicode,
     is_ordered_dict,
     hashable,
     named_objs,
@@ -214,7 +213,6 @@ __all__ = (
     '__version__',
     '_is_number',
     'abbreviate_paths',
-    'as_unicode',
     'batch_watch',
     'bind',
     'concrete_descendents',

@@ -54,7 +54,6 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.unwatch
   ~Parameters.update
   ~Parameters.values
-  ~Parameters.verbose
   ~Parameters.warning
   ~Parameters.watch
   ~Parameters.watch_values

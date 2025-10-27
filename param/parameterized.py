@@ -265,10 +265,6 @@ def resolve_ref(reference, recursive=False):
         return [reference]
     return []
 
-def _identity_hook(obj, val):
-    """To be removed when set_hook is removed."""
-    return val
-
 
 class _Undefined:
     """
@@ -1853,17 +1849,6 @@ class Parameter(_ParameterBase):
                     obj._param__private.async_refs.pop(name).cancel()
             if is_async or val is Undefined:
                 return
-
-        # Deprecated Number set_hook called here to avoid duplicating setter
-        if hasattr(self, 'set_hook'):
-            val = self.set_hook(obj, val)
-            if self.set_hook is not _identity_hook:
-                # PARAM3_DEPRECATION
-                warnings.warn(
-                    'Number.set_hook has been deprecated.',
-                    category=_ParamFutureWarning,
-                    stacklevel=_find_stack_level(),
-                )
 
         self._validate(val)
 

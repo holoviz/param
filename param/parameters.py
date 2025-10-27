@@ -35,7 +35,7 @@ from contextlib import contextmanager
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
-    _int_types, _identity_hook
+    _int_types
 )
 from ._utils import (
     ParamFutureWarning as _ParamFutureWarning,
@@ -606,23 +606,6 @@ class Dynamic(Parameter):
             return gen
 
 
-class __compute_set_hook:
-    """Remove when set_hook is removed."""
-
-    def __call__(self, p):
-        return _identity_hook
-
-    def __repr__(self):
-        return repr(self.sig)
-
-    @property
-    def sig(self):
-        return None
-
-
-_compute_set_hook = __compute_set_hook()
-
-
 class Number(Dynamic):
     """
     A numeric :class:`Dynamic` Parameter, with a default value and optional bounds.
@@ -668,17 +651,17 @@ class Number(Dynamic):
 
     """
 
-    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
+    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'step']
 
     _slot_defaults = dict(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
-        inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
+        inclusive_bounds=(True,True), step=None,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -687,14 +670,13 @@ class Number(Dynamic):
 
     @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
         super().__init__(default=default, **params)
-        self.set_hook = set_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -880,7 +862,7 @@ class Magnitude(Number):
     @typing.overload
     def __init__(
         self,
-        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -888,10 +870,10 @@ class Magnitude(Number):
         ...
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         super().__init__(
             default=default, bounds=bounds, softbounds=softbounds,
-            inclusive_bounds=inclusive_bounds, step=step, set_hook=set_hook, **params
+            inclusive_bounds=inclusive_bounds, step=step, **params
         )
 
 
@@ -903,7 +885,7 @@ class Date(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -962,7 +944,7 @@ class CalendarDate(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False

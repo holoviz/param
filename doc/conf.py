@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 import os
 import param
+import pydata_sphinx_theme
 
 param.parameterized.docstring_signature = False
 param.parameterized.docstring_describe_params = False
 
 from nbsite.shared_conf import *  # noqa
 
+if pydata_sphinx_theme.__version__ == '0.16.1':
+    # See https://github.com/pydata/pydata-sphinx-theme/issues/2088
+    templates_path.append('_static/patch_templates')  # noqa
 
 def patch_autosummary():
     # See https://github.com/sphinx-doc/sphinx/issues/13991
@@ -61,6 +65,18 @@ html_favicon = "_static/favicon.ico"
 
 exclude_patterns = ['governance/**/*.*', 'Promo.ipynb']
 
+html_context.update(  # noqa
+    {
+        'last_release': f'v{release}',
+        'default_mode': 'light',
+        # Useful for the edit button
+        'github_user': 'holoviz',
+        'github_repo': 'param',
+        'github_version': 'main',
+        'doc_path': 'doc',
+    }
+)
+
 switcher_version = (
     os.getenv('VERSION') or 'dev'
     if any(pr in param.__version__ for pr in ('a', 'b', 'rc', 'dev'))
@@ -68,6 +84,7 @@ switcher_version = (
 )
 
 html_theme_options = {
+    "use_edit_page_button": True,
     "navbar_start": ["navbar-logo", "version-switcher"],
     "github_url": "https://github.com/holoviz/param",
     "icon_links": [
@@ -129,6 +146,9 @@ rediraffe_redirects = {
 html_title = f'{project} v{version}'
 # Format of the last updated section in the footer
 html_last_updated_fmt = '%Y-%m-%d'
+
+# Without this .txt is appended to the files
+html_sourcelink_suffix = ''
 
 myst_heading_anchors = 3
 myst_enable_extensions = ["colon_fence"]

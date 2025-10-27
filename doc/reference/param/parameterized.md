@@ -48,7 +48,6 @@ of {py:class}`Parameterized` classes and instances.
   ~Parameters.method_dependencies
   ~Parameters.objects
   ~Parameters.outputs
-  ~Parameters.params
   ~Parameters.params_depended_on
   ~Parameters.pprint
   ~Parameters.print_param_defaults

@@ -60,15 +60,6 @@ class TestDeprecateParameters:
         with pytest.raises(param._utils.ParamFutureWarning):
             p.param.print_param_defaults()
 
-    def test_deprecate_params(self):
-        class P(param.Parameterized):
-            x = param.Parameter()
-
-        p = P()
-
-        with pytest.raises(param._utils.ParamFutureWarning):
-            p.param.params()
-
     def test_deprecate_set_param(self):
         class P(param.Parameterized):
             x = param.Parameter()

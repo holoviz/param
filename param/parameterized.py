@@ -2696,25 +2696,6 @@ class Parameters:
         # delete cached params()
         cls._param__private.params.clear()
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.values()` or `.param['param']`", warning_cat=_ParamFutureWarning)
-    def params(self_, parameter_name=None):
-        """
-        Return the Parameters of this class as the
-        dictionary {name: parameter_object}.
-
-        Includes Parameters from this class and its
-        superclasses.
-
-        .. deprecated:: 1.12.0
-            Use instead ``.param.values()` or `.param['param']``
-        """
-        pdict = self_.objects(instance='existing')
-        if parameter_name is None:
-            return pdict
-        else:
-            return pdict[parameter_name]
-
     # Bothmethods
 
     def update(self_, arg=Undefined, /, **kwargs):

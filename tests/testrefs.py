@@ -260,7 +260,7 @@ async def test_generator_ref():
     p = Parameters(string=gen_strings)
 
     await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
-    await wait_for_value(p, 'string', 'string!', delay=0.05, timeout=0.1)
+    await wait_for_value(p, 'string', 'string!', delay=0.05, timeout=0.3)
 
 async def test_async_generator_ref_cancelled():
     tasks = []

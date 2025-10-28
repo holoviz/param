@@ -1,26 +1,8 @@
 import asyncio
 import math
 import operator
-import os
 import re
-import unittest
 import time
-
-try:
-    import numpy as np
-except ModuleNotFoundError:
-    if os.getenv('PARAM_TEST_NUMPY','0') == '1':
-        raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
-    else:
-        raise unittest.SkipTest("numpy not available")
-
-try:
-    import pandas as pd
-except ModuleNotFoundError:
-    if os.getenv('PARAM_TEST_PANDAS','0') == '1':
-        raise ImportError("PARAM_TEST_PANDAS=1 but pandas not available.")
-    else:
-        raise unittest.SkipTest("pandas not available")
 
 import param
 import pytest
@@ -48,14 +30,17 @@ COMPARISON_OPERATORS = (
 
 LOGIC_UNARY_OPERATORS = (operator.inv,)
 
-NUMPY_UFUNCS = (np.min, np.max)
+NUMPY_UFUNCS = ("min", "max")
 
 @pytest.fixture(scope='module')
 def series():
+    np = pytest.importorskip("numpy")
+    pd = pytest.importorskip("pandas")
     return pd.Series(np.arange(5.0), name='A')
 
 @pytest.fixture(scope='module')
 def df():
+    pd = pytest.importorskip("pandas")
     return pd._testing.makeMixedDataFrame()
 
 class Parameters(param.Parameterized):
@@ -137,6 +122,7 @@ def test_reactive_getitem_list_with_slice():
     assert sx.rx.value == lst[i.rx.value: j.rx.value]
 
 def test_reactive_getitem_numpy_with_tuple():
+    np = pytest.importorskip("numpy")
     i = rx(0)
     j = rx(1)
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
@@ -148,6 +134,8 @@ def test_reactive_getitem_numpy_with_tuple():
 
 @pytest.mark.parametrize('ufunc', NUMPY_UFUNCS)
 def test_numpy_ufunc(ufunc):
+    np = pytest.importorskip("numpy")
+    ufunc = getattr(np, ufunc)
     l = [1, 2, 3]
     assert ufunc(rx(l)).rx.value == ufunc(l)
     array = np.ndarray([1, 2, 3])
@@ -280,14 +268,17 @@ def test_reactive_pipeline_reflect_bound_function():
     assert i.rx.value == 6
 
 def test_reactive_dataframe_method_chain(dataframe):
+    pd = pytest.importorskip("pandas")
     dfi = rx(dataframe).groupby('str')[['float']].mean().reset_index()
     pd.testing.assert_frame_equal(dfi.rx.value, dataframe.groupby('str')[['float']].mean().reset_index())
 
 def test_reactive_dataframe_attribute_chain(dataframe):
+    np = pytest.importorskip("numpy")
     array = rx(dataframe).str.values.rx.value
     np.testing.assert_array_equal(array, dataframe.str.values)
 
 def test_reactive_dataframe_param_value_method_chain(dataframe):
+    pd = pytest.importorskip("pd")
     P = Parameters(string='str')
     dfi = rx(dataframe).groupby(P.param.string)[['float']].mean().reset_index()
     pd.testing.assert_frame_equal(dfi.rx.value, dataframe.groupby('str')[['float']].mean().reset_index())
@@ -755,6 +746,7 @@ def test_ensure_ref_can_update_by_watcher_of_same_parameter():
     assert t.lst[1] == "TEST"
 
 def test_reactive_callback_resolve_accessor():
+    pd = pytest.importorskip("pandas")
     df = pd.DataFrame({"name": ["Bill", "Bob"]})
     dfx = rx(df)
     out = dfx["name"].str._callback()

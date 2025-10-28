@@ -7,6 +7,19 @@ on:
     branches:
       - "*"
   workflow_dispatch:
+    inputs:
+      target:
+        description: "How much of the test suite to run"
+        type: choice
+        default: default
+        options:
+          - default
+          - full
+          - downstream
+      cache:
+        description: "Use cache"
+        type: boolean
+        default: true
   schedule:
     - cron: "0 13 * * SUN"
 

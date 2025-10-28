@@ -581,7 +581,7 @@ async def test_reactive_gen():
 
     rxgen = rx(gen)
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.01)
+    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.0001)
     await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_gen_pipe():

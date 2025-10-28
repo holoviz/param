@@ -690,8 +690,6 @@ async def test_reactive_async_gen_pipe_with_dep():
     rxgen = rxv.rx.pipe(bind(gen, i=irx))
     rxgen.rx.watch()
     assert rxgen.rx.value is param.Undefined
-    await asyncio.sleep(0.04)
-    assert rxgen.rx.value == 1
     await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
     irx.rx.value = 3
     await asyncio.sleep(0.04)

@@ -4384,14 +4384,13 @@ class ParameterizedMetaclass(type):
 
         # Resolve dependencies of current class
         _watch = []
-        for name, method, dinfo in dependers:
+        for dname, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            minfo = MInfo(cls=mcs, inst=None, name=name,
-                          method=method)
+            minfo = MInfo(cls=mcs, inst=None, name=dname, method=method)
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             if watch:
-                _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
+                _watch.append((dname, watch == 'queued', on_init, deps, dynamic_deps))
 
         # Resolve dependencies in class hierarchy
         _inherited = []

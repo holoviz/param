@@ -1777,7 +1777,7 @@ class Parameter(_ParameterBase):
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)
-            elif name in refs and not syncing:
+            elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()

@@ -162,6 +162,60 @@ warning_count = 0
 # Hook to apply to depends and bind arguments to turn them into valid parameters
 _reference_transforms = []
 
+class Raw:
+    """
+    Wrapper type used to assign ref-like objects to Parameters *without*
+    triggering automatic resolution.
+
+    Normally, when a ref-like value (e.g. a Parameter, reactive expression,
+    async generator, etc.) is assigned to a Parameter attribute, Param
+    resolves it to its underlying value. Wrapping the object in ``Raw``
+    signals that the value should instead be stored as-is.
+
+    Example
+    -------
+    >>> obj.some_param = param.Raw(other.param.value)
+    >>> assert obj.some_param is other.param.value
+
+    Notes
+    -----
+    - ``Raw`` is only meaningful at assignment time; the wrapper is
+      unwrapped and not stored.
+    - The stored value is the inner object itself, not the ``Raw`` instance.
+    - This allows safe serialization, forwarding, or deferred resolution of
+      ref-like values.
+    """
+
+    __slots__ = ["value"]
+
+    def __init__(self, value): self.value = value
+    def __repr__(self): return f"Raw({self.value!r})"
+
+
+def raw(value: Any):
+    """
+    Mark a value to be assigned *as-is*, skipping Param’s automatic
+    resolution of ref-like objects.
+
+    This allows storing a Parameter, reactive expression, or other
+    ref-like value directly, without evaluating or resolving it at
+    assignment time.
+
+    Examples
+    --------
+    >>> c = MyComponent()
+    >>> c.target = param.raw(other.param.value)
+    >>> assert c.target is other.param.value
+
+    Notes
+    -----
+    - The wrapper is unwrapped during assignment and not stored.
+    - The stored value is the inner object itself.
+    - Useful when serializing, forwarding, or deferring resolution of
+      ref-like values.
+    """
+    return Raw(value)
+
 def register_reference_transform(transform):
     """
     Append a transform to extract potential parameter dependencies
@@ -170,7 +224,6 @@ def register_reference_transform(transform):
     Parameters
     ----------
     transform: Callable[Any, Any]
-
     """
     return _reference_transforms.append(transform)
 
@@ -182,6 +235,8 @@ def transform_reference(arg):
     that are not simple Parameters or functions with dependency
     definitions.
     """
+    if isinstance(arg, Raw):
+        return arg.value
     for transform in _reference_transforms:
         if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
             break
@@ -207,7 +262,9 @@ def eval_function_with_deps(function):
 
 def resolve_value(value, recursive=True):
     """Resolve the current value of a dynamic reference."""
-    if not recursive:
+    if isinstance(value, Raw):
+        return value.value
+    elif not recursive:
         pass
     elif isinstance(value, (list, tuple)):
         return type(value)(resolve_value(v) for v in value)
@@ -231,7 +288,9 @@ def resolve_value(value, recursive=True):
 
 def resolve_ref(reference, recursive=False):
     """Resolve all parameters a dynamic reference depends on."""
-    if recursive:
+    if isinstance(reference, Raw):
+        return []
+    elif recursive:
         if isinstance(reference, (list, tuple, set)):
             return [r for v in reference for r in resolve_ref(v, recursive)]
         elif isinstance(reference, dict):
@@ -2442,6 +2501,8 @@ class Parameters:
                 self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
+        if isinstance(value, Raw):
+            return None, None, value.value, False
         is_gen = inspect.isgeneratorfunction(value)
         is_async = iscoroutinefunction(value) or is_gen
         deps = resolve_ref(value, recursive=pobj.nested_refs)

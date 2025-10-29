@@ -458,7 +458,7 @@ def test_raw_survives_param_update_context_and_reassignments():
 
     p.allows_ref = p_src.param.string
     assert p.allows_ref == 'B'
-    p_src.allows_ref = 'C'
+    p_src.string = 'C'
     assert p.allows_ref == 'C'
 
 def test_raw_stores_callables_or_generators_without_consuming():

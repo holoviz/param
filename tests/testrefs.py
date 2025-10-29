@@ -458,7 +458,7 @@ def test_raw_survives_param_update_context_and_reassignments():
 
     p.allows_ref = p_src.param.string
     assert p.allows_ref == 'B'
-    p_src.string = 'C'
+    p_src.allows_ref = 'C'
     assert p.allows_ref == 'C'
 
 def test_raw_stores_callables_or_generators_without_consuming():
@@ -470,17 +470,17 @@ def test_raw_stores_callables_or_generators_without_consuming():
 
     async def agen():
         started['async'] = True
-        if False:  # pragma: no cover (keep as async generator)
+        if False:
             yield None
 
     p = Parameters()
-    p.allows_ref = param.raw(gen)     # store the generator *function* itself
+    p.allows_ref = param.raw(gen)
     assert p.allows_ref is gen
-    assert started['gen'] is False  # not invoked
+    assert started['gen'] is False
 
-    p.allows_ref = param.raw(agen)    # store async generator *function* itself
+    p.allows_ref = param.raw(agen)
     assert p.allows_ref is agen
-    assert started['async'] is False  # not invoked
+    assert started['async'] is False
 
 def test_resolve_ref_hides_inner_when_given_raw_directly():
     p_src = Parameters()

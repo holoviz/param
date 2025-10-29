@@ -96,6 +96,18 @@ def test_parameter_ref():
     p.string = 'new_string'
     assert p2.string == 'new_string'
 
+def testa_param_ref_no_desync_on_trigger():
+    p = Parameters(string='foo')
+    p2 = Parameters(string=p.param.string)
+
+    assert p.string == p2.string == 'foo'
+
+    p2.param.trigger('string')
+
+    p.string = 'bar'
+
+    assert p.string == p2.string == 'bar'
+
 def test_parameter_ref_update():
     p = Parameters()
     p2 = Parameters(string=p.param.string)

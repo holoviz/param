@@ -96,7 +96,8 @@ def test_parameter_ref():
     p.string = 'new_string'
     assert p2.string == 'new_string'
 
-def testa_param_ref_no_desync_on_trigger():
+def test_param_ref_no_desync_on_trigger():
+    # See https://github.com/holoviz/param/issues/1076
     p = Parameters(string='foo')
     p2 = Parameters(string=p.param.string)
 

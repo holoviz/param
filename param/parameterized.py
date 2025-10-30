@@ -4398,14 +4398,17 @@ class ParameterizedMetaclass(type):
             mcs._initialize_parameter(param_name, param)
 
         # Override class-value with default_factory
-        for pname, pobj in mcs.param._cls_parameters.items():
-            dfactory = pobj.default_factory
-            if (
-                dfactory is not Undefined
-                and isinstance(dfactory, DefaultFactory)
-                and dfactory.on_class
-            ):
-                setattr(mcs, pname, dfactory(cls=mcs, self=None, parameter=pobj))
+        for class_ in classlist(mcs):
+            for name, val in class_.__dict__.items():
+                if not isinstance(val, Parameter):
+                    continue
+                dfactory = val.default_factory
+                if (
+                    dfactory is not Undefined
+                    and isinstance(dfactory, DefaultFactory)
+                    and dfactory.on_class
+                ):
+                    setattr(mcs, name, dfactory(cls=mcs, self=None, parameter=val))
 
         # retrieve depends info from methods and store more conveniently
         dependers = [(n, m, m._dinfo) for (n, m) in dict_.items()

@@ -1379,12 +1379,12 @@ class Parameter(_ParameterBase):
             Default is ``None``.
         default_factory : callable, optional
             A callable to generate the attribute value. The callable can either
-            take 0 arguments (in which case it is called as is), or can be wrapped
-            in a :class:`DefaultFactory` for advanced use cases (the factory is
-            called with ``cls``, ``self`` and ``parameter``). ``default_factory``
-            takes precedence over ``default`` when set. On instance creation,
-            the factory is called once the :class:`Parameterized` instance is
-            initialized.
+            be passed directly (in which case it is called with 0 arguments),
+            or can be wrapped in a :class:`DefaultFactory` for advanced use cases
+            (in which case the factory is called with the arguments``cls``,
+            ``self`` and ``parameter``). ``default_factory`` takes precedence
+            over ``default`` when set. On instance creation, the factory is
+            called once the :class:`Parameterized` instance is initialized.
 
             .. versionadded:: 2.3.0
         doc : str | None, optional

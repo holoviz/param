@@ -1,7 +1,6 @@
 import param
 from param.parameterized import DefaultFactory
 
-
 import pytest
 
 
@@ -15,6 +14,14 @@ def P():
 @pytest.fixture
 def p(P):
     yield P()
+
+
+def test_default_factory_slot_default():
+    class P(param.Parameterized):
+        a = param.Parameter()
+
+    assert P.param.a.default_factory is None
+    assert P().param.a.default_factory is None
 
 
 def test_default_factory_bad_input_type():
@@ -52,6 +59,8 @@ def test_default_factory_called_constructor_override(P):
 
 
 def test_default_factory_validation_error():
+    # The usual parameter run-time validation works as usual, an error
+    # is raised if the value returned by the factory isn't valid.
     class P(param.Parameterized):
         s = param.String(default_factory=lambda: 1)
 
@@ -143,6 +152,8 @@ def test_default_factory_inheritance_override():
 
 
 def test_default_factory_called_in_declaration_order():
+    # The factories are called in the order of the parameter declarations,
+    # from top to bottom
     orders = []
     idx = 0
     def collect():
@@ -168,6 +179,7 @@ def test_default_factory_called_in_declaration_order():
 
 
 def test_default_factory_called_before_on_init():
+    # factories are called before on_init
     order = []
 
     def factory():
@@ -187,6 +199,7 @@ def test_default_factory_called_before_on_init():
 
 
 def test_default_factory_no_event():
+    # Value set from a factory doesn't trigger any event
     class P(param.Parameterized):
         called = False
         a = param.Parameter(default_factory=lambda: 'from factory')
@@ -201,6 +214,7 @@ def test_default_factory_no_event():
 
 
 def test_default_factory_alternative_instantiate():
+    # Using a factory is an alternative to instantiate=True for mutable objects
     class P(param.Parameterized):
         l = param.List(default_factory=list)
 
@@ -236,22 +250,34 @@ def test_default_factory_object_correct_args_passed_to_factory():
     assert p.a[2] is p.param['a']
 
 
-def test_default_factory_object_after_parameters_initialized():
-    def factory(_cls, self, _parameter):
-        assert self.a == 'a'
-        assert self.c == 'c'
+def test_default_factory_object_after_instance_initialized():
+    def factory(cls, self, parameter):
+        if self:
+            # Factories are called after the instance is initialized, which means
+            # (1) they have access to the values of all the other parameters,
+            # (2) the parameter argument is an instance-level parameter
+            assert self.a == 'a'
+            assert self.c == 'c'
+            assert parameter is self._param__private.params['b']
+        else:
+            # When called at the class-level, the parameter is the class-level one
+            assert cls.a == 'A'
+            assert cls.c == 'C'
+            assert parameter is cls._param__parameters._cls_parameters['b']
 
-    dfac = DefaultFactory(factory)
+    dfac = DefaultFactory(factory, on_class=True)
 
     class P(param.Parameterized):
-        a = param.Parameter()
+        a = param.Parameter(default='A')
         b = param.Parameter(default_factory=dfac)
-        c = param.Parameter()
+        c = param.Parameter(default='C')
 
     P(a='a', c='c')
 
 
 def test_default_factory_object_auto_name():
+    # Re-implementation of the behavior of the name String parameter with a
+    # default_factory
     name_counter = 0
 
     def factory(cls, self, parameter):
@@ -272,7 +298,7 @@ def test_default_factory_object_auto_name():
     dfac = DefaultFactory(factory, on_class=True)
 
     class P(param.Parameterized):
-        auto_name = param.Parameter(default_factory=dfac)
+        auto_name = param.String(default_factory=dfac)
 
     assert P.auto_name == 'P'
     p1 = P()

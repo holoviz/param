@@ -1378,13 +1378,13 @@ class Parameter(_ParameterBase):
             parameter, which can be overridden in an instance.
             Default is ``None``.
         default_factory : callable, optional
-            A callable to generate the attribute value. The callable can either
-            be passed directly (in which case it is called with 0 arguments),
-            or can be wrapped in a :class:`DefaultFactory` for advanced use cases
-            (in which case the factory is called with the arguments``cls``,
-            ``self`` and ``parameter``). ``default_factory`` takes precedence
-            over ``default`` when set. On instance creation, the factory is
-            called once the :class:`Parameterized` instance is initialized.
+            A callable used to generate the attribute value. It can be provided
+            directly (in which case it is invoked with no arguments) or wrapped
+            in a :class:`DefaultFactory` for more advanced behavior (in which
+            case it receives ``cls``, ``self``, and ``parameter`` as arguments).
+            When specified, ``default_factory`` takes precedence over ``default``.
+            The factory is invoked once the :class:`Parameterized` instance
+            is initialized.
 
             .. versionadded:: 2.3.0
         doc : str | None, optional
@@ -5254,15 +5254,17 @@ class DefaultFactory:
     The callable can be any callable that accepts three arguments ``cls``,
     ``self``, and ``parameter``.
 
-    - On instance creation, ``cls`` is passed the :class:`Parameterized`
-      class, ``self`` the Parameterized instance, and ``parameter`` the
-      instance-level :class:`Parameter` object.
-    - On class creation, and only if ``DefaultFactory`` is created with
-      ``on_class=True`` (default is ``False``), ``cls`` is passed the
-      :class:`Parameterized` class, ``self`` is passed ``None`` as the
-      instance doesn't yet exist, and ``parameter`` the class-level
-      :class:`Parameter` object. It is only with ``on class=True`` that the
-      *class-level* attribute value can be set via ``default_factory``.
+    - When an instance is created, the callable receives the
+      :class:`Parameterized` class as ``cls``, the instance itself as ``self``,
+      and the instance-level :class:`Parameter` object as `parameter`.
+    - During class creation (typically when a module defining
+      :class:`Parameterized` classes is imported), and only if the
+      ``DefaultFactory`` is initialized with ``on_class=True`` (default is
+      ``False``), the callable is instead passed the :class:`Parameterized`
+      class as ``cls``, ``None`` for ``self`` (since no instance exists yet),
+      and the class-level :class:`Parameter` object as ``parameter``. This is
+      the only case where the callable can influence the *class-level* attribute
+      value.
 
     Parameters
     ----------

@@ -40,6 +40,7 @@ from .parameterized import (
 )
 from ._utils import (
     ParamDeprecationWarning as _ParamDeprecationWarning,
+    _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -1844,7 +1845,7 @@ class Selector(SelectorBase, _SignatureSelector):
             warnings.warn(
                 'compute_default_fn has been deprecated and will be removed in a future version.',
                 _ParamDeprecationWarning,
-                stacklevel=3,
+                stacklevel=_find_stack_level(),
             )
 
         autodefault = Undefined

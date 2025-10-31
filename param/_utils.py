@@ -9,7 +9,7 @@ import os
 import re
 import traceback
 import warnings
-from collections import Counter, OrderedDict, abc, defaultdict
+from collections import OrderedDict, abc, defaultdict
 from contextlib import contextmanager
 from numbers import Real
 from textwrap import dedent
@@ -498,25 +498,29 @@ def concrete_descendents(parentclass: type) -> dict[str, type]:
 
     Only non-abstract classes will be included.
 
-    Warns
-    -----
-    ParamWarning
-        ``concrete_descendents`` overrides descendents that share the same
-        class name. To avoid this, use :func:`descendents` with ``concrete=True``.
+    .. warning::
+       ``concrete_descendents`` overrides descendents that share the same
+       class name. To avoid this, use :func:`descendents` with ``concrete=True``.
     """
+    # Warns
+    # -----
+    # ParamWarning
+    #     ``concrete_descendents`` overrides descendents that share the same
+    #     class name. To avoid this, use :func:`descendents` with ``concrete=True``.
+
     desc = descendents(parentclass, concrete=True)
     concrete_desc = {c.__name__: c for c in desc}
     # Descendents with the same name are clobbered.
-    if len(desc) != len(concrete_desc):
-        class_count = Counter([kls.__name__ for kls in desc])
-        clobbered = [kls for kls, count in class_count.items() if count > 1]
-        warnings.warn(
-            '`concrete_descendents` overrides descendents that share the same '
-            'class name. Other descendents with the same name as the following '
-            f'classes exist but were not returned: {clobbered!r}\n'
-            'Use `descendents(parentclass, concrete=True)` instead.',
-            ParamWarning,
-        )
+    # if len(desc) != len(concrete_desc):
+    #     class_count = Counter([kls.__name__ for kls in desc])
+    #     clobbered = [kls for kls, count in class_count.items() if count > 1]
+    #     warnings.warn(
+    #         '`concrete_descendents` overrides descendents that share the same '
+    #         'class name. Other descendents with the same name as the following '
+    #         f'classes exist but were not returned: {clobbered!r}\n'
+    #         'Use `descendents(parentclass, concrete=True)` instead.',
+    #         ParamWarning,
+    #     )
     return concrete_desc
 
 

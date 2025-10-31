@@ -1905,7 +1905,7 @@ class Selector(SelectorBase, _SignatureSelector):
         warnings.warn(
             'compute_default() has been deprecated and will be removed in a future version.',
             _ParamDeprecationWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
 
         if self.default is None and callable(self.compute_default_fn):
@@ -2051,7 +2051,7 @@ class ListSelector(Selector):
         warnings.warn(
             'compute_default() has been deprecated and will be removed in a future version.',
             _ParamDeprecationWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()

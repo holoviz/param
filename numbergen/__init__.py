@@ -247,7 +247,11 @@ class Hash:
             numer, denom = val, 1
         elif isinstance(val, fractions.Fraction):
             numer, denom = val.numerator, val.denominator
+        elif hasattr(val, 'numerator') and hasattr(val, 'denominator'):
+            # gmpy2 mpq objects have these attributes
+            numer, denom = val.numerator, val.denominator
         elif hasattr(val, 'numer'):
+            # I think this branch supports gmpy (i.e. not gmpy2)
             (numer, denom) = (int(val.numer()), int(val.denom()))
         else:
             param.main.param.log(param.WARNING, "Casting type '%s' to Fraction.fraction"
@@ -276,7 +280,7 @@ class Hash:
         architecture-independent 32-bit integer hash.
         """
         # Convert inputs to (numer, denom) pairs with integers
-        # becoming (int, 1) pairs to match gmpy.mpqs for int values.
+        # becoming (int, 1) pairs to match gmpy2.mpqs for int values.
         pairs = [self._rational(val) for val in vals]
         # Unpack pairs and fill struct with ints to update md5 hash
         ints = [el for pair in pairs for el in pair]

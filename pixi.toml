@@ -1,32 +1,70 @@
-[project]
+[workspace]
 name = "param"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
-
-[tasks]
-install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
 
 [activation.env]
 PYTHONIOENCODING = "utf-8"
 
 [environments]
-test-39 = ["py39", "test-core", "test", "example", "test-example"]
-test-310 = ["py310", "test-core", "test", "example", "test-example"]
-test-311 = ["py311", "test-core", "test", "example", "test-example"]
-test-312 = ["py312", "test-core", "test", "example", "test-example"]
-test-313 = ["py313", "test-core", "test", "example", "test-example"]
-test-core = ["py313", "test-core"]
-test-pypy = ["pypy", "test-core", "test-pypy"]
-docs = ["py311", "example", "doc"]
-build = ["py311", "build"]
-lint = ["py311", "lint"]
+default = [
+    "py312",
+    "required",
+    "test-core",
+    "test",
+    "example",
+    "test-example",
+    "lint",
+    "doc",
+    "dev",
+]
 
-[dependencies]
+[environments.test-310]
+features = ["py310", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-311]
+features = ["py311", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-312]
+features = ["py312", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-313]
+features = ["py313", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-314]
+features = ["py314", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-314t]
+features = ["py314t", "required", "test-core", "test-314t"]
+no-default-feature = true
+
+[environments.test-core]
+features = ["py314", "required", "test-core"]
+no-default-feature = true
+
+[environments.docs]
+features = ["py313", "required", "example", "doc"]
+no-default-feature = true
+
+[environments.build]
+features = ["py313", "required", "build"]
+no-default-feature = true
+
+[environments.lint]
+features = ["py313", "lint"]
+no-default-feature = true
+
+[feature.required.dependencies]
 nomkl = "*"
 pip = "*"
 
-[feature.py39.dependencies]
-python = "3.9.*"
+[feature.required.tasks]
+install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
 
 [feature.py310.dependencies]
 python = "3.10.*"
@@ -46,16 +84,30 @@ python = "3.13.*"
 [feature.py313.activation.env]
 COVERAGE_CORE = "sysmon"
 
-[feature.pypy]
-platforms = ["linux-64", "osx-64", "win-64"] # not supported for osx-arm64
+[feature.py314.dependencies]
+python = "3.14.*"
 
-[feature.pypy.dependencies]
-pypy = "7.3.*"
+[feature.py314.activation.env]
+COVERAGE_CORE = "sysmon"
+
+[feature.py314t.dependencies]
+python-freethreading = "3.14.*"
 
 [feature.example.dependencies]
 aiohttp = "*"
 pandas = "*"
 panel = "*"
+
+# =================== DEV ===================
+
+[feature.dev.dependencies]
+jupyterlab = "*"
+setuptools_scm = ">=6"
+
+[feature.dev.tasks]
+lab = 'jupyter lab'
+sync-git-tags = 'python scripts/sync_git_tags.py param'
+setup-dev = { depends-on = ["install", "lint-install"] }
 
 # =============================================
 # =================== TESTS ===================
@@ -81,20 +133,22 @@ pandas = "*"
 pyarrow = "*"
 pytables = "*"
 xlrd = "*"
-
-[feature.test.target.linux.dependencies]
 gmpy2 = "*"
+ipykernel = "!=7.0.0"  # temp pin: https://github.com/ipython/ipykernel/issues/1445
 
-[feature.test-pypy.dependencies]
+[feature.test-314t.dependencies]
 cloudpickle = "*"
 ipython = "*"
-jsonschema = "*"
+# jsonschema = "*"
 nest-asyncio = "*"
 numpy = "*"
 odfpy = "*"
-openpyxl = "*"
-pandas = "*"
+# openpyxl = "*"
+# pandas = "*"
+# pyarrow = "*"
+# pytables = "*"
 xlrd = "*"
+# gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'
@@ -108,11 +162,14 @@ nbval = "*"
 # =================== DOCS ====================
 # =============================================
 [feature.doc]
-channels = ["pyviz"]
+channels = ["pyviz/label/tooling_dev"]
+
+[feature.doc.activation.env]
+PARAM_PARAMETER_SIGNATURE = "1"
 
 [feature.doc.dependencies]
 graphviz = "*"
-nbsite = ">=0.8.4,<0.9.0"
+nbsite = ">=0.9.0a12"
 sphinx-remove-toctrees = "*"
 
 [feature.doc.tasks.docs-build]

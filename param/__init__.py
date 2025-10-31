@@ -10,8 +10,8 @@ Param is well-suited for use in scientific computing, data analysis tools,
 graphical user interfaces (GUIs), and any Python application where well-defined,
 validated parameters are needed.
 
-Documentation
--------------
+References
+----------
 For detailed documentation, see https://param.holoviz.org/.
 
 Examples
@@ -46,9 +46,9 @@ from . import version
 from .depends import depends
 from .parameterized import (
     Parameterized, Parameter, Skip, String, ParameterizedFunction,
-    ParamOverrides, Undefined, get_logger
+    ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
-from .parameterized import (batch_watch, output, script_repr,
+from .parameterized import (output, script_repr,
                             discard_events, edit_constant)
 from .parameterized import shared_parameters
 from .parameterized import logging_level
@@ -60,7 +60,6 @@ from .parameters import (
     guess_bounds,
     get_soft_bounds,
     resolve_path,
-    normalize_path,
     Time,
     Infinity,
     Dynamic,
@@ -102,14 +101,8 @@ from .parameters import (
 )
 from .reactive import bind, rx
 from ._utils import (
-    produce_value,
-    as_unicode,
-    is_ordered_dict,
-    hashable,
-    named_objs,
     descendents,
     concrete_descendents,
-    abbreviate_paths,
     exceptions_summarized,
     _is_number,
 )
@@ -197,6 +190,7 @@ __all__ = (
     'ParamOverrides',
     'Parameter',
     'Parameterized',
+    'ParameterizedABC',
     'ParameterizedFunction',
     'Path',
     'Range',
@@ -213,9 +207,6 @@ __all__ = (
     'XYCoordinates',
     '__version__',
     '_is_number',
-    'abbreviate_paths',
-    'as_unicode',
-    'batch_watch',
     'bind',
     'concrete_descendents',
     'depends',
@@ -227,16 +218,11 @@ __all__ = (
     'get_soft_bounds',
     'guess_bounds',
     'guess_param_types',
-    'hashable',
-    'is_ordered_dict',
     'logging_level',
     'main',
-    'named_objs',
-    'normalize_path',
     'output',
     'param_union',
     'parameterized_class',
-    'produce_value',
     'random_seed',
     'resolve_path',
     'rx',

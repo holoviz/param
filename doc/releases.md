@@ -1,5 +1,17 @@
 # Releases
 
+## Version 2.2.1
+
+Date: 2025-06-11
+
+This patch release contains a bug fix for nested references. Thanks to @philippjfr for their contribution.
+
+Bug Fixes:
+
+- Do not remove nested_refs when updating another ref ([#1061](https://github.com/holoviz/param/pull/1061))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.2.0...v2.2.1)
+
 ## Version 2.2.0
 
 Date: 2024-12-16
@@ -243,12 +255,11 @@ We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pul
     - `ClassSelector(class_=(str, int))`: OK
     - It's possible that in the future the signature of these two parameters will be aligned with the other parameters to accept `default` as first and only positional argument, but for now please use an explicit keyword so that your code will be compatible with all versions.
 - Parameter slots:
-  - `List._class`: use instead `item_type`.
+  - `List.class_`: use instead `item_type`.
   - `Number.set_hook`: no replacement
 - `param.__init__` module:
   - `param.produce_value`: no replacement
   - `param.as_unicode`: no replacement
-  - `param.is_ordered_dict`: no replacement
   - `param.is_ordered_dict`: no replacement
   - `param.hashable`: no replacement
   - `param.named_objs`: no replacement

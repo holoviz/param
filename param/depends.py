@@ -42,9 +42,9 @@ def depends(
     func: CallableT, /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Parameter
 ) -> Callable[[CallableT], DependsFunc[CallableT]]:
     """
-    Annotates a function or Parameterized method to express its dependencies.
+    Annotates a function or :class:`Parameterized` method to express its dependencies.
 
-    The specified dependencies can be either be Parameter instances or if a
+    The specified dependencies can be either be :class:`Parameter` instances or if a
     method is supplied they can be defined as strings referring to Parameters
     of the class, or Parameters of subobjects (Parameterized objects that are
     values of this object's parameters). Dependencies can either be on
@@ -54,10 +54,10 @@ def depends(
     ----------
     watch : bool, optional
         Whether to invoke the function/method when the dependency is updated,
-        by default False
+        by default ``False``.
     on_init : bool, optional
         Whether to invoke the function/method when the instance is created,
-        by default False
+        by default ``False``.
 
     """
     dependencies, kw = (

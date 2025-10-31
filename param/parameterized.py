@@ -8,14 +8,13 @@ either alone (providing basic Parameter support) or with param's
 __init__.py (providing specialized Parameter types).
 """
 
-import asyncio
+import abc
 import copy
 import datetime as dt
-import html
 import inspect
-import logging
 import numbers
 import operator
+import os
 import re
 import sys
 import types
@@ -24,22 +23,33 @@ import warnings
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
+from collections.abc import Callable, Generator, Iterable
 from functools import partial, wraps, reduce
-from html import escape
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
+# When python 3.9 support is dropped replace Union with |
+from typing import Any, Union, Literal, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import logging
 
 from contextlib import contextmanager
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+CRITICAL = 50
+ERROR = 40
+WARNING = 30
+INFO = 20
+DEBUG = 10
+VERBOSE = INFO - 1
 
 from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
+    ParamDeprecationWarning as _ParamDeprecationWarning,
     ParamFutureWarning as _ParamFutureWarning,
+    ParamPendingDeprecationWarning as _ParamPendingDeprecationWarning,
     Skip,
-    _deprecated,
-    _deprecate_positional_args,
+    _find_stack_level,
     _in_ipython,
     _is_auto_name,
     _is_mutable_container,
@@ -48,7 +58,7 @@ from ._utils import (
     _validate_error_prefix,
     accept_arguments,
     iscoroutinefunction,
-    descendents,
+    descendents,  # noqa: F401
     gen_types,
 )
 
@@ -80,16 +90,49 @@ def _int_types():
     if np := sys.modules.get("numpy"):
         yield np.integer
 
-VERBOSE = INFO - 1
-logging.addLevelName(VERBOSE, "VERBOSE")
 
-# Get the appropriate logging.Logger instance. If `logger` is None, a
-# logger named `"param"` will be instantiated. If `name` is set, a descendant
-# logger with the name ``"param.<name>"`` is returned (or
-# ``logger.name + ".<name>"``)
 logger = None
-def get_logger(name=None):
+
+def get_logger(name: Optional[str] = None)->"logging.Logger":
+    """
+    Retrieve a logger instance for use with the ``param`` library.
+
+    This function returns a logger configured for the ``param`` library. If no
+    logger has been explicitly set, it initializes a default root logger for
+    ``param`` with an ``INFO`` log level and a basic console handler. Additional
+    loggers can be retrieved by specifying a `name`, which appends to the
+    root logger's name.
+
+    Parameters
+    ----------
+    name : str | None, optional
+        The name of the logger to retrieve. If ``None`` (default), the root logger
+        for ``param`` is returned. If specified, a child logger with the name
+        ``param.<name>`` is returned.
+
+    Returns
+    -------
+    logging.Logger
+        A logger instance configured for the ``param`` library.
+
+    Examples
+    --------
+    Retrieve the root logger for ``param``:
+
+    >>> import param
+    >>> logger = param.get_logger()
+    >>> logger.info("This is an info message.")
+    INFO:param: This is an info message.
+
+    Retrieve a named child logger:
+
+    >>> logger = param.parameterized.get_logger("custom_logger")
+    >>> logger.warning("This is a warning from custom_logger.")
+    WARNING:param.custom_logger: This is a warning from custom_logger.
+    """
+    import logging
     if logger is None:
+        logging.addLevelName(VERBOSE, "VERBOSE")
         root_logger = logging.getLogger('param')
         if not root_logger.handlers:
             root_logger.setLevel(logging.INFO)
@@ -220,10 +263,6 @@ def resolve_ref(reference, recursive=False):
         return [reference]
     return []
 
-def _identity_hook(obj, val):
-    """To be removed when set_hook is removed."""
-    return val
-
 
 class _Undefined:
     """
@@ -245,8 +284,35 @@ Undefined = _Undefined()
 
 
 @contextmanager
-def logging_level(level):
-    """Temporarily modify param's logging level."""
+def logging_level(level: str) -> Generator[None, None, None]:
+    """
+    Context manager to temporarily modify Param's logging level.
+
+    This function allows you to temporarily change the logging level of the
+    Param library. Once the context exits, the original logging level is restored.
+
+    Parameters
+    ----------
+    level : str
+        The desired logging level as a string. Must be one of:
+        ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL``, or ``VERBOSE``.
+
+    Yields
+    ------
+    None
+        A context where the logging level is temporarily modified.
+
+    Examples
+    --------
+    Temporarily set the logging level to ``DEBUG``:
+
+    >>> import param
+    >>> with param.logging_level('DEBUG'):
+    ...     param.get_logger().debug("This is a debug message.")
+    DEBUG:param: This is a debug message.
+
+    After the context exits, the logging level is restored.
+    """
     level = level.upper()
     levels = [DEBUG, INFO, WARNING, ERROR, CRITICAL, VERBOSE]
     level_names = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'VERBOSE']
@@ -295,22 +361,15 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
             parameterized.param._batch_call_watchers()
 
 
-# PARAM3_DEPRECATION
-@_deprecated(extra_msg="Use instead `batch_call_watchers`.", warning_cat=_ParamFutureWarning)
-@contextmanager
-def batch_watch(parameterized, enable=True, run=True):
-    with _batch_call_watchers(parameterized, enable, run):
-        yield
-
-
 @contextmanager
 def batch_call_watchers(parameterized):
     """
-    Context manager to batch events to provide to Watchers on a
-    parameterized object.  This context manager queues any events
-    triggered by setting a parameter on the supplied parameterized
-    object, saving them up to dispatch them all at once when the
-    context manager exits.
+    Context manager to batch events to provide to :class:`Watchers` on a
+    parameterized object.
+
+    This context manager queues any events triggered by setting a parameter value
+    on the supplied :class:`Parameterized` object, saving them up to dispatch
+    them all at once when the context manager exits.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
@@ -333,27 +392,111 @@ def _syncing(parameterized, parameters):
 
 
 @contextmanager
-def edit_constant(parameterized):
+def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]:
     """
-    Temporarily set parameters on Parameterized object to constant=False
-    to allow editing them.
+    Context manager to temporarily set parameters on a Parameterized object
+    to ``constant=False`` to allow editing them.
+
+    The ``edit_constant`` context manager allows temporarily disabling the ``constant``
+    property of all parameters on the given :class:`Parameterized` object, enabling them
+    to be modified. Once the context exits, the original ``constant`` states are restored.
+
+    Parameters
+    ----------
+    parameterized : Parameterized
+        The :class:`Parameterized` object whose parameters will have their ``constant``
+        property temporarily disabled.
+
+    Yields
+    ------
+    None
+        A context where all parameters of the :class:`Parameterized` object can be modified.
+
+    Examples
+    --------
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     constant_param = param.Number(default=10, constant=True)
+    >>> p = MyClass()
+
+    Use ``edit_constant`` to modify the constant parameter:
+
+    >>> with param.edit_constant(p):
+    ...     p.constant_param = 20
+    >>> p.constant_param
+    20
     """
-    params = parameterized.param.objects('existing').values()
-    constants = [p.constant for p in params]
-    for p in params:
-        p.constant = False
+    kls_params = parameterized.param.objects(instance=False)
+    inst_params = parameterized._param__private.params
+    updated = []
+    for pname, pobj in (kls_params | inst_params).items():
+        if pobj.constant:
+            pobj.constant = False
+            updated.append(pname)
     try:
         yield
     finally:
-        for (p, const) in zip(params, constants):
-            p.constant = const
+        for pname in updated:
+            # Some operations trigger a parameter instantiation (copy),
+            # we ensure both the class and instance parameters are reset.
+            if pname in kls_params:
+                type(parameterized).param[pname].constant=True
+            if pname in inst_params:
+                parameterized.param[pname].constant = True
 
 
 @contextmanager
-def discard_events(parameterized):
+def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None]:
     """
-    Context manager that discards any events within its scope
-    triggered on the supplied parameterized object.
+    Context manager that discards any events within its scope triggered on the
+    supplied Parameterized object.
+
+    The ``discard_events`` context manager ensures that any events triggered
+    on the supplied :class:`Parameterized` object during its scope are discarded.
+    This allows for silent changes to dependent parameters, making it useful
+    for initialization or setup phases where changes should not propagate
+    to watchers or dependencies.
+
+    Be cautious when using this context manager, as it bypasses the normal
+    dependency mechanism. Manual changes made within this context may
+    leave the object in an inconsistent state if dependencies are meant
+    to ensure parameter consistency.
+
+    Parameters
+    ----------
+    parameterized : Parameterized
+        The :class:`Parameterized` object whose events will be suppressed.
+
+    Yields
+    ------
+    None
+        A context where events on the supplied :class:`Parameterized` object are discarded.
+
+    References
+    ----------
+    For more details, see the Param User Guide:
+    https://param.holoviz.org/user_guide/Dependencies_and_Watchers.html#discard-events
+
+    Examples
+    --------
+    Instantiate Parameterized and print its value(s) when changed:
+
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     a = param.Number(default=1)
+    ...
+    ...     @param.depends('a', watch=True)
+    ...     def on_a(self):
+    ...         print(self.a)
+    >>> p = MyClass()
+    >>> p.a = 2
+    2
+
+    Use ``discard_events`` to suppress events:
+
+    >>> with param.parameterized.discard_events(p):
+    ...     p.a = 3
+    # Nothing is printed
     """
     batch_watch = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
@@ -371,7 +514,7 @@ def classlist(class_):
     """
     Return a list of the class hierarchy above (and including) the given class.
 
-    Same as `inspect.getmro(class_)[::-1]`
+    Same as ``inspect.getmro(class_)[::-1]``
     """
     return inspect.getmro(class_)[::-1]
 
@@ -402,51 +545,6 @@ def get_occupied_slots(instance):
     """
     return [slot for slot in get_all_slots(type(instance))
             if hasattr(instance,slot)]
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=_ParamFutureWarning)
-def all_equal(arg1,arg2):
-    """
-    Return a single boolean for arg1==arg2, even for numpy arrays
-    using element-wise comparison.
-
-    Uses all(arg1==arg2) for sequences, and arg1==arg2 otherwise.
-
-    If both objects have an '_infinitely_iterable' attribute, they are
-    not be zipped together and are compared directly instead.
-    """
-    if all(hasattr(el, '_infinitely_iterable') for el in [arg1,arg2]):
-        return arg1==arg2
-    try:
-        return all(a1 == a2 for a1, a2 in zip(arg1, arg2))
-    except TypeError:
-        return arg1==arg2
-
-
-# PARAM3_DEPRECATION
-# The syntax to use a metaclass changed incompatibly between 2 and
-# 3. The add_metaclass() class decorator below creates a class using a
-# specified metaclass in a way that works on both 2 and 3. For 3, can
-# remove this decorator and specify metaclasses in a simpler way
-# (https://docs.python.org/3/reference/datamodel.html#customizing-class-creation)
-#
-# Code from six (https://bitbucket.org/gutworth/six; version 1.4.1).
-@_deprecated(warning_cat=_ParamFutureWarning)
-def add_metaclass(metaclass):
-    """
-    Class decorator for creating a class with a metaclass.
-
-    .. deprecated:: 2.0.0
-    """
-    def wrapper(cls):
-        orig_vars = cls.__dict__.copy()
-        orig_vars.pop('__dict__', None)
-        orig_vars.pop('__weakref__', None)
-        for slots_var in orig_vars.get('__slots__', ()):
-            orig_vars.pop(slots_var)
-        return metaclass(cls.__name__, cls.__bases__, orig_vars)
-    return wrapper
 
 
 class bothmethod:
@@ -542,58 +640,102 @@ def get_method_owner(method):
     return method.__self__
 
 
-# PARAM3_DEPRECATION
-def recursive_repr(fillvalue='...'):
-    """
-    Decorate to make a repr function return fillvalue for a recursive call.
-
-    .. deprecated:: 1.12.0
-    """
-    warnings.warn(
-        'recursive_repr has been deprecated and will be removed in a future version.',
-        category=_ParamFutureWarning,
-        stacklevel=2,
-    )
-    return _recursive_repr(fillvalue=fillvalue)
-
-
 @accept_arguments
 def output(func, *output, **kw):
     """
-    output allows annotating a method on a Parameterized class to
-    declare that it returns an output of a specific type. The outputs
-    of a Parameterized class can be queried using the
-    Parameterized.param.outputs method. By default the output will
-    inherit the method name but a custom name can be declared by
-    expressing the Parameter type using a keyword argument.
+    Annotate a method to declare its outputs with specific types.
 
-    The simplest declaration simply declares the method returns an
-    object without any type guarantees, e.g.:
+    The ``output`` decorator allows annotating a method in a :class:`Parameterized` class
+    to declare the types of the values it returns. This provides metadata for the
+    method's outputs, which can be queried using the :meth:`~Parameters.outputs`
+    method. Outputs can be declared as unnamed, named, or typed, and the decorator
+    supports multiple outputs.
 
-      @output()
+    Parameters
+    ----------
+    func : callable
+        The method being annotated.
+    *output : tuple or Parameter or type, optional
+        Positional arguments to declare outputs. Can include:
 
-    If a specific parameter type is specified this is a declaration
-    that the method will return a value of that type, e.g.:
+        - :class:`Parameter` instances or Python object types (e.g., :class:`int`, :class:`str`).
+        - Tuples of the form ``(name, type)`` to declare named outputs.
+        - Multiple such tuples for declaring multiple outputs.
+    **kw : dict, optional
+        Keyword arguments mapping output names to types. Types can be:
 
-      @output(param.Number())
+        - :class:`Parameter` instances.
+        - Python object types, which will be converted to :class:`ClassSelector`.
 
-    To override the default name of the output the type may be declared
-    as a keyword argument, e.g.:
+    Returns
+    -------
+    callable
+        The decorated method with annotated outputs.
 
-      @output(custom_name=param.Number())
+    Raises
+    ------
+    ValueError
+        If an invalid type is provided for an output or duplicate names are
+        used for multiple outputs.
 
-    Multiple outputs may be declared using keywords mapping from output name
-    to the type or using tuples of the same format, i.e. these two declarations
-    are equivalent:
+    Notes
+    -----
+    - Unnamed outputs default to the method name.
+    - Python types are converted to :class:`ClassSelector` instances.
+    - If no arguments are provided, the output is assumed to be an object
+      without a specific type.
 
-      @output(number=param.Number(), string=param.String())
+    Examples
+    --------
+    Declare a method with an unspecified output type:
 
-      @output(('number', param.Number()), ('string', param.String()))
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     @param.output()
+    ...     def my_method(self):
+    ...         return 42
 
-    output also accepts Python object types which will be upgraded to
-    a ClassSelector, e.g.:
+    Query the outputs:
 
-      @output(int)
+    >>> MyClass().param.outputs()
+    {'my_method': (<param.parameterized.Parameter at 0x7f12f8d334c0>,
+      <bound method MyClass.my_method of MyClass(name='MyClass00004')>,
+      None)}
+
+    Declare a method with a specified type:
+
+    >>> class MyClass(param.Parameterized):
+    ...     @param.output(param.Number())
+    ...     def my_method(self):
+    ...         return 42.0
+
+    Use a custom output name and type:
+
+    >>> class MyClass(param.Parameterized):
+    ...     @param.output(custom_name=param.Number())
+    ...     def my_method(self):
+    ...         return 42.0
+
+    Declare multiple outputs using keyword arguments:
+
+    >>> class MyClass(param.Parameterized):
+    ...     @param.output(number=param.Number(), string=param.String())
+    ...     def my_method(self):
+    ...         return 42.0, "hello"
+
+    Declare multiple outputs using tuples:
+
+    >>> class MyClass(param.Parameterized):
+    ...     @param.output(('number', param.Number()), ('string', param.String()))
+    ...     def my_method(self):
+    ...         return 42.0, "hello"
+
+    Declare a method returning a Python object type:
+
+    >>> class MyClass(param.Parameterized):
+    ...     @param.output(int)
+    ...     def my_method(self):
+    ...         return 42
     """
     if output:
         outputs = []
@@ -890,13 +1032,13 @@ class Watcher(_Watcher):
     `what`: What to watch on the Parameters (either 'value' or a slot
     name)
 
-    `queued`: Immediately invoke callbacks triggered during processing
-            of an Event (if False), or queue them up for processing
-            later, after this event has been handled (if True)
+    `queued` : Immediately invoke callbacks triggered during processing
+    of an Event (if False), or queue them up for processing
+    later, after this event has been handled (if True)
 
-    `precedence`: A numeric value which determines the precedence of
-                  the watcher.  Lower precedence values are executed
-                  with higher priority.
+    `precedence` : A numeric value which determines the precedence of
+    the watcher.  Lower precedence values are executed
+    with higher priority.
     """
 
     def __new__(cls_, *args, **kwargs):
@@ -971,6 +1113,9 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs,name)
 
 
+_UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+
+
 class _ParameterBase(metaclass=ParameterMetaclass):
     """
     Base Parameter class used to dynamically update the signature of all
@@ -986,6 +1131,8 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
+        if not _UDPATE_PARAMETER_SIGNATURE:
+            return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere
         # so wrapping this in a loose try/except.
@@ -1041,81 +1188,77 @@ class _ParameterBase(metaclass=ParameterMetaclass):
 
 class Parameter(_ParameterBase):
     """
-    An attribute descriptor for declaring parameters.
+    Base :class:`Parameter` type to hold any type of Python object.
 
-    Parameters are a special kind of class attribute.  Setting a
-    Parameterized class attribute to be a Parameter instance causes
-    that attribute of the class (and the class's instances) to be
-    treated as a Parameter.  This allows special behavior, including
-    dynamically generated parameter values, documentation strings,
-    constant and read-only parameters, and type or range checking at
-    assignment time.
+    Parameters are a special kind of class attribute implemented as descriptor.
+    Setting a Parameterized class attribute to a `Parameter` instance enables
+    enhanced functionality, including type and range validation at assignment,
+    support for constant and read-only parameters, documentation strings and
+    dynamic parameter values.
 
-    For example, suppose someone wants to define two new kinds of
-    objects Foo and Bar, such that Bar has a parameter delta, Foo is a
-    subclass of Bar, and Foo has parameters alpha, sigma, and gamma
-    (and delta inherited from Bar).  She would begin her class
-    definitions with something like this::
+    Parameters can only be used as class attributes of :class:`Parameterized` classes.
+    Using them in standalone contexts or with non-:class:`Parameterized` classes will
+    not provide the described behavior.
 
-       class Bar(Parameterized):
-           delta = Parameter(default=0.6, doc='The difference between steps.')
-           ...
-       class Foo(Bar):
-           alpha = Parameter(default=0.1, doc='The starting value.')
-           sigma = Parameter(default=0.5, doc='The standard deviation.',
-                           constant=True)
-           gamma = Parameter(default=1.0, doc='The ending value.')
-           ...
+    Notes
+    -----
+    Parameters provide lots of features.
 
-    Class Foo would then have four parameters, with delta defaulting
-    to 0.6.
+    **Dynamic Behavior**:
 
-    Parameters have several advantages over plain attributes:
+    - Parameters provide support for dynamic values, type validation,
+      and range checking.
+    - Parameters can be declared as constant or read-only.
 
-    1. Parameters can be set automatically when an instance is
-       constructed: The default constructor for Foo (and Bar) will
-       accept arbitrary keyword arguments, each of which can be used
-       to specify the value of a Parameter of Foo (or any of Foo's
-       superclasses).  E.g., if a script does this::
+    **Automatic Initialization**:
 
-           myfoo = Foo(alpha=0.5)
+    - Parameters can be set during object construction using keyword
+      arguments. For example: ``myfoo = Foo(alpha=0.5); print(myfoo.alpha)``.
 
-       myfoo.alpha will return 0.5, without the Foo constructor
-       needing special code to set alpha.
+    - If custom constructors are implemented, they can still pass
+      keyword arguments to the superclass to allow Parameter initialization.
 
-       If Foo implements its own constructor, keyword arguments will
-       still be accepted if the constructor accepts a dictionary of
-       keyword arguments (as in ``def __init__(self,**params):``), and
-       then each class calls its superclass (as in
-       ``super(Foo,self).__init__(**params)``) so that the
-       Parameterized constructor will process the keywords.
+    **Inheritance**:
 
-    2. A Parameterized class need specify only the attributes of a
-       Parameter whose values differ from those declared in
-       superclasses; the other values will be inherited.  E.g. if Foo
-       declares::
+    - :class:`Parameterized` classes automatically inherit parameters from
+      their superclasses. Attributes can be selectively overridden.
 
-        delta = Parameter(default=0.2)
+    **Subclassing**:
 
-       the default value of 0.2 will override the 0.6 inherited from
-       Bar, but the doc will be inherited from Bar.
+    - The :class:`Parameter` class can be subclassed to create custom behavior,
+      such as validating specific ranges or generating values dynamically.
 
-    3. The Parameter descriptor class can be subclassed to provide
-       more complex behavior, allowing special types of parameters
-       that, for example, require their values to be numbers in
-       certain ranges, generate their values dynamically from a random
-       distribution, or read their values from a file or other
-       external source.
+    **GUI Integration**:
 
-    4. The attributes associated with Parameters provide enough
-       information for automatically generating property sheets in
-       graphical user interfaces, allowing Parameterized instances to
-       be edited by users.
+    - Parameters provide sufficient metadata for auto-generating property
+      sheets in graphical user interfaces, enabling user-friendly
+      parameter editing.
 
-    Note that Parameters can only be used when set as class attributes
-    of Parameterized classes. Parameters used as standalone objects,
-    or as class attributes of non-Parameterized classes, will not have
-    the behavior described here.
+    Examples
+    --------
+    Define a :class:`Parameterized` class with parameters:
+
+    >>> import param
+    >>> class Foo(param.Parameterized):
+    ...     alpha = param.Parameter(default=0.1, doc="The starting value.")
+    ...     beta = param.Parameter(default=0.5, doc="The standard deviation.", constant=True)
+
+    When no initial value is provided the default is used:
+
+    >>> Foo().alpha
+    0.1
+
+    When an initial value is provided it is used:
+
+    >>> foo = Foo(alpha=0.5)
+    >>> foo.alpha
+    0.5
+
+    Constant parameters cannot be modified:
+
+    >>> foo.beta = 0.1  # Cannot be changed since it's constant
+    ...
+    TypeError: Constant parameter 'beta' cannot be modified
     """
 
     # Because they implement __get__ and __set__, Parameters are known
@@ -1208,91 +1351,113 @@ class Parameter(_ParameterBase):
     ):
         ...
 
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, doc=Undefined, # pylint: disable-msg=R0913
-                 label=Undefined, precedence=Undefined,
-                 instantiate=Undefined, constant=Undefined, readonly=Undefined,
-                 pickle_default_value=Undefined, allow_None=Undefined,
-                 per_instance=Undefined, allow_refs=Undefined, nested_refs=Undefined):
+    def __init__( # pylint: disable-msg=R0913
+        self,
+        default=Undefined,
+        *,
+        doc=Undefined,
+        label=Undefined,
+        precedence=Undefined,
+        instantiate=Undefined,
+        constant=Undefined,
+        readonly=Undefined,
+        pickle_default_value=Undefined,
+        allow_None=Undefined,
+        per_instance=Undefined,
+        allow_refs=Undefined,
+        nested_refs=Undefined,
+    ):
         """
-        Initialize a new Parameter object and store the supplied attributes.
+        Initialize a new :class:`Parameter` object with the specified attributes.
 
-        default: the owning class's value for the attribute represented
-        by this Parameter, which can be overridden in an instance.
+        Parameters
+        ----------
+        default : Any, optional
+            The owning class's value for the attribute represented by this
+            parameter, which can be overridden in an instance.
+            Default is ``None``.
+        doc : str | None, optional
+            A documentation string describing the purpose of the parameter.
+            Default is ``None``.
+        label : str | None, optional
+            An optional text label used when displaying this parameter, such as
+            in a listing. If not specified, the parameter's attribute name in
+            the owning :class:`Parameterized` object is used.
+        precedence : float | None, optional
+            A numeric value, usually in the range 0.0 to 1.0, that determines
+            the order of the parameter in a listing or user interface. A negative
+            precedence indicates a parameter that should be hidden in such
+            listings. Default is ``None``.
+        instantiate : bool, optional
+            Whether the default value of this parameter will be deepcopied when
+            a :class:`Parameterized` object is instantiated (``True``), or if the
+            single default value will be shared by all Parameterized instances
+            (``False``, the default).
+            For an immutable ``Parameter`` value, it is best to leave ``instantiate``
+            at the default of ``False``, so that a user can choose to change the
+            value at the ``Parameterized`` instance level (affecting only that
+            instance) or at the :class:`Parameterized` class or superclass level
+            (affecting all existing and future instances of that class or
+            superclass). For a mutable ``Parameter`` value, the default of ``False``
+            is also appropriate if you want all instances to share the same
+            value state, e.g. if they are each simply referring to a single
+            global object like a singleton. If instead each ``Parameterized``
+            should have its own independently mutable value, instantiate should
+            be set to ``True``, but note that there is then no simple way to
+            change the value of this parameter at the class or superclass
+            level, because each instance, once created, will then have an
+            independently deepcopied value. Default is ``False``.
+        constant : bool, optional
+            If ``True``, the parameter value can only be set at the class level
+            or in a :class:`Parameterized` constructor call. The value is otherwise
+            constant on the ``Parameterized`` instance, once it has been
+            constructed. Default is ``False``.
+        readonly : bool, optional
+            If ``True``, the parameter value cannot be modified at the class or
+            instance level. Default is ``False``.
+        pickle_default_value : bool, optional
+            Whether the default value should be pickled. Set to ``False`` in rare
+            cases, such as system-specific file paths.
 
-        doc: docstring explaining what this parameter represents.
+            .. deprecated:: 2.3.0
+        allow_None : bool, optional
+            If ``True``, allows ``None`` as a valid parameter value. If the default
+            value is ``None``, this is automatically set to ``True``. Default is
+            ``False``.
+        per_instance : bool, optional
+            Whether to create a separate ``Parameter`` object for each instance of
+            the ``Parameterized`` class (``True``), or share the same ``Parameter``
+            object across all instances (``False``). See also ``instantiate``,
+            which is conceptually similar but affects the parameter value
+            rather than the parameter object. Default is ``True``.
+        allow_refs : bool, optional
+            If ``True``, allows linking parameter references to this parameter,
+            meaning the value will automatically reflect the current value of
+            the reference that is passed in. Default is ``False``.
+        nested_refs : bool, optional
+            If ``True`` and ``allow_refs=True``, inspects nested objects (e.g.,
+            dictionaries, lists, slices, tuples) for references and resolves
+            them automatically. Default is ``False``.
 
-        label: optional text label to be used when this Parameter is
-        shown in a listing. If no label is supplied, the attribute name
-        for this parameter in the owning Parameterized object is used.
+        Examples
+        --------
+        Define a parameter with a default value:
 
-        precedence: a numeric value, usually in the range 0.0 to 1.0,
-        which allows the order of Parameters in a class to be defined in
-        a listing or e.g. in GUI menus. A negative precedence indicates
-        a parameter that should be hidden in such listings.
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     my_param = param.Parameter(default=10, doc="An example parameter.")
+        >>> instance = MyClass()
+        >>> instance.my_param
+        10
 
-        instantiate: controls whether the value of this Parameter will
-        be deepcopied when a Parameterized object is instantiated (if
-        True), or if the single default value will be shared by all
-        Parameterized instances (if False). For an immutable Parameter
-        value, it is best to leave instantiate at the default of
-        False, so that a user can choose to change the value at the
-        Parameterized instance level (affecting only that instance) or
-        at the Parameterized class or superclass level (affecting all
-        existing and future instances of that class or superclass). For
-        a mutable Parameter value, the default of False is also appropriate
-        if you want all instances to share the same value state, e.g. if
-        they are each simply referring to a single global object like
-        a singleton. If instead each Parameterized should have its own
-        independently mutable value, instantiate should be set to
-        True, but note that there is then no simple way to change the
-        value of this Parameter at the class or superclass level,
-        because each instance, once created, will then have an
-        independently instantiated value.
+        Use a constant parameter:
 
-        constant: if true, the Parameter value can be changed only at
-        the class level or in a Parameterized constructor call. The
-        value is otherwise constant on the Parameterized instance,
-        once it has been constructed.
-
-        readonly: if true, the Parameter value cannot ordinarily be
-        changed by setting the attribute at the class or instance
-        levels at all. The value can still be changed in code by
-        temporarily overriding the value of this slot and then
-        restoring it, which is useful for reporting values that the
-        _user_ should never change but which do change during code
-        execution.
-
-        pickle_default_value: whether the default value should be
-        pickled. Usually, you would want the default value to be pickled,
-        but there are rare cases where that would not be the case (e.g.
-        for file search paths that are specific to a certain system).
-
-        per_instance: whether a separate Parameter instance will be
-        created for every Parameterized instance. True by default.
-        If False, all instances of a Parameterized class will share
-        the same Parameter object, including all validation
-        attributes (bounds, etc.). See also instantiate, which is
-        conceptually similar but affects the Parameter value rather
-        than the Parameter object.
-
-        allow_None: if True, None is accepted as a valid value for
-        this Parameter, in addition to any other values that are
-        allowed. If the default value is defined as None, allow_None
-        is set to True automatically.
-
-        allow_refs: if True allows automatically linking parameter
-        references to this Parameter, i.e. the parameter value will
-        automatically reflect the current value of the reference that
-        is passed in.
-
-        nested_refs: if True and allow_refs=True then even nested objects
-        such as dictionaries, lists, slices, tuples and sets will be
-        inspected for references and will be automatically resolved.
-
-        default, doc, and precedence all default to None, which allows
-        inheritance of Parameter slots (attributes) from the owning-class'
-        class hierarchy (see ParameterizedMetaclass).
+        >>> class ConstantExample(param.Parameterized):
+        ...     my_param = param.Parameter(default=5, constant=True)
+        >>> instance = ConstantExample()
+        >>> instance.my_param = 10  # Raises an error
+        ...
+        TypeError: Constant parameter 'my_param' cannot be modified.
         """
         self.name = None
         self.owner = None
@@ -1301,10 +1466,19 @@ class Parameter(_ParameterBase):
         self.precedence = precedence
         self.default = default
         self.doc = doc
-        self.constant = constant is True or readonly is True # readonly => constant
+        if constant is True or readonly is True:  # readonly => constant
+            self.constant = True
+        else:
+            self.constant = constant
         self.readonly = readonly
         self._label = label
         self._set_instantiate(instantiate)
+        if pickle_default_value is False:
+            warnings.warn(
+                'pickle_default_value has been deprecated.',
+                category=_ParamDeprecationWarning,
+                stacklevel=_find_stack_level(),
+            )
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
         self.watchers = {}
@@ -1320,7 +1494,50 @@ class Parameter(_ParameterBase):
         """Given a serializable Python value, return a value that the parameter can be set to."""
         return value
 
-    def schema(self, safe=False, subset=None, mode='json'):
+    def schema(
+            self,
+            safe: bool = False,
+            subset: Optional[Iterable[str]] = None,
+            mode: str = 'json',
+        ) -> dict[str, Any]:
+        """
+        Generate a schema for the parameters of the :class:`Parameterized` object.
+
+        This method returns a schema representation of the object's parameters,
+        including metadata such as types, default values, and documentation.
+        The schema format is determined by the specified serialization mode.
+
+        Parameters
+        ----------
+        safe : bool, optional
+            If ``True``, only includes parameters marked as safe for serialization.
+            Default is ``False``.
+        subset : iterable of str or None, optional
+            A list of parameter names to include in the schema. If ``None``, all
+            parameters are included. Default is ``None``.
+        mode : str, optional
+            The serialization format to use. Must be one of the available
+            serialization formats registered in ``_serializers``. Default is ``'json'``.
+
+        Returns
+        -------
+        dict[str, Any]
+            A schema dictionary representing the parameters of the object and their
+            associated metadata.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1, bounds=(0, 10), doc="A numeric parameter.")
+        ...     b = param.String(default="hello", doc="A string parameter.")
+        >>> instance = MyClass()
+
+        Get the schema in JSON format:
+
+        >>> instance.param.a.schema()
+        {'type': 'number', 'minimum': 0, 'maximum': 10}
+        """
         if mode not in  self._serializers:
             raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(self.__class__.__name__, self,
@@ -1332,9 +1549,9 @@ class Parameter(_ParameterBase):
         The reactive operations namespace.
 
         Provides reactive versions of operations that cannot be made reactive through
-        operator overloading. This includes operations such as `.rx.and_` and `.rx.bool`.
+        operator overloading. This includes operations such as ``.rx.and_`` and ``.rx.bool``.
 
-        Calling this namespace (`.rx()`) creates and returns a reactive expression, enabling
+        Calling this namespace (``.rx()``) creates and returns a reactive expression, enabling
         dynamic updates and computation tracking.
 
         Returns
@@ -1342,7 +1559,7 @@ class Parameter(_ParameterBase):
         rx
             A reactive expression representing the operation applied to the current value.
 
-        User Guide
+        References
         ----------
         For more details, see the user guide:
         https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
@@ -1373,7 +1590,37 @@ class Parameter(_ParameterBase):
         return reactive_ops(self)
 
     @property
-    def label(self):
+    def label(self) -> str:
+        """
+        Get the label for this parameter.
+
+        The ``label`` property returns a human-readable text label associated with
+        the parameter.
+
+        Returns
+        -------
+        str
+            The label for the parameter, either automatically generated from the
+            name or the custom label if explicitly set.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     param_1 = param.Parameter()
+        ...     param_2 = param.Parameter(label="My Label")
+        >>> instance = MyClass()
+
+        Access the automatically generated label:
+
+        >>> instance.param.param_1.label
+        'Param 1'  # Based on `label_formatter` applied to the name
+
+        Access the manually specified label:
+
+        >>> instance.param.param_2.label
+        'My Label'
+        """
         if self.name and self._label is None:
             return label_formatter(self.name)
         else:
@@ -1530,23 +1777,12 @@ class Parameter(_ParameterBase):
             refs = obj._param__private.refs
             if ref is not None:
                 self.owner.param._update_ref(name, ref)
-            elif name in refs and not syncing:
+            elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
             if is_async or val is Undefined:
                 return
-
-        # Deprecated Number set_hook called here to avoid duplicating setter
-        if hasattr(self, 'set_hook'):
-            val = self.set_hook(obj, val)
-            if self.set_hook is not _identity_hook:
-                # PARAM3_DEPRECATION
-                warnings.warn(
-                    'Number.set_hook has been deprecated.',
-                    category=_ParamFutureWarning,
-                    stacklevel=6,
-                )
 
         self._validate(val)
 
@@ -1572,6 +1808,15 @@ class Parameter(_ParameterBase):
             else:
                 # When setting a Parameter before calling super.
                 if not isinstance(obj._param__private, _InstancePrivate):
+                    warnings.warn(
+                        f"Setting the Parameter {self.name!r} to {val!r} before "
+                        f"the Parameterized class {type(obj).__name__!r} is fully "
+                        "instantiated is deprecated and will raise an error in "
+                        "a future version. Ensure the value is set after calling "
+                        "`super().__init__(**params)` in the constructor.",
+                        category=_ParamPendingDeprecationWarning,
+                        stacklevel=_find_stack_level(),
+                    )
                     obj._param__private = _InstancePrivate(
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs
                     )
@@ -1682,16 +1927,45 @@ class Parameter(_ParameterBase):
 # Define one particular type of Parameter that is used in this file
 class String(Parameter):
     r"""
-    A String Parameter, with a default value and optional regular expression (regex) matching.
+    A String Parameter with optional regular expression (regex) validation.
 
-    Example of using a regex to implement IPv4 address matching::
+    The ``String`` class extends the :class:`Parameter` class to specifically handle
+    string values and provides additional support for validating values
+    against a regular expression.
 
-      class IPAddress(String):
-        '''IPv4 address as a string (dotted decimal notation)'''
-       def __init__(self, default="0.0.0.0", allow_None=False, **kwargs):
-           ip_regex = r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-           super(IPAddress, self).__init__(default=default, regex=ip_regex, **kwargs)
+    Parameters
+    ----------
+    default : str, optional
+        The default value of the parameter. Default is an empty string (``""``).
+    regex : str or None, optional
+        A regular expression used to validate the string value. If ``None``, no
+        regex validation is applied. Default is ``None``.
 
+    Examples
+    --------
+    Define a ``String`` parameter with regex validation:
+
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     user_name = param.String(default="John Doe", regex=r"^[A-Za-z ]+$", doc="Name of a person.")
+    >>> instance = MyClass()
+
+    Access the default value:
+
+    >>> instance.user_name
+    'John Doe'
+
+    Set a valid value:
+
+    >>> instance.user_name = "Jane Smith"
+    >>> instance.user_name
+    'Jane Smith'
+
+    Attempt to set an invalid value (non-alphabetic characters):
+
+    >>> instance.user_name = "Jane123"
+    ...
+    ValueError: String parameter 'MyClass.user_name' value 'Jane123' does not match regex '^[A-Za-z ]+$'.
     """
 
     __slots__ = ['regex']
@@ -1708,7 +1982,6 @@ class String(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex
@@ -1745,6 +2018,10 @@ class shared_parameters:
     Parameterized object of the same type is instantiated.
     Can be useful to easily modify large collections of Parameterized
     objects at once and can provide a significant speedup.
+
+    References
+    ----------
+    See https://param.holoviz.org/user_guide/Parameters.html#instantiating-with-shared-parameters
     """
 
     _share = False
@@ -1870,18 +2147,22 @@ class _ParametersRestorer:
 
 class Parameters:
     """
-    Object that holds the namespace and implementation of Parameterized
-    methods as well as any state that is not in __slots__ or the
-    Parameters themselves.
+    Object that holds the ``.param`` namespace and implementation of
+    :class:`Parameterized` methods as well as any state that is not in
+    ``__slots__`` or the Parameters themselves.
 
     Exists at both the metaclass level (instantiated by the metaclass)
     and at the instance level. Can contain state specific to either the
     class or the instance as necessary.
+
+    References
+    ----------
+    https://param.holoviz.org/user_guide/Parameters.html#parameterized-namespace
     """
 
-    def __init__(self_, cls, self=None):
+    def __init__(self_, cls: type['Parameterized'], self: Union['Parameterized', None]=None):
         """
-        cls is the Parameterized class which is always set.
+        `cls` is the Parameterized class which is always set.
         self is the instance if set.
         """
         self_.cls = cls
@@ -1933,7 +2214,7 @@ class Parameters:
         self_.self._param__private.watchers = value
 
     @property
-    def self_or_cls(self_):
+    def self_or_cls(self_) -> Union['Parameterized', type['Parameterized']]:
         return self_.cls if self_.self is None else self_.self
 
     def __setstate__(self, state):
@@ -1947,19 +2228,22 @@ class Parameters:
         for k, v in state.items():
             setattr(self, k, v)
 
-    def __getitem__(self_, key):
-        """Retrieve the class or instance parameter by key.
+    def __getitem__(self_, key: str) -> Parameter:
+        """
+        Retrieve a :class:`Parameter` by its key.
+
+        This method allows access to a class or instance :class:`Parameter` using its name.
 
         Parameters
         ----------
-        key: str
-            The name of the parameter to retrieve.
+        key : str
+            The name of the :class:`Parameter` to retrieve.
 
         Returns
         -------
-        Parameter:
-            The parameter associated with the given key. If accessed on an instance,
-            returns the instantiated parameter.
+        Parameter
+            The :class:`Parameter` associated with the given key. If accessed on an instance,
+            the method returns the instantiated (copied) parameter.
         """
         inst = self_.self
         if inst is None:
@@ -1985,11 +2269,11 @@ class Parameters:
         return param in self_._cls_parameters
 
     def __getattr__(self_, attr):
-        """Handle attribute access for parameter objects.
+        """Handle attribute access for :class:`Parameter` objects.
 
-        This method extends standard attribute access to support parameters
+        This method extends standard attribute access to support Parameters
         defined in the object. If the requested attribute corresponds to a
-        parameter, it retrieves the parameter value.
+        Parameter, it retrieves the Parameter value.
 
         Parameters
         ----------
@@ -1998,7 +2282,7 @@ class Parameters:
 
         Returns
         -------
-        The value of the parameter if it exists.
+        The value of the Parameter if it exists.
 
         Raises
         ------
@@ -2086,7 +2370,7 @@ class Parameters:
                             "Parameter definition to declare whether references "
                             "should be resolved or not.",
                             category=_ParamFutureWarning,
-                            stacklevel=4,
+                            stacklevel=_find_stack_level(),
                         )
                 setattr(self, name, val)
                 continue
@@ -2126,7 +2410,7 @@ class Parameters:
             dep_obj.param.unwatch(watcher)
         self_.self._param__private.ref_watchers = []
         refs = dict(self_.self._param__private.refs, **{name: ref})
-        deps = {name: resolve_ref(ref) for name, ref in refs.items()}
+        deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
 
@@ -2178,6 +2462,7 @@ class Parameters:
             async_executor(partial(self_._async_ref, pname, awaitable))
             return
 
+        import asyncio
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
         if running_task is None:
@@ -2267,7 +2552,10 @@ class Parameters:
                 watcher = self_._watch_group(obj, method, queued, group, attribute)
                 obj._param__private.dynamic_watchers[method].append(watcher)
         for m in init_methods:
-            m()
+            if iscoroutinefunction(m):
+                async_executor(m)
+            else:
+                m()
 
     def _resolve_dynamic_deps(self, obj, dynamic_dep, param_dep, attribute):
         """
@@ -2348,40 +2636,12 @@ class Parameters:
 
     # Classmethods
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
-    def print_param_defaults(self_):
-        """
-        Print the default values of all cls's Parameters.
-
-        .. deprecated:: 1.12.0
-            Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
-        """
-        cls = self_.cls
-        for key,val in cls.__dict__.items():
-            if isinstance(val,Parameter):
-                print(cls.__name__+'.'+key+ '='+ repr(val.default))
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `p.param.default =`", warning_cat=_ParamFutureWarning)
-    def set_default(self_,param_name,value):
-        """
-        Set the default value of param_name.
-
-        Equivalent to setting param_name on the class.
-
-        .. deprecated:: 1.12.0
-             Use instead `p.param.default =`
-        """
-        cls = self_.cls
-        setattr(cls,param_name,value)
-
     def add_parameter(self_, param_name: str, param_obj: Parameter):
         """
-        Add a new Parameter object to this class.
+        Add a new :class:`Parameter` object to this class.
 
-        This method allows dynamically adding a Parameter to the class, resulting in behavior equivalent to declaring
-        the Parameter in the class's source code.
+        This method allows dynamically adding a Parameter to the class, resulting
+        in behavior equivalent to declaring the Parameter in the class's source code.
 
         Parameters
         ----------
@@ -2392,7 +2652,7 @@ class Parameters:
 
         Examples
         --------
-        Create a Parameterized class:
+        Create a :class:`Parameterized` class:
 
         >>> import param
         >>> class P(param.Parameterized):
@@ -2400,13 +2660,13 @@ class Parameters:
         ...     b = param.String()
         >>> p = P()
 
-        Add a new parameter to the class `P` via the class namespace `P.param`:
+        Add a new parameter to the class ``P`` via the class namespace ``P.param``:
 
         >>> P.param.add_parameter('c', param.Tuple(default=(1, 2, 3)))
         >>> print(p.c)
         (1, 2, 3)
 
-        Add a new parameter to the class `P` via the instance namespace `p.param`:
+        Add a new parameter to the class ``P`` via the instance namespace ``p.param``:
 
         >>> p.param.add_parameter('d', param.Tuple(default=(3, 2, 1)))
         >>> p.d
@@ -2423,58 +2683,33 @@ class Parameters:
         # delete cached params()
         cls._param__private.params.clear()
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.add_parameter`", warning_cat=_ParamFutureWarning)
-    def _add_parameter(self_,param_name, param_obj):
-        """
-        Add a new Parameter object into this object's class.
-
-        .. deprecated :: 1.12.0
-        """
-        return self_.add_parameter(param_name, param_obj)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.values()` or `.param['param']`", warning_cat=_ParamFutureWarning)
-    def params(self_, parameter_name=None):
-        """
-        Return the Parameters of this class as the
-        dictionary {name: parameter_object}.
-
-        Includes Parameters from this class and its
-        superclasses.
-
-        .. deprecated:: 1.12.0
-            Use instead `.param.values()` or `.param['param']`
-        """
-        pdict = self_.objects(instance='existing')
-        if parameter_name is None:
-            return pdict
-        else:
-            return pdict[parameter_name]
-
     # Bothmethods
 
     def update(self_, arg=Undefined, /, **kwargs):
         """
         Update multiple parameters of this object or class before triggering events.
 
-        Allows setting the parameters of the object or class using a dictionary, an iterable, or keyword arguments
-        in the form of `param=value`. The specified parameters will be updated to the given values.
+        Allows setting the parameters of the object or class using a
+        dictionary, an iterable, or keyword arguments in the form of
+        ``param=value``. The specified parameters will be updated to
+        the given values.
 
-        This method can also be used as a context manager to temporarily set and then reset parameter values.
+        This method can also be used as a context manager to temporarily set
+        and then reset parameter values.
 
         Parameters
         ----------
-        **params : dict or iterable or keyword arguments
-            The parameters to update, provided as a dictionary, iterable, or keyword arguments in `param=value` format.
+        **kwargs : dict or iterable or keyword arguments
+            The parameters to update, provided as a dictionary, iterable, or
+            keyword arguments in ``param=value`` format.
 
-        User Guide
+        References
         ----------
         https://param.holoviz.org/user_guide/Parameters.html#other-parameterized-methods
 
         Examples
         --------
-        Create a Parameterized class:
+        Create a :class:`Parameterized` class:
 
         >>> import param
         >>> class P(param.Parameterized):
@@ -2485,7 +2720,7 @@ class Parameters:
 
         >>> p = P(a="0. Hello", b="0. World")
 
-        Use `.update` to update the parameters:
+        Use :meth:`update` to update the parameters:
 
         >>> p.param.update(a="1. Hello", b="2. World")
         >>> p.a, p.b
@@ -2500,14 +2735,14 @@ class Parameters:
         >>> p.a, p.b
         ('1. Hello', '1. World')
 
-        Lets see that events are triggered **after** all parameters have been updated
+        Lets check that the events are triggered **after** all parameters have
+        been updated:
 
         >>> @param.depends(p.param.a, watch=True)
         ... def print_a_b(a):
         ...     print(p.a, p.b)
         >>> my_param.param.update(a="3. Hello",b="3. World")
         3. Hello 3. World
-
         """
         refs = {}
         if self_.self is not None:
@@ -2562,30 +2797,6 @@ class Parameters:
             p._mode = 'set-reset'
         return restore
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.update`", warning_cat=_ParamFutureWarning)
-    def set_param(self_, *args,**kwargs):
-        """
-        For each param=value keyword argument, sets the corresponding
-        parameter of this object or class to the given value.
-
-        For backwards compatibility, also accepts
-        set_param("param",value) for a single parameter value using
-        positional arguments, but the keyword interface is preferred
-        because it is more compact and can set multiple values.
-
-        .. deprecated:: 1.12.0
-            Use instead `.param.update`
-        """
-        self_or_cls = self_.self_or_cls
-        if args:
-            if len(args) == 2 and args[0] not in kwargs and not kwargs:
-                kwargs[args[0]] = args[1]
-            else:
-                raise ValueError("Invalid positional arguments for %s.set_param" %
-                                 (self_or_cls.name))
-        return self_.update(kwargs)
-
     @property
     def _cls_parameters(self_):
         """
@@ -2611,17 +2822,46 @@ class Parameters:
         cls._param__private.params = paramdict
         return paramdict
 
-    def objects(self_, instance=True):
+    def objects(self_, instance: Literal[True, False, 'existing']=True) -> dict[str, Parameter]:
         """
         Return the Parameters of this instance or class.
 
-        If instance=True and called on a Parameterized instance it
-        will create instance parameters for all Parameters defined on
-        the class. To force class parameters to be returned use
-        instance=False. Since classes avoid creating instance
-        parameters unless necessary you may also request only existing
-        instance parameters to be returned by setting
-        instance='existing'.
+        This method provides access to :class:`Parameter` objects defined on
+        a :class:`Parameterized` class or instance, depending on the
+        value of the ``instance`` argument.
+
+        Parameters
+        ----------
+        instance : bool or ``{'existing'}``, default=True
+            - ``True``: Return instance-specific parameters, creating them if
+              necessary. This requires the instance to be fully initialized.
+            - ``False``: Return class-level parameters without creating
+              instance-specific copies.
+            - ``'existing'``: Returns a mix of instance parameters that already
+              exist and class parameters, avoiding creation of new
+              instance-specific parameters.
+
+        Returns
+        -------
+        dict[str, Parameter]
+            A dictionary mapping parameter names to their corresponding
+            :class:`Parameter` objects.
+
+        Examples
+        --------
+        Accessing *class-level* Parameters:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     param1 = param.Number(default=1)
+        >>> MyClass.param.objects(instance=False)
+        {'name': <param.parameterized.String at 0x...>}
+
+        Accessing *instance-level* Parameters:
+
+        >>> obj = MyClass()
+        >>> obj.param.objects()
+        {'name': <param.parameterized.String at 0x...>}
         """
         if self_.self is not None and not self_.self._param__private.initialized and instance is True:
             raise RuntimeError(
@@ -2643,13 +2883,40 @@ class Parameters:
                 return {k: self_.self.param[k] for k in pdict}
         return pdict
 
-    def trigger(self_, *param_names):
+    def trigger(self_, *param_names: str) -> None:
         """
-        Trigger watchers for the given set of parameter names. Watchers
-        will be triggered whether or not the parameter values have
-        actually changed. As a special case, the value will actually be
-        changed for a Parameter of type Event, setting it to True so
-        that it is clear which Event parameter has been triggered.
+        Trigger watchers for the given set of parameter names.
+
+        This method invokes all watchers associated with the given parameter names,
+        regardless of whether the parameter values have actually changed.
+
+        Parameters
+        ----------
+        *param_names : str
+            Names of the parameters to trigger. Each name must correspond to a
+            parameter defined on this :class:`Parameterized` object.
+
+        Notes
+        -----
+        As a special case, the value will actually be changed for a Parameter
+        of type :class:`param.Event`, setting it to ``True`` so that it is
+        clear which :class:`param.Event` parameter has been triggered.
+
+        Examples
+        --------
+        This method is useful to trigger watchers of parameters whose value
+        is a mutable container:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     values = param.List([1, 2])
+        >>> obj = MyClass()
+        >>> def callback(event):
+        ...     print(f"Triggered {event.name} / {event.new}")
+        >>> obj.param.watch(callback, 'values')
+        >>> obj.values.append(3)
+        >>> obj.param.trigger('values')
+        Triggered values / [1, 2, 3]
         """
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
@@ -2739,24 +3006,27 @@ class Parameters:
                           if (name, watcher.what) in event_dict]
                 with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                     self_._execute_watcher(watcher, events)
-
+    # Please update the docstring with better description and examples
+    # I've (MarcSkovMadsen) not been able to understand this. Its probably because I lack context.
+    # Its not mentioned in the documentation.
+    # The pytests do not make sense to me.
     def set_dynamic_time_fn(self_,time_fn,sublistattr=None):
         """
-        Set time_fn for all Dynamic Parameters of this class or
+        Set ``time_fn`` for all :class:`param.Dynamic` Parameters of this class or
         instance object that are currently being dynamically
         generated.
 
-        Additionally, sets _Dynamic_time_fn=time_fn on this class or
+        Additionally, sets ``_Dynamic_time_fn=time_fn`` on this class or
         instance object, so that any future changes to Dynamic
-        Parmeters can inherit time_fn (e.g. if a Number is changed
+        Parmeters can inherit ``time_fn`` (e.g. if a :class:`param.Number` is changed
         from a float to a number generator, the number generator will
-        inherit time_fn).
+        inherit ``time_fn``).
 
         If specified, sublistattr is the name of an attribute of this
         class or instance that contains an iterable collection of
-        subobjects on which set_dynamic_time_fn should be called.  If
+        subobjects on which ``set_dynamic_time_fn`` should be called.  If
         the attribute sublistattr is present on any of the subobjects,
-        set_dynamic_time_fn() will be called for those, too.
+        ``set_dynamic_time_fn()`` will be called for those, too.
         """
         self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn
@@ -2781,23 +3051,30 @@ class Parameters:
             for obj in sublist:
                 obj.param.set_dynamic_time_fn(time_fn,sublistattr)
 
-    def serialize_parameters(self_, subset=None, mode='json'):
+    def serialize_parameters(self_, subset: Union[Iterable[str], None]=None, mode='json'):
         """
-        Return the serialized parameters of the Parameterized object.
+        Return the serialized parameters of the :class:`Parameterized` object.
 
         Parameters
         ----------
-        subset : list, optional
-            A list of parameter names to serialize. If None, all parameters will be serialized. Defaults to None.
+        subset : iterable of str, optional
+            An iterable of parameter names to serialize. If ``None``, all
+            parameters will be serialized. Default is ``None``.
         mode : str, optional
-            The serialization format. By default, only 'json' is supported. Defaults to 'json'.
+            The serialization format. By default, only ``'json'`` is supported.
+            Default is ``'json'``.
 
         Returns
         -------
         Any
             The serialized value.
 
-        User Guide
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        References
         ----------
         https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
@@ -2814,45 +3091,94 @@ class Parameters:
         Serialize parameters:
 
         >>> serialized_data = p.param.serialize_parameters()
-        >>> print(serialized_data)
-        {"name": "P00002", "a": 1, "b": "hello"}
-
+        >>> serialized_data
+        '{"name": "P00002", "a": 1, "b": "hello"}'
         """
-        self_or_cls = self_.self_or_cls
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameters(self_or_cls, subset=subset)
 
-    def serialize_value(self_, pname, mode='json'):
-        self_or_cls = self_.self_or_cls
+    def serialize_value(self_, pname: str, mode: str='json'):
+        """
+        Serialize the value of a specific parameter.
+
+        This method serializes the value of a given parameter on a Parameterized
+        object using the specified serialization mode.
+
+        Parameters
+        ----------
+        pname : str
+            The name of the parameter whose value is to be serialized.
+        mode : str, optional
+            The serialization format to use. By default, only ``'json'`` is supported.
+            Default is ``'json'``.
+
+        Returns
+        -------
+        Any
+            The serialized value of the specified parameter.
+
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        References
+        ----------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
+
+        Examples
+        --------
+        Serialize the value of a specific parameter:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number()
+        ...     b = param.String()
+        >>> p = P(a=1, b="hello")
+
+        Serialize the value of parameter 'a':
+
+        >>> serialized_value = p.param.serialize_value('a')
+        >>> serialized_value
+        '1'
+        """
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.serialize_parameter_value(self_or_cls, pname)
 
-    def deserialize_parameters(self_, serialization, subset=None, mode='json') -> dict:
+    def deserialize_parameters(self_, serialization, subset: Union[Iterable[str], None]=None, mode: str='json') -> dict:
         """
-        Deserialize the given serialized data. This data can be used to create a
-        `Parameterized` object or update the parameters of an existing `Parameterized` object.
+        Deserialize the given serialized data. This data can be used to
+        create a :class:`Parameterized` object or update the parameters
+        of an existing :class:`Parameterized` object.
 
         Parameters
         ----------
         serialization : str
-            The serialized parameter data as a JSON string.
-        subset : list of str, optional
-            A list of parameter names to deserialize. If `None`, all parameters will be
-            deserialized. Defaults to `None`.
+            The serialized parameter data.
+        subset : iterable of str, optional
+            An iterable of parameter names to deserialize. If ``None``, all
+            parameters will be deserialized. Default is ``None``.
         mode : str, optional
-            The serialization format. By default, only 'json' is supported.
-            Defaults to 'json'.
+            The serialization format. By default, only ``'json'`` is supported.
+            Default is ``'json'``.
 
         Returns
         -------
         dict
             A dictionary with parameter names as keys and deserialized values.
 
-        User Guide
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        References
         ----------
         https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#serializing-with-json
 
@@ -2865,60 +3191,162 @@ class Parameters:
         ...
         >>> serialized_data = '{"a": 1, "b": "hello"}'
         >>> deserialized_data = P.param.deserialize_parameters(serialized_data)
-        >>> print(deserialized_data)
+        >>> deserialized_data
         {'a': 1, 'b': 'hello'}
         >>> instance = P(**deserialized_data)
-
+        >>> instance
+        P(a=1, b='hello', name='P...')
         """
+        if mode not in Parameter._serializers:
+            raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
 
-    def deserialize_value(self_, pname, value, mode='json'):
-        self_or_cls = self_.self_or_cls
+    def deserialize_value(self_, pname: str, value, mode: str='json'):
+        """
+        Deserialize the value of a specific parameter.
+
+        This method deserializes a value for a given parameter on a
+        :class:`Parameterized` object using the specified deserialization mode.
+
+        Parameters
+        ----------
+        pname : str
+            The name of the parameter whose value is to be deserialized.
+        value : Any
+            The serialized value to be deserialized.
+        mode : str, optional
+            The deserialization format to use. By default, only ``'json'`` is supported.
+            Default is ``'json'``.
+
+        Returns
+        -------
+        Any
+            The deserialized value of the specified parameter.
+
+        Raises
+        ------
+        ValueError
+            If the specified deserialization mode is not supported.
+
+        References
+        ----------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#deserializing-with-json
+
+        Examples
+        --------
+        Deserialize the value of a specific parameter:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number()
+        ...     b = param.String()
+        >>> p = P(a=1, b="hello")
+
+        Deserialize the value of parameter ``'a'``:
+
+        >>> deserialized_value = p.param.deserialize_value('a', '10')
+        >>> deserialized_value
+        10
+        """
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
-    def schema(self_, safe=False, subset=None, mode='json'):
-        """Return a schema for the parameters on this Parameterized object."""
-        self_or_cls = self_.self_or_cls
+    def schema(self_, safe: bool=False, subset: Union[Iterable[str], None]=None, mode: str='json'):
+        """
+        Generate a schema for the parameters on this :class:`Parameterized` object.
+
+        This method provides a schema representation of the parameters on a
+        Parameterized object, including their metadata, using the specified
+        serialization mode.
+
+        Parameters
+        ----------
+        safe : bool, optional
+            If ``True``, the schema will only include parameters marked as safe for
+            serialization. Default is ``False``.
+        subset : Iterable[str], optional
+            An iterable of parameter names to include in the schema. If None, all
+            parameters will be included. Default is ``None``.
+        mode : str, optional
+            The serialization format to use. By default, only ``'json'`` is supported.
+            Default is ``'json'``.
+
+        Returns
+        -------
+        dict
+            A schema dictionary representing the parameters and their metadata.
+
+        Raises
+        ------
+        ValueError
+            If the specified serialization mode is not supported.
+
+        References
+        ----------
+        https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#json-schemas
+
+        Examples
+        --------
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number(default=1, bounds=(0, 10), doc="A numeric parameter")
+        ...     b = param.String(default="hello", doc="A string parameter")
+        >>> p = P()
+
+        Generate the schema for all parameters:
+
+        >>> schema = p.param.schema()
+        >>> schema
+        {'name': {'anyOf': [{'type': 'string'}, {'type': 'null'}],
+         'description': "String identifier for this object. Default is the object's class name plus a unique integer",
+         'title': 'Name'},
+        'a': {'type': 'number',...
+        }
+        """
         if mode not in Parameter._serializers:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
+        self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
         return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
-    # PARAM3_DEPRECATION
-    # same as values() but returns list, not dict
-    @_deprecated(extra_msg="""
-        Use `.param.values().items()` instead (or `.param.values()` for the
-        common case of `dict(....param.get_param_values())`)
-    """, warning_cat=_ParamFutureWarning)
-    def get_param_values(self_, onlychanged=False):
+    def values(self_, onlychanged: bool = False) -> dict[str, Any]:
         """
-        Return a list of name,value pairs for all Parameters of this
-        object.
+        Retrieve a dictionary of parameter names and their current values.
 
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
+        Parameters
+        ----------
+        onlychanged : bool, optional
+            If ``True``, only parameters with values different from their defaults are
+            included (applicable only to instances). Default is ``False``.
 
-        .. deprecated:: 1.12.0
-            Use `.param.values().items()` instead (or `.param.values()` for the
-            common case of `dict(....param.get_param_values())`)
-        """
-        vals = self_.values(onlychanged)
-        return [(k, v) for k, v in vals.items()]
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing parameter names as keys and their current values
+            as values.
 
-    def values(self_, onlychanged=False):
-        """
-        Return a dictionary of name,value pairs for the Parameters of this
-        object.
+        Examples
+        --------
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     a = param.Number(default=0)
+        ...     b = param.String(default="hello")
+        >>> p = P(a=10)
 
-        When called on an instance with onlychanged set to True, will
-        only return values that are not equal to the default value
-        (onlychanged has no effect when called on a class).
+        Get all parameter values:
+
+        >>> p.param.values()
+        {'a': 10, 'b': 'hello', 'name': 'P...'}
+
+        Get only changed parameter values:
+
+        >>> p.param.values(onlychanged=True)
+        {'a': 10}
         """
         self_or_cls = self_.self_or_cls
         vals = []
@@ -2932,13 +3360,16 @@ class Parameters:
         vals.sort(key=itemgetter(0))
         return dict(vals)
 
+    # Please update the docstring with better description and examples
+    # I've (MarcSkovMadsen) not been able to understand this. Its probably because I lack context.
+    # Its not mentioned in the documentation or pytests
     def force_new_dynamic_value(self_, name): # pylint: disable-msg=E0213
         """
         Force a new value to be generated for the dynamic attribute
         name, and return it.
 
         If name is not dynamic, its current value is returned
-        (i.e. equivalent to getattr(name).
+        (i.e. equivalent to ``getattr(name)``).
         """
         cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.objects('existing').get(name)
@@ -2957,14 +3388,47 @@ class Parameters:
         else:
             return param_obj._force(slf, cls)
 
-    def get_value_generator(self_,name): # pylint: disable-msg=E0213
+    def get_value_generator(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
-        Return the value or value-generating object of the named
-        attribute.
+        Retrieve the value or value-generating object of a named parameter.
 
-        For most parameters, this is simply the parameter's value
-        (i.e. the same as getattr()), but Dynamic parameters have
-        their value-generating object returned.
+        For most parameters, this is simply the parameter's value (i.e. the
+        same as ``getattr()``), but :class:`param.Dynamic` parameters have their
+        value-generating object returned.
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter whose value or value-generating object is
+            to be retrieved.
+
+        Returns
+        -------
+        Any
+            The current value of the parameter, a value-generating object for
+            :class:`param.Dynamic` parameters.
+
+        Examples
+        --------
+        >>> import param
+        >>> import numbergen
+        >>> class MyClass(param.Parameterized):
+        ...     x = param.String(default="Hello")
+        ...     y = param.Dynamic(default=numbergen.UniformRandom(lbound=-1, ubound=1, seed=1))
+
+        >>> instance = MyClass()
+
+        Access the parameter value directly:
+
+        >>> instance.y
+        -0.7312715117751976
+        >>> instance.y
+        0.6948674738744653
+
+        Retrieve the parameter's value or value-generating object:
+
+        >>> instance.param.get_value_generator("y")
+        <UniformRandom UniformRandom ...>
         """
         cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.objects('existing').get(name)
@@ -2986,18 +3450,48 @@ class Parameters:
             if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
                 value = cls_or_slf._param__private.values[name]
+            elif not callable(param_obj.default):
+                value = getattr(cls_or_slf, name)
             else:
                 # dealing with class or isn't set on the object
                 value = param_obj.default
 
         return value
 
-    def inspect_value(self_,name): # pylint: disable-msg=E0213
+    def inspect_value(self_,name: str) -> Any: # pylint: disable-msg=E0213
         """
-        Return the current value of the named attribute without modifying it.
+        Inspect the current value of a parameter without modifying it.
 
-        Same as getattr() except for Dynamic parameters, which have their
-        last generated value returned.
+        Parameters
+        ----------
+        name : str
+            The name of the parameter whose value is to be inspected.
+
+        Returns
+        -------
+        Any
+            The current value of the parameter, the last generated value for
+            :class:`param.Dynamic` parameters.
+
+        Examples
+        --------
+        >>> import param
+        >>> import numbergen
+        >>> class MyClass(param.Parameterized):
+        ...     x = param.String(default="Hello")
+        ...     y = param.Dynamic(default=numbergen.UniformRandom(lbound=-1, ubound=1, seed=1), doc="nothing")
+
+        >>> instance = MyClass()
+
+        Access the parameter value directly:
+
+        >>> instance.y
+        -0.7312715117751976
+
+        Inspect the parameter value without modifying it:
+
+        >>> instance.param.inspect_value("y")
+        -0.7312715117751976
         """
         cls_or_slf = self_.self_or_cls
         param_obj = cls_or_slf.param.objects('existing').get(name)
@@ -3016,14 +3510,45 @@ class Parameters:
 
         return value
 
-    def method_dependencies(self_, name, intermediate=False):
+    def method_dependencies(self_, name: str, intermediate: bool = False) -> list[PInfo]:
         """
-        Given the name of a method, returns a PInfo object for each dependency
-        of this method. See help(PInfo) for the contents of these objects.
+        Retrieve the parameter dependencies of a specified method.
 
-        By default intermediate dependencies on sub-objects are not
-        returned as these are primarily useful for internal use to
-        determine when a sub-object dependency has to be updated.
+        By default intermediate dependencies on sub-objects are not returned as
+        these are primarily useful for internal use to determine when a
+        sub-object dependency has to be updated.
+
+        Parameters
+        ----------
+        name : str
+            The name of the method whose dependencies are to be retrieved.
+        intermediate : bool, optional
+            If ``True``, includes intermediate dependencies on sub-objects. These are
+            primarily useful for internal purposes. Default is ``False``.
+
+        Returns
+        -------
+        list[PInfo]
+            A list of :class:`PInfo` objects representing the dependencies of the specified
+            method. Each :class:`PInfo` object contains information about the instance,
+            parameter, and the type of dependency.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Parameter()
+        ...     b = param.Parameter()
+        ...
+        ...     @param.depends('a', 'b', watch=True)
+        ...     def test(self):
+        ...         pass
+
+        Create an instance and inspect method dependencies:
+
+        >>> instance = MyClass()
+        >>> instance.param.method_dependencies('test')
+        [PInfo(inst=MyClass(a=None, b=None, name='MyClass...]
         """
         method = getattr(self_.self_or_cls, name)
         minfo = MInfo(cls=self_.cls, inst=self_.self, name=name,
@@ -3035,27 +3560,55 @@ class Parameters:
         return _resolve_mcs_deps(
             self_.self, deps, dynamic, intermediate=intermediate)
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg='Use instead `.param.method_dependencies`', warning_cat=_ParamFutureWarning)
-    def params_depended_on(self_, *args, **kwargs):
+    def outputs(self_) -> dict[str,tuple]:
         """
-        Given the name of a method, returns a PInfo object for each dependency
-        of this method. See help(PInfo) for the contents of these objects.
+        Retrieve a mapping of declared outputs for the Parameterized object.
 
-        By default intermediate dependencies on sub-objects are not
-        returned as these are primarily useful for internal use to
-        determine when a sub-object dependency has to be updated.
+        Parameters are declared as outputs using the :meth`output` decorator.
 
-        .. deprecated: 2.0.0
-            Use instead `.param.method_dependencies`
-        """
-        return self_.method_dependencies(*args, **kwargs)
+        Returns
+        -------
+        dict
+            A dictionary mapping output names to a tuple of:
+            - Parameter type (:class:`Parameter`).
+            - Bound method of the output.
+            - Index into the output, or ``None`` if there is no specific index.
 
-    def outputs(self_):
-        """
-        Return a mapping between any declared outputs and a tuple
-        of the declared Parameter type, the output method, and the
-        index into the output if multiple outputs are returned.
+        Examples
+        --------
+        Declare a single output in a :class:`Parameterized` class:
+
+        >>> import param
+        >>> class P(param.Parameterized):
+        ...     @param.output()
+        ...     def single_output(self):
+        ...         return 1
+
+        Access the outputs:
+
+        >>> p = P()
+        >>> p.param.outputs()
+        {'single_output': (<param.parameterized.Parameter at 0x...>,
+          <bound method P.single_output of P(name='P...')>,
+          None)}
+
+        Declare multiple outputs:
+
+        >>> class Q(param.Parameterized):
+        ...     @param.output(('output1', param.Number), ('output2', param.String))
+        ...     def multi_output(self):
+        ...         return 42, "hello"
+
+        Access the outputs:
+
+        >>> q = Q()
+        >>> q.param.outputs()
+        {'output1': (<param.parameters.Number at 0x...>,
+          <bound method Q.multi_output of Q(name='Q...')>,
+          0),
+         'output2': (<param.parameterized.String at 0x...>,
+          <bound method Q.multi_output of Q(name='Q...')>,
+          1)}
         """
         outputs = {}
         for cls in classlist(self_.cls):
@@ -3168,7 +3721,11 @@ class Parameters:
             deps.append(info)
         return deps, dynamic_deps
 
-    def _register_watcher(self_, action, watcher, what='value'):
+    def _register_watcher(
+        self_,
+        action: Literal['append', 'remove'],
+        watcher: Watcher, what: str = 'value',
+    ):
         if self_.self is not None and not self_.self._param__private.initialized:
             raise RuntimeError(
                 '(Un)registering a watcher on a partially initialized Parameterized instance '
@@ -3188,49 +3745,107 @@ class Parameters:
                     watchers[parameter_name] = {}
                 if what not in watchers[parameter_name]:
                     watchers[parameter_name][what] = []
-                getattr(watchers[parameter_name][what], action)(watcher)
+                method = getattr(watchers[parameter_name][what], action)
             else:
                 watchers = self_[parameter_name].watchers
                 if what not in watchers:
                     watchers[what] = []
-                getattr(watchers[what], action)(watcher)
+                method = getattr(watchers[what], action)
+            try:
+                method(watcher)
+            except ValueError:
+                # ValueError raised when attempting to remove an already
+                # removed watcher. Error swallowed as unwatch is idempotent.
+                if action != 'remove':
+                    raise
 
-    def watch(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
+    def watch(
+        self_,
+        fn,
+        parameter_names: Union[str, list[str]],
+        what: str = 'value',
+        onlychanged: bool = True,
+        queued: bool = False,
+        precedence: int = 0,
+    ) -> Watcher:
         """
-        Register the given callback function `fn` to be invoked for
-        events on the indicated parameters.
+        Register a callback function to be invoked for parameter events.
 
-        `what`: What to watch on each parameter; either the value (by
-        default) or else the indicated slot (e.g. 'constant').
+        This method allows you to register a callback function (``fn``) that will
+        be triggered when specified events occur on the indicated parameters. The
+        behavior of the watcher can be customized using various options.
 
-        `onlychanged`: By default, only invokes the function when the
-        watched item changes, but if `onlychanged=False` also invokes
-        it when the `what` item is set to its current value again.
+        Parameters
+        ----------
+        fn : callable
+            The callback function to invoke when an event occurs. This function
+            will be provided with :class:`Event` objects as positional arguments,
+            allowing it to determine the triggering events.
+        parameter_names : str or list[str]
+            A parameter name or a list of parameter names to watch for events.
+        what : str, optional
+            The type of change to watch for. By default, this is ``'value'``,
+            but it can be set to other parameter attributes such as ``'constant'``.
+            Default is ``'value'``.
+        onlychanged : bool, optional
+            If ``True`` (default), the callback is only invoked when the watched
+            item changes. If ``False``, the callback is invoked even when the ```what```
+            item is set to its current value.
+        queued : bool, optional
+            By default (``False``), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting ``queued=True`` on this Watcher will queue up new downstream
+            events generated during ``fn`` until ``fn`` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
+        precedence : int, optional
+            The precedence level of the watcher. Lower precedence levels are
+            executed earlier. User-defined watchers must use positive precedence
+            values. Negative precedences are reserved for internal watchers
+            (e.g., those set up by :func:`depends`). Default is ``0``.
 
-        `queued`: By default, additional watcher events generated
-        inside the callback fn are dispatched immediately, effectively
-        doing depth-first processing of Watcher events. However, in
-        certain scenarios, it is helpful to wait to dispatch such
-        downstream events until all events that triggered this watcher
-        have been processed. In such cases setting `queued=True` on
-        this Watcher will queue up new downstream events generated
-        during `fn` until `fn` completes and all other watchers
-        invoked by that same event have finished executing),
-        effectively doing breadth-first processing of Watcher events.
+        Returns
+        -------
+        Watcher
+            The :class:`Watcher` object that encapsulates the registered callback.
 
-        `precedence`: Declares a precedence level for the Watcher that
-        determines the priority with which the callback is executed.
-        Lower precedence levels are executed earlier. Negative
-        precedences are reserved for internal Watchers, i.e. those
-        set up by param.depends.
+        See Also
+        --------
+        Watcher : Contains detailed information about the watcher object.
+        Event : Provides details about the triggering events.
 
-        When the `fn` is called, it will be provided the relevant
-        Event objects as positional arguments, which allows it to
-        determine which of the possible triggering events occurred.
+        Examples
+        --------
+        Register two watchers for parameter changes, one directly in
+        the constructor and one after the instance is created:
 
-        Returns a Watcher object.
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...     b = param.Number(default=2)
+        ...
+        ...     def __init__(self, **params):
+        ...         super().__init__(**params)
+        ...         self.param.watch(self.callback, ['a'])
+        ...
+        ...     def callback(self, event):
+        ...         print(f"Event triggered by: {event.name}, new value: {event.new}")
+        ...
+        >>> instance = MyClass()
 
-        See help(Watcher) and help(Event) for the contents of those objects.
+        Watch for changes to ``b``:
+
+        >>> instance.param.watch(instance.callback, ['b'])
+
+        Trigger a change to invoke the callback:
+
+        >>> instance.a = 10
+        Event triggered by: a, new value: 10
+        >>> instance.b = 11
+        Event triggered by: b, new value: 11
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -3246,24 +3861,162 @@ class Parameters:
         self_._register_watcher('append', watcher, what)
         return watcher
 
-    def unwatch(self_, watcher):
-        """Remove the given Watcher object (from `watch` or `watch_values`) from this object's list."""
-        try:
-            self_._register_watcher('remove', watcher, what=watcher.what)
-        except Exception:
-            self_.warning(f'No such watcher {str(watcher)} to remove.')
-
-    def watch_values(self_, fn, parameter_names, what='value', onlychanged=True, queued=False, precedence=0):
+    def unwatch(self_, watcher: Watcher) -> None:
         """
-        Easier-to-use version of `watch` specific to watching for changes in parameter values.
+        Remove a watcher from this object's list of registered watchers.
 
-        Only allows `what` to be 'value', and invokes the callback `fn` using keyword
-        arguments <param_name>=<new_value> rather than with a list of Event objects.
+        This method unregisters a previously registered :class:`Watcher` object,
+        effectively stopping it from being triggered by events on the associated
+        parameters. Calling unwatch with an already unregistered watcher
+        is a no-op.
+
+        Parameters
+        ----------
+        watcher : Watcher
+            The :class:`Watcher` object to remove. This should be an object returned
+            by a previous call to :meth:`watch` or :meth:`watch_values`.
+
+        See Also
+        --------
+        watch : Registers a new watcher to observe parameter changes.
+        watch_values : Registers a watcher specifically for value changes.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...
+        ...     def callback(self, event):
+        ...         print(f"Triggered by {event.name}")
+        ...
+        >>> instance = MyClass()
+
+        Add a watcher:
+
+        >>> watcher = instance.param.watch(instance.callback, ['a'])
+
+        Trigger the watcher:
+
+        >>> instance.a = 10
+        Triggered by a
+
+        Remove the watcher:
+
+        >>> instance.param.unwatch(watcher)
+
+        No callback is triggered after removing the watcher:
+
+        >>> instance.a = 20  # No output
+
+        Calling ``unwatch()`` again has no effect:
+
+        >>> instance.param.unwatch(watcher)
+        """
+        self_._register_watcher('remove', watcher, what=watcher.what)
+
+    def watch_values(
+        self_,
+        fn: Callable,
+        parameter_names: Union[str, list[str]],
+        what: Literal["value"] = 'value',
+        onlychanged: bool = True,
+        queued: bool = False,
+        precedence: int = 0
+    ) -> Watcher:
+        """
+        Register a callback function for changes in parameter values.
+
+        This method is a simplified version of :meth:`watch`, specifically designed for
+        monitoring changes in parameter values. Unlike :meth:`watch`, the callback is
+        invoked with keyword arguments (``<param_name>=<new_value>``) instead of
+        :class:`Event` objects.
+
+        Parameters
+        ----------
+        fn : Callable
+            The callback function to invoke when a parameter value changes. The
+            function is called with keyword arguments where the parameter names
+            are keys, and their new values are values.
+        parameter_names : str or list of str
+            The name(s) of the parameters to monitor. Can be a single parameter
+            name, a list of parameter names, or a tuple of parameter names.
+        what : str, optional
+            The type of change to watch for. Must be ``'value'``. Default is ``'value'``.
+
+            .. deprecated:: 2.3.0
+        onlychanged : bool, optional
+            If ``True`` (default), the callback is only invoked when the parameter value
+            changes. If ``False``, the callback is invoked even when the parameter is
+            set to its current value.
+        queued : bool, optional
+            By default (``False``), additional watcher events generated inside the
+            callback fn are dispatched immediately, effectively doing depth-first
+            processing of Watcher events. However, in certain scenarios, it is
+            helpful to wait to dispatch such downstream events until all events
+            that triggered this watcher have been processed. In such cases
+            setting ``queued=True`` on this Watcher will queue up new downstream
+            events generated during ``fn`` until ``fn`` completes and all other
+            watchers invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
+        precedence : int, optional
+            The precedence level of the watcher. Lower precedence values are executed
+            earlier. User-defined watchers must use positive precedence values.
+            Default is ``0``.
+
+        Returns
+        -------
+        Watcher
+            The :class:`Watcher` object encapsulating the registered callback.
+
+        Notes
+        -----
+        - This method is a convenient shorthand for :meth:`watch` when only monitoring
+          changes in parameter values is needed.
+        - Callback functions receive new values as keyword arguments, making it easier
+          to work with parameter updates.
+
+        See Also
+        --------
+        watch : General-purpose watcher registration supporting a broader range of events.
+
+        Examples
+        --------
+        Monitor parameter value changes:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...     b = param.Number(default=2)
+        ...
+        ...     def callback(self, a=None, b=None):
+        ...         print(f"Callback triggered with a={a}, b={b}")
+        ...
+        >>> instance = MyClass()
+
+        Register a watcher:
+
+        >>> instance.param.watch_values(instance.callback, ['a', 'b'])
+        Watcher(inst=MyClass(a=1, b=2, name=...)
+
+        Trigger changes to invoke the callback:
+
+        >>> instance.a = 10
+        Callback triggered with a=10, b=None
+        >>> instance.b = 20
+        Callback triggered with a=None, b=20
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
+        if what != 'value':
+            warnings.warn(
+                'The keyword "what" is deprecated and will be removed in a '
+                'future version.',
+                category=_ParamFutureWarning,
+                stacklevel=_find_stack_level(),
+            )
         assert what == 'value'
         if isinstance(parameter_names, list):
             parameter_names = tuple(parameter_names)
@@ -3277,29 +4030,6 @@ class Parameters:
         return watcher
 
     # Instance methods
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `{k:v.default for k,v in p.param.objects().items()}`", warning_cat=_ParamFutureWarning)
-    def defaults(self_):
-        """
-        Return {parameter_name:parameter.default} for all non-constant
-        Parameters.
-
-        Note that a Parameter for which instantiate==True has its default
-        instantiated.
-
-        .. deprecated:: 1.12.0
-            Use instead `{k:v.default for k,v in p.param.objects().items()}`
-        """
-        self = self_.self
-        d = {}
-        for param_name, param in self.param.objects('existing').items():
-            if param.constant:
-                pass
-            if param.instantiate:
-                self.param._instantiate_param(param, dict_=d, key=param_name)
-            d[param_name] = param.default
-        return d
 
     # Designed to avoid any processing unless the print
     # level is high enough, though not all callers of message(),
@@ -3319,19 +4049,6 @@ class Parameters:
 
             get_logger(name=self_or_cls.name).log(level, msg, *args, **kw)
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="""Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`""", warning_cat=_ParamFutureWarning)
-    def print_param_values(self_):
-        """
-        Print the values of all this object's Parameters.
-
-        .. deprecated:: 1.12.0
-            Use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")`
-        """
-        self = self_.self
-        for name, val in self.param.values().items():
-            print(f'{self.name}.{name} = {val}')
-
     def warning(self_, msg,*args,**kw):
         """
         Print msg merged with args as a warning, unless module variable
@@ -3342,57 +4059,57 @@ class Parameters:
         """
         self_.log(WARNING, msg, *args, **kw)
 
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.MESSAGE, ...)`", warning_cat=_ParamFutureWarning)
-    def message(self_,msg,*args,**kw):
+    def log(self_, level: int, msg: str, *args, **kw) -> None:
         """
-        Print msg merged with args as a message.
+        Log a message at the specified logging level.
 
-        See Python's logging module for details of message formatting.
+        This method logs a message constructed by merging ``msg`` with ``args`` at
+        the indicated logging level. It supports logging levels defined in
+        Python's ``logging`` module plus VERBOSE, either obtained directly from
+        the logging module like ``logging.INFO``, or from parameterized like
+        ``param.parameterized.INFO``.
 
-        .. deprecated:: 1.12.0
-            Use instead `.param.log(param.MESSAGE, ...)`
-        """
-        self_.__db_print(INFO,msg,*args,**kw)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.VERBOSE, ...)`", warning_cat=_ParamFutureWarning)
-    def verbose(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a verbose message.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead `.param.log(param.VERBOSE, ...)`
-        """
-        self_.__db_print(VERBOSE,msg,*args,**kw)
-
-    # PARAM3_DEPRECATION
-    @_deprecated(extra_msg="Use instead `.param.log(param.DEBUG, ...)`", warning_cat=_ParamFutureWarning)
-    def debug(self_,msg,*args,**kw):
-        """
-        Print msg merged with args as a debugging statement.
-
-        See Python's logging module for details of message formatting.
-
-        .. deprecated:: 1.12.0
-            Use instead `.param.log(param.DEBUG, ...)`
-        """
-        self_.__db_print(DEBUG,msg,*args,**kw)
-
-    def log(self_, level, msg, *args, **kw):
-        """
-        Print msg merged with args as a message at the indicated logging level.
-
-        Logging levels include those provided by the Python logging module
-        plus VERBOSE, either obtained directly from the logging module like
-        `logging.INFO`, or from parameterized like `param.parameterized.INFO`.
-
-        Supported logging levels include (in order of severity)
+        Supported logging levels include (in order of severity):
         DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
 
-        See Python's logging module for details of message formatting.
+        Parameters
+        ----------
+        level : int
+            The logging level at which the message should be logged e.g., ``logging.INFO`` or
+            ``param.INFO``.
+        msg : str
+            The message to log. This message can include format specifiers,
+            which will be replaced with values from ``args``.
+        *args : tuple
+            Arguments to merge into `msg` using the format specifiers.
+        **kw : dict
+            Additional keyword arguments passed to the logging implementation.
+
+        Raises
+        ------
+        Exception
+            If the logging level is ``WARNING`` and warnings are treated as
+            exceptions (:data:`warnings_as_exceptions` is True).
+
+        Examples
+        --------
+        Log a message at the ``INFO`` level:
+
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     def log_message(self):
+        ...         self.param.log(INFO, "This is an info message.")
+
+        >>> instance = MyClass()
+        >>> instance.param.log(param.INFO, "This is an info message.")
+        INFO:param.MyClass...: This is an info message.
+
+        Log a warning and treat it as an exception:
+
+        >>> param.parameterized.warnings_as_exceptions = True
+        >>> instance.param.log(param.WARNING, "This will raise an exception.")
+        ...
+        Exception: Warning: This will raise an exception.
         """
         if level is WARNING:
             if warnings_as_exceptions:
@@ -3453,11 +4170,74 @@ class Parameters:
             elif hasattr(g,'_state_pop') and isinstance(g,Parameterized):
                 g._state_pop()
 
-    def pprint(self_, imports=None, prefix=" ", unknown_value='<?>',
-               qualify=False, separator=""):
+    def pprint(
+        self_,
+        imports: Union[list[str], None]=None,
+        prefix: str = " ",
+        unknown_value: str = "<?>",
+        qualify: bool = False,
+        separator: str = ""
+    )->str:
         """
-        (Experimental) Pretty printed representation that may be
-        evaluated with eval. See pprint() function for more details.
+        Generate a pretty-printed representation of the object.
+
+        This method provides a pretty-printed string representation of the object,
+        which can be evaluated using Python :func:`eval` to reconstruct the object. It is intended
+        for debugging, introspection, or generating reproducible representations
+        of :class:`Parameterized` objects.
+
+        Parameters
+        ----------
+        imports : list of str, optional
+            A list of import statements to include in the generated representation.
+            Defaults to None, meaning no imports are included.
+        prefix : str, optional
+            A string to prepend to each line of the representation for indentation
+            or formatting purposes. Default is a single space (``" "``).
+        unknown_value : str, optional
+            A placeholder string for values that cannot be determined or represented.
+            Default is ``<?>``.
+        qualify : bool, optional
+            If True, includes fully qualified names (e.g., ``module.Class``) in the
+            representation. Default is ``False``.
+        separator : str, optional
+            A string used to separate elements in the generated representation.
+            Default is an empty string (``""``).
+
+        Returns
+        -------
+        str
+            A pretty-printed string representation of the object that can be
+            evaluated using :func:`eval`.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is called at the class level instead of an instance
+            of :class:`Parameterized`.
+
+        Notes
+        -----
+        - The generated representation assumes the necessary imports are provided
+          for evaluation with :func:`eval`.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=10)
+        ...     b = param.String(default="hello")
+        >>> instance = MyClass(a=20)
+
+        Pretty-print the instance:
+
+        >>> instance.param.pprint()
+        'MyClass(a=20)'
+
+        Use :func:`eval` to create an instance:
+
+        >>> eval(instance.param.pprint())
+        MyClass(a=20, b='hello', name='MyClass00004')
         """
         self = self_.self_or_cls
         if not isinstance(self, Parameterized):
@@ -3555,15 +4335,15 @@ class ParameterizedMetaclass(type):
     constant value 3 (and thereby losing all other info about that
     Parameter, such as the doc string, bounds, etc.).
 
-    The __init__ method is used when defining a Parameterized class,
+    The ``__init__`` method is used when defining a Parameterized class,
     usually when the module where that class is located is imported
-    for the first time.  That is, the __init__ in this metaclass
-    initializes the *class* object, while the __init__ method defined
+    for the first time.  That is, the ``__init__`` in this metaclass
+    initializes the *class* object, while the ``__init__`` method defined
     in each Parameterized class is called for each new instance of
     that class.
 
     Additionally, a class can declare itself abstract by having an
-    attribute __abstract set to True. The 'abstract' attribute can be
+    attribute ``__abstract`` set to True. The ``abstract`` attribute can be
     used to find out if a class is abstract or not.
     """
 
@@ -3573,8 +4353,8 @@ class ParameterizedMetaclass(type):
         the class itself).
 
         Initializes all the Parameters by looking up appropriate
-        default values (see __param_inheritance()) and setting
-        attrib_names (see _set_names()).
+        default values (see ``__param_inheritance()``) and setting
+        ``attrib_names`` (see ``_set_names()``).
         """
         type.__init__(mcs, name, bases, dict_)
 
@@ -3743,12 +4523,12 @@ class ParameterizedMetaclass(type):
         """Set an attribute, supporting special behavior for Parameters.
 
         If the attribute being set corresponds to a Parameter descriptor and the
-        new value is not a Parameter, the descriptor's `__set__` method is invoked
+        new value is not a Parameter, the descriptor's ``__set__`` method is invoked
         with the provided value. This ensures proper handling of Parameter values.
 
         In all other cases, the attribute is set normally. If the new value is a
         Parameter, the method ensures that the value is inherited correctly from
-        Parameterized superclasses as described in `__param_inheritance()`.
+        Parameterized superclasses as described in ``__param_inheritance()``.
 
         Parameters
         ----------
@@ -3966,36 +4746,89 @@ class ParameterizedMetaclass(type):
 script_repr_suppress_defaults=True
 
 
-def script_repr(val, imports=None, prefix="\n    ", settings=[],
-        qualify=True, unknown_value=None, separator="\n",
-        show_imports=True):
-    """
-    Variant of pprint() designed for generating a (nearly) runnable script.
+def script_repr(
+    val: 'Parameterized',
+    imports: Optional[list[str]] = None,
+    prefix: str = "\n    ",
+    settings: list[Any] = [],
+    qualify: bool = True,
+    unknown_value: Optional[Any] = None,
+    separator: str = "\n",
+    show_imports: bool = True,
+) -> str:
+    r"""
+    Generate a nearly runnable Python script representation of a Parameterized object.
 
-    The output of script_repr(parameterized_obj) is meant to be a
-    string suitable for running using `python file.py`. Not every
-    object is guaranteed to have a runnable script_repr
-    representation, but it is meant to be a good starting point for
-    generating a Python script that (after minor edits) can be
-    evaluated to get a newly initialized object similar to the one
-    provided.
+    The ``script_repr`` function generates a string representation of a
+    :class:`Parameterized` object, focusing on its parameter state. The output is
+    intended to serve as a starting point for creating a Python script that,
+    after minimal edits, can recreate an object with a similar parameter
+    configuration. It captures only the state of the object's parameters, not
+    its internal (non-parameter) attributes.
 
-    The new object will only have the same parameter state, not the
-    same internal (attribute) state; the script_repr captures only
-    the state of the Parameters of that object and not any other
-    attributes it may have.
+    Parameters
+    ----------
+    val : Parameterized
+        The class`Parameterized` object to be represented.
+    imports : list of str, optional
+        A list of import statements to include in the output. If not provided,
+        the function will populate this list based on the required modules.
+    prefix : str, optional
+        A string prefix added to each line of the representation for
+        indentation. Default is ``"\n    "``.
+    settings : list of Any, optional
+        A list of settings affecting the formatting of the representation.
+        Default is an empty list.
+    qualify : bool, optional
+        Whether to include fully qualified names (e.g., ``module.Class``).
+        Default is ``True``.
+    unknown_value : Any, optional
+        The value to use for parameters or attributes with unknown values.
+        Default is ``None``.
+    separator : str, optional
+        The string used to separate elements in the representation. Default is
+        ``"\n"``.
+    show_imports : bool, optional
+        Whether to include import statements in the output. Default is ``True``.
 
-    If show_imports is True (default), includes import statements
-    for each of the modules required for the objects being
-    instantiated. This list may not be complete, as it typically
-    includes only the imports needed for the Parameterized object
-    itself, not for values that may have been supplied to Parameters.
+    Returns
+    -------
+    str
+        A string representation of the object, suitable for use in a Python
+        script.
 
-    Apart from show_imports, accepts the same arguments as pprint(),
-    so see pprint() for explanations of the arguments accepted. The
-    default values of each of these arguments differ from pprint() in
-    ways that are more suitable for saving as a separate script than
-    for e.g. pretty-printing at the Python prompt.
+    Notes
+    -----
+    - The output script is designed to be a good starting point for
+      recreating the parameter state of the object. However, it may require
+      manual edits to ensure full compatibility or to recreate complex states.
+    - The ``imports`` list may not include all modules required for parameter
+      values, focusing primarily on the modules needed for the Parameterized
+      object itself.
+
+    References
+    ----------
+    See https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#script-repr.
+
+    Examples
+    --------
+    Create a Python script representation of a Parameterized object:
+
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     a = param.Number(default=10, doc="A numeric parameter.")
+    ...     b = param.String(default="hello", doc="A string parameter.")
+    ...
+    >>> instance = MyClass(a=20, b="world")
+    >>> print(param.script_repr(instance))
+
+    .. code-block:: text
+
+        import __main__
+
+        __main__.MyClass(a=20,
+
+                b='world')
     """
     if imports is None:
         imports = []
@@ -4135,12 +4968,14 @@ dbprint_prefix=None
 
 def truncate(str_, maxlen = 30):
     """Return HTML-safe truncated version of given string."""
+    import html
     rep = (str_[:(maxlen-2)] + '..') if (len(str_) > (maxlen-2)) else str_
     return html.escape(rep)
 
 
 def _get_param_repr(key, val, p, vallen=30, doclen=40):
     """HTML representation for a single Parameter object and its value."""
+    import html
     if isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
         value = val.param._repr_html_(open=False)
     elif hasattr(val, "_repr_html_"):
@@ -4181,7 +5016,7 @@ def _get_param_repr(key, val, p, vallen=30, doclen=40):
     if getattr(p, 'allow_None', False):
         range_ = ' '.join(s for s in ['<i>nullable</i>', range_] if s)
 
-    tooltip = f' class="param-doc-tooltip" data-tooltip="{escape(p.doc.strip())}"' if p.doc else ''
+    tooltip = f' class="param-doc-tooltip" data-tooltip="{html.escape(p.doc.strip())}"' if p.doc else ''
 
     return (
         f'<tr>'
@@ -4383,51 +5218,111 @@ class _InstancePrivate:
 
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
-    Base class for named objects that support Parameters and message
-    formatting.
+    A base class for creating Parameterized objects.
 
-    Automatic object naming: Every Parameterized instance has a name
-    parameter.  If the user doesn't designate a name=<str> argument
-    when constructing the object, the object will be given a name
-    consisting of its class name followed by a unique 5-digit number.
+    The ``Parameterized`` base class enables two main use cases:
 
-    Automatic parameter setting: The Parameterized __init__ method
-    will automatically read the list of keyword parameters.  If any
-    keyword matches the name of a Parameter (see Parameter class)
-    defined in the object's class or any of its superclasses, that
-    parameter in the instance will get the value given as a keyword
-    argument.  For example:
+    - Defining rich and run-time validated class and instance attributes,
+      called :class:`Parameter`.
+    - Watching :class:`Parameter` for changes and reacting through callbacks.
 
-    >>> class Foo(Parameterized):
-    ...     xx = Parameter(default=1)
+    This makes it well-suited for robust, maintainable code bases and
+    particularly useful in interactive applications requiring reactive behavior.
 
-    >>> foo = Foo(xx=20)
+    Attributes
+    ----------
+    name : str
+        Class/instance name.
+    param : Parameters
+        ``.param`` namespace.
 
-    in this case foo.xx gets the value 20.
+    References
+    ----------
+    https://param.holoviz.org/user_guide/Parameters.html.
 
-    When initializing a Parameterized instance ('foo' in the example
-    above), the values of parameters can be supplied as keyword
-    arguments to the constructor (using parametername=parametervalue);
-    these values will override the class default values for this one
-    instance.
+    Examples
+    --------
+    Defining a class with two :class:`Parameter`s and a callback run on changes
+    to ``my_number``.
 
-    If no 'name' parameter is supplied, self.name defaults to the
-    object's class name with a unique number appended to it.
+    >>> import param
+    >>> class MyClass(param.Parameterized):
+    ...     my_number = param.Number(default=1, bounds=(0, 10), doc='A numeric value')
+    ...     my_list = param.List(default=[1, 2, 3], item_type=int, doc='A list of integers')
+    ...
+    ...     @param.depends('my_number', watch=True)
+    ...     def callback(self):
+    ...         print(f'my_number new value: {self.my_number}')
 
-    Message formatting: Each Parameterized instance has several
-    methods for optionally printing output. This functionality is
-    based on the standard Python 'logging' module; using the methods
-    provided here, wraps calls to the 'logging' module's root logger
-    and prepends each message with information about the instance
-    from which the call was made. For more information on how to set
-    the global logging level and change the default message prefix,
-    see documentation for the 'logging' module.
+    Parameters are available as class attributes:
+
+    >>> MyClass.my_number
+    1
+
+    >>> obj = MyClass(my_number=2)
+
+    Constructor arguments override default values and default :class:`Parameter`
+    values are set unless overridden:
+
+    >>> obj.my_number
+    2
+    >>> obj.my_list
+    [1, 2, 3]
+
+    :class:`Parameter` values are dynamically validated:
+
+    >>> obj.my_number = 5  # Valid update within bounds.
+
+    Attempting to set an invalid value raises an error:
+
+    >>> try:
+    >>>     obj.my_number = 15
+    >>> except Exception as e:
+    >>>     print(repr(e))
+    ValueError: Number parameter 'MyClass.my_number' must be at most 10, not 15.
+
+    Updating ``my_number`` executes the callback method:
+
+    >>> obj.my_number = 7
+    my_number new value: 7
     """
 
     name = String(default=None, constant=True, doc="""
-        String identifier for this object.""")
+        String identifier for this object. Default is the object's class name
+        plus a unique integer""")
 
     def __init__(self, **params):
+        """
+        Initialize a :class:`Parameterized` instance with optional Parameter values.
+
+        Optional Parameter values must be supplied as keyword arguments
+        (``param_name=value``), overriding their default values for this one
+        instance. Any parameters not explicitly set will retain their defined
+        default values.
+
+        If no ``name`` parameter is provided, the instance's ``name`` attribute will
+        default to an identifier string composed of the class name followed by
+        an incremental 5-digit number.
+
+        Parameters
+        ----------
+        **params
+            Optional keyword arguments mapping :class:`Parameter` names to values.
+
+        Raises
+        ------
+        TypeError
+            If one of the keywords of ``params`` is not a :class:`Parameter` name.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     value = param.Number(default=10, bounds=(0, 20))
+        >>> obj = MyClass(value=15)
+
+        The ``value`` parameter is set to 15 for this instance, overriding the default.
+        """
         global object_count
 
         # Setting a Parameter value in an __init__ block before calling
@@ -4453,22 +5348,22 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self._param__private.refs = refs
 
     @property
-    def param(self):
+    def param(self) -> Parameters:
         """
-        The `.param` namespace for `Parameterized` classes and instances.
+        The ``.param`` namespace for :class:`Parameterized` classes and instances.
 
         This namespace provides access to powerful methods and properties for managing
         parameters in a `Parameterized` object. It includes utilities for adding parameters,
         updating parameters, debugging, serialization, logging, and more.
 
-        User Guide
+        References
         ----------
         For more details on parameter objects and instances, see:
         https://param.holoviz.org/user_guide/Parameters.html#parameter-objects-and-instances
 
         Examples
         --------
-        Basic usage of `.param` in a `Parameterized` class:
+        Basic usage of ``.param`` in a :class:`Parameterized` class:
 
         >>> import param
         >>>
@@ -4477,11 +5372,11 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         >>>
         >>> my_instance = MyClass(value=0)
 
-        Access the `value` parameter of `my_instance`:
+        Access the ``value`` parameter of ``my_instance``:
 
         >>> my_instance.param.value  # the Parameter instance
 
-        Note that this is different from the current `value` of `my_instance`:
+        Note that this is different from the current ``value`` of ``my_instance``:
 
         >>> my_instance.value  # the current parameter value
         0
@@ -4571,18 +5466,20 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         return f"<{self.__class__.__name__} {self.name}>"
 
 
-def print_all_param_defaults():
-    """Print the default values for all imported Parameters."""
-    print("_______________________________________________________________________________")
-    print("")
-    print("                           Parameter Default Values")
-    print("")
-    classes = descendents(Parameterized)
-    classes.sort(key=lambda x:x.__name__)
-    for c in classes:
-        c.print_param_defaults()
-    print("_______________________________________________________________________________")
+class ParameterizedABCMetaclass(abc.ABCMeta, ParameterizedMetaclass):
+    """Metaclass for abstract base classes using :class:`Parameterized`.
 
+    Ensures compatibility between ``abc.ABCMeta`` and ``ParameterizedMetaclass``.
+    """
+
+
+class ParameterizedABC(Parameterized, metaclass=ParameterizedABCMetaclass):
+    """Base class for user-defined :class:`abc.ABC` that extends :class:`Parameterized`."""
+
+    def __init_subclass__(cls, **kwargs):
+        if cls.__bases__ and cls.__bases__[0] is ParameterizedABC:
+            setattr(cls, f'_{cls.__name__}__abstract', True)
+        super().__init_subclass__(**kwargs)
 
 
 # As of Python 2.6+, a fn's **args no longer has to be a
@@ -4591,26 +5488,66 @@ def print_all_param_defaults():
 # http://docs.python.org/whatsnew/2.6.html
 class ParamOverrides(dict):
     """
-    A dictionary that returns the attribute of a specified object if
-    that attribute is not present in itself.
+    A dictionary-like object that provides two-level lookup for parameter values.
 
-    Used to override the parameters of an object.
+    ``ParamOverrides`` allows overriding the parameters of a :class:`ParameterizedFunction`
+    or other :class:`Parameterized` object. When a parameter is accessed, it first checks
+    for the value in the supplied dictionary. If the value is not present, it falls
+    back to the parameter's default value on the overridden object.
+
+    This mechanism is used to combine explicit parameter values provided at
+    runtime with the default parameter values defined on a :class:`ParameterizedFunction`
+    or :class:`Parameterized` object.
+
+    References
+    ----------
+    See https://param.holoviz.org/user_guide/ParameterizedFunctions.html
+
+    Examples
+    --------
+    Use ``ParamOverrides`` to combine runtime arguments with default parameters:
+
+    >>> from param import Parameter, ParameterizedFunction, ParamOverrides
+    >>> class multiply(ParameterizedFunction):
+    ...    left  = Parameter(2, doc="Left-hand-side argument")
+    ...    right = Parameter(4, doc="Right-hand-side argument")
+    ...
+    ...    def __call__(self, **params):
+    ...        p = ParamOverrides(self, params)
+    ...        return p.left * p.right
+    >>> multiply()
+    8
+    >>> multiply(left=3, right=7)
+    21
     """
 
     # NOTE: Attribute names of this object block parameters of the
     # same name, so all attributes of this object should have names
     # starting with an underscore (_).
 
-    def __init__(self,overridden,dict_,allow_extra_keywords=False):
+    def __init__(
+        self,
+        overridden: Parameterized,
+        dict_: dict[str, Any],
+        allow_extra_keywords: bool=False
+    ):
         """
+        Initialize a ``ParamOverrides`` object.
 
-        If allow_extra_keywords is False, then all keys in the
-        supplied dict_ must match parameter names on the overridden
-        object (otherwise a warning will be printed).
-
-        If allow_extra_keywords is True, then any items in the
-        supplied dict_ that are not also parameters of the overridden
-        object will be available via the extra_keywords() method.
+        Parameters
+        ----------
+        overridden : Parameterized
+            The object whose parameters are being overridden.
+        dict_ : dict[str, Any]
+            A dictionary containing parameter overrides. Keys must match
+            parameter names on the overridden object unless
+            ``allow_extra_keywords`` is True.
+        allow_extra_keywords : bool, optional
+            If ``False``, all keys in ``dict_`` must correspond to parameter names
+            on the overridden object. A warning is printed for any mismatched
+            keys. If ``True``, mismatched keys are stored in ``_extra_keywords``
+            and can be accessed using the :meth:`extra_keywords` method. Default is
+            ``False``.
         """
         # This method should be fast because it's going to be
         # called a lot. This _might_ be faster (not tested):
@@ -4625,19 +5562,39 @@ class ParamOverrides(dict):
         else:
             self._check_params(dict_)
 
-    def extra_keywords(self):
+    def extra_keywords(self) -> dict[str, Any]:
         """
-        Return a dictionary containing items from the originally
-        supplied `dict_` whose names are not parameters of the
-        overridden object.
+        Retrieve extra keyword arguments not matching the overridden object's parameters.
+
+        This method returns a dictionary containing key-value pairs from the
+        originally supplied ``dict_`` that do not correspond to parameter names
+        of the overridden object. These extra keywords are only available if
+        ``allow_extra_keywords`` was set to ``True`` during the initialization of
+        the ``ParamOverrides`` instance.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary of extra keyword arguments that were not recognized as
+            parameters of the overridden object. If ``allow_extra_keywords`` was
+            set to ``False``, this method will return an empty dictionary.
         """
         return self._extra_keywords
 
-    def param_keywords(self):
+    def param_keywords(self)->dict[str, Any]:
         """
-        Return a dictionary containing items from the originally
-        supplied `dict_` whose names are parameters of the
-        overridden object (i.e. not extra keywords/parameters).
+        Retrieve parameters matching the overridden object's declared parameters.
+
+        This method returns a dictionary containing key-value pairs from the
+        originally supplied ``dict_`` whose keys correspond to parameters of the
+        overridden object. It excludes any extra keywords that are not part of
+        the object's declared parameters.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary of parameter names and their corresponding values,
+            limited to those recognized as parameters of the overridden object.
         """
         return {key: self[key] for key in self if key not in self.extra_keywords()}
 
@@ -4664,7 +5621,27 @@ class ParamOverrides(dict):
         else:
             dict.__setattr__(self,name,val)
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Any=None)->Any:
+        """
+        Retrieve the value for a given key, with a default if the key is not found.
+
+        This method attempts to retrieve the value associated with the specified
+        ``key``. If the ``key`` is not present in the ``ParamOverrides`` object, the
+        method returns the provided ``default`` value instead.
+
+        Parameters
+        ----------
+        key : str
+            The name of the parameter or key to look up.
+        default : Any, optional
+            The value to return if the specified ``key`` is not found. Default is ``None``.
+
+        Returns
+        -------
+        Any
+            The value associated with the ``key``, or the ``default`` value if the
+            ``key`` is not found.
+        """
         try:
             return self[key]
         except KeyError:
@@ -4707,11 +5684,57 @@ class ParameterizedFunction(Parameterized):
     """
     Acts like a Python function, but with arguments that are Parameters.
 
-    Implemented as a subclass of Parameterized that, when instantiated,
-    automatically invokes __call__ and returns the result, instead of
-    returning an instance of the class.
+    When a ``ParameterizedFunction`` is instantiated, it automatically calls
+    its ``__call__`` method and returns the result, acting like a Python function.
 
-    To obtain an instance of this class, call instance().
+    Features:
+
+    - Declarative parameterization: Arguments are defined as :class:`Parameter` objects,
+      enabling type validation, bounds checking, and documentation.
+    - Dynamic updates: Changes to parameters can dynamically influence the
+      function's behavior.
+
+    References
+    ----------
+    See https://param.holoviz.org/user_guide/ParameterizedFunctions.html
+
+    Notes
+    -----
+    - Subclasses of ``ParameterizedFunction`` must implement the ``__call__`` method,
+      which defines the primary functionality of the function.
+    - The :meth:`instance` method can be used to obtain an object representation of the
+      class without triggering the function's execution.
+
+    Examples
+    --------
+    Define a subclass of :class:`ParameterizedFunction`:
+
+    >>> import param
+    >>> class Scale(param.ParameterizedFunction):
+    ...     multiplier = param.Number(default=2, bounds=(0, 10), doc="The multiplier value.")
+    ...
+    ...     def __call__(self, x):
+    ...         return x * self.multiplier
+
+    Instantiating the parameterized function calls it immediately:
+
+    >>> result = Scale(5)
+    >>> result
+    10
+
+    Access the instance explicitly:
+
+    >>> scale3 = Scale.instance(multiplier=3)
+    >>> scale3.multiplier
+    3
+    >>> scale3(5)
+    15
+
+    Customize parameters dynamically:
+
+    >>> scale3.multiplier = 4
+    >>> scale3(5)
+    20
     """
 
     __abstract = True
@@ -4722,8 +5745,46 @@ class ParameterizedFunction(Parameterized):
     @bothmethod
     def instance(self_or_cls,**params):
         """
-        Return an instance of this class, copying parameters from any
-        existing instance provided.
+        Create and return an instance of this class.
+
+        This method returns an instance of the :class:`ParameterizedFunction` class,
+        copying parameter values from any existing instance provided or initializing
+        them with the specified ``params``.
+
+        This method is useful for obtaining a persistent object representation of
+        a :class:`ParameterizedFunction` without triggering its execution (``__call__``).
+
+        Parameters
+        ----------
+        **params : dict
+            Parameter values to initialize the instance with. If an existing instance
+            is used, its parameters are copied and updated with the provided values.
+
+        Returns
+        -------
+        ParameterizedFunction
+            An instance of the class with the specified or inherited parameters.
+
+        References
+        ----------
+        See https://param.holoviz.org/user_guide/ParameterizedFunctions.html
+
+        Examples
+        --------
+        Create an instance with default parameters:
+
+        >>> import param
+        >>> class Scale(param.ParameterizedFunction):
+        ...     multiplier = param.Number(default=2, bounds=(0, 10), doc="The multiplier value.")
+        ...
+        >>> instance = Scale.instance()
+        >>> instance.multiplier
+        2
+
+        Use the instance:
+
+        >>> instance(5)
+        10
         """
         if isinstance (self_or_cls,ParameterizedMetaclass):
             cls = self_or_cls
@@ -4740,7 +5801,7 @@ class ParameterizedFunction(Parameterized):
         else:                 inst.__name__ = self_or_cls.name
         return inst
 
-    def __new__(class_,*args,**params):
+    def __new__(class_,*args,**params) -> Any:
         # Create and __call__() an instance of this class.
         inst = class_.instance()
         inst.param._set_name(class_.__name__)
@@ -4816,59 +5877,3 @@ class default_label_formatter(ParameterizedFunction):
 
 
 label_formatter = default_label_formatter
-
-
-# PARAM3_DEPRECATION: Should be able to remove this; was originally
-# adapted from OProperty from
-# infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
-# but since python 2.6 the getter, setter, and deleter attributes of
-# a property should provide similar functionality already.
-class overridable_property:
-    """
-    The same as Python's "property" attribute, but allows the accessor
-    methods to be overridden in subclasses.
-
-    .. deprecated:: 2.0.0
-    """
-
-    # Delays looking up the accessors until they're needed, rather
-    # than finding them when the class is first created.
-
-    # Based on the emulation of PyProperty_Type() in Objects/descrobject.c
-
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
-        warnings.warn(
-            message="overridable_property has been deprecated.",
-            category=_ParamFutureWarning,
-            stacklevel=2,
-        )
-        self.fget = fget
-        self.fset = fset
-        self.fdel = fdel
-        self.__doc__ = doc
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self
-        if self.fget is None:
-            raise AttributeError("unreadable attribute")
-        if self.fget.__name__ == '<lambda>' or not self.fget.__name__:
-            return self.fget(obj)
-        else:
-            return getattr(obj, self.fget.__name__)()
-
-    def __set__(self, obj, value):
-        if self.fset is None:
-            raise AttributeError("can't set attribute")
-        if self.fset.__name__ == '<lambda>' or not self.fset.__name__:
-            self.fset(obj, value)
-        else:
-            getattr(obj, self.fset.__name__)(value)
-
-    def __delete__(self, obj):
-        if self.fdel is None:
-            raise AttributeError("can't delete attribute")
-        if self.fdel.__name__ == '<lambda>' or not self.fdel.__name__:
-            self.fdel(obj)
-        else:
-            getattr(obj, self.fdel.__name__)()

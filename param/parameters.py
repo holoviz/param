@@ -36,20 +36,18 @@ from contextlib import contextmanager
 from .parameterized import (
     Parameterized, Parameter, ParameterizedFunction, ParamOverrides, String,
     Undefined, get_logger, instance_descriptor, _dt_types,
-    _int_types, _identity_hook
+    _int_types
 )
 from ._utils import (
-    ParamFutureWarning as _ParamFutureWarning,
     ParamDeprecationWarning as _ParamDeprecationWarning,
-    _deprecate_positional_args,
-    _deprecated,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
     _produce_value,
     _get_min_max_value,
     _is_number,
-    concrete_descendents,
+    concrete_descendents,  # noqa: F401
+    descendents as _descendents,
     _abbreviate_paths,
     _to_datetime,
 )
@@ -61,7 +59,7 @@ from ._utils import (
 
 def param_union(*parameterizeds, warn=True):
     """
-    Given a set of Parameterized objects, returns a dictionary
+    Given a set of :class:`Parameterized` objects, returns a dictionary
     with the union of all param name,value pairs across them.
 
     Parameters
@@ -150,7 +148,7 @@ def parameterized_class(name, params, bases=Parameterized):
 
 def guess_bounds(params, **overrides):
     """
-    Given a dictionary of Parameter instances, return a corresponding
+    Given a dictionary of :class:`Parameter` instances, return a corresponding
     set of copies with the bounds appropriately set.
 
 
@@ -203,7 +201,7 @@ class Infinity:
     """
     An instance of this class represents an infinite value. Unlike
     Python's float('inf') value, this object can be safely compared
-    with gmpy numeric types across different gmpy versions.
+    with gmpy2 numeric types across different gmpy2 versions.
 
     All operators on Infinity() return Infinity(), apart from the
     comparison and equality operators. Equality works by checking
@@ -323,11 +321,11 @@ class Time(Parameterized):
            times in decimal notation, but very slow and needs to be
            installed separately.
 
-         - gmpy.mpq: Allows a natural representation of times in
+         - gmpy2.mpq: Allows a natural representation of times in
            decimal notation, and very fast because it uses the GNU
            Multi-Precision library, but needs to be installed
-           separately and depends on a non-Python library.  gmpy.mpq
-           is gmpy's rational type.
+           separately and depends on a non-Python library.  gmpy2.mpq
+           is gmpy2's rational type.
         """)
 
     timestep = Parameter(default=1.0,doc="""
@@ -464,14 +462,14 @@ class Dynamic(Parameter):
     Note that at present, the callable object must allow attributes
     to be set on itself.
 
-    If set as time_dependent, setting the Dynamic.time_fn allows the
+    If set as ``time_dependent``, setting the ``Dynamic.time_fn`` allows the
     production of dynamic values to be controlled: a new value will be
-    produced only if the current value of time_fn is different from
+    produced only if the current value of ``time_fn`` is different from
     what it was the last time the parameter value was requested.
 
-    By default, the Dynamic parameters are not time_dependent so that
+    By default, the Dynamic parameters are not ``time_dependent`` so that
     new values are generated on every call regardless of the time. The
-    default time_fn used when time_dependent is a single Time instance
+    default ``time_fn`` used when ``time_dependent`` is a single :class:`Time` instance
     that allows general manipulations of time. It may be set to some
     other callable as required so long as a number is returned on each
     call.
@@ -608,41 +606,24 @@ class Dynamic(Parameter):
             return gen
 
 
-class __compute_set_hook:
-    """Remove when set_hook is removed."""
-
-    def __call__(self, p):
-        return _identity_hook
-
-    def __repr__(self):
-        return repr(self.sig)
-
-    @property
-    def sig(self):
-        return None
-
-
-_compute_set_hook = __compute_set_hook()
-
-
 class Number(Dynamic):
     """
-    A numeric Dynamic Parameter, with a default value and optional bounds.
+    A numeric :class:`Dynamic` Parameter, with a default value and optional bounds.
 
     There are two types of bounds: ``bounds`` and
     ``softbounds``.  ``bounds`` are hard bounds: the parameter must
     have a value within the specified range.  The default bounds are
-    (None,None), meaning there are actually no hard bounds.  One or
+    ``(None, None)``, meaning there are actually no hard bounds. One or
     both bounds can be set by specifying a value
-    (e.g. bounds=(None,10) means there is no lower bound, and an upper
+    (e.g. ``bounds=(None, 10)`` means there is no lower bound, and an upper
     bound of 10). Bounds are inclusive by default, but exclusivity
     can be specified for each bound by setting inclusive_bounds
-    (e.g. inclusive_bounds=(True,False) specifies an exclusive upper
+    (e.g. ``inclusive_bounds=(True, False)`` specifies an exclusive upper
     bound).
 
-    Number is also a type of Dynamic parameter, so its value
+    Number is also a type of :class:`Dynamic` parameter, so its value
     can be set to a callable to get a dynamically generated
-    number (see Dynamic).
+    number.
 
     When not being dynamically generated, bounds are checked when a
     Number is created or set. Using a default value outside the hard
@@ -651,11 +632,11 @@ class Number(Dynamic):
     of a Number is requested. A generated value that is not numeric,
     or is outside the hard bounds, results in an exception.
 
-    As a special case, if allow_None=True (which is true by default if
-    the parameter has a default of None when declared) then a value
-    of None is also allowed.
+    As a special case, if ``allow_None=True`` (which is true by default if
+    the parameter has a default of ``None`` when declared) then a value
+    of ``None`` is also allowed.
 
-    A separate function set_in_bounds() is provided that will
+    A separate method :meth:`set_in_bounds` is provided that will
     silently crop the given value into the legal range, for use
     in, for instance, a GUI.
 
@@ -670,33 +651,31 @@ class Number(Dynamic):
 
     """
 
-    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'set_hook', 'step']
+    __slots__ = ['bounds', 'softbounds', 'inclusive_bounds', 'step']
 
     _slot_defaults = dict(
         Dynamic._slot_defaults, default=0.0, bounds=None, softbounds=None,
-        inclusive_bounds=(True,True), step=None, set_hook=_compute_set_hook,
+        inclusive_bounds=(True,True), step=None,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=0.0, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         """
         Initialize this parameter object and store the bounds.
 
         Non-dynamic default values are checked against the bounds.
         """
         super().__init__(default=default, **params)
-        self.set_hook = set_hook
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -706,8 +685,8 @@ class Number(Dynamic):
     def __get__(self, obj, objtype):
         """Retrieve the value of the attribute, checking bounds if dynamically generated.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         obj: Parameterized | None
             The instance the attribute is accessed on, or `None` for class access.
         objtype: type[Parameterized]
@@ -875,14 +854,14 @@ class Integer(Number):
 
 
 class Magnitude(Number):
-    """Numeric Parameter required to be in the range [0.0-1.0]."""
+    """Numeric Parameter required to be in the range ``[0.0-1.0]``."""
 
     _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0,1.0))
 
     @typing.overload
     def __init__(
         self,
-        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=1.0, *, bounds=(0.0, 1.0), softbounds=None, inclusive_bounds=(True,True), step=None,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -890,10 +869,10 @@ class Magnitude(Number):
         ...
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, set_hook=Undefined, **params):
+                 inclusive_bounds=Undefined, step=Undefined, **params):
         super().__init__(
             default=default, bounds=bounds, softbounds=softbounds,
-            inclusive_bounds=inclusive_bounds, step=step, set_hook=set_hook, **params
+            inclusive_bounds=inclusive_bounds, step=step, **params
         )
 
 
@@ -905,7 +884,7 @@ class Date(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -964,7 +943,7 @@ class CalendarDate(Number):
     @typing.overload
     def __init__(
         self,
-        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None, set_hook=None,
+        default=None, *, bounds=None, softbounds=None, inclusive_bounds=(True,True), step=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
         allow_refs=False, nested_refs=False
@@ -1025,7 +1004,6 @@ class Boolean(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1050,17 +1028,18 @@ class Boolean(Parameter):
 class Event(Boolean):
     """
     An Event Parameter is one whose value is intimately linked to the
-    triggering of events for watchers to consume. Event has a Boolean
-    value, which when set to True triggers the associated watchers (as
+    triggering of events for watchers to consume. Event has a boolean
+    value, which when set to ``True`` triggers the associated watchers (as
     any Parameter does) and then is automatically set back to
-    False. Conversely, if events are triggered directly via `.trigger`,
-    the value is transiently set to True (so that it's clear which of
+    ``False``. Conversely, if events are triggered directly via
+    :meth:`~parameterized.Parameters.trigger`, the value is transiently set
+    to ``True`` (so that it's clear which of
     many parameters being watched may have changed), then restored to
-    False when the triggering completes. An Event parameter is thus like
-    a momentary switch or pushbutton with a transient True value that
-    serves only to launch some other action (e.g. via a param.depends
+    ``False`` when the triggering completes. An Event parameter is thus like
+    a momentary switch or pushbutton with a transient ``True`` value that
+    serves only to launch some other action (e.g. via a :func:`depends`
     decorator), rather than encapsulating the action itself as
-    param.Action does.
+    :class:`param.Action` does.
     """
 
     # _autotrigger_value specifies the value used to set the parameter
@@ -1078,7 +1057,6 @@ class Event(Boolean):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self,default=False,**params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
@@ -1095,7 +1073,7 @@ class Event(Boolean):
         # This _mode attribute is one of the few places where a specific
         # parameter has a special behavior that is relied upon by the
         # core functionality implemented in
-        # parameterized.py. Specifically, the set_param method
+        # parameterized.py. Specifically, the ``update`` method
         # temporarily sets this attribute in order to disable resetting
         # back to False while triggered callbacks are executing
         super().__init__(default=default,**params)
@@ -1135,7 +1113,7 @@ _compute_length_of_default = __compute_length_of_default()
 
 
 class Tuple(Parameter):
-    """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
+    """A tuple Parameter (e.g. ``('a', 7.6, [3,5])``) with a fixed tuple length."""
 
     __slots__ = ['length']
 
@@ -1151,7 +1129,6 @@ class Tuple(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, length=Undefined, **params):
         """
         Initialize a tuple parameter with a fixed length (number of
@@ -1209,7 +1186,7 @@ class Tuple(Parameter):
 
 
 class NumericTuple(Tuple):
-    """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
+    """A numeric tuple Parameter (e.g. ``(4.5, 7.6, 3)``) with a fixed tuple length."""
 
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)
@@ -1263,7 +1240,6 @@ class Range(NumericTuple):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
         self.bounds = bounds
@@ -1351,9 +1327,9 @@ class Range(NumericTuple):
 
 class DateRange(Range):
     """
-    A datetime or date range specified as (start, end).
+    A datetime or date range specified as ``(start, end)``.
 
-    Bounds must be specified as datetime or date types (see param.dt_types).
+    Bounds must be specified as datetime or date types (see ``param._dt_types``).
     """
 
     def _validate_bound_type(self, value, position, kind):
@@ -1429,7 +1405,7 @@ class DateRange(Range):
 
 
 class CalendarDateRange(Range):
-    """A date range specified as (start_date, end_date)."""
+    """A date range specified as ``(start_date, end_date)``."""
 
     def _validate_value(self, val, allow_None):
         if allow_None and val is None:
@@ -1478,7 +1454,7 @@ class Callable(Parameter):
     """
     Parameter holding a value that is a callable object, such as a function.
 
-    A keyword argument instantiate=True should be provided when a
+    A keyword argument ``instantiate=True`` should be provided when a
     function object is used that might have state.  On the other hand,
     regular standalone functions cannot be deepcopied as of Python
     2.4, so instantiate must be False for those values.
@@ -1494,7 +1470,6 @@ class Callable(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1526,7 +1501,7 @@ class Composite(Parameter):
     """
     A Parameter that is a composite of a set of other attributes of the class.
 
-    The constructor argument 'attribs' takes a list of attribute
+    The constructor argument ``attribs`` takes a list of attribute
     names, which may or may not be Parameters.  Getting the parameter
     returns a list of the values of the constituents of the composite,
     in the order specified.  Likewise, setting the parameter takes a
@@ -1549,7 +1524,6 @@ class Composite(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
@@ -1592,8 +1566,6 @@ class SelectorBase(Parameter):
 
     Subclasses must implement get_range().
     """
-
-    __abstract = True
 
     def get_range(self):
         raise NotImplementedError("get_range() must be implemented in subclasses.")
@@ -1829,25 +1801,25 @@ class Selector(SelectorBase, _SignatureSelector):
     the provided set of objects, as long as the objects are in an
     ordered data collection.
 
-    check_on_set restricts the value to be among the current list of
+    ``check_on_set`` restricts the value to be among the current list of
     objects. By default, if objects are initially supplied,
-    check_on_set is True, whereas if no objects are initially
-    supplied, check_on_set is False. This can be overridden by
+    ``check_on_set`` is ``True``, whereas if no objects are initially
+    supplied, ``check_on_set`` is ``False``. This can be overridden by
     explicitly specifying check_on_set initially.
 
-    If check_on_set is True (either because objects are supplied
+    If ``check_on_set`` is ``True`` (either because objects are supplied
     initially, or because it is explicitly specified), the default
     (initial) value must be among the list of objects (unless the
-    default value is None).
+    default value is ``None``).
 
     The list of objects can be supplied as a list (appropriate for
     selecting among a set of strings, or among a set of objects with a
-    "name" parameter), or as a (preferably ordered) dictionary from
+    ``name`` parameter), or as a (preferably ordered) dictionary from
     names to objects.  If a dictionary is supplied, the objects
     will need to be hashable so that their names can be looked
     up from the object value.
 
-    empty_default is an internal argument that does not have a slot.
+    ``empty_default`` is an internal argument that does not have a slot.
     """
 
     __slots__ = ['_objects', 'compute_default_fn', 'check_on_set', 'names']
@@ -1864,7 +1836,6 @@ class Selector(SelectorBase, _SignatureSelector):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    @_deprecate_positional_args
     def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
@@ -2000,7 +1971,6 @@ class ObjectSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
                          empty_default=True, **kwargs)
@@ -2025,7 +1995,6 @@ class FileSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2059,7 +2028,7 @@ class FileSelector(Selector):
 
 class ListSelector(Selector):
     """
-    Variant of Selector where the value can be multiple objects from
+    Variant of :class:`Selector` where the value can be multiple objects from
     a list of possible objects.
     """
 
@@ -2073,7 +2042,6 @@ class ListSelector(Selector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(
             objects=objects, default=default, empty_default=True, **kwargs)
@@ -2140,7 +2108,6 @@ class MultiFileSelector(ListSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2168,10 +2135,12 @@ class MultiFileSelector(ListSelector):
 
 class ClassSelector(SelectorBase):
     """
-    Parameter allowing selection of either a subclass or an instance of a class or tuple of classes.
-    By default, requires an instance, but if is_instance=False, accepts a class instead.
-    Both class and instance values respect the instantiate slot, though it matters only
-    for is_instance=True.
+    Parameter allowing selection of either a subclass or an instance of a class
+    or tuple of classes.
+
+    By default, requires an instance, but if ``is_instance=False``, accepts a
+    class instead. Both class and instance values respect the ``instantiate``
+    slot, though it matters only for ``is_instance=True``.
     """
 
     __slots__ = ['class_', 'is_instance']
@@ -2188,7 +2157,6 @@ class ClassSelector(SelectorBase):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance
@@ -2219,16 +2187,19 @@ class ClassSelector(SelectorBase):
         """
         Return the possible types for this parameter's value.
 
-        (I.e. return `{name: <class>}` for all classes that are
-        concrete_descendents() of `self.class_`.)
+        (I.e. return ``{name: <class>}`` for all classes that are
+        :func:`param.parameterized.descendents` of ``self.class_``.)
 
         Only classes from modules that have been imported are added
-        (see concrete_descendents()).
+        (see :func:`param.parameterized.descendents`).
         """
         classes = self.class_ if isinstance(self.class_, tuple) else (self.class_,)
         all_classes = {}
         for cls in classes:
-            all_classes.update(concrete_descendents(cls))
+            desc = _descendents(cls, concrete=True)
+            # This will clobber separate classes with identical names.
+            # Known historical issue, see https://github.com/holoviz/param/pull/1035
+            all_classes.update({c.__name__: c for c in desc})
         d = OrderedDict((name, class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None'] = None
@@ -2291,15 +2262,15 @@ class Array(ClassSelector):
 
 class DataFrame(ClassSelector):
     """
-    Parameter whose value is a pandas DataFrame.
+    Parameter whose value is a pandas ``DataFrame``.
 
     The structure of the DataFrame can be constrained by the rows and
     columns arguments:
 
-    rows: If specified, may be a number or an integer bounds tuple to
+    ``rows``: If specified, may be a number or an integer bounds tuple to
     constrain the allowable number of rows.
 
-    columns: If specified, may be a number, an integer bounds tuple, a
+    ``columns``: If specified, may be a number, an integer bounds tuple, a
     list or a set. If the argument is numeric, constrains the number of
     columns using the same semantics as used for rows. If either a list
     or set of strings, the column names will be validated. If a set is
@@ -2324,7 +2295,6 @@ class DataFrame(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
         self.rows = rows
@@ -2417,7 +2387,7 @@ class DataFrame(ClassSelector):
 
 class Series(ClassSelector):
     """
-    Parameter whose value is a pandas Series.
+    Parameter whose value is a pandas ``Series``.
 
     The structure of the Series can be constrained by the rows argument
     which may be a number or an integer bounds tuple to constrain the
@@ -2440,7 +2410,6 @@ class Series(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
@@ -2479,48 +2448,35 @@ class List(Parameter):
     Parameter whose value is a list of objects, usually of a specified type.
 
     The bounds allow a minimum and/or maximum length of
-    list to be enforced.  If the item_type is non-None, all
-    items in the list are checked to be of that type.
-
-    `class_` is accepted as an alias for `item_type`, but is
-    deprecated due to conflict with how the `class_` slot is
-    used in Selector classes.
+    list to be enforced.  If the ``item_type`` is non-None, all
+    items in the list are checked to be instances of that type if
+    ``is_instance`` is ``True`` (default) or subclasses of that type when False.
     """
 
-    __slots__ = ['bounds', 'item_type', 'class_']
+    __slots__ = ['bounds', 'item_type', 'is_instance']
 
     _slot_defaults = dict(
-        Parameter._slot_defaults, class_=None, item_type=None, bounds=(0, None),
-        instantiate=True, default=[],
+        Parameter._slot_defaults, item_type=None, bounds=(0, None),
+        instantiate=True, default=[], is_instance=True,
     )
 
     @typing.overload
     def __init__(
         self,
-        default=[], *, class_=None, item_type=None, instantiate=True, bounds=(0, None),
-        allow_None=False, doc=None, label=None, precedence=None,
+        default=[], *, item_type=None, instantiate=True, bounds=(0, None),
+        is_instance=True, allow_None=False, doc=None, label=None, precedence=None,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
         allow_refs=False, nested_refs=False
     ):
         ...
 
-    @_deprecate_positional_args
-    def __init__(self, default=Undefined, *, class_=Undefined, item_type=Undefined,
-                 instantiate=Undefined, bounds=Undefined, **params):
-        if class_ is not Undefined:
-            # PARAM3_DEPRECATION
-            warnings.warn(
-                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamFutureWarning,
-                stacklevel=3,
-            )
-        if item_type is not Undefined and class_ is not Undefined:
+    def __init__(self, default=Undefined, *, item_type=Undefined,
+                 instantiate=Undefined, bounds=Undefined, is_instance=Undefined, **params):
+        if item_type is not Undefined:
             self.item_type = item_type
-        elif item_type is Undefined or item_type is None:
-            self.item_type = class_
         else:
             self.item_type = item_type
-        self.class_ = self.item_type
+        self.is_instance = is_instance
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,
                            **params)
@@ -2533,7 +2489,7 @@ class List(Parameter):
         """
         self._validate_value(val, self.allow_None)
         self._validate_bounds(val, self.bounds)
-        self._validate_item_type(val, self.item_type)
+        self._validate_item_type(val, self.item_type, self.is_instance)
 
     def _validate_bounds(self, val, bounds):
         """Check that the list is of the right length and has the right contents."""
@@ -2569,28 +2525,34 @@ class List(Parameter):
                 f"object of {type(val)}."
             )
 
-    def _validate_item_type(self, val, item_type):
+    def _validate_item_type(self, val, item_type, is_instance):
         if item_type is None or (self.allow_None and val is None):
             return
+        err_kind = None
         for v in val:
-            if isinstance(v, item_type):
-                continue
-            raise TypeError(
-                f"{_validate_error_prefix(self)} items must be instances "
-                f"of {item_type!r}, not {type(v)}."
-            )
+            if is_instance and not isinstance(v, item_type):
+                err_kind = "instances"
+                obj_display = lambda v: type(v)
+            elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
+                err_kind = "subclasses"
+                obj_display = lambda v: v
+            if err_kind:
+                raise TypeError(
+                    f"{_validate_error_prefix(self)} items must be {err_kind} "
+                    f"of {item_type!r}, not {obj_display(v)}."
+                )
 
 
 class HookList(List):
     """
     Parameter whose value is a list of callable objects.
 
-    This type of List Parameter is typically used to provide a place
+    This type of :class:`List` Parameter is typically used to provide a place
     for users to register a set of commands to be called at a
     specified place in some sequence of processing steps.
     """
 
-    __slots__ = ['class_', 'bounds']
+    __slots__ = ['bounds']
 
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)
@@ -2611,8 +2573,7 @@ class HookList(List):
 # For portable code:
 #   - specify paths in unix (rather than Windows) style;
 #   - use resolve_path(path_to_file=True) for paths to existing files to be read,
-#   - use resolve_path(path_to_file=False) for paths to existing folders to be read,
-#     and normalize_path() for paths to new files to be written.
+#   - use resolve_path(path_to_file=False) for paths to existing folders to be read.
 
 class resolve_path(ParameterizedFunction):
     """
@@ -2631,11 +2592,11 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = List(default=[os.getcwd()], pickle_default_value=False, doc="""
+    search_paths = List(default=[os.getcwd()], pickle_default_value=None, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=False,
+    path_to_file = Boolean(default=True, pickle_default_value=None,
                            allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a
         'Folder'. If None, the path may point to *either* a 'File' *or*
@@ -2672,52 +2633,21 @@ class resolve_path(ParameterizedFunction):
             raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=_ParamFutureWarning)
-class normalize_path(ParameterizedFunction):
-    """
-    Convert a UNIX-style path to the current OS's format,
-    typically for creating a new file or directory.
-
-    If the path is not already absolute, it will be made absolute
-    (using the prefix parameter).
-
-    Should do the same as Python's os.path.abspath(), except using
-    prefix rather than os.getcwd).
-    """
-
-    prefix = String(default=os.getcwd(),pickle_default_value=False,doc="""
-        Prepended to the specified path, if that path is not
-        absolute.""")
-
-    def __call__(self,path="",**params):
-        p = ParamOverrides(self,params)
-
-        if not os.path.isabs(path):
-            path = os.path.join(os.path.normpath(p.prefix),path)
-
-        return os.path.normpath(path)
-
-
-
 class Path(Parameter):
     """
     Parameter that can be set to a string specifying the path of a file or folder.
 
     The string should be specified in UNIX style, but it will be
     returned in the format of the user's operating system. Please use
-    the Filename or Foldername Parameters if you require discrimination
+    the :class:`Filename` or :class:`Foldername` Parameters if you require discrimination
     between the two possibilities.
 
     The specified path can be absolute, or relative to either:
 
-    * any of the paths specified in the search_paths attribute (if
-       search_paths is not None);
-
-    or
-
-    * any of the paths searched by resolve_path() (if search_paths
-      is None).
+    * any of the paths specified in the ``search_paths`` attribute (if
+      ``search_paths`` is not ``None``);
+    * any of the paths searched by :func:`resolve_path` (if ``search_paths``
+      is ``None``).
 
     Parameters
     ----------
@@ -2745,7 +2675,6 @@ class Path(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, search_paths=Undefined, check_exists=Undefined, **params):
         if search_paths is Undefined:
             search_paths = []
@@ -2808,13 +2737,10 @@ class Filename(Path):
 
     The specified path can be absolute, or relative to either:
 
-    * any of the paths specified in the search_paths attribute (if
-      search_paths is not None);
-
-    or
-
-    * any of the paths searched by resolve_path() (if search_paths
-      is None).
+    * any of the paths specified in the ``search_paths`` attribute (if
+      ``search_paths`` is not ``None``);
+    * any of the paths searched by :func:`resolve_path` (if ``search_paths``
+      is ``None``).
     """
 
     def _resolve(self, path):
@@ -2830,13 +2756,10 @@ class Foldername(Path):
 
     The specified path can be absolute, or relative to either:
 
-    * any of the paths specified in the search_paths attribute (if
-      search_paths is not None);
-
-    or
-
-    * any of the paths searched by resolve_dir_path() (if search_paths
-      is None).
+    * any of the paths specified in the ``search_paths`` attribute (if
+      ``search_paths`` is not ``None``);
+    * any of the paths searched by resolve_dir_path() (if ``search_paths``
+      is ``None``).
     """
 
     def _resolve(self, path):
@@ -2848,7 +2771,7 @@ class Foldername(Path):
 
 class Color(Parameter):
     """
-    Color parameter defined as a hex RGB string with an optional #
+    Color parameter defined as a hex RGB string with an optional ``#``
     prefix or (optionally) as a CSS3 color name.
     """
 
@@ -2903,7 +2826,6 @@ class Color(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
@@ -2947,8 +2869,8 @@ class Bytes(Parameter):
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
 
-    Similar to the String parameter, but instead of type string
-    this parameter only allows objects of type bytes (e.g. b'bytes').
+    Similar to the :class:`String` parameter, but instead of type string
+    this parameter only allows objects of type bytes (e.g. ``b'bytes'``).
     """
 
     __slots__ = ['regex']
@@ -2968,7 +2890,6 @@ class Bytes(Parameter):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.regex = regex

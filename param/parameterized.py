@@ -1314,7 +1314,7 @@ class Parameter(_ParameterBase):
     # attributes.  Using __slots__ requires special support for
     # operations to copy and restore Parameters (e.g. for Python
     # persistent storage pickling); see __getstate__ and __setstate__.
-    __slots__ = ['name', 'default', 'doc',
+    __slots__ = ['name', 'default', 'default_factory', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
                  'watchers', 'owner', 'allow_refs', 'nested_refs', '_label']
@@ -1330,7 +1330,7 @@ class Parameter(_ParameterBase):
     _slot_defaults = dict(
         default=None, precedence=None, doc=None, _label=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
-        per_instance=True, allow_refs=False, nested_refs=False
+        per_instance=True, allow_refs=False, nested_refs=False, default_factory=None,
     )
 
     # Parameters can be updated during Parameterized class creation when they
@@ -1347,7 +1347,7 @@ class Parameter(_ParameterBase):
         default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
+        allow_refs=False, nested_refs=False, default_factory=None,
     ):
         ...
 
@@ -1366,6 +1366,7 @@ class Parameter(_ParameterBase):
         per_instance=Undefined,
         allow_refs=Undefined,
         nested_refs=Undefined,
+        default_factory=Undefined,
     ):
         """
         Initialize a new :class:`Parameter` object with the specified attributes.
@@ -1376,6 +1377,16 @@ class Parameter(_ParameterBase):
             The owning class's value for the attribute represented by this
             parameter, which can be overridden in an instance.
             Default is ``None``.
+        default_factory : callable, optional
+            A callable used to generate the attribute value. It can be provided
+            directly (in which case it is invoked with no arguments) or wrapped
+            in a :class:`DefaultFactory` for more advanced behavior (in which
+            case it receives ``cls``, ``self``, and ``parameter`` as arguments).
+            When specified, ``default_factory`` takes precedence over ``default``.
+            The factory is invoked once the :class:`Parameterized` instance
+            is initialized.
+
+            .. versionadded:: 2.3.0
         doc : str | None, optional
             A documentation string describing the purpose of the parameter.
             Default is ``None``.
@@ -1459,12 +1470,18 @@ class Parameter(_ParameterBase):
         ...
         TypeError: Constant parameter 'my_param' cannot be modified.
         """
+        if default_factory is not Undefined and not callable(default_factory):
+            raise TypeError(
+                "default_factory must be a callable, "
+                f"not {type(default_factory)!r}."
+            )
         self.name = None
         self.owner = None
         self.allow_refs = allow_refs
         self.nested_refs = nested_refs
         self.precedence = precedence
         self.default = default
+        self.default_factory = default_factory
         self.doc = doc
         if constant is True or readonly is True:  # readonly => constant
             self.constant = True
@@ -1978,7 +1995,7 @@ class String(Parameter):
         default="", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False
+        allow_refs=False, nested_refs=False, default_factory=None
     ):
         ...
 
@@ -2329,9 +2346,11 @@ class Parameters:
         params_to_ref = {}
         objects = self_._cls_parameters
         for pname, p in objects.items():
-            if p.instantiate and pname != "name":
+            if pname == 'name' or p.default_factory:
+                continue
+            if p.instantiate:
                 params_to_deepcopy[pname] = p
-            elif p.constant and pname != 'name':
+            elif p.constant:
                 params_to_ref[pname] = p
 
         for p in params_to_deepcopy.values():
@@ -4378,20 +4397,32 @@ class ParameterizedMetaclass(type):
         for param_name,param in parameters:
             mcs._initialize_parameter(param_name, param)
 
+        # Override class-value with default_factory
+        for class_ in classlist(mcs):
+            for name, val in class_.__dict__.items():
+                if not isinstance(val, Parameter):
+                    continue
+                dfactory = val.default_factory
+                if (
+                    dfactory is not Undefined
+                    and isinstance(dfactory, DefaultFactory)
+                    and dfactory.on_class
+                ):
+                    setattr(mcs, name, dfactory(cls=mcs, self=None, parameter=val))
+
         # retrieve depends info from methods and store more conveniently
         dependers = [(n, m, m._dinfo) for (n, m) in dict_.items()
                      if hasattr(m, '_dinfo')]
 
         # Resolve dependencies of current class
         _watch = []
-        for name, method, dinfo in dependers:
+        for dname, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            minfo = MInfo(cls=mcs, inst=None, name=name,
-                          method=method)
+            minfo = MInfo(cls=mcs, inst=None, name=dname, method=method)
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             if watch:
-                _watch.append((name, watch == 'queued', on_init, deps, dynamic_deps))
+                _watch.append((dname, watch == 'queued', on_init, deps, dynamic_deps))
 
         # Resolve dependencies in class hierarchy
         _inherited = []
@@ -4654,7 +4685,7 @@ class ParameterizedMetaclass(type):
                         f'Slot {slot!r} of parameter {param_name!r} has no '
                         'default value defined in `_slot_defaults`'
                     ) from e
-                if callable(default_val):
+                if slot != 'default_factory' and callable(default_val):
                     callables[slot] = default_val
                 else:
                     slot_values[slot] = default_val
@@ -5216,6 +5247,83 @@ class _InstancePrivate:
             setattr(self, k, v)
 
 
+class DefaultFactory:
+    """
+    A callable factory wrapper for the ``default_factory`` Parameter attribute.
+
+    The callable can be any callable that accepts three arguments ``cls``,
+    ``self``, and ``parameter``.
+
+    - When an instance is created, the callable receives the
+      :class:`Parameterized` class as ``cls``, the instance itself as ``self``,
+      and the instance-level :class:`Parameter` object as `parameter`.
+    - During class creation (typically when a module defining
+      :class:`Parameterized` classes is imported), and only if the
+      ``DefaultFactory`` is initialized with ``on_class=True`` (default is
+      ``False``), the callable is instead passed the :class:`Parameterized`
+      class as ``cls``, ``None`` for ``self`` (since no instance exists yet),
+      and the class-level :class:`Parameter` object as ``parameter``. This is
+      the only case where the callable can influence the *class-level* attribute
+      value.
+
+    Parameters
+    ----------
+    factory : Callable
+        A callable that produces a value when invoked. It should accept three
+        arguments: ``cls``, ``self``, and ``parameter``.
+    on_class : bool, optional
+        Whether to call the factory on :class:`Parameterized` class creation,
+        by default False.
+
+    Examples
+    --------
+    We will use ``my_factory`` to set the value of parameter ``d`` to a
+    dictionary that allows us to inspect the values passed to the factory.
+
+    >>> import param
+    >>> def my_factory(cls, self, parameter):
+    >>>     if self is None:
+    >>>         return dict(cls_a=cls.a, self_a=None, pname=parameter.name)
+    >>>     else:
+    >>>         return dict(cls_a=cls.a, self_a=self.a, pname=parameter.name)
+
+    The factory is wrapped with ``DefaultFactory` with ``on_class=True``, and
+    set to the ``default_factory`` attribute.
+
+    >>> class P(param.Parameterized):
+    >>>    a = param.String(default="A")
+    >>>    d = param.Dict(
+    >>>        default_factory=param.parameterized.DefaultFactory(
+    >>>            my_factory, on_class=True
+    >>>        )
+    >>>    )
+    ...
+
+    Because ``on_class=True``, the factory was executed on class creation,
+    setting the value of ``d`` at the class-level.
+
+    >>> P.d
+    {'cls_a': 'A', 'self_a': None, 'pname': 'd'}
+
+    The factory is always called on instance creation.
+
+    >>> p = P(a="foo")
+    >>> p.d
+    {'cls_a': 'A', 'self_a': 'foo', 'pname': 'd'}
+    """
+
+    def __init__(
+        self,
+        factory: Callable,
+        on_class: bool = False,
+    ):
+        self.factory = factory
+        self.on_class = on_class
+
+    def __call__(self_, *, cls=None, self=None, parameter=None):
+        return self_.factory(cls, self, parameter)
+
+
 class Parameterized(metaclass=ParameterizedMetaclass):
     """
     A base class for creating Parameterized objects.
@@ -5342,6 +5450,27 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         object_count += 1
 
         self._param__private.initialized = True
+
+        # Find parameters with default_factory through the class
+        # parameters to avoid making a copy.
+        params_with_default_factory = [
+            pname
+            for pname, pobj in self.param._cls_parameters.items()
+            if pname not in params
+            and callable(pobj.default_factory)
+        ]
+        # Set from default_factory once initialized so instance parameters
+        # are copied.
+        if params_with_default_factory:
+            for pname in params_with_default_factory:
+                pobj = self.param[pname]
+                dfactory = pobj.default_factory
+                if isinstance(dfactory, DefaultFactory):
+                    default_val = dfactory(cls=type(self), self=self, parameter=pobj)
+                else:
+                    default_val = dfactory()
+                with discard_events(self):
+                    setattr(self, pname, default_val)
 
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)

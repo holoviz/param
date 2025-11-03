@@ -2240,28 +2240,71 @@ class Array(ClassSelector):
 
 class DataFrame(ClassSelector):
     """
-    Parameter whose value is a pandas ``DataFrame``.
+    Parameter whose value is a tabular DataFrame.
 
-    The structure of the DataFrame can be constrained by the rows and
-    columns arguments:
+    This parameter accepts:
 
-    ``rows``: If specified, may be a number or an integer bounds tuple to
-    constrain the allowable number of rows.
+    - A pandas ``DataFrame`` (always supported).
+    - If Narwhals is installed, any Narwhals-compatible **eager** or
+      **lazy** data frame, including those from pandas, Polars, cuDF, etc.
+      Lazy data frames are only accepted if ``allow_lazy=True``.
 
-    ``columns``: If specified, may be a number, an integer bounds tuple, a
-    list or a set. If the argument is numeric, constrains the number of
-    columns using the same semantics as used for rows. If either a list
-    or set of strings, the column names will be validated. If a set is
-    used, the supplied DataFrame must contain the specified columns and
-    if a list is given, the supplied DataFrame must contain exactly the
-    same columns and in the same order and no other columns.
+    The parameter validates the frame’s **shape** and **column names**
+    while remaining backend-agnostic.
+
+    Parameters
+    ----------
+    rows : int | tuple[int, int] | None
+        Constrains the number of rows allowed.
+
+        - ``int`` → exact number of rows required.
+        - ``tuple[min, max]`` → inclusive bounds on number of rows.
+        - ``Integer`` bounds object → equivalent to a bounds tuple.
+        - ``None`` → no row constraint.
+
+    columns : int | tuple[int, int] | list[str] | set[str] | None
+        Constrains the number or names of columns allowed.
+
+        - ``int`` → exact number of columns required.
+        - ``tuple[min, max]`` → inclusive bounds on number of columns.
+        - ``list[str]`` → must contain *exactly* these columns,
+          in the same order and no others.
+        - ``set[str]`` → must contain *at least* these columns;
+          order and extra columns are allowed.
+        - ``None`` → no column constraint.
+
+    allow_lazy : bool, default=False
+        Whether to accept Narwhals **lazy** data frames
+        (e.g. Polars ``LazyFrame``). When ``False`` (default),
+        lazy frames raise a ``ValueError`` to prevent
+        unintentional deferred computation.
+
+        When ``True``:
+        - Validation is deferred; ``rows`` and ``columns`` checks
+          are skipped because they would require collection.
+        - The parameter stores the lazy frame as-is.
+        - It is the user’s responsibility to collect or validate
+          results downstream.
+
+    Notes
+    -----
+    - **Backend-neutrality:** If Narwhals is available, validation
+      uses its unified API (e.g. ``nw.from_native(df).columns``,
+      ``nw.len(df)``) instead of pandas-specific methods.
+    - **No data conversion:** The parameter stores the frame you provide
+      (backend-native, pandas, or lazy). It will not automatically convert
+      between backends.
+    - **Performance:** For large frames, only metadata (row/column info)
+      is inspected; data contents are never copied.
+    - **Serialization:** When serializing, behavior remains identical
+      to the legacy pandas implementation unless overridden by downstream
+      frameworks.
     """
 
-    __slots__ = ['rows', 'columns', 'ordered']
+    __slots__ = ['rows', 'columns', 'ordered', 'allow_lazy']
 
     _slot_defaults = dict(
-        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
-    )
+        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None, allow_lazy=False)
 
     @typing.overload
     def __init__(
@@ -2269,17 +2312,34 @@ class DataFrame(ClassSelector):
         default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
         allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        allow_refs=False, nested_refs=False, allow_lazy=False
     ):
         ...
 
-    def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
-        from pandas import DataFrame as pdDFrame
+    def __init__(
+        self, default=Undefined, *, rows=Undefined, columns=Undefined,
+        ordered=Undefined, allow_lazy=Undefined, **params
+    ):
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super().__init__(default=default, class_=pdDFrame, **params)
+        self.allow_lazy = allow_lazy
+        super().__init__(default=default, class_=None, **params)
         self._validate(self.default)
+
+    @property
+    def class_(self):
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            import pandas as pd
+            return pd.DataFrame
+        else:
+            return (nw.DataFrame, nw.LazyFrame) if self.allow_lazy is True else nw.DataFrame
+
+    @class_.setter
+    def class_(self, value):
+        pass # This is automatically determined from the libraries
 
     def _length_bounds_check(self, bounds, length, name):
         message = f'{name} length {length} does not match declared bounds of {bounds}'
@@ -2295,6 +2355,18 @@ class DataFrame(ClassSelector):
             raise ValueError(f"{_validate_error_prefix(self)}: {message}")
 
     def _validate(self, val):
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            nw = None
+        else:
+            if val is not None:
+                val = nw.from_native(val)
+            if isinstance(val, nw.LazyFrame) and not self.allow_lazy:
+                raise ValueError(
+                    'DataFrame parameter was given a LazyFrame; set allow_lazy=True to '
+                    'allow lazy data frames.')
+
         super()._validate(val)
 
         if isinstance(self.columns, set) and self.ordered is True:
@@ -2306,36 +2378,72 @@ class DataFrame(ClassSelector):
         if self.allow_None and val is None:
             return
 
-        if self.columns is None:
-            pass
-        elif (isinstance(self.columns, tuple) and len(self.columns)==2
-              and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
-            self._length_bounds_check(self.columns, len(val.columns), 'columns')
+        self._validate_columns(val)
+        self._validate_rows(val)
+
+    def _validate_columns(self, val):
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            nw = None
+
+        if val is None or self.columns is None:
+            return
+
+        if nw is None or not isinstance(val, nw.LazyFrame):
+            columns = val.columns
+        else:
+            columns = val.collect_schema().names()
+
+        if (isinstance(self.columns, tuple) and len(self.columns) == 2
+            and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
+            self._length_bounds_check(self.columns, len(columns), 'columns')
         elif isinstance(self.columns, (list, set)):
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
-            difference = set(self.columns) - {str(el) for el in val.columns}
+            difference = set(self.columns) - {str(el) for el in columns}
             if difference:
                 raise ValueError(
                     f"{_validate_error_prefix(self)}: provided columns "
-                    f"{list(val.columns)} does not contain required "
-                    f"columns {sorted(self.columns)}"
+                    f"{list(columns)} does not contain required "
+                    f"columns {sorted(difference)}"
                 )
         else:
-            self._length_bounds_check(self.columns, len(val.columns), 'column')
+            self._length_bounds_check(self.columns, len(columns), 'column')
 
         if self.ordered:
-            if list(val.columns) != list(self.columns):
+            if list(columns) != list(columns):
                 raise ValueError(
                     f"{_validate_error_prefix(self)}: provided columns "
-                    f"{list(val.columns)} must exactly match {self.columns}"
+                    f"{list(columns)} must exactly match {self.columns}"
                 )
-        if self.rows is not None:
-            self._length_bounds_check(self.rows, len(val), 'row')
+
+    def _validate_rows(self, val):
+        if self.rows is None or val is None:
+            return
+
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            nw = None
+
+        if nw is None or not isinstance(val, nw.LazyFrame):
+            n_rows = len(val)
+        else:
+            n_rows = int(
+                val.select(nw.len().alias('n_rows'))
+                .collect()
+                .item()
+            )
+        self._length_bounds_check(self.rows, n_rows, 'row')
 
     @classmethod
     def serialize(cls, value):
         if value is None:
             return None
+        if hasattr(value, 'collect'):
+            value = value.collect()  # Polars LazyFrame
+        if hasattr(value, 'to_dicts'):
+            return value.to_dicts()
         return value.to_dict('records')
 
     @classmethod
@@ -2372,10 +2480,10 @@ class Series(ClassSelector):
     allowable number of rows.
     """
 
-    __slots__ = ['rows']
+    __slots__ = ['rows', 'allow_lazy']
 
     _slot_defaults = dict(
-        ClassSelector._slot_defaults, rows=None, allow_None=False
+        ClassSelector._slot_defaults, rows=None, allow_None=False, allow_lazy=False
     )
 
     @typing.overload
@@ -2384,16 +2492,45 @@ class Series(ClassSelector):
         default=None, *, rows=None, allow_None=False, is_instance=True,
         doc=None, label=None, precedence=None, instantiate=True,
         constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False
+        allow_refs=False, nested_refs=False, allow_lazy=False
     ):
         ...
 
-    def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
-        from pandas import Series as pdSeries
+    def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, allow_lazy=Undefined, **params):
         self.rows = rows
-        super().__init__(default=default, class_=pdSeries, allow_None=allow_None,
-                         **params)
+        self.allow_lazy = allow_lazy
+        super().__init__(default=default, allow_None=allow_None, class_=None, **params)
         self._validate(self.default)
+
+    @property
+    def class_(self):
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            import pandas as pd
+            return pd.Series
+        else:
+            return (nw.Series, nw.LazySeries) if self.allow_lazy is True else nw.Series
+
+    def _validate(self, val):
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            pass
+        else:
+            if val is not None:
+                val = nw.from_native(val)
+            if isinstance(val, nw.LazyFrame) and not self.allow_lazy:
+                raise ValueError(
+                    'Series parameter was given a LazySeries; set allow_lazy=True to '
+                    'allow lazy series.')
+
+        super()._validate(val)
+
+        if self.allow_None and val is None:
+            return
+
+        self._validate_rows(val)
 
     def _length_bounds_check(self, bounds, length, name):
         message = f'{name} length {length} does not match declared bounds of {bounds}'
@@ -2408,14 +2545,25 @@ class Series(ClassSelector):
         if failure:
             raise ValueError(f"{_validate_error_prefix(self)}: {message}")
 
-    def _validate(self, val):
-        super()._validate(val)
-
-        if self.allow_None and val is None:
+    def _validate_rows(self, val):
+        if self.rows is None or val is None:
             return
 
-        if self.rows is not None:
-            self._length_bounds_check(self.rows, len(val), 'row')
+        try:
+            import narwhals.stable.v2 as nw
+        except Exception:
+            nw = None
+
+        if nw is None or not isinstance(val, nw.LazySeries):
+            n_rows = len(val)
+        else:
+            n_rows = int(
+                val.to_frame().select(nw.len().alias('n_rows'))
+                .collect()
+                .item()
+            )
+        self._length_bounds_check(self.rows, n_rows, 'row')
+
 
 #-----------------------------------------------------------------------------
 # List

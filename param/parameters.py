@@ -2427,13 +2427,13 @@ class DataFrame(ClassSelector):
             nw = None
 
         if nw is None or not isinstance(val, nw.LazyFrame):
+            n_rows = len(val)
+        else:
             n_rows = int(
                 val.select(nw.len().alias('n_rows'))
                 .collect()
                 .item()
             )
-        else:
-            n_rows = len(val)
         self._length_bounds_check(self.rows, n_rows, 'row')
 
     @classmethod
@@ -2499,7 +2499,7 @@ class Series(ClassSelector):
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, allow_lazy=Undefined, **params):
         self.rows = rows
         self.allow_lazy = allow_lazy
-        super().__init__(default=default, allow_None=allow_None, **params)
+        super().__init__(default=default, allow_None=allow_None, class_=None, **params)
         self._validate(self.default)
 
     @property
@@ -2555,13 +2555,13 @@ class Series(ClassSelector):
             nw = None
 
         if nw is None or not isinstance(val, nw.LazySeries):
+            n_rows = len(val)
+        else:
             n_rows = int(
                 val.to_frame().select(nw.len().alias('n_rows'))
                 .collect()
                 .item()
             )
-        else:
-            n_rows = len(val)
         self._length_bounds_check(self.rows, n_rows, 'row')
 
 

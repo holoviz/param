@@ -61,7 +61,6 @@ class ParamPager:
         and the dictionary of parameter values. If include_super is
         True, parameters are also collected from the super classes.
         """
-
         params = dict(obj.param.objects('existing'))
         if isinstance(obj,type):
             changed = []
@@ -86,12 +85,11 @@ class ParamPager:
         docstrings in a clean format (alternating red and blue for
         readability).
         """
-
         (params, val_dict, changed) = info
         contents = []
         displayed_params = []
         for name in self.sort_by_precedence(params):
-            if only_changed and not (name in changed):
+            if only_changed and name not in changed:
                 continue
             displayed_params.append((name, params[name]))
 
@@ -147,7 +145,6 @@ class ParamPager:
         Collect the information about parameters needed to build a
         properly formatted table and then tabulate it.
         """
-
         info_list, bounds_dict = [], {}
         (params, val_dict, changed) = info
         col_widths = {k:0 for k in order}
@@ -155,7 +152,7 @@ class ParamPager:
         ordering = self.sort_by_precedence(params)
         for name in ordering:
             p = params[name]
-            if only_changed and not (name in changed):
+            if only_changed and name not in changed:
                 continue
 
             constant = 'C' if p.constant else 'V'
@@ -200,7 +197,7 @@ class ParamPager:
 
     def _tabulate(self, info_list, col_widths, changed, order, bounds_dict):
         """
-        Returns the supplied information as a table suitable for
+        Return the supplied information as a table suitable for
         printing or paging.
 
         info_list:  List of the parameters name, type and mode.
@@ -209,7 +206,6 @@ class ParamPager:
         order:      The order of the table columns
         bound_dict: Dictionary of appropriately formatted bounds
         """
-
         contents, tail = [], []
         column_set = {k for _, row in info_list for k in row}
         columns = [col for col in order if col in column_set]
@@ -316,6 +312,7 @@ def load_ipython_extension(ip, verbose=True):
         Implements the %params line magic used to inspect the parameters
         of a parameterized class or object.
         """
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.param_pager = ParamPager()
@@ -323,13 +320,27 @@ def load_ipython_extension(ip, verbose=True):
 
         @line_magic
         def params(self, parameter_s='', namespaces=None):
-            """
-            The %params line magic accepts a single argument which is a
-            handle on the parameterized object to be inspected. If the
-            object can be found in the active namespace, information about
-            the object's parameters is displayed in the IPython pager.
+            """Display information about a parameterized object in the IPython pager.
 
-            Usage: %params <parameterized class or object>
+            The `%params` line magic takes a single argument, which is a reference to
+            a parameterized object or class to be inspected. If the object is found in
+            the active namespace, information about its parameters is displayed in the
+            IPython pager.
+
+            Usage:
+                %params <parameterized class or object>
+
+            Parameters
+            ----------
+            parameter_s : str, optional
+                The name of the parameterized object to inspect. Defaults to an empty string.
+            namespaces : dict, optional
+                Additional namespaces to search for the object.
+
+            Returns
+            -------
+            None:
+                Outputs the parameter information or error messages to stdout.
             """
             if parameter_s=='':
                 print("Please specify an object to inspect.")
@@ -353,9 +364,7 @@ def load_ipython_extension(ip, verbose=True):
 
 
 class IPythonDisplay:
-    """
-    Reactive display handler that updates the output.
-    """
+    """Reactive display handler that updates the output."""
 
     enabled = True
 

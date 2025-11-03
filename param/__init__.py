@@ -1,24 +1,65 @@
+
+"""
+Param: A declarative framework for managing parameters and reactive programming in Python.
+
+Param is a lightweight library for defining and managing user-modifiable parameters,
+designed to simplify Python programs and enhance their readability, maintainability,
+and robustness. In addition Param provides the `rx` framework for reactive programming.
+
+Param is well-suited for use in scientific computing, data analysis tools,
+graphical user interfaces (GUIs), and any Python application where well-defined,
+validated parameters are needed.
+
+References
+----------
+For detailed documentation, see https://param.holoviz.org/.
+
+Examples
+--------
+Here is an example of using `param.Parameterized` to define a class with validated parameters:
+
+>>> import param
+>>> class MyClass(param.Parameterized):
+...     my_number = param.Number(default=1, bounds=(0, 10))
+...     my_list = param.List(default=[1, 2, 3], item_type=int)
+
+>>> obj = MyClass()
+>>> obj.my_number = 5  # Valid
+>>> obj.my_number = 15  # Raises ValueError: must be in range (0, 10)
+
+Here is an example of using `param.rx` to define a reactive expression:
+
+>>> import param
+>>> rx_value = param.rx([1,2,3])
+>>> rx_value.rx.len()
+3
+
+Lets update the reactive value and check its length:
+
+>>> rx_value.rx.value = [1,2,3,4]
+>>> rx_value.rx.len()
+4
+"""
 import os
 
-from . import version  # noqa: api import
-from .depends import depends  # noqa: api import
-from .parameterized import (  # noqa: api import
+from . import version
+from .depends import depends
+from .parameterized import (
     Parameterized, Parameter, Skip, String, ParameterizedFunction,
-    ParamOverrides, Undefined, get_logger
+    ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
-from .parameterized import (batch_watch, output, script_repr, # noqa: api import
+from .parameterized import (output, script_repr,
                             discard_events, edit_constant)
-from .parameterized import shared_parameters  # noqa: api import
-from .parameterized import logging_level   # noqa: api import
-from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL  # noqa: api import
-from .parameters import (  # noqa: api import
+from .parameterized import shared_parameters
+from .parameterized import logging_level
+from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
+from .parameters import (
     guess_param_types,
     param_union,
     parameterized_class,
     guess_bounds,
     get_soft_bounds,
     resolve_path,
-    normalize_path,
     Time,
     Infinity,
     Dynamic,
@@ -58,16 +99,10 @@ from .parameters import (  # noqa: api import
     CalendarDateRange,
     Event,
 )
-from .reactive import bind, rx # noqa: api import
-from ._utils import (  # noqa: api import
-    produce_value,
-    as_unicode,
-    is_ordered_dict,
-    hashable,
-    named_objs,
+from .reactive import bind, rx
+from ._utils import (
     descendents,
     concrete_descendents,
-    abbreviate_paths,
     exceptions_summarized,
     _is_number,
 )
@@ -155,6 +190,7 @@ __all__ = (
     'ParamOverrides',
     'Parameter',
     'Parameterized',
+    'ParameterizedABC',
     'ParameterizedFunction',
     'Path',
     'Range',
@@ -171,9 +207,6 @@ __all__ = (
     'XYCoordinates',
     '__version__',
     '_is_number',
-    'abbreviate_paths',
-    'as_unicode',
-    'batch_watch',
     'bind',
     'concrete_descendents',
     'depends',
@@ -185,16 +218,11 @@ __all__ = (
     'get_soft_bounds',
     'guess_bounds',
     'guess_param_types',
-    'hashable',
-    'is_ordered_dict',
     'logging_level',
     'main',
-    'named_objs',
-    'normalize_path',
     'output',
     'param_union',
     'parameterized_class',
-    'produce_value',
     'random_seed',
     'resolve_path',
     'rx',

@@ -2,67 +2,65 @@ name: docs
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+a[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+b[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+a[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+b[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+rc[0-9]+"
   workflow_dispatch:
     inputs:
       target:
-        description: 'Site to build and deploy'
+        description: "Site to build and deploy"
         type: choice
         options:
-        - dev
-        - main
-        - dryrun
+          - dev
+          - main
+          - dryrun
         required: true
         default: dryrun
+      version:
+        description: 'Version tag X.X.X (required if target is main)'
+        required: false
   schedule:
-    - cron: '0 13 * * SUN'
+    - cron: "0 13 * * SUN"
+
+defaults:
+  run:
+    shell: bash -e {0}
+
+env:
+  DISPLAY: ":99.0"
 
 jobs:
-  build_docs:
-    name: Documentation
-    runs-on: 'ubuntu-latest'
-    timeout-minutes: 120
-    defaults:
-      run:
-        shell: bash -l {0}
+  pixi_lock:
+    name: Pixi lock
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Fetch unshallow
-        run: git fetch --prune --tags --unshallow -f
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-      - name: Set output
-        id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: graphviz
-        run: sudo apt install graphviz graphviz-dev
-      - name: env setup
+      - uses: holoviz-dev/holoviz_tasks/pixi_lock@v0
+
+  docs_build:
+    name: Build Documentation
+    needs: [pixi_lock]
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate version
+        if: ${{ inputs.target == 'main' }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install hatch
-      - name: build docs
-        run: hatch -v run docs:build
-      - name: Deploy dev
-        uses: peaceiris/actions-gh-pages@v4
-        if: |
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dev') ||
-          (github.event_name == 'push' && (contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
+          if [[ -z "$VERSION" || ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ 'version' is required and must match format X.X.X (e.g. 0.11.1) when target is 'main'"
+            exit 1
+          fi
+      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
-          personal_token: ${{ secrets.ACCESS_TOKEN }}
-          external_repository: holoviz-dev/param
-          publish_dir: ./builtdocs
-          force_orphan: true
-      - name: Deploy main
-        if: |
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'main') ||
-          (github.event_name == 'push' && !(contains(steps.vars.outputs.tag, 'a') || contains(steps.vars.outputs.tag, 'b') || contains(steps.vars.outputs.tag, 'rc')))
-        uses: peaceiris/actions-gh-pages@v4
+          environments: docs
+      - name: Build documentation
+        run: pixi run -e docs docs-build
+      - uses: holoviz-dev/holoviz_tasks/docs-publish@v0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./builtdocs
-          cname: param.holoviz.org
-          force_orphan: true
+          s3-url: s3://param.holoviz.org
+          s3-cloudfront-id: E1795F426SOIBL
+          s3-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          s3-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          version: ${{ inputs.version }}

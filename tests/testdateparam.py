@@ -1,6 +1,4 @@
-"""
-Unit test for Date parameters.
-"""
+"""Unit test for Date parameters."""
 import datetime as dt
 import json
 import re
@@ -11,7 +9,7 @@ import pytest
 
 try:
     import numpy as np
-except:
+except ModuleNotFoundError:
     np = None
 
 from .utils import check_defaults

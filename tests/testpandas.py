@@ -1,6 +1,4 @@
-"""
-Test Parameters based on pandas
-"""
+"""Test Parameters based on pandas."""
 import os
 import re
 import unittest
@@ -12,7 +10,7 @@ from .utils import check_defaults
 
 try:
     import pandas
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_PANDAS','0') == '1':
         raise ImportError("PARAM_TEST_PANDAS=1 but pandas not available.")
     else:

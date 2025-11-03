@@ -12,25 +12,32 @@ from .utils import check_defaults
 # TODO: tests copied from testobjectselector could use assertRaises
 # context manager (and could be updated in testobjectselector too).
 
+class Obj: pass
+class SubObj1(Obj): pass
+class SubObj2(Obj): pass
+class DiffObj: pass
+
 class TestListParameters(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
+
         class P(param.Parameterized):
             e = param.List([5,6,7], item_type=int)
             l = param.List(["red","green","blue"], item_type=str, bounds=(0,10))
             m = param.List([1, 2, 3], bounds=(3, None))
             n = param.List([1], bounds=(None, 3))
+            o = param.List([SubObj1, SubObj2], item_type=Obj, is_instance=False)
 
         self.P = P
 
     def _check_defaults(self, p):
         assert p.default == []
         assert p.allow_None is False
-        assert p.class_ is None
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True
+        assert p.is_instance is True
 
     def test_defaults_class(self):
         class P(param.Parameterized):
@@ -85,6 +92,22 @@ class TestListParameters(unittest.TestCase):
             match=re.escape("List parameter 'P.n' length must be at most 3, not 4.")
         ):
             p.n = [6] * 4
+
+    def test_set_object_wrong_is_instance(self):
+        p = self.P()
+        with pytest.raises(
+            TypeError,
+            match=re.escape("List parameter 'P.o' items must be subclasses of <class 'tests.testlist.Obj'>, not")
+        ):
+            p.o = [SubObj1()]
+
+    def test_set_object_wrong_is_instance_type(self):
+        p = self.P()
+        with pytest.raises(
+            TypeError,
+            match=re.escape("List parameter 'P.o' items must be subclasses of <class 'tests.testlist.Obj'>, not")
+        ):
+            p.o = [DiffObj]
 
     def test_set_object_wrong_type(self):
         p = self.P()
@@ -166,14 +189,14 @@ class TestListParameters(unittest.TestCase):
         assert B.param.p.default == [0]
         assert B.param.p.instantiate is True
         assert B.param.p.bounds == (0, None)
-        assert B.param.p.item_type == int
+        assert B.param.p.item_type is int
 
         b = B()
 
         assert b.param.p.default == [0]
         assert b.param.p.instantiate is True
         assert b.param.p.bounds == (0, None)
-        assert b.param.p.item_type == int
+        assert b.param.p.item_type is int
 
     def test_inheritance_behavior5(self):
         class A(param.Parameterized):
@@ -226,7 +249,6 @@ class TestHookListParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default == []
         assert p.allow_None is False
-        assert p.class_ is None
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True

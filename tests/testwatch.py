@@ -1,7 +1,6 @@
-"""
-Unit test for watch mechanism
-"""
+"""Unit test for watch mechanism."""
 import copy
+import re
 import unittest
 
 import param
@@ -9,7 +8,7 @@ import pytest
 
 from param.parameterized import Skip, discard_events
 
-from .utils import MockLoggingHandler, warnings_as_excepts
+from .utils import MockLoggingHandler
 
 
 class Accumulator:
@@ -251,15 +250,8 @@ class TestWatch(unittest.TestCase):
         obj = SimpleWatchExample()
         watcher = obj.param.watch(accumulator, 'a')
         obj.param.unwatch(watcher)
-        with warnings_as_excepts(match='No such watcher'):
-            obj.param.unwatch(watcher)
-        try:
-            param.parameterized.warnings_as_exceptions = False
-            obj.param.unwatch(watcher)
-            self.log_handler.assertEndsWith('WARNING',
-                                ' to remove.')
-        finally:
-            param.parameterized.warnings_as_exceptions = True
+        # Idempotent, not error raised.
+        obj.param.unwatch(watcher)
 
     def test_simple_batched_watch_setattr(self):
 
@@ -652,37 +644,6 @@ class TestWatch(unittest.TestCase):
 
         obj.param.watch(lambda: '', ['a', 'b'])
 
-        with pytest.warns(param._utils.ParamFutureWarning):
-            pw = obj._param_watchers
-        assert isinstance(pw, dict)
-        for pname in ('a', 'b'):
-            assert pname in pw
-            assert 'value' in pw[pname]
-            assert isinstance(pw[pname]['value'], list) and len(pw[pname]['value']) == 1
-            assert isinstance(pw[pname]['value'][0], param.parameterized.Watcher)
-
-    def test_watch_watchers_modified(self):
-        accumulator = Accumulator()
-        obj = SimpleWatchExample()
-
-        obj.param.watch(accumulator, ['a', 'b'])
-
-        with pytest.warns(param._utils.ParamFutureWarning):
-            pw = obj._param_watchers
-        del pw['a']
-
-        obj.param.update(a=1, b=1)
-
-        assert accumulator.call_count() == 1
-        args = accumulator.args_for_call(0)
-        assert len(args) == 1
-        assert args[0].name == 'b'
-
-    def test_watch_watchers_exposed_public(self):
-        obj = SimpleWatchExample()
-
-        obj.param.watch(lambda: '', ['a', 'b'])
-
         pw = obj.param.watchers
         assert isinstance(pw, dict)
         for pname in ('a', 'b'):
@@ -691,7 +652,7 @@ class TestWatch(unittest.TestCase):
             assert isinstance(pw[pname]['value'], list) and len(pw[pname]['value']) == 1
             assert isinstance(pw[pname]['value'][0], param.parameterized.Watcher)
 
-    def test_watch_watchers_modified_public(self):
+    def test_watch_watchers_modified(self):
         accumulator = Accumulator()
         obj = SimpleWatchExample()
 
@@ -732,6 +693,33 @@ class TestWatch(unittest.TestCase):
             match=r"Setting `\.param\.watchers` is only supported on a Parameterized instance, not class\."
         ):
             SimpleWatchExample.param.watchers = {}
+
+    def test_watch_error_unsafe_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    RuntimeError,
+                    match=re.escape(
+                        '(Un)registering a watcher on a partially initialized Parameterized instance '
+                        'is not allowed. Ensure you have called super().__init__(**) in the '
+                        'Parameterized instance constructor before trying to set up a watcher.',
+                    )
+                ):
+                    self.param.watch(print, 'x')
+
+        P()
+
+
+    def test_watch_raises_bad_parameter(self):
+        obj = SimpleWatchExample()
+        with pytest.raises(
+            ValueError,
+            match="does_not_exist parameter was not found in list of parameters of class SimpleWatchExample"
+        ):
+            obj.param.watch(lambda e: print(e), 'does_not_exist')
 
 
 class TestWatchMethod(unittest.TestCase):
@@ -1055,3 +1043,21 @@ class TestTrigger(unittest.TestCase):
 
         example.picker.value += 1
         assert example.da == 3
+
+    def test_trigger_error_unsafe_before_initialized(self):
+        class P(param.Parameterized):
+
+            x = param.Parameter()
+
+            def __init__(self, **params):
+                with pytest.raises(
+                    RuntimeError,
+                    match=re.escape(
+                        'Triggering watchers on a partially initialized Parameterized instance '
+                        'is not allowed. Ensure you have called super().__init__(**params) in '
+                        'the Parameterized instance constructor before trying to set up a watcher.',
+                    )
+                ):
+                    self.param.trigger('x')
+
+        P()

@@ -1,13 +1,11 @@
-"""
-Do all subclasses of Parameter supply a valid default?
-"""
+"""Test that all subclasses of Parameter supply a valid default."""
 import unittest
 
 import pytest
 
 import param
 
-from param import concrete_descendents, Parameter
+from param.parameterized import descendents, Parameter
 
 # import all parameter types
 from param import * # noqa
@@ -23,11 +21,11 @@ skip = []
 
 try:
     import numpy # noqa
-except ImportError:
+except ModuleNotFoundError:
     skip.append('Array')
 try:
     import pandas # noqa
-except ImportError:
+except ModuleNotFoundError:
     skip.append('DataFrame')
     skip.append('Series')
 
@@ -61,7 +59,7 @@ class DefaultsMetaclassTest(type):
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
-                    if type(parameter) == param.Composite and slot == 'objtype':
+                    if type(parameter) is param.Composite and slot == 'objtype':
                         continue
                     assert getattr(P.param.p, slot) is not param.Undefined
                     # Handled in a special way, skip it
@@ -82,7 +80,7 @@ class DefaultsMetaclassTest(type):
 
                 for slot in param.parameterized.get_all_slots(parameter):
                     # Handled in a special way, skip it
-                    if type(parameter) == param.Composite and slot == 'objtype':
+                    if type(parameter) is param.Composite and slot == 'objtype':
                         continue
                     assert getattr(inst.param.p, slot) is not param.Undefined
                     # Handled in a special way, skip it
@@ -92,7 +90,8 @@ class DefaultsMetaclassTest(type):
 
             return test
 
-        for p_name, p_type in concrete_descendents(Parameter).items():
+        for p_type in descendents(Parameter):
+            p_name = p_type.__name__
             dict_["test_default_of_unbound_%s"%p_name] = add_test_unbound(p_type) if p_name not in skip else test_skip
             dict_["test_default_of_class_%s"%p_name] = add_test_class(p_type) if p_name not in skip else test_skip
             dict_["test_default_of_inst_%s"%p_name] = add_test_inst(p_type) if p_name not in skip else test_skip

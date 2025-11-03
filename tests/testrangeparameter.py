@@ -1,6 +1,4 @@
-"""
-Unit test for Range parameters.
-"""
+"""Unit test for Range parameters."""
 import re
 import unittest
 

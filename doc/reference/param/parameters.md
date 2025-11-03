@@ -1,5 +1,7 @@
 # Parameters
 
+## Base
+
 ```{eval-rst}
 .. currentmodule:: param
 ```
@@ -10,6 +12,28 @@
   :nosignatures:
 
   Parameter
+```
+
+## `Parameter` methods and properties
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
+  Parameter.label
+  Parameter.rx
+  Parameter.schema
+  Parameter.deserialize
+  Parameter.serialize
+```
+
+## `Parameter` subclasses
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
+
   String
   Bytes
   Color
@@ -44,4 +68,22 @@
   Callable
   Action
   Composite
+```
+
+## Helpers
+
+```{eval-rst}
+.. currentmodule:: param
+```
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
+  get_soft_bounds
+  guess_bounds
+  guess_param_types
+  param_union
+  parameters.Time
+  resolve_path
 ```

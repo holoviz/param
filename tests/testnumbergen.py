@@ -1,6 +1,4 @@
-"""
-Test cases for the numbergen module.
-"""
+"""Test cases for the numbergen module."""
 import unittest
 
 import numbergen

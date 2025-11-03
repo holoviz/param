@@ -1,6 +1,4 @@
-"""
-If numpy's present, is numpy stuff ok?
-"""
+"""If numpy is present, test if numpy stuff is ok."""
 import os
 import unittest
 
@@ -11,7 +9,7 @@ from .utils import check_defaults
 try:
     import numpy
     import numpy.testing
-except ImportError:
+except ModuleNotFoundError:
     if os.getenv('PARAM_TEST_NUMPY','0') == '1':
         raise ImportError("PARAM_TEST_NUMPY=1 but numpy not available.")
     else:
@@ -19,7 +17,7 @@ except ImportError:
 
 
 def _is_array_and_equal(test, ref):
-    if not type(test) == numpy.ndarray:
+    if type(test) is not numpy.ndarray:
         raise AssertionError
     numpy.testing.assert_array_equal(test,ref)
 

@@ -1,0 +1,197 @@
+[workspace]
+name = "param"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
+
+[activation.env]
+PYTHONIOENCODING = "utf-8"
+
+[environments]
+default = [
+    "py312",
+    "required",
+    "test-core",
+    "test",
+    "example",
+    "test-example",
+    "lint",
+    "doc",
+    "dev",
+]
+
+[environments.test-310]
+features = ["py310", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-311]
+features = ["py311", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-312]
+features = ["py312", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-313]
+features = ["py313", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-314]
+features = ["py314", "required", "test-core", "test", "example", "test-example"]
+no-default-feature = true
+
+[environments.test-314t]
+features = ["py314t", "required", "test-core", "test-314t"]
+no-default-feature = true
+
+[environments.test-core]
+features = ["py314", "required", "test-core"]
+no-default-feature = true
+
+[environments.docs]
+features = ["py313", "required", "example", "doc"]
+no-default-feature = true
+
+[environments.build]
+features = ["py313", "required", "build"]
+no-default-feature = true
+
+[environments.lint]
+features = ["py313", "lint"]
+no-default-feature = true
+
+[feature.required.dependencies]
+nomkl = "*"
+pip = "*"
+
+[feature.required.tasks]
+install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
+
+[feature.py310.dependencies]
+python = "3.10.*"
+
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py312.activation.env]
+COVERAGE_CORE = "sysmon"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
+[feature.py313.activation.env]
+COVERAGE_CORE = "sysmon"
+
+[feature.py314.dependencies]
+python = "3.14.*"
+
+[feature.py314.activation.env]
+COVERAGE_CORE = "sysmon"
+
+[feature.py314t.dependencies]
+python-freethreading = "3.14.*"
+
+[feature.example.dependencies]
+aiohttp = "*"
+pandas = "*"
+panel = "*"
+
+# =================== DEV ===================
+
+[feature.dev.dependencies]
+jupyterlab = "*"
+setuptools_scm = ">=6"
+
+[feature.dev.tasks]
+lab = 'jupyter lab'
+sync-git-tags = 'python scripts/sync_git_tags.py param'
+setup-dev = { depends-on = ["install", "lint-install"] }
+
+# =============================================
+# =================== TESTS ===================
+# =============================================
+[feature.test-core.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-github-actions-annotate-failures = "*"
+
+[feature.test-core.tasks]
+test-unit = 'pytest tests'
+
+[feature.test.dependencies]
+cloudpickle = "*"
+ipython = "*"
+jsonschema = "*"
+nest-asyncio = "*"
+numpy = "*"
+odfpy = "*"
+openpyxl = "*"
+pandas = "*"
+pyarrow = "*"
+pytables = "*"
+xlrd = "*"
+gmpy2 = "*"
+ipykernel = "!=7.0.0"  # temp pin: https://github.com/ipython/ipykernel/issues/1445
+
+[feature.test-314t.dependencies]
+cloudpickle = "*"
+ipython = "*"
+# jsonschema = "*"
+nest-asyncio = "*"
+numpy = "*"
+odfpy = "*"
+# openpyxl = "*"
+# pandas = "*"
+# pyarrow = "*"
+# pytables = "*"
+xlrd = "*"
+# gmpy2 = "*"
+
+[feature.test-example.tasks]
+test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'
+
+[feature.test-example.dependencies]
+psutil = "*"
+pytest-xdist = "*"
+nbval = "*"
+
+# =============================================
+# =================== DOCS ====================
+# =============================================
+[feature.doc]
+channels = ["pyviz/label/tooling_dev"]
+
+[feature.doc.activation.env]
+PARAM_PARAMETER_SIGNATURE = "1"
+
+[feature.doc.dependencies]
+graphviz = "*"
+nbsite = ">=0.9.0a12"
+sphinx-remove-toctrees = "*"
+
+[feature.doc.tasks.docs-build]
+cmd = "sphinx-build -b html doc builtdocs"
+
+# =============================================
+# ================== BUILD ====================
+# =============================================
+[feature.build.dependencies]
+python-build = "*"
+conda-build = "*"
+
+[feature.build.tasks]
+build-conda = 'bash scripts/conda/build.sh'
+build-pip = 'python -m build .'
+
+# =============================================
+# =================== LINT ====================
+# =============================================
+[feature.lint.dependencies]
+pre-commit = "*"
+
+[feature.lint.tasks]
+lint = 'pre-commit run --all-files'
+lint-install = 'pre-commit install'

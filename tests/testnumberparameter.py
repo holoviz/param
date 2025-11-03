@@ -1,6 +1,4 @@
-"""
-Unit test for Number parameters and their subclasses.
-"""
+"""Unit test for Number parameters and their subclasses."""
 import unittest
 import pytest
 
@@ -10,7 +8,7 @@ from .utils import check_defaults
 
 try:
     import numpy as np
-except ImportError:
+except ModuleNotFoundError:
     np = None
 
 class TestNumberParameters(unittest.TestCase):

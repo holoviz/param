@@ -1,87 +1,93 @@
 """
-reactive API
+Reactive API for Dynamic Expression Pipelines.
 
-`rx` is a wrapper around a Python object that lets users create
-reactive expression pipelines by calling existing APIs on an object with dynamic
-parameters or widgets.
+`rx` provides a wrapper around Python objects, enabling the creation of
+reactive expression pipelines that dynamically update based on changes to their
+underlying parameters or widgets. This approach simplifies the implementation of
+dynamic, interactive behavior in Python code, particularly for data manipulation
+and visualization tasks.
 
-An `rx` instance watches what operations are applied to the object
-and records these on each instance, which are then strung together
-into a chain.
+Overview
+--------
 
-The original input to an `rx` object is stored in a mutable list and can be
-accessed via the `_obj` property. The shared mutable data structure
-ensures that all `rx` instances created from the same object can
-hold a shared reference that can be updated, e.g. via the `.value`
-property or because the input was itself a reference to some object that
-can potentially be updated.
+An `rx` instance tracks and records the operations applied to a wrapped object,
+constructing a chain of transformations that can reactively update as inputs change.
+These operations are recorded and evaluated lazily, ensuring that the object state
+remains up-to-date while enabling efficient re-computation.
 
-When an operation is applied to an `rx` instance, it will
-record the operation and create a new instance using the `_clone` method,
-e.g. `dfi.head()` first records that the `'head'` attribute is
-accessed, which is achieved by overriding `__getattribute__`. A new
-reactive object is returned, which will then record that it is
-being called, and that new object will be itself called, as
-`rx` implements `__call__`. `__call__` returns another
-`rx` instance. To be able to watch all the potential
-operations that may be applied to an object, `rx` implements:
+The original input object is stored in a shared mutable list accessible via the
+`_obj` property. This shared reference allows all `rx` instances derived from the
+same object to reflect updates, whether through the `.value` property or due to
+modifications in the underlying data.
 
-- `__getattribute__`: Watching for attribute accesses
-- `__call__`: Intercepting both actual calls or method calls if an
-  attribute was previously accessed
-- `__getitem__`: Intercepting indexing operations
-- Operators: Implementing all valid operators `__gt__`, `__add__`, etc.
-- `__array_ufunc__`: Intercepting numpy universal function calls
+Core Features
+-------------
 
-The `rx` object evaluates operations lazily, but whenever the
-current value is needed the operations are automatically
-evaluated. Note that even attribute access or tab-completion
-operations can result in evaluation of the pipeline. This is very
-useful in a REPL, as this allows inspecting the transformed
-object at any point of the pipeline, and as such provide correct
-auto-completion and docstrings. E.g. executing `dfi.A.max?` in an
-interactive REPL or notebook where it allows returning the docstring
-of the method being accessed.
+The `rx` implementation intercepts and records various operations performed on an
+object, including:
 
-The actual operations are stored as a dictionary on the `_operation`
-attribute of each instance. They contain 4 keys:
+- **Attribute Access**: Captured using `__getattribute__` to watch for method or
+  property usage.
+- **Method Calls**: Handled through `__call__` after an attribute is accessed.
+- **Indexing**: Tracked via `__getitem__` for slicing or item access.
+- **Operators**: Supports all standard operators (e.g., `__add__`, `__gt__`) to
+  enable arithmetic and logical expressions.
+- **NumPy Integration**: Overrides `__array_ufunc__` to capture NumPy universal
+  function calls.
 
-- `fn`: The function to apply (either an actual function or a string
-        indicating the operation is a method on the object)
-- `args`: Any arguments to supply to the `fn`.
-- `kwargs`: Any keyword arguments to supply to the `fn`.
-- `reverse`: If the function is not a method this indicates whether
-             the first arg and the input object should be supplied in
-             reverse order.
+This functionality makes `rx` objects particularly well-suited for interactive
+environments such as Jupyter notebooks or Python REPLs. Lazy evaluation ensures that
+pipeline operations are executed only when their result is needed, enabling dynamic
+inspection and interactive exploration. For instance, tab-completion and docstring
+retrieval (`dfi.A.max?`) work seamlessly with reactive expressions.
 
-The `_depth` attribute starts at 0 and is incremented by 1 every time
-a new `rx` instance is created part of a chain. The root
-instance in a reactive expression  has a `_depth` of 0. A reactive
-expression can consist of multiple chains, such as `dfi[dfi.A > 1]`,
-as the `rx` instance is referenced twice in the expression. As a
-consequence `_depth` is not the total count of `rx` instance
-creations of a pipeline, it is the count of instances created in the
-outer chain. In the example, that would be `dfi[]`. Each `rx`
-instance keeps a reference to the previous instance in the chain and
-each instance tracks whether its current value is up-to-date via the
-`_dirty` attribute, which is set to False if any dependency changes.
+Reactive Expression Mechanics
+-----------------------------
 
-The `_method` attribute is a string that temporarily stores the
-method/attr accessed on the object, e.g. `_method` is 'head' in
-`dfi.head()`, until the `rx` instance created in the pipeline
-is called at which point `_method` is reset to None. In cases such as
-`dfi.head` or `dfi.A`, `_method` is not (yet) reset to None. At this
-stage the `rx` instance returned has its `_current` attribute
-not updated, e.g. `dfi.A._current` is still the original dataframe,
-not the 'A' series. Keeping `_method` is thus useful for instance to
-display `dfi.A`, as the evaluation of the object will check whether
-`_method` is set or not, and if it's set it will use it to compute the
-object returned, e.g. the series `df.A` or the method `df.head`, and
-display its repr.
+When an operation is applied to an `rx` instance:
+
+1. The operation is recorded in a structured format (stored in `_operation`).
+2. A new `rx` instance is created using the `_clone` method.
+3. The `_dirty` attribute is set to `True` for dependent objects, indicating the
+   need for re-evaluation.
+
+Each `_operation` dictionary includes:
+
+- `fn`: The function or method to execute.
+- `args`: Positional arguments for the function or method.
+- `kwargs`: Keyword arguments for the function or method.
+- `reverse`: A flag indicating whether the input object and first argument should
+  be swapped during execution.
+
+Chain Tracking and Dependencies
+-------------------------------
+
+Reactive pipelines consist of chains of `rx` instances, with each instance linked
+to its predecessor. The `_depth` attribute indicates the chain depth, starting at
+0 for the root object. Note that `_depth` reflects the chain's outer structure, not
+the total number of reactive instances in a pipeline.
+
+Instances also track their dependencies to ensure accurate updates:
+- `_method`: Temporarily stores the method or attribute accessed (e.g., `'head'`
+  in `dfi.head()`).
+- `_dirty`: Indicates whether the current value needs re-computation.
+- `_current`: Stores the result of the most recent computation.
+
+Benefits and Use Cases
+----------------------
+
+The reactive approach eliminates the need for explicit callbacks and manual state
+management, making it ideal for:
+
+- Real-time data processing and visualization pipelines.
+- Interactive dashboards and applications.
+- Simplifying complex workflows with dynamic dependencies.
+
+By leveraging Python's operator overloading and lazy evaluation, `rx` provides a
+powerful and intuitive way to manage dynamic behavior in Python applications.
 """
 from __future__ import annotations
 
-import asyncio
 import inspect
 import math
 import operator
@@ -102,25 +108,19 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 
 class Wrapper(Parameterized):
-    """
-    Helper class to allow updating literal values easily.
-    """
+    """Helper class to allow updating literal values easily."""
 
     object = Parameter(allow_refs=False)
 
 
 class GenWrapper(Parameterized):
-    """
-    Helper class to allow streaming from generator functions.
-    """
+    """Helper class to allow streaming from generator functions."""
 
     object = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
-    """
-    Helper class to allow triggering an event under some condition.
-    """
+    """Helper class to allow triggering an event under some condition."""
 
     value = Event()
 
@@ -130,9 +130,7 @@ class Trigger(Parameterized):
         self.parameters = parameters
 
 class Resolver(Parameterized):
-    """
-    Helper class to allow (recursively) resolving references.
-    """
+    """Helper class to allow (recursively) resolving references."""
 
     object = Parameter(allow_refs=True)
 
@@ -181,10 +179,46 @@ class NestedResolver(Resolver):
 
 class reactive_ops:
     """
-    Namespace for reactive operators.
+    The reactive operations namespace.
 
-    Implements operators that cannot be implemented using regular
-    Python syntax.
+    Provides reactive versions of operations that cannot be made reactive through
+    operator overloading. This includes operations such as ``.rx.and_`` and ``.rx.bool``.
+
+    Calling this namespace (``()``) creates and returns a reactive expression, enabling
+    dynamic updates and computation tracking.
+
+    Returns
+    -------
+    rx
+        A reactive expression representing the operation applied to the current value.
+
+    References
+    ----------
+    For more details, see the user guide:
+    https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+
+    Examples
+    --------
+    Create a Parameterized instance and access its reactive operations property:
+
+    >>> import param
+    >>> class P(param.Parameterized):
+    ...     a = param.Number()
+    >>> p = P(a=1)
+
+    Retrieve the current value reactively:
+
+    >>> a_value = p.param.a.rx.value
+
+    Create a reactive expression by calling the namespace:
+
+    >>> rx_expression = p.param.a.rx()
+
+    Use special methods from the reactive ops namespace for reactive operations:
+
+    >>> condition = p.param.a.rx.and_(True)
+    >>> piped = p.param.a.rx.pipe(lambda x: x * 2)
+
     """
 
     def __init__(self, reactive):
@@ -193,25 +227,115 @@ class reactive_ops:
     def _as_rx(self):
         return self._reactive if isinstance(self._reactive, rx) else self()
 
-    def __call__(self):
+    def __call__(self) -> 'rx':
+        """Create a reactive expression."""
         rxi = self._reactive
-        return rxi if isinstance(rx, rx) else rx(rxi)
+        return rxi if isinstance(rxi, rx) else rx(rxi)
 
-    def and_(self, other):
+    def and_(self, other) -> 'rx':
         """
-        Replacement for the ``and`` statement.
+        Perform a logical AND operation with the given operand.
+
+        This method computes a logical AND (``and``) operation between the current
+        value of the reactive expression and the provided operand. The result is
+        returned as a new reactive expression.
+
+        Parameters
+        ----------
+        other : any
+            The operand to combine with the current value using the AND operation.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of the AND operation.
+
+        Examples
+        --------
+        Create two reactive expressions and combine them using ``and_``:
+
+        >>> import param
+        >>> a = param.rx(True)
+        >>> b = param.rx(False)
+        >>> result = a.rx.and_(b)
+        >>> result.rx.value
+        False
+
+        Combine a reactive expression with a static value:
+
+        >>> result = a.rx.and_(True)
+        >>> result.rx.value
+        True
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj and other, other)
 
-    def bool(self):
+    def bool(self) -> 'rx':
         """
-        __bool__ cannot be implemented so it is provided as a method.
+        Evaluate the truthiness of the current object.
+
+        This method computes the boolean value of the current reactive expression.
+        The result is returned as a new reactive expression, allowing the truthiness
+        of the object to be used in further reactive operations.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the boolean value of the object.
+
+        Examples
+        --------
+        Create a reactive expression and evaluate its truthiness:
+
+        >>> import param
+        >>> rx_value = param.rx(5)
+        >>> rx_bool = rx_value.rx.bool()
+        >>> rx_bool.rx.value
+        True
+
+        Evaluate the truthiness of an empty reactive expression:
+
+        >>> rx_empty = param.rx([])
+        >>> rx_bool = rx_empty.rx.bool()
+        >>> rx_bool.rx.value
+        False
         """
         return self._as_rx()._apply_operator(bool)
 
-    def buffer(self, n):
+    def buffer(self, n) -> 'rx':
         """
-        Collects the last n items that were emitted.
+        Collect the last ``n`` items emitted by the reactive expression.
+
+        This method creates a new reactive expression that maintains a buffer of the
+        most recent ``n`` items emitted by the current reactive expression. As new values
+        are emitted, older values are discarded to keep the buffer size constant.
+
+        Parameters
+        ----------
+        n : int
+            The maximum number of items to retain in the buffer.
+
+        Returns
+        -------
+        rx
+            A new reactive expression containing the buffered items as a list.
+
+        Examples
+        --------
+        Create a reactive expression and buffer the last 3 emitted items:
+
+        >>> import param
+        >>> rx_value = param.rx(1)
+        >>> rx_buffer = rx_value.rx.buffer(3)
+        >>> rx_buffer.rx.value
+        [1]
+
+        Emit new values and observe the buffered results:
+
+        >>> rx_value.rx.value = 2
+        >>> rx_value.rx.value = 3
+        >>> rx_value.rx.value = 4
+        >>> rx_buffer.rx.value
+        [2, 3, 4]
         """
         items = []
         def collect(new, n):
@@ -221,42 +345,222 @@ class reactive_ops:
             return items
         return self._as_rx()._apply_operator(collect, n)
 
-    def in_(self, other):
+    def in_(self, other) -> 'rx':
         """
-        Replacement for the ``in`` statement.
+        Check if the current object is contained "in" the given operand.
+
+        This method performs a containment check, equivalent to the ``in`` keyword in Python,
+        but within a reactive expression. The result is returned as a new reactive expression.
+
+        Parameters
+        ----------
+        other : any
+            The collection or operand to check for containment.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of the containment check.
+
+        Examples
+        --------
+        Check if a reactive value is in a list:
+
+        >>> import param
+        >>> rx_value = param.rx(2)
+        >>> rx_in = rx_value.rx.in_([1, 2, 3])
+        >>> rx_in.rx.value
+        True
+
+        Check containment with a string:
+
+        >>> rx_char = param.rx('a')
+        >>> rx_in = rx_char.rx.in_('alphabet')
+        >>> rx_in.rx.value
+        True
+
+        Update the reactive value and observe changes:
+
+        >>> rx_char.rx.value = 'c'
+        >>> rx_in.rx.value
+        False
         """
         return self._as_rx()._apply_operator(operator.contains, other, reverse=True)
 
-    def is_(self, other):
+    def is_(self, other) -> 'rx':
         """
-        Replacement for the ``is`` statement.
+        Perform a logical "is" comparison with the given operand.
+
+        This method checks if the current object is the same object (i.e., identical in
+        memory) as the given operand. The result is returned as a new reactive expression.
+
+        Parameters
+        ----------
+        other : any
+            The operand to compare for object identity.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of the "is" comparison.
+
+        Examples
+        --------
+        Check if a reactive value refers to the same object:
+
+        >>> import param
+        >>> obj1 = object()
+        >>> obj2 = object()
+        >>> rx_obj = param.rx(obj1)
+        >>> rx_is = rx_obj.rx.is_(obj1)
+        >>> rx_is.rx.value
+        True
+
+        Compare with a different object:
+
+        >>> rx_is = rx_obj.rx.is_(obj2)
+        >>> rx_is.rx.value
+        False
+
+        Update the reactive value and re-check identity:
+
+        >>> rx_obj.rx.value = obj2
+        >>> rx_is.rx.value
+        False
         """
         return self._as_rx()._apply_operator(operator.is_, other)
 
-    def is_not(self, other):
+    def is_not(self, other) -> 'rx':
         """
-        Replacement for the ``is not`` statement.
+        Perform a logical "is not" comparison with the given operand.
+
+        This method checks if the current object is not the same object (i.e., not
+        identical in memory) as the given operand. The result is returned as a new
+        reactive expression.
+
+        Parameters
+        ----------
+        other : any
+            The operand to compare for non-identity.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of the "is not" comparison.
+
+        Examples
+        --------
+        Check if a reactive value is not the same object:
+
+        >>> import param
+        >>> obj1 = object()
+        >>> obj2 = object()
+        >>> rx_obj = param.rx(obj1)
+        >>> rx_is_not = rx_obj.rx.is_not(obj2)
+        >>> rx_is_not.rx.value
+        True
+
+        Compare with the same object:
+
+        >>> rx_is_not = rx_obj.rx.is_not(obj1)
+        >>> rx_is_not.rx.value
+        False
+
+        Update the reactive value and re-check non-identity:
+
+        >>> rx_obj.rx.value = obj2
+        >>> rx_is_not.rx.value
+        True
         """
         return self._as_rx()._apply_operator(operator.is_not, other)
 
-    def len(self):
+    def len(self) -> 'rx':
         """
-        __len__ cannot be implemented so it is provided as a method.
+        Return the length of the current object as a reactive expression.
+
+        Since the ``__len__`` method cannot be overloaded reactively, this method
+        provides a way to compute the length of the current reactive expression.
+        The result is returned as a new reactive expression.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the length of the object.
+
+        Examples
+        --------
+        Compute the length of a reactive list:
+
+        >>> import param
+        >>> rx_list = param.rx([1, 2, 3])
+        >>> rx_len = rx_list.rx.len()
+        >>> rx_len.rx.value
+        3
+
+        Update the reactive list and observe the length update:
+
+        >>> rx_list.rx.value = [1, 2, 3, 4, 5]
+        >>> rx_len.rx.value
+        5
+
+        Compute the length of a reactive string:
+
+        >>> rx_string = param.rx("Hello World")
+        >>> rx_len = rx_string.rx.len()
+        >>> rx_len.rx.value
+        11
         """
         return self._as_rx()._apply_operator(len)
 
-    def map(self, func, /, *args, **kwargs):
+    def map(self, func, /, *args, **kwargs) -> 'rx':
         """
-        Apply a function to each item.
+        Apply a function to each item in the reactive collection.
 
-        Arguments
-        ---------
-        func: function
-          Function to apply.
-        args: iterable, optional
-          Positional arguments to pass to `func`.
-        kwargs: mapping, optional
-          A dictionary of keywords to pass to `func`.
+        This method applies a given function to every item in the current reactive
+        collection and returns a new reactive expression containing the results.
+
+        Parameters
+        ----------
+        func : callable
+            The function to apply to each item in the collection.
+        *args : iterable, optional
+            Positional arguments to pass to the function.
+        **kwargs : dict, optional
+            Keyword arguments to pass to the function.
+
+        Returns
+        -------
+        rx
+            A new reactive expression containing the results of applying ``func``
+            to each item.
+
+        Raises
+        ------
+        TypeError
+            If ``func`` is a generator or asynchronous generator function, which
+            are not supported.
+
+        Examples
+        --------
+        Apply a function to double each item in a reactive list:
+
+        >>> import param
+        >>> reactive_list = param.rx([1, 2, 3])
+        >>> reactive_doubled = reactive_list.rx.map(lambda x: x * 2)
+        >>> reactive_doubled.rx.value
+        [2, 4, 6]
+
+        Use positional arguments in the function:
+
+        >>> reactive_offset = reactive_list.rx.map(lambda x, offset: x + offset, offset=10)
+        >>> reactive_offset.rx.value
+        [11, 12, 13]
+
+        Use keyword arguments in the function:
+
+        >>> reactive_power = reactive_list.rx.map(lambda x, power=1: x ** power, power=3)
+        >>> reactive_power.rx.value
+        [1, 8, 27]
         """
         if inspect.isasyncgenfunction(func) or inspect.isgeneratorfunction(func):
             raise TypeError(
@@ -264,6 +568,7 @@ class reactive_ops:
                 "or coroutine functions are permitted."
             )
         if inspect.iscoroutinefunction(func):
+            import asyncio
             async def apply(vs, *args, **kwargs):
                 return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
         else:
@@ -271,78 +576,274 @@ class reactive_ops:
                 return [func(v, *args, **kwargs) for v in vs]
         return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
-    def not_(self):
+    def not_(self) -> 'rx':
         """
-        __bool__ cannot be implemented so not has to be provided as a method.
+        Perform a logical NOT operation on the current reactive value.
+
+        This method computes the logical negation (``not``) of the current reactive
+        expression and returns the result as a new reactive expression.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of the NOT operation.
+
+        Examples
+        --------
+        Apply a logical NOT operation to a reactive boolean:
+
+        >>> import param
+        >>> rx_bool = param.rx(True)
+        >>> rx_not = rx_bool.rx.not_()
+        >>> rx_not.rx.value
+        False
+
+        Update the reactive value and observe the change:
+
+        >>> rx_bool.rx.value = False
+        >>> rx_not.rx.value
+        True
         """
         return self._as_rx()._apply_operator(operator.not_)
 
-    def or_(self, other):
+    def or_(self, other)-> 'rx':
         """
-        Replacement for the ``or`` statement.
+        Perform a logical OR operation with the given operand.
+
+        This method computes a logical OR (``or``) operation between the current
+        reactive value and the provided operand. The result is returned as a new
+        reactive expression.
+
+        Parameters
+        ----------
+        other : any
+            The operand to combine with the current value using the OR operation.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of the OR operation.
+
+        Examples
+        --------
+        Combine two reactive boolean values using OR:
+
+        >>> import param
+        >>> rx_bool1 = param.rx(False)
+        >>> rx_bool2 = param.rx(True)
+        >>> rx_or = rx_bool1.rx.or_(rx_bool2)
+        >>> rx_or.rx.value
+        True
+
+        Combine a reactive value with a static boolean:
+
+        >>> rx_or_static = rx_bool1.rx.or_(True)
+        >>> rx_or_static.rx.value
+        True
+
+        Update the reactive value and observe the change:
+
+        >>> rx_bool1.rx.value = True
+        >>> rx_or.rx.value
+        True
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
-    def pipe(self, func, /, *args, **kwargs):
+    def pipe(self, func, /, *args, **kwargs)-> 'rx':
         """
-        Apply chainable functions.
+        Apply a chainable function to the current reactive value.
 
-        Arguments
-        ---------
-        func: function
-          Function to apply.
-        args: iterable, optional
-          Positional arguments to pass to `func`.
-        kwargs: mapping, optional
-          A dictionary of keywords to pass to `func`.
+        This method allows applying a custom function to the current reactive
+        expression. The result is returned as a new reactive expression, making
+        it possible to create dynamic and chainable pipelines.
+
+        Parameters
+        ----------
+        func : callable
+            The function to apply to the current value.
+        *args : iterable, optional
+            Positional arguments to pass to the function.
+        **kwargs : dict, optional
+            Keyword arguments to pass to the function.
+
+        Returns
+        -------
+        rx
+            A new reactive expression representing the result of applying ``func``.
+
+        Examples
+        --------
+        Apply a custom function to transform a reactive value:
+
+        >>> import param
+        >>> rx_value = param.rx(10)
+        >>> rx_result = rx_value.rx.pipe(lambda x: x * 2)
+        >>> rx_result.rx.value
+        20
+
+        Use positional arguments with the function:
+
+        >>> def add(x, y):
+        ...     return x + y
+        >>> rx_result = rx_value.rx.pipe(add, 5)
+        >>> rx_result.rx.value
+        15
+
+        Use keyword arguments with the function:
+
+        >>> def multiply(x, factor=1):
+        ...     return x * factor
+        >>> rx_result = rx_value.rx.pipe(multiply, factor=3)
+        >>> rx_result.rx.value
+        30
         """
         return self._as_rx()._apply_operator(func, *args, **kwargs)
 
-    def resolve(self, nested=True, recursive=False):
+    def resolve(self, nested=True, recursive=False) -> 'rx':
         """
-        Resolves references held by the expression.
+        Resolve references held by the reactive expression.
 
-        As an example if the expression returns a list of parameters
-        this operation will return a list of the parameter values.
+        This method resolves references within the reactive expression, replacing
+        any references with their actual values. For example, if the expression
+        contains a list of reactive parameters, this operation returns a list of
+        their resolved values.
 
-        Arguments
-        ---------
-        nested: bool
-          Whether to resolve references contained within nested objects,
-          i.e. tuples, lists, sets and dictionaries.
-        recursive: bool
-          Whether to recursively resolve references, i.e. if a reference
-          itself returns a reference we recurse into it until no more
-          references can be resolved.
+        Parameters
+        ----------
+        nested : bool, optional
+            Whether to resolve references within nested objects such as tuples,
+            lists, sets, and dictionaries. Default is True.
+        recursive : bool, optional
+            Whether to recursively resolve references. If a resolved reference
+            itself contains further references, this option enables resolving
+            them until no references remain. Default is False.
+
+        Returns
+        -------
+        rx
+            A new reactive expression containing the fully resolved values.
+
+        Examples
+        --------
+        Resolve a simple reactive list of values:
+
+        >>> import param
+        >>> rx_list = param.rx([param.rx(1), param.rx(2), param.rx(3)])
+        >>> resolved = rx_list.rx.resolve()
+        >>> resolved.rx.value
+        [1, 2, 3]
+
+        Enable recursive resolution for deeper references:
+
+        >>> rx_nested = param.rx({'key': param.rx([param.rx(10), param.rx(20)])})
+        >>> resolved_nested = rx_nested.rx.resolve(recursive=True)
+        >>> resolved_nested.rx.value
+        {'key': [10, 20]}
         """
         resolver_type = NestedResolver if nested else Resolver
         resolver = resolver_type(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
 
-    def updating(self):
+    def updating(self) -> 'rx':
         """
-        Returns a new expression that is True while the expression is updating.
+        Return a new expression that indicates whether the current expression is updating.
+
+        This method creates a reactive expression that evaluates to ``True`` while the
+        current expression is in the process of updating and ``False`` otherwise. This
+        can be useful for tracking or reacting to the update state of an expression,
+        such as displaying loading indicators or triggering conditional logic.
+
+        Returns
+        -------
+        ReactiveExpression
+            A reactive expression that is ``True`` while the current expression is updating
+            and ``False`` otherwise.
+
+        Examples
+        --------
+        Create a reactive expression and track its update state:
+
+        >>> import param
+        >>> rx_value = param.rx(1)
+
+        Create an updating tracker:
+
+        >>> updating = rx_value.rx.updating()
+        >>> updating.rx.value
+        False
+
+        Simulate an update and observe the change in the updating tracker:
+
+        >>> rx_value.rx.value = 2
+        >>> updating.rx.value  # Becomes True during the update process, then False.
+        False
         """
         wrapper = Wrapper(object=False)
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
 
-    def when(self, *dependencies, initial=Undefined):
+    def when(self, *dependencies, initial=Undefined) -> 'rx':
         """
-        Returns a reactive expression that emits the contents of this
-        expression only when the dependencies change. If initial value
-        is provided and the dependencies are all param.Event types the
-        expression will not be evaluated until the first event is
-        triggered.
+        Create a reactive expression that updates only when specified dependencies change.
 
-        Arguments
-        ---------
-        dependencies: param.Parameter | rx
-          A dependency that will trigger an update in the output.
-        initial: object
-          Object that will stand in for the actual value until the
-          first time a param.Event in the dependencies is triggered.
+        This method creates a new reactive expression that emits the value of the
+        current expression only when one of the provided dependencies changes. If
+        all dependencies are of type :class:`param.Event` and an initial value is provided,
+        the expression will not be evaluated until the first event is triggered.
+
+        Parameters
+        ----------
+        dependencies : Parameter or reactive expression rx
+            Dependencies that trigger an update in the reactive expression.
+        initial : object, optional
+            A placeholder value that is used until a dependency event is triggered.
+            Defaults to ``Undefined``.
+
+        Returns
+        -------
+        rx
+            A reactive expression that updates when the specified dependencies change.
+
+        Examples
+        --------
+        Use ``.when`` to control when a reactive expression updates:
+
+        >>> import param
+        >>> from param import rx
+        >>> from time import sleep
+
+        Define an expensive function:
+
+        >>> def expensive_function(a, b):
+        ...     print(f'multiplying {a=} and {b=}')
+        ...     sleep(1)
+        ...     return a * b
+
+        Create reactive values:
+
+        >>> a = rx(1)
+        >>> b = rx(2)
+
+        Define a state with an event parameter:
+
+        >>> class State(param.Parameterized):
+        ...     submit = param.Event()
+
+        >>> state = State()
+
+        Create a gated reactive expression that only updates when the ``submit`` event is triggered:
+
+        >>> gated_expr = rx(expensive_function)(a, b).rx.when(state.param.submit, initial="Initial Value")
+        >>> gated_expr.rx.value
+        'Initial Value'
+
+        Trigger the update by setting the `submit` event:
+
+        >>> state.submit = True
+        >>> gated_expr.rx.value
+        multiplying a=1 and b=2
+        2
         """
         deps = [p for d in dependencies for p in resolve_ref(d)]
         is_event = all(isinstance(dep, Event) for dep in deps)
@@ -355,17 +856,59 @@ class reactive_ops:
                 return self.value
         return bind(eval, *deps).rx()
 
-    def where(self, x, y):
+    def where(self, x, y) -> 'rx':
         """
-        Returns either x or y depending on the current state of the
-        expression, i.e. replaces a ternary if statement.
+        Return either ``x`` or ``y`` depending on the current state of the expression.
 
-        Arguments
-        ---------
-        x: object
-          The value to return if the expression evaluates to True.
-        y: object
-          The value to return if the expression evaluates to False.
+        This method implements a reactive version of a ternary conditional expression.
+        It evaluates the current reactive expression as a condition and returns ``x``
+        if the condition is ``True``, or ``y`` if the condition is ``False``.
+
+        Parameters
+        ----------
+        x : object
+            The value to return if the reactive condition evaluates to ``True``.
+        y : object
+            The value to return if the reactive condition evaluates to ``False``.
+
+        Returns
+        -------
+        rx
+            A reactive expression that evaluates to ``x`` or ``y`` based on the current
+            state of the condition.
+
+        Examples
+        --------
+        Use ``.where`` to implement a reactive conditional:
+
+        >>> import param
+        >>> rx_value = param.rx(True)
+        >>> rx_result = rx_value.rx.where("Condition is True", "Condition is False")
+
+        Check the result when the condition is ``True``:
+
+        >>> rx_result.rx.value
+        'Condition is True'
+
+        Change the reactive condition and observe the updated result:
+
+        >>> rx_value.rx.value = False
+        >>> rx_result.rx.value
+        'Condition is False'
+
+        Combine ``.where`` with reactive expressions for dynamic updates:
+
+        >>> rx_num = param.rx(10)
+        >>> rx_condition = rx_num > 5
+        >>> rx_result = rx_condition.rx.where("Above 5", "5 or below")
+        >>> rx_result.rx.value
+        'Above 5'
+
+        Update the reactive value and see the conditional result change:
+
+        >>> rx_num.rx.value = 3
+        >>> rx_result.rx.value
+        '5 or below'
         """
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
@@ -391,11 +934,53 @@ class reactive_ops:
 
     # Operations to get the output and set the input of an expression
 
+    def set(self, value):
+        """
+        Set the input of the pipeline to a new value. Equivalent
+        to ``.rx.value = value``.
+
+        Parameters
+        ----------
+        value : object
+            The value to set the pipeline input to.
+        """
+        self.value = value
+
     @property
     def value(self):
         """
-        Returns the current state of the reactive expression by
-        evaluating the pipeline.
+        Get or set the current state of the reactive expression.
+
+        When getting the value it evaluates the reactive expression, resolving all operations
+        and dependencies to return the current value. The value reflects the
+        latest state of the expression after applying all transformations or updates.
+
+        Returns
+        -------
+        any
+            The current value of the reactive expression, resolved based on the
+            operations and dependencies in its pipeline.
+
+        Examples
+        --------
+        Access the value of a basic reactive expression:
+
+        >>> import param
+        >>> rx_value = param.rx(10)
+        >>> rx_value.rx.value
+        10
+
+        Update the reactive expression and retrieve the updated value:
+
+        >>> rx_value.rx.value = 20
+        >>> rx_value.rx.value
+        20
+
+        Evaluate a reactive pipeline:
+
+        >>> rx_pipeline = rx_value.rx.pipe(lambda x: x * 2)
+        >>> rx_pipeline.rx.value
+        40
         """
         if isinstance(self._reactive, rx):
             return self._reactive._resolve()
@@ -407,7 +992,38 @@ class reactive_ops:
     @value.setter
     def value(self, new):
         """
-        Allows overriding the original input to the pipeline.
+        Get or set the current state of the reactive expression.
+
+        When getting the value it evaluates the reactive expression, resolving all operations
+        and dependencies to return the current value. The value reflects the
+        latest state of the expression after applying all transformations or updates.
+
+        Returns
+        -------
+        any
+            The current value of the reactive expression, resolved based on the
+            operations and dependencies in its pipeline.
+
+        Examples
+        --------
+        Access the value of a basic reactive expression:
+
+        >>> import param
+        >>> rx_value = param.rx(10)
+        >>> rx_value.rx.value
+        10
+
+        Update the reactive expression and retrieve the updated value:
+
+        >>> rx_value.rx.value = 20
+        >>> rx_value.rx.value
+        20
+
+        Evaluate a reactive pipeline:
+
+        >>> rx_pipeline = rx_value.rx.pipe(lambda x: x * 2)
+        >>> rx_pipeline.rx.value
+        40
         """
         if isinstance(self._reactive, Parameter):
             raise AttributeError(
@@ -437,9 +1053,52 @@ class reactive_ops:
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         """
-        Adds a callable that observes the output of the pipeline.
-        If no callable is provided this simply causes the expression
-        to be eagerly evaluated.
+        Add a callback to observe changes in the reactive expression's output.
+
+        This method allows you to attach a callable function (``fn``) that will be
+        invoked whenever the output of the reactive expression changes. The callback
+        can be either a regular or asynchronous function. If no callable is provided,
+        the expression is eagerly evaluated whenever it updates.
+
+        Parameters
+        ----------
+        fn : callable or coroutine function, optional
+            The function to be called whenever the reactive expression changes.
+            For function should accept a single argument, which is the new value
+            of the reactive expression. If no function provided, the expression
+            is simply evaluated eagerly.
+
+        Raises
+        ------
+        ValueError
+            If ``precedence`` is negative, as negative precedences are reserved
+            for internal watchers.
+
+        Examples
+        --------
+        Attach a regular callback to print the updated value:
+
+        >>> import param
+        >>> rx_value = param.rx(10)
+        >>> rx_value.rx.watch(lambda v: print(f"Updated value: {v}"))
+
+        Update the reactive value to trigger the callback:
+
+        >>> rx_value.rx.value = 20
+        Updated value: 20
+
+        Attach an asynchronous callback:
+
+        >>> import asyncio
+        >>> async def async_callback(value):
+        ...     await asyncio.sleep(1)
+        ...     print(f"Async updated value: {value}")
+        >>> rx_value.rx.watch(async_callback)
+
+        Trigger the async callback:
+
+        >>> rx_value.rx.value = 30
+        Async updated value: 30  # Printed after a 1-second delay.
         """
         if precedence < 0:
             raise ValueError("User-defined watch callbacks must declare "
@@ -457,34 +1116,72 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
-def bind(function, *args, watch=False, **kwargs):
+def bind(function, *args, watch: bool = False, **kwargs):
     """
-    Given a function, returns a wrapper function that binds the values
-    of some or all arguments to Parameter values and expresses Param
-    dependencies on those values, so that the function can be invoked
-    whenever the underlying values change and the output will reflect
-    those updated values.
+    Bind constant values, parameters, bound functions or reactive expressions to a function.
 
-    As for functools.partial, arguments can also be bound to constants,
-    which allows all of the arguments to be bound, leaving a simple
-    callable object.
+    This function creates a wrapper around the given ``function``, binding some or
+    all of its arguments to constant values, :class:`Parameter` objects, or
+    reactive expressions. The resulting function automatically reflects updates
+    to any bound parameters or reactive expressions, ensuring that its output
+    remains up-to-date.
 
-    Arguments
-    ---------
-    function: callable
-        The function to bind constant or dynamic args and kwargs to.
-    args: object, param.Parameter
-        Positional arguments to bind to the function.
-    watch: boolean
-        Whether to evaluate the function automatically whenever one of
-        the bound parameters changes.
-    kwargs: object, param.Parameter
-        Keyword arguments to bind to the function.
+    Similar to :func:`functools.partial`, arguments can also be bound to constants,
+    leaving a simple callable object. When ``watch=True``, the function is
+    automatically evaluated whenever any bound parameter or reactive expression changes.
+
+    Parameters
+    ----------
+    function : callable, generator, async generator, or coroutine
+        The function or coroutine to bind constant, dynamic, or reactive arguments to.
+        It can be:
+
+        - A standard callable (e.g., a regular function).
+        - A generator function (producing iterables).
+        - An async generator function (producing asynchronous iterables).
+        - A coroutine function (producing awaitables).
+    *args : object, Parameter, bound function or reactive expression rx
+        Positional arguments to bind to the function. These can be constants,
+        `param.Parameter` objects, bound functions or reactive expressions.
+    watch : bool, optional
+        If `True`, the function is automatically evaluated whenever a bound
+        parameter or reactive expression changes. Defaults to `False`.
+    **kwargs : object, Parameter, bound function or reactive expression rx
+        Keyword arguments to bind to the function. These can also be constants,
+        `param.Parameter` objects, bound functions or reactive expressions.
 
     Returns
     -------
-    Returns a new function with the args and kwargs bound to it and
-    annotated with all dependencies.
+    callable, generator, async generator, or coroutine
+        A new function with the bound arguments, annotated with all dependencies.
+        The function reflects changes to bound parameters or reactive expressions.
+
+    Examples
+    --------
+    Bind parameters to a function:
+
+    >>> import param
+    >>> class Example(param.Parameterized):
+    ...     a = param.Number(1)
+    ...     b = param.Number(2)
+    >>> example = Example()
+    >>> def add(a, b):
+    ...     return a + b
+    >>> bound_add = param.bind(add, example.param.a, example.param.b)
+    >>> bound_add()
+    3
+
+    Update a parameter and observe the updated result:
+
+    >>> example.a = 5
+    >>> bound_add()
+    7
+
+    Automatically evaluate the function when bound arguments change:
+
+    >>> bound_watch = param.bind(print, example.param.a, example.param.b, watch=True)
+    >>> example.a = 1  # Triggers automatic evaluation
+    1 2
     """
     args, kwargs = (
         tuple(transform_reference(arg) for arg in args),
@@ -599,30 +1296,55 @@ def bind(function, *args, watch=False, **kwargs):
         setattr(wrapped, name, accessor(wrapped))
     return wrapped
 
+# When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
+# See https://peps.python.org/pep-0673/
 
 class rx:
     """
-    `rx` allows wrapping objects and then operating on them
-    interactively while recording any operations applied to them. By
-    recording all arguments or operands in the operations the recorded
-    pipeline can be replayed if an operand represents a dynamic value.
+    A class for creating reactive expressions by wrapping objects.
+
+    The ``rx`` class allows you to wrap objects and operate on them interactively,
+    recording any operations applied. These recorded operations form a pipeline
+    that can be replayed dynamically when an operand changes. This makes ``rx``
+    particularly useful for building reactive workflows, such as real-time data
+    processing or dynamic user interfaces.
 
     Parameters
     ----------
-    obj: any
-        A supported data structure object
+    obj : any
+        The object to wrap, such as a number, string, list, or any supported
+        data structure.
+
+    References
+    ----------
+    For more details, see the user guide:
+    https://param.holoviz.org/user_guide/Reactive_Expressions.html
 
     Examples
     --------
-    Instantiate it from an object:
+    Instantiate :class:`rx` from an object:
 
-    >>> ifloat = rx(3.14)
-    >>> ifloat * 2
+    >>> from param import rx
+    >>> reactive_float = rx(3.14)
+
+    Perform operations on the reactive object:
+
+    >>> reactive_result = reactive_float * 2
+    >>> reactive_result.value
     6.28
 
-    Then update the original value and see the new result:
-    >>> ifloat.value = 1
+    Update the original value and see the updated result:
+
+    >>> reactive_float.value = 1
+    >>> reactive_result.rx.value
     2
+
+    Create a reactive list and compute its length reactively:
+
+    >>> reactive_list = rx([1, 2, 3])
+    >>> reactive_length = reactive_list.rx.len()
+    >>> reactive_length.rx.value
+    3
     """
 
     _accessors: dict[str, Callable[[rx], Any]] = {}
@@ -639,28 +1361,30 @@ class rx:
         predicate: Optional[Callable[[Any], bool]] = None
     ):
         """
-        Registers an accessor that extends rx with custom behavior.
+        Register an accessor that extends ``rx`` with custom behavior.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         name: str
           The name of the accessor will be attribute-accessible under.
         accessor: Callable[[rx], any]
           A callable that will return the accessor namespace object
-          given the rx object it is registered on.
+          given the ``rx`` object it is registered on.
         predicate: Callable[[Any], bool] | None
+
         """
         cls._accessors[name] = (accessor, predicate)
 
     @classmethod
     def register_display_handler(cls, obj_type, handler, **kwargs):
         """
-        Registers a display handler for a specific type of object,
-        making it possible to define custom display options for
+        Register a display handler for a specific type of object.
+
+        Makes it possible to define custom display options for
         specific objects.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         obj_type: type | callable
           The type to register a custom display handler on.
         handler: Viewable | callable
@@ -668,13 +1392,14 @@ class rx:
           and the custom keyword arguments.
         kwargs: dict[str, Any]
           Additional display options to register for this type.
+
         """
         cls._display_handlers[obj_type] = (handler, kwargs)
 
     @classmethod
     def register_method_handler(cls, method, handler):
         """
-        Registers a handler that is called when a specific method on
+        Register a handler that is called when a specific method on
         an object is called.
         """
         cls._method_handlers[method] = handler
@@ -755,13 +1480,44 @@ class rx:
         ]
         self._setup_invalidations(depth)
         self._kwargs = kwargs
-        self.rx = reactive_ops(self)
+        self._rx = reactive_ops(self)
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, accessor(self))
         for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))
+
+    @property
+    def rx(self) -> reactive_ops:
+        """
+        The reactive operations namespace.
+
+        Provides reactive versions of operations that cannot be made reactive through
+        operator overloading. This includes operations such as ``.rx.and_`` and ``.rx.bool``.
+
+        References
+        ----------
+        For more details, see the user guide:
+        https://param.holoviz.org/user_guide/Reactive_Expressions.html#special-methods-on-rx
+
+        Examples
+        --------
+        Create a reactive expression:
+
+        >>> import param
+        >>> rx_expression = param.rx(1)
+
+        Retrieve the current value reactively:
+
+        >>> a_value = rx_expression.rx.value
+
+        Use special methods from the reactive ops namespace for reactive operations:
+
+        >>> condition = rx_expression.rx.and_(True)
+        >>> piped = rx_expression.rx.pipe(lambda x: x * 2)
+        """
+        return self._rx
 
     @property
     def _obj(self):
@@ -877,6 +1633,7 @@ class rx:
         self._error_state = None
 
     async def _resolve_async(self, obj):
+        import asyncio
         self._current_task = task = asyncio.current_task()
         if inspect.isasyncgen(obj):
             async for val in obj:
@@ -931,9 +1688,7 @@ class rx:
         return current
 
     def _transform_output(self, obj):
-        """
-        Applies custom display handlers before their output.
-        """
+        """Apply custom display handlers before their output."""
         applies = False
         for predicate, (handler, opts) in self._display_handlers.items():
             display_opts = {
@@ -962,7 +1717,7 @@ class rx:
             return bind(evaluate, *params)
         return evaluate
 
-    def _clone(self, operation=None, copy=False, **kwargs):
+    def _clone(self, operation=None, copy=False, **kwargs) -> 'rx':
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
@@ -1067,7 +1822,7 @@ class rx:
         }
         return new._clone(operation)
 
-    def _apply_operator(self, operator, *args, reverse=False, **kwargs):
+    def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> 'rx':
         new = self._resolve_accessor()
         operation = {
             'fn': operator,
@@ -1196,6 +1951,19 @@ class rx:
         for i in range(len(self._current)):
             yield items[i]
 
+    def __bool__(self):
+        # Implemented otherwise truth value testing (e.g. if rx: ...)
+        # defers to __len__ which raises an error.
+        return True
+
+    def __len__(self):
+        raise TypeError(
+            'len(<rx_obj>) is not supported. Use `<rx_obj>.rx.len()` to '
+            'obtain the length as a reactive expression, or '
+            '`len(<rx_obj>.rx.value)` to obtain the length of the underlying '
+            'expression value.'
+        )
+
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
@@ -1217,6 +1985,17 @@ class rx:
         else:
             obj = fn(obj, *resolved_args, **resolved_kwargs)
         return obj
+
+    def __setattr__(self, name, value):
+        # Setting value instead of rx.value is a common user mistake.
+        # They are more but we don't want to restrict __setattr__ too much
+        # so only catch value, for now.
+        if name == "value":
+            raise AttributeError(
+                "'rx' has no attribute 'value', try "
+                "'<reactive_expr>.rx.value = <val>'."
+            )
+        super().__setattr__(name, value)
 
 
 def _rx_transform(obj):

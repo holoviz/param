@@ -2273,10 +2273,6 @@ class DataFrame(ClassSelector):
           order and extra columns are allowed.
         - ``None`` → no column constraint.
 
-        Notes:
-        - Column labels are coerced to strings during validation.
-        - No dtype or index validation is performed.
-
     allow_lazy : bool, default=False
         Whether to accept Narwhals **lazy** data frames
         (e.g. Polars ``LazyFrame``). When ``False`` (default),
@@ -2307,7 +2303,7 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered', 'allow_lazy']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, columns=None, ordered=None, allow_lazy=False)
 
     @typing.overload
@@ -2320,7 +2316,6 @@ class DataFrame(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(
         self, default=Undefined, *, rows=Undefined, columns=Undefined,
         ordered=Undefined, allow_lazy=Undefined, **params
@@ -2487,7 +2482,7 @@ class Series(ClassSelector):
 
     __slots__ = ['rows', 'allow_lazy']
 
-    _slot_defaults = _dict_update(
+    _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, allow_None=False, allow_lazy=False
     )
 
@@ -2501,7 +2496,6 @@ class Series(ClassSelector):
     ):
         ...
 
-    @_deprecate_positional_args
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, allow_lazy=Undefined, **params):
         self.rows = rows
         self.allow_lazy = allow_lazy

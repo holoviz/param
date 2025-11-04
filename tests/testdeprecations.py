@@ -20,6 +20,26 @@ class TestDeprecateParameter:
         with pytest.raises(param._utils.ParamDeprecationWarning):
             param.Parameter(pickle_default_value=False)
 
+    def test_deprecate_Selector_compute_default_fn(self):
+        with pytest.raises(param._utils.ParamDeprecationWarning):
+            param.Selector(compute_default_fn=lambda: 0)
+
+    def test_deprecate_Selector_compute_default(self):
+        class P(param.Parameterized):
+            s = param.Selector()
+
+        P.param['s'].compute_default_fn = lambda: 0
+        with pytest.raises(param._utils.ParamDeprecationWarning):
+            P().param['s'].compute_default()
+
+    def test_deprecate_ListSelector_compute_default(self):
+        class P(param.Parameterized):
+            ls = param.ListSelector()
+
+        P.param['ls'].compute_default_fn = lambda: [0]
+        with pytest.raises(param._utils.ParamDeprecationWarning):
+            P().param['ls'].compute_default()
+
 
 class TestDeprecateParameterizedModule:
 

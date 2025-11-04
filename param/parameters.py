@@ -27,6 +27,7 @@ import pathlib
 import re
 import sys
 import typing
+import warnings
 
 from collections import OrderedDict
 from collections.abc import Iterable
@@ -38,6 +39,8 @@ from .parameterized import (
     _int_types
 )
 from ._utils import (
+    ParamDeprecationWarning as _ParamDeprecationWarning,
+    _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
     _named_objs,
@@ -1839,6 +1842,13 @@ class Selector(SelectorBase, _SignatureSelector):
                  compute_default_fn=Undefined, check_on_set=Undefined,
                  allow_None=Undefined, empty_default=False, **params):
 
+        if compute_default_fn is not Undefined:
+            warnings.warn(
+                'compute_default_fn has been deprecated and will be removed in a future version.',
+                _ParamDeprecationWarning,
+                stacklevel=_find_stack_level(),
+            )
+
         autodefault = Undefined
         if objects is not Undefined and objects:
             if isinstance(objects, dict):
@@ -1890,7 +1900,15 @@ class Selector(SelectorBase, _SignatureSelector):
 
         Also removes None from the list of objects (if the default is
         no longer None).
+
+        .. deprecated:: 2.3.0
         """
+        warnings.warn(
+            'compute_default() has been deprecated and will be removed in a future version.',
+            _ParamDeprecationWarning,
+            stacklevel=_find_stack_level(),
+        )
+
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
             self._ensure_value_is_in_objects(self.default)
@@ -2034,6 +2052,11 @@ class ListSelector(Selector):
             objects=objects, default=default, empty_default=True, **kwargs)
 
     def compute_default(self):
+        warnings.warn(
+            'compute_default() has been deprecated and will be removed in a future version.',
+            _ParamDeprecationWarning,
+            stacklevel=_find_stack_level(),
+        )
         if self.default is None and callable(self.compute_default_fn):
             self.default = self.compute_default_fn()
             for o in self.default:

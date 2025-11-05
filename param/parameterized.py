@@ -1470,6 +1470,8 @@ class Parameter(_ParameterBase):
             An arbitrary mapping, to be used by third-party code.
             Default is ``{}``.
 
+            .. versionadded:: 2.3.0
+
         Examples
         --------
         Define a parameter with a default value:

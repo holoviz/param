@@ -51,6 +51,10 @@ class TestParameterMetadata:
         assert q.param.s.metadata is not P.param.s.metadata
         assert q.param.s.metadata == m
 
+        m2 = {"c": "d"}
+        P.param.s.metadata = m2
+        assert Q.param.s.metadata is m2
+
     def test_metadata_parameterized_inheritance_overridden(self):
         m = {"a": "b"}
         m2 = {"c": "d"}

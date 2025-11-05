@@ -2391,7 +2391,6 @@ class Parameters:
                 # contain a reference and warn the user that the
                 # behavior may change in future.
                 if name not in self_.cls._param__private.explicit_no_refs:
-                    print(pobj)
                     try:
                         ref, _, resolved, _ = self_._resolve_ref(pobj, val)
                     except Exception:

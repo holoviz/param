@@ -1186,6 +1186,20 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig
 
 
+class __compute_metadata_slot:
+    def __call__(self, p):
+        return {}
+
+    def __repr__(self):
+        return repr(self.sig)
+
+    @property
+    def sig(self):
+        return {}
+
+_compute_metadata_slot = __compute_metadata_slot()
+
+
 class Parameter(_ParameterBase):
     """
     Base :class:`Parameter` type to hold any type of Python object.
@@ -1332,7 +1346,7 @@ class Parameter(_ParameterBase):
         default=None, precedence=None, doc=None, _label=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
         per_instance=True, allow_refs=False, nested_refs=False, default_factory=None,
-        metadata=None,
+        metadata=_compute_metadata_slot,
     )
 
     # Parameters can be updated during Parameterized class creation when they
@@ -1349,7 +1363,7 @@ class Parameter(_ParameterBase):
         default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
+        allow_refs=False, nested_refs=False, default_factory=None, metadata={},
     ):
         ...
 
@@ -1454,7 +1468,7 @@ class Parameter(_ParameterBase):
             them automatically. Default is ``False``.
         metadata : dict, optional
             An arbitrary mapping, to be used by third-party code.
-            Default is ``None``.
+            Default is ``{}``.
 
         Examples
         --------
@@ -2002,7 +2016,7 @@ class String(Parameter):
         default="", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
+        allow_refs=False, nested_refs=False, default_factory=None, metadata={},
     ):
         ...
 

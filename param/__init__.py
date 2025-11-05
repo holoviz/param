@@ -48,7 +48,7 @@ from .parameterized import (
     Parameterized, Parameter, Skip, String, ParameterizedFunction,
     ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
-from .parameterized import (output, script_repr, raw,
+from .parameterized import (output, script_repr,
                             discard_events, edit_constant)
 from .parameterized import shared_parameters
 from .parameterized import logging_level
@@ -224,7 +224,6 @@ __all__ = (
     'param_union',
     'parameterized_class',
     'random_seed',
-    'raw',
     'resolve_path',
     'rx',
     'script_repr',

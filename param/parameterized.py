@@ -162,26 +162,26 @@ warning_count = 0
 # Hook to apply to depends and bind arguments to turn them into valid parameters
 _reference_transforms = []
 
-class Raw:
+class LiteralRef:
     """
     Wrapper type used to assign ref-like objects to Parameters *without*
     triggering automatic resolution.
 
     Normally, when a ref-like value (e.g. a Parameter, reactive expression,
     async generator, etc.) is assigned to a Parameter attribute, Param
-    resolves it to its underlying value. Wrapping the object in ``Raw``
+    resolves it to its underlying value. Wrapping the object in ``LiteralRef``
     signals that the value should instead be stored as-is.
 
     Example
     -------
-    >>> obj.some_param = param.Raw(other.param.value)
+    >>> obj.some_param = param.LiteralRef(other.param.value)
     >>> assert obj.some_param is other.param.value
 
     Notes
     -----
-    - ``Raw`` is only meaningful at assignment time; the wrapper is
+    - ``LiteralRef`` is only meaningful at assignment time; the wrapper is
       unwrapped and not stored.
-    - The stored value is the inner object itself, not the ``Raw`` instance.
+    - The stored value is the inner object itself, not the ``LiteralRef`` instance.
     - This allows safe serialization, forwarding, or deferred resolution of
       ref-like values.
     """
@@ -189,32 +189,8 @@ class Raw:
     __slots__ = ["value"]
 
     def __init__(self, value): self.value = value
-    def __repr__(self): return f"Raw({self.value!r})"
+    def __repr__(self): return f"LiteralRef({self.value!r})"
 
-
-def raw(value: Any):
-    """
-    Mark a value to be assigned *as-is*, skipping Param’s automatic
-    resolution of ref-like objects.
-
-    This allows storing a Parameter, reactive expression, or other
-    ref-like value directly, without evaluating or resolving it at
-    assignment time.
-
-    Examples
-    --------
-    >>> c = MyComponent()
-    >>> c.target = param.raw(other.param.value)
-    >>> assert c.target is other.param.value
-
-    Notes
-    -----
-    - The wrapper is unwrapped during assignment and not stored.
-    - The stored value is the inner object itself.
-    - Useful when serializing, forwarding, or deferring resolution of
-      ref-like values.
-    """
-    return Raw(value)
 
 def register_reference_transform(transform):
     """
@@ -235,7 +211,7 @@ def transform_reference(arg):
     that are not simple Parameters or functions with dependency
     definitions.
     """
-    if isinstance(arg, Raw):
+    if isinstance(arg, LiteralRef):
         return arg.value
     for transform in _reference_transforms:
         if isinstance(arg, Parameter) or hasattr(arg, '_dinfo'):
@@ -262,7 +238,7 @@ def eval_function_with_deps(function):
 
 def resolve_value(value, recursive=True):
     """Resolve the current value of a dynamic reference."""
-    if isinstance(value, Raw):
+    if isinstance(value, LiteralRef):
         return value.value
     elif not recursive:
         pass
@@ -288,7 +264,7 @@ def resolve_value(value, recursive=True):
 
 def resolve_ref(reference, recursive=False):
     """Resolve all parameters a dynamic reference depends on."""
-    if isinstance(reference, Raw):
+    if isinstance(reference, LiteralRef):
         return []
     elif recursive:
         if isinstance(reference, (list, tuple, set)):
@@ -2415,6 +2391,7 @@ class Parameters:
                 # contain a reference and warn the user that the
                 # behavior may change in future.
                 if name not in self_.cls._param__private.explicit_no_refs:
+                    print(pobj)
                     try:
                         ref, _, resolved, _ = self_._resolve_ref(pobj, val)
                     except Exception:
@@ -2501,12 +2478,12 @@ class Parameters:
                 self_.update(updates)
 
     def _resolve_ref(self_, pobj, value):
-        if isinstance(value, Raw):
+        if isinstance(value, LiteralRef):
             return None, None, value.value, False
         is_gen = inspect.isgeneratorfunction(value)
         is_async = iscoroutinefunction(value) or is_gen
         deps = resolve_ref(value, recursive=pobj.nested_refs)
-        if not (deps or is_async or is_gen):
+        if not (deps or is_async or is_gen or pobj.nested_refs):
             return None, None, value, False
         ref = value
         try:

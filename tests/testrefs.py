@@ -5,7 +5,7 @@ import time
 import param
 import pytest
 
-from param.parameterized import Skip, resolve_ref
+from param.parameterized import LiteralRef, Skip, resolve_ref
 from param.reactive import bind, rx
 
 
@@ -368,26 +368,26 @@ def test_resolve_ref_recursive_slice():
     assert len(refs) == 1
     assert refs[0] is p.param.string
 
-def test_raw_parameter_ref_not_resolved_errors():
+def test_literal_ref_parameter_ref_not_resolved_errors():
     p = Parameters(string='base')
 
     with pytest.raises(ValueError):
-        Parameters(string=param.raw(p.param.string))
+        Parameters(string=LiteralRef(p.param.string))
 
-def test_raw_plain_value_unchanged():
-    p = Parameters(allows_ref=param.raw('literal'))
+def test_literal_ref_plain_value_unchanged():
+    p = Parameters(allows_ref=LiteralRef('literal'))
     assert p.allows_ref == 'literal'
 
-def test_raw_is_transient_unwrapped():
+def test_literal_ref_is_transient_unwrapped():
     p0 = Parameters()
     r = p0.param.string
-    p = Parameters(allows_ref=param.raw(r))
+    p = Parameters(allows_ref=LiteralRef(r))
     assert p.allows_ref is r
 
-def test_raw_nested_list_parameter_ref_preserved():
+def test_literal_ref_nested_list_parameter_ref_preserved():
     p_src = Parameters(string='alpha')
-    p = Parameters(list=param.raw([p_src.param.string, 'other']))
-    # With raw, nested refs are preserved (not resolved)
+    p = Parameters(list=LiteralRef([p_src.param.string, 'other']))
+    # With literal_ref, nested refs are preserved (not resolved)
     assert isinstance(p.list, list)
     assert p.list[0] is p_src.param.string
     assert p.list[1] == 'other'
@@ -396,11 +396,11 @@ def test_raw_nested_list_parameter_ref_preserved():
     p_src.string = 'beta'
     assert p.list[0] is p_src.param.string
 
-def test_raw_nested_list_mixed_refs_preserved():
+def test_literal_ref_nested_list_mixed_refs_preserved():
     s = rx('x')
     expr = s + '!'
     p_src = Parameters(string='y')
-    p = Parameters(list=param.raw([expr, p_src.param.string, 'z']))
+    p = Parameters(list=LiteralRef([expr, p_src.param.string, 'z']))
 
     assert p.list[0] is expr
     assert p.list[1] is p_src.param.string
@@ -412,9 +412,9 @@ def test_raw_nested_list_mixed_refs_preserved():
     assert p.list[0] is expr
     assert p.list[1] is p_src.param.string
 
-def test_raw_nested_dict_value_parameter_ref_preserved():
+def test_literal_ref_nested_dict_value_parameter_ref_preserved():
     p_src = Parameters(string='keyed')
-    p = Parameters(dictionary=param.raw({'k': p_src.param.string, 'n': 1}))
+    p = Parameters(dictionary=LiteralRef({'k': p_src.param.string, 'n': 1}))
     # Values kept as-is
     assert p.dictionary['k'] is p_src.param.string
     assert p.dictionary['n'] == 1
@@ -422,7 +422,7 @@ def test_raw_nested_dict_value_parameter_ref_preserved():
     p_src.string = 'changed'
     assert p.dictionary['k'] is p_src.param.string
 
-def test_raw_nested_dict_deep_structure_preserved():
+def test_literal_ref_nested_dict_deep_structure_preserved():
     p_src = Parameters(string='deep')
     expr = (rx('a') + rx('b'))
     nested = {
@@ -430,28 +430,37 @@ def test_raw_nested_dict_deep_structure_preserved():
             'list': [p_src.param.string, expr, {'leaf': p_src.param.string}]
         }
     }
-    p = Parameters(dictionary=param.raw(nested))
+    p = Parameters(dictionary=LiteralRef(nested))
 
     got = p.dictionary
     assert got['level1']['list'][0] is p_src.param.string
     assert got['level1']['list'][1] is expr
     assert got['level1']['list'][2]['leaf'] is p_src.param.string
 
-def test_raw_nested_refs_do_not_resolve_even_when_param_has_nested_refs_true():
+def test_literal_ref_nested_refs_do_not_resolve_even_when_param_has_nested_refs_true():
     p_src = Parameters(string='s')
     obj = Parameters(
-        dictionary=param.raw({'inner': [p_src.param.string]}),
-        list=param.raw([p_src.param.string, 'x'])
+        dictionary=LiteralRef({'inner': [p_src.param.string]}),
+        list=LiteralRef([p_src.param.string, 'x'])
     )
     assert obj.dictionary['inner'][0] is p_src.param.string
     assert obj.list[0] is p_src.param.string
 
-def test_raw_survives_param_update_context_and_reassignments():
+def test_literal_ref_inner_nested_refs_do_not_resolve_even_when_param_has_nested_refs_true():
+    p_src = Parameters(string='s')
+    obj = Parameters(
+        dictionary={'inner': [LiteralRef(p_src.param.string)]},
+        list=[LiteralRef(p_src.param.string), 'x']
+    )
+    assert obj.dictionary['inner'][0] is p_src.param.string
+    assert obj.list[0] is p_src.param.string
+
+def test_literal_ref_survives_param_update_context_and_reassignments():
     p_src = Parameters(string='A')
-    p = Parameters(allows_ref=param.raw(p_src.param.string))
+    p = Parameters(allows_ref=LiteralRef(p_src.param.string))
     assert p.allows_ref is p_src.param.string
 
-    with p.param.update(allows_ref=param.raw(p_src.param.string)):
+    with p.param.update(allows_ref=LiteralRef(p_src.param.string)):
         assert p.allows_ref is p_src.param.string
         p_src.string = 'B'
         assert p.allows_ref is p_src.param.string
@@ -461,7 +470,7 @@ def test_raw_survives_param_update_context_and_reassignments():
     p_src.string = 'C'
     assert p.allows_ref == 'C'
 
-def test_raw_stores_callables_or_generators_without_consuming():
+def test_literal_ref_stores_callables_or_generators_without_consuming():
     started = {'gen': False, 'async': False}
 
     def gen():
@@ -474,21 +483,21 @@ def test_raw_stores_callables_or_generators_without_consuming():
             yield None
 
     p = Parameters()
-    p.allows_ref = param.raw(gen)
+    p.allows_ref = LiteralRef(gen)
     assert p.allows_ref is gen
     assert started['gen'] is False
 
-    p.allows_ref = param.raw(agen)
+    p.allows_ref = LiteralRef(agen)
     assert p.allows_ref is agen
     assert started['async'] is False
 
-def test_resolve_ref_hides_inner_when_given_raw_directly():
+def test_resolve_ref_hides_inner_when_given_literal_ref_directly():
     p_src = Parameters()
-    refs = resolve_ref(param.raw(p_src.param.string))
+    refs = resolve_ref(LiteralRef(p_src.param.string))
     assert len(refs) == 0
 
-def test_resolve_ref_recursive_on_container_from_raw():
+def test_resolve_ref_recursive_on_container_from_literal_ref():
     p_src = Parameters()
-    nested = param.raw([{'k': (p_src.param.string,)}])
+    nested = LiteralRef([{'k': (p_src.param.string,)}])
     refs = resolve_ref(nested, recursive=True)
     assert len(refs) == 0

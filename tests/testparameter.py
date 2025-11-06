@@ -5,14 +5,7 @@ class TestParameterMetadata:
     def test_metadata_default(self):
         p = param.Parameter()
 
-        assert isinstance(p.metadata, dict)
-        assert not p.metadata
-
-    def test_metadata_default_distinct(self):
-        p1 = param.Parameter()
-        p2 = param.Parameter()
-
-        assert p1.metadata is not p2.metadata
+        assert p.metadata is None
 
     def test_metadata_set(self):
         m = dict(a=1)

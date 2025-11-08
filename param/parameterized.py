@@ -1317,7 +1317,8 @@ class Parameter(_ParameterBase):
     __slots__ = ['name', 'default', 'default_factory', 'doc',
                  'precedence', 'instantiate', 'constant', 'readonly',
                  'pickle_default_value', 'allow_None', 'per_instance',
-                 'watchers', 'owner', 'allow_refs', 'nested_refs', '_label']
+                 'watchers', 'owner', 'allow_refs', 'nested_refs', '_label',
+                 'metadata',]
 
     # Note: When initially created, a Parameter does not know which
     # Parameterized class owns it, nor does it know its names
@@ -1331,6 +1332,7 @@ class Parameter(_ParameterBase):
         default=None, precedence=None, doc=None, _label=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
         per_instance=True, allow_refs=False, nested_refs=False, default_factory=None,
+        metadata=None,
     )
 
     # Parameters can be updated during Parameterized class creation when they
@@ -1339,7 +1341,7 @@ class Parameter(_ParameterBase):
     # in this list do not have to trigger such re-validation.
     _non_validated_slots = ['_label', 'doc', 'name', 'precedence',
                             'constant', 'pickle_default_value',
-                            'watchers', 'owner']
+                            'watchers', 'owner', 'metadata']
 
     @typing.overload
     def __init__(
@@ -1347,7 +1349,7 @@ class Parameter(_ParameterBase):
         default=None, *,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None,
+        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
     ):
         ...
 
@@ -1367,6 +1369,7 @@ class Parameter(_ParameterBase):
         allow_refs=Undefined,
         nested_refs=Undefined,
         default_factory=Undefined,
+        metadata=Undefined,
     ):
         """
         Initialize a new :class:`Parameter` object with the specified attributes.
@@ -1449,6 +1452,12 @@ class Parameter(_ParameterBase):
             If ``True`` and ``allow_refs=True``, inspects nested objects (e.g.,
             dictionaries, lists, slices, tuples) for references and resolves
             them automatically. Default is ``False``.
+        metadata : Mapping, optional
+            An arbitrary mapping, to be used to store additional metadata
+            than cannot be declared with the other attributes. Useful for
+            third-party libraries to extend Param. Default is ``None``.
+
+            .. versionadded:: 2.3.0
 
         Examples
         --------
@@ -1498,6 +1507,7 @@ class Parameter(_ParameterBase):
             )
         self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
+        self.metadata = metadata
         self.watchers = {}
         self.per_instance = per_instance
 
@@ -1995,7 +2005,7 @@ class String(Parameter):
         default="", *, regex=None,
         doc=None, label=None, precedence=None, instantiate=False, constant=False,
         readonly=False, pickle_default_value=True, allow_None=False, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None
+        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
     ):
         ...
 

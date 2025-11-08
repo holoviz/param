@@ -1452,7 +1452,7 @@ class Parameter(_ParameterBase):
             If ``True`` and ``allow_refs=True``, inspects nested objects (e.g.,
             dictionaries, lists, slices, tuples) for references and resolves
             them automatically. Default is ``False``.
-        metadata : dict, optional
+        metadata : Mapping, optional
             An arbitrary mapping, to be used to store additional metadata
             than cannot be declared with the other attributes. Useful for
             third-party libraries to extend Param. Default is ``None``.

@@ -46,6 +46,7 @@ Documentation:
 - Add a new page that lists deprecated and removed APIs ([#1016](https://github.com/holoviz/param/pull/1016))
 - Add a version switcher ([#1079](https://github.com/holoviz/param/pull/1079))
 - Small refactor and fixes to the API reference ([#1082](https://github.com/holoviz/param/pull/1082))
+- README and landing page updates ([#1095](https://github.com/holoviz/param/pull/1095))
 - Various minor fixes and improvements ([#1006](https://github.com/holoviz/param/pull/1006), [#1034](https://github.com/holoviz/param/pull/1034), [#1036](https://github.com/holoviz/param/pull/1036), [#1049](https://github.com/holoviz/param/pull/1049), [#1052](https://github.com/holoviz/param/pull/1052), [#1054](https://github.com/holoviz/param/pull/1054))
 
 Breaking changes:

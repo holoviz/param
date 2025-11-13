@@ -162,10 +162,9 @@ We'll start with APIs that trigger side-effects only, which either have the name
 
 1. `<parameterized_obj>.param.watch(fn, *parameters, ...)`: Low-level, imperative API to attach callbacks to parameter changes, the callback receives one or more rich `Event` objects.
 2. `@depends(*parameter_names, watch=True)`: In a Parameterized class, declare dependencies and automatically watch parameters for changes to call the decorated method.
-3. `@depends(*parameters, watch=True)`: Equivalent of 2 above to decorate functions.
-4. `bind(fn, *references, watch=True, **kwargs)`: Function binding with automatic references (parameters, bound functions, reactive expressions) watching and triggering on changes.
+3. `bind(fn, *references, watch=True, **kwargs)`: Function binding with automatic references (parameters, bound functions, reactive expressions) watching and triggering on changes.
 
-Running the snippet below, you will see that updating the parameters `a`, `b`, `c`, and `d` will emit print statements.
+Running the snippet below, you will see that updating the parameters `a`, `b`, and `c` will emit print statements.
 
 ```python
 import param
@@ -174,7 +173,6 @@ class SideEffectExample(param.Parameterized):
     a = param.String()
     b = param.String()
     c = param.String()
-    d = param.String()
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -186,33 +184,30 @@ class SideEffectExample(param.Parameterized):
 
 sfe = SideEffectExample()
 sfe.a = 'foo'
-# Event(what='value', name='a', obj=SideEffectExample(a='foo', b='', c='', d='', name='SideEffectExample00015'), cls=Example(a='foo', b='', c='', d='', name='SideEffectExample00015'), old='', new='foo', type='changed')
+# Event(
+#     what='value', name='a'
+#     obj=SideEffectExample(a='foo', b='', c='', d='', name='SideEffectExample00015'),
+#     cls=Example(a='foo', b='', c='', d='', name='SideEffectExample00015'),
+#     old='', new='foo', type='changed'
+# )
 
 sfe.b = 'bar'
 # print_b: self.b='bar'
 
-@param.depends(sfe.param.c, watch=True)  # 3.
-def print_c(c):
-    print(f"print_c: {c=}")
+def print_c(d):
+    print(f"print_c: {d=}")
 
-sfe.c = 'baz'
-# print_c: c='baz'
+param.bind(print_c, sfe.param.d, watch=True)  # 3.
 
-def print_d(d):
-    print(f"print_d: {d=}")
-
-param.bind(print_d, sfe.param.d, watch=True)  # 4.
-
-sfe.d = 'biz'
-# print_d: d='biz'
+sfe.d = 'baz'
+# print_c: d='baz'
 ```
 
 Let's continue the tour with what we'll call "reactive APIs". Contrary to the APIs presented above, in this group parameter updates do not immediately trigger side effects. Instead, these APIs let you declare relationships, dependencies, and expressions, which can be introspected by other frameworks to set up their own reactive workflows.
 
 1. `@depends(*parameter_names)`: In a Parameterized class, declare parameter dependencies by decorating a method.
-2. `@depends(*parameters)`: Equivalent of 1 above to decorate functions.
-3. `bind(fn, *references, **kwargs)`: Create a bound function, that when called, will always use the current parameter/reference value. `bind` is essentially a reactive version of [`functools.partial`](https://docs.python.org/3/library/functools.html#functools.partial).
-4. `rx()`: Fluent API to create reactive expressions, which allow chaining and composing operations.
+2. `bind(fn, *references, **kwargs)`: Create a bound function, that when called, will always use the current parameter/reference value. `bind` is essentially a reactive version of [`functools.partial`](https://docs.python.org/3/library/functools.html#functools.partial).
+3. `rx()`: Fluent API to create reactive expressions, which allow chaining and composing operations.
 
 ```python
 import param
@@ -227,14 +222,10 @@ class ReactiveExample(param.Parameterized):
 
 re = ReactiveExample()
 
-@param.depends(re.param.x, re.param.y)  # 2.
-def sub(a, b):
-    return a - b
-
 def mul(a, b):
     return a * b
 
-bound_mul = param.bind(mul, re.param.x, re.param.y)  # 3.
+bound_mul = param.bind(mul, re.param.x, re.param.y)  # 2.
 re.param.update(x=2, y=4)
 bound_mul()
 # 8

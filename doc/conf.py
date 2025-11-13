@@ -63,7 +63,7 @@ html_logo = "_static/logo_horizontal.png"
 
 html_favicon = "_static/favicon.ico"
 
-exclude_patterns = ['governance/**/*.*', 'Promo.ipynb']
+exclude_patterns = ['governance/**/*.*']
 
 html_context.update(  # noqa
     {

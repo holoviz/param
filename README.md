@@ -33,7 +33,7 @@ user.submit = True  # => Saving user to db: name=Bob, age=25
 
 ---
 
-Enjoying Param? Show your support with a [Github star](https://github.com/holoviz/param) — it’s a simple click that means the world to us and helps others discover it too! ⭐️
+Enjoying Param? Show your support with a [Github star](https://github.com/holoviz/param) to help others discover it too! ⭐️
 
 ---
 
@@ -114,7 +114,7 @@ print(processor.param.values())
 
 Runtime attribute validation is a great feature that helps build defendable code bases! Alternative libraries, like [Pydantic](https://docs.pydantic.dev) and others, excel at input validation, and if this is only what you need, you should probably look into them. Where Param shines is when you also need:
 
-- Attributes that are also available at the class-level, allowing to easily configure a hierarchy of classes and their instances.
+- Attributes that are also available at the class level, allowing to easily configure a hierarchy of classes and their instances.
 - Parameters with rich metadata (`default`, `doc`, `label`, `bounds`, etc.) that downstream tooling can inspect to build configuration UIs, CLIs, or documentation automatically.
 - Parameterized subclasses that inherit Parameter metadata from their parents, and can selectively override certain attributes (e.g. overriding `default` in a subclass).
 
@@ -211,8 +211,8 @@ Let's continue the tour with what we'll call "reactive APIs". Contrary to the AP
 
 1. `@depends(*parameter_names)`: In a Parameterized class, declare parameter dependencies by decorating a method.
 2. `@depends(*parameters)`: Equivalent of 1 above to decorate functions.
-3. `bind(fn, *references, **kwargs)`: Create a bound function, that when called, will always use the current parameter/reference value. `bind` is in a way a reactive version of [`functools.partial`](https://docs.python.org/3/library/functools.html#functools.partial).
-4. `rx()`: Fluent API to create reactive expressions, that allows chaining and composing operations.
+3. `bind(fn, *references, **kwargs)`: Create a bound function, that when called, will always use the current parameter/reference value. `bind` is essentially a reactive version of [`functools.partial`](https://docs.python.org/3/library/functools.html#functools.partial).
+4. `rx()`: Fluent API to create reactive expressions, which allow chaining and composing operations.
 
 ```python
 import param
@@ -245,7 +245,7 @@ bound_mul()
 ```python
 from param import rx
 
-# Reactive expressions can be created by simply calling an object with `rx()`
+# Reactive expressions can be created by simply wrapping an object with `rx()`
 val1 = rx(0)
 val2 = rx(0)
 factor = rx(1)
@@ -290,7 +290,7 @@ example = RXExample()
 
 # Reactive expressions can be created directly from Parameters by
 # calling `.rx()`. The source of the reactive expression is not a
-# literal value, but the more dynamic Parameter object.
+# literal value, but a fully dynamic Parameter object.
 print(example.param.val1.rx().title().rx.value)  # => 'Foo'
 
 # By updating the parameter value, we update the source value of
@@ -298,7 +298,7 @@ print(example.param.val1.rx().title().rx.value)  # => 'Foo'
 example.val1 = 'fab'
 print(example.param.val1.rx().title().rx.value)  # => 'Fab'
 
-# Reactive expressions aren't constrained to one data type, the source
+# Reactive expressions aren't constrained to one data type; the source
 # value of `cond1` is a string and the resolved value a is boolean.
 cond1 = example.param.val1.rx().startswith('o')
 print(cond1.rx.value)  # => False

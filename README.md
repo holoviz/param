@@ -11,7 +11,7 @@
 
 This combination of **rich attributes** and **reactive APIs** makes Param a solid foundation for constructing user interfaces, graphical applications, and responsive systems where data integrity and automatic synchronization are paramount. In fact, Param serves as the backbone of HoloViz’s [Panel](https://panel.holoviz.org) and [HoloViews](https://holoviews.org) libraries, powering their rich interactivity and data-driven workflows.
 
-Here is a very simple example showing both features at play. We declare a `UserForm` class with three Parameters: `age` and `name` for user data, and the `submit` event to simulate a button in a user interface. We also declare that the `save_user_to_db` method should be called automatically when the `submit` attribute changes.
+Here is a very simple example showing both features at play. We declare a UserForm class with three parameters: `age` as an *Integer* parameter and and `name` as a *String* parameter for user data, and `submit` as an *Event* parameter to simulate a button in a user interface. We also declare that the `save_user_to_db` method should be called automatically when the value of the `submit` attribute changes.
 
 ```python
 import param
@@ -158,16 +158,17 @@ print(cprocessor.mode)  # => 'accurate'
 
 Param extends beyond rich class attributes with a suite of APIs for reactive programming. Let's do a quick tour!
 
-We'll start with APIs that trigger side-effects only, which either have the name watch in their name or are invoked with `watch=True`:
+We'll start with APIs that trigger side-effects only, which either have the noun watch in their name or are invoked with `watch=True`:
 
 1. `<parameterized_obj>.param.watch(fn, *parameters, ...)`: Low-level, imperative API to attach callbacks to parameter changes, the callback receives one or more rich `Event` objects.
 2. `@depends(*parameter_names, watch=True)`: In a Parameterized class, declare dependencies and automatically watch parameters for changes to call the decorated method.
 3. `bind(fn, *references, watch=True, **kwargs)`: Function binding with automatic references (parameters, bound functions, reactive expressions) watching and triggering on changes.
 
-Running the snippet below, you will see that updating the parameters `a`, `b`, and `c` will emit print statements.
-
 ```python
 import param
+
+def debug_event(event: param.parameterized.Event):
+    print(event)
 
 class SideEffectExample(param.Parameterized):
     a = param.String()
@@ -176,31 +177,40 @@ class SideEffectExample(param.Parameterized):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.param.watch(lambda event: print(event), 'a')  # 1.
+        # We register the debug_event callback, that will be called when a changes.
+        self.param.watch(debug_event, 'a')  # 1.
 
+    # We declare an automatic dependency between b and the print_b method.
     @param.depends('b', watch=True)  # 2.
     def print_b(self):
         print(f"print_b: {self.b=}")
 
 sfe = SideEffectExample()
+# We update the value of a and immediately see that debug_event is called
+# with a rich Event object.
 sfe.a = 'foo'
-# Event(
-#     what='value', name='a'
-#     obj=SideEffectExample(a='foo', b='', c='', d='', name='SideEffectExample00015'),
-#     cls=Example(a='foo', b='', c='', d='', name='SideEffectExample00015'),
+# => Event(
+# => Event(
+#     what='value', name='a',
+#     obj=SideEffectExample(a='foo', b='', c='', name='SideEffectExample00008'),
+#     cls=SideEffectExample(a='foo', b='', c='', name='SideEffectExample00008'),
 #     old='', new='foo', type='changed'
 # )
 
+# Updating b automatically calls print_b, which is simply invoked as is without
+# any rich Event object passed. When called, b is already updated.
 sfe.b = 'bar'
 # print_b: self.b='bar'
 
-def print_c(d):
-    print(f"print_c: {d=}")
+def print_c(c):
+    print(f"print_c: {c=}")
 
-param.bind(print_c, sfe.param.d, watch=True)  # 3.
+# We can also bind a function to a parameter.
+param.bind(print_c, sfe.param.c, watch=True)  # 3.
 
-sfe.d = 'baz'
-# print_c: d='baz'
+# Updating c invokes the bound function with the updated value.
+sfe.c = 'baz'
+# print_c: c='baz'
 ```
 
 Let's continue the tour with what we'll call "reactive APIs". Contrary to the APIs presented above, in this group parameter updates do not immediately trigger side effects. Instead, these APIs let you declare relationships, dependencies, and expressions, which can be introspected by other frameworks to set up their own reactive workflows.

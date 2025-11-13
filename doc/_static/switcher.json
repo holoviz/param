@@ -2,11 +2,11 @@
   {
     "name": "2.3 (latest)",
     "version": "2.3.0",
-    "url": "https://d1e86hvd7le0jf.cloudfront.net/en/docs/latest/",
+    "url": "https://param.holoviz.org/en/docs/latest/",
     "preferred": true
   },
   {
     "version": "dev",
-    "url": "https://d1e86hvd7le0jf.cloudfront.net/en/docs/dev/"
+    "url": "https://param.holoviz.org/en/docs/dev/"
   }
 ]

@@ -301,6 +301,67 @@ cond2 = example.param.val2.rx().startswith('b')
 print(cond1.rx.or_(cond2).rx.value)  # => True
 ```
 
+A `Parameter` does not have to refer to a specific static value but can reference another object and update reactively when its value changes. We'll show a few examples of supported *references* (Parameters, bound functions, reactive expressions, etc.). Setting parameter values with references is an effective way to establish automatic one-way linking between a reference and a parameter (the reference being often driven by another parameter).
+
+```python
+import param
+
+class X(param.Parameterized):
+
+    # The source parameter is going to serve as the input of all
+    # our references.
+    source = param.Number()
+
+class Y(param.Parameterized):
+
+    # The target Parameter of this Y class is declared to accept references
+    # with allow_refs=True (False by default).
+    target = param.Number(allow_refs=True)
+
+    # We add this automatic callback for you to better understand when the
+    # updates actually occur; watch_target will be called when the resolved
+    # value of target changes.
+    @param.depends('target', watch=True)
+    def watch_target(self):
+        print(f'y.target updated to {self.target}')
+
+x = X(source=1)
+
+# The first example of a reference is simply another Parameter, here
+# the source parameter of the x instance.
+y = Y(target=x.param['source'])
+# y.target is already equal to the value of x.source
+print(y.target)  # => 1
+
+# When x.source is updated, y.target is immediately and automatically updated.
+x.source = 2
+# y.target updated to 2
+print(y.target)  # => 2
+
+# We can override a reference with another reference, in this case a function
+# bound to the x parameter of source.
+y.target = param.bind(lambda x: x + 10, x.param['source'])
+# y.target updated to 12
+print(y.target)  # => 12
+
+# When x.source is updated, the bound function is immediately called to update
+# the value of y.target.
+x.source = 3
+# y.target updated to 13
+print(y.target)  # => 13
+
+# Another kind of accepted reference is a reactive expression.
+y.target = x.param['source'].rx() * 20
+# y.target updated to 60
+print(y.target)  # => 60
+
+# Similarly, when x.source is updated, the reactive expression is immediately
+# resolved to update the value of y.target
+x.source = 5
+# y.target updated to 100
+print(y.target)  # => 100
+```
+
 ## Support & Feedback
 
 - Visit [Param's website](https://param.holoviz.org/)

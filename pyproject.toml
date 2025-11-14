@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "param"
 dynamic = ["version"]
-description = "Make your Python code clearer and more reliable by declaring Parameters."
+description = "Declarative parameters for robust Python classes and a rich API for reactive programming"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
 requires-python = ">=3.10"

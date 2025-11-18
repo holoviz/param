@@ -329,6 +329,26 @@ class TestParameterized(unittest.TestCase):
         assert TestPO.param['const'].constant
         assert TestPO.param['const'].default not in (670, 891)
 
+    def test_edit_constant_does_not_mutate_cls_value_if_not_constant(self):
+        # Regression https://github.com/holoviz/param/issues/1100
+        class P(param.Parameterized):
+            a = param.Number()
+
+
+        p = P()
+
+        # Manually set p.param.a.constant to True
+        p.param.a.constant = True
+
+        assert p.param.a.constant is True
+        assert P.param.a.constant is False
+
+        with param.parameterized.edit_constant(p):
+            pass
+
+        assert p.param.a.constant is True
+        assert P.param.a.constant is False
+
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""
         testpo = TestPO()

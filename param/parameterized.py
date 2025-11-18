@@ -428,6 +428,7 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
     """
     kls_params = parameterized.param.objects(instance=False)
     inst_params = parameterized._param__private.params
+    init_inst_params = list(inst_params)
     updated = []
     for pname, pobj in (kls_params | inst_params).items():
         if pobj.constant:
@@ -439,7 +440,7 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
         for pname in updated:
             # Some operations trigger a parameter instantiation (copy),
             # we ensure both the class and instance parameters are reset.
-            if pname in kls_params:
+            if pname in kls_params and pname not in init_inst_params:
                 type(parameterized).param[pname].constant=True
             if pname in inst_params:
                 parameterized.param[pname].constant = True

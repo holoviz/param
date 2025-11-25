@@ -1,5 +1,17 @@
 # Releases
 
+## Version 2.3.1
+
+Date: 2025-11-25
+
+This patch release fixes a regression introduced in the `param.parameterized.edit_constant` context manager.
+
+Fixes:
+
+- Fix `edit_constant` to prevent class value mutation when not constant
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.3.0...v2.3.1)
+
 ## Version 2.3.0
 
 Date: 2025-11-13

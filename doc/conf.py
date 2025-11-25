@@ -113,6 +113,8 @@ html_theme_options = {
         "version_match": switcher_version,
     },
     "show_version_warning_banner": True,
+    "announcement": "Param 2.3 has just been released! Check out the <a href='https://blog.holoviz.org/posts/param_release_2.3/'>release blog post</a> and support Param by giving it a 🌟 on <a href='https://github.com/holoviz/param'>Github</a>.",
+
 }
 
 extensions += [  # noqa

@@ -190,7 +190,6 @@ sfe = SideEffectExample()
 # with a rich Event object.
 sfe.a = 'foo'
 # => Event(
-# => Event(
 #     what='value', name='a',
 #     obj=SideEffectExample(a='foo', b='', c='', name='SideEffectExample00008'),
 #     cls=SideEffectExample(a='foo', b='', c='', name='SideEffectExample00008'),

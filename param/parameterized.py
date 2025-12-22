@@ -5411,37 +5411,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         plus a unique integer""")
 
     def __init__(self, **params):
-        """
-        Initialize a :class:`Parameterized` instance with optional Parameter values.
-
-        Optional Parameter values must be supplied as keyword arguments
-        (``param_name=value``), overriding their default values for this one
-        instance. Any parameters not explicitly set will retain their defined
-        default values.
-
-        If no ``name`` parameter is provided, the instance's ``name`` attribute will
-        default to an identifier string composed of the class name followed by
-        an incremental 5-digit number.
-
-        Parameters
-        ----------
-        **params
-            Optional keyword arguments mapping :class:`Parameter` names to values.
-
-        Raises
-        ------
-        TypeError
-            If one of the keywords of ``params`` is not a :class:`Parameter` name.
-
-        Examples
-        --------
-        >>> import param
-        >>> class MyClass(param.Parameterized):
-        ...     value = param.Number(default=10, bounds=(0, 20))
-        >>> obj = MyClass(value=15)
-
-        The ``value`` parameter is set to 15 for this instance, overriding the default.
-        """
         global object_count
 
         # Setting a Parameter value in an __init__ block before calling

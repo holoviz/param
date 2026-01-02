@@ -5348,6 +5348,15 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     This makes it well-suited for robust, maintainable code bases and
     particularly useful in interactive applications requiring reactive behavior.
 
+    To construct an instance, optional Parameter values must be supplied as
+    keyword arguments (``param_name=value``), overriding their default values
+    for this one instance. Any parameters not explicitly set will retain their
+    defined default values.
+
+    If no ``name`` parameter is provided, the instance's ``name`` attribute will
+    default to an identifier string composed of the class name followed by
+    an incremental 5-digit number.
+
     Attributes
     ----------
     name : str
@@ -5411,6 +5420,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         plus a unique integer""")
 
     def __init__(self, **params):
+        # No __init__ docstring to avoid shadowing the user class docstring
+        # displayed in IDEs.
+
         global object_count
 
         # Setting a Parameter value in an __init__ block before calling

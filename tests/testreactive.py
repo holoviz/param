@@ -436,6 +436,7 @@ def test_reactive_set_value_non_root_raises():
     with pytest.raises(AttributeError):
         rx_val.rx.value = 3
 
+
 @pytest.mark.parametrize(('input', 'op', 'expected'), [
     ('bob', lambda _rx: _rx.title(), 'Bob'),
     ('bob', lambda _rx: _rx.rx.map(str.upper), [*'BOB']),
@@ -455,7 +456,6 @@ def test_reactive_clone_evaluates_once_lazy(input: str, op: Callable[[rx], Any],
 
     assert result.rx.value == expected
     assert fcalls == 1
-
 
 @pytest.mark.parametrize(('input', 'op', 'expected'), [
     ('bob', lambda _rx: _rx.title(), 'Bob'),

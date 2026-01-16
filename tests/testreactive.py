@@ -9,6 +9,7 @@ import pytest
 
 from param.parameterized import Skip
 from param.reactive import bind, rx
+from typing import Any, Callable
 
 from .utils import async_wait_until
 
@@ -435,16 +436,69 @@ def test_reactive_set_value_non_root_raises():
     with pytest.raises(AttributeError):
         rx_val.rx.value = 3
 
-def test_reactive_clone_evaluates_once():
-    namex = rx('bob')
 
-    items = []
-    def debug(value):
-        items.append(value)
+@pytest.mark.parametrize(('input', 'op', 'expected'), [
+    ('bob', lambda _rx: _rx.title(), 'Bob'),
+    ('bob', lambda _rx: _rx.rx.map(str.upper), [*'BOB']),
+])
+def test_reactive_clone_evaluates_once_lazy(input: str, op: Callable[[rx], Any], expected: Any):
+    fcalls = 0
+    def debug_call_count(value):
+        nonlocal fcalls
+        fcalls += 1
         return value
 
-    assert namex.rx.pipe(debug).title().rx.value == 'Bob'
-    assert len(items) == 1
+    base = rx(input, lazy=True).rx.pipe(debug_call_count)
+
+    assert fcalls == 0
+    result = op(base)
+    assert fcalls == 0
+
+    assert result.rx.value == expected
+    assert fcalls == 1
+
+@pytest.mark.parametrize(('input', 'op', 'expected'), [
+    ('bob', lambda _rx: _rx.title(), 'Bob'),
+    ('bob', lambda _rx: _rx.rx.map(str.upper), [*'BOB']),
+])
+def test_reactive_clone_evaluates_once_eager(input: str, op: Callable[[rx], Any], expected: Any):
+    fcalls = 0
+    def debug_call_count(value):
+        nonlocal fcalls
+        fcalls += 1
+        return value
+
+    base = rx(input, lazy=False).rx.pipe(debug_call_count)
+
+    assert fcalls == 0
+    result = op(base)
+    assert fcalls == 1
+
+    assert result.rx.value == expected
+    assert fcalls == 1
+
+
+@pytest.mark.parametrize(('inputs', 'op', 'expecteds', 'lazy'), [
+    (['alice', 'bob', 'charlie'], lambda _rx: _rx.title(), ['Alice', 'Bob', 'Charlie'], [True, False]),
+    (['alice', 'bob', 'charlie'], lambda _rx: _rx.rx.map(str.upper), [[*'ALICE'], [*'BOB'], [*'CHARLIE']], [True, False]),
+])
+def test_reactive_clone_reevaluates(inputs: list[str], op: Callable[[rx], Any], expecteds: list[Any], lazy: bool):
+    fcalls = 0
+    def debug_call_count(value):
+        nonlocal fcalls
+        fcalls += 1
+        return value
+
+    base = rx(inputs[0], lazy=lazy)
+    transformed = op(base.rx.pipe(debug_call_count))
+    assert transformed.rx.value == expecteds[0]
+    assert fcalls == 1
+
+    for prev_fcalls, (inpt, expec) in enumerate(zip(inputs[1:], expecteds[1:]), start=fcalls):
+        base.rx.value = inpt
+        assert transformed.rx.value == expec
+        assert fcalls == (prev_fcalls + 1)
+
 
 def test_reactive_when():
     p = Parameters(integer=3)

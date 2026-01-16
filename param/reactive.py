@@ -1542,6 +1542,8 @@ class rx:
     def _current(self):
         if self._error_state:
             raise self._error_state
+        elif self._lazy:
+            pass
         elif self._dirty or self._root._dirty_obj:
             self._resolve()
         return self._current_
@@ -1734,7 +1736,7 @@ class rx:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
         return type(self)(
-            self._obj, operation=operation, depth=depth, fn=self._fn,
+            self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
             **kwargs
         )
@@ -1777,6 +1779,7 @@ class rx:
             operation = {
                 'fn': lambda obj, name: getattr(obj, name),
                 'args': (name,),
+                'kwargs': {},
             }
             return self._clone(operation)
 

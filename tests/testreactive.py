@@ -431,6 +431,10 @@ async def test_reactive_watch_async_on_event():
     p.param.trigger('event')
     await async_wait_until(lambda: items == [True])
 
+def test_reactive_set_value_non_root_raises():
+    rx_val = rx(1) + 1
+    with pytest.raises(AttributeError):
+        rx_val.rx.value = 3
 
 @pytest.mark.parametrize(('input', 'op', 'expected'), [
     ('bob', lambda _rx: _rx.title(), 'Bob'),

@@ -754,7 +754,7 @@ def test_reactive_callback_resolve_accessor():
     assert out._name == df["name"].str._name
 
 
-def test_reactive_dunder_len_error() -> None:
+def test_reactive_dunder_len_error():
     with pytest.raises(
         TypeError,
         match=re.escape(

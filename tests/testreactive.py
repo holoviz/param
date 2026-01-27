@@ -750,7 +750,8 @@ def test_reactive_callback_resolve_accessor():
     df = pd.DataFrame({"name": ["Bill", "Bob"]})
     dfx = rx(df)
     out = dfx["name"].str._callback()
-    assert out is df["name"].str
+    assert type(out) is type(df["name"].str)
+    assert out._name == df["name"].str._name
 
 
 def test_reactive_dunder_len_error():

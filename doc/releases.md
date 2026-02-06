@@ -1,5 +1,21 @@
 # Releases
 
+## Version 2.3.2
+
+Date: 2026-02-06
+
+This patch release fixes a regression introduced in `Parameterized` by adding a docstring to its `__init__` method, shadowing user-defined class docstrings displayed in IDEs like VSCode.
+
+Fixes:
+
+- Remove Parameterized `__init__` docstring as it shadows class user docstrings ([#1104](https://github.com/holoviz/param/pull/1104))
+
+Compatibility / Tests:
+
+- Pandas 3 test suite compatibility ([#1107](https://github.com/holoviz/param/pull/1107))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.3.1...v2.3.2)
+
 ## Version 2.3.1
 
 Date: 2025-11-25

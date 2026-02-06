@@ -2,8 +2,6 @@
 
 ## Version 2.3.2
 
-## What's Changed
-
 Date: 2026-02-06
 
 This patch release fixes a regression introduced in `Parameterized` by adding a docstring to its `__init__` method, shadowing user-defined class docstrings displayed in IDEs like VSCode.

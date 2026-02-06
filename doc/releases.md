@@ -4,13 +4,9 @@
 
 ## What's Changed
 
-@maximlt
-@maximlt
-@maximlt
-
 Date: 2026-02-06
 
-This patch release fixes a regression introduced `Parameterized` by adding a docstring to the `__init__` method, shadowing user-defined class docstrings displayed in IDEs like VSCode.
+This patch release fixes a regression introduced in `Parameterized` by adding a docstring to its `__init__` method, shadowing user-defined class docstrings displayed in IDEs like VSCode.
 
 Fixes:
 

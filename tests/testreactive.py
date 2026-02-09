@@ -787,7 +787,7 @@ def test_parameter_rx_type_annotation():
 
     p = P(a=1)
 
-    # Verify that rx property returns reactive_ops instance
+    # Verify that rx property returns reactive_ops instance (runtime check)
     assert isinstance(p.param.a.rx, reactive_ops)
 
     # Verify that calling rx() returns rx instance
@@ -798,5 +798,9 @@ def test_parameter_rx_type_annotation():
     rx_property = type(p.param.a).rx
     assert hasattr(rx_property, 'fget'), "rx should be a property"
     sig = inspect.signature(rx_property.fget)
+    # Check that there is a return annotation
+    assert sig.return_annotation != inspect.Signature.empty, \
+        "rx property should have a return type annotation"
+    # The annotation should be 'reactive_ops' as a string (forward reference)
     assert sig.return_annotation == 'reactive_ops', \
         f"Expected return annotation 'reactive_ops', got {sig.return_annotation}"

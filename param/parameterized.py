@@ -33,6 +33,7 @@ from typing import Any, Union, Literal, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import logging
+    from .reactive import rx
 
 from contextlib import contextmanager
 CRITICAL = 50
@@ -1572,7 +1573,7 @@ class Parameter(_ParameterBase):
                                                     safe=safe, subset=subset)
 
     @property
-    def rx(self):
+    def rx(self) -> 'rx':
         """
         The reactive operations namespace.
 

@@ -93,6 +93,7 @@ import math
 import operator
 
 from collections.abc import Iterable, Iterator
+from itertools import chain
 from functools import partial
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
@@ -1435,7 +1436,7 @@ class rx:
         return inst
 
     def __init__(
-        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None,
+        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
         _shared_obj=None, _current=None, _wrapper=None, **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
@@ -1450,6 +1451,7 @@ class rx:
             if dopt in kwargs
         })
         self._display_opts = display_opts
+        self._lazy = lazy
         self._method = method
         self._operation = operation
         self._depth = depth
@@ -1540,6 +1542,8 @@ class rx:
     def _current(self):
         if self._error_state:
             raise self._error_state
+        elif self._lazy:
+            pass
         elif self._dirty or self._root._dirty_obj:
             self._resolve()
         return self._current_
@@ -1588,7 +1592,10 @@ class rx:
         for ref in resolve_ref(self._operation['fn']):
             if ref not in ps:
                 ps.append(ref)
-        for arg in list(self._operation['args'])+list(self._operation['kwargs'].values()):
+        for arg in chain(
+            self._operation.get("args", tuple()),
+            self._operation.get("kwargs", {}).values(),
+        ):
             for ref in resolve_ref(arg, recursive=True):
                 if ref not in ps:
                     ps.append(ref)
@@ -1729,7 +1736,7 @@ class rx:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
         return type(self)(
-            self._obj, operation=operation, depth=depth, fn=self._fn,
+            self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
             **kwargs
         )
@@ -1767,6 +1774,15 @@ class rx:
 
         current = self_dict['_current_']
         dirty = self_dict['_dirty']
+        if self_dict['_lazy']:
+            # there is no current, delay the getattr to later
+            operation = {
+                'fn': lambda obj, name: getattr(obj, name),
+                'args': (name,),
+                'kwargs': {},
+            }
+            return self._clone(operation)
+
         if dirty:
             self._resolve()
             current = self_dict['_current_']

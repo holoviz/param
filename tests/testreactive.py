@@ -775,3 +775,28 @@ def test_reactive_set_value_attributeerror():
     x = rx(1)
     with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
         x.value = 1
+
+
+def test_parameter_rx_type_annotation():
+    """Test that Parameter.rx property has type annotation."""
+    import inspect
+    from param.reactive import reactive_ops
+    
+    class P(param.Parameterized):
+        a = param.Number()
+    
+    p = P(a=1)
+    
+    # Verify that rx property returns reactive_ops instance
+    assert isinstance(p.param.a.rx, reactive_ops)
+    
+    # Verify that calling rx() returns rx instance
+    rx_expr = p.param.a.rx()
+    assert isinstance(rx_expr, rx)
+    
+    # Verify that the property has the correct return type annotation
+    rx_property = type(p.param.a).rx
+    assert hasattr(rx_property, 'fget'), "rx should be a property"
+    sig = inspect.signature(rx_property.fget)
+    assert sig.return_annotation == 'reactive_ops', \
+        f"Expected return annotation 'reactive_ops', got {sig.return_annotation}"

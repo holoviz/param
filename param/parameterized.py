@@ -5911,7 +5911,7 @@ class ParameterizedFunction(Parameterized):
             cls = self_or_cls
         else:
             p = params
-            params = self_or_cls.param.values()
+            params = self_or_cls.param.objects()
             params.update(p)
             params.pop('name')
             cls = self_or_cls.__class__

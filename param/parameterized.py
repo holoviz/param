@@ -1231,6 +1231,8 @@ class ParameterKwargs(t.TypedDict, total=False):
     per_instance: bool
     allow_refs: bool
     nested_refs: bool
+    default_factory: Callable | None
+    metadata: dict[str, Any] | None
 
 
 class Parameter(_ParameterBase, t.Generic[T]):
@@ -1375,7 +1377,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
 
     _serializers = {'json': serializer.JSONSerialization}
 
-    _slot_defaults = dict(
+    _slot_defaults: dict[str, Any] = dict(
         default=None, precedence=None, doc=None, _label=None, instantiate=False,
         constant=False, readonly=False, pickle_default_value=True, allow_None=False,
         per_instance=True, allow_refs=False, nested_refs=False, default_factory=None,

@@ -1195,15 +1195,13 @@ class _ParameterBase(metaclass=ParameterMetaclass):
                 if parameter.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
                     continue
                 if getattr(parameter, 'default', None) is Undefined:
-                    if pname not in defaults:
-                        raise LookupError(
-                            f'Argument {pname!r} of Parameter {cls.__name__!r} has no '
-                            'entry in _slot_defaults.'
-                        )
-                    default = defaults[pname]
-                    if callable(default) and hasattr(default, 'sig'):
-                        default = default.sig
-                    new_parameter = parameter.replace(default=default)
+                    if pname in defaults:
+                        default = defaults[pname]
+                        if callable(default) and hasattr(default, 'sig'):
+                            default = default.sig
+                        new_parameter = parameter.replace(default=default)
+                    else:
+                        new_parameter = parameter
                 else:
                     new_parameter = parameter
                 if i >= 1:
@@ -1888,8 +1886,8 @@ class Parameter(_ParameterBase, t.Generic[T]):
             syncing = name in obj._param__private.syncing
             ref, deps, val, is_async = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
-            if ref is not None and self.owner is not None:
-                self.owner.param._update_ref(name, ref)
+            if ref is not None:
+                obj.param._update_ref(name, ref)
             elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
                 del refs[name]
                 if name in obj._param__private.async_refs:
@@ -2527,9 +2525,7 @@ class Parameters:
             if pobj is None:
                 setattr(self, name, val)
                 continue
-            elif pobj.allow_refs:
-                setattr(self, name, val)
-            else:
+            elif not pobj.allow_refs:
                 # Until Parameter.allow_refs=True by default we have to
                 # speculatively evaluate values to check whether they
                 # contain a reference and warn the user that the
@@ -2770,18 +2766,21 @@ class Parameters:
         reinitialized so we return a callback which updates the
         dependencies.
         """
+        spec_parts = dynamic_dep.spec.split(':')[0].split('.')
         subobj = obj
         subobjs = [obj]
-        for subpath in dynamic_dep.spec.split('.')[:-1]:
+        for subpath in spec_parts[:-1]:
             subobj = getattr(subobj, subpath.split(':')[0], None)
             if subobj is not None:
                 subobjs.append(subobj)
 
         dep_obj = param_dep.cls if param_dep.inst is None else param_dep.inst
-        if dep_obj not in subobjs[:-1]:
+        if dep_obj not in subobjs:
             return None, None, param_dep.what
 
         depth = subobjs.index(dep_obj)
+        if depth >= (len(spec_parts) - 1):
+            return None, None, param_dep.what
         callback = None
         if depth > 0:
             def cb(*events):
@@ -2792,7 +2791,7 @@ class Parameters:
                 obj.param._update_deps(attribute)
             callback = cb
 
-        p = '.'.join(dynamic_dep.spec.split(':')[0].split('.')[depth+1:])
+        p = '.'.join(spec_parts[depth+1:])
         if p == 'param':
             subparams = [sp for sp in list(subobjs[-1].param)]
         else:
@@ -2988,7 +2987,7 @@ class Parameters:
         base.update(kwargs)
 
         trigger_params = [
-            k for k in kwargs
+            k for k in base
             if k in self_ and hasattr(self_[k], '_autotrigger_value')
         ]
 
@@ -4626,6 +4625,7 @@ class ParameterizedMetaclass(type):
         mcs._param__private = PrivateNS(class_ns=_param__private)
         # Avoid referencing `Parameterized` before it is defined during class bootstrap.
         param_ns = Parameters(t.cast("type[Parameterized]", mcs))
+        mcs._param__parameters = param_ns
         mcs.param = NS(param_ns)
         mcs.__set_name(name, dict_)
 
@@ -4667,7 +4667,7 @@ class ParameterizedMetaclass(type):
         # Resolve dependencies in class hierarchy
         _inherited = []
         for cls in classlist(mcs)[:-1][::-1]:
-            if not issubclass(cls, mcs):
+            if not issubclass(mcs, cls) or not hasattr(cls, 'param'):
                 continue
             for dep in cls.param._depends['watch']:
                 method = getattr(mcs, dep[0], None)
@@ -4702,10 +4702,11 @@ class ParameterizedMetaclass(type):
                     "Overriding 'name' is only allowed with a 'String' Parameter."
                 )
             if name_param.default:
-                mcs.name = name_param.default
                 private.renamed = True
             else:
-                mcs.name = name
+                # `name_param` may not yet have been initialized via `_set_names`.
+                # Set the underlying default directly so class-level `name` resolves.
+                name_param.default = name
         else:
             classes = classlist(mcs)[::-1]
             found_renamed = False
@@ -5538,10 +5539,14 @@ class NS:
     def __get__(self, obj: C | None, objtype: type[C] | None = None) -> Parameters:
         if obj is None:
             return self.class_ns
-        ns = getattr(obj, "_param__parameters", None)
+        objdict = getattr(obj, "__dict__", None)
+        ns = objdict.get("_param__parameters") if objdict is not None else None
         if ns is None:
             ns = Parameters(self.class_ns.cls, self=obj)
-            setattr(obj, "_param__parameters", ns)
+            if objdict is not None:
+                objdict["_param__parameters"] = ns
+            else:
+                setattr(obj, "_param__parameters", ns)
         return ns
 
 
@@ -5556,13 +5561,7 @@ class PrivateNS:
     def __get__(self, obj: C, objtype: type[C] | None = ...) -> _InstancePrivate: ...
 
     def __get__(self, obj: C | None, objtype: type[C] | None = None) -> _ClassPrivate | _InstancePrivate:
-        if obj is None:
-            return self.class_ns
-        ns = getattr(obj, "_param__private_storage", None)
-        if ns is None:
-            ns = _InstancePrivate(explicit_no_refs=self.class_ns.explicit_no_refs)
-            setattr(obj, "_param__private_storage", ns)
-        return ns
+        return self.class_ns
 
 
 class DefaultFactory:
@@ -5740,6 +5739,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # displayed in IDEs.
 
         global object_count
+        if not isinstance(self.__dict__.get('_param__private'), _InstancePrivate):
+            self._param__private = _InstancePrivate(
+                explicit_no_refs=type(self)._param__private.explicit_no_refs
+            )
         # Skip generating a custom instance name when a class in the hierarchy
         # has overriden the default of the `name` Parameter.
         if self.param.name.default == self.__class__.__name__:

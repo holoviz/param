@@ -154,7 +154,8 @@ def _recursive_repr(fillvalue='...'):
 
 
 def _is_auto_name(class_name: str, instance_name: str) -> bool:
-    return bool(re.match(f'^{class_name}[0-9]{5}$', instance_name))
+    pattern = rf'^{re.escape(class_name)}[0-9]{{5}}$'
+    return bool(re.match(pattern, instance_name))
 
 
 def _find_pname(pclass):

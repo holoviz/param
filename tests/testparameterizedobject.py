@@ -1,7 +1,9 @@
 """Unit test for Parameterized."""
+import abc
 import inspect
 import re
 import unittest
+import warnings
 
 import param
 import numbergen
@@ -16,7 +18,9 @@ import random
 
 from param import parameterized, Parameter
 from param.parameterized import (
+    ParameterizedABC,
     ParamOverrides,
+    ParameterizedMetaclass,
     Undefined,
     default_label_formatter,
     edit_constant,
@@ -325,6 +329,26 @@ class TestParameterized(unittest.TestCase):
         assert TestPO.param['const'].constant
         assert TestPO.param['const'].default not in (670, 891)
 
+    def test_edit_constant_does_not_mutate_cls_value_if_not_constant(self):
+        # Regression https://github.com/holoviz/param/issues/1100
+        class P(param.Parameterized):
+            a = param.Number()
+
+
+        p = P()
+
+        # Manually set p.param.a.constant to True
+        p.param.a.constant = True
+
+        assert p.param.a.constant is True
+        assert P.param.a.constant is False
+
+        with param.parameterized.edit_constant(p):
+            pass
+
+        assert p.param.a.constant is True
+        assert P.param.a.constant is False
+
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""
         testpo = TestPO()
@@ -377,11 +401,28 @@ class TestParameterized(unittest.TestCase):
         assert t.param['instPO'].instantiate is True
         assert isinstance(t.instPO,AnotherTestPO)
 
-    def test_abstract_class(self):
+    def test_abstract_class_attribute(self):
         """Check that a class declared abstract actually shows up as abstract."""
         self.assertEqual(TestAbstractPO.abstract, True)
         self.assertEqual(_AnotherAbstractPO.abstract, True)
         self.assertEqual(TestPO.abstract, False)
+        # Test subclasses are not abstract
+        class A(param.Parameterized):
+            __abstract = True
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
+
+    def test_abstract_class_abc(self):
+        """Check that an ABC class actually shows up as abstract."""
+        class A(ParameterizedABC): pass
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
 
     def test_override_class_param_validation(self):
         test = TestPOValidation()
@@ -412,7 +453,9 @@ class TestParameterized(unittest.TestCase):
                 nonlocal count
                 count += 1
 
-        p = P()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            p = P()
 
         assert p.x == 1
         assert count == 0
@@ -429,7 +472,9 @@ class TestParameterized(unittest.TestCase):
                     self.sub = P(depth+1)
                 super().__init__()
 
-        p = P()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            p = P()
 
         assert p.value == 'B'
         assert p.sub.value == 'B'
@@ -454,7 +499,9 @@ class TestParameterized(unittest.TestCase):
 
         # When b is instantiated the `batched` Parameter of B is set before
         # Parameterized.__init__ is called.
-        b = B()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            b = B()
         assert b.batched is True
 
     def test_instantiation_param_objects_before_super_subclass(self):
@@ -548,7 +595,7 @@ class TestParameterized(unittest.TestCase):
     def test_values_name_ignored_for_instances_and_onlychanged(self):
         default_inst = param.Parameterized()
         assert 'Parameterized' in default_inst.name
-        # name ignored when automatically computed (behavior inherited from all_equal)
+        # name ignored when automatically computed (behavior inherited from is_equal)
         assert 'name' not in default_inst.param.values(onlychanged=True)
         # name not ignored when set
         assert param.Parameterized(name='foo').param.values(onlychanged=True)['name'] == 'foo'
@@ -1843,3 +1890,70 @@ def test_inheritance_with_changing_class_():
     ):
         class C(B):
             p = param.ClassSelector(class_=str)
+
+
+class MyABC(ParameterizedABC):
+
+    x = param.Number()
+
+    @abc.abstractmethod
+    def method(self): pass
+
+    @property
+    @abc.abstractmethod
+    def property(self): pass
+    # Other methods like abc.abstractproperty are deprecated and can be
+    # replaced by combining @abc.abstracmethod with other decorators, like
+    # @property, @classmethod, etc. No need to test them all.
+
+
+def test_abc_insintance_metaclass():
+    assert isinstance(MyABC, ParameterizedMetaclass)
+
+
+def test_abc_param_abstract():
+    assert MyABC.abstract
+
+
+def test_abc_error_when_interface_not_implemented():
+    class Bad(MyABC):
+        def wrong_method(self): pass
+
+    with pytest.raises(TypeError, match="Can't instantiate abstract class Bad"):
+        Bad()
+
+def test_abc_basic_checks():
+    # Some very basic tests to check the concrete class works as expected.
+    class GoodConcrete(MyABC):
+        l = param.List()
+
+        def method(self):
+            return 'foo'
+
+        @property
+        def property(self):
+            return 'bar'
+
+        @param.depends('x', watch=True, on_init=True)
+        def on_x(self):
+            self.l.append(self.x)
+
+    assert issubclass(GoodConcrete, param.Parameterized)
+    assert not GoodConcrete.abstract
+
+    assert GoodConcrete.name == 'GoodConcrete'
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Number parameter 'MyABC.x' only takes numeric values, not <class 'str'>."),
+    ):
+        GoodConcrete(x='bad')
+
+    gc = GoodConcrete(x=10)
+    assert isinstance(gc, param.Parameterized)
+    assert gc.method() == 'foo'
+    assert gc.property == 'bar'
+    assert gc.name.startswith('GoodConcrete0')
+    assert gc.l == [10]
+    gc.x += 1
+    assert gc.l == [10, 11]

@@ -237,12 +237,11 @@ Here is the complete list of deprecation warnings added in Param 2.0:
     - `ClassSelector(class_=(str, int))`: OK
     - It's possible that in the future the signature of these two parameters will be aligned with the other parameters to accept `default` as first and only positional argument, but for now please use an explicit keyword so that your code will be compatible with all versions.
 - Parameter slots:
-  - `List._class`: use instead `item_type`.
+  - `List.class_`: use instead `item_type`.
   - `Number.set_hook`: no replacement
 - `param.__init__` module:
   - `param.produce_value`: no replacement
   - `param.as_unicode`: no replacement
-  - `param.is_ordered_dict`: no replacement
   - `param.is_ordered_dict`: no replacement
   - `param.hashable`: no replacement
   - `param.named_objs`: no replacement

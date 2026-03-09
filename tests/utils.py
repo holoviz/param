@@ -116,7 +116,7 @@ def warnings_as_excepts(match=None):
         param.parameterized.warnings_as_exceptions = orig
 
 
-async def async_wait_until(fn, timeout=5000, interval=100):
+async def async_wait_until(fn, timeout=5000, interval=100, delay=0):
     """
     Exercise a test function in a loop until it evaluates to True
     or times out.
@@ -137,12 +137,17 @@ async def async_wait_until(fn, timeout=5000, interval=100):
         Total timeout in milliseconds, by default 5000
     interval : int, optional
         Waiting interval, by default 100
+    delay : int, optional
+        Delay before starting, by default 0
 
     Adapted from pytest-qt.
 
     """
     # Hide this function traceback from the pytest output if the test fails
     __tracebackhide__ = True
+
+    if delay:
+        await asyncio.sleep(delay)
 
     start = time.monotonic()
 

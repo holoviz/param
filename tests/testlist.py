@@ -34,7 +34,6 @@ class TestListParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default == []
         assert p.allow_None is False
-        assert p.class_ is None
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True
@@ -250,7 +249,6 @@ class TestHookListParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default == []
         assert p.allow_None is False
-        assert p.class_ is None
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True

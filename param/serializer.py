@@ -234,7 +234,7 @@ class JSONSerialization(Serialization):
             msg = ('List without a class specified cannot be guaranteed '
                    'to be safe for serialization')
             raise UnsafeserializableException(msg)
-        if p.class_ is not None:
+        if p.item_type is not None:
             schema['items'] = cls.class__schema(p.item_type, safe=safe)
         return schema
 

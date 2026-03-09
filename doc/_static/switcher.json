@@ -1,0 +1,12 @@
+[
+  {
+    "name": "2.3 (latest)",
+    "version": "2.3.2",
+    "url": "https://param.holoviz.org/en/docs/latest/",
+    "preferred": true
+  },
+  {
+    "version": "dev",
+    "url": "https://param.holoviz.org/en/docs/dev/"
+  }
+]

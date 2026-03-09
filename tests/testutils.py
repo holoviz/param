@@ -8,9 +8,12 @@ import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod, Parameterized
+from param.parameterized import bothmethod, Parameterized, ParameterizedABC
 from param._utils import (
+    # ParamWarning,
+    _is_abstract,
     _is_mutable_container,
+    concrete_descendents,
     descendents,
     iscoroutinefunction,
     gen_types,
@@ -480,17 +483,20 @@ def test_gen_types():
     assert isinstance(_int_types, Iterable)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_object():
     # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
     assert descendents(object)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_bad_type():
     with pytest.raises(
         TypeError,
         match="descendents expected a class object, not int"
     ):
         descendents(1)
+
 
 class A(Parameterized):
     __abstract = True
@@ -506,3 +512,50 @@ def test_descendents():
 
 def test_descendents_concrete():
     assert descendents(A, concrete=True) == [B, C, X, Y]
+
+
+def test_is_abstract_false():
+    class A: pass
+    class B(Parameterized): pass
+    assert not _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_attribute():
+    class A(Parameterized):
+        __abstract = True
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_abc():
+    class A(ParameterizedABC): pass
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_concrete_descendents():
+    assert concrete_descendents(A) == {
+        'B': B,
+        'C': C,
+        'X': X,
+        'Y': Y,
+    }
+
+
+# def test_concrete_descendents_same_name_warns():
+#     class X: pass
+#     class Y(X): pass
+#     y = Y  # noqa
+#     class Y(X): pass
+#     with pytest.warns(
+#         ParamWarning,
+#         match=r".*\['Y'\]"
+#     ):
+#         cd = concrete_descendents(X)
+#     # y not returned
+#     assert cd == {'X': X, 'Y': Y}

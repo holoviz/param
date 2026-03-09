@@ -1696,7 +1696,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         return reactive_ops(self)
 
     @property
-    def label(self) -> str:
+    def label(self) -> str | None:
         """
         Get the label for this parameter.
 
@@ -1729,11 +1729,10 @@ class Parameter(_ParameterBase, t.Generic[T]):
         """
         if self.name and self._label is None:
             return label_formatter(self.name)
-        else:
-            return self._label if self._label is not None else ""
+        return self._label
 
     @label.setter
-    def label(self, val: str):
+    def label(self, val: str | None):
         self._label = val
 
     def _set_allow_None(self, allow_None: bool | UndefinedType):
@@ -4625,7 +4624,8 @@ class ParameterizedMetaclass(type):
 
         _param__private = _ClassPrivate(explicit_no_refs=list(explicit_no_refs))
         mcs._param__private = PrivateNS(class_ns=_param__private)
-        param_ns = Parameters(t.cast(type[Parameterized], mcs))
+        # Avoid referencing `Parameterized` before it is defined during class bootstrap.
+        param_ns = Parameters(t.cast("type[Parameterized]", mcs))
         mcs.param = NS(param_ns)
         mcs.__set_name(name, dict_)
 
@@ -5522,12 +5522,7 @@ class _InstancePrivate:
             setattr(self, k, v)
 
 
-class _HasPrivateStorage(t.Protocol):
-
-    _param__private_storage: t.Optional["_InstancePrivate"]
-
-C = t.TypeVar("C")
-PS = t.TypeVar("PS", bound=_HasPrivateStorage)
+C = t.TypeVar("C", bound="Parameterized")
 
 
 class NS:
@@ -5535,7 +5530,12 @@ class NS:
     def __init__(self, class_ns: Parameters):
         self.class_ns = class_ns
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized] | None = None) -> Parameters:
+    @t.overload
+    def __get__(self, obj: None, objtype: type[C]) -> Parameters: ...
+    @t.overload
+    def __get__(self, obj: C, objtype: type[C] | None = ...) -> Parameters: ...
+
+    def __get__(self, obj: C | None, objtype: type[C] | None = None) -> Parameters:
         if obj is None:
             return self.class_ns
         ns = getattr(obj, "_param__parameters", None)
@@ -5551,11 +5551,11 @@ class PrivateNS:
         self.class_ns = class_ns
 
     @t.overload
-    def __get__(self, obj: None, objtype: type[PS]) -> _ClassPrivate: ...
+    def __get__(self, obj: None, objtype: type[C]) -> _ClassPrivate: ...
     @t.overload
-    def __get__(self, obj: PS, objtype: type[PS] | None = ...) -> _InstancePrivate: ...
+    def __get__(self, obj: C, objtype: type[C] | None = ...) -> _InstancePrivate: ...
 
-    def __get__(self, obj: PS | None, objtype: type[PS] | None = None) -> _ClassPrivate | _InstancePrivate:
+    def __get__(self, obj: C | None, objtype: type[C] | None = None) -> _ClassPrivate | _InstancePrivate:
         if obj is None:
             return self.class_ns
         ns = getattr(obj, "_param__private_storage", None)
@@ -5747,7 +5747,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         refs, deps = self.param._setup_params(**params)
         object_count += 1
 
-        self._param__private_storage: _InstancePrivate | None = None
         self._param__private.initialized = True
 
         # Find parameters with default_factory through the class

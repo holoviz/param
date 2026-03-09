@@ -2778,8 +2778,7 @@ class List(Parameter[T]):
         is_instance: bool | UndefinedType = Undefined,
         **params
     ):
-        if item_type is not Undefined:
-            self.item_type = item_type
+        self.item_type = item_type
         self.is_instance = is_instance
         self.bounds = bounds
         Parameter.__init__(self, default=default, instantiate=instantiate,

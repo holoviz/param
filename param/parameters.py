@@ -501,7 +501,7 @@ class Dynamic(Parameter[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
 
@@ -625,22 +625,6 @@ class Dynamic(Parameter[T]):
             return gen
 
 
-class __compute_set_hook:
-    """Remove when set_hook is removed."""
-
-    def __call__(self, p):
-        return _identity_hook
-
-    def __repr__(self):
-        return repr(self.sig)
-
-    @property
-    def sig(self):
-        return None
-
-
-_compute_set_hook = __compute_set_hook()
-
 class NumberKwargs(ParameterKwargs):
     bounds: tuple[t.Any | None, t.Any | None] | None
     softbounds: tuple[t.Any | None, t.Any | None] | None
@@ -756,7 +740,7 @@ class Number(Dynamic[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
 
@@ -1050,7 +1034,7 @@ class Magnitude(Number[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
 
@@ -1111,7 +1095,7 @@ class Date(Number[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
@@ -1208,7 +1192,7 @@ class CalendarDate(Number[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
@@ -1304,7 +1288,7 @@ class Boolean(Parameter[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
@@ -1367,7 +1351,7 @@ class Event(Boolean):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
@@ -1485,7 +1469,7 @@ class Tuple(Parameter[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
@@ -2698,7 +2682,7 @@ class Dict(ClassSelector[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
@@ -2985,30 +2969,20 @@ class List(Parameter[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 
     def __init__(
         self,
         default=Undefined, *,
-        class_: type[T] = Undefined,
         item_type: type[T] = Undefined,
         instantiate: bool = Undefined,
         bounds: tuple[int, int] = Undefined,
         is_instance: bool = Undefined,
         **params
     ):
-        if class_ is not Undefined:
-            # PARAM3_DEPRECATION
-            warnings.warn(
-                message="The 'class_' attribute on 'List' is deprecated. Use instead 'item_type'",
-                category=_ParamFutureWarning,
-                stacklevel=3,
-            )
-        if item_type is not Undefined and class_ is not Undefined:
-            self.item_type = item_type
-        else:
+        if item_type is not Undefined:
             self.item_type = item_type
         self.is_instance = is_instance
         self.bounds = bounds
@@ -3241,7 +3215,7 @@ class Path(Parameter):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, t.Any] | None = None
     ):
         ...
 

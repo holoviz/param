@@ -30,8 +30,7 @@ from functools import partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
-# When python 3.9 support is dropped replace Union with |
-from typing import Any, Union, Literal, Optional, Generic TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Optional, Generic
 
 if TYPE_CHECKING:
     import logging
@@ -1221,7 +1220,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
 
 T = t.TypeVar("T")
 P = t.ParamSpec("P")
-R = TypeVar("R", covariant=True)
+R = t.TypeVar("R", covariant=True)
 
 class ParameterKwargs(t.TypedDict, total=False):
     doc: str | None
@@ -1424,7 +1423,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         allow_refs: bool = False,
         nested_refs: bool = False,
         default_factory: Callable | None = None,
-        metadata: dict[str, Any] | None = False
+        metadata: dict[str, Any] | None = None
     ) -> None:
         ...
 
@@ -2141,7 +2140,6 @@ class String(Parameter[T]):
     ) -> None:
         ...
 
-    @_deprecate_positional_args
     def __init__(
         self,
         default: t.Any = Undefined,
@@ -3945,7 +3943,7 @@ class Parameters:
     def _register_watcher(
         self_,
         action: Literal['append', 'remove'],
-        watcher: Watcher, what: str = 'value',
+        watcher: Watcher,
         what: str = 'value'
     ):
         if self_.self is not None and not self_.self._param__private.initialized:
@@ -5552,7 +5550,7 @@ class PrivateNS:
             ns = _InstancePrivate(explicit_no_refs=self.class_ns.explicit_no_refs)
             setattr(obj, "_param__private_storage", ns)
         return ns
-      
+
 
 class DefaultFactory:
     """

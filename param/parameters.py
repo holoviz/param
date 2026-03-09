@@ -482,26 +482,6 @@ class Dynamic(Parameter[T]):
     time_fn = Time()
     time_dependent = False
 
-    @t.overload
-    def __init__(
-        self: Dynamic[t.Any],
-        default: t.Any = None,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: Callable | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ) -> None:
-        ...
-
     def __init__(
         self,
         default: t.Any = Undefined,
@@ -917,13 +897,13 @@ class Number(Dynamic[T]):
 class Integer(Number[T]):
     """Numeric Parameter required to be an Integer."""
 
-    _slot_defaults = dict(Number._slot_defaults, default=0)
+    _slot_defaults = {**Number._slot_defaults, 'default': 0}
 
     if t.TYPE_CHECKING:
 
         @t.overload
         def __init__(
-            self: Integer[int, int],
+            self: Integer[int],
             default: int = 0,
             *,
             allow_None: t.Literal[False] = False,
@@ -933,7 +913,7 @@ class Integer(Number[T]):
 
         @t.overload
         def __init__(
-            self: Integer[int | None, int | None],
+            self: Integer[int | None],
             default: int | None = 0,
             *,
             allow_None: t.Literal[True] = True,
@@ -943,13 +923,16 @@ class Integer(Number[T]):
 
         @t.overload
         def __init__(
-            self: Integer[int | None, int | None],
+            self: Integer[int | None],
             default: int | None = None,
             *,
             allow_None: bool = False,
             **kwargs: t.Unpack[NumberKwargs]
         ) -> None:
             ...
+
+    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
+        super().__init__(default=default, **kwargs)
 
     def _validate_value(self, val: t.Any, allow_None: bool) -> None:
         if callable(val):
@@ -975,7 +958,7 @@ class Integer(Number[T]):
 class Magnitude(Number[T]):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
-    _slot_defaults = dict(Number._slot_defaults, default=1.0, bounds=(0.0, 1.0))
+    _slot_defaults = {**Number._slot_defaults, 'default': 1.0, 'bounds': (0.0, 1.0)}
 
     if t.TYPE_CHECKING:
 
@@ -1046,7 +1029,7 @@ class Magnitude(Number[T]):
 class Date(Number[T]):
     """Date parameter of datetime or date type."""
 
-    _slot_defaults = dict(Number._slot_defaults, default=None)
+    _slot_defaults = {**Number._slot_defaults, 'default': None}
 
     if t.TYPE_CHECKING:
 
@@ -1143,13 +1126,13 @@ class Date(Number[T]):
 class CalendarDate(Number[T]):
     """Parameter specifically allowing dates (not datetimes)."""
 
-    _slot_defaults = dict(Number._slot_defaults, default=None)
+    _slot_defaults = {**Number._slot_defaults, 'default': None}
 
     if t.TYPE_CHECKING:
 
         @t.overload
         def __init__(
-            self: CalendarDate[dt.date, dt.date],
+            self: CalendarDate[dt.date],
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
@@ -1159,7 +1142,7 @@ class CalendarDate(Number[T]):
 
         @t.overload
         def __init__(
-            self: CalendarDate[dt.date | None, dt.date | None],
+            self: CalendarDate[dt.date | None],
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
@@ -1331,26 +1314,6 @@ class Event(Boolean):
     # to when the parameter is supplied to the trigger method. This
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
-
-    @t.overload
-    def __init__(
-        self,
-        default=False,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: Callable | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ):
-        ...
 
     def __init__(self, default=False, **params):
         self._autotrigger_value = True
@@ -1562,6 +1525,16 @@ class NumericTuple(Tuple[T]):
         ) -> None:
             ...
 
+    def __init__(
+        self,
+        default: t.Any = Undefined,
+        *,
+        length: int | None | UndefinedType = Undefined,
+        allow_None: bool | UndefinedType = Undefined,
+        **params: t.Unpack[ParameterKwargs]
+    ) -> None:
+        super().__init__(default=default, length=length, allow_None=allow_None, **params)
+
     def _validate_value(self, val, allow_None):
         super()._validate_value(val, allow_None)
         if allow_None and val is None:
@@ -1578,20 +1551,10 @@ class NumericTuple(Tuple[T]):
 class XYCoordinates(NumericTuple):
     """A NumericTuple for an X,Y coordinate."""
 
-    _slot_defaults = dict(NumericTuple._slot_defaults, default=(0.0, 0.0))
-
-    @t.overload
-    def __init__(
-        self,
-        default=(0.0, 0.0), *, length=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
+    _slot_defaults = {**NumericTuple._slot_defaults, 'default': (0.0, 0.0)}
 
     def __init__(self, default=Undefined, **params):
-        super().__init__(default=default, length=2, **params)
+        t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
 
 
 class Range(NumericTuple):
@@ -1599,29 +1562,19 @@ class Range(NumericTuple):
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
 
-    _slot_defaults = dict(
-        NumericTuple._slot_defaults, default=None, bounds=None,
-        inclusive_bounds=(True,True), softbounds=None, step=None
-    )
+    _slot_defaults = {
+        **NumericTuple._slot_defaults,
+        'default': None,
+        'bounds': None,
+        'inclusive_bounds': (True, True),
+        'softbounds': None,
+        'step': None,
+    }
 
     bounds: tuple[t.Any, t.Any] | None
     inclusive_bounds: tuple[bool, bool]
     softbounds: tuple[t.Any, t.Any] | None
     step: t.Any | None
-
-    @t.overload
-    def __init__(
-        self,
-        default=None,
-        *,
-        bounds: tuple[t.Any, t.Any] | None = None,
-        softbounds: tuple[t.Any, t.Any] | None = None,
-        inclusive_bounds: tuple[bool, bool] = (True, True),
-        step: t.Any | None = None,
-        length: int | None = None,
-        **kwargs: t.Unpack[ParameterKwargs]
-    ):
-        ...
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
@@ -1629,7 +1582,7 @@ class Range(NumericTuple):
         self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined]
         self.softbounds = softbounds  # type: ignore[attr-defined]
         self.step = step  # type: ignore[attr-defined]
-        super().__init__(default=default, length=2, **params)
+        t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
 
     def _validate(self, val):
         super()._validate(val)
@@ -1845,16 +1798,6 @@ class Callable(Parameter):
     2.4, so instantiate must be False for those values.
     """
 
-    @t.overload
-    def __init__(
-        self,
-        default=None, *,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
-
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1901,16 +1844,6 @@ class Composite(Parameter):
 
     attribs: list[str]
     objtype: type[Parameterized]
-
-    @t.overload
-    def __init__(
-        self,
-        *, attribs=None,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
 
     def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
@@ -2217,17 +2150,6 @@ class Selector(SelectorBase, _SignatureSelector):
     check_on_set: bool
     names: Mapping[str, t.Any]
 
-    @t.overload
-    def __init__(
-        self,
-        *, objects=[], default=None, instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, constant=False, readonly=False,
-        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False,
-        default_factory=None, metadata=None,
-    ):
-        ...
-
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
     def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
@@ -2355,17 +2277,6 @@ class ObjectSelector(Selector):
     historical reasons.
     """
 
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, constant=False, readonly=False,
-        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False,
-        default_factory=None, metadata=None,
-    ):
-        ...
-
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(objects=objects, default=default,
                          empty_default=True, **kwargs)
@@ -2376,20 +2287,7 @@ class FileSelector(Selector):
 
     __slots__ = ['path']
 
-    _slot_defaults = dict(
-        Selector._slot_defaults, path="",
-    )
-
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, path="", objects=[], instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, constant=False, readonly=False,
-        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False,
-        default_factory=None, metadata=None,
-    ):
-        ...
+    _slot_defaults = {**Selector._slot_defaults, 'path': ""}
 
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
@@ -2427,17 +2325,6 @@ class ListSelector(Selector):
     Variant of :class:`Selector` where the value can be multiple objects from
     a list of possible objects.
     """
-
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, objects=[], instantiate=False, compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, constant=False, readonly=False,
-        pickle_default_value=True, per_instance=True, allow_refs=False, nested_refs=False,
-        default_factory=None, metadata=None,
-    ):
-        ...
 
     def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
         super().__init__(
@@ -2490,21 +2377,7 @@ class MultiFileSelector(ListSelector):
 
     __slots__ = ['path']
 
-    _slot_defaults = dict(
-        Selector._slot_defaults, path="",
-    )
-
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, path="", objects=[], compute_default_fn=None,
-        check_on_set=None, allow_None=None, empty_default=False,
-        doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True,
-        per_instance=True, allow_refs=False, nested_refs=False,
-        default_factory=None, metadata=None,
-    ):
-        ...
+    _slot_defaults = {**Selector._slot_defaults, 'path': ""}
 
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
@@ -2543,7 +2416,7 @@ class ClassSelector(SelectorBase[T]):
 
     __slots__ = ['class_', 'is_instance']
 
-    _slot_defaults = dict(SelectorBase._slot_defaults, instantiate=True, is_instance=True)
+    _slot_defaults = {**SelectorBase._slot_defaults, 'instantiate': True, 'is_instance': True}
 
     instantiate: bool
     is_instance: bool
@@ -2574,23 +2447,6 @@ class ClassSelector(SelectorBase[T]):
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
             ...
-
-    @t.overload
-    def __init__(
-        self,
-        *,
-        class_: type[T],
-        default: T | None = None,
-        instantiate: bool = True,
-        is_instance: bool = True,
-        allow_None: bool = False,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        constant: bool = False,
-        readonly: bool = False,
-    ):
-        ...
 
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
@@ -2665,43 +2521,12 @@ class Dict(ClassSelector[T]):
         ) -> None:
             ...
 
-    @t.overload
-    def __init__(
-        self,
-        default=Undefined, *,
-        is_instance: bool = True,
-        allow_None: bool = False,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = True,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: Callable | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ):
-        ...
-
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, class_=dict, **params)
 
 
 class Array(ClassSelector):
     """Parameter whose value is a numpy array."""
-
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, is_instance=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
 
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
@@ -2748,19 +2573,12 @@ class DataFrame(ClassSelector):
 
     __slots__ = ['rows', 'columns', 'ordered']
 
-    _slot_defaults = dict(
-        ClassSelector._slot_defaults, rows=None, columns=None, ordered=None
-    )
-
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, rows=None, columns=None, ordered=None, is_instance=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=True,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
+    _slot_defaults = {
+        **ClassSelector._slot_defaults,
+        'rows': None,
+        'columns': None,
+        'ordered': None,
+    }
 
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
@@ -2867,21 +2685,12 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, rows=None, allow_None=False, is_instance=True,
-        doc=None, label=None, precedence=None, instantiate=True,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
-
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
         self.rows = rows
-        super().__init__(default=default, class_=pdSeries, allow_None=allow_None,
-                         **params)
+        t.cast(t.Any, ClassSelector.__init__)(
+            self, default=default, class_=pdSeries, allow_None=allow_None, **params
+        )
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -2949,29 +2758,16 @@ class List(Parameter[T]):
         ) -> None:
             ...
 
-    @t.overload
-    def __init__(
-        self,
-        default=[],
-        class_: type[T] | tuple[type[T], ...] | None = None,
-        item_type: type[T] | tuple[type[T], ...] | None = None,
-        instantiate: bool = True,
-        bounds: tuple[int, int | None] = (0, None),
-        is_instance: bool = True,
-        allow_None: bool = False,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: Callable | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ):
-        ...
+        @t.overload
+        def __init__(
+            self: List[list[T]],
+            default: list[T] = [],
+            *,
+            item_type: type[T] | tuple[type[T], ...] | None = None,
+            allow_None: t.Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     def __init__(
         self,
@@ -3100,7 +2896,7 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = List(default=[os.getcwd()], pickle_default_value=None, doc="""
+    search_paths = t.cast(t.Any, List)(default=[os.getcwd()], pickle_default_value=None, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
@@ -3360,16 +3156,6 @@ class Color(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
-    @t.overload
-    def __init__(
-        self,
-        default=None, *, allow_named=True,
-        allow_None=False, doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
-
     def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
@@ -3422,16 +3208,6 @@ class Bytes(Parameter):
     _slot_defaults = dict(
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
-
-    @t.overload
-    def __init__(
-        self,
-        default=b"", *, regex=None, allow_None=False,
-        doc=None, label=None, precedence=None, instantiate=False,
-        constant=False, readonly=False, pickle_default_value=True, per_instance=True,
-        allow_refs=False, nested_refs=False, default_factory=None, metadata=None,
-    ):
-        ...
 
     def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)

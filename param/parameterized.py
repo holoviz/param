@@ -2720,8 +2720,9 @@ class Parameters:
         obj = self_.self
         if obj is None:
             return
+        class_param = t.cast(Parameters, t.cast(t.Any, self_.cls).param)
         init_methods = []
-        for method, queued, on_init, constant, dynamic in self_.cls.param._depends['watch']:
+        for method, queued, on_init, constant, dynamic in class_param._depends['watch']:
             # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
             dynamic = [d for d in dynamic if attribute is None or d.spec.split(".")[0] == attribute]
@@ -3252,16 +3253,17 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[attr-defined]
+        param_ns = t.cast(Parameters, t.cast(t.Any, self_or_cls).param)
 
         if isinstance(self_or_cls,type):
             a = (None,self_or_cls)
         else:
             a = (self_or_cls,)
 
-        for n,p in self_or_cls.param.objects('existing').items():
+        for n,p in param_ns.objects('existing').items():
             if hasattr(p, '_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
-                    g = self_or_cls.param.get_value_generator(n)
+                    g = param_ns.get_value_generator(n)
                     g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -3571,9 +3573,10 @@ class Parameters:
         {'a': 10}
         """
         self_or_cls = self_.self_or_cls
+        param_ns = t.cast(Parameters, t.cast(t.Any, self_or_cls).param)
         vals = []
-        for name, val in self_or_cls.param.objects('existing').items():
-            value = self_or_cls.param.get_value_generator(name)
+        for name, val in param_ns.objects('existing').items():
+            value = param_ns.get_value_generator(name)
             if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
                 continue
             if not onlychanged or not Comparator.is_equal(value, val.default):
@@ -3594,7 +3597,8 @@ class Parameters:
         (i.e. equivalent to ``getattr(name)``).
         """
         cls_or_slf = self_.self_or_cls
-        param_obj = cls_or_slf.param.objects('existing').get(name)
+        param_ns = t.cast(Parameters, t.cast(t.Any, cls_or_slf).param)
+        param_obj = param_ns.objects('existing').get(name)
 
         if not param_obj:
             return getattr(cls_or_slf, name)
@@ -3653,14 +3657,15 @@ class Parameters:
         <UniformRandom UniformRandom ...>
         """
         cls_or_slf = self_.self_or_cls
-        param_obj = cls_or_slf.param.objects('existing').get(name)
+        param_ns = t.cast(Parameters, t.cast(t.Any, cls_or_slf).param)
+        param_obj = param_ns.objects('existing').get(name)
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj,'attribs'):
-            value = [cls_or_slf.param.get_value_generator(a) for a in param_obj.attribs]
+            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj,'_value_is_dynamic'):
@@ -3716,12 +3721,13 @@ class Parameters:
         -0.7312715117751976
         """
         cls_or_slf = self_.self_or_cls
-        param_obj = cls_or_slf.param.objects('existing').get(name)
+        param_ns = t.cast(Parameters, t.cast(t.Any, cls_or_slf).param)
+        param_obj = param_ns.objects('existing').get(name)
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [cls_or_slf.param.inspect_value(a) for a in param_obj.attribs]
+            value = [param_ns.inspect_value(a) for a in param_obj.attribs]
         elif not hasattr(param_obj,'_inspect'):
             value = getattr(cls_or_slf,name)
         else:

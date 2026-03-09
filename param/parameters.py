@@ -2148,7 +2148,7 @@ class Selector(SelectorBase, _SignatureSelector):
     _objects: list[t.Any]
     compute_default_fn: t.Callable[[], t.Any] | None
     check_on_set: bool
-    names: Mapping[str, t.Any]
+    names: dict[str, t.Any]
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
@@ -2198,7 +2198,7 @@ class Selector(SelectorBase, _SignatureSelector):
     @objects.setter
     def objects(self, objects):
         if isinstance(objects, Mapping):
-            self.names = objects
+            self.names = dict(objects)
             self._objects = list(objects.values())
         else:
             self.names = {}

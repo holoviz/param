@@ -1642,12 +1642,16 @@ class rx:
                 if self._current_task is not task:
                     break
                 self._current_ = val
-                self._trigger.param.trigger('value')
+                trigger = self._trigger
+                if trigger is not None:
+                    trigger.param.trigger('value')
         else:
             value = await obj
             if self._current_task is task:
                 self._current_ = value
-                self._trigger.param.trigger('value')
+                trigger = self._trigger
+                if trigger is not None:
+                    trigger.param.trigger('value')
 
     def _lazy_resolve(self, obj):
         from .parameterized import async_executor

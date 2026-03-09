@@ -21,11 +21,23 @@ import re
 import itertools
 import textwrap
 import uuid
+import typing as t
 
 import param
 
 from param.display import register_display_accessor
 from param._utils import async_executor
+
+_get_ipython: t.Callable[[], t.Any] | None = None
+_display: t.Callable[..., t.Any] | None = None
+try:
+    from IPython import get_ipython as _imported_get_ipython
+    from IPython.display import display as _imported_display
+except Exception:
+    pass
+else:
+    _get_ipython = _imported_get_ipython
+    _display = _imported_display
 
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False
@@ -349,7 +361,7 @@ def load_ipython_extension(ip, verbose=True):
                 return
 
             # Beware! Uses IPython internals that may change in future...
-            obj = self.shell._object_find(parameter_s)
+            obj = t.cast(t.Any, self.shell)._object_find(parameter_s)
             if obj.found is False:
                 print("Object %r not found in the namespace." % parameter_s)
                 return
@@ -395,14 +407,19 @@ class IPythonDisplay:
             obj = cb()
             if obj is Undefined:
                 obj = None
-            handle = display(obj, display_id=uuid.uuid4().hex) # noqa
+            if _display is None:
+                raise NotImplementedError
+            handle = _display(obj, display_id=uuid.uuid4().hex)
         except TypeError:
             raise NotImplementedError
 
 def ipython_async_executor(func):
     event_loop = None
+    if _get_ipython is None:
+        async_executor(func)
+        return
     try:
-        ip = get_ipython()  # noqa
+        ip = _get_ipython()
         if ip.kernel:
             # We are in Jupyter and can piggyback the tornado IOLoop
             from tornado.ioloop import IOLoop
@@ -413,7 +430,7 @@ def ipython_async_executor(func):
             else:
                 event_loop.run_until_complete(func())
             return
-    except (NameError, AttributeError):
+    except AttributeError:
         pass
     async_executor(func)
 

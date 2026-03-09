@@ -95,7 +95,7 @@ import operator
 from collections.abc import Iterable, Iterator
 from functools import partial
 from types import FunctionType, MethodType
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
@@ -778,7 +778,7 @@ class reactive_ops:
         >>> updating.rx.value  # Becomes True during the update process, then False.
         False
         """
-        wrapper = Wrapper(object=False)
+        wrapper = cast(Any, Wrapper)(object=False)
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
@@ -1109,9 +1109,11 @@ class reactive_ops:
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         def cb(value):
             from .parameterized import async_executor
+            if fn is None:
+                return
             if iscoroutinefunction(fn):
                 async_executor(partial(fn, value))
-            elif fn is not None:
+            else:
                 fn(value)
         bind(cb, self._reactive, watch=True)
 
@@ -1265,7 +1267,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             for val in evaled:
                 yield val
         wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
-        wrapped._dinfo = wrapper_fn._dinfo
+        cast(Any, wrapped)._dinfo = wrapper_fn._dinfo
     elif inspect.isasyncgenfunction(function):
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
@@ -1275,7 +1277,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             async for val in evaled:
                 yield val
         wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
-        wrapped._dinfo = wrapper_fn._dinfo
+        cast(Any, wrapped)._dinfo = wrapper_fn._dinfo
     elif iscoroutinefunction(function):
         @depends(**dependencies, watch=watch)
         async def wrapped(*wargs, **wkwargs):
@@ -1289,8 +1291,8 @@ def bind(function, *args, watch: bool = False, **kwargs):
         def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
             return eval_fn()(*combined_args, **combined_kwargs)
-    wrapped.__bound_function__ = function
-    wrapped.rx = reactive_ops(wrapped)
+    cast(Any, wrapped).__bound_function__ = function
+    cast(Any, wrapped).rx = reactive_ops(wrapped)
     _reactive_display_objs.add(wrapped)
     for name, accessor in _display_accessors.items():
         setattr(wrapped, name, accessor(wrapped))
@@ -1347,9 +1349,9 @@ class rx:
     3
     """
 
-    _accessors: dict[str, Callable[[rx], Any]] = {}
+    _accessors: dict[str, tuple[Callable[[Any], Any], Optional[Callable[[Any], bool]]]] = {}
 
-    _display_options: tuple[str] = ()
+    _display_options: tuple[str, ...] = ()
 
     _display_handlers: dict[type, tuple[Any, dict[str, Any]]] = {}
 
@@ -1357,7 +1359,7 @@ class rx:
 
     @classmethod
     def register_accessor(
-        cls, name: str, accessor: Callable[[rx], Any],
+        cls, name: str, accessor: Callable[[Any], Any],
         predicate: Optional[Callable[[Any], bool]] = None
     ):
         """
@@ -1413,7 +1415,7 @@ class rx:
             wrapper = kwargs.pop('_wrapper', None)
         elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
             # Resolves generator and coroutine functions lazily
-            wrapper = GenWrapper(object=obj)
+            wrapper = cast(Any, GenWrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
@@ -1426,7 +1428,7 @@ class rx:
         else:
             # For all other objects wrap them so they can be updated
             # via .rx.value property
-            wrapper = Wrapper(object=obj)
+            wrapper = cast(Any, Wrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
         inst = super(rx, cls).__new__(cls)
         inst._fn = fn
@@ -1717,7 +1719,7 @@ class rx:
             return bind(evaluate, *params)
         return evaluate
 
-    def _clone(self, operation=None, copy=False, **kwargs) -> 'rx':
+    def _clone(self, operation=None, copy=False, **kwargs) -> Any:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
@@ -1822,7 +1824,7 @@ class rx:
         }
         return new._clone(operation)
 
-    def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> 'rx':
+    def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> Any:
         new = self._resolve_accessor()
         operation = {
             'fn': operator,
@@ -1908,13 +1910,13 @@ class rx:
     def __rand__(self, other):
         return self._apply_operator(operator.and_, other, reverse=True)
     def __rdiv__(self, other):
-        return self._apply_operator(operator.div, other, reverse=True)
+        return self._apply_operator(operator.truediv, other, reverse=True)
     def __rdivmod__(self, other):
         return self._apply_operator(divmod, other, reverse=True)
     def __rfloordiv__(self, other):
         return self._apply_operator(operator.floordiv, other, reverse=True)
     def __rlshift__(self, other):
-        return self._apply_operator(operator.rlshift, other)
+        return self._apply_operator(operator.lshift, other, reverse=True)
     def __rmod__(self, other):
         return self._apply_operator(operator.mod, other, reverse=True)
     def __rmul__(self, other):
@@ -1923,8 +1925,6 @@ class rx:
         return self._apply_operator(operator.or_, other, reverse=True)
     def __rpow__(self, other):
         return self._apply_operator(operator.pow, other, reverse=True)
-    def __rrshift__(self, other):
-        return self._apply_operator(operator.rrshift, other)
     def __rsub__(self, other):
         return self._apply_operator(operator.sub, other, reverse=True)
     def __rtruediv__(self, other):

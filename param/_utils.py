@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import contextvars
-import collections
 import datetime as dt
 import functools
 import inspect
@@ -121,7 +119,8 @@ def _deprecated(extra_msg: str = "", warning_cat: type[Warning] = ParamDeprecati
         """
         @functools.wraps(func)
         def inner(*args, **kwargs):
-            msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
+            func_name = getattr(func, "__name__", repr(func))
+            msg = f"{func_name!r} has been deprecated and will be removed in a future version."
             if extra_msg:
                 em = dedent(extra_msg)
                 em = em.strip().replace('\n', ' ')
@@ -442,10 +441,7 @@ def _is_number(obj):
 def _is_abstract(class_: type) -> bool:
     if inspect.isabstract(class_):
         return True
-    try:
-        return class_.abstract
-    except AttributeError:
-        return False
+    return bool(getattr(class_, "abstract", False))
 
 
 def descendents(class_: type, concrete: bool = False) -> list[type]:
@@ -680,8 +676,12 @@ def _find_stack_level() -> int:
     import numbergen
     import param
 
-    ng_dir = os.path.dirname(numbergen.__file__)
-    param_dir = os.path.dirname(param.__file__)
+    numbergen_file = getattr(numbergen, "__file__", None)
+    param_file = getattr(param, "__file__", None)
+    if numbergen_file is None or param_file is None:
+        return 0
+    ng_dir = os.path.dirname(numbergen_file)
+    param_dir = os.path.dirname(param_file)
 
     # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
     frame = inspect.currentframe()

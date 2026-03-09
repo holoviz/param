@@ -26,7 +26,7 @@ import os.path
 import pathlib
 import re
 import sys
-import typing as t
+import typing_extensions as t
 import warnings
 
 from collections import OrderedDict
@@ -58,8 +58,8 @@ from ._utils import (
 #-----------------------------------------------------------------------------
 
 if t.TYPE_CHECKING:
-    K = t.TypeVar("K", default=t.Hashable)
-    V = t.TypeVar("V", default=t.Any)
+    K = t.TypeVar("K")
+    V = t.TypeVar("V")
 
 def param_union(*parameterizeds, warn=True):
     """
@@ -95,47 +95,47 @@ def guess_param_types(**kwargs) -> dict[str, Parameter]:
     """
     params = {}
     for k, v in kwargs.items():
-        kws = dict(default=v, constant=True)
+        kws: dict[str, t.Any] = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
         elif isinstance(v, _dt_types):
-            params[k] = Date(**kws)
+            params[k] = t.cast(t.Any, Date)(**kws)
         elif isinstance(v, bool):
-            params[k] = Boolean(**kws)
+            params[k] = t.cast(t.Any, Boolean)(**kws)
         elif isinstance(v, int):
-            params[k] = Integer(**kws)
+            params[k] = t.cast(t.Any, Integer)(**kws)
         elif isinstance(v, float):
-            params[k] = Number(**kws)
+            params[k] = t.cast(t.Any, Number)(**kws)
         elif isinstance(v, str):
-            params[k] = String(**kws)
+            params[k] = t.cast(t.Any, String)(**kws)
         elif isinstance(v, dict):
-            params[k] = Dict(**kws)
+            params[k] = t.cast(t.Any, Dict)(**kws)
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
-                params[k] = NumericTuple(**kws)
+                params[k] = t.cast(t.Any, NumericTuple)(**kws)
             elif len(v) == 2 and all(isinstance(el, _dt_types) for el in v):
-                params[k] = DateRange(**kws)
+                params[k] = t.cast(t.Any, DateRange)(**kws)
             else:
-                params[k] = Tuple(**kws)
+                params[k] = t.cast(t.Any, Tuple)(**kws)
         elif isinstance(v, list):
-            params[k] = List(**kws)
+            params[k] = t.cast(t.Any, List)(**kws)
         else:
             if 'numpy' in sys.modules:
                 from numpy import ndarray
                 if isinstance(v, ndarray):
-                    params[k] = Array(**kws)
+                    params[k] = t.cast(t.Any, Array)(**kws)
                     continue
             if 'pandas' in sys.modules:
                 from pandas import (
                     DataFrame as pdDFrame, Series as pdSeries
                 )
                 if isinstance(v, pdDFrame):
-                    params[k] = DataFrame(**kws)
+                    params[k] = t.cast(t.Any, DataFrame)(**kws)
                     continue
                 elif isinstance(v, pdSeries):
-                    params[k] = Series(**kws)
+                    params[k] = t.cast(t.Any, Series)(**kws)
                     continue
-            params[k] = Parameter(**kws)
+            params[k] = t.cast(t.Any, Parameter)(**kws)
 
     return params
 
@@ -153,7 +153,7 @@ def parameterized_class(
         basecls = (bases,)
     else:
         basecls = tuple(bases)
-    return type(name, basecls, params)
+    return t.cast(type[Parameterized], type(name, basecls, params))
 
 
 def guess_bounds(params: dict[str, Parameter], **overrides: tuple[t.Any, t.Any]):
@@ -596,7 +596,7 @@ class Dynamic(Parameter[T]):
 
         return value
 
-    def _value_is_dynamic(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> bool:
+    def _value_is_dynamic(self, obj: Parameterized | type[Parameterized] | None, objtype: type[Parameterized] | None = None) -> bool:
         """
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
@@ -745,11 +745,11 @@ class Number(Dynamic[T]):
         self,
         default: t.Any = Undefined,
         *,
-        bounds: tuple[float | int | None, float | int | None] = Undefined,
-        softbounds: tuple[float | int | None, float | int | None] = Undefined,
-        inclusive_bounds: tuple[bool, bool] = Undefined,
-        step: float | int | None = Undefined,
-        set_hook: Callable = Undefined,
+        bounds: tuple[float | int | None, float | int | None] | UndefinedType = Undefined,
+        softbounds: tuple[float | int | None, float | int | None] | UndefinedType = Undefined,
+        inclusive_bounds: tuple[bool, bool] | UndefinedType = Undefined,
+        step: float | int | None | UndefinedType = Undefined,
+        set_hook: Callable | UndefinedType = Undefined,
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -1122,7 +1122,7 @@ class Date(Number[T]):
 
     def _validate_bounds(self, val: t.Any, bounds: tuple[t.Any | None, t.Any | None] | None, inclusive_bounds: tuple[bool, bool]) -> None:
         val = _to_datetime(val)
-        bounds = None if bounds is None else map(_to_datetime, bounds)
+        bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
         return super()._validate_bounds(val, bounds, inclusive_bounds)
 
     @classmethod
@@ -1701,6 +1701,8 @@ class Range(NumericTuple):
         return get_soft_bounds(self.bounds, self.softbounds)
 
     def rangestr(self):
+        if self.bounds is None:
+            return "(-inf, inf)"
         vmin, vmax = self.bounds
         incmin, incmax = self.inclusive_bounds
         incmin = '[' if incmin else '('
@@ -1919,9 +1921,9 @@ class Composite(Parameter):
     def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
         """Return the values of all the attribs, as a list."""
         if obj is None:
-            return [getattr(objtype, a) for a in self.attribs]
+            return t.cast(T, [getattr(objtype, a) for a in self.attribs])
         else:
-            return [getattr(obj, a) for a in self.attribs]
+            return t.cast(T, [getattr(obj, a) for a in self.attribs])
 
     def _validate_attribs(self, val, attribs):
         if len(val) == len(attribs):
@@ -2252,7 +2254,8 @@ class Selector(SelectorBase, _SignatureSelector):
         self.compute_default_fn = compute_default_fn  # type: ignore[attr-defined]
         self.check_on_set = check_on_set  # type: ignore[attr-defined]
 
-        super().__init__(default=default, instantiate=instantiate, **params)
+        instantiate_value = False if isinstance(instantiate, UndefinedType) else instantiate
+        super().__init__(default=default, instantiate=instantiate_value, **params)
         # Required as Parameter sets allow_None=True if default is None
         if isinstance(allow_None, UndefinedType):
             self.allow_None = self._slot_defaults['allow_None']
@@ -2517,7 +2520,7 @@ class MultiFileSelector(ListSelector):
     def update(self, path=Undefined):
         if path is Undefined:
             path = self.path
-        self.objects = sorted(glob.glob(path))
+        self.objects = sorted(glob.glob(t.cast(str, path)))
         if self.default and all([o in self.objects for o in self.default]):
             return
         elif not self.default:
@@ -2646,7 +2649,7 @@ class Dict(ClassSelector[T]):
         def __init__(
             self: Dict[dict[K, V]],
             *,
-            default: dict[K, V] | t.Literal[Undefined] = Undefined,
+            default: dict[K, V] | UndefinedType = Undefined,
             allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
@@ -2809,7 +2812,7 @@ class DataFrame(ClassSelector):
         else:
             self._length_bounds_check(self.columns, len(val.columns), 'column')
 
-        if self.ordered:
+        if self.ordered and isinstance(self.columns, Iterable):
             if list(val.columns) != list(self.columns):
                 raise ValueError(
                     f"{_validate_error_prefix(self)}: provided columns "
@@ -2953,7 +2956,7 @@ class List(Parameter[T]):
         class_: type[T] | tuple[type[T], ...] | None = None,
         item_type: type[T] | tuple[type[T], ...] | None = None,
         instantiate: bool = True,
-        bounds: tuple[int, int] = (0, None),
+        bounds: tuple[int, int | None] = (0, None),
         is_instance: bool = True,
         allow_None: bool = False,
         doc: str | None = None,
@@ -2973,10 +2976,10 @@ class List(Parameter[T]):
     def __init__(
         self,
         default=Undefined, *,
-        item_type: type[T] = Undefined,
-        instantiate: bool = Undefined,
-        bounds: tuple[int, int] = Undefined,
-        is_instance: bool = Undefined,
+        item_type: type[T] | UndefinedType = Undefined,
+        instantiate: bool | UndefinedType = Undefined,
+        bounds: tuple[int, int | None] | UndefinedType = Undefined,
+        is_instance: bool | UndefinedType = Undefined,
         **params
     ):
         if item_type is not Undefined:
@@ -3228,7 +3231,7 @@ class Path(Parameter):
         self._validate(self.default)
 
     def _resolve(self, path):
-        return resolve_path(path, path_to_file=None, search_paths=self.search_paths)
+        return resolve_path(path=path, path_to_file=None, search_paths=self.search_paths)
 
     def _validate(self, val):
         if val is None:
@@ -3256,7 +3259,7 @@ class Path(Parameter):
                     raise
                 else:
                     path = raw_path
-        return path
+        return t.cast(T, path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths
@@ -3285,7 +3288,7 @@ class Filename(Path):
     """
 
     def _resolve(self, path):
-        return resolve_path(path, path_to_file=True, search_paths=self.search_paths)
+        return resolve_path(path=path, path_to_file=True, search_paths=self.search_paths)
 
 
 class Foldername(Path):
@@ -3304,7 +3307,7 @@ class Foldername(Path):
     """
 
     def _resolve(self, path):
-        return resolve_path(path, path_to_file=False, search_paths=self.search_paths)
+        return resolve_path(path=path, path_to_file=False, search_paths=self.search_paths)
 
 #-----------------------------------------------------------------------------
 # Color

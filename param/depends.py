@@ -46,26 +46,6 @@ def depends(
 ) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
     ...
 
-@overload
-def depends(
-    *dependencies: str, watch: bool = ..., on_init: bool = ...
-) -> Callable[[Callable[P, Awaitable[R]]], DependsFunc[P, Awaitable[R]]]: ...
-
-@overload
-def depends(
-    *dependencies: Parameter, watch: bool = ..., on_init: bool = ..., **kw: Parameter
-) -> Callable[[Callable[P, Awaitable[R]]], DependsFunc[P, Awaitable[R]]]: ...
-
-@overload
-def depends(
-    *dependencies: str, watch: bool = ..., on_init: bool = ...
-) -> Callable[[Callable[P, Generator[Y, S, T]]], DependsFunc[P, Generator[Y, S, T]]]: ...
-
-@overload
-def depends(
-    *dependencies: Parameter, watch: bool = ..., on_init: bool = ..., **kw: Parameter
-) -> Callable[[Callable[P, AsyncGenerator[Y, S]]], DependsFunc[P, AsyncGenerator[Y, S]]]: ...
-
 @accept_arguments
 def depends(
     func: Callable[P, R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
@@ -95,15 +75,17 @@ def depends(
     )
 
     if inspect.isgeneratorfunction(func):
+        func_gen = t.cast(Callable[P, Generator[Any, Any, Any]], func)
         @wraps(func)
         def _depends_gen(*args, **kw):
-            for val in func(*args, **kw):
+            for val in func_gen(*args, **kw):
                 yield val
         _depends = t.cast(Callable[P, R], _depends_gen)
     elif inspect.isasyncgenfunction(func):
+        func_agen = t.cast(Callable[P, AsyncGenerator[Any, Any]], func)
         @wraps(func)
         async def _depends_async_gen(*args, **kw):
-            async for val in func(*args, **kw):
+            async for val in func_agen(*args, **kw):
                 yield val
         _depends = t.cast(Callable[P, R], _depends_async_gen)
     elif iscoroutinefunction(func):
@@ -149,7 +131,7 @@ def depends(
                              'or function is not supported when referencing '
                              'parameters by name.')
 
-    _dinfo = getattr(func, '_dinfo', {})
+    _dinfo = t.cast(DependencyInfo, dict(getattr(func, '_dinfo', {})))
     _dinfo.update({'dependencies': dependencies,
                    'kw': kw, 'watch': watch, 'on_init': on_init})
 
@@ -196,6 +178,8 @@ def depends(
     for dep in param_deps:
         grouped[id(dep.owner)].append(dep)
     for group in grouped.values():
+        if group[0].owner is None:
+            continue
         group[0].owner.param.watch(cb, [dep.name for dep in group])
 
     return typed_depends

@@ -482,6 +482,31 @@ class Dynamic(Parameter[T]):
     time_fn = Time()
     time_dependent = False
 
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self: Dynamic[t.Any],
+        default: t.Any = None,
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(
         self,
         default: t.Any = Undefined,
@@ -1315,6 +1340,31 @@ class Event(Boolean):
     # value change is then what triggers the watcher callbacks.
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: bool = False,
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(self, default=False, **params):
         self._autotrigger_value = True
         self._autotrigger_reset_value = False
@@ -1553,6 +1603,31 @@ class XYCoordinates(NumericTuple):
 
     _slot_defaults = {**NumericTuple._slot_defaults, 'default': (0.0, 0.0)}
 
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: tuple[float, float] = (0.0, 0.0),
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(self, default=Undefined, **params):
         t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
 
@@ -1575,6 +1650,35 @@ class Range(NumericTuple):
     inclusive_bounds: tuple[bool, bool]
     softbounds: tuple[t.Any, t.Any] | None
     step: t.Any | None
+
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: tuple[t.Any, t.Any] | None = None,
+        *,
+        bounds: tuple[t.Any, t.Any] | None = None,
+        softbounds: tuple[t.Any, t.Any] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: t.Any | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
@@ -1798,6 +1902,31 @@ class Callable(Parameter):
     2.4, so instantiate must be False for those values.
     """
 
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: t.Callable[..., t.Any] | None = None,
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -1844,6 +1973,31 @@ class Composite(Parameter):
 
     attribs: list[str]
     objtype: type[Parameterized]
+
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        *,
+        attribs: list[str] | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
 
     def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
@@ -2289,6 +2443,32 @@ class FileSelector(Selector):
 
     _slot_defaults = {**Selector._slot_defaults, 'path': ""}
 
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: str | None = None,
+        *,
+        path: str = "",
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
         self.default = default
         self.path = path
@@ -2521,12 +2701,58 @@ class Dict(ClassSelector[T]):
         ) -> None:
             ...
 
+    @t.overload
+    def __init__(
+        self,
+        default: dict[K, V] | None = None,
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = True,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(self, default=Undefined, **params):
         super().__init__(default=default, class_=dict, **params)
 
 
 class Array(ClassSelector):
     """Parameter whose value is a numpy array."""
+
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: t.Any = None,
+        *,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = True,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
 
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
@@ -2579,6 +2805,34 @@ class DataFrame(ClassSelector):
         'columns': None,
         'ordered': None,
     }
+
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: t.Any = None,
+        *,
+        rows: int | tuple[int | None, int | None] | None = None,
+        columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
+        ordered: bool | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = True,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         from pandas import DataFrame as pdDFrame
@@ -2684,6 +2938,32 @@ class Series(ClassSelector):
     _slot_defaults = dict(
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
+
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: t.Any = None,
+        *,
+        rows: int | tuple[int | None, int | None] | None = None,
+        allow_None: bool = False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = True,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         from pandas import Series as pdSeries
@@ -3155,6 +3435,32 @@ class Color(Parameter):
 
     _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: str | None = None,
+        *,
+        allow_named: bool = True,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
+
     def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
@@ -3207,6 +3513,32 @@ class Bytes(Parameter):
     _slot_defaults = dict(
         Parameter._slot_defaults, default=b"", regex=None, allow_None=False,
     )
+
+    @t.overload
+    def __init__(self) -> None:
+        ...
+
+    @t.overload
+    def __init__(
+        self,
+        default: bytes | None = None,
+        *,
+        regex: bytes | str | None = None,
+        allow_None: bool = False,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: Callable | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        ...
 
     def __init__(self, default=Undefined, *, regex=Undefined, allow_None=Undefined, **kwargs):
         super().__init__(default=default, **kwargs)

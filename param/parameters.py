@@ -985,8 +985,14 @@ class Integer(Number[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
-        t.cast(t.Any, Number.__init__)(self, default=default, **kwargs)
+    def __init__(
+        self,
+        default=Undefined,
+        *,
+        allow_None: bool = t.cast(bool, Undefined),
+        **kwargs: t.Unpack[NumberInitKwargs]
+    ) -> None:
+        t.cast(t.Any, Number.__init__)(self, default=default, allow_None=allow_None, **kwargs)
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         if callable(value):

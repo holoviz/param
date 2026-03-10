@@ -4785,7 +4785,7 @@ class ParameterizedMetaclass(type):
             return private.signature
         # allowed_signature must be the signature of Parameterized.__init__
         # Inspecting `mcs.__init__` instead of `mcs` to avoid a recursion error
-        init_fn = mcs.__dict__.get("__init__", Parameterized.__init__)
+        init_fn = type.__getattribute__(mcs, "__init__")
         if inspect.signature(init_fn) != DEFAULT_SIGNATURE:
             return None
         processed_kws, keyword_groups = set(), []

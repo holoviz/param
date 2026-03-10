@@ -144,9 +144,11 @@ jobs:
         with:
           environments: lint
           install: false
-      - name: Run ty + mypy typecheck
+      - name: Run ty + mypy + pyrefly typecheck
         run: |
-          pixi run -e lint typecheck
+          pixi run -e lint ty-typecheck
+          pixi run -e lint mypy-typecheck
+          pixi run -e lint pyrefly-typecheck
 
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}

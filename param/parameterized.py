@@ -4960,9 +4960,9 @@ class ParameterizedMetaclass(type):
                 explicit_no_refs = private.explicit_no_refs
                 if param.name is None:
                     pass
-                elif not param.allow_refs:
+                elif param.allow_refs is False:
                     explicit_no_refs.append(param.name)
-                elif param.allow_refs and param.name in explicit_no_refs:
+                elif param.allow_refs is True and param.name in explicit_no_refs:  # type: ignore[unnecessary-comparison]
                     explicit_no_refs.remove(param.name)
 
         # Now set the actual slot values

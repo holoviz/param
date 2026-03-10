@@ -6,6 +6,7 @@ import param
 import pytest
 
 from param import descendents, Parameter
+from param.parameters import NumberInitKwargs
 
 
 SKIP_UPDATED = [
@@ -111,3 +112,14 @@ def test_signature_position_keywords():
                 p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
                 for p in parameters.values()
             )
+
+
+def test_number_init_kwargs_typed_dict_is_partial():
+    assert NumberInitKwargs.__total__ is False
+
+
+@pytest.mark.skipif(sys.version_info <= (3, 11), reason='typing.get_overloads available from Python 3.11')
+def test_list_overload_source_uses_non_nested_self_generic():
+    source = inspect.getsource(param.List)
+    assert "self: List[list[T]]" not in source
+    assert "self: List[T]" in source

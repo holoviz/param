@@ -632,7 +632,7 @@ class Dynamic(Parameter[T]):
             return gen
 
 
-class NumberInitKwargs(ParameterKwargs):
+class NumberInitKwargs(ParameterKwargs, total=False):
     bounds: tuple[t.Any | None, t.Any | None] | None
     softbounds: tuple[t.Any | None, t.Any | None] | None
     inclusive_bounds: tuple[bool, bool]
@@ -640,7 +640,7 @@ class NumberInitKwargs(ParameterKwargs):
     set_hook: t.Callable[..., t.Any] | None
 
 
-class NumberKwargs(NumberInitKwargs):
+class NumberKwargs(NumberInitKwargs, total=False):
     allow_None: bool
 
 
@@ -3158,7 +3158,7 @@ class List(Parameter[T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: List[list[T]],
+            self: List[T],
             default: list[T] = [],
             *,
             item_type: type[T] | tuple[type[T], ...],
@@ -3169,7 +3169,7 @@ class List(Parameter[T]):
 
         @t.overload
         def __init__(
-            self: List[list[T] | None],
+            self: List[T | None],
             default: list[T] | None = None,
             *,
             allow_None: t.Literal[True] = True,
@@ -3179,7 +3179,7 @@ class List(Parameter[T]):
 
         @t.overload
         def __init__(
-            self: List[list[T]],
+            self: List[T],
             default: list[T] = [],
             *,
             item_type: type[T] | tuple[type[T], ...] | None = None,

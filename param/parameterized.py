@@ -31,7 +31,7 @@ from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 from typing import TYPE_CHECKING, Any, Literal, Optional, Generic
-from typing_extensions import Self, Unpack, dataclass_transform
+from typing_extensions import Self, Unpack
 
 if TYPE_CHECKING:
     import logging
@@ -4588,9 +4588,6 @@ class Parameters:
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
         return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
-@dataclass_transform(
-    field_specifiers=(Parameter,),
-)
 class ParameterizedMetaclass(type):
     """
     The metaclass of Parameterized (and all its descendents).

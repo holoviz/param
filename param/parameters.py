@@ -985,51 +985,8 @@ class Integer(Number[T]):
         ) -> None:
             ...
 
-    def __init__(
-        self,
-        default=None,
-        *,
-        bounds: tuple[t.Any | None, t.Any | None] | None = None,
-        softbounds: tuple[t.Any | None, t.Any | None] | None = None,
-        inclusive_bounds: tuple[bool, bool] = (True, True),
-        step: t.Any | None = None,
-        set_hook: t.Callable[..., t.Any] | None = None,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: t.Callable[..., t.Any] | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ) -> None:
-        t.cast(t.Any, Number.__init__)(
-            self,
-            default=default,
-            bounds=bounds,
-            softbounds=softbounds,
-            inclusive_bounds=inclusive_bounds,
-            step=step,
-            set_hook=set_hook,
-            doc=doc,
-            label=label,
-            precedence=precedence,
-            instantiate=instantiate,
-            constant=constant,
-            readonly=readonly,
-            pickle_default_value=pickle_default_value,
-            allow_None=allow_None,
-            per_instance=per_instance,
-            allow_refs=allow_refs,
-            nested_refs=nested_refs,
-            default_factory=default_factory,
-            metadata=metadata,
-        )
+    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
+        t.cast(t.Any, Number.__init__)(self, default=default, **kwargs)
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         if callable(value):

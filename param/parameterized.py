@@ -6133,20 +6133,7 @@ def _new_parameterized(cls):
 
 
 
-class _HasInstance(t.Protocol):
-
-    @bothmethod
-    def instance(self_or_cls, *args: t.Any, **kwargs: t.Any) -> Self: ...
-
-
-class ParameterizedFunctionMetaclass(ParameterizedMetaclass):
-
-    def __call__(cls: type[_HasInstance], *args, **params) -> Any:
-        inst = cls.instance()
-        inst.param._set_name(cls.__name__)
-        return inst.__call__(*args, **params)
-
-class ParameterizedFunction(Parameterized, Generic[P, R], metaclass=ParameterizedFunctionMetaclass):
+class ParameterizedFunction(Parameterized, Generic[P, R]):
     """
     Acts like a Python function, but with arguments that are Parameters.
 
@@ -6252,7 +6239,7 @@ class ParameterizedFunction(Parameterized, Generic[P, R], metaclass=Parameterize
         >>> instance(5)
         10
         """
-        if isinstance(self_or_cls, ParameterizedFunctionMetaclass):
+        if isinstance(self_or_cls, type):
             cls = self_or_cls
         else:
             p = params
@@ -6268,6 +6255,12 @@ class ParameterizedFunction(Parameterized, Generic[P, R], metaclass=Parameterize
         else:
             setattr(inst, "__name__", self_or_cls.name)
         return inst
+
+    def __new__(class_, *args, **params) -> Any:
+        # Create and __call__() an instance of this class.
+        inst = class_.instance()
+        inst.param._set_name(class_.__name__)
+        return inst.__call__(*args, **params)
 
     def __call__(self, *args, **kw) -> R:
         raise NotImplementedError("Subclasses must implement __call__.")

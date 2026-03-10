@@ -95,50 +95,49 @@ def guess_param_types(**kwargs) -> dict[str, Parameter]:
     Given a set of keyword literals, promote to the appropriate
     parameter type based on some simple heuristics.
     """
-    params = {}
+    params: dict[str, Parameter] = {}
     for k, v in kwargs.items():
-        kws: dict[str, t.Any] = dict(default=v, constant=True)
         if isinstance(v, Parameter):
             params[k] = v
         elif isinstance(v, _dt_types):
-            params[k] = t.cast(t.Any, Date)(**kws)
+            params[k] = Date(default=v, constant=True)
         elif isinstance(v, bool):
-            params[k] = t.cast(t.Any, Boolean)(**kws)
+            params[k] = Boolean(default=v, constant=True)
         elif isinstance(v, int):
-            params[k] = t.cast(t.Any, Integer)(**kws)
+            params[k] = Integer(default=v, constant=True)
         elif isinstance(v, float):
-            params[k] = t.cast(t.Any, Number)(**kws)
+            params[k] = Number(default=v, constant=True)
         elif isinstance(v, str):
-            params[k] = t.cast(t.Any, String)(**kws)
+            params[k] = String(default=v, constant=True)
         elif isinstance(v, dict):
-            params[k] = t.cast(t.Any, Dict)(**kws)
+            params[k] = Dict(default=v, constant=True)
         elif isinstance(v, tuple):
             if all(_is_number(el) for el in v):
-                params[k] = t.cast(t.Any, NumericTuple)(**kws)
+                params[k] = NumericTuple(default=v, constant=True)
             elif len(v) == 2 and all(isinstance(el, _dt_types) for el in v):
-                params[k] = t.cast(t.Any, DateRange)(**kws)
+                params[k] = DateRange(default=v, constant=True)
             else:
-                params[k] = t.cast(t.Any, Tuple)(**kws)
+                params[k] = Tuple(default=v, constant=True)
         elif isinstance(v, list):
-            params[k] = t.cast(t.Any, List)(**kws)
+            params[k] = List(default=v, constant=True)
         else:
             if 'numpy' in sys.modules:
                 numpy_mod = t.cast(t.Any, sys.modules['numpy'])
                 ndarray = numpy_mod.ndarray
                 if isinstance(v, ndarray):
-                    params[k] = t.cast(t.Any, Array)(**kws)
+                    params[k] = Array(default=v, constant=True)
                     continue
             if 'pandas' in sys.modules:
                 pandas_mod = t.cast(t.Any, sys.modules['pandas'])
                 pdDFrame = pandas_mod.DataFrame
                 pdSeries = pandas_mod.Series
                 if isinstance(v, pdDFrame):
-                    params[k] = t.cast(t.Any, DataFrame)(**kws)
+                    params[k] = DataFrame(default=v, constant=True)
                     continue
                 elif isinstance(v, pdSeries):
-                    params[k] = t.cast(t.Any, Series)(**kws)
+                    params[k] = Series(default=v, constant=True)
                     continue
-            params[k] = t.cast(t.Any, Parameter)(**kws)
+            params[k] = Parameter(default=v, constant=True)
 
     return params
 

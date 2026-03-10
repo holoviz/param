@@ -144,7 +144,7 @@ jobs:
         with:
           environments: lint
           install: false
-      - name: Run ty typecheck
+      - name: Run ty + mypy typecheck
         run: |
           pixi run -e lint typecheck
 

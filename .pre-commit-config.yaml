@@ -21,12 +21,3 @@ repos:
     rev: v0.1.17
     hooks:
       - id: clean-notebook
-  - repo: local
-    hooks:
-      - id: ty-check
-        name: ty check
-        entry: ty check param --exclude param/version.py
-        language: python
-        additional_dependencies:
-          - ty
-        pass_filenames: false

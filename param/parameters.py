@@ -505,7 +505,7 @@ class Dynamic(Parameter[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -632,13 +632,30 @@ class Dynamic(Parameter[T]):
             return gen
 
 
-class NumberKwargs(ParameterKwargs):
+class NumberInitKwargs(ParameterKwargs):
     bounds: tuple[t.Any | None, t.Any | None] | None
     softbounds: tuple[t.Any | None, t.Any | None] | None
     inclusive_bounds: tuple[bool, bool]
     step: t.Any | None
-    set_hook: Callable | None
+    set_hook: t.Callable[..., t.Any] | None
+
+
+class NumberKwargs(NumberInitKwargs):
     allow_None: bool
+
+
+class ClassSelectorInitKwargs(t.TypedDict, total=False):
+    doc: str | None
+    label: str | None
+    precedence: float | None
+    constant: bool
+    readonly: bool
+    pickle_default_value: bool
+    per_instance: bool
+    allow_refs: bool
+    nested_refs: bool
+    default_factory: t.Callable[..., t.Any] | None
+    metadata: dict[str, t.Any] | None
 
 
 class Number(Dynamic[T]):
@@ -701,7 +718,7 @@ class Number(Dynamic[T]):
             default: float = 0.0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -711,7 +728,7 @@ class Number(Dynamic[T]):
             default: float | None = 0.0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -721,7 +738,7 @@ class Number(Dynamic[T]):
             default: float | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -734,7 +751,7 @@ class Number(Dynamic[T]):
         softbounds: tuple[float | None, float | None] | None = None,
         inclusive_bounds: tuple[bool, bool] = (True, True),
         step: float | int | None = None,
-        set_hook: Callable | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
         doc: str | None = None,
         label: str | None = None,
         precedence: float | None = None,
@@ -746,7 +763,7 @@ class Number(Dynamic[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -763,7 +780,8 @@ class Number(Dynamic[T]):
         ),
         inclusive_bounds: tuple[bool, bool] = t.cast(tuple[bool, bool], Undefined),
         step: float | int | None = t.cast(float | int | None, Undefined),
-        set_hook: t.Callable | None = t.cast(t.Callable | None, Undefined),
+        set_hook: t.Callable[..., t.Any] | None = t.cast(t.Callable[..., t.Any] | None, Undefined),
+        allow_None: bool = t.cast(bool, Undefined),
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -771,7 +789,7 @@ class Number(Dynamic[T]):
 
         Non-dynamic default values are checked against the bounds.
         """
-        super().__init__(default=default, **params)
+        super().__init__(default=default, allow_None=allow_None, **params)
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds
         self.softbounds = softbounds
@@ -943,7 +961,7 @@ class Integer(Number[T]):
             default: int = 0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -953,7 +971,7 @@ class Integer(Number[T]):
             default: int | None = 0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -963,12 +981,55 @@ class Integer(Number[T]):
             default: int | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
-        super().__init__(default=default, **kwargs)
+    def __init__(
+        self,
+        default=None,
+        *,
+        bounds: tuple[t.Any | None, t.Any | None] | None = None,
+        softbounds: tuple[t.Any | None, t.Any | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: t.Any | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: t.Callable[..., t.Any] | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        t.cast(t.Any, Number.__init__)(
+            self,
+            default=default,
+            bounds=bounds,
+            softbounds=softbounds,
+            inclusive_bounds=inclusive_bounds,
+            step=step,
+            set_hook=set_hook,
+            doc=doc,
+            label=label,
+            precedence=precedence,
+            instantiate=instantiate,
+            constant=constant,
+            readonly=readonly,
+            pickle_default_value=pickle_default_value,
+            allow_None=allow_None,
+            per_instance=per_instance,
+            allow_refs=allow_refs,
+            nested_refs=nested_refs,
+            default_factory=default_factory,
+            metadata=metadata,
+        )
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         if callable(value):
@@ -1004,7 +1065,7 @@ class Magnitude(Number[T]):
             default: float = 1.0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1014,7 +1075,7 @@ class Magnitude(Number[T]):
             default: float | None = 1.0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1024,7 +1085,7 @@ class Magnitude(Number[T]):
             default: float | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1037,7 +1098,7 @@ class Magnitude(Number[T]):
         softbounds: tuple[float | None, float | None] | None = None,
         inclusive_bounds: tuple[bool, bool] = (True, True),
         step: float | int | None = None,
-        set_hook: Callable | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
         doc: str | None = None,
         label: str | None = None,
         precedence: float | None = None,
@@ -1049,7 +1110,7 @@ class Magnitude(Number[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -1075,7 +1136,7 @@ class Date(Number[T]):
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1085,7 +1146,7 @@ class Date(Number[T]):
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1098,7 +1159,7 @@ class Date(Number[T]):
         softbounds: tuple[t.Any | None, t.Any | None] | None = None,
         inclusive_bounds: tuple[bool, bool] = (True, True),
         step: t.Any | None = None,
-        set_hook: Callable | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
         doc: str | None = None,
         label: str | None = None,
         precedence: float | None = None,
@@ -1110,13 +1171,56 @@ class Date(Number[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ):
         ...
 
-    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
-        super().__init__(default=default, **kwargs)
+    def __init__(
+        self,
+        default=None,
+        *,
+        bounds: tuple[t.Any | None, t.Any | None] | None = None,
+        softbounds: tuple[t.Any | None, t.Any | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: dt.date | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: t.Callable[..., t.Any] | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        t.cast(t.Any, Number.__init__)(
+            self,
+            default=default,
+            bounds=bounds,
+            softbounds=softbounds,
+            inclusive_bounds=inclusive_bounds,
+            step=step,
+            set_hook=set_hook,
+            doc=doc,
+            label=label,
+            precedence=precedence,
+            instantiate=instantiate,
+            constant=constant,
+            readonly=readonly,
+            pickle_default_value=pickle_default_value,
+            allow_None=allow_None,
+            per_instance=per_instance,
+            allow_refs=allow_refs,
+            nested_refs=nested_refs,
+            default_factory=default_factory,
+            metadata=metadata,
+        )
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         """
@@ -1172,7 +1276,7 @@ class CalendarDate(Number[T]):
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1182,7 +1286,7 @@ class CalendarDate(Number[T]):
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberKwargs]
+            **kwargs: t.Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1195,7 +1299,7 @@ class CalendarDate(Number[T]):
         softbounds: tuple[t.Any | None, t.Any | None] | None = None,
         inclusive_bounds: tuple[bool, bool] = (True, True),
         step: dt.date | None = None,
-        set_hook: Callable | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
         doc: str | None = None,
         label: str | None = None,
         precedence: float | None = None,
@@ -1207,13 +1311,56 @@ class CalendarDate(Number[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ):
         ...
 
-    def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
-        super().__init__(default=default, **kwargs)
+    def __init__(
+        self,
+        default=None,
+        *,
+        bounds: tuple[t.Any | None, t.Any | None] | None = None,
+        softbounds: tuple[t.Any | None, t.Any | None] | None = None,
+        inclusive_bounds: tuple[bool, bool] = (True, True),
+        step: dt.date | None = None,
+        set_hook: t.Callable[..., t.Any] | None = None,
+        doc: str | None = None,
+        label: str | None = None,
+        precedence: float | None = None,
+        instantiate: bool = False,
+        constant: bool = False,
+        readonly: bool = False,
+        pickle_default_value: bool = True,
+        allow_None: bool = False,
+        per_instance: bool = True,
+        allow_refs: bool = False,
+        nested_refs: bool = False,
+        default_factory: t.Callable[..., t.Any] | None = None,
+        metadata: dict[str, t.Any] | None = None
+    ) -> None:
+        t.cast(t.Any, Number.__init__)(
+            self,
+            default=default,
+            bounds=bounds,
+            softbounds=softbounds,
+            inclusive_bounds=inclusive_bounds,
+            step=step,
+            set_hook=set_hook,
+            doc=doc,
+            label=label,
+            precedence=precedence,
+            instantiate=instantiate,
+            constant=constant,
+            readonly=readonly,
+            pickle_default_value=pickle_default_value,
+            allow_None=allow_None,
+            per_instance=per_instance,
+            allow_refs=allow_refs,
+            nested_refs=nested_refs,
+            default_factory=default_factory,
+            metadata=metadata,
+        )
 
     def _validate_value(self, value, allow_None):
         """
@@ -1303,7 +1450,7 @@ class Boolean(Parameter[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ):
         ...
@@ -1371,7 +1518,7 @@ class Event(Boolean):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -1489,12 +1636,19 @@ class Tuple(Parameter[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ):
         ...
 
-    def __init__(self, default: t.Any = Undefined, *, length = Undefined, allow_None = Undefined, **params: t.Unpack[ParameterKwargs]):
+    def __init__(
+        self,
+        default: t.Any = Undefined,
+        *,
+        length: int | None = t.cast(int | None, Undefined),
+        allow_None: bool = t.cast(bool, Undefined),
+        **params: t.Unpack[ParameterKwargs]
+    ) -> None:
         """
         Initialize a tuple parameter with a fixed length (number of
         elements).  The length is determined by the initial default
@@ -1594,7 +1748,9 @@ class NumericTuple(Tuple[T]):
         allow_None: bool = t.cast(bool, Undefined),
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
-        super().__init__(default=default, length=length, allow_None=allow_None, **params)
+        t.cast(t.Any, Tuple.__init__)(
+            self, default=default, length=length, allow_None=allow_None, **params
+        )
 
     def _validate_value(self, value, allow_None):
         super()._validate_value(value, allow_None)
@@ -1634,7 +1790,7 @@ class XYCoordinates(NumericTuple):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -1686,7 +1842,7 @@ class Range(NumericTuple):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -1933,7 +2089,7 @@ class Callable(Parameter):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -2005,7 +2161,7 @@ class Composite(Parameter):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -2478,7 +2634,7 @@ class FileSelector(Selector):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -2629,7 +2785,7 @@ class ClassSelector(SelectorBase[T]):
             instantiate: bool = True,
             is_instance: bool = True,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: t.Unpack[ClassSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2641,8 +2797,8 @@ class ClassSelector(SelectorBase[T]):
             default: T | None = None,
             instantiate: bool = True,
             is_instance: bool = True,
-            allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            allow_None: t.Literal[True] = True,
+            **kwargs: t.Unpack[ClassSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2735,7 +2891,7 @@ class Dict(ClassSelector[T]):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -2767,7 +2923,7 @@ class Array(ClassSelector):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -2847,7 +3003,7 @@ class DataFrame(ClassSelector):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -2978,7 +3134,7 @@ class Series(ClassSelector):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -3307,7 +3463,7 @@ class Path(Parameter):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ):
         ...
@@ -3476,7 +3632,7 @@ class Color(Parameter):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...
@@ -3555,7 +3711,7 @@ class Bytes(Parameter):
         per_instance: bool = True,
         allow_refs: bool = False,
         nested_refs: bool = False,
-        default_factory: Callable | None = None,
+        default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
         ...

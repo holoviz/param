@@ -1224,6 +1224,8 @@ R = t.TypeVar("R", covariant=True)
 
 class ParameterKwargs(t.TypedDict, total=False):
     doc: str | None
+    label: str | None
+    precedence: float | None
     instantiate: bool
     constant: bool
     readonly: bool

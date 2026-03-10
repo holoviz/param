@@ -9,7 +9,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Awaitable, TypeVar, Callable, ParamSpec, Protocol, TypedDict, overload
 
 from .parameterized import (
-    Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
+    Event, Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
 )
 from ._utils import accept_arguments, iscoroutinefunction
 
@@ -144,33 +144,61 @@ def depends(
     param_args = [dep for dep in dependencies if isinstance(dep, Parameter)]
     param_kwargs = {n: dep for n, dep in kw.items() if isinstance(dep, Parameter)}
     param_deps = list(param_args) + list(param_kwargs.values())
+
+    def _dep_owner_name(dep: Parameter) -> tuple[Parameterized, str] | None:
+        owner = dep.owner
+        name = dep.name
+        if owner is None or name is None:
+            return None
+        return owner, name
+
+    def _resolve_args() -> tuple[Any, ...]:
+        args: list[Any] = []
+        for dep in param_args:
+            owner_name = _dep_owner_name(dep)
+            if owner_name is None:
+                continue
+            owner, name = owner_name
+            args.append(getattr(owner, name))
+        return tuple(args)
+
+    def _resolve_kwargs() -> dict[str, Any]:
+        dep_kwargs: dict[str, Any] = {}
+        for key, dep in param_kwargs.items():
+            owner_name = _dep_owner_name(dep)
+            if owner_name is None:
+                continue
+            owner, name = owner_name
+            dep_kwargs[key] = getattr(owner, name)
+        return dep_kwargs
+
     if inspect.isgeneratorfunction(func):
-        def cb_gen(*events):
-            args: tuple[Any, ...] = tuple(getattr(dep.owner, dep.name) for dep in param_args if dep.name)
-            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in param_kwargs.items() if dep.name}
+        def cb_gen(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
             func_gen = t.cast(Callable[P, Generator[Any, Any, Any]], func)
             for val in func_gen(*args, **dep_kwargs):
                 yield val
         cb = cb_gen
     elif inspect.isasyncgenfunction(func):
-        async def cb_async_gen(*events):
-            args: tuple[Any, ...] = tuple(getattr(dep.owner, dep.name) for dep in param_args if dep.name)
-            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in param_kwargs.items() if dep.name}
+        async def cb_async_gen(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
             func_agen = t.cast(Callable[P, AsyncGenerator[Any, Any]], func)
             async for val in func_agen(*args, **dep_kwargs):
                 yield val
         cb = cb_async_gen
     elif iscoroutinefunction(func):
-        async def cb_coro(*events):
-            args: tuple[Any, ...] = tuple(getattr(dep.owner, dep.name) for dep in param_args if dep.name)
-            dep_kwargs: dict[str, Any] = {n: getattr(dep.owner, dep.name) for n, dep in param_kwargs.items() if dep.name}
+        async def cb_coro(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
             func_coro = t.cast(Callable[P, Awaitable[Any]], func)
             await func_coro(*args, **dep_kwargs)
         cb = cb_coro
     else:
-        def cb_sync(*events):
-            args: tuple[Any, ...] = tuple(getattr(dep.owner, dep.name) for dep in param_args if dep.name)
-            dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in param_kwargs.items() if dep.name}
+        def cb_sync(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
             return func(*args, **dep_kwargs)
         cb = cb_sync
 

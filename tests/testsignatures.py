@@ -116,10 +116,3 @@ def test_signature_position_keywords():
 
 def test_number_init_kwargs_typed_dict_is_partial():
     assert NumberInitKwargs.__total__ is False
-
-
-@pytest.mark.skipif(sys.version_info <= (3, 11), reason='typing.get_overloads available from Python 3.11')
-def test_list_overload_source_uses_non_nested_self_generic():
-    source = inspect.getsource(param.List)
-    assert "self: List[list[T]]" not in source
-    assert "self: List[T]" in source

@@ -930,7 +930,7 @@ class reactive_ops:
 
         def ternary(condition, _):
             return resolve_value(x) if condition else resolve_value(y)
-        return cast(Any, bind(ternary, self._reactive, trigger.param.value)).rx()
+        return cast(Any, bind(ternary, self._reactive, trigger.param.value))
 
     # Operations to get the output and set the input of an expression
 

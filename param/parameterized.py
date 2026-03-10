@@ -6347,4 +6347,4 @@ class default_label_formatter(ParameterizedFunction):
         return pname
 
 
-label_formatter: Callable[[str], str] = t.cast(Callable[[str], str], default_label_formatter)
+label_formatter = t.cast(Callable[[str], str], default_label_formatter)

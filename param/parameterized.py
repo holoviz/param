@@ -83,13 +83,13 @@ def _dt_types():
     yield dt.datetime
     yield dt.date
     if np := sys.modules.get("numpy"):
-        yield np.datetime64  # type: ignore[possibly-missing-attribute]
+        yield np.datetime64  # type: ignore[unresolved-attribute]
 
 @gen_types
 def _int_types():
     yield int
     if np := sys.modules.get("numpy"):
-        yield np.integer  # type: ignore[possibly-missing-attribute]
+        yield np.integer  # type: ignore[unresolved-attribute]
 
 
 logger = None
@@ -3282,10 +3282,10 @@ class Parameters:
         else:
             a = (self_or_cls,)
 
-        for n,p in param_ns.objects('existing').items():  # ty: ignore[possibly-missing-attribute]
+        for n,p in param_ns.objects('existing').items():  # ty: ignore[unresolved-attribute]
             if hasattr(p, '_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
-                    g = param_ns.get_value_generator(n)  # ty: ignore[possibly-missing-attribute]
+                    g = param_ns.get_value_generator(n)  # ty: ignore[unresolved-attribute]
                     g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -3597,8 +3597,8 @@ class Parameters:
         self_or_cls = self_.self_or_cls
         param_ns = self_or_cls.param
         vals = []
-        for name, val in param_ns.objects('existing').items():  # type: ignore[possibly-missing-attribute, union-attr]
-            value = param_ns.get_value_generator(name)  # type: ignore[possibly-missing-attribute, union-attr]
+        for name, val in param_ns.objects('existing').items():  # type: ignore[unresolved-attribute, union-attr]
+            value = param_ns.get_value_generator(name)  # type: ignore[unresolved-attribute, union-attr]
             if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
                 continue
             if not onlychanged or not Comparator.is_equal(value, val.default):
@@ -3620,7 +3620,7 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[possibly-missing-attribute, union-attr]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[unresolved-attribute, union-attr]
 
         if not param_obj:
             return getattr(cls_or_slf, name)
@@ -3680,14 +3680,14 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[possibly-missing-attribute, union-attr]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[unresolved-attribute, union-attr]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj, 'attribs'):
-            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[possibly-missing-attribute, union-attr]
+            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[unresolved-attribute, union-attr]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj, '_value_is_dynamic'):
@@ -3744,12 +3744,12 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[possibly-missing-attribute, union-attr]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[unresolved-attribute, union-attr]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[possibly-missing-attribute, union-attr]
+            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[unresolved-attribute, union-attr]
         elif not hasattr(param_obj,'_inspect'):
             value = getattr(cls_or_slf,name)
         else:

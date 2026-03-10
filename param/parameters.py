@@ -153,7 +153,7 @@ def parameterized_class(
     supplied parameters, inheriting from the specified base(s).
     """
     if isinstance(bases, type):
-        basecls = (bases,)
+        basecls: tuple[type[Parameterized], ...] = (bases,)
     else:
         basecls = tuple(bases)
     return t.cast(type[Parameterized], type(name, basecls, params))
@@ -306,7 +306,7 @@ class Time(Parameterized):
          more specific notions of time as appropriate. For instance,
          the label could be 'Simulation Time' or 'Duration'.""")
 
-    time_type = Parameter(default=int, constant=True, doc="""
+    time_type: t.Any = Parameter(default=int, constant=True, doc="""
         Callable that Time will use to convert user-specified time
         values into the current time; all times will be of the resulting
         numeric type.
@@ -343,13 +343,13 @@ class Time(Parameterized):
            is gmpy2's rational type.
         """)
 
-    timestep = Parameter(default=1.0,doc="""
+    timestep: t.Any = Parameter(default=1.0,doc="""
         Stepsize to be used with the iterator interface.
         Time can be advanced or decremented by any value, not just
         those corresponding to the stepsize, and so this value is only
         a default.""")
 
-    until = Parameter(default=forever,doc="""
+    until: t.Any = Parameter(default=forever,doc="""
          Declaration of an expected end to time values, if any.  When
          using the iterator interface, iteration will end before this
          value is exceeded.""")
@@ -611,11 +611,11 @@ class Dynamic(Parameter[T]):
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
-        return hasattr(super().__get__(obj,objtype),'_Dynamic_last')
+        return hasattr(t.cast(t.Any, super()).__get__(obj, objtype),'_Dynamic_last')
 
     def _inspect(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> t.Any:
         """Return the last generated value for this parameter."""
-        gen=super().__get__(obj,objtype)
+        gen = t.cast(t.Any, super()).__get__(obj, objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return gen._Dynamic_last
@@ -624,10 +624,10 @@ class Dynamic(Parameter[T]):
 
     def _force(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> t.Any:
         """Force a new value to be generated, and return it."""
-        gen=super().__get__(obj,objtype)
+        gen = t.cast(t.Any, super()).__get__(obj, objtype)
 
         if hasattr(gen,'_Dynamic_last'):
-            return self._produce_value(gen,force=True)
+            return self._produce_value(gen, force=True)
         else:
             return gen
 
@@ -1583,6 +1583,8 @@ class Tuple(Parameter[T]):
 
     __slots__ = ['length']
 
+    length: int | None
+
     _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
 
     if t.TYPE_CHECKING:
@@ -2174,14 +2176,14 @@ class Composite(Parameter):
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
-    ) -> T:
+    ) -> list[t.Any]:
         """Return the values of all the attribs, as a list."""
         if objtype is None:
             objtype = self.objtype
         if obj is None:
-            return t.cast(T, [getattr(objtype, a) for a in self.attribs])
+            return [getattr(objtype, a) for a in self.attribs]
         else:
-            return t.cast(T, [getattr(obj, a) for a in self.attribs])
+            return [getattr(obj, a) for a in self.attribs]
 
     def _validate_attribs(self, val, attribs):
         if len(val) == len(attribs):
@@ -2857,9 +2859,9 @@ class Dict(ClassSelector[T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: Dict[dict[K, V]],
+            self: Dict[dict[t.Any, t.Any]],
             *,
-            default: dict[K, V] = t.cast(dict[K, V], Undefined),
+            default: dict[t.Any, t.Any] = t.cast(dict[t.Any, t.Any], Undefined),
             allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
@@ -2867,9 +2869,9 @@ class Dict(ClassSelector[T]):
 
         @t.overload
         def __init__(
-            self: Dict[dict[K, V] | None],
+            self: Dict[dict[t.Any, t.Any] | None],
             *,
-            default: dict[K, V] | None = None,
+            default: dict[t.Any, t.Any] | None = None,
             allow_None: t.Literal[True] = True,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
@@ -3353,7 +3355,7 @@ class resolve_path(ParameterizedFunction):
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=None,
+    path_to_file = Boolean(default=True, pickle_default_value=t.cast(bool, None),
                            allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a
         'Folder'. If None, the path may point to *either* a 'File' *or*
@@ -3424,7 +3426,7 @@ class Path(Parameter):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: Path[pathlib.PurePath | str],
+            self,
             default: pathlib.PurePath | None = None,
             *,
             search_paths: list[str] | None = None,
@@ -3436,7 +3438,7 @@ class Path(Parameter):
 
         @t.overload
         def __init__(
-            self: Path[pathlib.PurePath | str | None],
+            self,
             default: pathlib.PurePath | str | None = None,
             *,
             search_paths: list[str] | None = None,
@@ -3497,7 +3499,7 @@ class Path(Parameter):
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
-    ) -> T:
+    ) -> str | pathlib.Path | None:
         """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj, objtype)
         if raw_path is None:
@@ -3510,7 +3512,7 @@ class Path(Parameter):
                     raise
                 else:
                     path = raw_path
-        return t.cast(T, path)
+        return t.cast(str | pathlib.Path | None, path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths

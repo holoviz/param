@@ -1295,7 +1295,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
     cast(Any, wrapped).rx = reactive_ops(wrapped)
     _reactive_display_objs.add(wrapped)
     for name, accessor in _display_accessors.items():
-        setattr(wrapped, name, accessor(wrapped))
+        setattr(wrapped, name, cast(Any, accessor)(wrapped))
     return wrapped
 
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
@@ -1485,7 +1485,7 @@ class rx:
         self._rx = reactive_ops(self)
         self._init = True
         for name, accessor in _display_accessors.items():
-            setattr(self, name, accessor(self))
+            setattr(self, name, cast(Any, accessor)(self))
         for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))

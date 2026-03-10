@@ -66,6 +66,7 @@ from ._utils import (
 # Ideally setting param_pager would be in __init__.py but param_pager is
 # needed on import to create the Parameterized class, so it'd need to precede
 # importing parameterized.py in __init__.py which would be a little weird.
+param_pager: Any | None = None
 if _in_ipython():
     # In case the optional ipython module is unavailable
     try:
@@ -75,7 +76,6 @@ if _in_ipython():
         from ._utils import async_executor
 else:
     from ._utils import async_executor
-    param_pager = None
 
 
 @gen_types
@@ -197,14 +197,24 @@ def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     stored on the _dinfo attribute and passing the resolved values
     as arguments.
     """
-    args, kwargs = (), {}
+    args: tuple[Any, ...] = ()
+    kwargs: dict[str, Any] = {}
     dinfo = t.cast(dict[str, t.Any], getattr(function, "_dinfo", {}))
     if dinfo:
         arg_deps = dinfo.get("dependencies", ())
         kw_deps = t.cast(dict[str, t.Any], dinfo.get("kw", {}))
         if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
-            args = (getattr(dep.owner, dep.name) for dep in arg_deps if isinstance(dep, Parameter))
-            kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw_deps.items() if isinstance(dep, Parameter)}
+            resolved_args: list[Any] = []
+            for dep in arg_deps:
+                if not isinstance(dep, Parameter) or dep.owner is None or dep.name is None:
+                    continue
+                resolved_args.append(getattr(dep.owner, dep.name))
+            args = tuple(resolved_args)
+
+            for n, dep in kw_deps.items():
+                if not isinstance(dep, Parameter) or dep.owner is None or dep.name is None:
+                    continue
+                kwargs[n] = getattr(dep.owner, dep.name)
     return function(*args, **kwargs)
 
 def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
@@ -591,7 +601,7 @@ def _instantiate_param_obj(paramobj: Parameter, owner: Parameterized | None = No
     """Return a Parameter object suitable for instantiation given the class's Parameter object."""
     # Shallow-copy Parameter object without the watchers
     p = copy.copy(paramobj)
-    p.owner = owner
+    p.owner = t.cast(Any, owner)
 
     # Reset watchers since class parameter watcher should not execute
     # on instance parameters
@@ -971,7 +981,7 @@ def _m_caller(
     function = getattr(self, method_name)
     _caller = _async_caller if iscoroutinefunction(function) else _sync_caller
     caller = partial(_caller, what=what, changed=changed, callback=callback, function=function)
-    caller._watcher_name = method_name  # type: ignore[attr-defined]
+    t.cast(Any, caller)._watcher_name = method_name
     return caller
 
 
@@ -1039,7 +1049,7 @@ _add_doc(Event,
     or  None if type not yet known
     """)
 
-_Watcher = namedtuple("Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence")
+_Watcher = namedtuple("_Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence")
 
 class Watcher(_Watcher):
     """
@@ -1557,7 +1567,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         ...
         TypeError: Constant parameter 'my_param' cannot be modified.
         """
-        if default_factory is not Undefined and not callable(default_factory):
+        if default_factory is not Undefined and default_factory is not None and not callable(default_factory):
             raise TypeError(
                 "default_factory must be a callable, "
                 f"not {type(default_factory)!r}."
@@ -1586,7 +1596,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         self.pickle_default_value = t.cast(bool, pickle_default_value)
         self._set_allow_None(allow_None)
         self.metadata = metadata
-        self.watchers = {}
+        self.watchers: dict[str, list[Watcher]] = {}
         self.per_instance = per_instance  # type: ignore[assignment]
 
     @classmethod
@@ -2020,7 +2030,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 'ensure that you create a new parameter '
                 'instance for each new class.'
             )
-        self.name = attrib_name
+        self.name = t.cast(Any, attrib_name)
 
     def __getstate__(self) -> dict[str, t.Any]:
         """
@@ -2190,7 +2200,7 @@ class shared_parameters:
     """
 
     _share = False
-    _shared_cache = {}
+    _shared_cache: dict[tuple[str, str], Any] = {}
 
     def __enter__(self):
         shared_parameters._share = True
@@ -2333,7 +2343,7 @@ class Parameters:
         """
         self_.cls = cls
         self_.self = self
-        self_._depends = {"watch": []}
+        self_._depends: dict[str, list[Any]] = {"watch": []}
 
     @property
     def _BATCH_WATCH(self_):
@@ -2561,7 +2571,7 @@ class Parameters:
     def _setup_refs(self_, refs: Mapping[str, Iterable[t.Any]]):
         if self_.self is None:
             return
-        groups = defaultdict(list)
+        groups: defaultdict[Any, list[tuple[str, str | None]]] = defaultdict(list)
         for pname, subrefs in refs.items():
             for p in subrefs:
 
@@ -2570,11 +2580,12 @@ class Parameters:
                 else:
                     for sp in extract_dependencies(p):
                         groups[sp.owner].append((pname, sp.name))
-        for owner, pnames in groups.items():
-            refnames, pnames = zip(*pnames)
+        for owner, grouped_pnames in groups.items():
+            refnames, pnames = zip(*grouped_pnames)
+            watched_pnames = [p for p in pnames if p is not None]
             self_.self._param__private.ref_watchers.append((
                 refnames,
-                owner.param._watch(self_._sync_refs, list(set(pnames)), precedence=-1)
+                owner.param._watch(self_._sync_refs, list(set(watched_pnames)), precedence=-1)
             ))
 
     def _update_ref(self_, name: str, ref: t.Any):
@@ -2688,11 +2699,15 @@ class Parameters:
         # deepcopy or store a reference to reference param_obj.default into
         # self._param__private.values (or dict_ if supplied) under the
         # parameter's name (or key if supplied)
-        instantiator = copy.deepcopy if deepcopy else lambda o: o
+        if deepcopy:
+            instantiator: Callable[[Any], Any] = copy.deepcopy
+        else:
+            def instantiator(o: Any) -> Any:
+                return o
         dict_ = dict_ or self._param__private.values
         key = key or t.cast(str, param_obj.name)
         if shared_parameters._share:
-            param_key = (str(type(self)), param_obj.name)
+            param_key = (str(type(self)), t.cast(str, param_obj.name))
             if param_key in shared_parameters._shared_cache:
                 new_object = shared_parameters._shared_cache[param_key]
             else:
@@ -2725,7 +2740,7 @@ class Parameters:
                 for dep in _resolve_mcs_deps(obj, constant, []):
                     constant_grouped[(id(dep.inst), id(dep.cls), dep.what)].append((None, dep))
                 for group in constant_grouped.values():
-                    self_._watch_group(obj, method, queued, group)
+                    self_._watch_group(obj, method, queued, t.cast(list[tuple[Parameter | None, PInfo]], group))
                 m = getattr(self_.self, method)
                 if on_init and m not in init_methods:
                     init_methods.append(m)
@@ -2742,7 +2757,9 @@ class Parameters:
                     grouped[(id(dep.inst), id(dep.cls), dep.what)].append((ddep, dep))
 
             for group in grouped.values():
-                watcher = self_._watch_group(obj, method, queued, group, attribute)
+                watcher = self_._watch_group(
+                    obj, method, queued, t.cast(list[tuple[Parameter | None, PInfo]], group), attribute
+                )
                 obj._param__private.dynamic_watchers[method].append(watcher)
         for m in init_methods:
             if iscoroutinefunction(m):
@@ -2766,7 +2783,7 @@ class Parameters:
         dependencies.
         """
         spec_parts = dynamic_dep.spec.split(':')[0].split('.')
-        subobj = obj
+        subobj: Any = obj
         subobjs = [obj]
         for subpath in spec_parts[:-1]:
             subobj = getattr(subobj, subpath.split(':')[0], None)
@@ -3874,8 +3891,8 @@ class Parameters:
         if isinstance(spec, Parameter):
             inst = spec.owner if isinstance(spec.owner, Parameterized) else None
             cls = spec.owner if inst is None else type(inst)
-            info = PInfo(inst, cls, spec.name, spec, 'value')
-            return [] if intermediate == 'only' else [info], []
+            pinfo = PInfo(inst, cls, spec.name, spec, 'value')
+            return [] if intermediate == 'only' else [pinfo], []
 
         obj, attr, what = _parse_dependency_spec(spec)
         if obj is None:
@@ -3891,7 +3908,7 @@ class Parameters:
                     'Parameterized constructor.'
                 )
 
-            src: Parameterized | type[Parameterized] = _getattrr(self_.self_or_cls, obj[1::], None)
+            src = _getattrr(self_.self_or_cls, obj[1::], None)
             if src is None:
                 path = obj[1:].split('.')
                 deps = []
@@ -3912,6 +3929,7 @@ class Parameters:
                 return deps, [] if intermediate == 'only' else [DInfo(spec=spec)]
 
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
+        info: PInfo | MInfo
         if attr is None:
             raise AttributeError("Specification must include attribute.")
         elif obj is not None and attr == 'param':
@@ -3965,17 +3983,17 @@ class Parameters:
                                  "parameters of class {}".format(parameter_name, self_.cls.__name__))
 
             if self_.self is not None and what == "value":
-                watchers = self_.self._param__private.watchers
-                if parameter_name not in watchers:
-                    watchers[parameter_name] = {}
-                if what not in watchers[parameter_name]:
-                    watchers[parameter_name][what] = []
-                method = getattr(watchers[parameter_name][what], action)
+                instance_watchers = self_.self._param__private.watchers
+                if parameter_name not in instance_watchers:
+                    instance_watchers[parameter_name] = {}
+                if what not in instance_watchers[parameter_name]:
+                    instance_watchers[parameter_name][what] = []
+                method = getattr(instance_watchers[parameter_name][what], action)
             else:
-                watchers = self_[parameter_name].watchers
-                if what not in watchers:
-                    watchers[what] = []
-                method = getattr(watchers[what], action)
+                param_watchers = self_[parameter_name].watchers
+                if what not in param_watchers:
+                    param_watchers[what] = []
+                method = getattr(param_watchers[what], action)
             try:
                 method(watcher)
             except ValueError:
@@ -4659,7 +4677,7 @@ class ParameterizedMetaclass(type):
                 _watch.append((dname, watch == 'queued', on_init, deps, dynamic_deps))
 
         # Resolve dependencies in class hierarchy
-        _inherited = []
+        _inherited: list[Any] = []
         for cls in classlist(mcs)[:-1][::-1]:
             if not issubclass(mcs, cls) or not hasattr(cls, 'param'):
                 continue
@@ -4677,7 +4695,7 @@ class ParameterizedMetaclass(type):
 
     @property
     def __get_params(mcs) -> Parameters:
-        return mcs.param  # type: ignore[attr-defined]
+        return mcs.param  # type: ignore[attr-defined,return-value]
 
     def __set_name(mcs, name: str, dict_: dict[str, t.Any]):
         """
@@ -4752,7 +4770,7 @@ class ParameterizedMetaclass(type):
             return False
 
     def __get_private(mcs) -> _ClassPrivate:
-        return mcs._param__private  # type: ignore[attr-defined]
+        return mcs._param__private  # type: ignore[attr-defined,return-value]
 
     def __get_signature(mcs) -> inspect.Signature | None:
         """
@@ -4767,7 +4785,8 @@ class ParameterizedMetaclass(type):
             return private.signature
         # allowed_signature must be the signature of Parameterized.__init__
         # Inspecting `mcs.__init__` instead of `mcs` to avoid a recursion error
-        if inspect.signature(mcs.__init__) != DEFAULT_SIGNATURE:
+        init_fn = mcs.__dict__.get("__init__", Parameterized.__init__)
+        if inspect.signature(init_fn) != DEFAULT_SIGNATURE:
             return None
         processed_kws, keyword_groups = set(), []
         for cls in reversed(mcs.mro()):
@@ -4814,7 +4833,7 @@ class ParameterizedMetaclass(type):
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
                 parameter = copy.copy(parameter)
-                parameter.owner = mcs
+                parameter.owner = t.cast(Any, mcs)
                 type.__setattr__(mcs, attribute_name, parameter)
             mcs.__dict__[attribute_name].__set__(None,value)
 
@@ -4885,7 +4904,8 @@ class ParameterizedMetaclass(type):
                 type_change = True
         del slots['instantiate']
 
-        callables, slot_values = {}, {}
+        callables: dict[str, Any] = {}
+        slot_values: dict[str, Any] = {}
         slot_overridden = False
         private = mcs.__get_private()
         for slot in slots.keys():
@@ -5177,7 +5197,7 @@ def pprint(
     elif isinstance(val, _no_script_repr):
         rep = None
     elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
-        rep=val.param.pprint(
+        rep=t.cast(Any, val.param).pprint(
             imports=imports,
             prefix=prefix+"    ",
             qualify=qualify,
@@ -5191,7 +5211,7 @@ def pprint(
 
 
 # Registry for special handling for certain types in script_repr and pprint
-script_repr_reg = {}
+script_repr_reg: dict[type[Any], Callable[..., Any]] = {}
 
 
 # currently only handles list and tuple
@@ -5720,13 +5740,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         plus a unique integer""")
 
     _param__private: t.ClassVar[PrivateNS]
-    param: t.ClassVar[NS]
     _param__parameters: t.ClassVar[Parameters]
-
-    if t.TYPE_CHECKING:
-        _param__private: _InstancePrivate
-        _param__parameters: Parameters
-        param: NS
 
     def __init__(self, **params):
         # No __init__ docstring to avoid shadowing the user class docstring
@@ -5734,7 +5748,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         global object_count
         if not isinstance(self.__dict__.get('_param__private'), _InstancePrivate):
-            self._param__private = _InstancePrivate(
+            self.__dict__['_param__private'] = _InstancePrivate(
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
         # Skip generating a custom instance name when a class in the hierarchy
@@ -5837,7 +5851,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         During this process the object is considered uninitialized.
         """
         explicit_no_refs = type(self)._param__private.explicit_no_refs
-        self._param__private = _InstancePrivate(explicit_no_refs=explicit_no_refs)
+        self.__dict__['_param__private'] = _InstancePrivate(explicit_no_refs=explicit_no_refs)
         self._param__private.initialized = False
 
         _param__private = state.get('_param__private', None)
@@ -6113,7 +6127,7 @@ class _HasInstance(t.Protocol):
 
 class ParameterizedFunctionMetaclass(ParameterizedMetaclass):
 
-    def __call__(cls: type[_HasInstance], *args, **params) -> R:
+    def __call__(cls: type[_HasInstance], *args, **params) -> Any:
         inst = cls.instance()
         inst.param._set_name(cls.__name__)
         return inst.__call__(*args, **params)
@@ -6236,9 +6250,9 @@ class ParameterizedFunction(Parameterized, Generic[P, R], metaclass=Parameterize
         inst = Parameterized.__new__(cls)
         Parameterized.__init__(inst, **params)
         if 'name' in params:
-            inst.__name__ = params['name']
+            setattr(inst, "__name__", params['name'])
         else:
-            inst.__name__ = self_or_cls.name
+            setattr(inst, "__name__", self_or_cls.name)
         return inst
 
     def __call__(self, *args, **kw) -> R:

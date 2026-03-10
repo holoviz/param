@@ -556,7 +556,7 @@ class Dynamic(Parameter[T]):
         if not hasattr(gen,'_Dynamic_last'):
             return gen
         else:
-            return self._produce_value(gen)
+            return t.cast(T, self._produce_value(gen))
 
     @instance_descriptor
     def __set__(self, obj: Parameterized | type[Parameterized], val: T):
@@ -642,6 +642,22 @@ class NumberInitKwargs(ParameterKwargs, total=False):
 
 class NumberKwargs(NumberInitKwargs, total=False):
     allow_None: bool
+
+
+class DateInitKwargs(ParameterKwargs, total=False):
+    bounds: tuple[t.Any | None, t.Any | None] | None
+    softbounds: tuple[t.Any | None, t.Any | None] | None
+    inclusive_bounds: tuple[bool, bool]
+    step: dt.datetime | dt.date | None
+    set_hook: t.Callable[..., t.Any] | None
+
+
+class CalendarDateInitKwargs(ParameterKwargs, total=False):
+    bounds: tuple[t.Any | None, t.Any | None] | None
+    softbounds: tuple[t.Any | None, t.Any | None] | None
+    inclusive_bounds: tuple[bool, bool]
+    step: dt.date | None
+    set_hook: t.Callable[..., t.Any] | None
 
 
 class ClassSelectorInitKwargs(t.TypedDict, total=False):
@@ -1080,7 +1096,7 @@ class Magnitude(Number[T]):
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
-        super().__init__(
+        t.cast(t.Any, super().__init__)(
             default=default, bounds=bounds, softbounds=softbounds,
             inclusive_bounds=inclusive_bounds, step=step, **params
         )
@@ -1094,22 +1110,22 @@ class Date(Number[T]):
     if t.TYPE_CHECKING:
 
         @t.overload
-        def __init__(
+        def __init__(  # type: ignore[inconsistent-overload]
             self: Date[dt.datetime | dt.date],
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: t.Unpack[DateInitKwargs]
         ) -> None:
             ...
 
         @t.overload
-        def __init__(
+        def __init__(  # type: ignore[inconsistent-overload]
             self: Date[dt.datetime | dt.date | None],
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: t.Unpack[DateInitKwargs]
         ) -> None:
             ...
 
@@ -1146,7 +1162,7 @@ class Date(Number[T]):
         bounds: tuple[t.Any | None, t.Any | None] | None = None,
         softbounds: tuple[t.Any | None, t.Any | None] | None = None,
         inclusive_bounds: tuple[bool, bool] = (True, True),
-        step: dt.date | None = None,
+        step: dt.datetime | dt.date | None = None,
         set_hook: t.Callable[..., t.Any] | None = None,
         doc: str | None = None,
         label: str | None = None,
@@ -1208,7 +1224,10 @@ class Date(Number[T]):
 
     def _validate_bounds(self, val: t.Any, bounds: tuple[t.Any | None, t.Any | None] | None, inclusive_bounds: tuple[bool, bool]) -> None:
         val = _to_datetime(val)
-        bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
+        bounds = None if bounds is None else t.cast(
+            tuple[t.Any | None, t.Any | None],
+            tuple(map(_to_datetime, bounds)),
+        )
         return super()._validate_bounds(val, bounds, inclusive_bounds)
 
     @classmethod
@@ -1234,22 +1253,22 @@ class CalendarDate(Number[T]):
     if t.TYPE_CHECKING:
 
         @t.overload
-        def __init__(
+        def __init__(  # type: ignore[inconsistent-overload]
             self: CalendarDate[dt.date],
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: t.Unpack[CalendarDateInitKwargs]
         ) -> None:
             ...
 
         @t.overload
-        def __init__(
+        def __init__(  # type: ignore[inconsistent-overload]
             self: CalendarDate[dt.date | None],
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: t.Unpack[CalendarDateInitKwargs]
         ) -> None:
             ...
 
@@ -1399,7 +1418,7 @@ class Boolean(Parameter[T]):
             ...
 
     @t.overload
-    def __init__(
+    def __init__(  # type: ignore[inconsistent-overload]
         self,
         default=False,
         doc: str | None = None,
@@ -1713,8 +1732,8 @@ class NumericTuple(Tuple[T]):
         allow_None: bool = t.cast(bool, Undefined),
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
-        t.cast(t.Any, Tuple.__init__)(
-            self, default=default, length=length, allow_None=allow_None, **params
+        t.cast(t.Any, super().__init__)(  # type: ignore[attr-defined,misc]
+            default=default, length=length, allow_None=allow_None, **params
         )
 
     def _validate_value(self, value, allow_None):
@@ -1760,8 +1779,14 @@ class XYCoordinates(NumericTuple):
     ) -> None:
         ...
 
-    def __init__(self, default=Undefined, **params):
-        t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
+    def __init__(
+        self, default=Undefined, **params
+    ):
+        super().__init__(
+            default=t.cast(tuple[float, float] | None, default),
+            length=2,
+            **params
+        )
 
 
 class Range(NumericTuple):
@@ -1842,10 +1867,12 @@ class Range(NumericTuple):
     def _validate_order(self, val, step, allow_None):
         if val is None and allow_None:
             return
+        if val is None:
+            return
         elif val is not None and (val[0] is None or val[1] is None):
             return
 
-        start, end = val
+        start, end = t.cast(tuple[t.Any, t.Any], val)
         if step is not None and step > 0 and not start <= end:
             raise ValueError(
                 f"{_validate_error_prefix(self)} end {end} is less than its "
@@ -1889,14 +1916,14 @@ class Range(NumericTuple):
     def get_soft_bounds(self):
         return get_soft_bounds(self.bounds, self.softbounds)
 
-    def rangestr(self):
+    def rangestr(self) -> str | tuple[str, str]:
         if self.bounds is None:
             return "(-inf, inf)"
         vmin, vmax = self.bounds
         incmin, incmax = self.inclusive_bounds
-        incmin = '[' if incmin else '('
-        incmax = ']' if incmax else ')'
-        return f'{incmin}{vmin}, {vmax}{incmax}'
+        min_delim = '[' if incmin else '('
+        max_delim = ']' if incmax else ')'
+        return f'{min_delim}{vmin}, {vmax}{max_delim}'
 
 
 class DateRange(Range):
@@ -2253,7 +2280,7 @@ class ListProxy(list):
             super().append(object)
             self._parameter._objects.append(object)
 
-    def copy(self):
+    def copy(self):  # type: ignore[override]
         if self._parameter.names:
             return self._parameter.names.copy()
         return list(self)
@@ -2625,7 +2652,7 @@ class FileSelector(Selector):
         else:
             # Convert using os.fspath and pathlib.Path to handle ensure
             # the path separators are consistent (on Windows in particular)
-            pathpattern = os.fspath(pathlib.Path(t.cast(str | PathLike[str], resolved)))
+            pathpattern = os.fspath(pathlib.Path(t.cast(str | PathLike[str], resolved)))  # type: ignore[redundant-cast]
             self.objects = sorted(glob.glob(pathpattern))
         if self.default in self.objects:
             return
@@ -2743,7 +2770,7 @@ class ClassSelector(SelectorBase[T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: ClassSelector[T],
+            self,
             *,
             class_: type[T] | tuple[type[T], ...],
             default: T | None = None,
@@ -2756,7 +2783,7 @@ class ClassSelector(SelectorBase[T]):
 
         @t.overload
         def __init__(
-            self: ClassSelector[T],
+            self,
             *,
             class_: type[T] | tuple[type[T], ...],
             default: T | None = None,
@@ -2770,7 +2797,7 @@ class ClassSelector(SelectorBase[T]):
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance  # type: ignore
-        super().__init__(default=default, instantiate=instantiate, **params)
+        t.cast(t.Any, super().__init__)(default=default, instantiate=instantiate, **params)
         self._validate(self.default)
 
     def _validate(self, val):
@@ -2862,7 +2889,7 @@ class Dict(ClassSelector[T]):
         ...
 
     def __init__(self, default=Undefined, **params):
-        super().__init__(default=default, class_=dict, **params)
+        t.cast(t.Any, super().__init__)(default=default, class_=dict, **params)
 
 
 class Array(ClassSelector):
@@ -3158,7 +3185,7 @@ class List(Parameter[T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self: List[T],
+            self,
             default: list[T] = [],
             *,
             item_type: type[T] | tuple[type[T], ...],
@@ -3169,7 +3196,7 @@ class List(Parameter[T]):
 
         @t.overload
         def __init__(
-            self: List[T | None],
+            self,
             default: list[T] | None = None,
             *,
             allow_None: t.Literal[True] = True,
@@ -3179,7 +3206,7 @@ class List(Parameter[T]):
 
         @t.overload
         def __init__(
-            self: List[T],
+            self,
             default: list[T] = [],
             *,
             item_type: type[T] | tuple[type[T], ...] | None = None,
@@ -3252,12 +3279,12 @@ class List(Parameter[T]):
             return
         err_kind = None
         for v in val:
+            obj_display = lambda v: v
             if is_instance and not isinstance(v, item_type):
                 err_kind = "instances"
                 obj_display = lambda v: type(v)
             elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
                 err_kind = "subclasses"
-                obj_display = lambda v: v
             if err_kind:
                 raise TypeError(
                     f"{_validate_error_prefix(self)} items must be {err_kind} "

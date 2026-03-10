@@ -92,7 +92,7 @@ import inspect
 import math
 import operator
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sized
 from functools import partial
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional, cast
@@ -854,7 +854,7 @@ class reactive_ops:
                 return initial
             else:
                 return self.value
-        return bind(eval, *deps).rx()
+        return cast(Any, bind(eval, *deps)).rx()
 
     def where(self, x, y) -> 'rx':
         """
@@ -930,7 +930,7 @@ class reactive_ops:
 
         def ternary(condition, _):
             return resolve_value(x) if condition else resolve_value(y)
-        return bind(ternary, self._reactive, trigger.param.value)
+        return cast(Any, bind(ternary, self._reactive, trigger.param.value)).rx()
 
     # Operations to get the output and set the input of an expression
 
@@ -985,7 +985,11 @@ class reactive_ops:
         if isinstance(self._reactive, rx):
             return self._reactive._resolve()
         elif isinstance(self._reactive, Parameter):
-            return getattr(self._reactive.owner, self._reactive.name)
+            owner = self._reactive.owner
+            name = self._reactive.name
+            if owner is None or name is None:
+                return None
+            return getattr(owner, name)
         else:
             return self._reactive()
 
@@ -1220,7 +1224,8 @@ def bind(function, *args, watch: bool = False, **kwargs):
             if hasattr(arg, '_dinfo'):
                 arg = eval_function_with_deps(arg)
             elif isinstance(arg, Parameter):
-                arg = getattr(arg.owner, arg.name)
+                if arg.owner is not None and arg.name is not None:
+                    arg = getattr(arg.owner, arg.name)
             combined_args.append(arg)
         combined_args += list(wargs)
 
@@ -1229,7 +1234,8 @@ def bind(function, *args, watch: bool = False, **kwargs):
             if hasattr(arg, '_dinfo'):
                 arg = eval_function_with_deps(arg)
             elif isinstance(arg, Parameter):
-                arg = getattr(arg.owner, arg.name)
+                if arg.owner is not None and arg.name is not None:
+                    arg = getattr(arg.owner, arg.name)
             combined_kwargs[kw] = arg
         for kw, arg in wkwargs.items():
             if asynchronous:
@@ -1253,6 +1259,8 @@ def bind(function, *args, watch: bool = False, **kwargs):
         else:
             p = transform_reference(function)
             if isinstance(p, Parameter):
+                if p.owner is None or p.name is None:
+                    raise ValueError("Referenced Parameter is unbound.")
                 fn = getattr(p.owner, p.name)
             else:
                 fn = eval_function_with_deps(p)
@@ -1263,7 +1271,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            evaled = cast(Iterable[Any], eval_fn()(*combined_args, **combined_kwargs))
             for val in evaled:
                 yield val
         wrapper_fn = cast(Any, depends)(**dependencies, watch=watch)(wrapped)
@@ -1273,7 +1281,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            evaled = cast(Any, eval_fn()(*combined_args, **combined_kwargs))
             async for val in evaled:
                 yield val
         wrapper_fn = cast(Any, depends)(**dependencies, watch=watch)(wrapped)
@@ -1284,7 +1292,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = eval_fn()(*combined_args, **combined_kwargs)
+            evaled = cast(Any, eval_fn()(*combined_args, **combined_kwargs))
             return await evaled
     else:
         @cast(Any, depends)(**dependencies, watch=watch)
@@ -1424,7 +1432,10 @@ class rx:
             obj = None
         elif isinstance(obj, Parameter):
             fn = bind(lambda obj: obj, obj)
-            obj = getattr(obj.owner, obj.name)
+            if obj.owner is not None and obj.name is not None:
+                obj = getattr(obj.owner, obj.name)
+            else:
+                obj = None
         else:
             # For all other objects wrap them so they can be updated
             # via .rx.value property
@@ -1463,14 +1474,14 @@ class rx:
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
-            self._prev = prev
+            self._prev = cast(Any, prev)
 
         # Define special trigger parameter if operation has to be lazily evaluated
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
         else:
-            self._trigger = None
+            self._trigger = cast(Any, None)
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
         self._internal_params = self._compute_params()
@@ -1478,7 +1489,10 @@ class rx:
         # that Trigger parameters do not cause double execution
         self._params = [
             p for p in self._internal_params if (not isinstance(p.owner, Trigger) or p.owner.internal)
-            or any (p not in self._internal_params for p in p.owner.parameters)
+            or (
+                p.owner is not None
+                and any(p not in self._internal_params for p in cast(Any, p.owner).parameters)
+            )
         ]
         self._setup_invalidations(depth)
         self._kwargs = kwargs
@@ -1528,13 +1542,13 @@ class rx:
         elif self._root._dirty_obj:
             root = self._root
             root._shared_obj[0] = eval_function_with_deps(root._fn)
-            root._dirty_obj = False
+            cast(Any, root)._dirty_obj = False
         return self._shared_obj[0]
 
     @_obj.setter
     def _obj(self, obj):
         if self._shared_obj is None:
-            self._shared_obj = [obj]
+            self._shared_obj = cast(Any, [obj])
         else:
             self._shared_obj[0] = obj
 
@@ -1561,7 +1575,7 @@ class rx:
         owner = get_method_owner(self._fn)
         if owner is not None:
             deps = [
-                dep.pobj for dep in owner.param.method_dependencies(self._fn.__name__)
+                dep.pobj for dep in cast(Any, owner).param.method_dependencies(self._fn.__name__)
             ]
             return deps
 
@@ -1631,7 +1645,7 @@ class rx:
         self._error_state = None
 
     def _invalidate_obj(self, *events):
-        self._root._dirty_obj = True
+        cast(Any, self._root)._dirty_obj = True
         self._error_state = None
 
     async def _resolve_async(self, obj):
@@ -1951,6 +1965,8 @@ class rx:
             return
         elif not isinstance(self._current, Iterable):
             raise TypeError(f'cannot unpack non-iterable {type(self._current).__name__} object.')
+        if not isinstance(self._current, Sized):
+            raise TypeError(f'cannot determine length of {type(self._current).__name__} object.')
         items = self._apply_operator(list)
         for i in range(len(self._current)):
             yield items[i]

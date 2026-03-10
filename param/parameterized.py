@@ -1191,11 +1191,13 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     def _update_signature(cls):
         defaults = cls._modified_slots_defaults()
         new_parameters = {}
+        last_sig: inspect.Signature | None = None
 
         for i, kls in enumerate(cls.mro()):
             if kls.__name__.startswith('_'):
                 continue
             sig = inspect.signature(kls.__init__)
+            last_sig = sig
             for pname, parameter in sig.parameters.items():
                 if pname == 'self':
                     continue
@@ -1224,7 +1226,9 @@ class _ParameterBase(metaclass=ParameterMetaclass):
                 return 1
 
         new_parameters = sorted(new_parameters.values(), key=_sorter)
-        new_sig = sig.replace(parameters=new_parameters)
+        if last_sig is None:
+            raise RuntimeError("Could not derive constructor signature")
+        new_sig = last_sig.replace(parameters=new_parameters)
         cls.__signature__ = new_sig
 
 
@@ -1655,8 +1659,12 @@ class Parameter(_ParameterBase, t.Generic[T]):
         """
         if mode not in  self._serializers:
             raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
-        return self._serializers[mode].param_schema(self.__class__.__name__, self,
-                                                    safe=safe, subset=subset)
+        return self._serializers[mode].param_schema(
+            self.__class__.__name__,
+            t.cast(Any, self),
+            safe=safe,
+            subset=subset,
+        )
 
     @property
     def rx(self):
@@ -1938,7 +1946,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                         category=_ParamPendingDeprecationWarning,
                         stacklevel=_find_stack_level(),
                     )
-                    obj._param__private = _InstancePrivate(
+                    obj.__dict__['_param__private'] = _InstancePrivate(
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs
                     )
                 _old = obj._param__private.values.get(name, self.default)
@@ -2540,6 +2548,7 @@ class Parameters:
                 # contain a reference and warn the user that the
                 # behavior may change in future.
                 if name not in self_.cls._param__private.explicit_no_refs:
+                    resolved = val
                     try:
                         ref, _, resolved, _ = self_._resolve_ref(pobj, val)
                     except Exception:
@@ -3174,7 +3183,7 @@ class Parameters:
         param_values = self_.values()
         params = {name: param_values[name] for name in param_names}
         self_._TRIGGER = True
-        self_.update(dict(params, **triggers))
+        self_.update({**params, **triggers})
         self_._TRIGGER = False
         self_._events += events
         self_._state_watchers += watchers
@@ -3335,7 +3344,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.serialize_parameters(self_or_cls, subset=subset)
+        return serializer.serialize_parameters(t.cast(Any, self_or_cls), subset=subset)
 
     def serialize_value(self_, pname: str, mode: str = 'json'):
         """
@@ -3386,7 +3395,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.serialize_parameter_value(self_or_cls, pname)
+        return serializer.serialize_parameter_value(t.cast(Any, self_or_cls), pname)
 
     def deserialize_parameters(self_, serialization, subset: Iterable[str] | None = None, mode: str = 'json') -> dict:
         """
@@ -3438,7 +3447,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
+        return serializer.deserialize_parameters(t.cast(Any, self_or_cls), serialization, subset=subset)
 
     def deserialize_value(self_, pname: str, value, mode: str = 'json'):
         """
@@ -3491,7 +3500,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.deserialize_parameter_value(self_or_cls, pname, value)
+        return serializer.deserialize_parameter_value(t.cast(Any, self_or_cls), pname, value)
 
     def schema(self_, safe: bool = False, subset: Iterable[str] | None = None, mode: str = 'json'):
         """
@@ -3549,7 +3558,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.schema(self_or_cls, safe=safe, subset=subset)
+        return serializer.schema(t.cast(Any, self_or_cls), safe=safe, subset=subset)
 
     def values(self_, onlychanged: bool = False) -> dict[str, Any]:
         """
@@ -4413,7 +4422,7 @@ class Parameters:
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
             elif hasattr(g,'_state_push') and isinstance(g,Parameterized):
-                g._state_push()
+                t.cast(Any, g)._state_push()
 
     def _state_pop(self_):
         """
@@ -4430,7 +4439,7 @@ class Parameters:
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif isinstance(g, Parameterized) and hasattr(g, '_state_pop'):
-                g._state_pop()
+                t.cast(Any, g)._state_pop()
 
     def pprint(
         self_,
@@ -4951,9 +4960,9 @@ class ParameterizedMetaclass(type):
                 explicit_no_refs = private.explicit_no_refs
                 if param.name is None:
                     pass
-                elif param.allow_refs is False:
+                elif not param.allow_refs:
                     explicit_no_refs.append(param.name)
-                elif param.allow_refs is True and param.name in explicit_no_refs:
+                elif param.allow_refs and param.name in explicit_no_refs:
                     explicit_no_refs.remove(param.name)
 
         # Now set the actual slot values
@@ -5330,7 +5339,7 @@ def _parameterized_repr_html(p, open):
     """HTML representation for a Parameterized object."""
     if isinstance(p, Parameterized):
         cls = p.__class__
-        title = cls.name + "()"
+        title = f"{cls.name}()"
         value_field = 'Value'
     else:
         cls = p

@@ -199,4 +199,5 @@ pandas = "*"
 [feature.lint.tasks]
 lint = 'pre-commit run --all-files'
 lint-install = 'pre-commit install'
-typecheck = 'ty check param --exclude param/version.py && mypy param --follow-imports=skip --disable-error-code import-untyped --disable-error-code import-not-found'
+typecheck = 'ty check param --exclude param/version.py && mypy param --follow-imports=skip --disable-error-code import-untyped --disable-error-code import-not-found && pyrefly check --output-format min-text --count-errors=0'
+pyrefly-check = 'pyrefly check --output-format min-text --count-errors=0'

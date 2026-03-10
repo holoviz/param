@@ -143,6 +143,7 @@ jobs:
       - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
           environments: lint
+          install: false
       - name: Run ty typecheck
         run: |
           pixi run -e lint typecheck

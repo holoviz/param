@@ -83,18 +83,18 @@ def _dt_types():
     yield dt.datetime
     yield dt.date
     if np := sys.modules.get("numpy"):
-        yield t.cast(Any, np).datetime64
+        yield np.datetime64  # type: ignore[possibly-missing-attribute]
 
 @gen_types
 def _int_types():
     yield int
     if np := sys.modules.get("numpy"):
-        yield t.cast(Any, np).integer
+        yield np.integer  # type: ignore[possibly-missing-attribute]
 
 
 logger = None
 
-def get_logger(name: Optional[str] = None)->"logging.Logger":
+def get_logger(name: Optional[str] = None) -> "logging.Logger":
     """
     Retrieve a logger instance for use with the ``param`` library.
 
@@ -3597,8 +3597,8 @@ class Parameters:
         self_or_cls = self_.self_or_cls
         param_ns = self_or_cls.param
         vals = []
-        for name, val in param_ns.objects('existing').items():  # ty: ignore[possibly-missing-attribute]
-            value = param_ns.get_value_generator(name)  # ty: ignore[possibly-missing-attribute]
+        for name, val in param_ns.objects('existing').items():  # type: ignore[possibly-missing-attribute, union-attr]
+            value = param_ns.get_value_generator(name)  # type: ignore[possibly-missing-attribute, union-attr]
             if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
                 continue
             if not onlychanged or not Comparator.is_equal(value, val.default):
@@ -3620,7 +3620,7 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # ty: ignore[possibly-missing-attribute]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[possibly-missing-attribute, union-attr]
 
         if not param_obj:
             return getattr(cls_or_slf, name)
@@ -3680,14 +3680,14 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # ty: ignore[possibly-missing-attribute]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[possibly-missing-attribute, union-attr]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj, 'attribs'):
-            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # ty: ignore[possibly-missing-attribute]
+            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[possibly-missing-attribute, union-attr]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj, '_value_is_dynamic'):
@@ -3744,12 +3744,12 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # ty: ignore[possibly-missing-attribute]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[possibly-missing-attribute, union-attr]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # ty: ignore[possibly-missing-attribute]
+            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[possibly-missing-attribute, union-attr]
         elif not hasattr(param_obj,'_inspect'):
             value = getattr(cls_or_slf,name)
         else:
@@ -3937,6 +3937,8 @@ class Parameters:
                         deps += subdeps
                 return deps, [] if intermediate == 'only' else [DInfo(spec=spec)]
 
+        if not (isinstance(src, type) and issubclass(src, Parameterized) or isinstance(src, Parameterized)):
+            raise ValueError(f"Dependency {spec!r} is not a Parameterized class or instance.")
         cls, inst = (src, None) if isinstance(src, type) else (type(src), src)
         info: PInfo | MInfo
         if attr is None:

@@ -540,7 +540,9 @@ class Dynamic(Parameter[T]):
         gen._saved_Dynamic_time = []
 
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
+    def __get__(
+        self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
+    ) -> T:
         """
         Call the superclass's __get__; if the result is not dynamic
         return that result, otherwise ask that result to produce a
@@ -769,7 +771,9 @@ class Number(Dynamic[T]):
         self.step = step
         self._validate(self.default)
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
+    def __get__(
+        self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
+    ) -> T:
         """Retrieve the value of the attribute, checking bounds if dynamically generated.
 
         Parameters
@@ -882,14 +886,14 @@ class Number(Dynamic[T]):
                         f"{vmin}, not {val}."
                     )
 
-    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
-        if (allow_None and val is None) or (callable(val) and not inspect.isgeneratorfunction(val)):
+    def _validate_value(self, value: t.Any, allow_None: bool) -> None:
+        if (allow_None and value is None) or (callable(value) and not inspect.isgeneratorfunction(value)):
             return
 
-        if not _is_number(val):
+        if not _is_number(value):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes numeric values, "
-                f"not {type(val)}."
+                f"not {type(value)}."
             )
 
     def _validate_step(self, val: t.Any, step: t.Any) -> None:
@@ -959,17 +963,17 @@ class Integer(Number[T]):
     def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
         super().__init__(default=default, **kwargs)
 
-    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
-        if callable(val):
+    def _validate_value(self, value: t.Any, allow_None: bool) -> None:
+        if callable(value):
             return
 
-        if allow_None and val is None:
+        if allow_None and value is None:
             return
 
-        if not isinstance(val, _int_types):
+        if not isinstance(value, _int_types):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be an integer, "
-                f"not {type(val)}."
+                f"not {type(value)}."
             )
 
     def _validate_step(self, val: t.Any, step: t.Any) -> None:
@@ -1107,18 +1111,18 @@ class Date(Number[T]):
     def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
         super().__init__(default=default, **kwargs)
 
-    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
+    def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         """
         Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
-        if self.allow_None and val is None:
+        if self.allow_None and value is None:
             return
 
-        if not isinstance(val, _dt_types) and not (allow_None and val is None):
+        if not isinstance(value, _dt_types) and not (allow_None and value is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
-                f"date types, not {type(val)}."
+                f"date types, not {type(value)}."
             )
 
     def _validate_step(self, val: t.Any, step: t.Any) -> None:
@@ -1204,15 +1208,15 @@ class CalendarDate(Number[T]):
     def __init__(self, default=Undefined, **kwargs: t.Unpack[NumberKwargs]):
         super().__init__(default=default, **kwargs)
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, value, allow_None):
         """
         Check that the value is numeric and that it is within the hard
         bounds; if not, an exception is raised.
         """
-        if self.allow_None and val is None:
+        if self.allow_None and value is None:
             return
 
-        if (not isinstance(val, dt.date) or isinstance(val, dt.datetime)) and not (allow_None and val is None):
+        if (not isinstance(value, dt.date) or isinstance(value, dt.datetime)) and not (allow_None and value is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes date types."
             )
@@ -1301,17 +1305,17 @@ class Boolean(Parameter[T]):
         super().__init__(default=default, **params)
         self._validate(self.default)
 
-    def _validate_value(self, val: t.Any, allow_None: bool) -> None:
+    def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         if allow_None:
-            if not isinstance(val, bool) and val is not None:
+            if not isinstance(value, bool) and value is not None:
                 raise ValueError(
                     f"{_validate_error_prefix(self)} only takes a "
-                    f"boolean value or None, not {val!r}."
+                    f"boolean value or None, not {value!r}."
                 )
-        elif not isinstance(val, bool):
+        elif not isinstance(value, bool):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be True or False, "
-                f"not {val!r}."
+                f"not {value!r}."
             )
 
     def _validate(self, val: t.Any) -> None:
@@ -1502,14 +1506,14 @@ class Tuple(Parameter[T]):
             self.length = length
         self._validate(self.default)
 
-    def _validate_value(self, val, allow_None):
-        if val is None and allow_None:
+    def _validate_value(self, value, allow_None):
+        if value is None and allow_None:
             return
 
-        if not isinstance(val, tuple):
+        if not isinstance(value, tuple):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes a tuple value, "
-                f"not {type(val)}."
+                f"not {type(value)}."
             )
 
     def _validate_length(self, val, length):
@@ -1585,11 +1589,11 @@ class NumericTuple(Tuple[T]):
     ) -> None:
         super().__init__(default=default, length=length, allow_None=allow_None, **params)
 
-    def _validate_value(self, val, allow_None):
-        super()._validate_value(val, allow_None)
-        if allow_None and val is None:
+    def _validate_value(self, value, allow_None):
+        super()._validate_value(value, allow_None)
+        if allow_None and value is None:
             return
-        for n in val:
+        for n in value:
             if _is_number(n):
                 continue
             raise ValueError(
@@ -1786,19 +1790,19 @@ class DateRange(Range):
         bounds = None if bounds is None else tuple(map(_to_datetime, bounds))
         super()._validate_bounds(val, bounds, inclusive_bounds, kind)
 
-    def _validate_value(self, val, allow_None):
+    def _validate_value(self, value, allow_None):
         # Cannot use super()._validate_value as DateRange inherits from
         # NumericTuple which check that the tuple values are numbers and
         # datetime objects aren't numbers.
-        if allow_None and val is None:
+        if allow_None and value is None:
             return
 
-        if not isinstance(val, tuple):
+        if not isinstance(value, tuple):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes a tuple value, "
-                f"not {type(val)}."
+                f"not {type(value)}."
             )
-        for n in val:
+        for n in value:
             if isinstance(n, _dt_types):
                 continue
             raise ValueError(
@@ -1806,11 +1810,11 @@ class DateRange(Range):
                 f"values, not {type(n)}."
             )
 
-        start, end = val
+        start, end = value
         if not end >= start:
             raise ValueError(
-                f"{_validate_error_prefix(self)} end datetime {val[1]} "
-                f"is before start datetime {val[0]}."
+                f"{_validate_error_prefix(self)} end datetime {value[1]} "
+                f"is before start datetime {value[0]}."
             )
 
     @classmethod
@@ -1849,22 +1853,22 @@ class DateRange(Range):
 class CalendarDateRange(Range):
     """A date range specified as ``(start_date, end_date)``."""
 
-    def _validate_value(self, val, allow_None):
-        if allow_None and val is None:
+    def _validate_value(self, value, allow_None):
+        if allow_None and value is None:
             return
 
-        for n in val:
+        for n in value:
             if not isinstance(n, dt.date):
                 raise ValueError(
                     f"{_validate_error_prefix(self)} only takes date types, "
-                    f"not {val}."
+                    f"not {value}."
                 )
 
-        start, end = val
+        start, end = value
         if not end >= start:
             raise ValueError(
-                f"{_validate_error_prefix(self)} end date {val[1]} is before "
-                f"start date {val[0]}."
+                f"{_validate_error_prefix(self)} end date {value[1]} is before "
+                f"start date {value[0]}."
             )
 
     def _validate_bound_type(self, value, position, kind):
@@ -1931,12 +1935,12 @@ class Callable(Parameter):
         super().__init__(default=default, **params)
         self._validate(self.default)
 
-    def _validate_value(self, val, allow_None):
-        if (allow_None and val is None) or callable(val):
+    def _validate_value(self, value, allow_None):
+        if (allow_None and value is None) or callable(value):
             return
         raise ValueError(
             f"{_validate_error_prefix(self)} only takes a callable object, "
-            f"not objects of {type(val)}."
+            f"not objects of {type(value)}."
         )
 
     def _validate(self, val):
@@ -2005,8 +2009,12 @@ class Composite(Parameter):
         super().__init__(default=Undefined, **kw)
         self.attribs = attribs  # type: ignore[attr-defined]
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
+    def __get__(
+        self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
+    ) -> T:
         """Return the values of all the attribs, as a list."""
+        if objtype is None:
+            objtype = self.objtype
         if obj is None:
             return t.cast(T, [getattr(objtype, a) for a in self.attribs])
         else:
@@ -2388,8 +2396,10 @@ class Selector(SelectorBase, _SignatureSelector):
 
         self._validate_value(val)
 
-    def _validate_value(self, val):
-        if self.check_on_set and not (self.allow_None and val is None) and val not in self.objects:
+    def _validate_value(self, value, allow_None=None):
+        if allow_None is None:
+            allow_None = self.allow_None
+        if self.check_on_set and not (allow_None and value is None) and value not in self.objects:
             items = []
             limiter = ']'
             length = 0
@@ -2403,7 +2413,7 @@ class Selector(SelectorBase, _SignatureSelector):
                     break
             items = '[' + ', '.join(items) + limiter
             raise ValueError(
-                f"{_validate_error_prefix(self)} does not accept {val!r}; "
+                f"{_validate_error_prefix(self)} does not accept {value!r}; "
                 f"valid options include: {items!r}"
             )
 
@@ -2477,10 +2487,10 @@ class FileSelector(Selector):
             self.default = default
         super().__init__(default=self.default, objects=self._objects, **kwargs)
 
-    def _on_set(self, attribute, old, new):
-        super()._on_set(attribute, new, old)
+    def _on_set(self, attribute, old, value):
+        super()._on_set(attribute, old, value)
         if attribute == 'path':
-            self.update(path=new)
+            self.update(path=value)
 
     def update(self, path=Undefined):
         if path is Undefined:
@@ -2540,10 +2550,14 @@ class ListSelector(Selector):
                 f"not {val!r}."
             )
 
-    def _validate_value(self, val):
-        self._validate_type(val)
-        if val is not None:
-            for o in val:
+    def _validate_value(self, value, allow_None=None):
+        if allow_None is None:
+            allow_None = self.allow_None
+        self._validate_type(value)
+        if allow_None and value is None:
+            return
+        if value is not None:
+            for o in value:
                 super()._validate_value(o)
 
     def _update_state(self):
@@ -2565,10 +2579,10 @@ class MultiFileSelector(ListSelector):
         self.update(path=path)
         super().__init__(default=default, objects=self._objects, **kwargs)
 
-    def _on_set(self, attribute, old, new):
-        super()._on_set(attribute, new, old)
+    def _on_set(self, attribute, old, value):
+        super()._on_set(attribute, old, value)
         if attribute == 'path':
-            self.update(path=new)
+            self.update(path=value)
 
     def update(self, path=Undefined):
         if path is Undefined:
@@ -3099,13 +3113,13 @@ class List(Parameter[T]):
                     f"most {max_length}, not {l}."
                 )
 
-    def _validate_value(self, val, allow_None):
-        if allow_None and val is None:
+    def _validate_value(self, value, allow_None):
+        if allow_None and value is None:
             return
-        if not isinstance(val, list):
+        if not isinstance(value, list):
             raise ValueError(
                 f"{_validate_error_prefix(self)} must be a list, not an "
-                f"object of {type(val)}."
+                f"object of {type(value)}."
             )
 
     def _validate_item_type(self, val, item_type, is_instance):
@@ -3137,11 +3151,11 @@ class HookList(List):
 
     __slots__ = ['bounds']
 
-    def _validate_value(self, val, allow_None):
-        super()._validate_value(val, allow_None)
-        if allow_None and val is None:
+    def _validate_value(self, value, allow_None):
+        super()._validate_value(value, allow_None)
+        if allow_None and value is None:
             return
-        for v in val:
+        for v in value:
             if callable(v):
                 continue
             raise ValueError(
@@ -3321,7 +3335,9 @@ class Path(Parameter):
                 if self.check_exists:
                     raise OSError(e.args[0]) from None
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized]) -> T:
+    def __get__(
+        self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
+    ) -> T:
         """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj, objtype)
         if raw_path is None:
@@ -3470,13 +3486,13 @@ class Color(Parameter):
         self._validate_value(val, self.allow_None)
         self._validate_allow_named(val, self.allow_named)
 
-    def _validate_value(self, val, allow_None):
-        if (allow_None and val is None):
+    def _validate_value(self, value, allow_None):
+        if (allow_None and value is None):
             return
-        if not isinstance(val, str):
+        if not isinstance(value, str):
             raise ValueError(
                 f"{_validate_error_prefix(self)} expects a string value, "
-                f"not an object of {type(val)}."
+                f"not an object of {type(value)}."
             )
 
     def _validate_allow_named(self, val, allow_named):
@@ -3554,13 +3570,13 @@ class Bytes(Parameter):
                 f"does not match regex {regex!r}."
             )
 
-    def _validate_value(self, val, allow_None):
-        if allow_None and val is None:
+    def _validate_value(self, value, allow_None):
+        if allow_None and value is None:
             return
-        if not isinstance(val, bytes):
+        if not isinstance(value, bytes):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes a byte string value, "
-                f"not value of {type(val)}."
+                f"not value of {type(value)}."
             )
 
     def _validate(self, val):

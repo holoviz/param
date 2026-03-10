@@ -2162,13 +2162,13 @@ class String(Parameter[T]):
                 f'match regex {regex!r}.'
             )
 
-    def _validate_value(self, val: t.Any, allow_None: bool):
-        if allow_None and val is None:
+    def _validate_value(self, value: t.Any, allow_None: bool):
+        if allow_None and value is None:
             return
-        if not isinstance(val, str):
+        if not isinstance(value, str):
             raise ValueError(
                 f'{_validate_error_prefix(self)} only takes a string value, '
-                f'not value of {type(val)}.'
+                f'not value of {type(value)}.'
             )
 
     def _validate(self, val: t.Any):

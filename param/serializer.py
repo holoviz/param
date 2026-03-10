@@ -75,7 +75,7 @@ class JSONSerialization(Serialization):
         return json.dumps(obj)
 
     @classmethod
-    def schema(cls, pobj, safe=False, subset=None):
+    def schema(cls, pobj, subset=None, *, safe=False):
         schema = {}
         for name, p in pobj.param.objects('existing').items():
             if subset is not None and name not in subset:
@@ -98,8 +98,8 @@ class JSONSerialization(Serialization):
         return cls.dumps(components)
 
     @classmethod
-    def deserialize_parameters(cls, pobj, serialization, subset=None):
-        deserialized = cls.loads(serialization)
+    def deserialize_parameters(cls, pobj, serialized, subset=None):
+        deserialized = cls.loads(serialized)
         components = {}
         for name, value in deserialized.items():
             if subset is not None and name not in subset:

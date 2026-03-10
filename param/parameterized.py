@@ -5575,6 +5575,12 @@ class PrivateNS:
     def __get__(self, obj: C, objtype: type[C] | None = ...) -> _InstancePrivate: ...
 
     def __get__(self, obj: C | None, objtype: type[C] | None = None) -> _ClassPrivate | _InstancePrivate:
+        if obj is None:
+            return self.class_ns
+        objdict = getattr(obj, "__dict__", None)
+        ns = objdict.get("_param__private") if objdict is not None else None
+        if isinstance(ns, _InstancePrivate):
+            return ns
         return self.class_ns
 
 

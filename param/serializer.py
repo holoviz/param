@@ -181,7 +181,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def tuple_schema(cls, p, safe=False):
-        schema = {'type': 'array'}
+        schema: dict[str, object] = {'type': 'array'}
         if p.length is not None:
             schema['minItems'] =  p.length
             schema['maxItems'] =  p.length
@@ -189,7 +189,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def number_schema(cls, p, safe=False):
-        schema = {'type': p.__class__.__name__.lower() }
+        schema: dict[str, object] = {'type': p.__class__.__name__.lower() }
         return cls.declare_numeric_bounds(schema, p.bounds, p.inclusive_bounds)
 
     @classmethod
@@ -229,7 +229,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def list_schema(cls, p, safe=False):
-        schema = {'type': 'array'}
+        schema: dict[str, object] = {'type': 'array'}
         if safe is True and p.item_type is None:
             msg = ('List without a class specified cannot be guaranteed '
                    'to be safe for serialization')
@@ -283,7 +283,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def dataframe_schema(cls, p, safe=False):
-        schema = {'type': 'array'}
+        schema: dict[str, object] = {'type': 'array'}
         if safe is True:
             msg = ('DataFrame is not guaranteed to be safe for '
                    'serialization as the column dtypes are unknown')

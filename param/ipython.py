@@ -31,8 +31,8 @@ from param._utils import async_executor
 _get_ipython: t.Callable[[], t.Any] | None = None
 _display: t.Callable[..., t.Any] | None = None
 try:
-    from IPython import get_ipython as _imported_get_ipython
-    from IPython.display import display as _imported_display
+    from IPython import get_ipython as _imported_get_ipython  # type: ignore[unresolved-import]
+    from IPython.display import display as _imported_display  # type: ignore[unresolved-import]
 except Exception:
     pass
 else:
@@ -316,8 +316,8 @@ _loaded = False
 
 def load_ipython_extension(ip, verbose=True):
 
-    from IPython.core.magic import Magics, magics_class, line_magic
-    from IPython.core import page
+    from IPython.core.magic import Magics, magics_class, line_magic  # type: ignore[unresolved-import]
+    from IPython.core import page  # type: ignore[unresolved-import]
 
 
     @magics_class
@@ -422,9 +422,9 @@ def ipython_async_executor(func):
         ip = _get_ipython()
         if ip.kernel:
             # We are in Jupyter and can piggyback the tornado IOLoop
-            from tornado.ioloop import IOLoop
+            from tornado.ioloop import IOLoop  # type: ignore[unresolved-import]
             ioloop = IOLoop.current()
-            event_loop = ioloop.asyncio_loop # type: ignore
+            event_loop = ioloop.asyncio_loop
             if event_loop.is_running():
                 ioloop.add_callback(func)
             else:

@@ -284,7 +284,7 @@ def flatten(line):
 
 def accept_arguments(
     f: Callable[Concatenate[CallableT, P], R]
-) -> Callable[P, Callable[[CallableT], R]]:
+) -> Callable[..., Callable[[CallableT], R]]:
     """Decorate a decorator to accept arguments."""
     @functools.wraps(f)
     def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:

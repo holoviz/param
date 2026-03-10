@@ -136,7 +136,7 @@ def depends(
                    'kw': kw, 'watch': watch, 'on_init': on_init})
 
     typed_depends = t.cast(DependsFunc[P, R], _depends)
-    typed_depends._dinfo = _dinfo  # type: ignore[attr-defined]
+    typed_depends._dinfo = _dinfo
 
     if string_specs or not watch:
          # string_specs case handled elsewhere (later), in Parameterized.__init__

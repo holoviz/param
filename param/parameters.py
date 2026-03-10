@@ -20,6 +20,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import glob
+import importlib
 import inspect
 import numbers
 import os.path
@@ -32,6 +33,7 @@ import warnings
 from collections import OrderedDict
 from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
+from os import PathLike
 
 from .parameterized import (
     T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
@@ -121,14 +123,15 @@ def guess_param_types(**kwargs) -> dict[str, Parameter]:
             params[k] = t.cast(t.Any, List)(**kws)
         else:
             if 'numpy' in sys.modules:
-                from numpy import ndarray
+                numpy_mod = t.cast(t.Any, sys.modules['numpy'])
+                ndarray = numpy_mod.ndarray
                 if isinstance(v, ndarray):
                     params[k] = t.cast(t.Any, Array)(**kws)
                     continue
             if 'pandas' in sys.modules:
-                from pandas import (
-                    DataFrame as pdDFrame, Series as pdSeries
-                )
+                pandas_mod = t.cast(t.Any, sys.modules['pandas'])
+                pdDFrame = pandas_mod.DataFrame
+                pdSeries = pandas_mod.Series
                 if isinstance(v, pdDFrame):
                     params[k] = t.cast(t.Any, DataFrame)(**kws)
                     continue
@@ -511,7 +514,7 @@ class Dynamic(Parameter[T]):
         self,
         default: t.Any = Undefined,
         *,
-        allow_None: bool | UndefinedType = Undefined,
+        allow_None: bool = t.cast(bool, Undefined),
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -752,11 +755,15 @@ class Number(Dynamic[T]):
         self,
         default: t.Any = Undefined,
         *,
-        bounds: tuple[float | int | None, float | int | None] | UndefinedType = Undefined,
-        softbounds: tuple[float | int | None, float | int | None] | UndefinedType = Undefined,
-        inclusive_bounds: tuple[bool, bool] | UndefinedType = Undefined,
-        step: float | int | None | UndefinedType = Undefined,
-        set_hook: Callable | UndefinedType = Undefined,
+        bounds: tuple[float | int | None, float | int | None] | None = t.cast(
+            tuple[float | int | None, float | int | None] | None, Undefined
+        ),
+        softbounds: tuple[float | int | None, float | int | None] | None = t.cast(
+            tuple[float | int | None, float | int | None] | None, Undefined
+        ),
+        inclusive_bounds: tuple[bool, bool] = t.cast(tuple[bool, bool], Undefined),
+        step: float | int | None = t.cast(float | int | None, Undefined),
+        set_hook: t.Callable | None = t.cast(t.Callable | None, Undefined),
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -1583,8 +1590,8 @@ class NumericTuple(Tuple[T]):
         self,
         default: t.Any = Undefined,
         *,
-        length: int | None | UndefinedType = Undefined,
-        allow_None: bool | UndefinedType = Undefined,
+        length: int | None = t.cast(int | None, Undefined),
+        allow_None: bool = t.cast(bool, Undefined),
         **params: t.Unpack[ParameterKwargs]
     ) -> None:
         super().__init__(default=default, length=length, allow_None=allow_None, **params)
@@ -1689,7 +1696,7 @@ class Range(NumericTuple):
         self.bounds = bounds  # type: ignore[attr-defined]
         self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined]
         self.softbounds = softbounds  # type: ignore[attr-defined]
-        self.step = step  # type: ignore[attr-defined]
+        self.step = step
         t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
 
     def _validate(self, val):
@@ -2341,10 +2348,7 @@ class Selector(SelectorBase, _SignatureSelector):
         instantiate_value = False if isinstance(instantiate, UndefinedType) else instantiate
         super().__init__(default=default, instantiate=instantiate_value, **params)
         # Required as Parameter sets allow_None=True if default is None
-        if isinstance(allow_None, UndefinedType):
-            self.allow_None = self._slot_defaults['allow_None']
-        else:
-            self.allow_None = allow_None
+        self.allow_None = t.cast(bool, allow_None)
         if self.default is not None:
             self._validate_value(self.default)
         self._update_state()
@@ -2460,9 +2464,9 @@ class FileSelector(Selector):
     @t.overload
     def __init__(
         self,
-        default: str | None = None,
+        default: str | PathLike[str] | None = None,
         *,
-        path: str = "",
+        path: str | PathLike[str] = "",
         doc: str | None = None,
         label: str | None = None,
         precedence: float | None = None,
@@ -2480,9 +2484,10 @@ class FileSelector(Selector):
         ...
 
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
+        resolved = t.cast(str | PathLike[str], path)
         self.default = default
-        self.path = path
-        self.update(path=path)
+        self.path = resolved
+        self.update(path=resolved)
         if default is not Undefined:
             self.default = default
         super().__init__(default=self.default, objects=self._objects, **kwargs)
@@ -2492,15 +2497,14 @@ class FileSelector(Selector):
         if attribute == 'path':
             self.update(path=value)
 
-    def update(self, path=Undefined):
-        if path is Undefined:
-            path = self.path
-        if path == "":
+    def update(self, path: str | PathLike[str] = t.cast(str | PathLike[str], Undefined)):
+        resolved = self.path if path is Undefined else path
+        if resolved is Undefined or resolved == "":
             self.objects = []
         else:
             # Convert using os.fspath and pathlib.Path to handle ensure
             # the path separators are consistent (on Windows in particular)
-            pathpattern = os.fspath(pathlib.Path(path))
+            pathpattern = os.fspath(pathlib.Path(t.cast(str | PathLike[str], resolved)))
             self.objects = sorted(glob.glob(pathpattern))
         if self.default in self.objects:
             return
@@ -2658,7 +2662,7 @@ class ClassSelector(SelectorBase[T]):
         if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
             return
 
-        if isinstance(class_, Iterable):
+        if isinstance(class_, tuple):
             class_name = ('({})'.format(', '.join(cl.__name__ for cl in class_)))
         else:
             class_name = class_.__name__
@@ -2699,7 +2703,7 @@ class Dict(ClassSelector[T]):
         def __init__(
             self: Dict[dict[K, V]],
             *,
-            default: dict[K, V] | UndefinedType = Undefined,
+            default: dict[K, V] = t.cast(dict[K, V], Undefined),
             allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
@@ -2769,7 +2773,7 @@ class Array(ClassSelector):
         ...
 
     def __init__(self, default=Undefined, **params):
-        from numpy import ndarray
+        ndarray = t.cast(t.Any, importlib.import_module('numpy')).ndarray
         super().__init__(default=default, class_=ndarray, **params)
 
     @classmethod
@@ -2782,7 +2786,7 @@ class Array(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        import numpy
+        numpy = t.cast(t.Any, importlib.import_module('numpy'))
         if isinstance(value, str):
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
@@ -2849,7 +2853,7 @@ class DataFrame(ClassSelector):
         ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
-        from pandas import DataFrame as pdDFrame
+        pdDFrame = t.cast(t.Any, importlib.import_module('pandas')).DataFrame
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
@@ -2917,7 +2921,7 @@ class DataFrame(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        import pandas
+        pandas = t.cast(t.Any, importlib.import_module('pandas'))
         if isinstance(value, str):
             return _deserialize_from_path(
                 {
@@ -2980,7 +2984,7 @@ class Series(ClassSelector):
         ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
-        from pandas import Series as pdSeries
+        pdSeries = t.cast(t.Any, importlib.import_module('pandas')).Series
         self.rows = rows
         t.cast(t.Any, ClassSelector.__init__)(
             self, default=default, class_=pdSeries, allow_None=allow_None, **params
@@ -3066,12 +3070,12 @@ class List(Parameter[T]):
     def __init__(
         self,
         default=Undefined, *,
-        item_type: type[T] | UndefinedType = Undefined,
-        instantiate: bool | UndefinedType = Undefined,
-        bounds: tuple[int, int | None] | UndefinedType = Undefined,
-        is_instance: bool | UndefinedType = Undefined,
+        item_type: type[T] | tuple[type[T], ...] | None = t.cast(type[T] | tuple[type[T], ...] | None, Undefined),
+        instantiate: bool = t.cast(bool, Undefined),
+        bounds: tuple[int, int | None] | None = t.cast(tuple[int, int | None] | None, Undefined),
+        is_instance: bool = t.cast(bool, Undefined),
         **params
-    ):
+    ) -> None:
         self.item_type = item_type
         self.is_instance = is_instance
         self.bounds = bounds

@@ -771,10 +771,10 @@ def output(func, *output, **kw):
                 otype = otype()
             else:
                 from .import ClassSelector
-                otype = ClassSelector(class_=otype)
+                otype = t.cast(t.Any, ClassSelector)(class_=otype)
         elif isinstance(otype, tuple) and all(isinstance(t, type) for t in otype):
             from .import ClassSelector
-            otype = ClassSelector(class_=otype)
+            otype = t.cast(t.Any, ClassSelector)(class_=otype)
         if not isinstance(otype, Parameter):
             raise ValueError('output type must be declared with a Parameter class, '
                              'instance or a Python object type.')
@@ -1562,12 +1562,12 @@ class Parameter(_ParameterBase, t.Generic[T]):
             )
         self.name = None
         self.owner = None
-        self.allow_refs = allow_refs
-        self.nested_refs = nested_refs
-        self.precedence = precedence
+        self.allow_refs = t.cast(bool, allow_refs)
+        self.nested_refs = t.cast(bool, nested_refs)
+        self.precedence = t.cast(float | None, precedence)
         self.default = default
         self.default_factory = default_factory
-        self.doc = doc
+        self.doc = t.cast(str | None, doc)
         if constant is True or readonly is True:  # readonly => constant
             self.constant = True
         else:
@@ -1581,7 +1581,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 category=_ParamDeprecationWarning,
                 stacklevel=_find_stack_level(),
             )
-        self.pickle_default_value = pickle_default_value
+        self.pickle_default_value = t.cast(bool, pickle_default_value)
         self._set_allow_None(allow_None)
         self.metadata = metadata
         self.watchers = {}
@@ -4393,7 +4393,7 @@ class Parameters:
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
             elif hasattr(g,'_state_push') and isinstance(g,Parameterized):
-                g._state_push()  # type: ignore[attr-defined]
+                g._state_push()
 
     def _state_pop(self_):
         """
@@ -4410,7 +4410,7 @@ class Parameters:
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif isinstance(g, Parameterized) and hasattr(g, '_state_pop'):
-                g._state_pop()  # type: ignore[attr-defined]
+                g._state_pop()
 
     def pprint(
         self_,
@@ -4812,7 +4812,7 @@ class ParameterizedMetaclass(type):
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
                 parameter = copy.copy(parameter)
-                parameter.owner = mcs  # type: ignore[attr-defined]
+                parameter.owner = mcs
                 type.__setattr__(mcs, attribute_name, parameter)
             mcs.__dict__[attribute_name].__set__(None,value)
 
@@ -5761,7 +5761,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                 if isinstance(dfactory, DefaultFactory):
                     default_val = dfactory(cls=type(self), self=self, parameter=pobj)
                 else:
-                    default_val = dfactory()
+                    default_val = t.cast(t.Callable[[], t.Any], dfactory)()
                 with discard_events(self):
                     setattr(self, pname, default_val)
 
@@ -6231,7 +6231,7 @@ class ParameterizedFunction(Parameterized, Generic[P, R], metaclass=Parameterize
             params.pop('name')
             cls = self_or_cls.__class__
 
-        inst = Parameterized.__new__(cls)  # type: ignore[call-arg]
+        inst = Parameterized.__new__(cls)
         Parameterized.__init__(inst, **params)
         if 'name' in params:
             inst.__name__ = params['name']

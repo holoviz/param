@@ -741,7 +741,7 @@ class reactive_ops:
         {'key': [10, 20]}
         """
         resolver_type = NestedResolver if nested else Resolver
-        resolver = resolver_type(object=self._reactive, recursive=recursive)
+        resolver = cast(Any, resolver_type)(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
 
     def updating(self) -> 'rx':
@@ -1266,7 +1266,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             evaled = eval_fn()(*combined_args, **combined_kwargs)
             for val in evaled:
                 yield val
-        wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
+        wrapper_fn = cast(Any, depends)(**dependencies, watch=watch)(wrapped)
         cast(Any, wrapped)._dinfo = wrapper_fn._dinfo
     elif inspect.isasyncgenfunction(function):
         async def wrapped(*wargs, **wkwargs):
@@ -1276,10 +1276,10 @@ def bind(function, *args, watch: bool = False, **kwargs):
             evaled = eval_fn()(*combined_args, **combined_kwargs)
             async for val in evaled:
                 yield val
-        wrapper_fn = depends(**dependencies, watch=watch)(wrapped)
+        wrapper_fn = cast(Any, depends)(**dependencies, watch=watch)(wrapped)
         cast(Any, wrapped)._dinfo = wrapper_fn._dinfo
     elif iscoroutinefunction(function):
-        @depends(**dependencies, watch=watch)
+        @cast(Any, depends)(**dependencies, watch=watch)
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
@@ -1287,7 +1287,7 @@ def bind(function, *args, watch: bool = False, **kwargs):
             evaled = eval_fn()(*combined_args, **combined_kwargs)
             return await evaled
     else:
-        @depends(**dependencies, watch=watch)
+        @cast(Any, depends)(**dependencies, watch=watch)
         def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
             return eval_fn()(*combined_args, **combined_kwargs)

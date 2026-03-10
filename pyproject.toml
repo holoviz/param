@@ -149,3 +149,18 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.pyrefly]
+project-includes = ["param/"]
+project-excludes = [
+    "param/version.py",
+    "**/version.py",
+    "**/tests",
+    "**/test_*",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/.git",
+]
+infer-with-first-use = false

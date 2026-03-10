@@ -40,6 +40,7 @@ Lets update the reactive value and check its length:
 >>> rx_value.rx.len()
 4
 """
+import importlib
 import os
 
 from . import version
@@ -115,7 +116,7 @@ try:
     if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
         # If setuptools_scm is installed (e.g. in a development environment with
         # an editable install), then use it to determine the version dynamically.
-        from setuptools_scm import get_version
+        from setuptools_scm import get_version  # type: ignore[unresolved-import,import-untyped]
 
         # This will fail with LookupError if the package is not installed in
         # editable mode or if Git is not installed.
@@ -127,7 +128,7 @@ except (ImportError, LookupError, FileNotFoundError):
     try:
         # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
         # the hopefully stable version variable.
-        from ._version import version as __version__
+        __version__ = importlib.import_module(f"{__name__}._version").version
     except (ModuleNotFoundError, ImportError):
         # Either _version doesn't exist (ModuleNotFoundError) or version isn't
         # in _version (ImportError). ModuleNotFoundError is a subclass of
@@ -145,8 +146,7 @@ except (ImportError, LookupError, FileNotFoundError):
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
-main=Parameterized(name="main")
-
+main = Parameterized(name="main")
 
 # A global random seed (integer or rational) available for controlling
 # the behaviour of Parameterized objects with random state.

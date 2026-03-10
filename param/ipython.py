@@ -425,7 +425,7 @@ def ipython_async_executor(func):
             # We are in Jupyter and can piggyback the tornado IOLoop
             from tornado.ioloop import IOLoop  # type: ignore[unresolved-import]
             ioloop = IOLoop.current()
-            event_loop = t.cast(t.Any, ioloop).asyncio_loop
+            event_loop = ioloop.asyncio_loop  # type: ignore[attr-defined]
             if event_loop.is_running():
                 ioloop.add_callback(func)
             else:

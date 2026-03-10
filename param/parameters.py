@@ -122,15 +122,15 @@ def guess_param_types(**kwargs) -> dict[str, Parameter]:
             params[k] = List(default=v, constant=True)
         else:
             if 'numpy' in sys.modules:
-                numpy_mod = t.cast(t.Any, sys.modules['numpy'])
-                ndarray = numpy_mod.ndarray
+                numpy_mod = sys.modules['numpy']
+                ndarray = numpy_mod.ndarray  # type: ignore[unresolved-attribute]
                 if isinstance(v, ndarray):
                     params[k] = Array(default=v, constant=True)
                     continue
             if 'pandas' in sys.modules:
-                pandas_mod = t.cast(t.Any, sys.modules['pandas'])
-                pdDFrame = pandas_mod.DataFrame
-                pdSeries = pandas_mod.Series
+                pandas_mod = sys.modules['pandas']
+                pdDFrame = pandas_mod.DataFrame  # type: ignore[unresolved-attribute]
+                pdSeries = pandas_mod.Series  # type: ignore[unresolved-attribute]
                 if isinstance(v, pdDFrame):
                     params[k] = DataFrame(default=v, constant=True)
                     continue
@@ -2920,7 +2920,7 @@ class Array(ClassSelector):
         ...
 
     def __init__(self, default=Undefined, **params):
-        ndarray = t.cast(t.Any, importlib.import_module('numpy')).ndarray
+        ndarray = importlib.import_module('numpy').ndarray  # type: ignore[unresolved-attribute]
         super().__init__(default=default, class_=ndarray, **params)
 
     @classmethod
@@ -3000,7 +3000,7 @@ class DataFrame(ClassSelector):
         ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
-        pdDFrame = t.cast(t.Any, importlib.import_module('pandas')).DataFrame
+        pdDFrame = importlib.import_module('pandas').DataFrame  # type: ignore[unresolved-attribute]
         self.rows = rows
         self.columns = columns
         self.ordered = ordered

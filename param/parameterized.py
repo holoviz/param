@@ -1578,12 +1578,12 @@ class Parameter(_ParameterBase, t.Generic[T]):
             )
         self.name = None
         self.owner = None
-        self.allow_refs = t.cast(bool, allow_refs)
-        self.nested_refs = t.cast(bool, nested_refs)
-        self.precedence = t.cast(float | None, precedence)
+        self.allow_refs = allow_refs  # type: ignore[assignment]
+        self.nested_refs = nested_refs  # type: ignore[assignment]
+        self.precedence = precedence  # type: ignore[assignment]
         self.default = default
-        self.default_factory = default_factory
-        self.doc = t.cast(str | None, doc)
+        self.default_factory = default_factory  # type: ignore[assignment]
+        self.doc = doc  # type: ignore[assignment]
         if constant is True or readonly is True:  # readonly => constant
             self.constant = True
         else:
@@ -3275,17 +3275,17 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[attr-defined]
-        param_ns = t.cast(Parameters, t.cast(t.Any, self_or_cls).param)
+        param_ns = self_or_cls.param
 
         if isinstance(self_or_cls,type):
             a = (None,self_or_cls)
         else:
             a = (self_or_cls,)
 
-        for n,p in param_ns.objects('existing').items():
+        for n,p in param_ns.objects('existing').items():  # ty: ignore[possibly-missing-attribute]
             if hasattr(p, '_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
-                    g = param_ns.get_value_generator(n)
+                    g = param_ns.get_value_generator(n)  # ty: ignore[possibly-missing-attribute]
                     g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -3344,7 +3344,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.serialize_parameters(t.cast(Any, self_or_cls), subset=subset)
+        return serializer.serialize_parameters(self_or_cls, subset=subset)
 
     def serialize_value(self_, pname: str, mode: str = 'json'):
         """
@@ -3395,7 +3395,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.serialize_parameter_value(t.cast(Any, self_or_cls), pname)
+        return serializer.serialize_parameter_value(self_or_cls, pname)
 
     def deserialize_parameters(self_, serialization, subset: Iterable[str] | None = None, mode: str = 'json') -> dict:
         """
@@ -3447,7 +3447,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.deserialize_parameters(t.cast(Any, self_or_cls), serialization, subset=subset)
+        return serializer.deserialize_parameters(self_or_cls, serialization, subset=subset)
 
     def deserialize_value(self_, pname: str, value, mode: str = 'json'):
         """
@@ -3500,7 +3500,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.deserialize_parameter_value(t.cast(Any, self_or_cls), pname, value)
+        return serializer.deserialize_parameter_value(self_or_cls, pname, value)
 
     def schema(self_, safe: bool = False, subset: Iterable[str] | None = None, mode: str = 'json'):
         """
@@ -3558,7 +3558,7 @@ class Parameters:
             raise ValueError(f'Mode {mode!r} not in available serialization formats {list(Parameter._serializers.keys())!r}')
         self_or_cls = self_.self_or_cls
         serializer = Parameter._serializers[mode]
-        return serializer.schema(t.cast(Any, self_or_cls), safe=safe, subset=subset)
+        return serializer.schema(self_or_cls, safe=safe, subset=subset)
 
     def values(self_, onlychanged: bool = False) -> dict[str, Any]:
         """
@@ -3595,10 +3595,10 @@ class Parameters:
         {'a': 10}
         """
         self_or_cls = self_.self_or_cls
-        param_ns = t.cast(Parameters, t.cast(t.Any, self_or_cls).param)
+        param_ns = self_or_cls.param
         vals = []
-        for name, val in param_ns.objects('existing').items():
-            value = param_ns.get_value_generator(name)
+        for name, val in param_ns.objects('existing').items():  # ty: ignore[possibly-missing-attribute]
+            value = param_ns.get_value_generator(name)  # ty: ignore[possibly-missing-attribute]
             if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
                 continue
             if not onlychanged or not Comparator.is_equal(value, val.default):
@@ -3619,8 +3619,8 @@ class Parameters:
         (i.e. equivalent to ``getattr(name)``).
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = t.cast(Parameters, t.cast(t.Any, cls_or_slf).param)
-        param_obj = param_ns.objects('existing').get(name)
+        param_ns = cls_or_slf.param
+        param_obj = param_ns.objects('existing').get(name)  # ty: ignore[possibly-missing-attribute]
 
         if not param_obj:
             return getattr(cls_or_slf, name)
@@ -3679,19 +3679,19 @@ class Parameters:
         <UniformRandom UniformRandom ...>
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = t.cast(Parameters, t.cast(t.Any, cls_or_slf).param)
-        param_obj = param_ns.objects('existing').get(name)
+        param_ns = cls_or_slf.param
+        param_obj = param_ns.objects('existing').get(name)  # ty: ignore[possibly-missing-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
-        elif hasattr(param_obj,'attribs'):
-            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]
+        elif hasattr(param_obj, 'attribs'):
+            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # ty: ignore[possibly-missing-attribute]
 
         # not a Dynamic Parameter
-        elif not hasattr(param_obj,'_value_is_dynamic'):
-            value = getattr(cls_or_slf,name)
+        elif not hasattr(param_obj, '_value_is_dynamic'):
+            value = getattr(cls_or_slf, name)
 
         # Dynamic Parameter...
         else:
@@ -3743,20 +3743,20 @@ class Parameters:
         -0.7312715117751976
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = t.cast(Parameters, t.cast(t.Any, cls_or_slf).param)
-        param_obj = param_ns.objects('existing').get(name)
+        param_ns = cls_or_slf.param
+        param_obj = param_ns.objects('existing').get(name)  # ty: ignore[possibly-missing-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [param_ns.inspect_value(a) for a in param_obj.attribs]
+            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # ty: ignore[possibly-missing-attribute]
         elif not hasattr(param_obj,'_inspect'):
             value = getattr(cls_or_slf,name)
         else:
             if isinstance(cls_or_slf,type):
-                value = param_obj._inspect(None,cls_or_slf)
+                value = param_obj._inspect(None, cls_or_slf)
             else:
-                value = param_obj._inspect(cls_or_slf,None)
+                value = param_obj._inspect(cls_or_slf, None)
 
         return value
 

@@ -151,7 +151,7 @@ ignore = [
 convention = "numpy"
 
 [tool.pyrefly]
-project-includes = ["param/**/*.py"]
+project-includes = ["param/"]
 project-excludes = [
     "param/version.py",
     "**/version.py",
@@ -163,7 +163,4 @@ project-excludes = [
     "**/node_modules",
     "**/.git",
 ]
-search-path = ["./param"]
-python-platform = "darwin"
-python-version = "3.11.0"
 infer-with-first-use = false

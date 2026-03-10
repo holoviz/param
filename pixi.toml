@@ -200,6 +200,6 @@ pyrefly = "*"
 [feature.lint.tasks]
 lint = 'pre-commit run --all-files'
 lint-install = 'pre-commit install'
-ty-typecheck = 'ty check param --exclude param/version.py'
+ty-typecheck = 'ty check param --exclude param/version.py --ignore unused-ignore-comment'
 mypy-typecheck = 'mypy param --follow-imports=skip --disable-error-code import-untyped --disable-error-code import-not-found'
 pyrefly-typecheck = 'pyrefly check --output-format min-text --count-errors=0'

@@ -15,6 +15,7 @@ import inspect
 import numbers
 import operator
 import os
+import pathlib
 import re
 import sys
 import types
@@ -2100,16 +2101,57 @@ class Comparator:
     To use the Comparator simply call the is_equal function.
     """
 
+    # Maximum number of elements for array/frame equality checks.
+    # Above this threshold the comparator gives up and returns False
+    # (triggering watchers) rather than doing an expensive comparison.
+    array_max_size = 1_000_000
+
     equalities = {
         numbers.Number: operator.eq,
         str: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq,
+        pathlib.PurePath: operator.eq,
         lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
+        lambda o: type(o).__module__.startswith('numpy') and hasattr(o, 'shape'): lambda a, b: Comparator._array_equal(a, b),
+        lambda o: type(o).__module__.startswith('pandas') and hasattr(o, 'equals'): lambda a, b: Comparator._pandas_equal(a, b),
     }
     gen_equalities = {
         _dt_types: operator.eq
     }
+
+    @staticmethod
+    def _array_equal(obj1, obj2):
+        """Equality check for numpy arrays with a size cutoff."""
+        import numpy as np
+        if obj1 is obj2:
+            return True
+        if type(obj1) is not type(obj2):
+            return False
+        if obj1.shape != obj2.shape or obj1.dtype != obj2.dtype:
+            return False
+        if obj1.size > Comparator.array_max_size:
+            return False
+        try:
+            return bool(np.array_equal(obj1, obj2))
+        except (ValueError, TypeError):
+            return False
+
+    @staticmethod
+    def _pandas_equal(obj1, obj2):
+        """Equality check for pandas DataFrame/Series with a size cutoff."""
+        if obj1 is obj2:
+            return True
+        if type(obj1) is not type(obj2):
+            return False
+        if obj1.shape != obj2.shape:
+            return False
+        if obj1.size > Comparator.array_max_size:
+            return False
+        try:
+            return bool(obj1.equals(obj2))
+        except (ValueError, TypeError, AttributeError):
+            return False
 
     @classmethod
     def is_equal(cls, obj1, obj2):

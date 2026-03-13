@@ -2230,7 +2230,12 @@ class Dict(ClassSelector):
 
 
 class Array(ClassSelector):
-    """Parameter whose value is a numpy array."""
+    """Parameter whose value is a numpy array.
+
+    Accepts numpy ``ndarray`` objects as well as array-like objects that
+    implement the ``__array__`` protocol (e.g. pandas ``ExtensionArray``
+    subclasses such as ``ArrowStringArray``).
+    """
 
     @typing.overload
     def __init__(
@@ -2245,6 +2250,18 @@ class Array(ClassSelector):
     def __init__(self, default=Undefined, **params):
         from numpy import ndarray
         super().__init__(default=default, class_=ndarray, **params)
+
+    @staticmethod
+    def _is_array_like(val):
+        """Return True if *val* supports the numpy array protocol."""
+        return hasattr(val, '__array__') or hasattr(val, '__array_interface__')
+
+    def _validate_class_(self, val, class_, is_instance):
+        # Accept array-like objects (e.g. pandas ExtensionArray,
+        # ArrowStringArray) that support the numpy array protocol.
+        if is_instance and not isinstance(val, class_) and self._is_array_like(val):
+            return
+        super()._validate_class_(val, class_, is_instance)
 
     @classmethod
     def serialize(cls, value):

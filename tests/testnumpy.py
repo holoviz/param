@@ -78,3 +78,81 @@ class TestNumpy(unittest.TestCase):
 
         mp = MatParam()
         mp.param.pprint()
+
+    def test_array_accepts_array_like_with_dunder_array(self):
+        """Objects implementing __array__ should be accepted by param.Array."""
+        class ArrayLike:
+            """Minimal array-like with __array__ protocol."""
+            def __init__(self, data):
+                self._data = numpy.asarray(data)
+            def __array__(self, dtype=None, copy=None):
+                if dtype is not None:
+                    return self._data.astype(dtype)
+                return self._data
+
+        class P(param.Parameterized):
+            arr = param.Array()
+
+        p = P()
+        array_like = ArrayLike([1, 2, 3])
+        p.arr = array_like  # Should not raise
+        numpy.testing.assert_array_equal(numpy.asarray(p.arr), [1, 2, 3])
+
+    def test_array_accepts_array_like_with_array_interface(self):
+        """Objects with __array_interface__ should be accepted."""
+        class ArrayInterface:
+            """Minimal object with __array_interface__."""
+            def __init__(self, data):
+                self._arr = numpy.asarray(data)
+
+            @property
+            def __array_interface__(self):
+                return self._arr.__array_interface__
+
+        class P(param.Parameterized):
+            arr = param.Array()
+
+        p = P()
+        obj = ArrayInterface([4, 5, 6])
+        p.arr = obj  # Should not raise
+        numpy.testing.assert_array_equal(numpy.asarray(p.arr), [4, 5, 6])
+
+    def test_array_rejects_plain_list(self):
+        """Plain lists should still be rejected (no __array__ attribute)."""
+        class P(param.Parameterized):
+            arr = param.Array()
+
+        p = P()
+        with self.assertRaises(ValueError):
+            p.arr = [1, 2, 3]
+
+    def test_array_rejects_string(self):
+        """Strings should still be rejected."""
+        class P(param.Parameterized):
+            arr = param.Array()
+
+        p = P()
+        with self.assertRaises(ValueError):
+            p.arr = "not an array"
+
+    def test_array_accepts_pandas_extension_array(self):
+        """pandas ExtensionArray subclasses should be accepted."""
+        try:
+            import pandas as pd
+        except ImportError:
+            self.skipTest("pandas not available")
+
+        class P(param.Parameterized):
+            arr = param.Array()
+
+        p = P()
+        # Categorical array implements __array__
+        cat = pd.Categorical(["a", "b", "a"])
+        p.arr = cat  # Should not raise
+
+        # ArrowStringArray (pandas >= 1.2 with pyarrow) also implements __array__
+        try:
+            arrow_arr = pd.array(["x", "y", "z"], dtype="string[pyarrow]")
+            p.arr = arrow_arr  # Should not raise
+        except (ImportError, TypeError):
+            pass  # pyarrow not installed, skip this sub-test

@@ -2113,8 +2113,8 @@ class Comparator:
         type(None): operator.eq,
         pathlib.PurePath: operator.eq,
         lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
-        lambda o: type(o).__module__.startswith('numpy') and hasattr(o, 'shape'): lambda a, b: Comparator._array_equal(a, b),
-        lambda o: type(o).__module__.startswith('pandas') and hasattr(o, 'equals'): lambda a, b: Comparator._pandas_equal(a, b),
+        lambda o: type(o).__module__.startswith('numpy') and all(hasattr(o, a) for a in ('shape', 'dtype', 'size')): lambda a, b: Comparator._array_equal(a, b),
+        lambda o: type(o).__module__.startswith('pandas') and all(hasattr(o, a) for a in ('shape', 'size', 'equals')): lambda a, b: Comparator._pandas_equal(a, b),
     }
     gen_equalities = {
         _dt_types: operator.eq
@@ -2123,18 +2123,21 @@ class Comparator:
     @staticmethod
     def _array_equal(obj1, obj2):
         """Equality check for numpy arrays with a size cutoff."""
-        import numpy as np
         if obj1 is obj2:
             return True
         if type(obj1) is not type(obj2):
             return False
-        if obj1.shape != obj2.shape or obj1.dtype != obj2.dtype:
-            return False
-        if obj1.size > Comparator.array_max_size:
+        try:
+            if obj1.shape != obj2.shape or obj1.dtype != obj2.dtype:
+                return False
+            if obj1.size > Comparator.array_max_size:
+                return False
+        except AttributeError:
             return False
         try:
+            import numpy as np
             return bool(np.array_equal(obj1, obj2))
-        except (ValueError, TypeError):
+        except (ImportError, ValueError, TypeError):
             return False
 
     @staticmethod
@@ -2144,13 +2147,13 @@ class Comparator:
             return True
         if type(obj1) is not type(obj2):
             return False
-        if obj1.shape != obj2.shape:
-            return False
-        if obj1.size > Comparator.array_max_size:
-            return False
         try:
+            if obj1.shape != obj2.shape:
+                return False
+            if obj1.size > Comparator.array_max_size:
+                return False
             return bool(obj1.equals(obj2))
-        except (ValueError, TypeError, AttributeError):
+        except (AttributeError, ValueError, TypeError):
             return False
 
     @classmethod

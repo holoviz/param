@@ -159,3 +159,14 @@ class TestComparatorPandas:
             assert not Comparator.is_equal(a, b)
         finally:
             Comparator.array_max_size = old
+
+    def test_dataframe_large_skips(self):
+        """DataFrames larger than array_max_size should return False."""
+        old = Comparator.array_max_size
+        try:
+            Comparator.array_max_size = 5
+            a = pd.DataFrame({'x': range(10)})
+            b = pd.DataFrame({'x': range(10)})
+            assert not Comparator.is_equal(a, b)
+        finally:
+            Comparator.array_max_size = old

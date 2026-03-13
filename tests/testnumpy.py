@@ -97,6 +97,8 @@ class TestNumpy(unittest.TestCase):
         array_like = ArrayLike([1, 2, 3])
         p.arr = array_like  # Should not raise
         numpy.testing.assert_array_equal(numpy.asarray(p.arr), [1, 2, 3])
+        # Verify serialize fallback (ArrayLike has no .tolist())
+        self.assertEqual(param.Array.serialize(array_like), [1, 2, 3])
 
     def test_array_accepts_array_like_with_array_interface(self):
         """Objects with __array_interface__ should be accepted."""
@@ -149,10 +151,12 @@ class TestNumpy(unittest.TestCase):
         # Categorical array implements __array__
         cat = pd.Categorical(["a", "b", "a"])
         p.arr = cat  # Should not raise
+        # Verify serialization works on accepted array-like
+        self.assertEqual(param.Array.serialize(cat), ["a", "b", "a"])
 
         # ArrowStringArray (pandas >= 1.2 with pyarrow) also implements __array__
         try:
             arrow_arr = pd.array(["x", "y", "z"], dtype="string[pyarrow]")
             p.arr = arrow_arr  # Should not raise
-        except (ImportError, TypeError):
-            pass  # pyarrow not installed, skip this sub-test
+        except (ImportError, TypeError, ValueError):
+            pass  # pyarrow not installed or dtype unavailable

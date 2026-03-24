@@ -3872,7 +3872,9 @@ class Parameters:
                     outputs[name] = (otype, method, idx)
         return outputs
 
-    def _spec_to_obj(self_, spec: str, dynamic: bool = True, intermediate: bool = True):
+    def _spec_to_obj(
+        self_, spec: str, dynamic: bool = True, intermediate: bool = True
+    ) -> tuple[list[PInfo | MInfo], list[DInfo]]:
         """
         Resolve a dependency specification into lists of explicit
         parameter dependencies and dynamic dependencies.
@@ -5272,7 +5274,7 @@ script_repr_reg[FunctionType] = function_script_repr
 #: before every call to __db_print, and is expected to evaluate to a
 #: string that is suitable for prefixing messages and warnings (such
 #: as some indicator of the global state).
-dbprint_prefix=None
+dbprint_prefix = None
 
 
 def truncate(str_, maxlen = 30):

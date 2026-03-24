@@ -1579,9 +1579,20 @@ class Tuple(Parameter[T]):
         @t.overload
         def __init__(
             self: Tuple[tuple[t.Any, ...]],
+            *,
+            length: int | None = None,
+            allow_None: t.Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Tuple[tuple[t.Any, ...]],
             default: tuple[t.Any, ...] = (0, 0),
             *,
             length: int | None = None,
+            allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
             ...
@@ -1600,7 +1611,7 @@ class Tuple(Parameter[T]):
         @t.overload
         def __init__(
             self: Tuple[tuple[t.Any, ...] | None],
-            default: tuple[t.Any, ...] | None = None,
+            default: None,
             *,
             length: int | None = None,
             allow_None: bool = False,

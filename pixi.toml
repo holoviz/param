@@ -211,6 +211,7 @@ numpy = "*"
 pandas = "*"
 pyrefly = "*"
 
+[feature.typecheck.tasks]
 ty-typecheck = 'ty check param --exclude param/version.py --ignore unused-type-ignore-comment'
 mypy-typecheck = 'mypy param --follow-imports=skip --disable-error-code import-untyped --disable-error-code import-not-found'
 pyrefly-typecheck = 'pyrefly check --output-format min-text --count-errors=0'

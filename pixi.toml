@@ -15,6 +15,7 @@ default = [
     "example",
     "test-example",
     "lint",
+    "typecheck",
     "doc",
     "dev",
 ]
@@ -57,6 +58,10 @@ no-default-feature = true
 
 [environments.lint]
 features = ["py313", "lint"]
+no-default-feature = true
+
+[environments.typecheck]
+features = ["py313", "typecheck"]
 no-default-feature = true
 
 [feature.required.dependencies]
@@ -191,15 +196,21 @@ build-pip = 'python -m build .'
 # =============================================
 [feature.lint.dependencies]
 pre-commit = "*"
+
+[feature.lint.tasks]
+lint = 'pre-commit run --all-files'
+lint-install = 'pre-commit install'
+
+# =============================================
+# =============== TYPECHECK ===================
+# =============================================
+[feature.typecheck.dependencies]
 ty = "*"
 mypy = "*"
 numpy = "*"
 pandas = "*"
 pyrefly = "*"
 
-[feature.lint.tasks]
-lint = 'pre-commit run --all-files'
-lint-install = 'pre-commit install'
 ty-typecheck = 'ty check param --exclude param/version.py --ignore unused-type-ignore-comment'
 mypy-typecheck = 'mypy param --follow-imports=skip --disable-error-code import-untyped --disable-error-code import-not-found'
 pyrefly-typecheck = 'pyrefly check --output-format min-text --count-errors=0'

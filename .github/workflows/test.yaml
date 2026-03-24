@@ -146,9 +146,9 @@ jobs:
           install: false
       - name: Run ty + mypy + pyrefly typecheck
         run: |
-          pixi run -e lint ty-typecheck
-          pixi run -e lint mypy-typecheck
-          pixi run -e lint pyrefly-typecheck
+          pixi run -e typecheck ty-typecheck
+          pixi run -e typecheck mypy-typecheck
+          pixi run -e typecheck pyrefly-typecheck
 
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}

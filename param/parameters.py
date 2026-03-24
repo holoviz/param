@@ -3267,7 +3267,9 @@ class List(Parameter[T]):
     def __init__(
         self,
         default=Undefined, *,
-        item_type: type[T] | tuple[type[T], ...] | None = t.cast(type[T] | tuple[type[T], ...] | None, Undefined),
+        item_type: type[t.Any] | tuple[type[t.Any], ...] | None = t.cast(
+            type[t.Any] | tuple[type[t.Any], ...] | None, Undefined
+        ),
         instantiate: bool = t.cast(bool, Undefined),
         bounds: tuple[int, int | None] | None = t.cast(tuple[int, int | None] | None, Undefined),
         is_instance: bool = t.cast(bool, Undefined),

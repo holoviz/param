@@ -1543,7 +1543,10 @@ class rx:
             root = self._root
             root._shared_obj[0] = eval_function_with_deps(root._fn)
             cast(Any, root)._dirty_obj = False
-        return self._shared_obj[0]
+        shared_obj = self._shared_obj
+        if shared_obj is None:
+            raise RuntimeError("Reactive shared object could not be initialized.")
+        return shared_obj[0]
 
     @_obj.setter
     def _obj(self, obj):

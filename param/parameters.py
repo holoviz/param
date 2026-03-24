@@ -3018,7 +3018,7 @@ class DataFrame(ClassSelector[T]):
         @t.overload
         def __init__(
             self: DataFrame[pd.DataFrame],
-            default: pd.DataFrame = ...,
+            default: pd.DataFrame = pd.DataFrame([]),
             *,
             rows: int | tuple[int | None, int | None] | None = None,
             columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
@@ -3150,7 +3150,7 @@ class Series(ClassSelector[T]):
         @t.overload
         def __init__(
             self: Series[pd.Series],
-            default: pd.Series = ...,
+            default: pd.Series = pd.Series([]),
             *,
             rows: int | tuple[int | None, int | None] | None = None,
             allow_None: t.Literal[False] = False,

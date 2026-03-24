@@ -59,7 +59,13 @@ from ._utils import (
 # Utilities
 #-----------------------------------------------------------------------------
 
+LT = t.TypeVar("LT")
+CT = t.TypeVar("CT")
+IT = t.TypeVar("IT")
+
 if t.TYPE_CHECKING:
+    import pandas as pd
+
     K = t.TypeVar("K")
     V = t.TypeVar("V")
 
@@ -1419,7 +1425,7 @@ class Boolean(Parameter[T]):
     @t.overload
     def __init__(  # type: ignore[inconsistent-overload]
         self,
-        default=False,
+        default: bool | None = False,
         doc: str | None = None,
         label: str | None = None,
         precedence: float | None = None,
@@ -2769,12 +2775,12 @@ class ClassSelector(SelectorBase[T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[type[CT]],
             *,
-            class_: type[T] | tuple[type[T], ...],
-            default: T | None = None,
+            class_: type[CT] | tuple[type[CT], ...],
+            default: type[CT] | None = None,
             instantiate: bool = True,
-            is_instance: bool = True,
+            is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ClassSelectorInitKwargs]
         ) -> None:
@@ -2782,12 +2788,38 @@ class ClassSelector(SelectorBase[T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[type[CT] | None],
             *,
-            class_: type[T] | tuple[type[T], ...],
-            default: T | None = None,
+            class_: type[CT] | tuple[type[CT], ...],
+            default: type[CT] | None = None,
             instantiate: bool = True,
-            is_instance: bool = True,
+            is_instance: t.Literal[False],
+            allow_None: t.Literal[True] = True,
+            **kwargs: t.Unpack[ClassSelectorInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[IT],
+            *,
+            class_: type[IT] | tuple[type[IT], ...],
+            default: IT | None = None,
+            instantiate: bool = True,
+            is_instance: t.Literal[True] = True,
+            allow_None: t.Literal[False] = False,
+            **kwargs: t.Unpack[ClassSelectorInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[IT | None],
+            *,
+            class_: type[IT] | tuple[type[IT], ...],
+            default: IT | None = None,
+            instantiate: bool = True,
+            is_instance: t.Literal[True] = True,
             allow_None: t.Literal[True] = True,
             **kwargs: t.Unpack[ClassSelectorInitKwargs]
         ) -> None:
@@ -2943,7 +2975,7 @@ class Array(ClassSelector):
             return numpy.asarray(value)
 
 
-class DataFrame(ClassSelector):
+class DataFrame(ClassSelector[T]):
     """
     Parameter whose value is a pandas ``DataFrame``.
 
@@ -2971,40 +3003,39 @@ class DataFrame(ClassSelector):
         'ordered': None,
     }
 
-    @t.overload
-    def __init__(self) -> None:
-        ...
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: DataFrame[pd.DataFrame],
+            default: pd.DataFrame = ...,
+            *,
+            rows: int | tuple[int | None, int | None] | None = None,
+            columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
+            ordered: bool | None = None,
+            allow_None: t.Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
-    @t.overload
-    def __init__(
-        self,
-        default: t.Any = None,
-        *,
-        rows: int | tuple[int | None, int | None] | None = None,
-        columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
-        ordered: bool | None = None,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = True,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: t.Callable[..., t.Any] | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ) -> None:
-        ...
+        @t.overload
+        def __init__(
+            self: DataFrame[pd.DataFrame | None],
+            default: pd.DataFrame | None = None,
+            *,
+            rows: int | tuple[int | None, int | None] | None = None,
+            columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
+            ordered: bool | None = None,
+            allow_None: t.Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
         pdDFrame = importlib.import_module('pandas').DataFrame  # type: ignore[unresolved-attribute]
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super().__init__(default=default, class_=pdDFrame, **params)
+        t.cast(t.Any, ClassSelector.__init__)(self, default=default, class_=pdDFrame, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -3089,7 +3120,7 @@ class DataFrame(ClassSelector):
             return pandas.DataFrame(value)
 
 
-class Series(ClassSelector):
+class Series(ClassSelector[T]):
     """
     Parameter whose value is a pandas ``Series``.
 
@@ -3104,31 +3135,28 @@ class Series(ClassSelector):
         ClassSelector._slot_defaults, rows=None, allow_None=False
     )
 
-    @t.overload
-    def __init__(self) -> None:
-        ...
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self: Series[pd.Series],
+            default: pd.Series = ...,
+            *,
+            rows: int | tuple[int | None, int | None] | None = None,
+            allow_None: t.Literal[False] = False,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
-    @t.overload
-    def __init__(
-        self,
-        default: t.Any = None,
-        *,
-        rows: int | tuple[int | None, int | None] | None = None,
-        allow_None: bool = False,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = True,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: t.Callable[..., t.Any] | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ) -> None:
-        ...
+        @t.overload
+        def __init__(
+            self: Series[pd.Series | None],
+            default: pd.Series | None = None,
+            *,
+            rows: int | tuple[int | None, int | None] | None = None,
+            allow_None: t.Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
         pdSeries = t.cast(t.Any, importlib.import_module('pandas')).Series
@@ -3184,10 +3212,10 @@ class List(Parameter[T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self,
-            default: list[T] = [],
+            self: List[list[LT]],
+            default: list[LT] = [],
             *,
-            item_type: type[T] | tuple[type[T], ...],
+            item_type: type[LT] | tuple[type[LT], ...],
             allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:
@@ -3195,8 +3223,19 @@ class List(Parameter[T]):
 
         @t.overload
         def __init__(
-            self,
-            default: list[T] | None = None,
+            self: List[list[LT] | None],
+            default: list[LT] | None = None,
+            *,
+            item_type: type[LT] | tuple[type[LT], ...],
+            allow_None: t.Literal[True] = True,
+            **kwargs: t.Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: List[list[t.Any] | None],
+            default: list[t.Any] | None = None,
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: t.Unpack[ParameterKwargs]
@@ -3205,10 +3244,10 @@ class List(Parameter[T]):
 
         @t.overload
         def __init__(
-            self,
-            default: list[T] = [],
+            self: List[list[t.Any]],
+            default: list[t.Any] = [],
             *,
-            item_type: type[T] | tuple[type[T], ...] | None = None,
+            item_type: None = None,
             allow_None: t.Literal[False] = False,
             **kwargs: t.Unpack[ParameterKwargs]
         ) -> None:

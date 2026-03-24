@@ -27,7 +27,7 @@ import os.path
 import pathlib
 import re
 import sys
-import typing_extensions as t
+import typing as t
 import warnings
 
 from collections import OrderedDict

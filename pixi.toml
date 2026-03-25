@@ -210,6 +210,9 @@ mypy = "*"
 numpy = "*"
 pandas = "*"
 pyrefly = "*"
+IPython = "*"
+setupstools_scm = "*"
+typing_extensions = "*"
 
 [feature.typecheck.tasks]
 ty-typecheck = 'ty check param --exclude param/version.py --ignore unused-type-ignore-comment'

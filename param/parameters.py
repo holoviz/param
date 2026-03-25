@@ -810,16 +810,16 @@ class Number(Dynamic[T]):
         self,
         default: t.Any = Undefined,
         *,
-        bounds: tuple[float | int | None, float | int | None] | None = t.cast(
+        bounds: tuple[float | int | None, float | int | None] | None = t.cast(  # pyrefly: ignore[bad-argument-type]
             "tuple[float | int | None, float | int | None] | None", Undefined
         ),
-        softbounds: tuple[float | int | None, float | int | None] | None = t.cast(
+        softbounds: tuple[float | int | None, float | int | None] | None = t.cast(  # pyrefly: ignore[bad-argument-type]
             "tuple[float | int | None, float | int | None] | None", Undefined
         ),
-        inclusive_bounds: tuple[bool, bool] = t.cast("tuple[bool, bool]", Undefined),
-        step: float | int | None = t.cast("float | int | None", Undefined),
-        set_hook: t.Callable[..., t.Any] | None = t.cast("t.Callable[..., t.Any] | None", Undefined),
-        allow_None: bool = t.cast("bool", Undefined),
+        inclusive_bounds: tuple[bool, bool] = t.cast("tuple[bool, bool]", Undefined),  # pyrefly: ignore[bad-argument-type]
+        step: float | int | None = t.cast("float | int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        set_hook: t.Callable[..., t.Any] | None = t.cast("t.Callable[..., t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -1027,7 +1027,7 @@ class Integer(Number[T]):
         self,
         default=Undefined,
         *,
-        allow_None: bool = t.cast("bool", Undefined),
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[NumberInitKwargs]
     ) -> None:
         t.cast("t.Any", Number.__init__)(self, default=default, allow_None=allow_None, **kwargs)
@@ -1662,8 +1662,8 @@ class Tuple(Parameter[T]):
         self,
         default: t.Any = Undefined,
         *,
-        length: int | None = t.cast("int | None", Undefined),
-        allow_None: bool = t.cast("bool", Undefined),
+        length: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -1761,8 +1761,8 @@ class NumericTuple(Tuple[T]):
         self,
         default: t.Any = Undefined,
         *,
-        length: int | None = t.cast("int | None", Undefined),
-        allow_None: bool = t.cast("bool", Undefined),
+        length: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
         t.cast("t.Any", super().__init__)(  # type: ignore[attr-defined,misc]
@@ -2910,7 +2910,7 @@ class Dict(ClassSelector[T]):
         def __init__(
             self: Dict[dict[t.Any, t.Any]],
             *,
-            default: dict[t.Any, t.Any] = t.cast("dict[t.Any, t.Any]", Undefined),
+            default: dict[t.Any, t.Any] = t.cast("dict[t.Any, t.Any]", Undefined),  # pyrefly: ignore[bad-argument-type]
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[ParameterKwargs]
         ) -> None:
@@ -3284,12 +3284,12 @@ class List(Parameter[T]):
     def __init__(
         self,
         default=Undefined, *,
-        item_type: type[t.Any] | tuple[type[t.Any], ...] | None = t.cast(
+        item_type: type[t.Any] | tuple[type[t.Any], ...] | None = t.cast(  # pyrefly: ignore[bad-argument-type]
             "type[t.Any] | tuple[type[t.Any], ...] | None", Undefined
         ),
-        instantiate: bool = t.cast("bool", Undefined),
-        bounds: tuple[int, int | None] | None = t.cast("tuple[int, int | None] | None", Undefined),
-        is_instance: bool = t.cast("bool", Undefined),
+        instantiate: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        bounds: tuple[int, int | None] | None = t.cast("tuple[int, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params
     ) -> None:
         self.item_type = item_type
@@ -3409,11 +3409,11 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = t.cast("t.Any", List)(default=[os.getcwd()], pickle_default_value=None, doc="""
+    search_paths = List(default=[os.getcwd()], pickle_default_value=False, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=t.cast("bool", None),
+    path_to_file = Boolean(default=True, pickle_default_value=False,
                            allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a
         'Folder'. If None, the path may point to *either* a 'File' *or*

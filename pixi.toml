@@ -211,7 +211,6 @@ numpy = "*"
 pandas = "*"
 pyrefly = "*"
 IPython = "*"
-setupstools_scm = "*"
 typing_extensions = "*"
 
 [feature.typecheck.tasks]

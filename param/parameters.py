@@ -35,6 +35,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from os import PathLike
 
+if sys.version_info < (3, 11):
+    from typing_extensions import Unpack
+else:
+    from typing import Unpack
+
 from .parameterized import (
     T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
     String, Undefined, UndefinedType, get_logger, instance_descriptor, _dt_types,
@@ -520,7 +525,7 @@ class Dynamic(Parameter[T]):
         default: t.Any = Undefined,
         *,
         allow_None: bool = t.cast(bool, Undefined),
-        **params: t.Unpack[ParameterKwargs]
+        **params: Unpack[ParameterKwargs]
     ) -> None:
         """
         Call the superclass's __init__ and set instantiate=True if the
@@ -739,7 +744,7 @@ class Number(Dynamic[T]):
             default: float = 0.0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -749,7 +754,7 @@ class Number(Dynamic[T]):
             default: float | None = 0.0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -759,7 +764,7 @@ class Number(Dynamic[T]):
             default: float | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -803,7 +808,7 @@ class Number(Dynamic[T]):
         step: float | int | None = t.cast(float | int | None, Undefined),
         set_hook: t.Callable[..., t.Any] | None = t.cast(t.Callable[..., t.Any] | None, Undefined),
         allow_None: bool = t.cast(bool, Undefined),
-        **params: t.Unpack[ParameterKwargs]
+        **params: Unpack[ParameterKwargs]
     ) -> None:
         """
         Initialize this parameter object and store the bounds.
@@ -982,7 +987,7 @@ class Integer(Number[T]):
             default: int = 0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -992,7 +997,7 @@ class Integer(Number[T]):
             default: int | None = 0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1002,7 +1007,7 @@ class Integer(Number[T]):
             default: int | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1011,7 +1016,7 @@ class Integer(Number[T]):
         default=Undefined,
         *,
         allow_None: bool = t.cast(bool, Undefined),
-        **kwargs: t.Unpack[NumberInitKwargs]
+        **kwargs: Unpack[NumberInitKwargs]
     ) -> None:
         t.cast(t.Any, Number.__init__)(self, default=default, allow_None=allow_None, **kwargs)
 
@@ -1049,7 +1054,7 @@ class Magnitude(Number[T]):
             default: float = 1.0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1059,7 +1064,7 @@ class Magnitude(Number[T]):
             default: float | None = 1.0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1069,7 +1074,7 @@ class Magnitude(Number[T]):
             default: float | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[NumberInitKwargs]
+            **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
@@ -1120,7 +1125,7 @@ class Date(Number[T]):
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[DateInitKwargs]
+            **kwargs: Unpack[DateInitKwargs]
         ) -> None:
             ...
 
@@ -1130,7 +1135,7 @@ class Date(Number[T]):
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[DateInitKwargs]
+            **kwargs: Unpack[DateInitKwargs]
         ) -> None:
             ...
 
@@ -1263,7 +1268,7 @@ class CalendarDate(Number[T]):
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[CalendarDateInitKwargs]
+            **kwargs: Unpack[CalendarDateInitKwargs]
         ) -> None:
             ...
 
@@ -1273,7 +1278,7 @@ class CalendarDate(Number[T]):
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[CalendarDateInitKwargs]
+            **kwargs: Unpack[CalendarDateInitKwargs]
         ) -> None:
             ...
 
@@ -1398,7 +1403,7 @@ class Boolean(Parameter[T]):
             default: bool = False,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1408,7 +1413,7 @@ class Boolean(Parameter[T]):
             default: bool | None = False,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1418,7 +1423,7 @@ class Boolean(Parameter[T]):
             default: bool | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1582,7 +1587,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1593,7 +1598,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1604,7 +1609,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1615,7 +1620,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: bool = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1647,7 +1652,7 @@ class Tuple(Parameter[T]):
         *,
         length: int | None = t.cast(int | None, Undefined),
         allow_None: bool = t.cast(bool, Undefined),
-        **params: t.Unpack[ParameterKwargs]
+        **params: Unpack[ParameterKwargs]
     ) -> None:
         """
         Initialize a tuple parameter with a fixed length (number of
@@ -1714,7 +1719,7 @@ class NumericTuple(Tuple[T]):
             default: tuple[float, ...] = (0.0, 0.0),
             *,
             length: int | None = None,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1725,7 +1730,7 @@ class NumericTuple(Tuple[T]):
             *,
             length: int | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1736,7 +1741,7 @@ class NumericTuple(Tuple[T]):
             *,
             length: int | None = None,
             allow_None: bool = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -1746,7 +1751,7 @@ class NumericTuple(Tuple[T]):
         *,
         length: int | None = t.cast(int | None, Undefined),
         allow_None: bool = t.cast(bool, Undefined),
-        **params: t.Unpack[ParameterKwargs]
+        **params: Unpack[ParameterKwargs]
     ) -> None:
         t.cast(t.Any, super().__init__)(  # type: ignore[attr-defined,misc]
             default=default, length=length, allow_None=allow_None, **params
@@ -2793,7 +2798,7 @@ class ClassSelector(SelectorBase[T]):
             instantiate: bool = True,
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ClassSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2806,7 +2811,7 @@ class ClassSelector(SelectorBase[T]):
             instantiate: bool = True,
             is_instance: t.Literal[False],
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ClassSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2819,7 +2824,7 @@ class ClassSelector(SelectorBase[T]):
             instantiate: bool = True,
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ClassSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2832,7 +2837,7 @@ class ClassSelector(SelectorBase[T]):
             instantiate: bool = True,
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ClassSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2895,7 +2900,7 @@ class Dict(ClassSelector[T]):
             *,
             default: dict[t.Any, t.Any] = t.cast(dict[t.Any, t.Any], Undefined),
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -2905,7 +2910,7 @@ class Dict(ClassSelector[T]):
             *,
             default: dict[t.Any, t.Any] | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3024,7 +3029,7 @@ class DataFrame(ClassSelector[T]):
             columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
             ordered: bool | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3037,7 +3042,7 @@ class DataFrame(ClassSelector[T]):
             columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
             ordered: bool | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3154,7 +3159,7 @@ class Series(ClassSelector[T]):
             *,
             rows: int | tuple[int | None, int | None] | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3165,7 +3170,7 @@ class Series(ClassSelector[T]):
             *,
             rows: int | tuple[int | None, int | None] | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3228,7 +3233,7 @@ class List(Parameter[T]):
             *,
             item_type: type[LT] | tuple[type[LT], ...],
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3239,7 +3244,7 @@ class List(Parameter[T]):
             *,
             item_type: type[LT] | tuple[type[LT], ...],
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3249,7 +3254,7 @@ class List(Parameter[T]):
             default: list[t.Any] | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3260,7 +3265,7 @@ class List(Parameter[T]):
             *,
             item_type: None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3473,7 +3478,7 @@ class Path(Parameter):
             search_paths: list[str] | None = None,
             check_exists: bool = True,
             allow_None: t.Literal[False] = False,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -3485,7 +3490,7 @@ class Path(Parameter):
             search_paths: list[str] | None = None,
             check_exists: bool = True,
             allow_None: t.Literal[True] = True,
-            **kwargs: t.Unpack[ParameterKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 

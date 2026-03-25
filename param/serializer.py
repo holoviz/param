@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import json
 import textwrap
+import typing as t
 
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Callable, cast
+from collections.abc import Callable, Iterable
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from .parameterized import Parameter, Parameterized
     from .parameters import (
         Tuple,
@@ -34,7 +34,7 @@ class Serialization:
     @classmethod
     def schema(
         cls, pobj: Parameterized | type[Parameterized], subset: Iterable[str] | None = None
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         raise NotImplementedError
 
     @classmethod
@@ -53,7 +53,7 @@ class Serialization:
         pobj: Parameterized | type[Parameterized],
         serialized: str,
         subset: Iterable[str] | None = None
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         """
         Deserialize a serialized object representing one or
         more Parameters into a dictionary of parameter values.
@@ -68,7 +68,7 @@ class Serialization:
     @classmethod
     def deserialize_parameter_value(
         cls, pobj: Parameterized | type[Parameterized], pname: str, value: str
-    ) -> Any:
+    ) -> t.Any:
         """Deserialize a single parameter value."""
         raise NotImplementedError
 
@@ -88,11 +88,11 @@ class JSONSerialization(Serialization):
     }
 
     @classmethod
-    def loads(cls, serialized: str) -> Any:
+    def loads(cls, serialized: str) -> t.Any:
         return json.loads(serialized)
 
     @classmethod
-    def dumps(cls, obj: Any) -> str:
+    def dumps(cls, obj: t.Any) -> str:
         return json.dumps(obj)
 
     @classmethod
@@ -102,9 +102,9 @@ class JSONSerialization(Serialization):
         subset: Iterable[str] | None = None,
         *,
         safe: bool = False
-    ) -> dict[str, Any]:
-        schema: dict[str, Any] = {}
-        params = cast(Any, pobj).param
+    ) -> dict[str, t.Any]:
+        schema: dict[str, t.Any] = {}
+        params = t.cast(t.Any, pobj).param
         for name, p in params.objects('existing').items():
             if subset is not None and name not in subset:
                 continue
@@ -119,8 +119,8 @@ class JSONSerialization(Serialization):
     def serialize_parameters(
         cls, pobj: Parameterized | type[Parameterized], subset: Iterable[str] | None = None
     ) -> str:
-        components: dict[str, Any] = {}
-        params = cast(Any, pobj).param
+        components: dict[str, t.Any] = {}
+        params = t.cast(t.Any, pobj).param
         for name, p in params.objects('existing').items():
             if subset is not None and name not in subset:
                 continue
@@ -134,10 +134,10 @@ class JSONSerialization(Serialization):
         pobj: Parameterized | type[Parameterized],
         serialized: str,
         subset: Iterable[str] | None = None
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         deserialized = cls.loads(serialized)
-        components: dict[str, Any] = {}
-        params = cast(Any, pobj).param
+        components: dict[str, t.Any] = {}
+        params = t.cast(t.Any, pobj).param
         for name, value in deserialized.items():
             if subset is not None and name not in subset:
                 continue
@@ -148,7 +148,7 @@ class JSONSerialization(Serialization):
     # Parameter level methods
 
     @classmethod
-    def _get_method(cls, ptype: str, suffix: str) -> Callable[..., Any] | None:
+    def _get_method(cls, ptype: str, suffix: str) -> Callable[..., t.Any] | None:
         """Return specialized method if available, otherwise None."""
         method_name = ptype.lower()+'_' + suffix
         return getattr(cls, method_name, None)
@@ -156,7 +156,7 @@ class JSONSerialization(Serialization):
     @classmethod
     def param_schema(
         cls, ptype: str, p: Parameter, safe: bool = False, subset: Iterable[str] | None = None
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         if ptype in cls.unserializable_parameter_types:
             raise UnserializableException
         dispatch_method = cls._get_method(ptype, 'schema')
@@ -168,22 +168,22 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def serialize_parameter_value(cls, pobj: Parameterized | type[Parameterized], pname: str) -> str:
-        params = cast(Any, pobj).param
+        params = t.cast(t.Any, pobj).param
         value = params.get_value_generator(pname)
         return cls.dumps(params[pname].serialize(value))
 
     @classmethod
     def deserialize_parameter_value(
         cls, pobj: Parameterized | type[Parameterized], pname: str, value: str
-    ) -> Any:
+    ) -> t.Any:
         value = cls.loads(value)
-        params = cast(Any, pobj).param
+        params = t.cast(t.Any, pobj).param
         return params[pname].deserialize(value)
 
     # Custom Schemas
 
     @classmethod
-    def class__schema(cls, class_: Any, safe: bool = False) -> dict[str, Any]:
+    def class__schema(cls, class_: t.Any, safe: bool = False) -> dict[str, t.Any]:
         from .parameterized import Parameterized
         if isinstance(class_, tuple):
             return {'anyOf': [cls.class__schema(cls_) for cls_ in class_]}
@@ -195,7 +195,7 @@ class JSONSerialization(Serialization):
             return {'type': 'object'}
 
     @classmethod
-    def array_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def array_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         if safe is True:
             msg = ('Array is not guaranteed to be safe for '
                    'serialization as the dtype is unknown')
@@ -203,11 +203,11 @@ class JSONSerialization(Serialization):
         return {'type': 'array'}
 
     @classmethod
-    def classselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def classselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         return cls.class__schema(p.class_, safe=safe)
 
     @classmethod
-    def dict_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def dict_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         if safe is True:
             msg = ('Dict is not guaranteed to be safe for '
                    'serialization as the key and value types are unknown')
@@ -215,15 +215,15 @@ class JSONSerialization(Serialization):
         return {'type': 'object'}
 
     @classmethod
-    def date_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def date_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         return {'type': 'string', 'format': 'date-time'}
 
     @classmethod
-    def calendardate_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def calendardate_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         return {'type': 'string', 'format': 'date'}
 
     @classmethod
-    def tuple_schema(cls, p: Tuple, safe: bool = False) -> dict[str, Any]:
+    def tuple_schema(cls, p: Tuple, safe: bool = False) -> dict[str, t.Any]:
         schema: dict[str, object] = {'type': 'array'}
         if p.length is not None:
             schema['minItems'] =  p.length
@@ -231,17 +231,17 @@ class JSONSerialization(Serialization):
         return schema
 
     @classmethod
-    def number_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def number_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         schema: dict[str, object] = {'type': p.__class__.__name__.lower() }
         return cls.declare_numeric_bounds(schema, p.bounds, p.inclusive_bounds)
 
     @classmethod
     def declare_numeric_bounds(
         cls,
-        schema: dict[str, Any],
-        bounds: tuple[Any | None, Any | None] | None,
+        schema: dict[str, t.Any],
+        bounds: tuple[t.Any | None, t.Any | None] | None,
         inclusive_bounds: tuple[bool, bool],
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         """Given an applicable numeric schema, augment with bounds information."""
         if bounds is not None:
             (low, high) = bounds
@@ -254,21 +254,21 @@ class JSONSerialization(Serialization):
         return schema
 
     @classmethod
-    def integer_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def integer_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         return cls.number_schema(p)
 
     @classmethod
-    def numerictuple_schema(cls, p: Tuple, safe: bool = False) -> dict[str, Any]:
+    def numerictuple_schema(cls, p: Tuple, safe: bool = False) -> dict[str, t.Any]:
         schema = cls.tuple_schema(p, safe=safe)
         schema['additionalItems'] = {'type': 'number'}
         return schema
 
     @classmethod
-    def xycoordinates_schema(cls, p: Tuple, safe: bool = False) -> dict[str, Any]:
+    def xycoordinates_schema(cls, p: Tuple, safe: bool = False) -> dict[str, t.Any]:
         return cls.numerictuple_schema(p, safe=safe)
 
     @classmethod
-    def range_schema(cls, p: Tuple, safe: bool = False) -> dict[str, Any]:
+    def range_schema(cls, p: Tuple, safe: bool = False) -> dict[str, t.Any]:
         schema = cls.tuple_schema(p, safe=safe)
         bounded_number = cls.declare_numeric_bounds(
             {'type': 'number'}, p.bounds, p.inclusive_bounds)
@@ -276,7 +276,7 @@ class JSONSerialization(Serialization):
         return schema
 
     @classmethod
-    def list_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def list_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         schema: dict[str, object] = {'type': 'array'}
         if safe is True and p.item_type is None:
             msg = ('List without a class specified cannot be guaranteed '
@@ -287,7 +287,7 @@ class JSONSerialization(Serialization):
         return schema
 
     @classmethod
-    def objectselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def objectselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         try:
             allowed_types = [{'type': cls.json_schema_literal_types[type(obj)]}
                              for obj in p.objects]
@@ -302,7 +302,7 @@ class JSONSerialization(Serialization):
             return {}
 
     @classmethod
-    def selector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def selector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         try:
             allowed_types = [{'type': cls.json_schema_literal_types[type(obj)]}
                              for obj in p.objects.values()]
@@ -317,7 +317,7 @@ class JSONSerialization(Serialization):
             return {}
 
     @classmethod
-    def listselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def listselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         if p.objects is None:
             if safe is True:
                 msg = ('ListSelector cannot be guaranteed to be safe for '
@@ -330,7 +330,7 @@ class JSONSerialization(Serialization):
         return {'type': 'array', 'items': {'enum': p.objects}}
 
     @classmethod
-    def dataframe_schema(cls, p: Parameter, safe: bool = False) -> dict[str, Any]:
+    def dataframe_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         schema: dict[str, object] = {'type': 'array'}
         if safe is True:
             msg = ('DataFrame is not guaranteed to be safe for '

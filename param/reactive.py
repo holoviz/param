@@ -91,11 +91,11 @@ from __future__ import annotations
 import inspect
 import math
 import operator
+import typing as t
 
-from collections.abc import Iterable, Iterator, Sized
+from collections.abc import Callable, Iterable, Iterator, Sized
 from functools import partial
 from types import FunctionType, MethodType
-from typing import Any, Callable, Optional, cast
 
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
@@ -110,13 +110,13 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 class Wrapper(Parameterized):
     """Helper class to allow updating literal values easily."""
 
-    object: Any = Parameter(allow_refs=False)
+    object: t.Any = Parameter(allow_refs=False)
 
 
 class GenWrapper(Parameterized):
     """Helper class to allow streaming from generator functions."""
 
-    object: Any = Parameter(allow_refs=True)
+    object: t.Any = Parameter(allow_refs=True)
 
 
 class Trigger(Parameterized):
@@ -132,11 +132,11 @@ class Trigger(Parameterized):
 class Resolver(Parameterized):
     """Helper class to allow (recursively) resolving references."""
 
-    object: Any = Parameter(allow_refs=True)
+    object: t.Any = Parameter(allow_refs=True)
 
     recursive = Boolean(default=False)
 
-    value: Any = Parameter()
+    value: t.Any = Parameter()
 
     def __init__(self, **params):
         self._watchers = []
@@ -174,7 +174,7 @@ class Resolver(Parameterized):
 
 class NestedResolver(Resolver):
 
-    object: Any = Parameter(allow_refs=True, nested_refs=True)
+    object: t.Any = Parameter(allow_refs=True, nested_refs=True)
 
 
 class reactive_ops:
@@ -741,7 +741,7 @@ class reactive_ops:
         {'key': [10, 20]}
         """
         resolver_type = NestedResolver if nested else Resolver
-        resolver = cast(Any, resolver_type)(object=self._reactive, recursive=recursive)
+        resolver = t.cast(t.Any, resolver_type)(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
 
     def updating(self) -> 'rx':
@@ -778,7 +778,7 @@ class reactive_ops:
         >>> updating.rx.value  # Becomes True during the update process, then False.
         False
         """
-        wrapper = cast(Any, Wrapper)(object=False)
+        wrapper = t.cast(t.Any, Wrapper)(object=False)
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
@@ -854,7 +854,7 @@ class reactive_ops:
                 return initial
             else:
                 return self.value
-        return cast(Any, bind(eval, *deps)).rx()
+        return t.cast(t.Any, bind(eval, *deps)).rx()
 
     def where(self, x, y) -> 'rx':
         """
@@ -930,7 +930,7 @@ class reactive_ops:
 
         def ternary(condition, _):
             return resolve_value(x) if condition else resolve_value(y)
-        return cast(Any, bind(ternary, self._reactive, trigger.param.value))
+        return t.cast(t.Any, bind(ternary, self._reactive, trigger.param.value))
 
     # Operations to get the output and set the input of an expression
 
@@ -1271,39 +1271,39 @@ def bind(function, *args, watch: bool = False, **kwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = cast(Iterable[Any], eval_fn()(*combined_args, **combined_kwargs))
+            evaled = t.cast(Iterable[t.Any], eval_fn()(*combined_args, **combined_kwargs))
             for val in evaled:
                 yield val
-        wrapper_fn = cast(Any, depends)(**dependencies, watch=watch)(wrapped)
-        cast(Any, wrapped)._dinfo = wrapper_fn._dinfo
+        wrapper_fn = t.cast(t.Any, depends)(**dependencies, watch=watch)(wrapped)
+        t.cast(t.Any, wrapped)._dinfo = wrapper_fn._dinfo
     elif inspect.isasyncgenfunction(function):
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = cast(Any, eval_fn()(*combined_args, **combined_kwargs))
+            evaled = t.cast(t.Any, eval_fn()(*combined_args, **combined_kwargs))
             async for val in evaled:
                 yield val
-        wrapper_fn = cast(Any, depends)(**dependencies, watch=watch)(wrapped)
-        cast(Any, wrapped)._dinfo = wrapper_fn._dinfo
+        wrapper_fn = t.cast(t.Any, depends)(**dependencies, watch=watch)(wrapped)
+        t.cast(t.Any, wrapped)._dinfo = wrapper_fn._dinfo
     elif iscoroutinefunction(function):
-        @cast(Any, depends)(**dependencies, watch=watch)
+        @t.cast(t.Any, depends)(**dependencies, watch=watch)
         async def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = cast(Any, eval_fn()(*combined_args, **combined_kwargs))
+            evaled = t.cast(t.Any, eval_fn()(*combined_args, **combined_kwargs))
             return await evaled
     else:
-        @cast(Any, depends)(**dependencies, watch=watch)
+        @t.cast(t.Any, depends)(**dependencies, watch=watch)
         def wrapped(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
             return eval_fn()(*combined_args, **combined_kwargs)
-    cast(Any, wrapped).__bound_function__ = function
-    cast(Any, wrapped).rx = reactive_ops(wrapped)
+    t.cast(t.Any, wrapped).__bound_function__ = function
+    t.cast(t.Any, wrapped).rx = reactive_ops(wrapped)
     _reactive_display_objs.add(wrapped)
     for name, accessor in _display_accessors.items():
-        setattr(wrapped, name, cast(Any, accessor)(wrapped))
+        setattr(wrapped, name, t.cast(t.Any, accessor)(wrapped))
     return wrapped
 
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
@@ -1357,18 +1357,18 @@ class rx:
     3
     """
 
-    _accessors: dict[str, tuple[Callable[[Any], Any], Optional[Callable[[Any], bool]]]] = {}
+    _accessors: dict[str, tuple[Callable[[t.Any], t.Any], Callable[[t.Any], bool] | None]] = {}
 
     _display_options: tuple[str, ...] = ()
 
-    _display_handlers: dict[type, tuple[Any, dict[str, Any]]] = {}
+    _display_handlers: dict[type, tuple[t.Any, dict[str, t.Any]]] = {}
 
     _method_handlers: dict[str, Callable] = {}
 
     @classmethod
     def register_accessor(
-        cls, name: str, accessor: Callable[[Any], Any],
-        predicate: Optional[Callable[[Any], bool]] = None
+        cls, name: str, accessor: Callable[[t.Any], t.Any],
+        predicate: Callable[[t.Any], bool] | None = None
     ):
         """
         Register an accessor that extends ``rx`` with custom behavior.
@@ -1423,7 +1423,7 @@ class rx:
             wrapper = kwargs.pop('_wrapper', None)
         elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
             # Resolves generator and coroutine functions lazily
-            wrapper = cast(Any, GenWrapper)(object=obj)
+            wrapper = t.cast(t.Any, GenWrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
@@ -1439,7 +1439,7 @@ class rx:
         else:
             # For all other objects wrap them so they can be updated
             # via .rx.value property
-            wrapper = cast(Any, Wrapper)(object=obj)
+            wrapper = t.cast(t.Any, Wrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
         inst = super(rx, cls).__new__(cls)
         inst._fn = fn
@@ -1474,14 +1474,14 @@ class rx:
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
-            self._prev = cast(Any, prev)
+            self._prev = t.cast(t.Any, prev)
 
         # Define special trigger parameter if operation has to be lazily evaluated
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
         else:
-            self._trigger = cast(Any, None)
+            self._trigger = t.cast(t.Any, None)
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
         self._internal_params = self._compute_params()
@@ -1491,7 +1491,7 @@ class rx:
             p for p in self._internal_params if (not isinstance(p.owner, Trigger) or p.owner.internal)
             or (
                 p.owner is not None
-                and any(p not in self._internal_params for p in cast(Any, p.owner).parameters)
+                and any(p not in self._internal_params for p in t.cast(t.Any, p.owner).parameters)
             )
         ]
         self._setup_invalidations(depth)
@@ -1499,7 +1499,7 @@ class rx:
         self._rx = reactive_ops(self)
         self._init = True
         for name, accessor in _display_accessors.items():
-            setattr(self, name, cast(Any, accessor)(self))
+            setattr(self, name, t.cast(t.Any, accessor)(self))
         for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))
@@ -1542,7 +1542,7 @@ class rx:
         elif self._root._dirty_obj:
             root = self._root
             root._shared_obj[0] = eval_function_with_deps(root._fn)
-            cast(Any, root)._dirty_obj = False
+            t.cast(t.Any, root)._dirty_obj = False
         shared_obj = self._shared_obj
         if shared_obj is None:
             raise RuntimeError("Reactive shared object could not be initialized.")
@@ -1551,7 +1551,7 @@ class rx:
     @_obj.setter
     def _obj(self, obj):
         if self._shared_obj is None:
-            self._shared_obj = cast(Any, [obj])
+            self._shared_obj = t.cast(t.Any, [obj])
         else:
             self._shared_obj[0] = obj
 
@@ -1578,7 +1578,7 @@ class rx:
         owner = get_method_owner(self._fn)
         if owner is not None:
             deps = [
-                dep.pobj for dep in cast(Any, owner).param.method_dependencies(self._fn.__name__)
+                dep.pobj for dep in t.cast(t.Any, owner).param.method_dependencies(self._fn.__name__)
             ]
             return deps
 
@@ -1648,7 +1648,7 @@ class rx:
         self._error_state = None
 
     def _invalidate_obj(self, *events):
-        cast(Any, self._root)._dirty_obj = True
+        t.cast(t.Any, self._root)._dirty_obj = True
         self._error_state = None
 
     async def _resolve_async(self, obj):
@@ -1740,7 +1740,7 @@ class rx:
             return bind(evaluate, *params)
         return evaluate
 
-    def _clone(self, operation=None, copy=False, **kwargs) -> Any:
+    def _clone(self, operation=None, copy=False, **kwargs) -> t.Any:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
@@ -1845,7 +1845,7 @@ class rx:
         }
         return new._clone(operation)
 
-    def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> Any:
+    def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> t.Any:
         new = self._resolve_accessor()
         operation = {
             'fn': operator,

@@ -152,6 +152,16 @@ ignore = [
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
+[tool.ty.analysis]
+allowed-unresolved-imports = [
+    "IPython",
+    "IPython.core",
+    "IPython.core.magic",
+    "IPython.display",
+    "setuptools_scm",
+    "tornado"
+]
+
 [tool.pyrefly]
 project-includes = ["param/"]
 project-excludes = [

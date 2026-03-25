@@ -805,7 +805,7 @@ def output(func, *output, **kw):
     def _output(*args,**kw):
         return func(*args,**kw)
 
-    _output._dinfo = _dinfo  # type: ignore[attr-defined]
+    _output._dinfo = _dinfo  # type: ignore[attr-defined, ty:unresolved-attribute]
 
     return _output
 
@@ -1581,18 +1581,18 @@ class Parameter(_ParameterBase, t.Generic[T]):
             )
         self.name = None
         self.owner = None
-        self.allow_refs = allow_refs  # type: ignore[assignment]
-        self.nested_refs = nested_refs  # type: ignore[assignment]
-        self.precedence = precedence  # type: ignore[assignment]
+        self.allow_refs = allow_refs  # type: ignore[assignment, ty:invalid-assignment]
+        self.nested_refs = nested_refs  # type: ignore[assignment, ty:invalid-assignment]
+        self.precedence = precedence  # type: ignore[assignment, ty:invalid-assignment]
         self.default = default
-        self.default_factory = default_factory  # type: ignore[assignment]
-        self.doc = doc  # type: ignore[assignment]
+        self.default_factory = default_factory  # type: ignore[assignment, ty:invalid-assignment]
+        self.doc = doc  # type: ignore[assignment, ty:invalid-assignment]
         if constant is True or readonly is True:  # readonly => constant
             self.constant = True
         else:
-            self.constant = constant  # type: ignore[assignment]
-        self.readonly = readonly  # type: ignore[assignment]
-        self._label = label  # type: ignore[assignment]
+            self.constant = constant  # type: ignore[assignment, ty:invalid-assignment]
+        self.readonly = readonly  # type: ignore[assignment, ty:invalid-assignment]
+        self._label = label  # type: ignore[assignment, ty:invalid-assignment]
         self._set_instantiate(instantiate)
         if pickle_default_value is False:
             warnings.warn(
@@ -1604,7 +1604,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         self._set_allow_None(allow_None)
         self.metadata = metadata
         self.watchers: dict[str, list[Watcher]] = {}
-        self.per_instance = per_instance  # type: ignore[assignment]
+        self.per_instance = per_instance  # type: ignore[assignment, ty:invalid-assignment]
 
     @classmethod
     def serialize(cls, value):
@@ -2170,7 +2170,7 @@ class String(Parameter[T]):
         **kwargs: t.Any
     ) -> None:
         super().__init__(default=default, **kwargs)
-        self.regex = regex  # type: ignore[assignment]
+        self.regex = regex  # type: ignore[assignment, ty:invalid-assignment]
         self._validate(self.default)
 
     def _validate_regex(self, val: t.Any, regex: str | re.Pattern[str] | None):
@@ -3258,11 +3258,8 @@ class Parameters:
                           if (name, watcher.what) in event_dict]
                 with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                     self_._execute_watcher(watcher, events)
-    # Please update the docstring with better description and examples
-    # I've (MarcSkovMadsen) not been able to understand this. Its probably because I lack context.
-    # Its not mentioned in the documentation.
-    # The pytests do not make sense to me.
-    def set_dynamic_time_fn(self_, time_fn, sublistattr=None):
+
+    def set_dynamic_time_fn(self_, time_fn: Callable, sublistattr=None):
         """
         Set ``time_fn`` for all :class:`param.Dynamic` Parameters of this class or
         instance object that are currently being dynamically
@@ -3281,11 +3278,11 @@ class Parameters:
         ``set_dynamic_time_fn()`` will be called for those, too.
         """
         self_or_cls = self_.self_or_cls
-        self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[attr-defined]
+        self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[attr-defined, ty:invalid-assignment]
         param_ns = self_or_cls.param
 
-        if isinstance(self_or_cls,type):
-            a = (None,self_or_cls)
+        if isinstance(self_or_cls, type):
+            a = (None, self_or_cls)
         else:
             a = (self_or_cls,)
 
@@ -3604,8 +3601,8 @@ class Parameters:
         self_or_cls = self_.self_or_cls
         param_ns = self_or_cls.param
         vals = []
-        for name, val in param_ns.objects('existing').items():  # type: ignore[unresolved-attribute, union-attr]
-            value = param_ns.get_value_generator(name)  # type: ignore[unresolved-attribute, union-attr]
+        for name, val in param_ns.objects('existing').items():  # type: ignore[union-attr, ty:unresolved-attribute,]
+            value = param_ns.get_value_generator(name)  # type: ignore[union-attr, ty:unresolved-attribute]
             if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
                 continue
             if not onlychanged or not Comparator.is_equal(value, val.default):
@@ -3627,7 +3624,7 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[unresolved-attribute, union-attr]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
             return getattr(cls_or_slf, name)
@@ -3687,14 +3684,14 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[unresolved-attribute, union-attr]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj, 'attribs'):
-            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[unresolved-attribute, union-attr]
+            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj, '_value_is_dynamic'):
@@ -3751,12 +3748,12 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[unresolved-attribute, union-attr]
+        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[unresolved-attribute, union-attr]
+            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
         elif not hasattr(param_obj,'_inspect'):
             value = getattr(cls_or_slf,name)
         else:
@@ -4712,7 +4709,7 @@ class ParameterizedMetaclass(type):
 
     @property
     def __get_params(mcs) -> Parameters:
-        return mcs.param  # type: ignore[attr-defined,return-value]
+        return mcs.param  # type: ignore[attr-defined,return-value, ty:invalid-return-type]
 
     def __set_name(mcs, name: str, dict_: dict[str, t.Any]):
         """
@@ -4787,7 +4784,7 @@ class ParameterizedMetaclass(type):
             return False
 
     def __get_private(mcs) -> _ClassPrivate:
-        return mcs._param__private  # type: ignore[attr-defined,return-value]
+        return mcs._param__private  # type: ignore[attr-defined,return-value, ty:invalid-return-type]
 
     def __get_signature(mcs) -> inspect.Signature | None:
         """

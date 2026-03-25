@@ -595,7 +595,7 @@ class Dynamic(Parameter[T]):
         value will be produced and returned. Otherwise, the last value
         gen produced will be returned.
         """
-        if hasattr(gen,"_Dynamic_time_fn"):
+        if hasattr(gen, "_Dynamic_time_fn"):
             time_fn = gen._Dynamic_time_fn
         else:
             time_fn = self.time_fn
@@ -607,7 +607,7 @@ class Dynamic(Parameter[T]):
 
             time = time_fn()
 
-            if force or time!=gen._Dynamic_time:
+            if force or time != gen._Dynamic_time:
                 value = _produce_value(gen)
                 gen._Dynamic_last = value
                 gen._Dynamic_time = time
@@ -616,14 +616,22 @@ class Dynamic(Parameter[T]):
 
         return value
 
-    def _value_is_dynamic(self, obj: Parameterized | type[Parameterized] | None, objtype: type[Parameterized] | None = None) -> bool:
+    def _value_is_dynamic(
+        self,
+        obj: Parameterized | type[Parameterized] | None,
+        objtype: type[Parameterized] | None = None
+    ) -> bool:
         """
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
-        return hasattr(t.cast(t.Any, super()).__get__(obj, objtype),'_Dynamic_last')
+        return hasattr(t.cast(t.Any, super()).__get__(obj, objtype), '_Dynamic_last')
 
-    def _inspect(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> t.Any:
+    def _inspect(
+        self,
+        obj: Parameterized | type[Parameterized],
+        objtype: type[Parameterized] | None = None
+    ) -> t.Any:
         """Return the last generated value for this parameter."""
         gen = t.cast(t.Any, super()).__get__(obj, objtype)
 
@@ -632,7 +640,11 @@ class Dynamic(Parameter[T]):
         else:
             return gen
 
-    def _force(self, obj: Parameterized | type[Parameterized], objtype: type[Parameterized] | None = None) -> t.Any:
+    def _force(
+        self,
+        obj: Parameterized | type[Parameterized],
+        objtype: type[Parameterized] | None = None
+    ) -> t.Any:
         """Force a new value to be generated, and return it."""
         gen = t.cast(t.Any, super()).__get__(obj, objtype)
 
@@ -1860,9 +1872,9 @@ class Range(NumericTuple):
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
-        self.bounds = bounds  # type: ignore[attr-defined]
-        self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined]
-        self.softbounds = softbounds  # type: ignore[attr-defined]
+        self.bounds = bounds  # type: ignore[attr-defined, ty:invalid-assignment]
+        self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined, ty:invalid-assignment]
+        self.softbounds = softbounds  # type: ignore[attr-defined, ty:invalid-assignment]
         self.step = step
         t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
 
@@ -2183,7 +2195,7 @@ class Composite(Parameter):
         if attribs is Undefined:
             attribs = []
         super().__init__(default=Undefined, **kw)
-        self.attribs = attribs  # type: ignore[attr-defined]
+        self.attribs = attribs  # type: ignore[attr-defined, ty:invalid-assignment]
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
@@ -2511,8 +2523,8 @@ class Selector(SelectorBase, _SignatureSelector):
         default = autodefault if (not empty_default and default is Undefined) else default
 
         self.objects = objects
-        self.compute_default_fn = compute_default_fn  # type: ignore[attr-defined]
-        self.check_on_set = check_on_set  # type: ignore[attr-defined]
+        self.compute_default_fn = compute_default_fn  # type: ignore[attr-defined, ty:invalid-assignment]
+        self.check_on_set = check_on_set  # type: ignore[attr-defined, ty:invalid-assignment]
 
         instantiate_value = False if isinstance(instantiate, UndefinedType) else instantiate
         super().__init__(default=default, instantiate=instantiate_value, **params)

@@ -600,7 +600,7 @@ def exceptions_summarized():
 
 def _in_ipython():
     try:
-        get_ipython()  # type: ignore[name-defined]
+        get_ipython()  # type: ignore[name-defined, ty:unresolved-reference]
         return True
     except NameError:
         return False

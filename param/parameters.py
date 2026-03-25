@@ -35,11 +35,6 @@ from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from os import PathLike
 
-if sys.version_info < (3, 11):
-    from typing_extensions import Unpack
-else:
-    from typing import Unpack
-
 from .parameterized import (
     T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
     String, Undefined, UndefinedType, get_logger, instance_descriptor, _dt_types,
@@ -64,15 +59,20 @@ from ._utils import (
 # Utilities
 #-----------------------------------------------------------------------------
 
-LT = t.TypeVar("LT")
-CT = t.TypeVar("CT")
-IT = t.TypeVar("IT")
-
 if t.TYPE_CHECKING:
+    if sys.version_info < (3, 11):
+        from typing_extensions import Unpack
+    else:
+        from typing import Unpack
+
     import pandas as pd
 
     K = t.TypeVar("K")
     V = t.TypeVar("V")
+    LT = t.TypeVar("LT")
+    CT = t.TypeVar("CT")
+    IT = t.TypeVar("IT")
+
 
 def param_union(*parameterizeds, warn=True):
     """

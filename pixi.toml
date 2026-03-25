@@ -212,6 +212,7 @@ pandas = "*"
 pyrefly = "*"
 IPython = "*"
 typing_extensions = "*"
+tornado = "*"
 
 [feature.typecheck.tasks]
 ty-typecheck = 'ty check param --exclude param/version.py --ignore unused-type-ignore-comment'

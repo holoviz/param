@@ -1458,6 +1458,10 @@ class rx:
         self._current_task = None
         self._error_state = None
         self._current_ = _current
+        # _shared is used for branching rx pipelines where we clone the input.
+        # Here we store the original shared input, which makes it possible to
+        # cache the input value as long as the shared instance does not store
+        # a diverging _method accessor.
         self._shared = _shared
         if isinstance(obj, rx) and not prev:
             self._prev = obj

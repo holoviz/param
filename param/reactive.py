@@ -1436,7 +1436,7 @@ class rx:
 
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None,
-        _shared_obj=None, _current=None, _wrapper=None, **kwargs
+        _shared_obj=None, _current=None, _wrapper=None, _shared=None,  **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
         # specialized code.
@@ -1458,6 +1458,7 @@ class rx:
         self._current_task = None
         self._error_state = None
         self._current_ = _current
+        self._shared = _shared
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
@@ -1528,6 +1529,17 @@ class rx:
             root._shared_obj[0] = eval_function_with_deps(root._fn)
             root._dirty_obj = False
         return self._shared_obj[0]
+
+    @property
+    def _is_async(self) -> bool:
+        if not self._operation:
+            return False
+        fn = self._operation["fn"]
+        return (
+            inspect.iscoroutinefunction(fn) or
+            inspect.isasyncgenfunction(fn) or
+            inspect.isgeneratorfunction(fn)
+        )
 
     @_obj.setter
     def _obj(self, obj):
@@ -1662,6 +1674,9 @@ class rx:
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
                     raise Skip
+                elif self._shared is not None and self._method == self._shared._method and not self._is_async:
+                    self._current_ = self._shared.rx.value
+                    raise Skip
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
@@ -1723,7 +1738,7 @@ class rx:
         if copy:
             kwargs = dict(
                 self._kwargs, _current=self._current, method=self._method,
-                prev=self._prev, **kwargs
+                prev=self._prev, _shared=self, **kwargs
             )
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))

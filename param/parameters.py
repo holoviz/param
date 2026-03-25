@@ -166,7 +166,7 @@ def parameterized_class(
         basecls: tuple[type[Parameterized], ...] = (bases,)
     else:
         basecls = tuple(bases)
-    return t.cast(type[Parameterized], type(name, basecls, params))
+    return t.cast("type[Parameterized]", type(name, basecls, params))
 
 
 def guess_bounds(params: dict[str, Parameter], **overrides: tuple[t.Any, t.Any]):
@@ -524,7 +524,7 @@ class Dynamic(Parameter[T]):
         self,
         default: t.Any = Undefined,
         *,
-        allow_None: bool = t.cast(bool, Undefined),
+        allow_None: bool = t.cast("bool", Undefined),
         **params: Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -566,7 +566,7 @@ class Dynamic(Parameter[T]):
         if not hasattr(gen,'_Dynamic_last'):
             return gen
         else:
-            return t.cast(T, self._produce_value(gen))
+            return t.cast("T", self._produce_value(gen))
 
     @instance_descriptor
     def __set__(self, obj: Parameterized | type[Parameterized], val: T):
@@ -625,7 +625,7 @@ class Dynamic(Parameter[T]):
         Return True if the parameter is actually dynamic (i.e. the
         value is being generated).
         """
-        return hasattr(t.cast(t.Any, super()).__get__(obj, objtype), '_Dynamic_last')
+        return hasattr(t.cast("t.Any", super()).__get__(obj, objtype), '_Dynamic_last')
 
     def _inspect(
         self,
@@ -633,7 +633,7 @@ class Dynamic(Parameter[T]):
         objtype: type[Parameterized] | None = None
     ) -> t.Any:
         """Return the last generated value for this parameter."""
-        gen = t.cast(t.Any, super()).__get__(obj, objtype)
+        gen = t.cast("t.Any", super()).__get__(obj, objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return gen._Dynamic_last
@@ -646,7 +646,7 @@ class Dynamic(Parameter[T]):
         objtype: type[Parameterized] | None = None
     ) -> t.Any:
         """Force a new value to be generated, and return it."""
-        gen = t.cast(t.Any, super()).__get__(obj, objtype)
+        gen = t.cast("t.Any", super()).__get__(obj, objtype)
 
         if hasattr(gen,'_Dynamic_last'):
             return self._produce_value(gen, force=True)
@@ -811,15 +811,15 @@ class Number(Dynamic[T]):
         default: t.Any = Undefined,
         *,
         bounds: tuple[float | int | None, float | int | None] | None = t.cast(
-            tuple[float | int | None, float | int | None] | None, Undefined
+            "tuple[float | int | None, float | int | None] | None", Undefined
         ),
         softbounds: tuple[float | int | None, float | int | None] | None = t.cast(
-            tuple[float | int | None, float | int | None] | None, Undefined
+            "tuple[float | int | None, float | int | None] | None", Undefined
         ),
-        inclusive_bounds: tuple[bool, bool] = t.cast(tuple[bool, bool], Undefined),
-        step: float | int | None = t.cast(float | int | None, Undefined),
-        set_hook: t.Callable[..., t.Any] | None = t.cast(t.Callable[..., t.Any] | None, Undefined),
-        allow_None: bool = t.cast(bool, Undefined),
+        inclusive_bounds: tuple[bool, bool] = t.cast("tuple[bool, bool]", Undefined),
+        step: float | int | None = t.cast("float | int | None", Undefined),
+        set_hook: t.Callable[..., t.Any] | None = t.cast("t.Callable[..., t.Any] | None", Undefined),
+        allow_None: bool = t.cast("bool", Undefined),
         **params: Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -1027,10 +1027,10 @@ class Integer(Number[T]):
         self,
         default=Undefined,
         *,
-        allow_None: bool = t.cast(bool, Undefined),
+        allow_None: bool = t.cast("bool", Undefined),
         **kwargs: Unpack[NumberInitKwargs]
     ) -> None:
-        t.cast(t.Any, Number.__init__)(self, default=default, allow_None=allow_None, **kwargs)
+        t.cast("t.Any", Number.__init__)(self, default=default, allow_None=allow_None, **kwargs)
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         if callable(value):
@@ -1118,7 +1118,7 @@ class Magnitude(Number[T]):
 
     def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
                  inclusive_bounds=Undefined, step=Undefined, **params):
-        t.cast(t.Any, super().__init__)(
+        t.cast("t.Any", super().__init__)(
             default=default, bounds=bounds, softbounds=softbounds,
             inclusive_bounds=inclusive_bounds, step=step, **params
         )
@@ -1200,7 +1200,7 @@ class Date(Number[T]):
         default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
-        t.cast(t.Any, Number.__init__)(
+        t.cast("t.Any", Number.__init__)(
             self,
             default=default,
             bounds=bounds,
@@ -1247,7 +1247,7 @@ class Date(Number[T]):
     def _validate_bounds(self, val: t.Any, bounds: tuple[t.Any | None, t.Any | None] | None, inclusive_bounds: tuple[bool, bool]) -> None:
         val = _to_datetime(val)
         bounds = None if bounds is None else t.cast(
-            tuple[t.Any | None, t.Any | None],
+            "tuple[t.Any | None, t.Any | None]",
             tuple(map(_to_datetime, bounds)),
         )
         return super()._validate_bounds(val, bounds, inclusive_bounds)
@@ -1343,7 +1343,7 @@ class CalendarDate(Number[T]):
         default_factory: t.Callable[..., t.Any] | None = None,
         metadata: dict[str, t.Any] | None = None
     ) -> None:
-        t.cast(t.Any, Number.__init__)(
+        t.cast("t.Any", Number.__init__)(
             self,
             default=default,
             bounds=bounds,
@@ -1662,8 +1662,8 @@ class Tuple(Parameter[T]):
         self,
         default: t.Any = Undefined,
         *,
-        length: int | None = t.cast(int | None, Undefined),
-        allow_None: bool = t.cast(bool, Undefined),
+        length: int | None = t.cast("int | None", Undefined),
+        allow_None: bool = t.cast("bool", Undefined),
         **params: Unpack[ParameterKwargs]
     ) -> None:
         """
@@ -1761,11 +1761,11 @@ class NumericTuple(Tuple[T]):
         self,
         default: t.Any = Undefined,
         *,
-        length: int | None = t.cast(int | None, Undefined),
-        allow_None: bool = t.cast(bool, Undefined),
+        length: int | None = t.cast("int | None", Undefined),
+        allow_None: bool = t.cast("bool", Undefined),
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        t.cast(t.Any, super().__init__)(  # type: ignore[attr-defined,misc]
+        t.cast("t.Any", super().__init__)(  # type: ignore[attr-defined,misc]
             default=default, length=length, allow_None=allow_None, **params
         )
 
@@ -1816,7 +1816,7 @@ class XYCoordinates(NumericTuple):
         self, default=Undefined, **params
     ):
         super().__init__(
-            default=t.cast(tuple[float, float] | None, default),
+            default=t.cast("tuple[float, float] | None", default),
             length=2,
             **params
         )
@@ -1876,7 +1876,7 @@ class Range(NumericTuple):
         self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined, ty:invalid-assignment]
         self.softbounds = softbounds  # type: ignore[attr-defined, ty:invalid-assignment]
         self.step = step
-        t.cast(t.Any, NumericTuple.__init__)(self, default=default, length=2, **params)
+        t.cast("t.Any", NumericTuple.__init__)(self, default=default, length=2, **params)
 
     def _validate(self, val):
         super()._validate(val)
@@ -1905,7 +1905,7 @@ class Range(NumericTuple):
         elif val is not None and (val[0] is None or val[1] is None):
             return
 
-        start, end = t.cast(tuple[t.Any, t.Any], val)
+        start, end = t.cast("tuple[t.Any, t.Any]", val)
         if step is not None and step > 0 and not start <= end:
             raise ValueError(
                 f"{_validate_error_prefix(self)} end {end} is less than its "
@@ -2529,7 +2529,7 @@ class Selector(SelectorBase, _SignatureSelector):
         instantiate_value = False if isinstance(instantiate, UndefinedType) else instantiate
         super().__init__(default=default, instantiate=instantiate_value, **params)
         # Required as Parameter sets allow_None=True if default is None
-        self.allow_None = t.cast(bool, allow_None)
+        self.allow_None = t.cast("bool", allow_None)
         if self.default is not None:
             self._validate_value(self.default)
         self._update_state()
@@ -2665,7 +2665,7 @@ class FileSelector(Selector):
         ...
 
     def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
-        resolved = t.cast(str | PathLike[str], path)
+        resolved = t.cast("str | PathLike[str]", path)
         self.default = default
         self.path = resolved
         self.update(path=resolved)
@@ -2678,14 +2678,14 @@ class FileSelector(Selector):
         if attribute == 'path':
             self.update(path=value)
 
-    def update(self, path: str | PathLike[str] = t.cast(str | PathLike[str], Undefined)):
+    def update(self, path: str | PathLike[str] = t.cast("str | PathLike[str]", Undefined)):
         resolved = self.path if path is Undefined else path
         if resolved is Undefined or resolved == "":
             self.objects = []
         else:
             # Convert using os.fspath and pathlib.Path to handle ensure
             # the path separators are consistent (on Windows in particular)
-            pathpattern = os.fspath(pathlib.Path(t.cast(str | PathLike[str], resolved)))  # type: ignore[redundant-cast]
+            pathpattern = os.fspath(pathlib.Path(t.cast("str | PathLike[str]", resolved)))  # type: ignore[redundant-cast]
             self.objects = sorted(glob.glob(pathpattern))
         if self.default in self.objects:
             return
@@ -2772,7 +2772,7 @@ class MultiFileSelector(ListSelector):
     def update(self, path=Undefined):
         if path is Undefined:
             path = self.path
-        self.objects = sorted(glob.glob(t.cast(str, path)))
+        self.objects = sorted(glob.glob(t.cast("str", path)))
         if self.default and all([o in self.objects for o in self.default]):
             return
         elif not self.default:
@@ -2856,7 +2856,7 @@ class ClassSelector(SelectorBase[T]):
     def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
         self.class_ = class_
         self.is_instance = is_instance  # type: ignore
-        t.cast(t.Any, super().__init__)(default=default, instantiate=instantiate, **params)
+        t.cast("t.Any", super().__init__)(default=default, instantiate=instantiate, **params)
         self._validate(self.default)
 
     def _validate(self, val):
@@ -2910,7 +2910,7 @@ class Dict(ClassSelector[T]):
         def __init__(
             self: Dict[dict[t.Any, t.Any]],
             *,
-            default: dict[t.Any, t.Any] = t.cast(dict[t.Any, t.Any], Undefined),
+            default: dict[t.Any, t.Any] = t.cast("dict[t.Any, t.Any]", Undefined),
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[ParameterKwargs]
         ) -> None:
@@ -2948,7 +2948,7 @@ class Dict(ClassSelector[T]):
         ...
 
     def __init__(self, default=Undefined, **params):
-        t.cast(t.Any, super().__init__)(default=default, class_=dict, **params)
+        t.cast("t.Any", super().__init__)(default=default, class_=dict, **params)
 
 
 class Array(ClassSelector):
@@ -2993,7 +2993,7 @@ class Array(ClassSelector):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        numpy = t.cast(t.Any, importlib.import_module('numpy'))
+        numpy = t.cast("t.Any", importlib.import_module('numpy'))
         if isinstance(value, str):
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
@@ -3063,7 +3063,7 @@ class DataFrame(ClassSelector[T]):
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        t.cast(t.Any, ClassSelector.__init__)(self, default=default, class_=pdDFrame, **params)
+        t.cast("t.Any", ClassSelector.__init__)(self, default=default, class_=pdDFrame, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -3127,7 +3127,7 @@ class DataFrame(ClassSelector[T]):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        pandas = t.cast(t.Any, importlib.import_module('pandas'))
+        pandas = t.cast("t.Any", importlib.import_module('pandas'))
         if isinstance(value, str):
             return _deserialize_from_path(
                 {
@@ -3187,9 +3187,9 @@ class Series(ClassSelector[T]):
             ...
 
     def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
-        pdSeries = t.cast(t.Any, importlib.import_module('pandas')).Series
+        pdSeries = t.cast("t.Any", importlib.import_module('pandas')).Series
         self.rows = rows
-        t.cast(t.Any, ClassSelector.__init__)(
+        t.cast("t.Any", ClassSelector.__init__)(
             self, default=default, class_=pdSeries, allow_None=allow_None, **params
         )
         self._validate(self.default)
@@ -3285,11 +3285,11 @@ class List(Parameter[T]):
         self,
         default=Undefined, *,
         item_type: type[t.Any] | tuple[type[t.Any], ...] | None = t.cast(
-            type[t.Any] | tuple[type[t.Any], ...] | None, Undefined
+            "type[t.Any] | tuple[type[t.Any], ...] | None", Undefined
         ),
-        instantiate: bool = t.cast(bool, Undefined),
-        bounds: tuple[int, int | None] | None = t.cast(tuple[int, int | None] | None, Undefined),
-        is_instance: bool = t.cast(bool, Undefined),
+        instantiate: bool = t.cast("bool", Undefined),
+        bounds: tuple[int, int | None] | None = t.cast("tuple[int, int | None] | None", Undefined),
+        is_instance: bool = t.cast("bool", Undefined),
         **params
     ) -> None:
         self.item_type = item_type
@@ -3409,11 +3409,11 @@ class resolve_path(ParameterizedFunction):
     than just os.getcwd() can be used, and the file must exist.
     """
 
-    search_paths = t.cast(t.Any, List)(default=[os.getcwd()], pickle_default_value=None, doc="""
+    search_paths = t.cast("t.Any", List)(default=[os.getcwd()], pickle_default_value=None, doc="""
         Prepended to a non-relative path, in order, until a file is
         found.""")
 
-    path_to_file = Boolean(default=True, pickle_default_value=t.cast(bool, None),
+    path_to_file = Boolean(default=True, pickle_default_value=t.cast("bool", None),
                            allow_None=True, doc="""
         String specifying whether the path refers to a 'File' or a
         'Folder'. If None, the path may point to *either* a 'File' *or*
@@ -3570,7 +3570,7 @@ class Path(Parameter):
                     raise
                 else:
                     path = raw_path
-        return t.cast(str | pathlib.Path | None, path)
+        return t.cast("str | pathlib.Path | None", path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths

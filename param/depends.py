@@ -3,7 +3,6 @@ from __future__ import annotations
 import inspect
 import typing as t
 
-from collections.abc import AsyncGenerator, Callable, Generator
 from collections import defaultdict
 from functools import wraps
 
@@ -13,6 +12,8 @@ from .parameterized import (
 from ._utils import accept_arguments, iscoroutinefunction
 
 if t.TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Generator
+
     Y = t.TypeVar("Y")
     S = t.TypeVar("S")
     T = t.TypeVar("T")
@@ -74,30 +75,30 @@ def depends(
     )
 
     if inspect.isgeneratorfunction(func):
-        func_gen = t.cast(Callable[P, Generator[t.Any, t.Any, t.Any]], func)
+        func_gen = t.cast("Callable[P, Generator[t.Any, t.Any, t.Any]]", func)
         @wraps(func)
         def _depends_gen(*args, **kw):
             for val in func_gen(*args, **kw):
                 yield val
-        _depends = t.cast(Callable[P, R], _depends_gen)
+        _depends = t.cast("Callable[P, R]", _depends_gen)
     elif inspect.isasyncgenfunction(func):
-        func_agen = t.cast(Callable[P, AsyncGenerator[t.Any, t.Any]], func)
+        func_agen = t.cast("Callable[P, AsyncGenerator[t.Any, t.Any]]", func)
         @wraps(func)
         async def _depends_async_gen(*args, **kw):
             async for val in func_agen(*args, **kw):
                 yield val
-        _depends = t.cast(Callable[P, R], _depends_async_gen)
+        _depends = t.cast("Callable[P, R]", _depends_async_gen)
     elif iscoroutinefunction(func):
-        F = t.cast(Callable[P, t.Awaitable[R]], func)
+        F = t.cast("Callable[P, t.Awaitable[R]]", func)
         @wraps(func)
         async def _depends_coro(*args, **kw):
             return await F(*args, **kw)
-        _depends = t.cast(Callable[P, R], _depends_coro)
+        _depends = t.cast("Callable[P, R]", _depends_coro)
     else:
         @wraps(func)
         def _depends_sync(*args, **kw):
             return func(*args, **kw)
-        _depends = t.cast(Callable[P, R], _depends_sync)
+        _depends = t.cast("Callable[P, R]", _depends_sync)
 
     deps = list(dependencies)+list(kw.values())
     string_specs = False
@@ -130,11 +131,11 @@ def depends(
                              'or function is not supported when referencing '
                              'parameters by name.')
 
-    _dinfo = t.cast(DependencyInfo, dict(getattr(func, '_dinfo', {})))
+    _dinfo = t.cast("DependencyInfo", dict(getattr(func, '_dinfo', {})))
     _dinfo.update({'dependencies': dependencies,
                    'kw': kw, 'watch': watch, 'on_init': on_init})
 
-    typed_depends = t.cast(DependsFunc[P, R], _depends)
+    typed_depends = t.cast("DependsFunc[P, R]", _depends)
     typed_depends._dinfo = _dinfo
 
     if string_specs or not watch:
@@ -175,7 +176,7 @@ def depends(
         def cb_gen(*events: Event):
             args = _resolve_args()
             dep_kwargs = _resolve_kwargs()
-            func_gen = t.cast(Callable[P, Generator[t.Any, t.Any, t.Any]], func)
+            func_gen = t.cast("Callable[P, Generator[t.Any, t.Any, t.Any]]", func)
             for val in func_gen(*args, **dep_kwargs):
                 yield val
         cb = cb_gen
@@ -183,7 +184,7 @@ def depends(
         async def cb_async_gen(*events: Event):
             args = _resolve_args()
             dep_kwargs = _resolve_kwargs()
-            func_agen = t.cast(Callable[P, AsyncGenerator[t.Any, t.Any]], func)
+            func_agen = t.cast("Callable[P, AsyncGenerator[t.Any, t.Any]]", func)
             async for val in func_agen(*args, **dep_kwargs):
                 yield val
         cb = cb_async_gen
@@ -191,7 +192,7 @@ def depends(
         async def cb_coro(*events: Event):
             args = _resolve_args()
             dep_kwargs = _resolve_kwargs()
-            func_coro = t.cast(Callable[P, t.Awaitable[t.Any]], func)
+            func_coro = t.cast("Callable[P, t.Awaitable[t.Any]]", func)
             await func_coro(*args, **dep_kwargs)
         cb = cb_coro
     else:

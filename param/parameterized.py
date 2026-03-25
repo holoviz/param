@@ -25,16 +25,20 @@ from contextlib import contextmanager
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
-from collections.abc import Callable, Iterable, Generator, Mapping
 from functools import partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
 
-if sys.version_info < (3, 11):
-    from typing_extensions import Self, Unpack
-else:
-    from typing import Self, Unpack
+if t.TYPE_CHECKING:
+    import logging
+
+    from collections.abc import Callable, Iterable, Generator, Mapping
+
+    if sys.version_info < (3, 11):
+        from typing_extensions import Self, Unpack
+    else:
+        from typing import Self, Unpack
 
 from . import serializer
 from ._utils import (
@@ -55,9 +59,6 @@ from ._utils import (
     descendents,  # noqa: F401
     gen_types,
 )
-
-if t.TYPE_CHECKING:
-    import logging
 
 CRITICAL = 50
 ERROR = 40
@@ -202,10 +203,10 @@ def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
     args: tuple[t.Any, ...] = ()
     kwargs: dict[str, t.Any] = {}
-    dinfo = t.cast(dict[str, t.Any], getattr(function, "_dinfo", {}))
+    dinfo = t.cast("dict[str, t.Any]", getattr(function, "_dinfo", {}))
     if dinfo:
         arg_deps = dinfo.get("dependencies", ())
-        kw_deps = t.cast(dict[str, t.Any], dinfo.get("kw", {}))
+        kw_deps = t.cast("dict[str, t.Any]", dinfo.get("kw", {}))
         if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
             resolved_args: list[t.Any] = []
             for dep in arg_deps:
@@ -460,7 +461,7 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
             # Some operations trigger a parameter instantiation (copy),
             # we ensure both the class and instance parameters are reset.
             if pname in kls_params and pname not in init_inst_params:
-                t.cast(t.Any, type(parameterized).param)[pname].constant = True
+                t.cast("t.Any", type(parameterized).param)[pname].constant = True
             if pname in inst_params:
                 parameterized.param[pname].constant = True
 
@@ -604,7 +605,7 @@ def _instantiate_param_obj(paramobj: Parameter, owner: Parameterized | None = No
     """Return a Parameter object suitable for instantiation given the class's Parameter object."""
     # Shallow-copy Parameter object without the watchers
     p = copy.copy(paramobj)
-    p.owner = t.cast(t.Any, owner)
+    p.owner = t.cast("t.Any", owner)
 
     # Reset watchers since class parameter watcher should not execute
     # on instance parameters
@@ -784,10 +785,10 @@ def output(func, *output, **kw):
                 otype = otype()
             else:
                 from .import ClassSelector
-                otype = t.cast(t.Any, ClassSelector)(class_=otype)
+                otype = t.cast("t.Any", ClassSelector)(class_=otype)
         elif isinstance(otype, tuple) and all(isinstance(t, type) for t in otype):
             from .import ClassSelector
-            otype = t.cast(t.Any, ClassSelector)(class_=otype)
+            otype = t.cast("t.Any", ClassSelector)(class_=otype)
         if not isinstance(otype, Parameter):
             raise ValueError('output type must be declared with a Parameter class, '
                              'instance or a Python object type.')
@@ -878,7 +879,7 @@ def _resolve_mcs_deps(obj, resolved, dynamic, intermediate=True):
             dependencies.append(dep)
             continue
         inst = obj if dep.inst is None else dep.inst
-        dep = PInfo(inst, dep.cls, dep.name, inst.param[dep.name], dep.what)
+        dep = PInfo(inst, dep.cls, dep.name, inst.param[dep.name], what=dep.what)
         dependencies.append(dep)
     for dep in dynamic:
         subresolved, _ = obj.param._spec_to_obj(dep.spec, intermediate=intermediate)
@@ -916,8 +917,8 @@ def _skip_event(*events, **kwargs):
 
 def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
     """Extract references from a method or function that declares the references."""
-    dinfo = t.cast(dict[str, t.Any], getattr(function, "_dinfo", {}))
-    subparameters = list(dinfo.get("dependencies", ())) + list(t.cast(dict[str, t.Any], dinfo.get("kw", {})).values())
+    dinfo = t.cast("dict[str, t.Any]", getattr(function, "_dinfo", {}))
+    subparameters = list(dinfo.get("dependencies", ())) + list(t.cast("dict[str, t.Any]", dinfo.get("kw", {})).values())
     params = []
     for p in subparameters:
         if isinstance(p, str):
@@ -984,7 +985,7 @@ def _m_caller(
     function = getattr(self, method_name)
     _caller = _async_caller if iscoroutinefunction(function) else _sync_caller
     caller = partial(_caller, what=what, changed=changed, callback=callback, function=function)
-    t.cast(t.Any, caller)._watcher_name = method_name
+    t.cast("t.Any", caller)._watcher_name = method_name
     return caller
 
 
@@ -1600,7 +1601,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 category=_ParamDeprecationWarning,
                 stacklevel=_find_stack_level(),
             )
-        self.pickle_default_value = t.cast(bool, pickle_default_value)
+        self.pickle_default_value = t.cast("bool", pickle_default_value)
         self._set_allow_None(allow_None)
         self.metadata = metadata
         self.watchers: dict[str, list[Watcher]] = {}
@@ -1664,7 +1665,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
             raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(
             self.__class__.__name__,
-            t.cast(t.Any, self),
+            t.cast("t.Any", self),
             safe=safe,
             subset=subset,
         )
@@ -1765,7 +1766,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         elif isinstance(allow_None, bool):
             self.allow_None = allow_None
         else:
-            self.allow_None = t.cast(bool, self._slot_defaults['allow_None'])
+            self.allow_None = t.cast("bool", self._slot_defaults['allow_None'])
 
     def _set_instantiate(self, instantiate: bool | UndefinedType):
         """Constant parameters must be instantiated."""
@@ -1778,7 +1779,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
             self.instantiate = instantiate
         else:
             # Default value
-            self.instantiate = t.cast(bool, self._slot_defaults['instantiate'])
+            self.instantiate = t.cast("bool", self._slot_defaults['instantiate'])
 
     def __setattr__(self, attribute: str, value):
         if attribute == 'name':
@@ -2041,7 +2042,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 'ensure that you create a new parameter '
                 'instance for each new class.'
             )
-        self.name = t.cast(t.Any, attrib_name)
+        self.name = t.cast("t.Any", attrib_name)
 
     def __getstate__(self) -> dict[str, t.Any]:
         """
@@ -2635,7 +2636,7 @@ class Parameters:
             if new_val is Skip or new_val is Undefined:
                 continue
             elif is_async:
-                async_executor(partial(self_._async_ref, pname, t.cast(t.Awaitable[t.Any], new_val)))
+                async_executor(partial(self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val)))
                 continue
 
             updates[pname] = new_val
@@ -2717,9 +2718,9 @@ class Parameters:
             def instantiator(o: t.Any) -> t.Any:
                 return o
         dict_ = dict_ or self._param__private.values
-        key = key or t.cast(str, param_obj.name)
+        key = key or t.cast("str", param_obj.name)
         if shared_parameters._share:
-            param_key = (str(type(self)), t.cast(str, param_obj.name))
+            param_key = (str(type(self)), t.cast("str", param_obj.name))
             if param_key in shared_parameters._shared_cache:
                 new_object = shared_parameters._shared_cache[param_key]
             else:
@@ -2741,7 +2742,7 @@ class Parameters:
         obj = self_.self
         if obj is None:
             return
-        class_param = t.cast(Parameters, t.cast(t.Any, self_.cls).param)
+        class_param = t.cast("Parameters", t.cast("t.Any", self_.cls).param)
         init_methods = []
         for method, queued, on_init, constant, dynamic in class_param._depends['watch']:
             # On initialization set up constant watchers; otherwise
@@ -2752,7 +2753,7 @@ class Parameters:
                 for dep in _resolve_mcs_deps(obj, constant, []):
                     constant_grouped[(id(dep.inst), id(dep.cls), dep.what)].append((None, dep))
                 for group in constant_grouped.values():
-                    self_._watch_group(obj, method, queued, t.cast(list[tuple[Parameter | None, PInfo]], group))
+                    self_._watch_group(obj, method, queued, t.cast("list[tuple[Parameter | None, PInfo]]", group))
                 m = getattr(self_.self, method)
                 if on_init and m not in init_methods:
                     init_methods.append(m)
@@ -2770,7 +2771,7 @@ class Parameters:
 
             for group in grouped.values():
                 watcher = self_._watch_group(
-                    obj, method, queued, t.cast(list[tuple[Parameter | None, PInfo]], group), attribute
+                    obj, method, queued, t.cast("list[tuple[Parameter | None, PInfo]]", group), attribute
                 )
                 obj._param__private.dynamic_watchers[method].append(watcher)
         for m in init_methods:
@@ -3951,14 +3952,14 @@ class Parameters:
             raise AttributeError("Specification must include attribute.")
         elif obj is not None and attr == 'param':
             deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic, intermediate)
-            src_param = t.cast(t.Any, src.param)
+            src_param = t.cast("t.Any", src.param)
             for p in src_param:
-                param_deps, param_dynamic_deps = src_param._spec_to_obj(t.cast(str, p), dynamic, intermediate)
+                param_deps, param_dynamic_deps = src_param._spec_to_obj(t.cast("str", p), dynamic, intermediate)
                 deps += param_deps
                 dynamic_deps += param_dynamic_deps
             return deps, dynamic_deps
-        elif attr in t.cast(t.Any, src.param):
-            info = PInfo(inst, cls, attr, t.cast(t.Any, src.param)[attr], what)
+        elif attr in t.cast("t.Any", src.param):
+            info = PInfo(inst, cls, attr, t.cast("t.Any", src.param)[attr], what)
         elif hasattr(src, attr):
             attr_obj = getattr(src, attr)
             if isinstance(attr_obj, Parameterized):
@@ -3993,7 +3994,7 @@ class Parameters:
             )
 
         parameter_names = watcher.parameter_names
-        cls_param = t.cast(t.Any, self_.cls.param)
+        cls_param = t.cast("t.Any", self_.cls.param)
         for parameter_name in parameter_names:
             if parameter_name not in cls_param:
                 raise ValueError("{} parameter was not found in list of "
@@ -4430,7 +4431,7 @@ class Parameters:
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
             elif hasattr(g,'_state_push') and isinstance(g,Parameterized):
-                t.cast(t.Any, g)._state_push()
+                t.cast("t.Any", g)._state_push()
 
     def _state_pop(self_):
         """
@@ -4447,7 +4448,7 @@ class Parameters:
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
             elif isinstance(g, Parameterized) and hasattr(g, '_state_pop'):
-                t.cast(t.Any, g)._state_pop()
+                t.cast("t.Any", g)._state_pop()
 
     def pprint(
         self_,
@@ -4847,7 +4848,7 @@ class ParameterizedMetaclass(type):
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
                 parameter = copy.copy(parameter)
-                parameter.owner = t.cast(t.Any, mcs)
+                parameter.owner = t.cast("t.Any", mcs)
                 type.__setattr__(mcs, attribute_name, parameter)
             mcs.__dict__[attribute_name].__set__(None,value)
 
@@ -5211,7 +5212,7 @@ def pprint(
     elif isinstance(val, _no_script_repr):
         rep = None
     elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
-        rep=t.cast(t.Any, val.param).pprint(
+        rep=t.cast("t.Any", val.param).pprint(
             imports=imports,
             prefix=prefix+"    ",
             qualify=qualify,
@@ -5252,9 +5253,9 @@ def container_script_repr(container,imports,prefix,settings):
 def _no_script_repr():
     # Suppress scriptrepr for objects not yet having a useful string representation
     if random := sys.modules.get("random"):
-        yield t.cast(t.Any, random).Random
+        yield t.cast("t.Any", random).Random
     if npr := sys.modules.get("numpy.random"):
-        yield t.cast(t.Any, npr).RandomState
+        yield t.cast("t.Any", npr).RandomState
 
 
 def function_script_repr(fn,imports,prefix,settings):
@@ -5797,7 +5798,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                 if isinstance(dfactory, DefaultFactory):
                     default_val = dfactory(cls=type(self), self=self, parameter=pobj)
                 else:
-                    default_val = t.cast(t.Callable[[], t.Any], dfactory)()
+                    default_val = t.cast("t.Callable[[], t.Any]", dfactory)()
                 with discard_events(self):
                     setattr(self, pname, default_val)
 
@@ -6346,4 +6347,4 @@ class default_label_formatter(ParameterizedFunction):
         return pname
 
 
-label_formatter = t.cast(Callable[[str], str], default_label_formatter)
+label_formatter = t.cast("Callable[[str], str]", default_label_formatter)

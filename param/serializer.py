@@ -8,9 +8,9 @@ import json
 import textwrap
 import typing as t
 
-from collections.abc import Callable, Iterable
-
 if t.TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from .parameterized import Parameter, Parameterized
     from .parameters import (
         Tuple,
@@ -104,7 +104,7 @@ class JSONSerialization(Serialization):
         safe: bool = False
     ) -> dict[str, t.Any]:
         schema: dict[str, t.Any] = {}
-        params = t.cast(t.Any, pobj).param
+        params = t.cast('t.Any', pobj).param
         for name, p in params.objects('existing').items():
             if subset is not None and name not in subset:
                 continue
@@ -120,7 +120,7 @@ class JSONSerialization(Serialization):
         cls, pobj: Parameterized | type[Parameterized], subset: Iterable[str] | None = None
     ) -> str:
         components: dict[str, t.Any] = {}
-        params = t.cast(t.Any, pobj).param
+        params = t.cast('t.Any', pobj).param
         for name, p in params.objects('existing').items():
             if subset is not None and name not in subset:
                 continue
@@ -137,7 +137,7 @@ class JSONSerialization(Serialization):
     ) -> dict[str, t.Any]:
         deserialized = cls.loads(serialized)
         components: dict[str, t.Any] = {}
-        params = t.cast(t.Any, pobj).param
+        params = t.cast('t.Any', pobj).param
         for name, value in deserialized.items():
             if subset is not None and name not in subset:
                 continue
@@ -168,7 +168,7 @@ class JSONSerialization(Serialization):
 
     @classmethod
     def serialize_parameter_value(cls, pobj: Parameterized | type[Parameterized], pname: str) -> str:
-        params = t.cast(t.Any, pobj).param
+        params = t.cast('t.Any', pobj).param
         value = params.get_value_generator(pname)
         return cls.dumps(params[pname].serialize(value))
 
@@ -177,7 +177,7 @@ class JSONSerialization(Serialization):
         cls, pobj: Parameterized | type[Parameterized], pname: str, value: str
     ) -> t.Any:
         value = cls.loads(value)
-        params = t.cast(t.Any, pobj).param
+        params = t.cast('t.Any', pobj).param
         return params[pname].deserialize(value)
 
     # Custom Schemas

@@ -362,7 +362,7 @@ def load_ipython_extension(ip, verbose=True):
                 return
 
             # Beware! Uses IPython internals that may change in future...
-            obj = t.cast(t.Any, self.shell)._object_find(parameter_s)
+            obj = t.cast('t.Any', self.shell)._object_find(parameter_s)
             if obj.found is False:
                 print("Object %r not found in the namespace." % parameter_s)
                 return

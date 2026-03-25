@@ -1678,7 +1678,15 @@ class rx:
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
                     raise Skip
-                elif self._shared is not None and self._method == self._shared._method and not self._is_async:
+                elif (
+                    self._shared is not None and
+                    self._method is None and
+                    self._shared._method is None and
+                    not self._is_async
+                ):
+                    # If this rx is cloned from an shared input then we make use
+                    # of the shared.rx.value to ensure branching pipelines do
+                    # not have to recompute the inputs multiple times.
                     self._current_ = self._shared.rx.value
                     raise Skip
                 operation = self._operation

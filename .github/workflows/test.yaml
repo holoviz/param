@@ -112,7 +112,7 @@ jobs:
       - name: Test Examples
         run: |
           pixi run -e ${{ matrix.environment }} test-example
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -145,16 +145,16 @@ jobs:
         python-version: ["pypy3.11"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: "100"
       - name: Fetch
         run: git fetch --prune --tags -f
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
       - name: Install project dependencies

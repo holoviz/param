@@ -40,7 +40,6 @@ Lets update the reactive value and check its length:
 >>> rx_value.rx.len()
 4
 """
-import importlib
 import os
 
 from . import version
@@ -128,7 +127,7 @@ except (ImportError, LookupError, FileNotFoundError):
     try:
         # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
         # the hopefully stable version variable.
-        __version__ = importlib.import_module(f"{__name__}._version").version
+        from ._version import version as __version__  # type: ignore[unresolved-import]
     except (ModuleNotFoundError, ImportError):
         # Either _version doesn't exist (ModuleNotFoundError) or version isn't
         # in _version (ImportError). ModuleNotFoundError is a subclass of

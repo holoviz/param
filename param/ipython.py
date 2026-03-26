@@ -28,17 +28,6 @@ import param
 from param.display import register_display_accessor
 from param._utils import async_executor
 
-_get_ipython: t.Callable[[], t.Any] | None = None
-_display: t.Callable[..., t.Any] | None = None
-try:
-    from IPython import get_ipython as _imported_get_ipython  # type: ignore[unresolved-import]
-    from IPython.display import display as _imported_display  # type: ignore[unresolved-import]
-except Exception:
-    pass
-else:
-    _get_ipython = _imported_get_ipython
-    _display = _imported_display
-
 # Whether to generate warnings when misformatted docstrings are found
 WARN_MISFORMATTED_DOCSTRINGS = False
 
@@ -387,6 +376,8 @@ class IPythonDisplay:
         self._reactive = reactive
 
     def __call__(self):
+        from IPython.display import display
+
         from param.depends import depends
         from param.parameterized import Undefined, resolve_ref
         from param.reactive import rx
@@ -408,19 +399,17 @@ class IPythonDisplay:
             obj = cb()
             if obj is Undefined:
                 obj = None
-            if _display is None:
-                raise NotImplementedError
-            handle = _display(obj, display_id=uuid.uuid4().hex)
+            handle = display(obj, display_id=uuid.uuid4().hex)
         except TypeError:
             raise NotImplementedError
 
 def ipython_async_executor(func):
     event_loop = None
-    if _get_ipython is None:
+    if "get_ipython" not in globals():
         async_executor(func)
         return
     try:
-        ip = _get_ipython()
+        ip = get_ipython()  # type: ignore[unresolved-reference]  # noqa: F821
         if ip.kernel:
             # We are in Jupyter and can piggyback the tornado IOLoop
             from tornado.ioloop import IOLoop  # type: ignore[unresolved-import]

@@ -106,6 +106,14 @@ from .parameterized import (
 from .parameters import Boolean, Event
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
+if t.TYPE_CHECKING:
+    import sys
+
+    if sys.version_info < (3, 11):
+        from typing_extensions import Self
+    else:
+        from typing import Self
+
 
 class Wrapper(Parameterized):
     """Helper class to allow updating literal values easily."""
@@ -1122,7 +1130,7 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
-def bind(function, *args, watch: bool = False, **kwargs):
+def bind(function: Callable, *args, watch: bool = False, **kwargs):
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
 
@@ -1740,7 +1748,7 @@ class rx:
             return bind(evaluate, *params)
         return evaluate
 
-    def _clone(self, operation=None, copy=False, **kwargs) -> t.Any:
+    def _clone(self, operation=None, copy=False, **kwargs) -> Self:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
@@ -1767,7 +1775,7 @@ class rx:
         except Exception:
             return sorted(set(dir(type(self))) | set(self.__dict__) | extras)
 
-    def _resolve_accessor(self):
+    def _resolve_accessor(self) -> Self:
         if not self._method:
             # No method is yet set, as in `dfi.A`, so return a copied clone.
             return self._clone(copy=True)
@@ -1835,7 +1843,7 @@ class rx:
     # rx pipeline APIs
     #----------------------------------------------------------------
 
-    def __array_ufunc__(self, ufunc, method, *args, **kwargs):
+    def __array_ufunc__(self, ufunc, method, *args, **kwargs) -> Self:
         new = self._resolve_accessor()
         operation = {
             'fn': getattr(ufunc, method),
@@ -1845,7 +1853,9 @@ class rx:
         }
         return new._clone(operation)
 
-    def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> t.Any:
+    def _apply_operator(
+        self, operator: Callable, *args, reverse: bool = False, **kwargs
+    ) -> Self:
         new = self._resolve_accessor()
         operation = {
             'fn': operator,
@@ -1860,7 +1870,7 @@ class rx:
     def __abs__(self):
         return self._apply_operator(abs)
 
-    def __str__(self):
+    def __str__(self):  # type: ignore[bad-override]
         return self._apply_operator(str)
 
     def __round__(self, ndigits=None):
@@ -1890,7 +1900,7 @@ class rx:
         return self._apply_operator(operator.contains, other)
     def __divmod__(self, other):
         return self._apply_operator(divmod, other)
-    def __eq__(self, other):
+    def __eq__(self, other):  # type: ignore[bad-override]
         return self._apply_operator(operator.eq, other)
     def __floordiv__(self, other):
         return self._apply_operator(operator.floordiv, other)
@@ -1910,7 +1920,7 @@ class rx:
         return self._apply_operator(operator.mod, other)
     def __mul__(self, other):
         return self._apply_operator(operator.mul, other)
-    def __ne__(self, other):
+    def __ne__(self, other):  # type: ignore[bad-override]
         return self._apply_operator(operator.ne, other)
     def __or__(self, other):
         return self._apply_operator(operator.or_, other)

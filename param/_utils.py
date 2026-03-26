@@ -13,15 +13,13 @@ from collections import OrderedDict, abc, defaultdict
 from contextlib import contextmanager
 from textwrap import dedent
 from threading import get_ident
-from typing import TYPE_CHECKING, Callable, Protocol, TypeVar, runtime_checkable
 
-if TYPE_CHECKING:
-    from typing_extensions import Concatenate, ParamSpec
+if t.TYPE_CHECKING:
     from param.parameterized import Parameter
 
-    P = ParamSpec("P")
-    R = TypeVar("R")
-    CallableT = TypeVar("CallableT", bound=Callable)
+    P = t.ParamSpec("P")
+    R = t.TypeVar("R")
+    CallableT = t.TypeVar("CallableT", bound=abc.Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
@@ -100,7 +98,7 @@ class Skip(Exception):
 
 
 def _deprecated(extra_msg: str = "", warning_cat: type[Warning] = ParamDeprecationWarning):
-    def decorator(func: Callable[..., t.Any]) -> Callable[..., t.Any]:
+    def decorator(func: abc.Callable[..., t.Any]) -> abc.Callable[..., t.Any]:
         """Mark a function or method as deprecated.
 
         This internal decorator issues a warning when the decorated function
@@ -283,11 +281,11 @@ def flatten(line):
 
 
 def accept_arguments(
-    f: Callable[Concatenate[CallableT, P], R]
-) -> Callable[..., Callable[[CallableT], R]]:
+    f: abc.Callable[t.Concatenate[CallableT, P], R]
+) -> abc.Callable[..., abc.Callable[[CallableT], R]]:
     """Decorate a decorator to accept arguments."""
     @functools.wraps(f)
-    def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
+    def _f(*args: P.args, **kwargs: P.kwargs) -> abc.Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
 
@@ -620,8 +618,8 @@ def async_executor(func):
     else:
         event_loop.run_until_complete(func())
 
-@runtime_checkable
-class _HasTypes(Protocol):
+@t.runtime_checkable
+class _HasTypes(t.Protocol):
     @classmethod
     def types(cls) -> abc.Iterable[type]: ...
 

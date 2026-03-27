@@ -5757,7 +5757,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     _param__private: t.ClassVar[PrivateNS]
     _param__parameters: t.ClassVar[Parameters]
 
-    param: Parameters = NS()  # type: ignore[bad-assignment]
+    param: Parameters = NS()  # type: ignore[bad-assignment, assignment]
 
     def __init__(self, **params):
         # No __init__ docstring to avoid shadowing the user class docstring

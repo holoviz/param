@@ -138,7 +138,7 @@ except (ImportError, LookupError, FileNotFoundError):
         from importlib.metadata import version as mversion, PackageNotFoundError
 
         try:
-            __version__ = mversion("param")
+            __version__ = str(mversion("param"))
         except PackageNotFoundError:
             # The user is probably trying to run this without having installed
             # the package.

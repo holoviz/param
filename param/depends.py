@@ -9,7 +9,7 @@ from functools import wraps
 from .parameterized import (
     Event, Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
 )
-from ._utils import accept_arguments, iscoroutinefunction
+from ._utils import iscoroutinefunction
 
 if t.TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator
@@ -36,6 +36,12 @@ class DependsFunc(t.Protocol[P, R]):
 
 @t.overload
 def depends(
+    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = ..., on_init: bool = ..., **kw: Dependency
+) -> DependsFunc[P, R]:
+    ...
+
+@t.overload
+def depends(
     *dependencies: str, watch: bool = ..., on_init: bool = ...
 ) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
     ...
@@ -46,10 +52,9 @@ def depends(
 ) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
     ...
 
-@accept_arguments
 def depends(
-    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
-) -> DependsFunc[P, R]:
+    *dependencies: Dependency | Callable[P, R], watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> DependsFunc[P, R] | Callable[[Callable[P, R]], DependsFunc[P, R]]:
     """
     Annotates a function or :class:`Parameterized` method to express its dependencies.
 
@@ -69,6 +74,22 @@ def depends(
         by default ``False``.
 
     """
+    if dependencies and callable(dependencies[0]) and not isinstance(dependencies[0], (str, Parameter)):
+        func = t.cast("Callable[P, R]", dependencies[0])
+        deps = t.cast("tuple[Dependency, ...]", dependencies[1:])
+        return _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw)
+
+    deps = t.cast("tuple[Dependency, ...]", dependencies)
+
+    def _decorator(func: Callable[P, R]) -> DependsFunc[P, R]:
+        return _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw)
+
+    return _decorator
+
+
+def _depends_impl(
+    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> DependsFunc[P, R]:
     dependencies, kw = (
         tuple(transform_reference(arg) for arg in dependencies),
         {key: transform_reference(arg) for key, arg in kw.items()}

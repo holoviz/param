@@ -3260,7 +3260,7 @@ class Parameters:
                 with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                     self_._execute_watcher(watcher, events)
 
-    def set_dynamic_time_fn(self_, time_fn: Callable, sublistattr=None):
+    def set_dynamic_time_fn(self_, time_fn: Callable, sublistattr: str | None = None) -> None:
         """
         Set ``time_fn`` for all :class:`param.Dynamic` Parameters of this class or
         instance object that are currently being dynamically
@@ -3279,28 +3279,29 @@ class Parameters:
         ``set_dynamic_time_fn()`` will be called for those, too.
         """
         self_or_cls = self_.self_or_cls
-        self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[attr-defined, ty:invalid-assignment]
-        param_ns = self_or_cls.param
+        self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]
+        param_ns: Parameters = self_or_cls.param
 
-        if isinstance(self_or_cls, type):
+        a : tuple[None, type[Parameterized]] | tuple[Parameterized]
+        if isinstance(self_or_cls, type) and issubclass(self_or_cls, Parameterized):
             a = (None, self_or_cls)
         else:
             a = (self_or_cls,)
 
-        for n,p in param_ns.objects('existing').items():  # ty: ignore[unresolved-attribute]
+        for n, p in param_ns.objects('existing').items():
             if hasattr(p, '_value_is_dynamic'):
                 if p._value_is_dynamic(*a):
-                    g = param_ns.get_value_generator(n)  # ty: ignore[unresolved-attribute]
+                    g = param_ns.get_value_generator(n)
                     g._Dynamic_time_fn = time_fn
 
         if sublistattr:
             try:
-                sublist = getattr(self_or_cls,sublistattr)
+                sublist = getattr(self_or_cls, sublistattr)
             except AttributeError:
                 sublist = []
 
             for obj in sublist:
-                obj.param.set_dynamic_time_fn(time_fn,sublistattr)
+                obj.param.set_dynamic_time_fn(time_fn, sublistattr)
 
     def serialize_parameters(self_, subset: Iterable[str] | None = None, mode: str = 'json'):
         """
@@ -4606,6 +4607,7 @@ class Parameters:
         arguments = arglist + keywords + (['**%s' % spec.varargs] if spec.varargs else [])
         return qualifier + '{}({})'.format(self.__class__.__name__,  (','+separator+prefix).join(arguments))
 
+
 class ParameterizedMetaclass(type):
     """
     The metaclass of Parameterized (and all its descendents).
@@ -4653,7 +4655,6 @@ class ParameterizedMetaclass(type):
         # Avoid referencing `Parameterized` before it is defined during class bootstrap.
         param_ns = Parameters(t.cast("type[Parameterized]", mcs))
         mcs._param__parameters = param_ns
-        mcs.param = NS(param_ns)
         mcs.__set_name(name, dict_)
 
         # All objects (with their names) of type Parameter that are
@@ -4661,7 +4662,7 @@ class ParameterizedMetaclass(type):
         parameters = [(n, o) for (n, o) in dict_.items()
                       if isinstance(o, Parameter)]
 
-        for param_name,param in parameters:
+        for param_name, param in parameters:
             mcs._initialize_parameter(param_name, param)
 
         # Override class-value with default_factory
@@ -4710,7 +4711,7 @@ class ParameterizedMetaclass(type):
 
     @property
     def __get_params(mcs) -> Parameters:
-        return mcs.param  # type: ignore[attr-defined,return-value, ty:invalid-return-type]
+        return mcs._param__parameters  # type: ignore[attr-defined,return-value, ty:invalid-return-type]
 
     def __set_name(mcs, name: str, dict_: dict[str, t.Any]):
         """
@@ -5557,21 +5558,18 @@ C = t.TypeVar("C", bound="Parameterized")
 
 class NS:
 
-    def __init__(self, class_ns: Parameters):
-        self.class_ns = class_ns
-
     @t.overload
     def __get__(self, obj: None, objtype: type[C]) -> Parameters: ...
     @t.overload
-    def __get__(self, obj: C, objtype: type[C] | None = ...) -> Parameters: ...
+    def __get__(self, obj: C, objtype: type[C]) -> Parameters: ...
 
-    def __get__(self, obj: C | None, objtype: type[C] | None = None) -> Parameters:
+    def __get__(self, obj: C | None, objtype: type[C]) -> Parameters:
         if obj is None:
-            return self.class_ns
+            return objtype._param__parameters
         objdict = getattr(obj, "__dict__", None)
         ns = objdict.get("_param__parameters") if objdict is not None else None
         if ns is None:
-            ns = Parameters(self.class_ns.cls, self=obj)
+            ns = Parameters(objtype, self=obj)
             if objdict is not None:
                 objdict["_param__parameters"] = ns
             else:
@@ -5763,6 +5761,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     _param__private: t.ClassVar[PrivateNS]
     _param__parameters: t.ClassVar[Parameters]
 
+    param: Parameters = NS()  # type: ignore[bad-assignment]
+
     def __init__(self, **params):
         # No __init__ docstring to avoid shadowing the user class docstring
         # displayed in IDEs.
@@ -5805,43 +5805,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)
         self._param__private.refs = refs
-
-    @property
-    def param(self) -> Parameters:
-        """
-        The ``.param`` namespace for :class:`Parameterized` classes and instances.
-
-        This namespace provides access to powerful methods and properties for managing
-        parameters in a `Parameterized` object. It includes utilities for adding parameters,
-        updating parameters, debugging, serialization, logging, and more.
-
-        References
-        ----------
-        For more details on parameter objects and instances, see:
-        https://param.holoviz.org/user_guide/Parameters.html#parameter-objects-and-instances
-
-        Examples
-        --------
-        Basic usage of ``.param`` in a :class:`Parameterized` class:
-
-        >>> import param
-        >>>
-        >>> class MyClass(param.Parameterized):
-        ...     value = param.Parameter()
-        >>>
-        >>> my_instance = MyClass(value=0)
-
-        Access the ``value`` parameter of ``my_instance``:
-
-        >>> my_instance.param.value  # the Parameter instance
-
-        Note that this is different from the current ``value`` of ``my_instance``:
-
-        >>> my_instance.value  # the current parameter value
-        0
-
-        """
-        return Parameters(self.__class__, self=self)
 
     # 'Special' methods
 

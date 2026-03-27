@@ -176,3 +176,16 @@ project-excludes = [
     "**/.git",
 ]
 infer-with-first-use = false
+
+[tool.pyright]
+ignore = [
+    "param/version.py",
+    "**/version.py",
+    "**/tests",
+    "**/test_*",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/.git",
+]

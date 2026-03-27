@@ -35,6 +35,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from os import PathLike
 
+
 from .parameterized import (
     T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
     String, Undefined, get_logger, instance_descriptor, _dt_types,
@@ -527,11 +528,10 @@ class Dynamic(Parameter[T]):
             self._set_instantiate(True)
             self._initialize_generator(self.default)
 
-
-    def _initialize_generator(self,gen,obj=None):
+    def _initialize_generator(self, gen, obj=None):
         """Add 'last time' and 'last value' attributes to the generator."""
         # Could use a dictionary to hold these things.
-        if hasattr(obj,"_Dynamic_time_fn"):
+        if obj is not None and hasattr(obj, "_Dynamic_time_fn"):
             gen._Dynamic_time_fn = obj._Dynamic_time_fn
 
         gen._Dynamic_last = None
@@ -558,7 +558,7 @@ class Dynamic(Parameter[T]):
             return t.cast("T", self._produce_value(gen))
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized | type[Parameterized], val: T):
+    def __set__(self, obj: Parameterized, val: T):
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -566,7 +566,7 @@ class Dynamic(Parameter[T]):
 
         If val is dynamic, initialize it as a generator.
         """
-        super().__set__(obj,val)
+        super().__set__(obj, val)
 
         dynamic = callable(val)
         if dynamic: self._initialize_generator(val,obj)
@@ -707,12 +707,17 @@ class Number(Dynamic[T]):
         inclusive_bounds=(True,True), step=None,
     )
 
+    bounds: tuple[float | int | None, float | int | None] | None
+    softbounds: tuple[float | int | None, float | int | None] | None
+    inclusive_bounds: tuple[bool, bool]
+    step: float | int | None
+
     if t.TYPE_CHECKING:
 
         @t.overload
         def __init__(
-            self: Number[float],
-            default: float = 0.0,
+            self: Number[float | int],
+            default: float | int = 0.0,
             *,
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[NumberInitKwargs]
@@ -721,8 +726,8 @@ class Number(Dynamic[T]):
 
         @t.overload
         def __init__(
-            self: Number[float | None],
-            default: float | None = 0.0,
+            self: Number[float | int | None],
+            default: float | int = 0.0,
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[NumberInitKwargs]
@@ -731,17 +736,27 @@ class Number(Dynamic[T]):
 
         @t.overload
         def __init__(
-            self: Number[float | None],
-            default: float | None = None,
+            self: Number[float | int | None],
+            default: None = None,
             *,
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[NumberInitKwargs]
         ) -> None:
             ...
 
+        @t.overload
+        def __init__(
+            self: Number[float | int | None],
+            default: float | int | None = None,
+            *,
+            allow_None: bool = False,
+            **kwargs: Unpack[NumberInitKwargs]
+        ) -> None:
+            ...
+
     def __init__(
         self,
-        default: t.Any = Undefined,
+        default: float | int | None = t.cast("float | int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         bounds: tuple[float | int | None, float | int | None] | None = t.cast(  # pyrefly: ignore[bad-argument-type]
             "tuple[float | int | None, float | int | None] | None", Undefined
@@ -792,7 +807,7 @@ class Number(Dynamic[T]):
             self._validate(result)
         return result
 
-    def set_in_bounds(self, obj: Parameterized | type[Parameterized], val: t.Any) -> None:
+    def set_in_bounds(self, obj: Parameterized, val: t.Any) -> None:
         """
         Set to the given value, but cropped to be within the legal bounds.
         All objects are accepted, and no exceptions will be raised.  See
@@ -802,7 +817,7 @@ class Number(Dynamic[T]):
             bounded_val = self.crop_to_bounds(val)
         else:
             bounded_val = val
-        super().__set__(obj, bounded_val)
+        super().__set__(obj, t.cast("t.Any", bounded_val))
 
     def crop_to_bounds(self, val: t.Any) -> t.Any:
         """
@@ -919,6 +934,14 @@ class Number(Dynamic[T]):
         super().__setstate__(state)
 
 
+class IntegerInitKwargs(ParameterKwargs, total=False):
+    bounds: tuple[int | None, int | None] | None
+    softbounds: tuple[int | None, int | None] | None
+    inclusive_bounds: tuple[bool, bool]
+    step: int | None
+    set_hook: t.Callable[..., t.Any] | None
+
+
 class Integer(Number[T]):
     """Numeric Parameter required to be an Integer."""
 
@@ -962,12 +985,12 @@ class Integer(Number[T]):
 
     def __init__(
         self,
-        default=Undefined,
+        default: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[NumberInitKwargs]
+        **kwargs: Unpack[IntegerInitKwargs]
     ) -> None:
-        t.cast("t.Any", Number.__init__)(self, default=default, allow_None=allow_None, **kwargs)
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc]
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
         if callable(value):
@@ -995,52 +1018,12 @@ class Magnitude(Number[T]):
 
     _slot_defaults = {**Number._slot_defaults, 'default': 1.0, 'bounds': (0.0, 1.0)}
 
-    if t.TYPE_CHECKING:
-
-        @t.overload
-        def __init__(
-            self: Magnitude[float],
-            default: float = 1.0,
-            *,
-            allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[NumberInitKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Magnitude[float | None],
-            default: float | None = 1.0,
-            *,
-            allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[NumberInitKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Magnitude[float | None],
-            default: float | None = None,
-            *,
-            allow_None: bool = False,
-            **kwargs: Unpack[NumberInitKwargs]
-        ) -> None:
-            ...
-
-    def __init__(self, default=Undefined, *, bounds=Undefined, softbounds=Undefined,
-                 inclusive_bounds=Undefined, step=Undefined, **params):
-        t.cast("t.Any", super().__init__)(
-            default=default, bounds=bounds, softbounds=softbounds,
-            inclusive_bounds=inclusive_bounds, step=step, **params
-        )
-
-
 
 class DateInitKwargs(ParameterKwargs, total=False):
     bounds: tuple[t.Any | None, t.Any | None] | None
     softbounds: tuple[t.Any | None, t.Any | None] | None
     inclusive_bounds: tuple[bool, bool]
-    step: dt.datetime | dt.date | None
+    step: int | None
     set_hook: t.Callable[..., t.Any] | None
 
 
@@ -1130,7 +1113,7 @@ class CalendarDateInitKwargs(ParameterKwargs, total=False):
     bounds: tuple[dt.date | None, dt.date | None] | None
     softbounds: tuple[dt.date | None, dt.date | None] | None
     inclusive_bounds: tuple[bool, bool]
-    step: dt.date | None
+    step: int | None
     set_hook: t.Callable[..., t.Any] | None
 
 
@@ -1163,12 +1146,12 @@ class CalendarDate(Number[T]):
 
     def __init__(
         self,
-        default=None,
+        default: dt.date | None = t.cast("dt.date | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[CalendarDateInitKwargs]
     ) -> None:
-        t.cast("t.Any", Number.__init__)(
+        super().__init__( # type: ignore[misc, call-overload]
             self, default=default, allow_None=allow_None, **kwargs
         )
 
@@ -1245,8 +1228,14 @@ class Boolean(Parameter[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **params):
-        super().__init__(default=default, **params)
+    def __init__(
+        self,
+        default: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
+        super().__init__(default=default, allow_None=allow_None, **params)
         self._validate(self.default)
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
@@ -1348,9 +1337,9 @@ class Tuple(Parameter[T]):
 
     __slots__ = ['length']
 
-    length: int | None
-
     _slot_defaults = dict(Parameter._slot_defaults, default=(0,0), length=_compute_length_of_default)
+
+    length: int | None
 
     if t.TYPE_CHECKING:
 
@@ -1397,9 +1386,20 @@ class Tuple(Parameter[T]):
         ) -> None:
             ...
 
+        @t.overload
+        def __init__(
+            self: Tuple[tuple[t.Any, ...] | None],
+            default: tuple[t.Any, ...] | None = None,
+            *,
+            length: int | None = None,
+            allow_None: bool = False,
+            **kwargs: Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
     def __init__(
         self,
-        default: t.Any = Undefined,
+        default=t.cast("tuple[t.Any, ...] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         length: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -1491,15 +1491,26 @@ class NumericTuple(Tuple[T]):
         ) -> None:
             ...
 
+        @t.overload
+        def __init__(
+            self: NumericTuple[tuple[float, ...] | None],
+            default: tuple[float, ...] | None = None,
+            *,
+            length: int | None = None,
+            allow_None: bool = False,
+            **kwargs: Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
     def __init__(
         self,
-        default=Undefined,
+        default: tuple[float, ...] | None = t.cast("tuple[float, ...] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
-        length=Undefined,
-        allow_None=Undefined,
+        length: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        t.cast("t.Any", super().__init__)(  # type: ignore[attr-defined,misc]
+        super().__init__( # type: ignore[misc]
             default=default, length=length, allow_None=allow_None, **params
         )
 
@@ -1523,7 +1534,7 @@ class XYCoordinates(NumericTuple[T]):
 
     if t.TYPE_CHECKING:
         @t.overload
-        def __init__(self: XYCoordinates[tuple[float, float]]) -> None:
+        def __init__(self: XYCoordinates[tuple[float, float] | None]) -> None:
             ...
 
         @t.overload
@@ -1546,8 +1557,37 @@ class XYCoordinates(NumericTuple[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **params):
-        t.cast("t.Any", super().__init__)(default=default, length=2, **params)
+        @t.overload
+        def __init__(
+            self: XYCoordinates[tuple[float, float] | None],
+            default: tuple[float, float] | None = None,
+            *,
+            allow_None: bool = False,
+            **params: Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: tuple[float, float] | None = t.cast("tuple[float, float] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
+        super().__init__( # type: ignore[misc]
+            default=default,
+            length=2,
+            allow_None=allow_None,
+            **params
+        )
+
+
+class RangeInitKwargs(ParameterKwargs, total=False):
+    bounds: tuple[float, float] | None
+    softbounds: tuple[float, float] | None
+    inclusive_bounds: tuple[bool, bool]
+    step: float | None
+    set_hook: t.Callable[..., t.Any] | None
 
 
 class Range(NumericTuple[T]):
@@ -1570,6 +1610,7 @@ class Range(NumericTuple[T]):
     step: float | None
 
     if t.TYPE_CHECKING:
+
         @t.overload
         def __init__(self: Range[tuple[float, float]]) -> None:
             ...
@@ -1580,7 +1621,7 @@ class Range(NumericTuple[T]):
             default: tuple[float, float] = (0.0, 0.0),
             *,
             allow_None: t.Literal[False] = False,
-            **params: Unpack[NumberInitKwargs]
+            **params: Unpack[RangeInitKwargs]
         ) -> None:
             ...
 
@@ -1590,25 +1631,26 @@ class Range(NumericTuple[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **params: Unpack[NumberInitKwargs]
+            **params: Unpack[RangeInitKwargs]
         ) -> None:
             ...
 
-    def __init__(
+    def __init__(  # type: ignore[call-overload, misc]
         self,
-        default=Undefined,
+        default: tuple[float, float] | None = t.cast("tuple[float, float] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
-        bounds=Undefined,
-        softbounds=Undefined,
-        inclusive_bounds=Undefined,
-        step=Undefined,
-        **params
+        bounds: tuple[float, float] | None = t.cast("tuple[float, float] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        softbounds: tuple[float, float] | None = t.cast("tuple[float, float] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        inclusive_bounds: tuple[bool, bool] = t.cast("tuple[bool, bool]", Undefined),  # pyrefly: ignore[bad-argument-type]
+        step: float | None = t.cast("float | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
     ):
-        self.bounds = bounds  # type: ignore[attr-defined, ty:invalid-assignment]
-        self.inclusive_bounds = inclusive_bounds  # type: ignore[attr-defined, ty:invalid-assignment]
-        self.softbounds = softbounds  # type: ignore[attr-defined, ty:invalid-assignment]
-        self.step = step  # type: ignore[attr-defined, ty:invalid-assignment]
-        t.cast("t.Any", super().__init__)(default=default, length=2, **params)
+        self.bounds = bounds
+        self.inclusive_bounds = inclusive_bounds
+        self.softbounds = softbounds
+        self.step = step
+        super().__init__(default=default, length=2, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
 
     def _validate(self, val):
         super()._validate(val)
@@ -1724,8 +1766,14 @@ class DateRange(Range[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **kwargs) -> None:
-        t.cast("t.Any", super().__init__)(default=default, **kwargs)  # type: ignore[misc]
+    def __init__(
+        self,
+        default: tuple[dt.datetime | dt.date, dt.datetime | dt.date] | None = t.cast("tuple[dt.datetime | dt.date, dt.datetime | dt.date] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[DateInitKwargs]
+    ) -> None:
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
 
     def _validate_bound_type(self, value, position, kind):
         if not isinstance(value, _dt_types):
@@ -1828,8 +1876,14 @@ class CalendarDateRange(Range[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **kwargs) -> None:
-        t.cast("t.Any", super().__init__)(default=default, **kwargs)  # type: ignore[misc]
+    def __init__(
+        self,
+        default: tuple[dt.date, dt.date] | None = t.cast("tuple[dt.date, dt.date] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[CalendarDateInitKwargs]
+    ) -> None:
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
 
     def _validate_value(self, value, allow_None):
         if allow_None and value is None:
@@ -1910,7 +1964,12 @@ class Callable(Parameter[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **params):
+    def __init__(self,
+        default: t.Callable[..., t.Any] | None = t.cast("t.Callable[..., t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
         super().__init__(default=default, **params)
         self._validate(self.default)
 
@@ -2255,6 +2314,13 @@ class _SignatureSelector(Parameter[T]):
         return defaults
 
 
+class SelectorInitKwargs(ParameterKwargs, total=False):
+    objects: list[t.Any] | dict[str, t.Any] | None
+    compute_default_fn: t.Callable[[], t.Any] | None
+    check_on_set: bool
+    empty_default: bool
+
+
 class Selector(SelectorBase, _SignatureSelector[T]):
     """
     Parameter whose value must be one object from a list of possible objects.
@@ -2293,9 +2359,17 @@ class Selector(SelectorBase, _SignatureSelector[T]):
 
     # Selector is usually used to allow selection from a list of
     # existing objects, therefore instantiate is False by default.
-    def __init__(self, *, objects=Undefined, default=Undefined, instantiate=Undefined,
-                 compute_default_fn=Undefined, check_on_set=Undefined,
-                 allow_None=Undefined, empty_default=False, **params):
+    def __init__(
+        self,
+        *,
+        objects: list[t.Any] | dict[str, t.Any] | None = t.cast("list[t.Any] | dict[str, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default: t.Any = t.cast("t.Any", Undefined),  # pyrefly: ignore[bad-argument-type]
+        compute_default_fn: t.Callable[[], t.Any] | None = t.cast("t.Callable[[], t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        check_on_set: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        empty_default: bool = False,
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
 
         if compute_default_fn is not Undefined:
             warnings.warn(
@@ -2314,13 +2388,14 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         default = autodefault if (not empty_default and default is Undefined) else default
 
         self.objects = objects
-        self.compute_default_fn = compute_default_fn  # type: ignore[attr-defined, ty:invalid-assignment]
-        self.check_on_set = check_on_set  # type: ignore[attr-defined, ty:invalid-assignment]
+        self.compute_default_fn = compute_default_fn
+        self.check_on_set = check_on_set
 
-        instantiate_value = False if instantiate is Undefined else instantiate
-        super().__init__(default=default, instantiate=instantiate_value, **params)
+        instantiate = params.pop("instantiate", Undefined)
+        params["instantiate"] = False if instantiate is Undefined else instantiate
+        super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
-        self.allow_None = t.cast("bool", allow_None)
+        self.allow_None = allow_None
         if self.default is not None:
             self._validate_value(self.default)
         self._update_state()
@@ -2417,9 +2492,13 @@ class ObjectSelector(Selector):
     historical reasons.
     """
 
-    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
-        super().__init__(objects=objects, default=default,
-                         empty_default=True, **kwargs)
+    def __init__(
+        self,
+        default: t.Any = t.cast("t.Any", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[SelectorInitKwargs]
+    ) -> None:
+        kwargs["empty_default"] = True
+        super().__init__(default=default, **kwargs) # type: ignore[misc, call-overload]
 
 
 class FileSelectorInitKwargs(ParameterKwargs, total=False):
@@ -2471,14 +2550,17 @@ class FileSelector(Selector[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
-        resolved = t.cast("str | PathLike[str]", path)
-        self.default = default
-        self.path = resolved
-        self.update(path=resolved)
-        if default is not Undefined:
-            self.default = default
-        super().__init__(default=self.default, objects=self._objects, **kwargs)
+    def __init__(
+        self,
+        default: PathLike | str | None = t.cast("PathLike | str", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        path: str | PathLike = t.cast("str | PathLike", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[ParameterKwargs]
+    ) -> None:
+        self.path = path
+        self.update(path=path)
+        super().__init__(default=default, objects=self._objects, **kwargs) # type: ignore[misc, call-overload]
 
     def _on_set(self, attribute: str, old: t.Any, value: t.Any):
         super()._on_set(attribute, old, value)
@@ -2508,9 +2590,15 @@ class ListSelector(Selector):
     a list of possible objects.
     """
 
-    def __init__(self, default=Undefined, *, objects=Undefined, **kwargs):
-        super().__init__(
-            objects=objects, default=default, empty_default=True, **kwargs)
+    def __init__(
+        self,
+        default: list[t.Any] | None = t.cast("list[t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[SelectorInitKwargs]
+    ) -> None:
+        kwargs["empty_default"] = True
+        super().__init__(default=default, allow_None=allow_None, **kwargs) # type: ignore[misc, call-overload]
 
     def compute_default(self):
         warnings.warn(
@@ -2565,11 +2653,18 @@ class MultiFileSelector(ListSelector):
 
     _slot_defaults = {**Selector._slot_defaults, 'path': ""}
 
-    def __init__(self, default=Undefined, *, path=Undefined, **kwargs):
+    def __init__(
+        self,
+        default: list[PathLike | str] | None = t.cast("list[PathLike | str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        path: str | PathLike = t.cast("str | PathLike", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[SelectorInitKwargs]
+    ) -> None:
         self.default = default
         self.path = path
         self.update(path=path)
-        super().__init__(default=default, objects=self._objects, **kwargs)
+        kwargs["objects"] = self._objects
+        super().__init__(default=default, **kwargs)
 
     def _on_set(self, attribute: str, old: t.Any, value: t.Any):
         super()._on_set(attribute, old, value)
@@ -2620,6 +2715,7 @@ class ClassSelector(SelectorBase[T]):
 
     instantiate: bool
     is_instance: bool
+    class_: type | tuple[type, ...]
 
     if t.TYPE_CHECKING:
 
@@ -2675,17 +2771,40 @@ class ClassSelector(SelectorBase[T]):
         ) -> None:
             ...
 
-    def __init__(self, *, class_, default=Undefined, instantiate=Undefined, is_instance=Undefined, **params):
+        @t.overload
+        def __init__(
+            self: ClassSelector[IT | CT | None],
+            *,
+            class_: type[IT] | type[CT] | tuple[type[IT] | type[CT], ...],
+            default: IT | type[CT] | None = None,
+            instantiate: bool = True,
+            is_instance: bool = True,
+            allow_None: bool = False,
+            **kwargs: Unpack[ClassSelectorInitKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self, *,
+        class_: type | tuple[type, ...] = t.cast("type | tuple[type, ...]", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default: t.Any | None = t.cast("t.Any | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        instantiate: bool = True,
+        is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ClassSelectorInitKwargs]
+    ) -> None:
         self.class_ = class_
         self.is_instance = is_instance  # type: ignore
-        t.cast("t.Any", super().__init__)(default=default, instantiate=instantiate, **params)
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default, allow_None=allow_None, **params
+        )
         self._validate(self.default)
 
     def _validate(self, val):
         super()._validate(val)
         self._validate_class_(val, self.class_, self.is_instance)
 
-    def _validate_class_(self, val: t.Any, class_: type[T] | tuple[type[T], ...], is_instance: bool):
+    def _validate_class_(self, val: t.Any, class_: type | tuple[type, ...], is_instance: bool):
         if (val is None and self.allow_None):
             return
         if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
@@ -2731,7 +2850,7 @@ class Dict(ClassSelector[T]):
 
         @t.overload
         def __init__(
-            self: Dict[np.ndarray | None],
+            self: Dict[dict[t.Any, t.Any] | None],
         ):
             ...
 
@@ -2755,8 +2874,24 @@ class Dict(ClassSelector[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **params):
-        t.cast("t.Any", super().__init__)(default=default, class_=dict, **params)
+        @t.overload
+        def __init__(
+            self: Dict[dict[t.Any, t.Any] | None],
+            default: dict[t.Any, t.Any] | None = None,
+            *,
+            allow_None: bool = False,
+            **kwargs: Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: dict[t.Any, t.Any] | None = t.cast("dict[t.Any, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
+        super().__init__(default=default, class_=dict, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
 
 
 class Array(ClassSelector[T]):
@@ -2814,6 +2949,12 @@ class Array(ClassSelector[T]):
             return numpy.asarray(value)
 
 
+class DataFrameInitKwargs(ParameterKwargs, total=False):
+    rows: int | tuple[int | None, int | None] | None
+    columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
+    ordered: bool | None
+
+
 class DataFrame(ClassSelector[T]):
     """
     Parameter whose value is a pandas ``DataFrame``.
@@ -2855,11 +2996,8 @@ class DataFrame(ClassSelector[T]):
             self: DataFrame[pd.DataFrame],
             default: pd.DataFrame = pd.DataFrame([]),
             *,
-            rows: int | tuple[int | None, int | None] | None = None,
-            columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
-            ordered: bool | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[DataFrameInitKwargs]
         ) -> None:
             ...
 
@@ -2871,17 +3009,26 @@ class DataFrame(ClassSelector[T]):
             rows: int | tuple[int | None, int | None] | None = None,
             columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
             ordered: bool | None = None,
-            allow_None: t.Literal[True] = True,
+            allow_None: bool = True,
             **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, *, rows=Undefined, columns=Undefined, ordered=Undefined, **params):
+    def __init__(
+        self,
+        default: pd.DataFrame | None = t.cast("pd.DataFrame | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        rows: int | tuple[int | None, int | None] | None = t.cast("int | tuple[int | None, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = t.cast("int | tuple[int | None, int | None] | list[str] | set[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        ordered: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
         pdDFrame = importlib.import_module('pandas').DataFrame  # type: ignore[unresolved-attribute]
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        t.cast("t.Any", ClassSelector.__init__)(self, default=default, class_=pdDFrame, **params)
+        super().__init__(default=default, class_=pdDFrame, **params)
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -3022,11 +3169,29 @@ class Series(ClassSelector[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, *, rows=Undefined, allow_None=Undefined, **params):
+        @t.overload
+        def __init__(
+            self: Series[pd.Series | None],
+            default: pd.Series | None = None,
+            *,
+            rows: int | tuple[int | None, int | None] | None = None,
+            allow_None: bool = False,
+            **kwargs: Unpack[ParameterKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: pd.Series | None = t.cast("pd.Series | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        rows: int | tuple[int | None, int | None] | None = t.cast("int | tuple[int | None, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ):
         pdSeries = t.cast("t.Any", importlib.import_module('pandas')).Series
         self.rows = rows
-        t.cast("t.Any", ClassSelector.__init__)(
-            self, default=default, class_=pdSeries, allow_None=allow_None, **params
+        super().__init__(
+            default=default, class_=pdSeries, allow_None=allow_None, **params
         )
         self._validate(self.default)
 
@@ -3127,18 +3292,20 @@ class List(Parameter[T]):
 
     def __init__(
         self,
-        default=Undefined, *,
+        default: list[t.Any] | None = t.cast("list[t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
         item_type: type[t.Any] | tuple[type[t.Any], ...] | None = t.cast(  # pyrefly: ignore[bad-argument-type]
             "type[t.Any] | tuple[type[t.Any], ...] | None", Undefined
         ),
         bounds: tuple[int, int | None] | None = t.cast("tuple[int, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
     ) -> None:
         self.item_type = item_type
         self.is_instance = is_instance
         self.bounds = bounds
-        Parameter.__init__(self, default=default, **params)
+        Parameter.__init__(self, default=default, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
         self._validate(self.default)
 
     def _validate(self, val):
@@ -3364,14 +3531,22 @@ class Path(Parameter[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, *, search_paths=Undefined, check_exists=Undefined, **params):
+    def __init__(
+        self,
+        default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        search_paths: list[str | PathLike] | None = t.cast("list[str | PathLike] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        check_exists: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[ParameterKwargs]
+    ) -> None:
         if search_paths is Undefined:
             search_paths = []
         self.search_paths = t.cast("list[str | PathLike] | None", search_paths)
         if check_exists is not Undefined and not isinstance(check_exists, bool):
             raise ValueError("'check_exists' attribute value must be a boolean")
-        self.check_exists = t.cast("bool", check_exists)
-        super().__init__(default,**params)
+        self.check_exists = check_exists
+        super().__init__(default=default, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
         self._validate(self.default)
 
     def _resolve(self, path):
@@ -3546,7 +3721,13 @@ class Color(Parameter[T]):
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, *, allow_named=Undefined, **kwargs):
+    def __init__(self,
+        default: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_named: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[ParameterKwargs]
+    ) -> None:
         super().__init__(default=default, **kwargs)
         self.allow_named = allow_named
         self._validate(self.default)
@@ -3631,13 +3812,13 @@ class Bytes(Parameter[T]):
 
     def __init__(
         self,
-        default=Undefined,
+        default: bytes | str | None = t.cast("bytes | str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         regex: bytes | str | None = t.cast("bytes | str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
-        allow_None=Undefined,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[ParameterKwargs]
     ) -> None:
-        super().__init__(default=default, **kwargs)
+        super().__init__(default=default, allow_None=allow_None, **kwargs)
         self.regex = regex
         self._validate(self.default)
 

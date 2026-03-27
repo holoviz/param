@@ -577,12 +577,13 @@ class reactive_ops:
             )
         if inspect.iscoroutinefunction(func):
             import asyncio
-            async def apply(vs, *args, **kwargs):
+            async def apply_async(vs, *args, **kwargs):
                 return list(await asyncio.gather(*(func(v, *args, **kwargs) for v in vs)))
+            return self._as_rx()._apply_operator(apply_async, *args, **kwargs)
         else:
             def apply(vs, *args, **kwargs):
                 return [func(v, *args, **kwargs) for v in vs]
-        return self._as_rx()._apply_operator(apply, *args, **kwargs)
+            return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
     def not_(self) -> 'rx':
         """
@@ -927,12 +928,12 @@ class reactive_ops:
         trigger = Trigger(parameters=params)
         if xrefs:
             def trigger_x(*args):
-                if self.value:
+                if t.cast("bool", self.value):
                     trigger.param.trigger('value')
             bind(trigger_x, *xrefs, watch=True)
         if yrefs:
             def trigger_y(*args):
-                if not self.value:
+                if not t.cast("bool", self.value):
                     trigger.param.trigger('value')
             bind(trigger_y, *yrefs, watch=True)
 
@@ -1230,7 +1231,7 @@ def bind(function: Callable, *args, watch: bool = False, **kwargs):
         combined_args = []
         for arg in args:
             if hasattr(arg, '_dinfo'):
-                arg = eval_function_with_deps(arg)
+                arg = eval_function_with_deps(arg)  # type: ignore[arg-type]
             elif isinstance(arg, Parameter):
                 if arg.owner is not None and arg.name is not None:
                     arg = getattr(arg.owner, arg.name)
@@ -1240,7 +1241,7 @@ def bind(function: Callable, *args, watch: bool = False, **kwargs):
         combined_kwargs = {}
         for kw, arg in kwargs.items():
             if hasattr(arg, '_dinfo'):
-                arg = eval_function_with_deps(arg)
+                arg = eval_function_with_deps(arg)  # type: ignore[arg-type]
             elif isinstance(arg, Parameter):
                 if arg.owner is not None and arg.name is not None:
                     arg = getattr(arg.owner, arg.name)
@@ -1274,41 +1275,46 @@ def bind(function: Callable, *args, watch: bool = False, **kwargs):
                 fn = eval_function_with_deps(p)
         return fn
 
+    wrapped: t.Callable | t.AsyncGenerator | t.Awaitable
     if inspect.isgeneratorfunction(function):
-        def wrapped(*wargs, **wkwargs):
+        def wrapped_gen(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
             evaled = t.cast('Iterable[t.Any]', eval_fn()(*combined_args, **combined_kwargs))
             for val in evaled:
                 yield val
-        wrapper_fn = t.cast('t.Any', depends)(**dependencies, watch=watch)(wrapped)
-        t.cast('t.Any', wrapped)._dinfo = wrapper_fn._dinfo
+        wrapper_fn = t.cast('t.Any', depends)(**dependencies, watch=watch)(wrapped_gen)
+        t.cast('t.Any', wrapped_gen)._dinfo = wrapper_fn._dinfo
+        wrapped = wrapped_gen
     elif inspect.isasyncgenfunction(function):
-        async def wrapped(*wargs, **wkwargs):
+        async def wrapped_async_gen(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
             evaled = t.cast('t.Any', eval_fn()(*combined_args, **combined_kwargs))
             async for val in evaled:
                 yield val
-        wrapper_fn = t.cast('t.Any', depends)(**dependencies, watch=watch)(wrapped)
-        t.cast('t.Any', wrapped)._dinfo = wrapper_fn._dinfo
+        wrapper_fn = t.cast('t.Any', depends)(**dependencies, watch=watch)(wrapped_async_gen)
+        t.cast('t.Any', wrapped_async_gen)._dinfo = wrapper_fn._dinfo
+        wrapped = wrapped_async_gen
     elif iscoroutinefunction(function):
         @t.cast('t.Any', depends)(**dependencies, watch=watch)
-        async def wrapped(*wargs, **wkwargs):
+        async def wrapped_coro(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
             evaled = t.cast('t.Any', eval_fn()(*combined_args, **combined_kwargs))
             return await evaled
+        wrapped = wrapped_coro
     else:
         @t.cast('t.Any', depends)(**dependencies, watch=watch)
-        def wrapped(*wargs, **wkwargs):
+        def wrapped_sync(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
             return eval_fn()(*combined_args, **combined_kwargs)
+        wrapped = wrapped_sync
     t.cast('t.Any', wrapped).__bound_function__ = function
-    t.cast('t.Any', wrapped).rx = reactive_ops(wrapped)
+    t.cast('t.Any', wrapped).rx = reactive_ops(wrapped_gen)
     _reactive_display_objs.add(wrapped)
     for name, accessor in _display_accessors.items():
         setattr(wrapped, name, t.cast('t.Any', accessor)(wrapped))

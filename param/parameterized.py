@@ -806,7 +806,7 @@ def output(func, *output, **kw):
     def _output(*args,**kw):
         return func(*args,**kw)
 
-    _output._dinfo = _dinfo  # type: ignore[attr-defined, ty:unresolved-attribute]
+    _output._dinfo = _dinfo  # type: ignore[attr-defined, ty:unresolved-attribute]  # pyright: ignore[reportAttributeAccessIssue]
 
     return _output
 
@@ -1424,6 +1424,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
     pickle_default_value: bool
     allow_None: bool
     per_instance: bool
+    default_factory: Callable | None
 
     @t.overload
     def __init__(self) -> None: ...
@@ -1453,19 +1454,19 @@ class Parameter(_ParameterBase, t.Generic[T]):
         self,
         default: t.Any = Undefined,
         *,
-        doc=Undefined,
-        label=Undefined,
-        precedence=Undefined,
-        instantiate=Undefined,
-        constant=Undefined,
-        readonly=Undefined,
-        pickle_default_value=Undefined,
-        allow_None=Undefined,
-        per_instance=Undefined,
-        allow_refs=Undefined,
-        nested_refs=Undefined,
-        default_factory=Undefined,
-        metadata=Undefined,
+        doc: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        label: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        precedence: float | None = t.cast("float | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        instantiate: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        constant: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        readonly: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        pickle_default_value: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        per_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_refs: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        nested_refs: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default_factory: Callable | None = t.cast("Callable | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        metadata: dict[str, t.Any] | None = t.cast("dict[str, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
     ):
         """
         Initialize a new :class:`Parameter` object with the specified attributes.
@@ -1582,18 +1583,18 @@ class Parameter(_ParameterBase, t.Generic[T]):
             )
         self.name = None
         self.owner = None
-        self.allow_refs = allow_refs  # type: ignore[assignment, ty:invalid-assignment]
-        self.nested_refs = nested_refs  # type: ignore[assignment, ty:invalid-assignment]
-        self.precedence = precedence  # type: ignore[assignment, ty:invalid-assignment]
+        self.allow_refs = allow_refs
+        self.nested_refs = nested_refs
+        self.precedence = precedence
         self.default = default
-        self.default_factory = default_factory  # type: ignore[assignment, ty:invalid-assignment]
-        self.doc = doc  # type: ignore[assignment, ty:invalid-assignment]
+        self.default_factory = default_factory
+        self.doc = doc
         if constant is True or readonly is True:  # readonly => constant
             self.constant = True
         else:
-            self.constant = constant  # type: ignore[assignment, ty:invalid-assignment]
-        self.readonly = readonly  # type: ignore[assignment, ty:invalid-assignment]
-        self._label = label  # type: ignore[assignment, ty:invalid-assignment]
+            self.constant = constant
+        self.readonly = readonly
+        self._label = label
         self._set_instantiate(instantiate)
         if pickle_default_value is False:
             warnings.warn(
@@ -1601,11 +1602,11 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 category=_ParamDeprecationWarning,
                 stacklevel=_find_stack_level(),
             )
-        self.pickle_default_value = t.cast("bool", pickle_default_value)
+        self.pickle_default_value = pickle_default_value
         self._set_allow_None(allow_None)
         self.metadata = metadata
         self.watchers: dict[str, list[Watcher]] = {}
-        self.per_instance = per_instance  # type: ignore[assignment, ty:invalid-assignment]
+        self.per_instance = per_instance
 
     @classmethod
     def serialize(cls, value):
@@ -1618,11 +1619,11 @@ class Parameter(_ParameterBase, t.Generic[T]):
         return value
 
     def schema(
-            self,
-            safe: bool = False,
-            subset: Iterable[str] | None = None,
-            mode: str = 'json',
-        ) -> dict[str, t.Any]:
+        self,
+        safe: bool = False,
+        subset: Iterable[str] | None = None,
+        mode: str = 'json',
+    ) -> dict[str, t.Any]:
         """
         Generate a schema for the parameters of the :class:`Parameterized` object.
 
@@ -1874,7 +1875,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         return result
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized | None, val: T):
+    def __set__(self, obj: Parameterized, val: T):
         """
         Set the value for this Parameter.
 
@@ -2435,7 +2436,7 @@ class Parameters:
         params = iter(self_._cls_parameters)
         yield from params
 
-    def __contains__(self_, param):
+    def __contains__(self_, param: object) -> bool:
         return param in self_._cls_parameters
 
     def __getattr__(self_, attr: str) -> t.Any:
@@ -2904,7 +2905,7 @@ class Parameters:
 
     def update(
         self_,
-        arg: dict[str, t.Any] | Iterable[tuple[str, t.Any]] | UndefinedType = Undefined,
+        arg: dict[str, t.Any] | Iterable[tuple[str, t.Any]] = t.cast("dict[str, t.Any] | Iterable[tuple[str, t.Any]]", Undefined),  # pyrefly: ignore[bad-argument-type]
         /,
         **kwargs: t.Any,
     ) -> _ParametersRestorer:
@@ -2987,7 +2988,8 @@ class Parameters:
 
     def _update(
         self_,
-        arg: dict[str, t.Any] | Iterable[tuple[str, t.Any]] | UndefinedType = Undefined, /,
+        arg: dict[str, t.Any] | Iterable[tuple[str, t.Any]] = t.cast("dict[str, t.Any] | Iterable[tuple[str, t.Any]]", Undefined),  # pyrefly: ignore[bad-argument-type]
+        /,
         **kwargs: t.Any
     ):
         BATCH_WATCH = self_._BATCH_WATCH
@@ -3032,7 +3034,7 @@ class Parameters:
         return restore
 
     @property
-    def _cls_parameters(self_):
+    def _cls_parameters(self_) -> dict[str, Parameter]:
         """
         Class parameters are cached because they are accessed often,
         and parameters are rarely added (and cannot be deleted).
@@ -3259,7 +3261,7 @@ class Parameters:
         ``set_dynamic_time_fn()`` will be called for those, too.
         """
         self_or_cls = self_.self_or_cls
-        self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]
+        self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]  # pyright: ignore[reportAttributeAccessIssue]
         param_ns: Parameters = self_or_cls.param
 
         for n, p in param_ns.objects('existing').items():
@@ -4762,7 +4764,7 @@ class ParameterizedMetaclass(type):
             return False
 
     def __get_private(mcs) -> _ClassPrivate:
-        return mcs._param__private  # type: ignore[attr-defined,return-value, ty:invalid-return-type]
+        return mcs._param__private  # type: ignore[attr-defined,return-value, ty:invalid-return-type]  # pyright: ignore[reportReturnType]
 
     def __get_signature(mcs) -> inspect.Signature | None:
         """
@@ -4867,7 +4869,7 @@ class ParameterizedMetaclass(type):
         # get all relevant slots (i.e. slots defined in all
         # superclasses of this parameter)
         p_type = type(param)
-        slots = dict.fromkeys(getattr(p_type, "_all_slots_", ()))
+        slots: dict[str, t.Any] = dict.fromkeys(getattr(p_type, "_all_slots_", ()))
 
         # note for some eventual future: python 3.6+ descriptors grew
         # __set_name__, which could replace this and _set_names
@@ -5737,7 +5739,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
     _param__private: t.ClassVar[PrivateNS]
     _param__parameters: t.ClassVar[Parameters]
 
-    param: Parameters = NS()  # type: ignore[bad-assignment, assignment, ty:invalid-assignment]
+    param: Parameters = NS()  # type: ignore[bad-assignment, assignment, ty:invalid-assignment]  # pyright: ignore[reportAssignmentType]
 
     def __init__(self, **params):
         # No __init__ docstring to avoid shadowing the user class docstring

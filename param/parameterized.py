@@ -1192,15 +1192,15 @@ class _ParameterBase(metaclass=ParameterMetaclass):
             cls.__signature__ = inspect.signature(cls.__init__)
 
     @classmethod
-    def _update_signature(cls):
+    def _update_signature(cls) -> None:
         defaults = cls._modified_slots_defaults()
-        new_parameters = {}
+        new_parameters: dict[str, inspect.Parameter] = {}
         last_sig: inspect.Signature | None = None
 
         for i, kls in enumerate(cls.mro()):
             if kls.__name__.startswith('_'):
                 continue
-            sig = inspect.signature(kls.__init__)
+            sig = inspect.signature(kls.__init__)  # type: ignore[misc]
             last_sig = sig
             for pname, parameter in sig.parameters.items():
                 if pname == 'self':
@@ -1223,17 +1223,17 @@ class _ParameterBase(metaclass=ParameterMetaclass):
                     new_parameter = new_parameter.replace(kind=inspect.Parameter.KEYWORD_ONLY)
                 new_parameters.setdefault(pname, new_parameter)
 
-        def _sorter(p):
+        def _sorter(p: inspect.Parameter) -> int:
             if p.default == inspect.Signature.empty:
                 return 0
             else:
                 return 1
 
-        new_parameters = sorted(new_parameters.values(), key=_sorter)
+        parameters = sorted(new_parameters.values(), key=_sorter)
         if last_sig is None:
             raise RuntimeError("Could not derive constructor signature")
-        new_sig = last_sig.replace(parameters=new_parameters)
-        cls.__signature__ = new_sig
+        new_sig = last_sig.replace(parameters=parameters)
+        cls.__signature__ = new_sig  # type: ignore[attr-defined]
 
 
 T = t.TypeVar("T")
@@ -3282,17 +3282,13 @@ class Parameters:
         self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]
         param_ns: Parameters = self_or_cls.param
 
-        a : tuple[None, type[Parameterized]] | tuple[Parameterized]
-        if isinstance(self_or_cls, type) and issubclass(self_or_cls, Parameterized):
-            a = (None, self_or_cls)
-        else:
-            a = (self_or_cls,)
-
         for n, p in param_ns.objects('existing').items():
-            if hasattr(p, '_value_is_dynamic'):
-                if p._value_is_dynamic(*a):
-                    g = param_ns.get_value_generator(n)
-                    g._Dynamic_time_fn = time_fn
+            if not hasattr(p, '_value_is_dynamic'):
+                continue
+            is_dynamic = p._value_is_dynamic(None, self_._cls) if self_.self is None else p._value_is_dynamic(self_.self)
+            if is_dynamic:
+                g = param_ns.get_value_generator(n)
+                g._Dynamic_time_fn = time_fn
 
         if sublistattr:
             try:

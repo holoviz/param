@@ -138,11 +138,11 @@ except (ImportError, LookupError, FileNotFoundError):
         from importlib.metadata import version as mversion, PackageNotFoundError
 
         try:
-            __version__ = str(mversion("param"))
+            __version__ = str(mversion("param"))  # ty: ignore[conflicting-declarations]
         except PackageNotFoundError:
             # The user is probably trying to run this without having installed
             # the package.
-            __version__ = "0.0.0+unknown"
+            __version__ = "0.0.0+unknown"  # ty: ignore[conflicting-declarations]
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.

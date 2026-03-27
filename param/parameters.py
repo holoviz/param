@@ -1547,7 +1547,7 @@ class XYCoordinates(NumericTuple[T]):
             ...
 
     def __init__(self, default=Undefined, **params):
-        t.cast("t.Any", super().__init__).__init__(default=default, length=2, **params)
+        t.cast("t.Any", super().__init__)(default=default, length=2, **params)
 
 
 class Range(NumericTuple[T]):
@@ -3073,6 +3073,9 @@ class List(Parameter[T]):
         instantiate=True, default=[], is_instance=True,
     )
 
+    bounds: tuple[int, int | None] | None
+    item_type: type | tuple[type, ...] | None
+
     if t.TYPE_CHECKING:
 
         @t.overload
@@ -3128,7 +3131,6 @@ class List(Parameter[T]):
         item_type: type[t.Any] | tuple[type[t.Any], ...] | None = t.cast(  # pyrefly: ignore[bad-argument-type]
             "type[t.Any] | tuple[type[t.Any], ...] | None", Undefined
         ),
-        instantiate: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         bounds: tuple[int, int | None] | None = t.cast("tuple[int, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params
@@ -3136,8 +3138,7 @@ class List(Parameter[T]):
         self.item_type = item_type
         self.is_instance = is_instance
         self.bounds = bounds
-        Parameter.__init__(self, default=default, instantiate=instantiate,
-                           **params)
+        Parameter.__init__(self, default=default, **params)
         self._validate(self.default)
 
     def _validate(self, val):
@@ -3209,8 +3210,6 @@ class HookList(List):
     for users to register a set of commands to be called at a
     specified place in some sequence of processing steps.
     """
-
-    __slots__ = ['bounds']
 
     def _validate_value(self, value, allow_None):
         super()._validate_value(value, allow_None)

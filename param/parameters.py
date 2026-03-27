@@ -1152,7 +1152,7 @@ class CalendarDate(Number[T]):
         **kwargs: Unpack[CalendarDateInitKwargs]
     ) -> None:
         super().__init__( # type: ignore[misc, call-overload]
-            self, default=default, allow_None=allow_None, **kwargs
+            default=default, allow_None=allow_None, **kwargs
         )
 
     def _validate_value(self, value, allow_None):

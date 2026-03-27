@@ -37,7 +37,7 @@ from os import PathLike
 
 from .parameterized import (
     T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
-    String, Undefined, UndefinedType, get_logger, instance_descriptor, _dt_types,
+    String, Undefined, get_logger, instance_descriptor, _dt_types,
     _int_types
 )
 from ._utils import (
@@ -1678,7 +1678,7 @@ class Tuple(Parameter[T]):
                 f"{_validate_error_prefix(self, 'length')} must be "
                 "specified if no default is supplied."
             )
-        elif not isinstance(default, UndefinedType) and default:
+        elif default is not Undefined and default:
             self.length = len(default)
         else:
             self.length = length
@@ -2514,7 +2514,7 @@ class Selector(SelectorBase, _SignatureSelector):
             )
 
         autodefault = Undefined
-        if not isinstance(objects, UndefinedType) and objects:
+        if objects is not Undefined and objects:
             if isinstance(objects, dict):
                 autodefault = list(objects.values())[0]
             elif isinstance(objects, list):
@@ -2526,7 +2526,7 @@ class Selector(SelectorBase, _SignatureSelector):
         self.compute_default_fn = compute_default_fn  # type: ignore[attr-defined, ty:invalid-assignment]
         self.check_on_set = check_on_set  # type: ignore[attr-defined, ty:invalid-assignment]
 
-        instantiate_value = False if isinstance(instantiate, UndefinedType) else instantiate
+        instantiate_value = False if instantiate is Undefined else instantiate
         super().__init__(default=default, instantiate=instantiate_value, **params)
         # Required as Parameter sets allow_None=True if default is None
         self.allow_None = t.cast("bool", allow_None)

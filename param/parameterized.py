@@ -12,6 +12,7 @@ from __future__ import annotations
 import abc
 import copy
 import datetime as dt
+import enum
 import inspect
 import numbers
 import operator
@@ -282,13 +283,13 @@ def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
     return []
 
 
-class _Undefined:
+class UndefinedType(enum.Enum):
     """
     Dummy value to signal completely undefined values rather than
     simple None values.
     """
 
-    __slots__ = ()
+    UNDEFINED = enum.auto()
 
     def __bool__(self):
         # Haven't defined whether Undefined is falsy or truthy,
@@ -300,8 +301,7 @@ class _Undefined:
         return '<Undefined>'
 
 
-Undefined: t.Final[_Undefined] = _Undefined()
-UndefinedType: t.TypeAlias = _Undefined
+Undefined = UndefinedType.UNDEFINED
 
 @contextmanager
 def logging_level(level: str) -> Generator[None, None, None]:
@@ -2167,7 +2167,7 @@ class String(Parameter[T]):
         self,
         default: t.Any = Undefined,
         *,
-        regex: str | re.Pattern[str] | None | _Undefined = Undefined,
+        regex: str | re.Pattern[str] | None | UndefinedType = Undefined,
         **kwargs: t.Any
     ) -> None:
         super().__init__(default=default, **kwargs)
@@ -2992,7 +2992,7 @@ class Parameters:
         if self_.self is not None:
             private = self_.self._param__private
             base: dict[str, t.Any] = {}
-            if not isinstance(arg, UndefinedType):
+            if arg is not Undefined:
                 base.update(arg)
             base.update(kwargs)
             for pname in base:
@@ -3015,7 +3015,7 @@ class Parameters:
         self_or_cls = self_.self_or_cls
 
         base: dict[str, t.Any] = {}
-        if not isinstance(arg, UndefinedType):
+        if arg is not Undefined:
             base.update(arg)
         base.update(kwargs)
 

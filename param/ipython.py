@@ -409,7 +409,7 @@ def ipython_async_executor(func):
         async_executor(func)
         return
     try:
-        ip = get_ipython()  # type: ignore[unresolved-reference]  # noqa: F821
+        ip = get_ipython()  # type: ignore[unresolved-reference, ty:unresolved-reference]  # noqa: F821
         if ip.kernel:
             # We are in Jupyter and can piggyback the tornado IOLoop
             from tornado.ioloop import IOLoop  # type: ignore[unresolved-import]

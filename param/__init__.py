@@ -112,6 +112,7 @@ from ._utils import (
 try:
     # For performance reasons on imports, avoid importing setuptools_scm
     # if not in a .git folder
+    __version__ : str
     if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
         # If setuptools_scm is installed (e.g. in a development environment with
         # an editable install), then use it to determine the version dynamically.
@@ -127,7 +128,7 @@ except (ImportError, LookupError, FileNotFoundError):
     try:
         # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
         # the hopefully stable version variable.
-        from ._version import version as __version__  # type: ignore[unresolved-import]
+        from ._version import version as __version__  # type: ignore[unresolved-import, ty:unresolved-import]
     except (ModuleNotFoundError, ImportError):
         # Either _version doesn't exist (ModuleNotFoundError) or version isn't
         # in _version (ImportError). ModuleNotFoundError is a subclass of

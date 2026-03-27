@@ -2057,6 +2057,9 @@ class Parameter(_ParameterBase, t.Generic[T]):
             setattr(self, k, v)
 
 
+class StringInitKwargs(ParameterKwargs, total=False):
+    regex: str | re.Pattern[str] | None
+
 # Define one particular type of Parameter that is used in this file
 class String(Parameter[T]):
     r"""
@@ -2115,7 +2118,7 @@ class String(Parameter[T]):
             default: str = "",
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[StringInitKwargs]
         ) -> None:
             ...
 
@@ -2124,9 +2127,8 @@ class String(Parameter[T]):
             self: String[str | None],
             default: str | None = None,
             *,
-            regex: str | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[StringInitKwargs]
         ) -> None:
             ...
 
@@ -2135,43 +2137,21 @@ class String(Parameter[T]):
             self: String[str | None],
             default: str | None = "",
             *,
-            regex: str | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[StringInitKwargs]
         ) -> None:
             ...
-
-    @t.overload
-    def __init__(
-        self: String[str | None],
-        default: str | None = "",
-        *,
-        regex: str | None = None,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: FunctionType | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ) -> None:
-        ...
 
     def __init__(
         self,
         default: t.Any = Undefined,
         *,
-        regex: str | re.Pattern[str] | None | UndefinedType = Undefined,
-        **kwargs: t.Any
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        regex: str | re.Pattern[str] | None = t.cast("str | re.Pattern[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[ParameterKwargs]
     ) -> None:
-        super().__init__(default=default, **kwargs)
-        self.regex = regex  # type: ignore[assignment, ty:invalid-assignment]
+        super().__init__(default=default, allow_None=allow_None, **kwargs)
+        self.regex = regex
         self._validate(self.default)
 
     def _validate_regex(self, val: t.Any, regex: str | re.Pattern[str] | None):

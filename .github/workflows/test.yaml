@@ -135,7 +135,7 @@ jobs:
           pixi run -e ${{ matrix.environment }} test-unit
 
   typecheck:
-    name: typecheck:lint:ubuntu-latest
+    name: type:ubuntu-latest
     needs: [pre_commit, pixi_lock]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -144,11 +144,25 @@ jobs:
         with:
           environments: lint
           install: false
-      - name: Run ty + mypy + pyrefly typecheck
+      - name: TY
+        id: ty
+        continue-on-error: true
+        run: pixi run -e typecheck type-ty
+      - name: mypy
+        id: mypy
+        continue-on-error: true
+        run: pixi run -e typecheck type-mypy
+      - name: Pyrefly
+        id: pyrefly
+        continue-on-error: true
+        run: pixi run -e typecheck type-pyrefly
+      - name: Error if any check failed
+        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success'
         run: |
-          pixi run -e typecheck ty-typecheck
-          pixi run -e typecheck mypy-typecheck
-          pixi run -e typecheck pyrefly-typecheck
+          echo "TY: ${{ steps.ty.outcome }}"
+          echo "mypy: ${{ steps.mypy.outcome }}"
+          echo "Pyrefly: ${{ steps.pyrefly.outcome }}"
+          exit 1
 
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}

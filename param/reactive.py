@@ -1648,10 +1648,15 @@ class rx:
         self._root._dirty_obj = True
         self._error_state = None
 
-    async def _resolve_async(self, obj):
+    async def _resolve_async(self, obj = None):
         import asyncio
         self._current_task = task = asyncio.current_task()
-        if inspect.isasyncgen(obj):
+        if obj is None:
+            if self._shared._current_task:
+                await self._shared._current_task
+            self._current_ = self._shared.rx.value
+            self._trigger.param.trigger('value')
+        elif inspect.isasyncgen(obj):
             async for val in obj:
                 if self._current_task is not task:
                     break
@@ -1663,7 +1668,7 @@ class rx:
                 self._current_ = value
                 self._trigger.param.trigger('value')
 
-    def _lazy_resolve(self, obj):
+    def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
         if inspect.isgenerator(obj):
             obj = _to_async_gen(obj)
@@ -1681,18 +1686,21 @@ class rx:
                 elif (
                     self._shared is not None and
                     self._method is None and
-                    self._shared._method is None and
-                    not self._is_async
+                    self._shared._method is None
                 ):
                     # If this rx is cloned from an shared input then we make use
                     # of the shared.rx.value to ensure branching pipelines do
                     # not have to recompute the inputs multiple times.
-                    self._current_ = self._shared.rx.value
+                    if self._is_async:
+                        self._shared.rx.value # trigger async resolve
+                        self._lazy_resolve()
+                    else:
+                        self._current_ = self._shared.rx.value
                     raise Skip
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
-                    if inspect.isasyncgen(obj) or inspect.iscoroutine(obj) or inspect.isgenerator(obj):
+                    if self._is_async:
                         self._lazy_resolve(obj)
                         obj = Skip
                     if obj is Skip:

@@ -922,9 +922,7 @@ def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
     params = []
     for p in subparameters:
         if isinstance(p, str):
-            owner = get_method_owner(function)
-            if not isinstance(owner, Parameterized):
-                continue
+            owner = t.cast("Parameterized", get_method_owner(function))
             *subps, p = p.split('.')
             for subp in subps:
                 owner = getattr(owner, subp, None)

@@ -6,8 +6,6 @@ import param
 import pytest
 
 from param import descendents, Parameter
-from param.parameters import NumberInitKwargs
-
 
 SKIP_UPDATED = [
     # Not sure how to handle attribs yet
@@ -112,7 +110,3 @@ def test_signature_position_keywords():
                 p.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
                 for p in parameters.values()
             )
-
-
-def test_number_init_kwargs_typed_dict_is_partial():
-    assert NumberInitKwargs.__total__ is False

@@ -91,6 +91,49 @@ if t.TYPE_CHECKING:
         step: int | None
         set_hook: t.Callable[..., t.Any] | None
 
+    class NumberInitKwargs(ParameterKwargs, total=False):
+        bounds: tuple[t.Any | None, t.Any | None] | None
+        softbounds: tuple[t.Any | None, t.Any | None] | None
+        inclusive_bounds: tuple[bool, bool]
+        step: t.Any | None
+        set_hook: t.Callable[..., t.Any] | None
+
+    class IntegerInitKwargs(ParameterKwargs, total=False):
+        bounds: tuple[int | None, int | None] | None
+        softbounds: tuple[int | None, int | None] | None
+        inclusive_bounds: tuple[bool, bool]
+        step: int | None
+        set_hook: t.Callable[..., t.Any] | None
+
+    class RangeInitKwargs(ParameterKwargs, total=False):
+        bounds: tuple[float, float] | None
+        softbounds: tuple[float, float] | None
+        inclusive_bounds: tuple[bool, bool]
+        step: float | None
+        set_hook: t.Callable[..., t.Any] | None
+
+    class DataFrameInitKwargs(ParameterKwargs, total=False):
+        rows: int | tuple[int | None, int | None] | None
+        columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
+        ordered: bool | None
+
+    class SeriesInitKwargs(ParameterKwargs, total=False):
+        rows: int | tuple[int | None, int | None] | None
+
+    class FileSelectorInitKwargs(ParameterKwargs, total=False):
+        path: str | PathLike
+
+    class PathInitKwargs(ParameterKwargs, total=False):
+        search_paths: list[str | PathLike] | None
+        check_exists: bool
+
+    class ColorInitKwargs(ParameterKwargs, total=False):
+        allow_named: bool
+
+    class BytesInitKwargs(ParameterKwargs, total=False):
+        regex: bytes | str | None
+
+
 
 def param_union(*parameterizeds: Parameterized, warn: bool = True) -> dict[str, t.Any]:
     """
@@ -718,13 +761,6 @@ class Number(Dynamic[T]):
 
     if t.TYPE_CHECKING:
 
-        class NumberInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            bounds: tuple[t.Any | None, t.Any | None] | None
-            softbounds: tuple[t.Any | None, t.Any | None] | None
-            inclusive_bounds: tuple[bool, bool]
-            step: t.Any | None
-            set_hook: t.Callable[..., t.Any] | None
-
         @t.overload
         def __init__(
             self: Number[float | int],
@@ -952,13 +988,6 @@ class Integer(Number[T]):
 
     if t.TYPE_CHECKING:
 
-        class IntegerInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            bounds: tuple[int | None, int | None] | None
-            softbounds: tuple[int | None, int | None] | None
-            inclusive_bounds: tuple[bool, bool]
-            step: int | None
-            set_hook: t.Callable[..., t.Any] | None
-
         @t.overload
         def __init__(self: Integer[int]):
             ...
@@ -1064,7 +1093,7 @@ class Date(Number[T]):
         **kwargs: Unpack[DateInitKwargs]
     ) -> None:
         super().__init__(  # type: ignore[misc, call-overload]
-            self, default=default, allow_None=allow_None, **kwargs
+            default=default, allow_None=allow_None, **kwargs
         )
 
     def _validate_value(self, value: t.Any, allow_None: bool) -> None:
@@ -1118,13 +1147,6 @@ class CalendarDate(Number[T]):
 
     if t.TYPE_CHECKING:
 
-        class CalendarDateInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            bounds: tuple[dt.date | None, dt.date | None] | None
-            softbounds: tuple[dt.date | None, dt.date | None] | None
-            inclusive_bounds: tuple[bool, bool]
-            step: int | None
-            set_hook: t.Callable[..., t.Any] | None
-
         @t.overload
         def __init__(  # type: ignore[inconsistent-overload]
             self: CalendarDate[dt.date],
@@ -1153,7 +1175,7 @@ class CalendarDate(Number[T]):
         **kwargs: Unpack[CalendarDateInitKwargs]
     ) -> None:
         super().__init__( # type: ignore[misc, call-overload]
-            default=default, allow_None=allow_None, **kwargs
+            default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
 
     def _validate_value(self, value, allow_None):
@@ -1603,13 +1625,6 @@ class Range(NumericTuple[T]):
     step: float | None
 
     if t.TYPE_CHECKING:
-
-        class RangeInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            bounds: tuple[float, float] | None
-            softbounds: tuple[float, float] | None
-            inclusive_bounds: tuple[bool, bool]
-            step: float | None
-            set_hook: t.Callable[..., t.Any] | None
 
         @t.overload
         def __init__(self: Range[tuple[float, float]]) -> None:
@@ -2353,6 +2368,7 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         **params: Unpack[ParameterKwargs]
     ) -> None:
 
+        print(allow_None)
         if compute_default_fn is not Undefined:
             warnings.warn(
                 'compute_default_fn has been deprecated and will be removed in a future version.',
@@ -2377,7 +2393,11 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         params["instantiate"] = False if instantiate is Undefined else instantiate
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
-        self.allow_None = allow_None
+        print(allow_None)
+        if allow_None is Undefined:
+            self.allow_None = self._slot_defaults['allow_None']
+        else:
+            self.allow_None = allow_None
         if self.default is not None:
             self._validate_value(self.default)
         self._update_state()
@@ -2483,10 +2503,6 @@ class ObjectSelector(Selector):
         super().__init__(default=default, **kwargs) # type: ignore[misc, call-overload]
 
 
-class FileSelectorInitKwargs(ParameterKwargs, total=False):
-    path: str | PathLike
-
-
 class FileSelector(Selector[T]):
     """Given a path glob, allows one file to be selected from those matching."""
 
@@ -2540,6 +2556,7 @@ class FileSelector(Selector[T]):
         allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[ParameterKwargs]
     ) -> None:
+        self.default = default
         self.path = path
         self.update(path=path)
         super().__init__(default=default, objects=self._objects, **kwargs) # type: ignore[misc, call-overload]
@@ -2576,7 +2593,7 @@ class ListSelector(Selector):
         self,
         default: list[t.Any] | None = t.cast("list[t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
-        allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[SelectorInitKwargs]
     ) -> None:
         kwargs["empty_default"] = True
@@ -2847,10 +2864,12 @@ class Dict(ClassSelector[T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ClassSelectorKwargs]
     ) -> None:
-        super().__init__(default=default, class_=dict, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default, class_=dict, allow_None=allow_None, **params  # type: ignore[arg-type]
+        )
 
 
-class Array(ClassSelector[AT]):
+class Array(ClassSelector["AT"]):
     """Parameter whose value is a numpy array."""
 
     if t.TYPE_CHECKING:
@@ -2881,18 +2900,18 @@ class Array(ClassSelector[AT]):
 
     def __init__(
         self,
-        default: np.ndarray | None = t.cast("np.ndarray | None", Undefined),
+        default: np.ndarray | None = t.cast("np.ndarray | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
-        allow_None: bool = t.cast("bool", Undefined),
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ClassSelectorKwargs]
     ) -> None:
         np_array = importlib.import_module("numpy").ndarray  # type: ignore[unresolved-attribute]
         super().__init__(  # type: ignore[misc, call-overload]
-            default=default,
+            default=default,  # type: ignore[arg-type]
             class_=np_array,
             is_instance=True,
-            allow_None=allow_None,
-            **params,
+            allow_None=allow_None,  # type: ignore[arg-type]
+            **params,  # type: ignore[arg-type]
         )
 
     @classmethod
@@ -2915,7 +2934,7 @@ class Array(ClassSelector[AT]):
             return numpy.asarray(value)
 
 
-class DataFrame(ClassSelector[DF]):
+class DataFrame(ClassSelector["DF"]):
     """
     Parameter whose value is a pandas ``DataFrame``.
 
@@ -2944,11 +2963,6 @@ class DataFrame(ClassSelector[DF]):
     }
 
     if t.TYPE_CHECKING:
-
-        class DataFrameInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            rows: int | tuple[int | None, int | None] | None
-            columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
-            ordered: bool | None
 
         @t.overload
         def __init__(
@@ -2994,7 +3008,7 @@ class DataFrame(ClassSelector[DF]):
             default=default,
             class_=pdDataFrame,
             is_instance=True,
-            allow_None=allow_None,
+            allow_None=allow_None,  # type: ignore[arg-type]
             **params,
         )
         self._validate(self.default)
@@ -3081,7 +3095,7 @@ class DataFrame(ClassSelector[DF]):
             return pandas.DataFrame(value)
 
 
-class Series(ClassSelector[ST]):
+class Series(ClassSelector["ST"]):
     """
     Parameter whose value is a pandas ``Series``.
 
@@ -3097,9 +3111,6 @@ class Series(ClassSelector[ST]):
     )
 
     if t.TYPE_CHECKING:
-
-        class SeriesInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            rows: int | tuple[int | None, int | None] | None
 
         @t.overload
         def __init__(
@@ -3141,7 +3152,7 @@ class Series(ClassSelector[ST]):
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,
             class_=pdSeries,
-            allow_None=allow_None,
+            allow_None=allow_None,  # type: ignore[arg-type]
             is_instance=True,
             **params,
         )
@@ -3444,10 +3455,6 @@ class Path(Parameter[T]):
 
     if t.TYPE_CHECKING:
 
-        class PathInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            search_paths: list[str | PathLike] | None
-            check_exists: bool
-
         @t.overload
         def __init__(self: Path[PathLike | str | None]) -> None:
             ...
@@ -3634,9 +3641,6 @@ class Color(Parameter[T]):
 
     if t.TYPE_CHECKING:
 
-        class ColorInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            allow_named: bool
-
         @t.overload
         def __init__(self: Color[str]) -> None:
             ...
@@ -3731,9 +3735,6 @@ class Bytes(Parameter[T]):
     )
 
     if t.TYPE_CHECKING:
-
-        class BytesInitKwargs(ParameterKwargs, total=False):  # noqa: D106
-            regex: bytes | str | None
 
         @t.overload
         def __init__(self: Bytes[bytes]) -> None:

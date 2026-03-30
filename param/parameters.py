@@ -1850,8 +1850,6 @@ class Range(NumericTuple[T]):
                 )
 
     def _validate_order(self, val, step, allow_None):
-        if val is None and allow_None:
-            return
         if val is None:
             return
         elif val is not None and (val[0] is None or val[1] is None):

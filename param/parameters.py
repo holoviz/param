@@ -2581,7 +2581,6 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         params["instantiate"] = False if instantiate is Undefined else instantiate
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
-        print(allow_None)
         if allow_None is Undefined:
             self.allow_None = self._slot_defaults['allow_None']
         else:
@@ -3157,7 +3156,7 @@ class Array(ClassSelector["AT"]):
         import numpy
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,  # type: ignore[arg-type]
-            class_=numpy.array,
+            class_=numpy.ndarray,
             is_instance=True,
             allow_None=allow_None,  # type: ignore[arg-type]
             **params,  # type: ignore[arg-type]

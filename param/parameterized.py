@@ -4661,7 +4661,7 @@ class ParameterizedMetaclass(type):
                 explicit_no_refs |= set(base._param__private.explicit_no_refs)
 
         _param__private = _ClassPrivate(explicit_no_refs=list(explicit_no_refs))
-        mcs._param__private = PrivateNS(class_ns=_param__private)
+        mcs._param__private = _PrivateNS(class_ns=_param__private)
         # Avoid referencing `Parameterized` before it is defined during class bootstrap.
         param_ns = Parameters(t.cast("type[Parameterized]", mcs))
         mcs._param__parameters = param_ns
@@ -5549,7 +5549,7 @@ class _InstancePrivate:
         self.ref_watchers = []
         self.async_refs = {}
         self.parameters_state = parameters_state
-        self.dynamic_watchers = defaultdict(list) if dynamic_watchers is None else defaultdict(list, dynamic_watchers)
+        self.dynamic_watchers = defaultdict(list, dynamic_watchers or ())
         self.params = {} if params is None else params
         self.refs = {} if refs is None else refs
         self.watchers = {} if watchers is None else watchers
@@ -5566,7 +5566,7 @@ class _InstancePrivate:
 C = t.TypeVar("C", bound="Parameterized")
 
 
-class NS:
+class _NS:
 
     @t.overload
     def __get__(self, obj: None, objtype: type[C]) -> Parameters: ...
@@ -5587,7 +5587,7 @@ class NS:
         return ns
 
 
-class PrivateNS:
+class _PrivateNS:
 
     def __init__(self, class_ns: _ClassPrivate):
         self.class_ns = class_ns
@@ -5768,10 +5768,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         String identifier for this object. Default is the object's class name
         plus a unique integer""")
 
-    _param__private: t.ClassVar[PrivateNS]
+    _param__private: t.ClassVar[_PrivateNS]
     _param__parameters: t.ClassVar[Parameters]
 
-    param: Parameters = NS()  # type: ignore[bad-assignment, assignment, ty:invalid-assignment]  # pyright: ignore[reportAssignmentType]
+    param: Parameters = _NS()  # type: ignore[bad-assignment, assignment, ty:invalid-assignment]  # pyright: ignore[reportAssignmentType]
 
     def __init__(self, **params):
         # No __init__ docstring to avoid shadowing the user class docstring
@@ -6221,7 +6221,7 @@ class ParameterizedFunction(Parameterized, t.Generic[P, R]):
         >>> instance(5)
         10
         """
-        if isinstance(self_or_cls, type):
+        if isinstance(self_or_cls, ParameterizedMetaclass):
             cls = self_or_cls
         else:
             p = params

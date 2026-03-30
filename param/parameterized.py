@@ -1249,7 +1249,7 @@ class ParameterKwargs(t.TypedDict, total=False):
     per_instance: bool
     allow_refs: bool
     nested_refs: bool
-    default_factory: Callable | None
+    default_factory: t.Callable[[], t.Any] | None
     metadata: dict[str, t.Any] | None
 
 
@@ -1422,35 +1422,52 @@ class Parameter(_ParameterBase, t.Generic[T]):
     pickle_default_value: bool
     allow_None: bool
     per_instance: bool
-    default_factory: Callable | None
+    default_factory: Callable[[], t.Any] | None
 
-    @t.overload
-    def __init__(self) -> None: ...
+    if t.TYPE_CHECKING:
+        @t.overload
+        def __init__(
+            self,
+            default: t.Any = ...,
+            *,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = False,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            allow_None: t.Literal[False] = False,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None: ...
 
-    @t.overload
+        @t.overload
+        def __init__(
+            self,
+            default: t.Any | None = ...,
+            *,
+            allow_None: t.Literal[True] = True,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = False,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None: ...
+
     def __init__(
         self,
-        default: t.Any = "",
-        *,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: Callable | None = None,
-        metadata: dict[str, t.Any] | None = None
-    ) -> None:
-        ...
-
-    def __init__(
-        self,
-        default: t.Any = Undefined,
+        default: t.Any | None = t.cast("t.Any | None", Undefined),   # pyrefly: ignore[bad-argument-type]
         *,
         doc: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         label: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -1463,7 +1480,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         per_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_refs: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         nested_refs: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        default_factory: Callable | None = t.cast("Callable | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default_factory: Callable[[], t.Any] | None = t.cast("Callable[[], t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         metadata: dict[str, t.Any] | None = t.cast("dict[str, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
     ):
         """
@@ -2116,8 +2133,20 @@ class String(Parameter[T]):
             self: String[str],
             default: str = "",
             *,
+            regex: str | re.Pattern[str] | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[StringInitKwargs]
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = False,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: Callable | None = None,
+            metadata: dict[str, t.Any] | None = None,
         ) -> None:
             ...
 
@@ -2149,7 +2178,9 @@ class String(Parameter[T]):
         regex: str | re.Pattern[str] | None = t.cast("str | re.Pattern[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[ParameterKwargs]
     ) -> None:
-        super().__init__(default=default, allow_None=allow_None, **kwargs)
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
+        )
         self.regex = regex
         self._validate(self.default)
 

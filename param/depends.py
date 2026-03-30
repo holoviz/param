@@ -36,19 +36,19 @@ class DependsFunc(t.Protocol[P, R]):
 
 @t.overload
 def depends(
-    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = ..., on_init: bool = ..., **kw: Dependency
+    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
 ) -> DependsFunc[P, R]:
     ...
 
 @t.overload
 def depends(
-    *dependencies: str, watch: bool = ..., on_init: bool = ...
+    *dependencies: str, watch: bool = False, on_init: bool = False
 ) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
     ...
 
 @t.overload
 def depends(
-    *dependencies: Parameter, watch: bool = ..., on_init: bool = ..., **kw: Parameter
+    *dependencies: Parameter, watch: bool = False, on_init: bool = False, **kw: Parameter
 ) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
     ...
 

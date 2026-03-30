@@ -383,18 +383,21 @@ class IPythonDisplay:
         from param.reactive import rx
 
         handle = None
+        cb: t.Callable[..., t.Any]
         if isinstance(self._reactive, rx):
-            cb = self._reactive._callback
+            cb_rx_cb = self._reactive._callback
             @depends(*self._reactive._params, watch=True)
             def update_handle(*args, **kwargs):
                 if handle is not None:
-                    handle.update(cb())
+                    handle.update(cb_rx_cb())
+            cb = cb_rx_cb
         else:
-            cb = self._reactive
-            @depends(*resolve_ref(cb), watch=True)
+            cb_reactive_cb = self._reactive
+            @depends(*resolve_ref(cb_reactive_cb), watch=True)
             def update_handle(*args, **kwargs):
                 if handle is not None:
-                    handle.update(cb())
+                    handle.update(cb_reactive_cb())
+            cb = cb_reactive_cb
         try:
             obj = cb()
             if obj is Undefined:
@@ -409,12 +412,12 @@ def ipython_async_executor(func):
         async_executor(func)
         return
     try:
-        ip = get_ipython()  # type: ignore[unresolved-reference, ty:unresolved-reference]  # noqa: F821
+        ip = get_ipython()  # type: ignore[unresolved-reference, ty:unresolved-reference]  # noqa: F821  # pyright: ignore[reportUndefinedVariable]
         if ip.kernel:
             # We are in Jupyter and can piggyback the tornado IOLoop
             from tornado.ioloop import IOLoop  # type: ignore[unresolved-import]
             ioloop = IOLoop.current()
-            event_loop = ioloop.asyncio_loop  # type: ignore[attr-defined, ty:unresolved-attribute]
+            event_loop = ioloop.asyncio_loop  # type: ignore[attr-defined, ty:unresolved-attribute]  # pyright: ignore[reportAttributeAccessIssue]
             if event_loop.is_running():
                 ioloop.add_callback(func)
             else:

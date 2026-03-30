@@ -93,7 +93,9 @@ import math
 import operator
 import typing as t
 
-from collections.abc import Callable, Iterable, Iterator, Sized
+from collections.abc import (
+    AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator, Sized
+)
 from functools import partial
 from types import FunctionType, MethodType
 
@@ -113,6 +115,11 @@ if t.TYPE_CHECKING:
         from typing_extensions import Self
     else:
         from typing import Self
+
+
+_P = t.ParamSpec('_P')
+_R = t.TypeVar('_R')
+_Y = t.TypeVar('_Y')
 
 
 class Wrapper(Parameterized):
@@ -1131,7 +1138,37 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
-def bind(function: Callable, *args, watch: bool = False, **kwargs):
+@t.overload
+def bind(
+    function: Callable[_P, Generator[_Y, t.Any, t.Any]], *args: t.Any,
+    watch: bool = False, **kwargs: t.Any
+) -> Callable[_P, Generator[_Y, t.Any, t.Any]]: ...
+
+
+@t.overload
+def bind(
+    function: Callable[_P, AsyncGenerator[_Y, t.Any]], *args: t.Any,
+    watch: bool = False, **kwargs: t.Any
+) -> Callable[_P, AsyncGenerator[_Y, t.Any]]: ...
+
+
+@t.overload
+def bind(
+    function: Callable[_P, Coroutine[t.Any, t.Any, _R]], *args: t.Any,
+    watch: bool = False, **kwargs: t.Any
+) -> Callable[_P, Coroutine[t.Any, t.Any, _R]]: ...
+
+
+@t.overload
+def bind(
+    function: Callable[_P, _R], *args: t.Any,
+    watch: bool = False, **kwargs: t.Any
+) -> Callable[_P, _R]: ...
+
+
+def bind(
+    function: Callable[..., t.Any], *args: t.Any, watch: bool = False, **kwargs: t.Any
+) -> Callable[..., t.Any]:
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
 
@@ -1275,7 +1312,7 @@ def bind(function: Callable, *args, watch: bool = False, **kwargs):
                 fn = eval_function_with_deps(p)
         return fn
 
-    wrapped: t.Callable | t.AsyncGenerator | t.Awaitable
+    wrapped: Callable[..., t.Any]
     if inspect.isgeneratorfunction(function):
         def wrapped_gen(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
@@ -1743,7 +1780,7 @@ class rx:
         return obj
 
     @property
-    def _callback(self):
+    def _callback(self) -> Callable[..., t.Any]:
         params = self._params
         def evaluate(*args, **kwargs):
             out = self._current

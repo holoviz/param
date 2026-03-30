@@ -598,7 +598,7 @@ def exceptions_summarized():
 
 def _in_ipython():
     try:
-        get_ipython()  # type: ignore[name-defined,ty:unresolved-reference,reportUndefinedVariable]
+        get_ipython()  # type: ignore[name-defined,ty:unresolved-reference]  # pyright: ignore[reportUndefinedVariable]
         return True
     except NameError:
         return False

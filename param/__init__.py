@@ -116,7 +116,7 @@ try:
     if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
         # If setuptools_scm is installed (e.g. in a development environment with
         # an editable install), then use it to determine the version dynamically.
-        from setuptools_scm import get_version  # type: ignore[unresolved-import,import-untyped]
+        from setuptools_scm import get_version  # type: ignore[unresolved-import,import-untyped,reportMissingImports]
 
         # This will fail with LookupError if the package is not installed in
         # editable mode or if Git is not installed.

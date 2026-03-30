@@ -263,10 +263,8 @@ def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
         refs = []
         for arg in (args + kwargs):
             if isinstance(arg, str):
-                owner = get_method_owner(reference)
-                if not isinstance(owner, Parameterized):
-                    continue
-                elif arg in owner.param:
+                owner = t.cast("Parameterized", get_method_owner(reference))
+                if arg in owner.param:
                     arg = owner.param[arg]
                 elif '.' in arg:
                     path = arg.split('.')
@@ -461,7 +459,7 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
             # Some operations trigger a parameter instantiation (copy),
             # we ensure both the class and instance parameters are reset.
             if pname in kls_params and pname not in init_inst_params:
-                t.cast("t.Any", type(parameterized).param)[pname].constant = True
+                t.cast("Parameters", type(parameterized).param)[pname].constant = True
             if pname in inst_params:
                 parameterized.param[pname].constant = True
 

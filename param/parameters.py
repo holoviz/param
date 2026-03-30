@@ -575,12 +575,18 @@ class Dynamic(Parameter[T]):
             ...
 
         @t.overload
-        def __init__(self) -> None:
+        def __init__(
+            self: Dynamic[t.Any | None],
+            default: t.Any | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **params: Unpack[ParameterKwargs]
+        ) -> None:
             ...
 
     def __init__(
         self,
-        default=Undefined,
+        default: t.Any | None = t.cast("t.Any | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None=t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
@@ -3258,8 +3264,8 @@ class DataFrame(ClassSelector["DF"]):
         self.columns = columns
         self.ordered = ordered
         super().__init__(  # type: ignore[misc, call-overload]
-            default=default, # type: ignore[arg-type]
-            class_=pandas.DataFrame,
+            default=default,  # type: ignore[arg-type]
+            class_=pandas.DataFrame,  # type: ignore[arg-type]
             is_instance=True,
             allow_None=allow_None,  # type: ignore[arg-type]
             **params,
@@ -3409,7 +3415,7 @@ class Series(ClassSelector["ST"]):
         self.rows = rows
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, # type: ignore[arg-type]
-            class_=pandas.Series,
+            class_=pandas.Series,  # type: ignore[arg-type]
             allow_None=allow_None,  # type: ignore[arg-type]
             is_instance=True,
             **params,

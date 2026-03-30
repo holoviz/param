@@ -5263,10 +5263,12 @@ def container_script_repr(container,imports,prefix,settings):
 @gen_types
 def _no_script_repr():
     # Suppress scriptrepr for objects not yet having a useful string representation
-    if random := sys.modules.get("random"):
-        yield t.cast("t.Any", random).Random
-    if npr := sys.modules.get("numpy.random"):
-        yield t.cast("t.Any", npr).RandomState
+    if "random" in sys.modules:
+        import random
+        yield random.Random
+    if "numpy.random" in sys.modules:
+        import numpy.random
+        yield numpy.random.RandomState
 
 
 def function_script_repr(fn,imports,prefix,settings):

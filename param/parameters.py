@@ -20,7 +20,6 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import glob
-import importlib
 import inspect
 import numbers
 import os.path
@@ -3155,10 +3154,10 @@ class Array(ClassSelector["AT"]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ClassSelectorKwargs]
     ) -> None:
-        np_array = importlib.import_module("numpy").ndarray  # type: ignore[unresolved-attribute]
+        import numpy
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,  # type: ignore[arg-type]
-            class_=np_array,
+            class_=numpy.array,
             is_instance=True,
             allow_None=allow_None,  # type: ignore[arg-type]
             **params,  # type: ignore[arg-type]
@@ -3174,7 +3173,7 @@ class Array(ClassSelector["AT"]):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        numpy = t.cast("t.Any", importlib.import_module('numpy'))
+        import numpy
         if isinstance(value, str):
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
@@ -3255,13 +3254,13 @@ class DataFrame(ClassSelector["DF"]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        pdDataFrame = importlib.import_module('pandas').DataFrame  # type: ignore[unresolved-attribute]
+        import pandas
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, # type: ignore[arg-type]
-            class_=pdDataFrame,
+            class_=pandas.DataFrame,
             is_instance=True,
             allow_None=allow_None,  # type: ignore[arg-type]
             **params,
@@ -3329,7 +3328,7 @@ class DataFrame(ClassSelector["DF"]):
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
-        pandas = t.cast("t.Any", importlib.import_module('pandas'))
+        import pandas
         if isinstance(value, str):
             return _deserialize_from_path(
                 {
@@ -3407,11 +3406,11 @@ class Series(ClassSelector["ST"]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        pdSeries = importlib.import_module('pandas').Series  # type: ignore[unresolved-attribute]
+        import pandas
         self.rows = rows
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, # type: ignore[arg-type]
-            class_=pdSeries,
+            class_=pandas.Series,
             allow_None=allow_None,  # type: ignore[arg-type]
             is_instance=True,
             **params,

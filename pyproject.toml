@@ -162,6 +162,13 @@ allowed-unresolved-imports = [
     "tornado"
 ]
 
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
+
+[tool.ty.src]
+include = ["param"]
+exclude = ["param/version.py"]
+
 [tool.pyrefly]
 project-includes = ["param/"]
 project-excludes = [
@@ -177,7 +184,14 @@ project-excludes = [
 ]
 infer-with-first-use = false
 
+[tool.mypy]
+files = ["param"]
+follow_imports = "skip"
+disable_error_code = ["import-untyped", "import-not-found"]
+
 [tool.pyright]
+include = ["param"]
+reportSelfClsParameterName = "none"
 ignore = [
     "param/version.py",
     "**/version.py",

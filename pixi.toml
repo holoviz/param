@@ -216,7 +216,7 @@ typing_extensions = "*"
 tornado = "*"
 
 [feature.typecheck.tasks]
-type-ty = 'ty check param --exclude param/version.py --ignore unused-type-ignore-comment'
-type-mypy = 'mypy param --follow-imports=skip --disable-error-code import-untyped --disable-error-code import-not-found'
+type-ty = 'ty check'
+type-mypy = 'mypy'
 type-pyrefly = 'pyrefly check --output-format min-text --count-errors=0'
-type-pyright = 'pyright param'
+type-pyright = 'pyright'

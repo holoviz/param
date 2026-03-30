@@ -556,9 +556,9 @@ class Dynamic(Parameter[T]):
         @t.overload
         def __init__(
             self: Dynamic[t.Any],
-            default: t.Any = None,
+            default: t.Any = ...,
             *,
-            allow_None: bool = False,
+            allow_None: t.Literal[False] = False,
             doc: str | None = None,
             label: str | None = None,
             precedence: float | None = None,

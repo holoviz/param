@@ -918,7 +918,7 @@ def _skip_event(*events, **kwargs):
 def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
     """Extract references from a method or function that declares the references."""
     dinfo = t.cast("dict[str, t.Any]", getattr(function, "_dinfo", {}))
-    subparameters = list(dinfo.get("dependencies", ())) + list(t.cast("dict[str, t.Any]", dinfo.get("kw", {})).values())
+    subparameters = list[str](dinfo.get("dependencies", ())) + list[str](t.cast("dict[str, t.Any]", dinfo.get("kw", {})).values())
     params = []
     for p in subparameters:
         if isinstance(p, str):
@@ -1972,7 +1972,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         else:
             watchers = None
 
-        obj = self.owner if obj is None else obj
+        obj = self.owner if obj is None and self.owner is not None else obj
 
         if obj is None or not watchers:
             return
@@ -2693,11 +2693,14 @@ class Parameters:
         # deepcopy or store a reference to reference param_obj.default into
         # self._param__private.values (or dict_ if supplied) under the
         # parameter's name (or key if supplied)
+        def _identity(o: t.Any) -> t.Any:
+            return o
+        instantiator: Callable[[t.Any], t.Any]
         if deepcopy:
-            instantiator: Callable[[t.Any], t.Any] = copy.deepcopy
+            instantiator = copy.deepcopy
         else:
-            def instantiator(o: t.Any) -> t.Any:
-                return o
+            instantiator = _identity
+
         dict_ = dict_ or self._param__private.values
         key = key or t.cast("str", param_obj.name)
         if shared_parameters._share:
@@ -5747,7 +5750,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         global object_count
         if not isinstance(self.__dict__.get('_param__private'), _InstancePrivate):
-            self.__dict__['_param__private'] = _InstancePrivate(
+            self.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
         # Skip generating a custom instance name when a class in the hierarchy
@@ -5813,7 +5816,9 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         During this process the object is considered uninitialized.
         """
         explicit_no_refs = type(self)._param__private.explicit_no_refs
-        self.__dict__['_param__private'] = _InstancePrivate(explicit_no_refs=explicit_no_refs)
+        self.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
+            explicit_no_refs=explicit_no_refs
+        )
         self._param__private.initialized = False
 
         _param__private = state.get('_param__private', None)

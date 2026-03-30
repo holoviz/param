@@ -35,10 +35,9 @@ from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from os import PathLike
 
-
 from .parameterized import (
     T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
-    String, Undefined, get_logger, instance_descriptor, _dt_types,
+    String, Undefined, UndefinedType, get_logger, instance_descriptor, _dt_types,
     _int_types
 )
 from ._utils import (
@@ -74,11 +73,29 @@ if t.TYPE_CHECKING:
     CT = t.TypeVar("CT")
     IT = t.TypeVar("IT")
 
+    AT = t.TypeVar("AT", np.ndarray, np.ndarray | None)
+    DF = t.TypeVar("DF", pd.DataFrame, pd.DataFrame | None)
+    ST = t.TypeVar("ST", pd.Series, pd.Series | None)
 
-def param_union(*parameterizeds, warn=True):
+    class DateInitKwargs(ParameterKwargs, total=False):
+        bounds: tuple[t.Any | None, t.Any | None] | None
+        softbounds: tuple[t.Any | None, t.Any | None] | None
+        inclusive_bounds: tuple[bool, bool]
+        step: int | None
+        set_hook: t.Callable[..., t.Any] | None
+
+    class CalendarDateInitKwargs(ParameterKwargs, total=False):
+        bounds: tuple[dt.date | None, dt.date | None] | None
+        softbounds: tuple[dt.date | None, dt.date | None] | None
+        inclusive_bounds: tuple[bool, bool]
+        step: int | None
+        set_hook: t.Callable[..., t.Any] | None
+
+
+def param_union(*parameterizeds: Parameterized, warn: bool = True) -> dict[str, t.Any]:
     """
     Given a set of :class:`Parameterized` objects, returns a dictionary
-    with the union of all param name,value pairs across them.
+    with the union of all param name, value pairs across them.
 
     Parameters
     ----------
@@ -467,7 +484,6 @@ class Time(Parameterized):
 # Dynamic/Number
 #-----------------------------------------------------------------------------
 
-
 class Dynamic(Parameter[T]):
     """
     Parameter whose value can be generated dynamically by a callable
@@ -643,18 +659,6 @@ class Dynamic(Parameter[T]):
             return gen
 
 
-class NumberInitKwargs(ParameterKwargs, total=False):
-    bounds: tuple[t.Any | None, t.Any | None] | None
-    softbounds: tuple[t.Any | None, t.Any | None] | None
-    inclusive_bounds: tuple[bool, bool]
-    step: t.Any | None
-    set_hook: t.Callable[..., t.Any] | None
-
-
-class NumberKwargs(NumberInitKwargs, total=False):
-    allow_None: bool
-
-
 class Number(Dynamic[T]):
     """
     A numeric :class:`Dynamic` Parameter, with a default value and optional bounds.
@@ -713,6 +717,13 @@ class Number(Dynamic[T]):
     step: float | int | None
 
     if t.TYPE_CHECKING:
+
+        class NumberInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            bounds: tuple[t.Any | None, t.Any | None] | None
+            softbounds: tuple[t.Any | None, t.Any | None] | None
+            inclusive_bounds: tuple[bool, bool]
+            step: t.Any | None
+            set_hook: t.Callable[..., t.Any] | None
 
         @t.overload
         def __init__(
@@ -934,20 +945,19 @@ class Number(Dynamic[T]):
         super().__setstate__(state)
 
 
-class IntegerInitKwargs(ParameterKwargs, total=False):
-    bounds: tuple[int | None, int | None] | None
-    softbounds: tuple[int | None, int | None] | None
-    inclusive_bounds: tuple[bool, bool]
-    step: int | None
-    set_hook: t.Callable[..., t.Any] | None
-
-
 class Integer(Number[T]):
     """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = {**Number._slot_defaults, 'default': 0}
 
     if t.TYPE_CHECKING:
+
+        class IntegerInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            bounds: tuple[int | None, int | None] | None
+            softbounds: tuple[int | None, int | None] | None
+            inclusive_bounds: tuple[bool, bool]
+            step: int | None
+            set_hook: t.Callable[..., t.Any] | None
 
         @t.overload
         def __init__(self: Integer[int]):
@@ -959,7 +969,7 @@ class Integer(Number[T]):
             default: int = 0,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[NumberInitKwargs]
+            **kwargs: Unpack[IntegerInitKwargs]
         ) -> None:
             ...
 
@@ -969,7 +979,7 @@ class Integer(Number[T]):
             default: int = 0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[NumberInitKwargs]
+            **kwargs: Unpack[IntegerInitKwargs]
         ) -> None:
             ...
 
@@ -979,7 +989,7 @@ class Integer(Number[T]):
             default: None = None,
             *,
             allow_None: bool = False,
-            **kwargs: Unpack[NumberInitKwargs]
+            **kwargs: Unpack[IntegerInitKwargs]
         ) -> None:
             ...
 
@@ -1019,14 +1029,6 @@ class Magnitude(Number[T]):
     _slot_defaults = {**Number._slot_defaults, 'default': 1.0, 'bounds': (0.0, 1.0)}
 
 
-class DateInitKwargs(ParameterKwargs, total=False):
-    bounds: tuple[t.Any | None, t.Any | None] | None
-    softbounds: tuple[t.Any | None, t.Any | None] | None
-    inclusive_bounds: tuple[bool, bool]
-    step: int | None
-    set_hook: t.Callable[..., t.Any] | None
-
-
 class Date(Number[T]):
     """Date parameter of datetime or date type."""
 
@@ -1061,7 +1063,7 @@ class Date(Number[T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[DateInitKwargs]
     ) -> None:
-        t.cast("t.Any", Number.__init__)(
+        super().__init__(  # type: ignore[misc, call-overload]
             self, default=default, allow_None=allow_None, **kwargs
         )
 
@@ -1109,20 +1111,19 @@ class Date(Number[T]):
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
-class CalendarDateInitKwargs(ParameterKwargs, total=False):
-    bounds: tuple[dt.date | None, dt.date | None] | None
-    softbounds: tuple[dt.date | None, dt.date | None] | None
-    inclusive_bounds: tuple[bool, bool]
-    step: int | None
-    set_hook: t.Callable[..., t.Any] | None
-
-
 class CalendarDate(Number[T]):
     """Parameter specifically allowing dates (not datetimes)."""
 
     _slot_defaults = {**Number._slot_defaults, 'default': None}
 
     if t.TYPE_CHECKING:
+
+        class CalendarDateInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            bounds: tuple[dt.date | None, dt.date | None] | None
+            softbounds: tuple[dt.date | None, dt.date | None] | None
+            inclusive_bounds: tuple[bool, bool]
+            step: int | None
+            set_hook: t.Callable[..., t.Any] | None
 
         @t.overload
         def __init__(  # type: ignore[inconsistent-overload]
@@ -1582,14 +1583,6 @@ class XYCoordinates(NumericTuple[T]):
         )
 
 
-class RangeInitKwargs(ParameterKwargs, total=False):
-    bounds: tuple[float, float] | None
-    softbounds: tuple[float, float] | None
-    inclusive_bounds: tuple[bool, bool]
-    step: float | None
-    set_hook: t.Callable[..., t.Any] | None
-
-
 class Range(NumericTuple[T]):
     """A numeric range with optional bounds and softbounds."""
 
@@ -1610,6 +1603,13 @@ class Range(NumericTuple[T]):
     step: float | None
 
     if t.TYPE_CHECKING:
+
+        class RangeInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            bounds: tuple[float, float] | None
+            softbounds: tuple[float, float] | None
+            inclusive_bounds: tuple[bool, bool]
+            step: float | None
+            set_hook: t.Callable[..., t.Any] | None
 
         @t.overload
         def __init__(self: Range[tuple[float, float]]) -> None:
@@ -1831,6 +1831,7 @@ class DateRange(Range[T]):
             serialized.append(v)
         return serialized
 
+    @classmethod
     def deserialize(cls, value):
         if value == 'null' or value is None:
             return None
@@ -2016,35 +2017,16 @@ class Composite(Parameter):
     attribs: list[str]
     objtype: type[Parameterized]
 
-    @t.overload
-    def __init__(self) -> None:
-        ...
-
-    @t.overload
     def __init__(
         self,
         *,
-        attribs: list[str] | None = None,
-        doc: str | None = None,
-        label: str | None = None,
-        precedence: float | None = None,
-        instantiate: bool = False,
-        constant: bool = False,
-        readonly: bool = False,
-        pickle_default_value: bool = True,
-        allow_None: bool = False,
-        per_instance: bool = True,
-        allow_refs: bool = False,
-        nested_refs: bool = False,
-        default_factory: t.Callable[..., t.Any] | None = None,
-        metadata: dict[str, t.Any] | None = None
+        attribs: list[str] = t.cast("list[str]", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[ParameterKwargs]
     ) -> None:
-        ...
-
-    def __init__(self, *, attribs=Undefined, **kw):
         if attribs is Undefined:
             attribs = []
-        super().__init__(default=Undefined, **kw)
+        super().__init__(default=Undefined, allow_None=allow_None, **kwargs)
         self.attribs = attribs  # type: ignore[attr-defined, ty:invalid-assignment]
 
     def __get__(
@@ -2671,7 +2653,7 @@ class MultiFileSelector(ListSelector):
         if attribute == 'path':
             self.update(path=value)
 
-    def update(self, path=Undefined):
+    def update(self, path: str | PathLike | UndefinedType = Undefined):  # pyrefly: ignore[bad-argument-type]
         if path is Undefined:
             path = self.path
         self.objects = sorted(glob.glob(t.cast("str", path)))
@@ -2682,21 +2664,13 @@ class MultiFileSelector(ListSelector):
         self.default = self.objects
 
     def get_range(self) -> dict[str, str | PathLike]:
-        return _abbreviate_paths(self.path,super().get_range())
+        return _abbreviate_paths(self.path, super().get_range())
 
 
-class ClassSelectorInitKwargs(t.TypedDict, total=False):
-    doc: str | None
-    label: str | None
-    precedence: float | None
-    constant: bool
-    readonly: bool
-    pickle_default_value: bool
-    per_instance: bool
-    allow_refs: bool
-    nested_refs: bool
-    default_factory: t.Callable[..., t.Any] | None
-    metadata: dict[str, t.Any] | None
+
+class ClassSelectorKwargs(ParameterKwargs, total=False):
+    is_instance: bool
+    class_: type | tuple[type, ...]
 
 
 class ClassSelector(SelectorBase[T]):
@@ -2723,12 +2697,11 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self: ClassSelector[type[CT]],
             *,
-            class_: type[CT] | tuple[type[CT], ...],
             default: type[CT] | None = None,
-            instantiate: bool = True,
+            class_: type[CT] | tuple[type[CT], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -2738,10 +2711,9 @@ class ClassSelector(SelectorBase[T]):
             *,
             class_: type[CT] | tuple[type[CT], ...],
             default: type[CT] | None = None,
-            instantiate: bool = True,
             is_instance: t.Literal[False],
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -2749,12 +2721,11 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self: ClassSelector[IT],
             *,
-            class_: type[IT] | tuple[type[IT], ...],
             default: IT | None = None,
-            instantiate: bool = True,
+            class_: type[IT] | tuple[type[IT], ...],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -2762,25 +2733,11 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self: ClassSelector[IT | None],
             *,
-            class_: type[IT] | tuple[type[IT], ...],
             default: IT | None = None,
-            instantiate: bool = True,
+            class_: type[IT] | tuple[type[IT], ...],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ClassSelectorInitKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: ClassSelector[IT | CT | None],
-            *,
-            class_: type[IT] | type[CT] | tuple[type[IT] | type[CT], ...],
-            default: IT | type[CT] | None = None,
-            instantiate: bool = True,
-            is_instance: bool = True,
-            allow_None: bool = False,
-            **kwargs: Unpack[ClassSelectorInitKwargs]
+            **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
@@ -2788,10 +2745,9 @@ class ClassSelector(SelectorBase[T]):
         self, *,
         class_: type | tuple[type, ...] = t.cast("type | tuple[type, ...]", Undefined),  # pyrefly: ignore[bad-argument-type]
         default: t.Any | None = t.cast("t.Any | None", Undefined),  # pyrefly: ignore[bad-argument-type]
-        instantiate: bool = True,
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ClassSelectorInitKwargs]
+        **params: Unpack[ParameterKwargs]
     ) -> None:
         self.class_ = class_
         self.is_instance = is_instance  # type: ignore
@@ -2889,20 +2845,18 @@ class Dict(ClassSelector[T]):
         default: dict[t.Any, t.Any] | None = t.cast("dict[t.Any, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[ClassSelectorKwargs]
     ) -> None:
         super().__init__(default=default, class_=dict, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
 
 
-class Array(ClassSelector[T]):
+class Array(ClassSelector[AT]):
     """Parameter whose value is a numpy array."""
 
     if t.TYPE_CHECKING:
 
         @t.overload
-        def __init__(
-            self: Array[np.ndarray | None],
-        ):
+        def __init__(self: Array[np.ndarray | None]) -> None:
             ...
 
         @t.overload
@@ -2918,16 +2872,28 @@ class Array(ClassSelector[T]):
         @t.overload
         def __init__(
             self: Array[np.ndarray | None],
-            default: None = None,
+            default: np.ndarray | None = None,
             *,
-            allow_None: t.Literal[False] = False,
+            allow_None: t.Literal[True] = True,
             **kwargs: Unpack[ParameterKwargs]
         ) -> None:
             ...
 
-    def __init__(self, default=Undefined, **params):
-        ndarray = importlib.import_module('numpy').ndarray  # type: ignore[unresolved-attribute]
-        t.cast("t.Any", super().__init__)(default=default, class_=ndarray, **params)
+    def __init__(
+        self,
+        default: np.ndarray | None = t.cast("np.ndarray | None", Undefined),
+        *,
+        allow_None: bool = t.cast("bool", Undefined),
+        **params: Unpack[ClassSelectorKwargs]
+    ) -> None:
+        np_array = importlib.import_module("numpy").ndarray  # type: ignore[unresolved-attribute]
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default,
+            class_=np_array,
+            is_instance=True,
+            allow_None=allow_None,
+            **params,
+        )
 
     @classmethod
     def serialize(cls, value: np.ndarray | None) -> list | None:
@@ -2949,13 +2915,7 @@ class Array(ClassSelector[T]):
             return numpy.asarray(value)
 
 
-class DataFrameInitKwargs(ParameterKwargs, total=False):
-    rows: int | tuple[int | None, int | None] | None
-    columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
-    ordered: bool | None
-
-
-class DataFrame(ClassSelector[T]):
+class DataFrame(ClassSelector[DF]):
     """
     Parameter whose value is a pandas ``DataFrame``.
 
@@ -2985,6 +2945,11 @@ class DataFrame(ClassSelector[T]):
 
     if t.TYPE_CHECKING:
 
+        class DataFrameInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            rows: int | tuple[int | None, int | None] | None
+            columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
+            ordered: bool | None
+
         @t.overload
         def __init__(
             self: DataFrame[pd.DataFrame | None],
@@ -3006,11 +2971,8 @@ class DataFrame(ClassSelector[T]):
             self: DataFrame[pd.DataFrame | None],
             default: pd.DataFrame | None = None,
             *,
-            rows: int | tuple[int | None, int | None] | None = None,
-            columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = None,
-            ordered: bool | None = None,
-            allow_None: bool = True,
-            **kwargs: Unpack[ParameterKwargs]
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[DataFrameInitKwargs]
         ) -> None:
             ...
 
@@ -3024,11 +2986,17 @@ class DataFrame(ClassSelector[T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        pdDFrame = importlib.import_module('pandas').DataFrame  # type: ignore[unresolved-attribute]
+        pdDataFrame = importlib.import_module('pandas').DataFrame  # type: ignore[unresolved-attribute]
         self.rows = rows
         self.columns = columns
         self.ordered = ordered
-        super().__init__(default=default, class_=pdDFrame, **params)
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default,
+            class_=pdDataFrame,
+            is_instance=True,
+            allow_None=allow_None,
+            **params,
+        )
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
@@ -3113,7 +3081,7 @@ class DataFrame(ClassSelector[T]):
             return pandas.DataFrame(value)
 
 
-class Series(ClassSelector[T]):
+class Series(ClassSelector[ST]):
     """
     Parameter whose value is a pandas ``Series``.
 
@@ -3130,6 +3098,9 @@ class Series(ClassSelector[T]):
 
     if t.TYPE_CHECKING:
 
+        class SeriesInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            rows: int | tuple[int | None, int | None] | None
+
         @t.overload
         def __init__(
             self: Series[pd.Series | None],
@@ -3141,20 +3112,8 @@ class Series(ClassSelector[T]):
             self: Series[pd.Series],
             default: pd.Series = pd.Series([]),
             *,
-            rows: int | tuple[int | None, int | None] | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Series[pd.Series | None],
-            default: None = None,
-            *,
-            rows: int | tuple[int | None, int | None] | None = None,
-            allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[SeriesInitKwargs]
         ) -> None:
             ...
 
@@ -3163,20 +3122,8 @@ class Series(ClassSelector[T]):
             self: Series[pd.Series | None],
             default: pd.Series | None = None,
             *,
-            rows: int | tuple[int | None, int | None] | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Series[pd.Series | None],
-            default: pd.Series | None = None,
-            *,
-            rows: int | tuple[int | None, int | None] | None = None,
-            allow_None: bool = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[SeriesInitKwargs]
         ) -> None:
             ...
 
@@ -3185,13 +3132,18 @@ class Series(ClassSelector[T]):
         default: pd.Series | None = t.cast("pd.Series | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         rows: int | tuple[int | None, int | None] | None = t.cast("int | tuple[int | None, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        is_instance: t.Literal[True] = True,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
-    ):
-        pdSeries = t.cast("t.Any", importlib.import_module('pandas')).Series
+    ) -> None:
+        pdSeries = importlib.import_module('pandas').Series  # type: ignore[unresolved-attribute]
         self.rows = rows
-        super().__init__(
-            default=default, class_=pdSeries, allow_None=allow_None, **params
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default,
+            class_=pdSeries,
+            allow_None=allow_None,
+            is_instance=True,
+            **params,
         )
         self._validate(self.default)
 
@@ -3456,11 +3408,6 @@ class resolve_path(ParameterizedFunction):
             raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
-class PathInitKwargs(ParameterKwargs, total=False):
-    search_paths: list[str | PathLike] | None
-    check_exists: bool
-
-
 class Path(Parameter[T]):
     """
     Parameter that can be set to a string specifying the path of a file or folder.
@@ -3496,6 +3443,10 @@ class Path(Parameter[T]):
     check_exists: bool
 
     if t.TYPE_CHECKING:
+
+        class PathInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            search_paths: list[str | PathLike] | None
+            check_exists: bool
 
         @t.overload
         def __init__(self: Path[PathLike | str | None]) -> None:
@@ -3634,10 +3585,6 @@ class Foldername(Path):
 # Color
 #-----------------------------------------------------------------------------
 
-class ColorInitKwargs(ParameterKwargs, total=False):
-    allow_named: bool
-
-
 class Color(Parameter[T]):
     """
     Color parameter defined as a hex RGB string with an optional ``#``
@@ -3686,6 +3633,9 @@ class Color(Parameter[T]):
     _slot_defaults = dict(Parameter._slot_defaults, allow_named=True)
 
     if t.TYPE_CHECKING:
+
+        class ColorInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            allow_named: bool
 
         @t.overload
         def __init__(self: Color[str]) -> None:
@@ -3765,10 +3715,6 @@ class Color(Parameter[T]):
 # Bytes
 #-----------------------------------------------------------------------------
 
-class BytesInitKwargs(ParameterKwargs, total=False):
-    regex: bytes | str | None
-
-
 class Bytes(Parameter[T]):
     """
     A Bytes Parameter, with a default value and optional regular
@@ -3785,6 +3731,9 @@ class Bytes(Parameter[T]):
     )
 
     if t.TYPE_CHECKING:
+
+        class BytesInitKwargs(ParameterKwargs, total=False):  # noqa: D106
+            regex: bytes | str | None
 
         @t.overload
         def __init__(self: Bytes[bytes]) -> None:

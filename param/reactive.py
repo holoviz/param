@@ -1314,7 +1314,7 @@ def bind(function: Callable, *args, watch: bool = False, **kwargs):
             return eval_fn()(*combined_args, **combined_kwargs)
         wrapped = wrapped_sync
     t.cast('t.Any', wrapped).__bound_function__ = function
-    t.cast('t.Any', wrapped).rx = reactive_ops(wrapped_gen)
+    t.cast('t.Any', wrapped).rx = reactive_ops(wrapped)
     _reactive_display_objs.add(wrapped)
     for name, accessor in _display_accessors.items():
         setattr(wrapped, name, t.cast('t.Any', accessor)(wrapped))

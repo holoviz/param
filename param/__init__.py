@@ -128,7 +128,7 @@ except (ImportError, LookupError, FileNotFoundError):
     try:
         # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
         # the hopefully stable version variable.
-        from ._version import version as __version__  # type: ignore[unresolved-import,ty:unresolved-import,no-redef]
+        from ._version import version as __version__  # type: ignore[unresolved-import,ty:unresolved-import,no-redef,reportMissingImports]
     except (ModuleNotFoundError, ImportError):
         # Either _version doesn't exist (ModuleNotFoundError) or version isn't
         # in _version (ImportError). ModuleNotFoundError is a subclass of

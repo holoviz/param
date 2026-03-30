@@ -864,7 +864,7 @@ class Number(Dynamic[T]):
             bounded_val = self.crop_to_bounds(val)
         else:
             bounded_val = val
-        super().__set__(obj, t.cast("t.Any", bounded_val))
+        super().__set__(obj, t.cast("t.Any", bounded_val))  # ty: ignore[redundant-cast]
 
     def crop_to_bounds(self, val: t.Any) -> t.Any:
         """

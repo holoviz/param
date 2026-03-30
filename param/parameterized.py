@@ -1213,7 +1213,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
                     if pname in defaults:
                         default = defaults[pname]
                         if callable(default) and hasattr(default, 'sig'):
-                            default = default.sig
+                            default = default.sig  # pyright: ignore[reportFunctionMemberAccess]
                         new_parameter = parameter.replace(default=default)
                     else:
                         new_parameter = parameter
@@ -1951,7 +1951,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                         category=_ParamPendingDeprecationWarning,
                         stacklevel=_find_stack_level(),
                     )
-                    obj.__dict__['_param__private'] = _InstancePrivate(
+                    obj.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs
                     )
                 _old = obj._param__private.values.get(name, self.default)

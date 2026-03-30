@@ -34,7 +34,9 @@ from types import FunctionType, MethodType
 if t.TYPE_CHECKING:
     import logging
 
-    from collections.abc import Callable, Iterable, Generator, Mapping
+    from collections.abc import (
+        Callable, Iterable, Iterator, Generator, Mapping
+    )
 
     if sys.version_info < (3, 11):
         from typing_extensions import Self, Unpack
@@ -1824,7 +1826,9 @@ class Parameter(_ParameterBase, t.Generic[T]):
 
     def _trigger_event(self, attribute: str, old: t.Any, new: t.Any):
         if self.owner is None:
-            return
+            raise RuntimeError(
+                "An event cannot be triggered for an unbound parameter."
+            )
         event = Event(attribute, self.name, None, self.owner, old, new, None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
@@ -1917,7 +1921,9 @@ class Parameter(_ParameterBase, t.Generic[T]):
         item in a list).
         """
         if self.name is None:
-            return
+            raise RuntimeError(
+                "A parameter value cannot be set for an unbound parameter."
+            )
         name = self.name
 
         if obj is not None and self.allow_refs and obj._param__private.initialized:
@@ -2460,7 +2466,7 @@ class Parameters:
         """
         return list(super().__dir__()) + list(self_._cls_parameters)
 
-    def __iter__(self_) -> Generator[str, None, None]:
+    def __iter__(self_) -> Iterator[str]:
         """Iterate over the parameters on this object."""
         params = iter(self_._cls_parameters)
         yield from params

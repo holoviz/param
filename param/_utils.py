@@ -678,7 +678,7 @@ def _find_stack_level() -> int:
     numbergen_file = getattr(numbergen, "__file__", None)
     param_file = getattr(param, "__file__", None)
     if numbergen_file is None or param_file is None:
-        return 0
+        return 2
     ng_dir = os.path.dirname(numbergen_file)
     param_dir = os.path.dirname(param_file)
 

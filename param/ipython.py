@@ -375,7 +375,7 @@ class IPythonDisplay:
     def __init__(self, reactive):
         self._reactive = reactive
 
-    def __call__(self):
+    def __call__(self) -> None:
         from IPython.display import display
 
         from param.depends import depends

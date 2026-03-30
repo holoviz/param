@@ -853,7 +853,7 @@ class Number(Dynamic[T]):
         Non-dynamic default values are checked against the bounds.
         """
         super().__init__(  # type: ignore[misc, call-overload]
-            default=default, allow_None=allow_None, **params
+            default=default, allow_None=allow_None, **params  # type: ignore[arg-type]
         )
         self.bounds = bounds
         self.inclusive_bounds = inclusive_bounds

@@ -91,6 +91,7 @@ from __future__ import annotations
 import inspect
 import math
 import operator
+import warnings
 
 from collections.abc import Iterable, Iterator
 from itertools import chain
@@ -1105,6 +1106,8 @@ class reactive_ops:
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
+        elif isinstance(self._reactive, rx) and self._reactive._lazy:
+            warnings.warn("Watching a lazy expressions converts it into an eager expression.")
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
@@ -1455,7 +1458,7 @@ class rx:
         self._method = method
         self._operation = operation
         self._depth = depth
-        self._dirty = _current is None
+        self._dirty = _current is None or _current is Undefined
         self._dirty_obj = False
         self._current_task = None
         self._error_state = None
@@ -1843,7 +1846,7 @@ class rx:
     def __call__(self, *args, **kwargs):
         new = self._clone(copy=True)
         method = new._method or '__call__'
-        if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__'):
+        if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__') and not self._lazy:
             return self.set_display(*args, **kwargs)
 
         if method in rx._method_handlers:
@@ -1997,7 +2000,13 @@ class rx:
                 yield new
             return
         elif not isinstance(self._current, Iterable):
-            raise TypeError(f'cannot unpack non-iterable {type(self._current).__name__} object.')
+            if self._lazy:
+                raise RuntimeError(
+                    "Lazy rx expressions must be resolved before being iterated over. "
+                    "Access the current value using .rx.value before iterating."
+                )
+            else:
+                raise TypeError(f'Cannot unpack non-iterable {type(self._current).__name__} object.')
         items = self._apply_operator(list)
         for i in range(len(self._current)):
             yield items[i]

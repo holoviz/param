@@ -59,13 +59,10 @@ from ._utils import (
 #-----------------------------------------------------------------------------
 
 if t.TYPE_CHECKING:
-    if sys.version_info < (3, 11):
-        from typing_extensions import Unpack
-    else:
-        from typing import Unpack
-
     import numpy as np
     import pandas as pd
+
+    from typing_extensions import Unpack
 
     LT = t.TypeVar("LT")
 
@@ -223,7 +220,7 @@ def parameterized_class(
         basecls: tuple[type[Parameterized], ...] = (bases,)
     else:
         basecls = tuple(bases)
-    return t.cast("type[Parameterized]", type(name, basecls, params))
+    return type(name, basecls, params)
 
 
 def guess_bounds(params: dict[str, Parameter], **overrides: tuple[t.Any, t.Any]):
@@ -586,7 +583,7 @@ class Dynamic(Parameter[T]):
 
     def __init__(
         self,
-        default: t.Any | None = t.cast("t.Any | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default: t.Any | None = Undefined,
         *,
         allow_None=t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
@@ -1851,13 +1848,13 @@ class Range(NumericTuple[T]):
                     f"{_validate_error_prefix(self, 'step')} cannot be 0."
                 )
 
-    def _validate_order(self, val, step, allow_None):
+    def _validate_order(self, val: tuple[t.Any, t.Any] | None, step, allow_None):
         if val is None:
             return
         elif val is not None and (val[0] is None or val[1] is None):
             return
 
-        start, end = t.cast("tuple[t.Any, t.Any]", val)
+        start, end = val
         if step is not None and step > 0 and not start <= end:
             raise ValueError(
                 f"{_validate_error_prefix(self)} end {end} is less than its "
@@ -2556,7 +2553,7 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         self,
         *,
         objects: list[t.Any] | dict[str, t.Any] | None = t.cast("list[t.Any] | dict[str, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
-        default: t.Any = t.cast("t.Any", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default: t.Any =  Undefined,
         compute_default_fn: t.Callable[[], t.Any] | None = t.cast("t.Callable[[], t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         check_on_set: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -2689,7 +2686,7 @@ class ObjectSelector(Selector):
 
     def __init__(
         self,
-        default: t.Any = t.cast("t.Any", Undefined),  # pyrefly: ignore[bad-argument-type],
+        default: t.Any = Undefined,
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[SelectorInitKwargs]
@@ -2857,9 +2854,9 @@ class MultiFileSelector(ListSelector):
 
     def __init__(
         self,
-        default: list[PathLike | str] | None = t.cast("list[PathLike | str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default: list[PathLike | str] | None = t.cast("list[PathLike | str] | None", Undefined),
         *,
-        path: str | PathLike = t.cast("str | PathLike", Undefined),  # pyrefly: ignore[bad-argument-type]
+        path: str | PathLike = t.cast("str | PathLike", Undefined),
         **kwargs: Unpack[SelectorInitKwargs]
     ) -> None:
         self.default = default
@@ -2873,7 +2870,7 @@ class MultiFileSelector(ListSelector):
         if attribute == 'path':
             self.update(path=value)
 
-    def update(self, path: str | PathLike | UndefinedType = Undefined):  # pyrefly: ignore[bad-argument-type]
+    def update(self, path: str | PathLike | UndefinedType = Undefined):
         if path is Undefined:
             path = self.path
         self.objects = sorted(glob.glob(t.cast("str", path)))
@@ -3003,7 +3000,7 @@ class ClassSelector(SelectorBase[T]):
     def __init__(
         self, *,
         class_: type | tuple[type, ...] = t.cast("type | tuple[type, ...]", Undefined),  # pyrefly: ignore[bad-argument-type]
-        default: t.Any | None = t.cast("t.Any | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        default: t.Any | None = Undefined,
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]

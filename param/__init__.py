@@ -128,7 +128,7 @@ except (ImportError, LookupError, FileNotFoundError):
     try:
         # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
         # the hopefully stable version variable.
-        from ._version import version as __version__  # type: ignore[unresolved-import,ty:unresolved-import,no-redef]  # pyright: ignore[reportMissingImports]
+        from ._version import version as __version__  # type: ignore[unresolved-import,no-redef]  # pyright: ignore[reportMissingImports]
     except (ModuleNotFoundError, ImportError):
         # Either _version doesn't exist (ModuleNotFoundError) or version isn't
         # in _version (ImportError). ModuleNotFoundError is a subclass of
@@ -138,11 +138,11 @@ except (ImportError, LookupError, FileNotFoundError):
         from importlib.metadata import version as mversion, PackageNotFoundError
 
         try:
-            __version__ = str(mversion("param"))  # ty: ignore[conflicting-declarations]
+            __version__ = str(mversion("param"))
         except PackageNotFoundError:
             # The user is probably trying to run this without having installed
             # the package.
-            __version__ = "0.0.0+unknown"  # ty: ignore[conflicting-declarations]
+            __version__ = "0.0.0+unknown"
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
@@ -227,7 +227,6 @@ __all__ = (
     'resolve_path',
     'rx',
     'script_repr',
-    'serializer',
     'shared_parameters',
     'version',
 )

@@ -109,12 +109,7 @@ from .parameters import Boolean, Event
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 if t.TYPE_CHECKING:
-    import sys
-
-    if sys.version_info < (3, 11):
-        from typing_extensions import Self
-    else:
-        from typing import Self
+    from typing_extensions import Self
 
 
 _P = t.ParamSpec('_P')
@@ -757,7 +752,7 @@ class reactive_ops:
         {'key': [10, 20]}
         """
         resolver_type = NestedResolver if nested else Resolver
-        resolver = t.cast('t.Any', resolver_type)(object=self._reactive, recursive=recursive)
+        resolver = resolver_type(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
 
     def updating(self) -> 'rx':
@@ -794,7 +789,7 @@ class reactive_ops:
         >>> updating.rx.value  # Becomes True during the update process, then False.
         False
         """
-        wrapper = t.cast('t.Any', Wrapper)(object=False)
+        wrapper = t.cast('Callable', Wrapper)(object=False)
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
         return wrapper.param.object.rx()
@@ -1318,10 +1313,10 @@ def bind(
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = t.cast('Iterable[t.Any]', eval_fn()(*combined_args, **combined_kwargs))
+            evaled: Iterable[t.Any] = eval_fn()(*combined_args, **combined_kwargs)
             for val in evaled:
                 yield val
-        wrapper_fn = t.cast('t.Any', depends)(**dependencies, watch=watch)(wrapped_gen)
+        wrapper_fn = t.cast('Callable', depends)(**dependencies, watch=watch)(wrapped_gen)
         t.cast('t.Any', wrapped_gen)._dinfo = wrapper_fn._dinfo
         wrapped = wrapped_gen
     elif inspect.isasyncgenfunction(function):
@@ -1329,19 +1324,19 @@ def bind(
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = t.cast('t.Any', eval_fn()(*combined_args, **combined_kwargs))
+            evaled: t.Any = eval_fn()(*combined_args, **combined_kwargs)
             async for val in evaled:
                 yield val
-        wrapper_fn = t.cast('t.Any', depends)(**dependencies, watch=watch)(wrapped_async_gen)
+        wrapper_fn = t.cast('Callable', depends)(**dependencies, watch=watch)(wrapped_async_gen)
         t.cast('t.Any', wrapped_async_gen)._dinfo = wrapper_fn._dinfo
         wrapped = wrapped_async_gen
     elif iscoroutinefunction(function):
-        @t.cast('t.Any', depends)(**dependencies, watch=watch)
+        @t.cast('Callable', depends)(**dependencies, watch=watch)
         async def wrapped_coro(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
-            evaled = t.cast('t.Any', eval_fn()(*combined_args, **combined_kwargs))
+            evaled: t.Any = eval_fn()(*combined_args, **combined_kwargs)
             return await evaled
         wrapped = wrapped_coro
     else:
@@ -1354,7 +1349,7 @@ def bind(
     t.cast('t.Any', wrapped).rx = reactive_ops(wrapped)
     _reactive_display_objs.add(wrapped)
     for name, accessor in _display_accessors.items():
-        setattr(wrapped, name, t.cast('t.Any', accessor)(wrapped))
+        setattr(wrapped, name, t.cast('Callable', accessor)(wrapped))
     return wrapped
 
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
@@ -1474,7 +1469,7 @@ class rx:
             wrapper = kwargs.pop('_wrapper', None)
         elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
             # Resolves generator and coroutine functions lazily
-            wrapper = t.cast('t.Any', GenWrapper)(object=obj)
+            wrapper = t.cast('Callable', GenWrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
@@ -1490,7 +1485,7 @@ class rx:
         else:
             # For all other objects wrap them so they can be updated
             # via .rx.value property
-            wrapper = t.cast('t.Any', Wrapper)(object=obj)
+            wrapper = t.cast('Callable', Wrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
         inst = super(rx, cls).__new__(cls)
         inst._fn = fn
@@ -1525,14 +1520,15 @@ class rx:
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
-            self._prev = t.cast('t.Any', prev)
+            self._prev = t.cast('rx', prev)
 
         # Define special trigger parameter if operation has to be lazily evaluated
+        self._trigger: Trigger | None
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
         else:
-            self._trigger = t.cast('t.Any', None)
+            self._trigger = None
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
         self._internal_params = self._compute_params()
@@ -1550,7 +1546,7 @@ class rx:
         self._rx = reactive_ops(self)
         self._init = True
         for name, accessor in _display_accessors.items():
-            setattr(self, name, t.cast('t.Any', accessor)(self))
+            setattr(self, name, t.cast('Callable', accessor)(self))
         for name, (accessor, predicate) in rx._accessors.items():
             if predicate is None or predicate(self._current):
                 setattr(self, name, accessor(self))
@@ -1602,7 +1598,7 @@ class rx:
     @_obj.setter
     def _obj(self, obj):
         if self._shared_obj is None:
-            self._shared_obj = t.cast('t.Any', [obj])
+            self._shared_obj: t.Any = [obj]
         else:
             self._shared_obj[0] = obj
 

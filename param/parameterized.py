@@ -38,10 +38,7 @@ if t.TYPE_CHECKING:
         Callable, Iterable, Iterator, Generator, Mapping
     )
 
-    if sys.version_info < (3, 11):
-        from typing_extensions import Self, Unpack
-    else:
-        from typing import Self, Unpack
+    from typing_extensions import Self, Unpack
 
 from . import serializer
 from ._utils import (
@@ -206,10 +203,10 @@ def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
     args: tuple[t.Any, ...] = ()
     kwargs: dict[str, t.Any] = {}
-    dinfo = t.cast("dict[str, t.Any]", getattr(function, "_dinfo", {}))
+    dinfo: dict[str, t.Any] = getattr(function, "_dinfo", {})
     if dinfo:
         arg_deps = dinfo.get("dependencies", ())
-        kw_deps = t.cast("dict[str, t.Any]", dinfo.get("kw", {}))
+        kw_deps: dict[str, t.Any] = dinfo.get("kw", {})
         if kw_deps or any(isinstance(d, Parameter) for d in arg_deps):
             resolved_args: list[t.Any] = []
             for dep in arg_deps:
@@ -265,7 +262,7 @@ def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
         refs = []
         for arg in (args + kwargs):
             if isinstance(arg, str):
-                owner = t.cast("Parameterized", get_method_owner(reference))
+                owner = t.cast("Parameterized", get_method_owner(reference))  # TODO: We should have better support for owner.
                 if arg in owner.param:
                     arg = owner.param[arg]
                 elif '.' in arg:
@@ -412,7 +409,7 @@ def _syncing(parameterized, parameters):
 
 
 @contextmanager
-def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]:
+def edit_constant(parameterized: Parameterized) -> Generator[None, None, None]:
     """
     Context manager to temporarily set parameters on a Parameterized object
     to ``constant=False`` to allow editing them.
@@ -461,7 +458,7 @@ def edit_constant(parameterized: 'Parameterized') -> Generator[None, None, None]
             # Some operations trigger a parameter instantiation (copy),
             # we ensure both the class and instance parameters are reset.
             if pname in kls_params and pname not in init_inst_params:
-                t.cast("Parameters", type(parameterized).param)[pname].constant = True
+                type(parameterized).param[pname].constant = True
             if pname in inst_params:
                 parameterized.param[pname].constant = True
 
@@ -784,11 +781,11 @@ def output(func, *output, **kw):
             if issubclass(otype, Parameter):
                 otype = otype()
             else:
-                from .import ClassSelector
-                otype = t.cast("t.Any", ClassSelector)(class_=otype)
+                from . import ClassSelector
+                otype = ClassSelector(class_=otype)
         elif isinstance(otype, tuple) and all(isinstance(t, type) for t in otype):
             from .import ClassSelector
-            otype = t.cast("t.Any", ClassSelector)(class_=otype)
+            otype = ClassSelector(class_=t.cast("tuple[type, ...]", otype))
         if not isinstance(otype, Parameter):
             raise ValueError('output type must be declared with a Parameter class, '
                              'instance or a Python object type.')
@@ -917,8 +914,8 @@ def _skip_event(*events, **kwargs):
 
 def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
     """Extract references from a method or function that declares the references."""
-    dinfo = t.cast("dict[str, t.Any]", getattr(function, "_dinfo", {}))
-    subparameters = list[str](dinfo.get("dependencies", ())) + list[str](t.cast("dict[str, t.Any]", dinfo.get("kw", {})).values())
+    dinfo: dict[str, t.Any] = getattr(function, "_dinfo", {})
+    subparameters: list[str] = [*(dinfo.get("dependencies", ())), *dinfo.get("kw", {}).values()]
     params = []
     for p in subparameters:
         if isinstance(p, str):
@@ -1467,7 +1464,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
 
     def __init__(
         self,
-        default: t.Any | None = t.cast("t.Any | None", Undefined),   # pyrefly: ignore[bad-argument-type]
+        default: t.Any | None = Undefined,
         *,
         doc: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         label: str | None = t.cast("str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -1596,7 +1593,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 "default_factory must be a callable, "
                 f"not {type(default_factory)!r}."
             )
-        self.name = None
+        self.name: str | None = None
         self.owner = None
         self.allow_refs = allow_refs
         self.nested_refs = nested_refs
@@ -1681,7 +1678,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
             raise KeyError(f'Mode {mode!r} not in available serialization formats {list(self._serializers.keys())!r}')
         return self._serializers[mode].param_schema(
             self.__class__.__name__,
-            t.cast("t.Any", self),
+            self,
             safe=safe,
             subset=subset,
         )
@@ -1782,7 +1779,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         elif isinstance(allow_None, bool):
             self.allow_None = allow_None
         else:
-            self.allow_None = t.cast("bool", self._slot_defaults['allow_None'])
+            self.allow_None = self._slot_defaults['allow_None']
 
     def _set_instantiate(self, instantiate: bool | UndefinedType):
         """Constant parameters must be instantiated."""
@@ -1795,7 +1792,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
             self.instantiate = instantiate
         else:
             # Default value
-            self.instantiate = t.cast("bool", self._slot_defaults['instantiate'])
+            self.instantiate = self._slot_defaults['instantiate']
 
     def __setattr__(self, attribute: str, value):
         if attribute == 'name':
@@ -2062,7 +2059,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 'ensure that you create a new parameter '
                 'instance for each new class.'
             )
-        self.name = t.cast("t.Any", attrib_name)
+        self.name = attrib_name  # TODO: Is the casting need to support other names?
 
     def __getstate__(self) -> dict[str, t.Any]:
         """
@@ -2759,7 +2756,7 @@ class Parameters:
         obj = self_.self
         if obj is None:
             return
-        class_param = t.cast("Parameters", t.cast("t.Any", self_.cls).param)
+        class_param = self_.cls.param
         init_methods = []
         for method, queued, on_init, constant, dynamic in class_param._depends['watch']:
             # On initialization set up constant watchers; otherwise
@@ -3967,14 +3964,14 @@ class Parameters:
             raise AttributeError("Specification must include attribute.")
         elif obj is not None and attr == 'param':
             deps, dynamic_deps = self_._spec_to_obj(obj[1:], dynamic, intermediate)
-            src_param = t.cast("t.Any", src.param)
+            src_param = src.param
             for p in src_param:
-                param_deps, param_dynamic_deps = src_param._spec_to_obj(t.cast("str", p), dynamic, intermediate)
+                param_deps, param_dynamic_deps = src_param._spec_to_obj(p, dynamic, intermediate)
                 deps += param_deps
                 dynamic_deps += param_dynamic_deps
             return deps, dynamic_deps
-        elif attr in t.cast("t.Any", src.param):
-            info = PInfo(inst, cls, attr, t.cast("t.Any", src.param)[attr], what)
+        elif attr in src.param:
+            info = PInfo(inst, cls, attr, src.param[attr], what)
         elif hasattr(src, attr):
             attr_obj = getattr(src, attr)
             if isinstance(attr_obj, Parameterized):
@@ -4009,7 +4006,7 @@ class Parameters:
             )
 
         parameter_names = watcher.parameter_names
-        cls_param = t.cast("t.Any", self_.cls.param)
+        cls_param = self_.cls.param
         for parameter_name in parameter_names:
             if parameter_name not in cls_param:
                 raise ValueError("{} parameter was not found in list of "
@@ -4445,8 +4442,8 @@ class Parameters:
                 g._saved_Dynamic_time.append(g._Dynamic_time)
                 # CB: not storing the time_fn: assuming that doesn't
                 # change.
-            elif hasattr(g,'_state_push') and isinstance(g,Parameterized):
-                t.cast("t.Any", g)._state_push()
+            elif hasattr(g,'_state_push'):
+                g._state_push()
 
     def _state_pop(self_):
         """
@@ -4462,8 +4459,8 @@ class Parameters:
             if hasattr(g, '_Dynamic_last'):
                 g._Dynamic_last = g._saved_Dynamic_last.pop()
                 g._Dynamic_time = g._saved_Dynamic_time.pop()
-            elif isinstance(g, Parameterized) and hasattr(g, '_state_pop'):
-                t.cast("t.Any", g)._state_pop()
+            elif hasattr(g, '_state_pop'):
+                g._state_pop()
 
     def pprint(
         self_,
@@ -5227,7 +5224,7 @@ def pprint(
     elif isinstance(val, _no_script_repr):
         rep = None
     elif isinstance(val, Parameterized) or (type(val) is type and issubclass(val, Parameterized)):
-        rep=t.cast("t.Any", val.param).pprint(
+        rep=val.param.pprint(
             imports=imports,
             prefix=prefix+"    ",
             qualify=qualify,
@@ -5797,26 +5794,27 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         self._param__private.initialized = True
 
+        # TODO: Double check that the change is correct change and to or
         # Find parameters with default_factory through the class
         # parameters to avoid making a copy.
-        params_with_default_factory = [
-            pname
-            for pname, pobj in self.param._cls_parameters.items()
-            if pname not in params
-            and callable(pobj.default_factory)
-        ]
+        # params_with_default_factory = [
+        #     (pname, pobj)
+        #     for pname, pobj in self.param._cls_parameters.items()
+        #     if pname not in params
+        #     and pobj.default_factory is not None
+        # ]
         # Set from default_factory once initialized so instance parameters
         # are copied.
-        if params_with_default_factory:
-            for pname in params_with_default_factory:
-                pobj = self.param[pname]
-                dfactory = pobj.default_factory
-                if isinstance(dfactory, DefaultFactory):
-                    default_val = dfactory(cls=type(self), self=self, parameter=pobj)
-                else:
-                    default_val = t.cast("t.Callable[[], t.Any]", dfactory)()
-                with discard_events(self):
-                    setattr(self, pname, default_val)
+        for pname, pobj in self.param._cls_parameters.items():
+            if pname not in params or pobj.default_factory is None:
+                continue
+            dfactory = pobj.default_factory
+            if isinstance(dfactory, DefaultFactory):
+                default_val = dfactory(cls=type(self), self=self, parameter=pobj)
+            else:
+                default_val = dfactory()
+            with discard_events(self):
+                setattr(self, pname, default_val)
 
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)

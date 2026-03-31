@@ -1600,6 +1600,13 @@ class rx:
             raise RuntimeError("Reactive shared object could not be initialized.")
         return shared_obj[0]
 
+    @_obj.setter
+    def _obj(self, obj):
+        if self._shared_obj is None:
+            self._shared_obj: t.Any = [obj]
+        else:
+            self._shared_obj[0] = obj
+
     @property
     def _is_async(self) -> bool:
         if not self._operation:
@@ -1610,13 +1617,6 @@ class rx:
             inspect.isasyncgenfunction(fn) or
             inspect.isgeneratorfunction(fn)
         )
-
-    @_obj.setter
-    def _obj(self, obj):
-        if self._shared_obj is None:
-            self._shared_obj: t.Any = [obj]
-        else:
-            self._shared_obj[0] = obj
 
     @property
     def _current(self):
@@ -1718,25 +1718,23 @@ class rx:
         import asyncio
         self._current_task = task = asyncio.current_task()
         if obj is None:
-            if self._shared._current_task:
-                await self._shared._current_task
-            self._current_ = self._shared.rx.value
-            self._trigger.param.trigger('value')
+            shared = self._shared
+            if shared is not None:
+                if shared._current_task:
+                    await shared._current_task
+                self._current_ = shared.rx.value
         elif inspect.isasyncgen(obj):
             async for val in obj:
                 if self._current_task is not task:
                     break
                 self._current_ = val
-                trigger = self._trigger
-                if trigger is not None:
-                    trigger.param.trigger('value')
         else:
             value = await obj
             if self._current_task is task:
                 self._current_ = value
-                trigger = self._trigger
-                if trigger is not None:
-                    trigger.param.trigger('value')
+
+        if self._trigger is not None:
+            self._trigger.param.trigger('value')
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor

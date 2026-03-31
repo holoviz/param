@@ -5794,27 +5794,28 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         self._param__private.initialized = True
 
-        # TODO: Double check that the change is correct change and to or
         # Find parameters with default_factory through the class
         # parameters to avoid making a copy.
-        # params_with_default_factory = [
-        #     (pname, pobj)
-        #     for pname, pobj in self.param._cls_parameters.items()
-        #     if pname not in params
-        #     and pobj.default_factory is not None
-        # ]
+        params_with_default_factory = [
+            pname
+            for pname, pobj in self.param._cls_parameters.items()
+            if pname not in params
+            and pobj.default_factory is not None
+        ]
         # Set from default_factory once initialized so instance parameters
         # are copied.
-        for pname, pobj in self.param._cls_parameters.items():
-            if pname not in params or pobj.default_factory is None:
-                continue
-            dfactory = pobj.default_factory
-            if isinstance(dfactory, DefaultFactory):
-                default_val = dfactory(cls=type(self), self=self, parameter=pobj)
-            else:
-                default_val = dfactory()
-            with discard_events(self):
-                setattr(self, pname, default_val)
+        if params_with_default_factory:
+            for pname in params_with_default_factory:
+                pobj = self.param[pname]
+                dfactory = pobj.default_factory
+                if dfactory is None:
+                    continue
+                elif isinstance(dfactory, DefaultFactory):
+                    default_val = dfactory(cls=type(self), self=self, parameter=pobj)
+                else:
+                    default_val = dfactory()
+                with discard_events(self):
+                    setattr(self, pname, default_val)
 
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)

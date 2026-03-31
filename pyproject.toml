@@ -31,9 +31,6 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
-dependencies = [
-    "typing_extensions; python_version < '3.11'"
-]
 
 [project.optional-dependencies]
 examples = [

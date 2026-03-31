@@ -220,3 +220,4 @@ type-ty = 'ty check'
 type-mypy = 'mypy'
 type-pyrefly = 'pyrefly check --output-format min-text --count-errors=0'
 type-pyright = 'pyright'
+type-all = { depends-on = ["type-ty", "type-mypy", "type-pyrefly", "type-pyright"] }

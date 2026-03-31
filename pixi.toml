@@ -61,7 +61,7 @@ features = ["py313", "lint"]
 no-default-feature = true
 
 [environments.typecheck]
-features = ["py313", "typecheck"]
+features = ["py313", "required", "typecheck"]
 no-default-feature = true
 
 [feature.required.dependencies]

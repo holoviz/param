@@ -142,8 +142,7 @@ jobs:
     steps:
       - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
-          environments: lint
-          install: true
+          environments: typecheck
       - name: TY
         id: ty
         continue-on-error: true

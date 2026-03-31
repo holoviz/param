@@ -924,7 +924,7 @@ def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
             for subp in subps:
                 owner = t.cast("Parameterized", getattr(owner, subp, None))
                 if owner is None:
-                    raise ValueError('Cannot depend on undefined sub-parameter {p!r}.')
+                    raise ValueError(f'Cannot depend on undefined sub-parameter {p!r}.')
             if p in owner.param:
                 pobj = owner.param[p]
                 if pobj not in params:

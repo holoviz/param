@@ -804,7 +804,8 @@ def test_reactive_callback_resolve_accessor():
     df = pd.DataFrame({"name": ["Bill", "Bob"]})
     dfx = rx(df)
     out = dfx["name"].str._callback()
-    assert out is df["name"].str
+    assert type(out) is type(df["name"].str)
+    assert out._name == df["name"].str._name
 
 
 def test_reactive_dunder_len_error():
@@ -828,3 +829,69 @@ def test_reactive_set_value_attributeerror():
     x = rx(1)
     with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
         x.value = 1
+
+def test_shared_rx_only_triggers_once():
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        return {"x": a + 1, "y": a * 2}
+
+    shared = rx(expensive_compute)(model.param.a)
+
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    assert call_count == 1
+
+    model.a = 2.0
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    assert call_count == 2
+
+
+async def test_async_shared_rx_only_triggers_once():
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    async def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        return {"x": a + 1, "y": a * 2}
+
+    shared = model.param.a.rx.pipe(expensive_compute)
+
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    await async_wait_until(lambda: call_count == 1)
+
+    model.a = 2.0
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    await async_wait_until(lambda: call_count == 2)
+
+    assert x_rx.rx.value == 3
+    assert y_rx.rx.value == 4
+
+    assert call_count == 2

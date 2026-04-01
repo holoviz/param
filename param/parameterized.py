@@ -42,6 +42,28 @@ if t.TYPE_CHECKING:
 
     from typing_extensions import Self, Unpack
 
+    class _ParameterKwargs(t.TypedDict, total=False):
+        doc: str | None
+        label: str | None
+        precedence: float | None
+        instantiate: bool
+        constant: bool
+        readonly: bool
+        pickle_default_value: bool
+        per_instance: bool
+        allow_refs: bool
+        nested_refs: bool
+        default_factory: t.Callable[[], t.Any] | None
+        metadata: dict[str, t.Any] | None
+
+    class _StringInitKwargs(_ParameterKwargs, total=False):
+        regex: str | re.Pattern[str] | None
+
+
+_T = t.TypeVar("_T")
+_P = t.ParamSpec("_P")
+_R = t.TypeVar("_R", covariant=True)
+
 from . import serializer
 from ._utils import (
     DEFAULT_SIGNATURE,
@@ -1241,26 +1263,9 @@ class _ParameterBase(metaclass=ParameterMetaclass):
         cls.__signature__ = new_sig  # type: ignore[attr-defined]
 
 
-T = t.TypeVar("T")
-P = t.ParamSpec("P")
-R = t.TypeVar("R", covariant=True)
-
-class ParameterKwargs(t.TypedDict, total=False):
-    doc: str | None
-    label: str | None
-    precedence: float | None
-    instantiate: bool
-    constant: bool
-    readonly: bool
-    pickle_default_value: bool
-    per_instance: bool
-    allow_refs: bool
-    nested_refs: bool
-    default_factory: t.Callable[[], t.Any] | None
-    metadata: dict[str, t.Any] | None
 
 
-class Parameter(_ParameterBase, t.Generic[T]):
+class Parameter(_ParameterBase, t.Generic[_T]):
     """
     Base :class:`Parameter` type to hold any type of Python object.
 
@@ -1872,7 +1877,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         values, after the slot values have been set in the inheritance procedure.
         """
 
-    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized] | None = None) -> T:
+    def __get__(self, obj: Parameterized | None, objtype: type[Parameterized] | None = None) -> _T:
         """
         Return the value for this Parameter.
 
@@ -1899,7 +1904,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         return result
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized, val: T):
+    def __set__(self, obj: Parameterized, val: _T):
         """
         Set the value for this Parameter.
 
@@ -2084,11 +2089,9 @@ class Parameter(_ParameterBase, t.Generic[T]):
             setattr(self, k, v)
 
 
-class StringInitKwargs(ParameterKwargs, total=False):
-    regex: str | re.Pattern[str] | None
 
 # Define one particular type of Parameter that is used in this file
-class String(Parameter[T]):
+class String(Parameter[_T]):
     r"""
     A String Parameter with optional regular expression (regex) validation.
 
@@ -2167,7 +2170,7 @@ class String(Parameter[T]):
             default: str | None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[StringInitKwargs]
+            **kwargs: Unpack[_StringInitKwargs]
         ) -> None:
             ...
 
@@ -2177,7 +2180,7 @@ class String(Parameter[T]):
             default: str | None = "",
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[StringInitKwargs]
+            **kwargs: Unpack[_StringInitKwargs]
         ) -> None:
             ...
 
@@ -2187,7 +2190,7 @@ class String(Parameter[T]):
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         regex: str | re.Pattern[str] | None = t.cast("str | re.Pattern[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[ParameterKwargs]
+        **kwargs: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
@@ -6130,7 +6133,7 @@ def _new_parameterized(cls):
 
 
 
-class ParameterizedFunction(Parameterized, t.Generic[P, R]):
+class ParameterizedFunction(Parameterized, t.Generic[_P, _R]):
     """
     Acts like a Python function, but with arguments that are Parameters.
 
@@ -6259,7 +6262,7 @@ class ParameterizedFunction(Parameterized, t.Generic[P, R]):
         inst.param._set_name(class_.__name__)
         return inst.__call__(*args, **params)
 
-    def __call__(self, *args, **kw) -> R:
+    def __call__(self, *args, **kw) -> _R:
         raise NotImplementedError("Subclasses must implement __call__.")
 
     def __reduce__(self):

@@ -114,10 +114,10 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
+    _P = t.ParamSpec('_P')
+    _R = t.TypeVar('_R')
+    _Y = t.TypeVar('_Y')
 
-_P = t.ParamSpec('_P')
-_R = t.TypeVar('_R')
-_Y = t.TypeVar('_Y')
 
 logger = logging.getLogger(__name__)
 

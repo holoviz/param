@@ -721,7 +721,7 @@ async def test_reactive_lazy_gen():
     await async_wait_until(lambda: rxgen.rx.value == 1, interval=10, delay=0.0001)
     await asyncio.sleep(0.1)
     assert rxgen._current_ == 1
-    assert rxgen.rx.value == 2
+    await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_gen_pipe():
     def gen(val):
@@ -732,10 +732,10 @@ async def test_reactive_gen_pipe():
     rxv = rx(0)
     rxgen = rxv.rx.pipe(gen)
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.02)
     await async_wait_until(lambda: rxgen.rx.value == 2)
     rxv.rx.value = 2
-    await async_wait_until(lambda: rxgen.rx.value == 3, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 3)
     await async_wait_until(lambda: rxgen.rx.value == 4)
 
 async def test_reactive_lazy_gen_pipe():

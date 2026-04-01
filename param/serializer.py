@@ -12,9 +12,8 @@ if t.TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
     from .parameterized import Parameter, Parameterized
-    from .parameters import (
-        Tuple,
-    )
+    from .parameters import Tuple
+
 
 class UnserializableException(Exception):
     pass

@@ -17,9 +17,9 @@ from threading import get_ident
 if t.TYPE_CHECKING:
     from param.parameterized import Parameter
 
-    P = t.ParamSpec("P")
-    R = t.TypeVar("R")
-    CallableT = t.TypeVar("CallableT", bound=abc.Callable)
+    _P = t.ParamSpec("_P")
+    _R = t.TypeVar("_R")
+    _CallableT = t.TypeVar("_CallableT", bound=abc.Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
@@ -281,11 +281,11 @@ def flatten(line):
 
 
 def accept_arguments(
-    f: abc.Callable[t.Concatenate[CallableT, P], R]
-) -> abc.Callable[..., abc.Callable[[CallableT], R]]:
+    f: abc.Callable[t.Concatenate[_CallableT, _P], _R]
+) -> abc.Callable[..., abc.Callable[[_CallableT], _R]]:
     """Decorate a decorator to accept arguments."""
     @functools.wraps(f)
-    def _f(*args: P.args, **kwargs: P.kwargs) -> abc.Callable[[CallableT], R]:
+    def _f(*args: _P.args, **kwargs: _P.kwargs) -> abc.Callable[[_CallableT], _R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
 

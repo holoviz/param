@@ -35,7 +35,7 @@ from contextlib import contextmanager
 from os import PathLike
 
 from .parameterized import (
-    T, Parameterized, Parameter, ParameterizedFunction, ParameterKwargs, ParamOverrides,
+    _T, Parameterized, Parameter, ParameterizedFunction, ParamOverrides,
     String, Undefined, UndefinedType, get_logger, instance_descriptor, _dt_types,
     _int_types
 )
@@ -64,67 +64,79 @@ if t.TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
+    from .parameterized import _ParameterKwargs
+
     LT = t.TypeVar("LT")
 
     AT = t.TypeVar("AT", np.ndarray, np.ndarray | None)
     DF = t.TypeVar("DF", pd.DataFrame, pd.DataFrame | None)
     ST = t.TypeVar("ST", pd.Series, pd.Series | None)
 
-    class DateInitKwargs(ParameterKwargs, total=False):
+    class _DateInitKwargs(_ParameterKwargs, total=False):
         bounds: tuple[t.Any | None, t.Any | None] | None
         softbounds: tuple[t.Any | None, t.Any | None] | None
         inclusive_bounds: tuple[bool, bool]
         step: int | None
         set_hook: t.Callable[..., t.Any] | None
 
-    class CalendarDateInitKwargs(ParameterKwargs, total=False):
+    class _CalendarDateInitKwargs(_ParameterKwargs, total=False):
         bounds: tuple[dt.date | None, dt.date | None] | None
         softbounds: tuple[dt.date | None, dt.date | None] | None
         inclusive_bounds: tuple[bool, bool]
         step: int | None
         set_hook: t.Callable[..., t.Any] | None
 
-    class NumberInitKwargs(ParameterKwargs, total=False):
+    class _NumberInitKwargs(_ParameterKwargs, total=False):
         bounds: tuple[t.Any | None, t.Any | None] | None
         softbounds: tuple[t.Any | None, t.Any | None] | None
         inclusive_bounds: tuple[bool, bool]
         step: t.Any | None
         set_hook: t.Callable[..., t.Any] | None
 
-    class IntegerInitKwargs(ParameterKwargs, total=False):
+    class _IntegerInitKwargs(_ParameterKwargs, total=False):
         bounds: tuple[int | None, int | None] | None
         softbounds: tuple[int | None, int | None] | None
         inclusive_bounds: tuple[bool, bool]
         step: int | None
         set_hook: t.Callable[..., t.Any] | None
 
-    class RangeInitKwargs(ParameterKwargs, total=False):
+    class _RangeInitKwargs(_ParameterKwargs, total=False):
         bounds: tuple[float, float] | None
         softbounds: tuple[float, float] | None
         inclusive_bounds: tuple[bool, bool]
         step: float | None
         set_hook: t.Callable[..., t.Any] | None
 
-    class DataFrameInitKwargs(ParameterKwargs, total=False):
+    class _DataFrameInitKwargs(_ParameterKwargs, total=False):
         rows: int | tuple[int | None, int | None] | None
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
         ordered: bool | None
 
-    class SeriesInitKwargs(ParameterKwargs, total=False):
+    class _SeriesInitKwargs(_ParameterKwargs, total=False):
         rows: int | tuple[int | None, int | None] | None
 
-    class FileSelectorInitKwargs(ParameterKwargs, total=False):
+    class _FileSelectorInitKwargs(_ParameterKwargs, total=False):
         path: str | PathLike
 
-    class PathInitKwargs(ParameterKwargs, total=False):
+    class _PathInitKwargs(_ParameterKwargs, total=False):
         search_paths: list[str | PathLike] | None
         check_exists: bool
 
-    class ColorInitKwargs(ParameterKwargs, total=False):
+    class _ColorInitKwargs(_ParameterKwargs, total=False):
         allow_named: bool
 
-    class BytesInitKwargs(ParameterKwargs, total=False):
+    class _BytesInitKwargs(_ParameterKwargs, total=False):
         regex: bytes | str | None
+
+    class _SelectorInitKwargs(_ParameterKwargs, total=False):
+        objects: list[t.Any] | dict[str, t.Any]
+        compute_default_fn: t.Callable[[], t.Any] | None
+        check_on_set: bool
+        empty_default: bool
+
+    class _ClassSelectorKwargs(_ParameterKwargs, total=False):
+        is_instance: bool
+        class_: type | tuple[type, ...]
 
 
 
@@ -520,7 +532,7 @@ class Time(Parameterized):
 # Dynamic/Number
 #-----------------------------------------------------------------------------
 
-class Dynamic(Parameter[T]):
+class Dynamic(Parameter[_T]):
     """
     Parameter whose value can be generated dynamically by a callable
     object.
@@ -577,7 +589,7 @@ class Dynamic(Parameter[T]):
             default: t.Any | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **params: Unpack[ParameterKwargs]
+            **params: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -586,7 +598,7 @@ class Dynamic(Parameter[T]):
         default: t.Any | None = Undefined,
         *,
         allow_None=t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         """
         Call the superclass's __init__ and set instantiate=True if the
@@ -614,7 +626,7 @@ class Dynamic(Parameter[T]):
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
-    ) -> T:
+    ) -> _T:
         """
         Call the superclass's __get__; if the result is not dynamic
         return that result, otherwise ask that result to produce a
@@ -625,10 +637,10 @@ class Dynamic(Parameter[T]):
         if not hasattr(gen,'_Dynamic_last'):
             return gen
         else:
-            return t.cast("T", self._produce_value(gen))
+            return t.cast("_T", self._produce_value(gen))
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized, val: T):
+    def __set__(self, obj: Parameterized, val: _T):
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -713,7 +725,7 @@ class Dynamic(Parameter[T]):
             return gen
 
 
-class Number(Dynamic[T]):
+class Number(Dynamic[_T]):
     """
     A numeric :class:`Dynamic` Parameter, with a default value and optional bounds.
 
@@ -804,7 +816,7 @@ class Number(Dynamic[T]):
             default: float | int = 0.0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[NumberInitKwargs]
+            **kwargs: Unpack[_NumberInitKwargs]
         ) -> None:
             ...
 
@@ -814,7 +826,7 @@ class Number(Dynamic[T]):
             default: None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[NumberInitKwargs]
+            **kwargs: Unpack[_NumberInitKwargs]
         ) -> None:
             ...
 
@@ -824,7 +836,7 @@ class Number(Dynamic[T]):
             default: float | int | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: Unpack[NumberInitKwargs]
+            **kwargs: Unpack[_NumberInitKwargs]
         ) -> None:
             ...
 
@@ -842,7 +854,7 @@ class Number(Dynamic[T]):
         step: float | int | None = t.cast("float | int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         set_hook: t.Callable[..., t.Any] | None = t.cast("t.Callable[..., t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         """
         Initialize this parameter object and store the bounds.
@@ -860,7 +872,7 @@ class Number(Dynamic[T]):
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
-    ) -> T:
+    ) -> _T:
         """Retrieve the value of the attribute, checking bounds if dynamically generated.
 
         Parameters
@@ -1010,7 +1022,7 @@ class Number(Dynamic[T]):
         super().__setstate__(state)
 
 
-class Integer(Number[T]):
+class Integer(Number[_T]):
     """Numeric Parameter required to be an Integer."""
 
     _slot_defaults = {**Number._slot_defaults, 'default': 0}
@@ -1049,7 +1061,7 @@ class Integer(Number[T]):
             default: int = 0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[IntegerInitKwargs]
+            **kwargs: Unpack[_IntegerInitKwargs]
         ) -> None:
             ...
 
@@ -1059,7 +1071,7 @@ class Integer(Number[T]):
             default: None = None,
             *,
             allow_None: bool = False,
-            **kwargs: Unpack[IntegerInitKwargs]
+            **kwargs: Unpack[_IntegerInitKwargs]
         ) -> None:
             ...
 
@@ -1068,7 +1080,7 @@ class Integer(Number[T]):
         default: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[IntegerInitKwargs]
+        **kwargs: Unpack[_IntegerInitKwargs]
     ) -> None:
         super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc]
 
@@ -1093,7 +1105,7 @@ class Integer(Number[T]):
             )
 
 
-class Magnitude(Number[T]):
+class Magnitude(Number[_T]):
     """Numeric Parameter required to be in the range [0.0-1.0]."""
 
     _slot_defaults = {**Number._slot_defaults, 'default': 1.0, 'bounds': (0.0, 1.0)}
@@ -1130,7 +1142,7 @@ class Magnitude(Number[T]):
             default: float | None = 1.0,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1139,14 +1151,14 @@ class Magnitude(Number[T]):
         default: float | None = t.cast("float | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[NumberInitKwargs]
+        **kwargs: Unpack[_NumberInitKwargs]
     ) -> None:
         super().__init__( # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
 
 
-class Date(Number[T]):
+class Date(Number[_T]):
     """Date parameter of datetime or date type."""
 
     _slot_defaults = {**Number._slot_defaults, 'default': None}
@@ -1185,7 +1197,7 @@ class Date(Number[T]):
             default: dt.datetime | dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[DateInitKwargs]
+            **kwargs: Unpack[_DateInitKwargs]
         ) -> None:
             ...
 
@@ -1194,7 +1206,7 @@ class Date(Number[T]):
         default=None,
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[DateInitKwargs]
+        **kwargs: Unpack[_DateInitKwargs]
     ) -> None:
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs
@@ -1244,7 +1256,7 @@ class Date(Number[T]):
         return dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
-class CalendarDate(Number[T]):
+class CalendarDate(Number[_T]):
     """Parameter specifically allowing dates (not datetimes)."""
 
     _slot_defaults = {**Number._slot_defaults, 'default': None}
@@ -1283,7 +1295,7 @@ class CalendarDate(Number[T]):
             default: dt.date | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[CalendarDateInitKwargs]
+            **kwargs: Unpack[_CalendarDateInitKwargs]
         ) -> None:
             ...
 
@@ -1292,7 +1304,7 @@ class CalendarDate(Number[T]):
         default: dt.date | None = t.cast("dt.date | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[CalendarDateInitKwargs]
+        **kwargs: Unpack[_CalendarDateInitKwargs]
     ) -> None:
         super().__init__( # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
@@ -1334,7 +1346,7 @@ class CalendarDate(Number[T]):
 # Boolean
 #-----------------------------------------------------------------------------
 
-class Boolean(Parameter[T]):
+class Boolean(Parameter[_T]):
     """Binary or tristate Boolean Parameter."""
 
     _slot_defaults = dict(Parameter._slot_defaults, default=False)
@@ -1368,7 +1380,7 @@ class Boolean(Parameter[T]):
             default: bool | None = False,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1378,7 +1390,7 @@ class Boolean(Parameter[T]):
             default: None = None,
             *,
             allow_None: bool = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1387,7 +1399,7 @@ class Boolean(Parameter[T]):
         default: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **params  # type: ignore[arg-type]
@@ -1488,7 +1500,7 @@ class __compute_length_of_default:
 _compute_length_of_default = __compute_length_of_default()
 
 
-class Tuple(Parameter[T]):
+class Tuple(Parameter[_T]):
     """A tuple Parameter (e.g. ('a',7.6,[3,5])) with a fixed tuple length."""
 
     __slots__ = ['length']
@@ -1528,7 +1540,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1539,7 +1551,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: bool = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1550,7 +1562,7 @@ class Tuple(Parameter[T]):
             *,
             length: int | None = None,
             allow_None: bool = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1560,7 +1572,7 @@ class Tuple(Parameter[T]):
         *,
         length: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         """
         Initialize a tuple parameter with a fixed length (number of
@@ -1619,7 +1631,7 @@ class Tuple(Parameter[T]):
         return tuple(value) # As JSON has no tuple representation
 
 
-class NumericTuple(Tuple[T]):
+class NumericTuple(Tuple[_T]):
     """A numeric tuple Parameter (e.g. (4.5,7.6,3)) with a fixed tuple length."""
 
     if t.TYPE_CHECKING:
@@ -1653,7 +1665,7 @@ class NumericTuple(Tuple[T]):
             *,
             length: int | None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1664,7 +1676,7 @@ class NumericTuple(Tuple[T]):
             *,
             length: int | None = None,
             allow_None: bool = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1674,7 +1686,7 @@ class NumericTuple(Tuple[T]):
         *,
         length: int | None = t.cast("int | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__( # type: ignore[misc]
             default=default, length=length, allow_None=allow_None, **params
@@ -1693,7 +1705,7 @@ class NumericTuple(Tuple[T]):
             )
 
 
-class XYCoordinates(NumericTuple[T]):
+class XYCoordinates(NumericTuple[_T]):
     """A NumericTuple for an X,Y coordinate."""
 
     _slot_defaults = {**NumericTuple._slot_defaults, 'default': (0.0, 0.0)}
@@ -1727,7 +1739,7 @@ class XYCoordinates(NumericTuple[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **params: Unpack[ParameterKwargs]
+            **params: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1737,7 +1749,7 @@ class XYCoordinates(NumericTuple[T]):
             default: tuple[float, float] | None = None,
             *,
             allow_None: bool = False,
-            **params: Unpack[ParameterKwargs]
+            **params: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -1746,7 +1758,7 @@ class XYCoordinates(NumericTuple[T]):
         default: tuple[float, float] | None = t.cast("tuple[float, float] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__( # type: ignore[misc]
             default=default,
@@ -1756,7 +1768,7 @@ class XYCoordinates(NumericTuple[T]):
         )
 
 
-class Range(NumericTuple[T]):
+class Range(NumericTuple[_T]):
     """A numeric range with optional bounds and softbounds."""
 
     __slots__ = ['bounds', 'inclusive_bounds', 'softbounds', 'step']
@@ -1808,7 +1820,7 @@ class Range(NumericTuple[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **params: Unpack[RangeInitKwargs]
+            **params: Unpack[_RangeInitKwargs]
         ) -> None:
             ...
 
@@ -1821,7 +1833,7 @@ class Range(NumericTuple[T]):
         inclusive_bounds: tuple[bool, bool] = t.cast("tuple[bool, bool]", Undefined),  # pyrefly: ignore[bad-argument-type]
         step: float | None = t.cast("float | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ):
         object.__setattr__(self, 'bounds', bounds)
         object.__setattr__(self, 'inclusive_bounds', inclusive_bounds)
@@ -1908,7 +1920,7 @@ class Range(NumericTuple[T]):
         return f'{min_delim}{vmin}, {vmax}{max_delim}'
 
 
-class DateRange(Range[T]):
+class DateRange(Range[_T]):
     """
     A datetime or date range specified as ``(start, end)``.
 
@@ -1949,7 +1961,7 @@ class DateRange(Range[T]):
             default: tuple[dt.datetime | dt.date, dt.datetime | dt.date] | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[DateInitKwargs]
+            **kwargs: Unpack[_DateInitKwargs]
         ) -> None:
             ...
 
@@ -1958,7 +1970,7 @@ class DateRange(Range[T]):
         default: tuple[dt.datetime | dt.date, dt.datetime | dt.date] | None = t.cast("tuple[dt.datetime | dt.date, dt.datetime | dt.date] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[DateInitKwargs]
+        **kwargs: Unpack[_DateInitKwargs]
     ) -> None:
         super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
 
@@ -2035,7 +2047,7 @@ class DateRange(Range[T]):
         return tuple(deserialized)
 
 
-class CalendarDateRange(Range[T]):
+class CalendarDateRange(Range[_T]):
     """A date range specified as ``(start_date, end_date)``."""
 
     if t.TYPE_CHECKING:
@@ -2072,7 +2084,7 @@ class CalendarDateRange(Range[T]):
             default: tuple[dt.date, dt.date] | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[CalendarDateInitKwargs]
+            **kwargs: Unpack[_CalendarDateInitKwargs]
         ) -> None:
             ...
 
@@ -2081,7 +2093,7 @@ class CalendarDateRange(Range[T]):
         default: tuple[dt.date, dt.date] | None = t.cast("tuple[dt.date, dt.date] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[CalendarDateInitKwargs]
+        **kwargs: Unpack[_CalendarDateInitKwargs]
     ) -> None:
         super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
 
@@ -2128,7 +2140,7 @@ class CalendarDateRange(Range[T]):
 # Callable
 #-----------------------------------------------------------------------------
 
-class Callable(Parameter[T]):
+class Callable(Parameter[_T]):
     """
     Parameter holding a value that is a callable object, such as a function.
 
@@ -2167,7 +2179,7 @@ class Callable(Parameter[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **params: Unpack[ParameterKwargs]
+            **params: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -2175,7 +2187,7 @@ class Callable(Parameter[T]):
         default: t.Callable[..., t.Any] | None = t.cast("t.Callable[..., t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__(default=default, **params)
         self._validate(self.default)
@@ -2228,7 +2240,7 @@ class Composite(Parameter):
         *,
         attribs: list[str] = t.cast("list[str]", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[ParameterKwargs]
+        **kwargs: Unpack[_ParameterKwargs]
     ) -> None:
         if attribs is Undefined:
             attribs = []
@@ -2271,7 +2283,7 @@ class Composite(Parameter):
 # Selector
 #-----------------------------------------------------------------------------
 
-class SelectorBase(Parameter[T]):
+class SelectorBase(Parameter[_T]):
     """
     Parameter whose value must be chosen from a list of possibilities.
 
@@ -2489,7 +2501,7 @@ class __compute_selector_checking_default:
 _compute_selector_checking_default = __compute_selector_checking_default()
 
 
-class _SignatureSelector(Parameter[T]):
+class _SignatureSelector(Parameter[_T]):
     # Needs docstring; why is this a separate mixin?
     _slot_defaults = dict(
         SelectorBase._slot_defaults, _objects=_compute_selector_default,
@@ -2504,14 +2516,7 @@ class _SignatureSelector(Parameter[T]):
         return defaults
 
 
-class SelectorInitKwargs(ParameterKwargs, total=False):
-    objects: list[t.Any] | dict[str, t.Any]
-    compute_default_fn: t.Callable[[], t.Any] | None
-    check_on_set: bool
-    empty_default: bool
-
-
-class Selector(SelectorBase, _SignatureSelector[T]):
+class Selector(SelectorBase, _SignatureSelector[_T]):
     """
     Parameter whose value must be one object from a list of possible objects.
 
@@ -2558,7 +2563,7 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         check_on_set: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         empty_default: bool = False,
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         if compute_default_fn is not Undefined:
             warnings.warn(
@@ -2689,13 +2694,13 @@ class ObjectSelector(Selector):
         default: t.Any = Undefined,
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[SelectorInitKwargs]
+        **kwargs: Unpack[_SelectorInitKwargs]
     ) -> None:
         kwargs["empty_default"] = True
         super().__init__(default=default, allow_None=allow_None, **kwargs) # type: ignore[misc, call-overload]
 
 
-class FileSelector(Selector[T]):
+class FileSelector(Selector[_T]):
     """Given a path glob, allows one file to be selected from those matching."""
 
     __slots__ = ['path']
@@ -2734,7 +2739,7 @@ class FileSelector(Selector[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[FileSelectorInitKwargs]
+            **kwargs: Unpack[_FileSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2744,7 +2749,7 @@ class FileSelector(Selector[T]):
             default: PathLike | str = pathlib.Path(""),
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[FileSelectorInitKwargs]
+            **kwargs: Unpack[_FileSelectorInitKwargs]
         ) -> None:
             ...
 
@@ -2754,7 +2759,7 @@ class FileSelector(Selector[T]):
         *,
         path: str | PathLike = t.cast("str | PathLike", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[ParameterKwargs]
+        **kwargs: Unpack[_ParameterKwargs]
     ) -> None:
         object.__setattr__(self, 'default', default)
         object.__setattr__(self, 'path', path)
@@ -2794,7 +2799,7 @@ class ListSelector(Selector):
         default: list[t.Any] | None = t.cast("list[t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[SelectorInitKwargs]
+        **kwargs: Unpack[_SelectorInitKwargs]
     ) -> None:
         kwargs["empty_default"] = True
         super().__init__(default=default, allow_None=allow_None, **kwargs) # type: ignore[misc, call-overload]
@@ -2857,7 +2862,7 @@ class MultiFileSelector(ListSelector):
         default: list[PathLike | str] | None = t.cast("list[PathLike | str] | None", Undefined),
         *,
         path: str | PathLike = t.cast("str | PathLike", Undefined),
-        **kwargs: Unpack[SelectorInitKwargs]
+        **kwargs: Unpack[_SelectorInitKwargs]
     ) -> None:
         object.__setattr__(self, 'default', default)
         object.__setattr__(self, 'path', path)
@@ -2884,13 +2889,7 @@ class MultiFileSelector(ListSelector):
         return _abbreviate_paths(self.path, super().get_range())
 
 
-
-class ClassSelectorKwargs(ParameterKwargs, total=False):
-    is_instance: bool
-    class_: type | tuple[type, ...]
-
-
-class ClassSelector(SelectorBase[T]):
+class ClassSelector(SelectorBase[_T]):
     """
     Parameter allowing selection of either a subclass or an instance of a class
     or tuple of classes.
@@ -2918,8 +2917,8 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self,
             *,
-            default: T,
-            class_: type[T] | tuple[type[T], ...],
+            default: _T,
+            class_: type[_T] | tuple[type[_T], ...],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
             doc: str | None = None,
@@ -2942,10 +2941,10 @@ class ClassSelector(SelectorBase[T]):
             self,
             *,
             default: None = None,
-            class_: type[T] | tuple[type[T], ...],
+            class_: type[_T] | tuple[type[_T], ...],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -2953,11 +2952,11 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self,
             *,
-            default: T | None = None,
-            class_: type[T] | tuple[type[T], ...],
+            default: _T | None = None,
+            class_: type[_T] | tuple[type[_T], ...],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -2965,11 +2964,11 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self,
             *,
-            default: type[T],
-            class_: type[T] | tuple[type[T], ...],
+            default: type[_T],
+            class_: type[_T] | tuple[type[_T], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -2978,10 +2977,10 @@ class ClassSelector(SelectorBase[T]):
             self,
             *,
             default: None = None,
-            class_: type[T] | tuple[type[T], ...],
+            class_: type[_T] | tuple[type[_T], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -2989,11 +2988,11 @@ class ClassSelector(SelectorBase[T]):
         def __init__(
             self,
             *,
-            default: type[T] | None = None,
-            class_: type[T] | tuple[type[T], ...],
+            default: type[_T] | None = None,
+            class_: type[_T] | tuple[type[_T], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3003,7 +3002,7 @@ class ClassSelector(SelectorBase[T]):
         default: t.Any | None = Undefined,
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         object.__setattr__(self, 'class_', class_)
         object.__setattr__(self, 'is_instance', is_instance)  # type: ignore
@@ -3055,7 +3054,7 @@ class ClassSelector(SelectorBase[T]):
         return d
 
 
-class Dict(ClassSelector[T]):
+class Dict(ClassSelector[_T]):
     """Parameter whose value is a dictionary."""
 
     if t.TYPE_CHECKING:
@@ -3087,7 +3086,7 @@ class Dict(ClassSelector[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3097,7 +3096,7 @@ class Dict(ClassSelector[T]):
             default: dict[t.Any, t.Any] | None = None,
             *,
             allow_None: bool = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3106,7 +3105,7 @@ class Dict(ClassSelector[T]):
         default: dict[t.Any, t.Any] | None = t.cast("dict[t.Any, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ClassSelectorKwargs]
+        **params: Unpack[_ClassSelectorKwargs]
     ) -> None:
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, class_=dict, allow_None=allow_None, **params  # type: ignore[arg-type]
@@ -3145,7 +3144,7 @@ class Array(ClassSelector["AT"]):
             default: np.ndarray | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3154,7 +3153,7 @@ class Array(ClassSelector["AT"]):
         default: np.ndarray | None = t.cast("np.ndarray | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         *,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ClassSelectorKwargs]
+        **params: Unpack[_ClassSelectorKwargs]
     ) -> None:
         import numpy
         super().__init__(  # type: ignore[misc, call-overload]
@@ -3242,7 +3241,7 @@ class DataFrame(ClassSelector["DF"]):
             default: pd.DataFrame | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[DataFrameInitKwargs]
+            **kwargs: Unpack[_DataFrameInitKwargs]
         ) -> None:
             ...
 
@@ -3254,7 +3253,7 @@ class DataFrame(ClassSelector["DF"]):
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = t.cast("int | tuple[int | None, int | None] | list[str] | set[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         ordered: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         import pandas
         object.__setattr__(self, 'rows', rows)
@@ -3395,7 +3394,7 @@ class Series(ClassSelector["ST"]):
             default: pd.Series | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[SeriesInitKwargs]
+            **kwargs: Unpack[_SeriesInitKwargs]
         ) -> None:
             ...
 
@@ -3406,7 +3405,7 @@ class Series(ClassSelector["ST"]):
         rows: int | tuple[int | None, int | None] | None = t.cast("int | tuple[int | None, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         is_instance: t.Literal[True] = True,
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         import pandas
         object.__setattr__(self, 'rows', rows)
@@ -3445,7 +3444,7 @@ class Series(ClassSelector["ST"]):
 # List
 #-----------------------------------------------------------------------------
 
-class List(Parameter[T]):
+class List(Parameter[_T]):
     """
     Parameter whose value is a list of objects, usually of a specified type.
 
@@ -3498,7 +3497,7 @@ class List(Parameter[T]):
             *,
             item_type: type[LT] | tuple[type[LT], ...] | None = None,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3508,7 +3507,7 @@ class List(Parameter[T]):
             default: list[t.Any] | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3519,7 +3518,7 @@ class List(Parameter[T]):
             *,
             item_type: None = None,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ParameterKwargs]
+            **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
 
@@ -3533,7 +3532,7 @@ class List(Parameter[T]):
         bounds: tuple[int, int | None] | None = t.cast("tuple[int, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         object.__setattr__(self, 'item_type', item_type)
         object.__setattr__(self, 'is_instance', is_instance)
@@ -3689,7 +3688,7 @@ class resolve_path(ParameterizedFunction):
             raise OSError(ftype + " " + os.path.split(path)[1] + " was not found in the following place(s): " + str(paths_tried) + ".")
 
 
-class Path(Parameter[T]):
+class Path(Parameter[_T]):
     """
     Parameter that can be set to a string specifying the path of a file or folder.
 
@@ -3754,7 +3753,7 @@ class Path(Parameter[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[PathInitKwargs]
+            **kwargs: Unpack[_PathInitKwargs]
         ) -> None:
             ...
 
@@ -3764,7 +3763,7 @@ class Path(Parameter[T]):
             default: PathLike | str = pathlib.Path(""),
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[PathInitKwargs]
+            **kwargs: Unpack[_PathInitKwargs]
         ) -> None:
             ...
 
@@ -3775,7 +3774,7 @@ class Path(Parameter[T]):
         search_paths: list[str | PathLike] | None = t.cast("list[str | PathLike] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         check_exists: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **params: Unpack[ParameterKwargs]
+        **params: Unpack[_ParameterKwargs]
     ) -> None:
         if search_paths is Undefined:
             search_paths = []
@@ -3804,7 +3803,7 @@ class Path(Parameter[T]):
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
-    ) -> T:
+    ) -> _T:
         """Return an absolute, normalized path (see resolve_path)."""
         raw_path = super().__get__(obj, objtype)
         if raw_path is None:
@@ -3817,7 +3816,7 @@ class Path(Parameter[T]):
                     raise
                 else:
                     path = raw_path
-        return t.cast("T", path)
+        return t.cast("_T", path)
 
     def __getstate__(self):
         # don't want to pickle the search_paths
@@ -3871,7 +3870,7 @@ class Foldername(Path):
 # Color
 #-----------------------------------------------------------------------------
 
-class Color(Parameter[T]):
+class Color(Parameter[_T]):
     """
     Color parameter defined as a hex RGB string with an optional ``#``
     prefix or (optionally) as a CSS3 color name.
@@ -3948,7 +3947,7 @@ class Color(Parameter[T]):
             default: None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[ColorInitKwargs]
+            **kwargs: Unpack[_ColorInitKwargs]
         ) -> None:
             ...
 
@@ -3958,7 +3957,7 @@ class Color(Parameter[T]):
             default: None = None,
             *,
             allow_None: t.Literal[False] = False,
-            **kwargs: Unpack[ColorInitKwargs]
+            **kwargs: Unpack[_ColorInitKwargs]
         ) -> None:
             ...
 
@@ -3967,7 +3966,7 @@ class Color(Parameter[T]):
         *,
         allow_named: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[ParameterKwargs]
+        **kwargs: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__(default=default, **kwargs)
         object.__setattr__(self, 'allow_named', allow_named)
@@ -4006,7 +4005,7 @@ class Color(Parameter[T]):
 # Bytes
 #-----------------------------------------------------------------------------
 
-class Bytes(Parameter[T]):
+class Bytes(Parameter[_T]):
     """
     A Bytes Parameter, with a default value and optional regular
     expression (regex) matching.
@@ -4051,7 +4050,7 @@ class Bytes(Parameter[T]):
             default: bytes | None = None,
             *,
             allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[BytesInitKwargs]
+            **kwargs: Unpack[_BytesInitKwargs]
         ) -> None:
             ...
 
@@ -4061,7 +4060,7 @@ class Bytes(Parameter[T]):
         *,
         regex: bytes | str | None = t.cast("bytes | str | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        **kwargs: Unpack[ParameterKwargs]
+        **kwargs: Unpack[_ParameterKwargs]
     ) -> None:
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]

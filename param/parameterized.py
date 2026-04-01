@@ -1603,32 +1603,53 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 "default_factory must be a callable, "
                 f"not {type(default_factory)!r}."
             )
-        self.name: str | None = None
-        self.owner = None
-        self.allow_refs = allow_refs
-        self.nested_refs = nested_refs
-        self.precedence = precedence
-        self.default = default
-        self.default_factory = default_factory
-        self.doc = doc
+
+        # Constructor bootstrap fast-path:
+        # avoid __setattr__ hook overhead while assigning initial slot values.
         if constant is True or readonly is True:  # readonly => constant
-            self.constant = True
+            constant_value: bool | UndefinedType = True
         else:
-            self.constant = constant
-        self.readonly = readonly
-        self._label = label
-        self._set_instantiate(instantiate)
+            constant_value = constant
+
+        if readonly is True:
+            instantiate_value: bool | UndefinedType = False
+        elif isinstance(instantiate, bool):
+            instantiate_value = instantiate
+        else:
+            instantiate_value = self._slot_defaults['instantiate']
+
+        default_value = self._slot_defaults['default'] if default is Undefined else default
+        if default_value is None:
+            allow_none_value = True
+        elif isinstance(allow_None, bool):
+            allow_none_value = allow_None
+        else:
+            allow_none_value = self._slot_defaults['allow_None']
+
+        object.__setattr__(self, 'name', None)
+        object.__setattr__(self, 'owner', None)
+        object.__setattr__(self, 'allow_refs', allow_refs)
+        object.__setattr__(self, 'nested_refs', nested_refs)
+        object.__setattr__(self, 'precedence', precedence)
+        object.__setattr__(self, 'default', default)
+        object.__setattr__(self, 'default_factory', default_factory)
+        object.__setattr__(self, 'doc', doc)
+        object.__setattr__(self, 'constant', constant_value)
+        object.__setattr__(self, 'readonly', readonly)
+        object.__setattr__(self, '_label', label)
+        object.__setattr__(self, 'instantiate', instantiate_value)
+
         if pickle_default_value is False:
             warnings.warn(
                 'pickle_default_value has been deprecated.',
                 category=_ParamDeprecationWarning,
                 stacklevel=_find_stack_level(),
             )
-        self.pickle_default_value = pickle_default_value
-        self._set_allow_None(allow_None)
-        self.metadata = metadata
-        self.watchers: dict[str, list[Watcher]] = {}
-        self.per_instance = per_instance
+        object.__setattr__(self, 'pickle_default_value', pickle_default_value)
+        object.__setattr__(self, 'allow_None', allow_none_value)
+        object.__setattr__(self, 'metadata', metadata)
+        object.__setattr__(self, 'watchers', {})
+        object.__setattr__(self, 'per_instance', per_instance)
 
     @classmethod
     def serialize(cls, value):

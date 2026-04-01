@@ -1839,6 +1839,11 @@ class Parameter(_ParameterBase, t.Generic[T]):
             # Return early if attribute is not a slot
             return super().__setattr__(attribute, value)
 
+        # Fast-path for slot updates on unbound parameters during constructor
+        # setup (including subclass slots), where there are no watcher events.
+        if is_slot and not has_watcher and getattr(self, 'name', None) is None:
+            return super().__setattr__(attribute, value)
+
         # Otherwise get the old value so we can call watcher/on_set
         old = getattr(self, attribute, NotImplemented)
         if is_slot:
@@ -2214,7 +2219,7 @@ class String(Parameter[T]):
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
-        self.regex = regex
+        object.__setattr__(self, 'regex', regex)
         self._validate(self.default)
 
     def _validate_regex(self, val: t.Any, regex: str | re.Pattern[str] | None):

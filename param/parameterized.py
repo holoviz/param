@@ -34,6 +34,8 @@ from types import FunctionType, MethodType
 if t.TYPE_CHECKING:
     import logging
 
+    from .reactive import reactive_ops
+
     from collections.abc import (
         Callable, Iterable, Iterator, Generator, Mapping
     )
@@ -1692,7 +1694,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         )
 
     @property
-    def rx(self):
+    def rx(self) -> 'reactive_ops':
         """
         The reactive operations namespace.
 
@@ -1704,8 +1706,8 @@ class Parameter(_ParameterBase, t.Generic[T]):
 
         Returns
         -------
-        rx
-            A reactive expression representing the operation applied to the current value.
+        reactive_ops
+            A reactive operation namespace object representing the operation applied to the current value.
 
         References
         ----------

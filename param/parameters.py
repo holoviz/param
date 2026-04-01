@@ -852,10 +852,10 @@ class Number(Dynamic[T]):
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **params  # type: ignore[arg-type]
         )
-        self.bounds = bounds
-        self.inclusive_bounds = inclusive_bounds
-        self.softbounds = softbounds
-        self.step = step
+        object.__setattr__(self, 'bounds', bounds)
+        object.__setattr__(self, 'inclusive_bounds', inclusive_bounds)
+        object.__setattr__(self, 'softbounds', softbounds)
+        object.__setattr__(self, 'step', step)
         self._validate(self.default)
 
     def __get__(
@@ -1434,9 +1434,9 @@ class Event(Boolean):
     __slots__ = ['_autotrigger_value', '_mode', '_autotrigger_reset_value']
 
     def __init__(self, default=False, **params):
-        self._autotrigger_value = True
-        self._autotrigger_reset_value = False
-        self._mode = 'set-reset'
+        object.__setattr__(self, '_autotrigger_value', True)
+        object.__setattr__(self, '_autotrigger_reset_value', False)
+        object.__setattr__(self, '_mode', 'set-reset')
         # Mode can be one of 'set', 'set-reset' or 'reset'
 
         # 'set' is normal Boolean parameter behavior when set with a value.
@@ -1577,9 +1577,9 @@ class Tuple(Parameter[T]):
                 "specified if no default is supplied."
             )
         elif default is not Undefined and default:
-            self.length = len(default)
+            object.__setattr__(self, 'length', len(default))
         else:
-            self.length = length
+            object.__setattr__(self, 'length', length)
         self._validate(self.default)
 
     def _validate_value(self, value, allow_None):
@@ -1823,10 +1823,10 @@ class Range(NumericTuple[T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ):
-        self.bounds = bounds
-        self.inclusive_bounds = inclusive_bounds
-        self.softbounds = softbounds
-        self.step = step
+        object.__setattr__(self, 'bounds', bounds)
+        object.__setattr__(self, 'inclusive_bounds', inclusive_bounds)
+        object.__setattr__(self, 'softbounds', softbounds)
+        object.__setattr__(self, 'step', step)
         super().__init__(default=default, length=2, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
 
     def _validate(self, val):
@@ -2235,7 +2235,7 @@ class Composite(Parameter):
         super().__init__(  # type: ignore[misc, call-overload]
             default=Undefined, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
-        self.attribs = attribs  # type: ignore[attr-defined, ty:invalid-assignment]
+        object.__setattr__(self, 'attribs', attribs)  # type: ignore[attr-defined, ty:invalid-assignment]
 
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
@@ -2576,18 +2576,18 @@ class Selector(SelectorBase, _SignatureSelector[T]):
 
         default = autodefault if (not empty_default and default is Undefined) else default
 
-        self.objects = objects
-        self.compute_default_fn = compute_default_fn
-        self.check_on_set = check_on_set
+        object.__setattr__(self, 'objects', objects)
+        object.__setattr__(self, 'compute_default_fn', compute_default_fn)
+        object.__setattr__(self, 'check_on_set', check_on_set)
 
         instantiate = params.pop("instantiate", Undefined)
         params["instantiate"] = False if instantiate is Undefined else instantiate
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:
-            self.allow_None = self._slot_defaults['allow_None']
+            object.__setattr__(self, 'allow_None', self._slot_defaults['allow_None'])
         else:
-            self.allow_None = allow_None
+            object.__setattr__(self, 'allow_None', allow_None)
         if self.default is not None:
             self._validate_value(self.default)
         self._update_state()
@@ -2756,8 +2756,8 @@ class FileSelector(Selector[T]):
         allow_None: bool = t.cast("bool", False),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[ParameterKwargs]
     ) -> None:
-        self.default = default
-        self.path = path
+        object.__setattr__(self, 'default', default)
+        object.__setattr__(self, 'path', path)
         self.update(path=path)
         super().__init__(default=default, objects=self._objects, **kwargs) # type: ignore[misc, call-overload]
 
@@ -2859,8 +2859,8 @@ class MultiFileSelector(ListSelector):
         path: str | PathLike = t.cast("str | PathLike", Undefined),
         **kwargs: Unpack[SelectorInitKwargs]
     ) -> None:
-        self.default = default
-        self.path = path
+        object.__setattr__(self, 'default', default)
+        object.__setattr__(self, 'path', path)
         self.update(path=path)
         kwargs["objects"] = self._objects
         super().__init__(default=default, **kwargs)
@@ -3005,8 +3005,8 @@ class ClassSelector(SelectorBase[T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        self.class_ = class_
-        self.is_instance = is_instance  # type: ignore
+        object.__setattr__(self, 'class_', class_)
+        object.__setattr__(self, 'is_instance', is_instance)  # type: ignore
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **params
         )
@@ -3257,9 +3257,9 @@ class DataFrame(ClassSelector["DF"]):
         **params: Unpack[ParameterKwargs]
     ) -> None:
         import pandas
-        self.rows = rows
-        self.columns = columns
-        self.ordered = ordered
+        object.__setattr__(self, 'rows', rows)
+        object.__setattr__(self, 'columns', columns)
+        object.__setattr__(self, 'ordered', ordered)
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,  # type: ignore[arg-type]
             class_=pandas.DataFrame,  # type: ignore[arg-type]
@@ -3409,7 +3409,7 @@ class Series(ClassSelector["ST"]):
         **params: Unpack[ParameterKwargs]
     ) -> None:
         import pandas
-        self.rows = rows
+        object.__setattr__(self, 'rows', rows)
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, # type: ignore[arg-type]
             class_=pandas.Series,  # type: ignore[arg-type]
@@ -3535,9 +3535,9 @@ class List(Parameter[T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[ParameterKwargs]
     ) -> None:
-        self.item_type = item_type
-        self.is_instance = is_instance
-        self.bounds = bounds
+        object.__setattr__(self, 'item_type', item_type)
+        object.__setattr__(self, 'is_instance', is_instance)
+        object.__setattr__(self, 'bounds', bounds)
         Parameter.__init__(self, default=default, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
         self._validate(self.default)
 
@@ -3779,10 +3779,10 @@ class Path(Parameter[T]):
     ) -> None:
         if search_paths is Undefined:
             search_paths = []
-        self.search_paths = t.cast("list[str | PathLike] | None", search_paths)
+        object.__setattr__(self, 'search_paths', t.cast("list[str | PathLike] | None", search_paths))
         if check_exists is not Undefined and not isinstance(check_exists, bool):
             raise ValueError("'check_exists' attribute value must be a boolean")
-        self.check_exists = check_exists
+        object.__setattr__(self, 'check_exists', check_exists)
         super().__init__(default=default, allow_None=allow_None, **params) # type: ignore[misc, call-overload]
         self._validate(self.default)
 
@@ -3970,7 +3970,7 @@ class Color(Parameter[T]):
         **kwargs: Unpack[ParameterKwargs]
     ) -> None:
         super().__init__(default=default, **kwargs)
-        self.allow_named = allow_named
+        object.__setattr__(self, 'allow_named', allow_named)
         self._validate(self.default)
 
     def _validate(self, val):
@@ -4066,7 +4066,7 @@ class Bytes(Parameter[T]):
         super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
-        self.regex = regex
+        object.__setattr__(self, 'regex', regex)
         self._validate(self.default)
 
     def _validate_regex(self, val, regex):

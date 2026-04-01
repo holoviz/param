@@ -1461,6 +1461,7 @@ class rx:
         self._dirty = _current is None or _current is Undefined
         self._dirty_obj = False
         self._current_task = None
+        self._resolve_generation = 0
         self._error_state = None
         self._current_ = _current
         # _shared is used for branching rx pipelines where we clone the input.
@@ -1656,31 +1657,59 @@ class rx:
         self._root._dirty_obj = True
         self._error_state = None
 
-    async def _resolve_async(self, obj = None):
+    async def _resolve_async(self, obj=None, generation=None):
         import asyncio
         self._current_task = task = asyncio.current_task()
-        if obj is None:
-            if self._shared._current_task:
-                await self._shared._current_task
-            self._current_ = self._shared.rx.value
-            self._trigger.param.trigger('value')
-        elif inspect.isasyncgen(obj):
-            async for val in obj:
-                if self._current_task is not task:
-                    break
-                self._current_ = val
-                self._trigger.param.trigger('value')
-        else:
-            value = await obj
-            if self._current_task is task:
+        trigger = self._trigger
+
+        def stale():
+            return generation != self._resolve_generation
+
+        try:
+            if trigger is None:
+                return
+            if obj is None:
+                shared = self._shared
+                if shared is None:
+                    return
+                if shared._current_task:
+                    await shared._current_task
+                if stale():
+                    return
+                self._current_ = shared.rx.value
+                trigger.param.trigger('value')
+            elif inspect.isasyncgen(obj):
+                async for val in obj:
+                    if stale():
+                        try:
+                            await obj.aclose()
+                        except Exception:
+                            pass
+                        break
+                    self._current_ = val
+                    trigger.param.trigger('value')
+            else:
+                value = await obj
+                if stale():
+                    return
                 self._current_ = value
-                self._trigger.param.trigger('value')
+                trigger.param.trigger('value')
+        except asyncio.CancelledError:
+            return
+        finally:
+            if self._current_task is task:
+                self._current_task = None
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
         if inspect.isgenerator(obj):
             obj = _to_async_gen(obj)
-        async_executor(partial(self._resolve_async, obj))
+        self._resolve_generation += 1
+        generation = self._resolve_generation
+        previous_task = self._current_task
+        if previous_task is not None and not previous_task.done():
+            previous_task.cancel()
+        async_executor(partial(self._resolve_async, obj, generation))
 
     def _resolve(self):
         if self._error_state:

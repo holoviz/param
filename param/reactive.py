@@ -89,6 +89,7 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 from __future__ import annotations
 
 import inspect
+import logging
 import math
 import operator
 import warnings
@@ -107,6 +108,8 @@ from .parameterized import (
 )
 from .parameters import Boolean, Event
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
+
+logger = logging.getLogger(__name__)
 
 
 class Wrapper(Parameterized):
@@ -1683,8 +1686,13 @@ class rx:
                     if stale():
                         try:
                             await obj.aclose()
-                        except Exception:
+                        except (StopAsyncIteration, GeneratorExit):
                             pass
+                        except Exception:
+                            logger.debug(
+                                "Ignoring async generator close error for stale reactive task.",
+                                exc_info=True,
+                            )
                         break
                     self._current_ = val
                     trigger.param.trigger('value')

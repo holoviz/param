@@ -1,46 +1,60 @@
 from __future__ import annotations
 
 import inspect
+import typing as t
 
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, TypeVar, Callable, Protocol, TypedDict, overload
 
 from .parameterized import (
-    Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
+    Event, Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
 )
-from ._utils import accept_arguments, iscoroutinefunction
+from ._utils import iscoroutinefunction
 
-if TYPE_CHECKING:
-    CallableT = TypeVar("CallableT", bound=Callable)
-    Dependency = Parameter | str
+if t.TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Generator
 
-    class DependencyInfo(TypedDict):
-        dependencies: tuple[Dependency, ...]
-        kw: dict[str, Dependency]
-        watch: bool
-        on_init: bool
+    Y = t.TypeVar("Y")
+    S = t.TypeVar("S")
+    T = t.TypeVar("T")
 
-    class DependsFunc(Protocol[CallableT]):
-        _dinfo: DependencyInfo
-        __call__: CallableT
+P = t.ParamSpec("P")
+R = t.TypeVar("R", covariant=True)
 
-@overload
+Dependency = Parameter | str
+
+class DependencyInfo(t.TypedDict):
+    dependencies: tuple[Dependency, ...]
+    kw: dict[str, Dependency]
+    watch: bool
+    on_init: bool
+
+class DependsFunc(t.Protocol[P, R]):
+    _dinfo: DependencyInfo
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
+
+
+@t.overload
 def depends(
-    *dependencies: str, watch: bool = ..., on_init: bool = ...
-) -> Callable[[CallableT], DependsFunc[CallableT]]:
+    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> DependsFunc[P, R]:
     ...
 
-@overload
+@t.overload
 def depends(
-    *dependencies: Parameter, watch: bool = ..., on_init: bool = ..., **kw: Parameter
-) -> Callable[[CallableT], DependsFunc[CallableT]]:
+    *dependencies: str, watch: bool = False, on_init: bool = False
+) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
     ...
 
-@accept_arguments
+@t.overload
 def depends(
-    func: CallableT, /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Parameter
-) -> Callable[[CallableT], DependsFunc[CallableT]]:
+    *dependencies: Parameter, watch: bool = False, on_init: bool = False, **kw: Parameter
+) -> Callable[[Callable[P, R]], DependsFunc[P, R]]:
+    ...
+
+def depends(
+    *dependencies: Dependency | Callable[P, R], watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> DependsFunc[P, R] | Callable[[Callable[P, R]], DependsFunc[P, R]]:
     """
     Annotates a function or :class:`Parameterized` method to express its dependencies.
 
@@ -60,29 +74,52 @@ def depends(
         by default ``False``.
 
     """
+    if dependencies and callable(dependencies[0]) and not isinstance(dependencies[0], (str, Parameter)):
+        func = t.cast("Callable[P, R]", dependencies[0])
+        deps = t.cast("tuple[Dependency, ...]", dependencies[1:])
+        return _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw)
+
+    deps = t.cast("tuple[Dependency, ...]", dependencies)
+
+    def _decorator(func: Callable[P, R]) -> DependsFunc[P, R]:
+        return _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw)
+
+    return _decorator
+
+
+def _depends_impl(
+    func: Callable[P, R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> DependsFunc[P, R]:
     dependencies, kw = (
         tuple(transform_reference(arg) for arg in dependencies),
         {key: transform_reference(arg) for key, arg in kw.items()}
     )
 
     if inspect.isgeneratorfunction(func):
+        func_gen = t.cast("Callable[P, Generator[t.Any, t.Any, t.Any]]", func)
         @wraps(func)
-        def _depends(*args, **kw):
-            for val in func(*args, **kw):
+        def _depends_gen(*args, **kw):
+            for val in func_gen(*args, **kw):
                 yield val
+        _depends = t.cast("Callable[P, R]", _depends_gen)
     elif inspect.isasyncgenfunction(func):
+        func_agen = t.cast("Callable[P, AsyncGenerator[t.Any, t.Any]]", func)
         @wraps(func)
-        async def _depends(*args, **kw):
-            async for val in func(*args, **kw):
+        async def _depends_async_gen(*args, **kw):
+            async for val in func_agen(*args, **kw):
                 yield val
+        _depends = t.cast("Callable[P, R]", _depends_async_gen)
     elif iscoroutinefunction(func):
+        F = t.cast("Callable[P, t.Awaitable[R]]", func)
         @wraps(func)
-        async def _depends(*args, **kw):
-            return await func(*args, **kw)
+        async def _depends_coro(*args, **kw):
+            return await F(*args, **kw)
+        _depends = t.cast("Callable[P, R]", _depends_coro)
     else:
         @wraps(func)
-        def _depends(*args, **kw):
+        def _depends_sync(*args, **kw):
             return func(*args, **kw)
+        _depends = t.cast("Callable[P, R]", _depends_sync)
 
     deps = list(dependencies)+list(kw.values())
     string_specs = False
@@ -115,40 +152,83 @@ def depends(
                              'or function is not supported when referencing '
                              'parameters by name.')
 
-    if not string_specs and watch: # string_specs case handled elsewhere (later), in Parameterized.__init__
-        if inspect.isgeneratorfunction(func):
-            def cb(*events):
-                args = (getattr(dep.owner, dep.name) for dep in dependencies)
-                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-                for val in func(*args, **dep_kwargs):
-                    yield val
-        elif inspect.isasyncgenfunction(func):
-            async def cb(*events):
-                args = (getattr(dep.owner, dep.name) for dep in dependencies)
-                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-                async for val in func(*args, **dep_kwargs):
-                    yield val
-        elif iscoroutinefunction(func):
-            async def cb(*events):
-                args = (getattr(dep.owner, dep.name) for dep in dependencies)
-                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-                await func(*args, **dep_kwargs)
-        else:
-            def cb(*events):
-                args = (getattr(dep.owner, dep.name) for dep in dependencies)
-                dep_kwargs = {n: getattr(dep.owner, dep.name) for n, dep in kw.items()}
-                return func(*args, **dep_kwargs)
-
-        grouped = defaultdict(list)
-        for dep in deps:
-            grouped[id(dep.owner)].append(dep)
-        for group in grouped.values():
-            group[0].owner.param.watch(cb, [dep.name for dep in group])
-
-    _dinfo = getattr(func, '_dinfo', {})
+    _dinfo = t.cast("DependencyInfo", dict(getattr(func, '_dinfo', {})))
     _dinfo.update({'dependencies': dependencies,
                    'kw': kw, 'watch': watch, 'on_init': on_init})
 
-    _depends._dinfo = _dinfo  # type: ignore[attr-defined]
+    typed_depends = t.cast("DependsFunc[P, R]", _depends)
+    typed_depends._dinfo = _dinfo
 
-    return _depends
+    if string_specs or not watch:
+         # string_specs case handled elsewhere (later), in Parameterized.__init__
+         return typed_depends
+    param_args = [dep for dep in dependencies if isinstance(dep, Parameter)]
+    param_kwargs = {n: dep for n, dep in kw.items() if isinstance(dep, Parameter)}
+    param_deps = list(param_args) + list(param_kwargs.values())
+
+    def _dep_owner_name(dep: Parameter) -> tuple[Parameterized, str] | None:
+        owner = dep.owner
+        name = dep.name
+        if owner is None or name is None:
+            return None
+        return owner, name
+
+    def _resolve_args() -> tuple[t.Any, ...]:
+        args: list[t.Any] = []
+        for dep in param_args:
+            owner_name = _dep_owner_name(dep)
+            if owner_name is None:
+                continue
+            owner, name = owner_name
+            args.append(getattr(owner, name))
+        return tuple(args)
+
+    def _resolve_kwargs() -> dict[str, t.Any]:
+        dep_kwargs: dict[str, t.Any] = {}
+        for key, dep in param_kwargs.items():
+            owner_name = _dep_owner_name(dep)
+            if owner_name is None:
+                continue
+            owner, name = owner_name
+            dep_kwargs[key] = getattr(owner, name)
+        return dep_kwargs
+
+    if inspect.isgeneratorfunction(func):
+        def cb_gen(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
+            func_gen = t.cast("Callable[P, Generator[t.Any, t.Any, t.Any]]", func)
+            for val in func_gen(*args, **dep_kwargs):
+                yield val
+        cb = cb_gen
+    elif inspect.isasyncgenfunction(func):
+        async def cb_async_gen(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
+            func_agen = t.cast("Callable[P, AsyncGenerator[t.Any, t.Any]]", func)
+            async for val in func_agen(*args, **dep_kwargs):
+                yield val
+        cb = cb_async_gen
+    elif iscoroutinefunction(func):
+        async def cb_coro(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
+            func_coro = t.cast("Callable[P, t.Awaitable[t.Any]]", func)
+            await func_coro(*args, **dep_kwargs)
+        cb = cb_coro
+    else:
+        def cb_sync(*events: Event):
+            args = _resolve_args()
+            dep_kwargs = _resolve_kwargs()
+            return func(*args, **dep_kwargs)
+        cb = cb_sync
+
+    grouped = defaultdict(list)
+    for dep in param_deps:
+        grouped[id(dep.owner)].append(dep)
+    for group in grouped.values():
+        if group[0].owner is None:
+            continue
+        group[0].owner.param.watch(cb, [dep.name for dep in group])
+
+    return typed_depends

@@ -31,7 +31,6 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
-dependencies = []
 
 [project.optional-dependencies]
 examples = [
@@ -128,7 +127,7 @@ include = ["*.py"]
 exclude = ["version.py"]
 
 [tool.ruff.lint]
-select = ["D", "W", "E", "F"]
+select = ["D", "W", "E", "F", "TYP"]
 ignore = [
     "D100", # Missing docstring in public module"
     "D101", # Missing docstring in public class"
@@ -149,3 +148,55 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = [
+    "IPython",
+    "IPython.core",
+    "IPython.core.magic",
+    "IPython.display",
+    "setuptools_scm",
+    "tornado"
+]
+
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
+
+[tool.ty.src]
+include = ["param"]
+exclude = ["param/version.py"]
+
+[tool.pyrefly]
+project-includes = ["param/"]
+project-excludes = [
+    "param/version.py",
+    "**/version.py",
+    "**/tests",
+    "**/test_*",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/.git",
+]
+infer-with-first-use = false
+
+[tool.mypy]
+files = ["param"]
+follow_imports = "skip"
+disable_error_code = ["import-untyped", "import-not-found"]
+
+[tool.pyright]
+include = ["param"]
+reportSelfClsParameterName = "none"
+ignore = [
+    "param/version.py",
+    "**/version.py",
+    "**/tests",
+    "**/test_*",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/.git",
+]

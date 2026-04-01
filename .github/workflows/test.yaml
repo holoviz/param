@@ -112,7 +112,7 @@ jobs:
       - name: Test Examples
         run: |
           pixi run -e ${{ matrix.environment }} test-example
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -134,6 +134,40 @@ jobs:
         run: |
           pixi run -e ${{ matrix.environment }} test-unit
 
+  typecheck:
+    name: type:ubuntu-latest
+    needs: [pre_commit, pixi_lock]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+        with:
+          environments: typecheck
+      - name: TY
+        id: ty
+        continue-on-error: true
+        run: pixi run -e typecheck type-ty
+      - name: mypy
+        id: mypy
+        continue-on-error: true
+        run: pixi run -e typecheck type-mypy
+      - name: Pyrefly
+        id: pyrefly
+        continue-on-error: true
+        run: pixi run -e typecheck type-pyrefly
+      - name: Pyright
+        id: pyright
+        continue-on-error: true
+        run: pixi run -e typecheck type-pyright
+      - name: Error if any check failed
+        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success'
+        run: |
+          echo "TY: ${{ steps.ty.outcome }}"
+          echo "mypy: ${{ steps.mypy.outcome }}"
+          echo "Pyrefly: ${{ steps.pyrefly.outcome }}"
+          echo "Pyright: ${{ steps.pyright.outcome }}"
+          exit 1
+
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}
     needs: [pre_commit]
@@ -145,16 +179,16 @@ jobs:
         python-version: ["pypy3.11"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: "100"
       - name: Fetch
         run: git fetch --prune --tags -f
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
       - name: Install project dependencies
@@ -175,7 +209,7 @@ jobs:
 
   result_test_suite:
     name: result:test
-    needs: [unit_test_suite, core_test_suite, pypy_test_suite]
+    needs: [unit_test_suite, core_test_suite, pypy_test_suite, typecheck]
     if: always()
     runs-on: ubuntu-latest
     steps:

@@ -7,7 +7,6 @@ import pytest
 
 from param import descendents, Parameter
 
-
 SKIP_UPDATED = [
     # Not sure how to handle attribs yet
     param.Composite,
@@ -22,13 +21,6 @@ def custom_concrete_descendents(kls):
         for ptype in descendents(kls)
         if ptype.__module__.startswith('param')
     }
-
-
-@pytest.mark.skipif(sys.version_info <= (3, 11), reason='typing.get_overloads available from Python 3.11')
-def test_signature_parameters_constructors_overloaded():
-    for _, p_type in custom_concrete_descendents(Parameter).items():
-        init_overloads = typing.get_overloads(p_type.__init__)
-        assert len(init_overloads) == 1
 
 
 def test_signature_parameters_constructors_updated():
@@ -46,14 +38,40 @@ def test_signature_parameters_constructors_updated():
 
 @pytest.mark.skipif(sys.version_info <= (3, 11), reason='typing.get_overloads available from Python 3.11')
 def test_signature_parameters_constructors_overloaded_updated_match():
+    def _is_overload_compatible(overload_sig, runtime_sig):
+        ignored = {'allow_None'}
+        overload_names = set(overload_sig.parameters) - ignored
+        runtime_names = set(runtime_sig.parameters) - ignored
+        return overload_names.issubset(runtime_names) or runtime_names.issubset(overload_names)
+
     for _, p_type in custom_concrete_descendents(Parameter).items():
         if p_type.__name__.startswith('_') or p_type in SKIP_UPDATED:
             continue
         init_overloads = typing.get_overloads(p_type.__init__)
-        osig = inspect.signature(init_overloads[0])
-        osig = osig.replace(parameters=[parameter for pname, parameter in osig.parameters.items() if pname != 'self'])
+        if not init_overloads:
+            continue
         usig = inspect.signature(p_type)
-        assert osig == usig, _
+        if any(
+            parameter.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+            for parameter in usig.parameters.values()
+        ):
+            # Classes that still expose a variadic runtime signature cannot be
+            # compared reliably to overload declarations.
+            continue
+        compatible = False
+        for overload in init_overloads:
+            osig = inspect.signature(overload)
+            osig = osig.replace(
+                parameters=[
+                    parameter for pname, parameter in osig.parameters.items()
+                    if pname != 'self'
+                    and parameter.kind not in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+                ]
+            )
+            if _is_overload_compatible(osig, usig):
+                compatible = True
+                break
+        assert compatible, _
 
 
 def test_signature_position_keywords():

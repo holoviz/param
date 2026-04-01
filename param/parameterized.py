@@ -2064,7 +2064,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
                 'ensure that you create a new parameter '
                 'instance for each new class.'
             )
-        self.name = attrib_name  # TODO: Is the casting need to support other names?
+        self.name = attrib_name
 
     def __getstate__(self) -> dict[str, t.Any]:
         """

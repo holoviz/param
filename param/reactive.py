@@ -89,10 +89,13 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 from __future__ import annotations
 
 import inspect
+import logging
 import math
 import operator
+import warnings
 
 from collections.abc import Iterable, Iterator
+from itertools import chain
 from functools import partial
 from types import FunctionType, MethodType
 from typing import Any, Callable, Optional
@@ -105,6 +108,8 @@ from .parameterized import (
 )
 from .parameters import Boolean, Event
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
+
+logger = logging.getLogger(__name__)
 
 
 class Wrapper(Parameterized):
@@ -1104,6 +1109,8 @@ class reactive_ops:
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
+        elif isinstance(self._reactive, rx) and self._reactive._lazy:
+            warnings.warn("Watching a lazy expressions converts it into an eager expression.")
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
@@ -1435,8 +1442,8 @@ class rx:
         return inst
 
     def __init__(
-        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None,
-        _shared_obj=None, _current=None, _wrapper=None, _shared=None,  **kwargs
+        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
+        _shared_obj=None, _current=None, _wrapper=None, _shared=None, **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
         # specialized code.
@@ -1450,12 +1457,14 @@ class rx:
             if dopt in kwargs
         })
         self._display_opts = display_opts
+        self._lazy = lazy
         self._method = method
         self._operation = operation
         self._depth = depth
-        self._dirty = _current is None
+        self._dirty = _current is None or _current is Undefined
         self._dirty_obj = False
         self._current_task = None
+        self._resolve_generation = 0
         self._error_state = None
         self._current_ = _current
         # _shared is used for branching rx pipelines where we clone the input.
@@ -1556,7 +1565,7 @@ class rx:
     def _current(self):
         if self._error_state:
             raise self._error_state
-        elif self._dirty or self._root._dirty_obj:
+        elif not self._lazy and (self._dirty or self._root._dirty_obj):
             self._resolve()
         return self._current_
 
@@ -1604,7 +1613,10 @@ class rx:
         for ref in resolve_ref(self._operation['fn']):
             if ref not in ps:
                 ps.append(ref)
-        for arg in list(self._operation['args'])+list(self._operation['kwargs'].values()):
+        for arg in chain(
+            self._operation.get("args", tuple()),
+            self._operation.get("kwargs", {}).values(),
+        ):
             for ref in resolve_ref(arg, recursive=True):
                 if ref not in ps:
                     ps.append(ref)
@@ -1648,31 +1660,64 @@ class rx:
         self._root._dirty_obj = True
         self._error_state = None
 
-    async def _resolve_async(self, obj = None):
+    async def _resolve_async(self, obj=None, generation=None):
         import asyncio
         self._current_task = task = asyncio.current_task()
-        if obj is None:
-            if self._shared._current_task:
-                await self._shared._current_task
-            self._current_ = self._shared.rx.value
-            self._trigger.param.trigger('value')
-        elif inspect.isasyncgen(obj):
-            async for val in obj:
-                if self._current_task is not task:
-                    break
-                self._current_ = val
-                self._trigger.param.trigger('value')
-        else:
-            value = await obj
-            if self._current_task is task:
+        trigger = self._trigger
+
+        def stale():
+            return generation != self._resolve_generation
+
+        try:
+            if trigger is None:
+                return
+            if obj is None:
+                shared = self._shared
+                if shared is None:
+                    return
+                if shared._current_task:
+                    await shared._current_task
+                if stale():
+                    return
+                self._current_ = shared.rx.value
+                trigger.param.trigger('value')
+            elif inspect.isasyncgen(obj):
+                async for val in obj:
+                    if stale():
+                        try:
+                            await obj.aclose()
+                        except (StopAsyncIteration, GeneratorExit):
+                            pass
+                        except Exception:
+                            logger.debug(
+                                "Ignoring async generator close error for stale reactive task.",
+                                exc_info=True,
+                            )
+                        break
+                    self._current_ = val
+                    trigger.param.trigger('value')
+            else:
+                value = await obj
+                if stale():
+                    return
                 self._current_ = value
-                self._trigger.param.trigger('value')
+                trigger.param.trigger('value')
+        except asyncio.CancelledError:
+            return
+        finally:
+            if self._current_task is task:
+                self._current_task = None
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
         if inspect.isgenerator(obj):
             obj = _to_async_gen(obj)
-        async_executor(partial(self._resolve_async, obj))
+        self._resolve_generation += 1
+        generation = self._resolve_generation
+        previous_task = self._current_task
+        if previous_task is not None and not previous_task.done():
+            previous_task.cancel()
+        async_executor(partial(self._resolve_async, obj, generation))
 
     def _resolve(self):
         if self._error_state:
@@ -1764,7 +1809,7 @@ class rx:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
         return type(self)(
-            self._obj, operation=operation, depth=depth, fn=self._fn,
+            self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
             **kwargs
         )
@@ -1802,6 +1847,15 @@ class rx:
 
         current = self_dict['_current_']
         dirty = self_dict['_dirty']
+        if self_dict['_lazy']:
+            # there is no current, delay the getattr to later
+            operation = {
+                'fn': lambda obj, name: getattr(obj, name),
+                'args': (name,),
+                'kwargs': {},
+            }
+            return self._clone(operation)
+
         if dirty:
             self._resolve()
             current = self_dict['_current_']
@@ -1827,7 +1881,7 @@ class rx:
     def __call__(self, *args, **kwargs):
         new = self._clone(copy=True)
         method = new._method or '__call__'
-        if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__'):
+        if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__') and not self._lazy:
             return self.set_display(*args, **kwargs)
 
         if method in rx._method_handlers:
@@ -1981,7 +2035,13 @@ class rx:
                 yield new
             return
         elif not isinstance(self._current, Iterable):
-            raise TypeError(f'cannot unpack non-iterable {type(self._current).__name__} object.')
+            if self._lazy:
+                raise RuntimeError(
+                    "Lazy rx expressions must be resolved before being iterated over. "
+                    "Access the current value using .rx.value before iterating."
+                )
+            else:
+                raise TypeError(f'Cannot unpack non-iterable {type(self._current).__name__} object.')
         items = self._apply_operator(list)
         for i in range(len(self._current)):
             yield items[i]

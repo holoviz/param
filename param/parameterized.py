@@ -262,7 +262,9 @@ def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
         refs = []
         for arg in (args + kwargs):
             if isinstance(arg, str):
-                owner = t.cast("Parameterized", get_method_owner(reference))  # TODO: We should have better support for owner.
+                owner = get_method_owner(reference)
+                if owner is None:
+                    raise
                 if arg in owner.param:
                     arg = owner.param[arg]
                 elif '.' in arg:
@@ -652,7 +654,7 @@ def instance_descriptor(f):
     return _f
 
 
-def get_method_owner(method):
+def get_method_owner(method: Callable[..., t.Any]) -> t.Any | None:
     """Get the instance that owns the supplied method."""
     if not inspect.ismethod(method):
         return None
@@ -919,18 +921,21 @@ def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
     params = []
     for p in subparameters:
         if isinstance(p, str):
-            owner = t.cast("Parameterized", get_method_owner(function))
-            *subps, p = p.split('.')
+            owner = get_method_owner(function)
+            if owner is None:
+                raise ValueError()
+            *subps, pname = p.split('.')
             for subp in subps:
-                owner = t.cast("Parameterized", getattr(owner, subp, None))
-                if owner is None:
-                    raise ValueError(f'Cannot depend on undefined sub-parameter {p!r}.')
-            if p in owner.param:
-                pobj = owner.param[p]
+                subowner = getattr(owner, subp, None)
+                if subowner is None:
+                    raise ValueError(f'Cannot depend on undefined sub-parameter {pname!r}.')
+                owner = subowner
+            if pname in owner.param:
+                pobj = owner.param[pname]
                 if pobj not in params:
                     params.append(pobj)
             else:
-                for sp in extract_dependencies(getattr(owner, p)):
+                for sp in extract_dependencies(getattr(owner, pname)):
                     if sp not in params:
                         params.append(sp)
         elif p not in params:

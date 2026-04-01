@@ -1641,7 +1641,7 @@ class rx:
         owner = get_method_owner(self._fn)
         if owner is not None:
             deps = [
-                dep.pobj for dep in t.cast('t.Any', owner).param.method_dependencies(self._fn.__name__)
+                dep.pobj for dep in owner.param.method_dependencies(self._fn.__name__)
             ]
             return deps
 

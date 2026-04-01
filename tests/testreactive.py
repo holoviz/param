@@ -748,8 +748,7 @@ async def test_reactive_lazy_gen_pipe():
     rxgen = rxv.rx.pipe(gen)
     assert rxgen.rx.value is param.Undefined
     await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
-    await asyncio.sleep(0.1)
-    assert rxgen._current_ == 2
+    await async_wait_until(lambda: rxgen._current_ == 2)
     assert rxgen.rx.value == 2
 
     rxv.rx.value = 2

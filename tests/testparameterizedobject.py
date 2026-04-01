@@ -22,6 +22,8 @@ from param.parameterized import (
     ParamOverrides,
     ParameterizedMetaclass,
     Undefined,
+    _ClassPrivate,
+    _InstancePrivate,
     default_label_formatter,
     edit_constant,
     no_instance_params,
@@ -348,6 +350,28 @@ class TestParameterized(unittest.TestCase):
 
         assert p.param.a.constant is True
         assert P.param.a.constant is False
+
+    def test_private_namespace_descriptor_class_access_returns_class_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        assert isinstance(P._param__private, _ClassPrivate)
+
+    def test_private_namespace_descriptor_uninitialized_instance_returns_class_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        # Bypass __init__ to verify descriptor behavior before instance setup.
+        p = P.__new__(P)
+        assert isinstance(p._param__private, _ClassPrivate)
+
+    def test_private_namespace_descriptor_initialized_instance_returns_instance_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        p = P()
+        assert isinstance(p._param__private, _InstancePrivate)
+        assert p._param__private is p.__dict__['_param__private']
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""

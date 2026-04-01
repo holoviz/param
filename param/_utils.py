@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import datetime as dt
 import functools
 import inspect
@@ -8,20 +7,19 @@ import numbers
 import os
 import re
 import traceback
+import typing as t
 import warnings
 from collections import OrderedDict, abc, defaultdict
 from contextlib import contextmanager
-from numbers import Real
 from textwrap import dedent
 from threading import get_ident
-from typing import TYPE_CHECKING, Callable, TypeVar
 
-if TYPE_CHECKING:
-    from typing_extensions import Concatenate, ParamSpec
+if t.TYPE_CHECKING:
+    from param.parameterized import Parameter
 
-    P = ParamSpec("P")
-    R = TypeVar("R")
-    CallableT = TypeVar("CallableT", bound=Callable)
+    P = t.ParamSpec("P")
+    R = t.TypeVar("R")
+    CallableT = t.TypeVar("CallableT", bound=abc.Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
@@ -99,8 +97,8 @@ class Skip(Exception):
     """
 
 
-def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
-    def decorator(func):
+def _deprecated(extra_msg: str = "", warning_cat: type[Warning] = ParamDeprecationWarning):
+    def decorator(func: abc.Callable[..., t.Any]) -> abc.Callable[..., t.Any]:
         """Mark a function or method as deprecated.
 
         This internal decorator issues a warning when the decorated function
@@ -119,7 +117,8 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
         """
         @functools.wraps(func)
         def inner(*args, **kwargs):
-            msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
+            func_name = getattr(func, "__name__", repr(func))
+            msg = f"{func_name!r} has been deprecated and will be removed in a future version."
             if extra_msg:
                 em = dedent(extra_msg)
                 em = em.strip().replace('\n', ' ')
@@ -152,8 +151,9 @@ def _recursive_repr(fillvalue='...'):
     return decorating_function
 
 
-def _is_auto_name(class_name, instance_name):
-    return re.match('^'+class_name+'[0-9]{5}$', instance_name)
+def _is_auto_name(class_name: str, instance_name: str) -> bool:
+    pattern = rf'^{re.escape(class_name)}[0-9]{{5}}$'
+    return bool(re.match(pattern, instance_name))
 
 
 def _find_pname(pclass):
@@ -163,12 +163,14 @@ def _find_pname(pclass):
     """
     stack = traceback.extract_stack()
     for frame in stack:
-        match = re.match(r"^(\S+)\s*=\s*(param|pm)\." + pclass + r"\(", frame.line)
+        if frame.line is None:
+            continue
+        match = re.match(rf"^(\S+)\s*=\s*(param|pm)\.{pclass}\(", frame.line)
         if match:
             return match.group(1)
 
 
-def _validate_error_prefix(parameter, attribute=None):
+def _validate_error_prefix(parameter: Parameter, attribute: str | None = None) -> str:
     """
     Generate an error prefix suitable for Parameters when they raise a validation
     error.
@@ -279,11 +281,11 @@ def flatten(line):
 
 
 def accept_arguments(
-    f: Callable[Concatenate[CallableT, P], R]
-) -> Callable[P, Callable[[CallableT], R]]:
+    f: abc.Callable[t.Concatenate[CallableT, P], R]
+) -> abc.Callable[..., abc.Callable[[CallableT], R]]:
     """Decorate a decorator to accept arguments."""
     @functools.wraps(f)
-    def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
+    def _f(*args: P.args, **kwargs: P.kwargs) -> abc.Callable[[CallableT], R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
 
@@ -308,10 +310,10 @@ def _hashable(x):
     part of the object has changed.  Does not (currently) recursively
     replace mutable subobjects.
     """
-    if isinstance(x, collections.abc.MutableSequence):
+    if isinstance(x, abc.MutableSequence):
         return tuple(x)
-    elif isinstance(x, collections.abc.MutableMapping):
-        return tuple([(k,v) for k,v in x.items()])
+    elif isinstance(x, abc.MutableMapping):
+        return tuple([(k, v) for k, v in x.items()])
     else:
         return x
 
@@ -351,39 +353,52 @@ def _named_objs(objlist, namesdict=None):
 
 def _get_min_max_value(min, max, value=None, step=None):
     """Return min, max, value given input values with possible None."""
-    # Either min and max need to be given, or value needs to be given
+    fmin = float(min) if min is not None else None
+    fmax = float(max) if max is not None else None
+
     if value is None:
-        if min is None or max is None:
-            raise ValueError(
-                f'unable to infer range, value from: ({min}, {max}, {value})'
-            )
-        diff = max - min
-        value = min + (diff / 2)
-        # Ensure that value has the same type as diff
-        if not isinstance(value, type(diff)):
-            value = min + (diff // 2)
-    else:  # value is not None
-        if not isinstance(value, Real):
-            raise TypeError('expected a real number, got: %r' % value)
-        # Infer min/max from value
-        if value == 0:
-            # This gives (0, 1) of the correct type
-            vrange = (value, value + 1)
-        elif value > 0:
-            vrange = (-value, 3*value)
-        else:
-            vrange = (3*value, -value)
-        if min is None:
-            min = vrange[0]
-        if max is None:
-            max = vrange[1]
+        if fmin is None or fmax is None:
+            raise ValueError(f"unable to infer range, value from: ({min}, {max}, {value})")
+        fvalue = (fmin + fmax) / 2.0
+    else:
+        fvalue = float(value)
+        if fmin is None or fmax is None:
+            if fvalue == 0.0:
+                low, high = 0.0, 1.0
+            elif fvalue > 0.0:
+                low, high = -fvalue, 3.0 * fvalue
+            else:
+                low, high = 3.0 * fvalue, -fvalue
+            if fmin is None:
+                fmin = low
+            if fmax is None:
+                fmax = high
+
+    # Safety: ensure bounds exist
+    if fmin is None or fmax is None:
+        raise RuntimeError("internal error: bounds not resolved")
+
+    # Normalize so fmin <= fmax
+    if fmin > fmax:
+        fmin, fmax = fmax, fmin
+
+    # Snap to step if requested
     if step is not None:
-        # ensure value is on a step
-        tick = int((value - min) / step)
-        value = min + tick * step
-    if not min <= value <= max:
-        raise ValueError(f'value must be between min and max (min={min}, value={value}, max={max})')
-    return min, max, value
+        fstep = abs(float(step))
+        if fstep == 0.0:
+            raise ValueError("step must be non-zero")
+        ticks = round((fvalue - fmin) / fstep)  # nearest tick; use math.floor for always-down
+        fvalue = fmin + ticks * fstep
+        # Clamp after snapping
+        if fvalue < fmin:
+            fvalue = fmin
+        if fvalue > fmax:
+            fvalue = fmax
+
+    if not (fmin <= fvalue <= fmax):
+        raise ValueError(f"value must be between min and max (min={fmin}, value={fvalue}, max={fmax})")
+
+    return fmin, fmax, fvalue
 
 
 def _deserialize_from_path(ext_to_routine, path, type_name):
@@ -425,10 +440,7 @@ def _is_number(obj):
 def _is_abstract(class_: type) -> bool:
     if inspect.isabstract(class_):
         return True
-    try:
-        return class_.abstract
-    except AttributeError:
-        return False
+    return bool(getattr(class_, "abstract", False))
 
 
 def descendents(class_: type, concrete: bool = False) -> list[type]:
@@ -470,7 +482,7 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
     if not isinstance(class_, type):
         raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")
     q = [class_]
-    out = []
+    out: list[type] = []
     while len(q):
         x = q.pop(0)
         out.insert(0, x)
@@ -580,12 +592,13 @@ def exceptions_summarized():
     except Exception:
         import sys
         etype, value, tb = sys.exc_info()
-        print(f"{etype.__name__}: {value}", file=sys.stderr)
+        if etype is not None:
+            print(f"{etype.__name__}: {value}", file=sys.stderr)
 
 
 def _in_ipython():
     try:
-        get_ipython
+        get_ipython()  # type: ignore[name-defined,ty:unresolved-reference]  # pyright: ignore[reportUndefinedVariable]
         return True
     except NameError:
         return False
@@ -605,20 +618,26 @@ def async_executor(func):
     else:
         event_loop.run_until_complete(func())
 
+@t.runtime_checkable
+class _HasTypes(t.Protocol):
+    @classmethod
+    def types(cls) -> abc.Iterable[type]: ...
+
 class _GeneratorIsMeta(type):
-    def __instancecheck__(cls, inst):
+    def __instancecheck__(cls: type[_HasTypes], inst):
         return isinstance(inst, tuple(cls.types()))
 
-    def __subclasscheck__(cls, sub):
+    def __subclasscheck__(cls: type[_HasTypes], sub: type) -> bool:
         return issubclass(sub, tuple(cls.types()))
 
-    def __iter__(cls):
+    def __iter__(cls: type[_HasTypes]) -> abc.Iterator[type]:
         yield from cls.types()
 
 class _GeneratorIs(metaclass=_GeneratorIsMeta):
     @classmethod
-    def __iter__(cls):
+    def __iter__(cls: type[_HasTypes]) -> abc.Iterator[type]:
         yield from cls.types()
+
 
 def gen_types(gen_func):
     """Decorate a generator function to support type checking.
@@ -656,8 +675,12 @@ def _find_stack_level() -> int:
     import numbergen
     import param
 
-    ng_dir = os.path.dirname(numbergen.__file__)
-    param_dir = os.path.dirname(param.__file__)
+    numbergen_file = getattr(numbergen, "__file__", None)
+    param_file = getattr(param, "__file__", None)
+    if numbergen_file is None or param_file is None:
+        return 2
+    ng_dir = os.path.dirname(numbergen_file)
+    param_dir = os.path.dirname(param_file)
 
     # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
     frame = inspect.currentframe()

@@ -134,6 +134,40 @@ jobs:
         run: |
           pixi run -e ${{ matrix.environment }} test-unit
 
+  typecheck:
+    name: type:ubuntu-latest
+    needs: [pre_commit, pixi_lock]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+        with:
+          environments: typecheck
+      - name: TY
+        id: ty
+        continue-on-error: true
+        run: pixi run -e typecheck type-ty
+      - name: mypy
+        id: mypy
+        continue-on-error: true
+        run: pixi run -e typecheck type-mypy
+      - name: Pyrefly
+        id: pyrefly
+        continue-on-error: true
+        run: pixi run -e typecheck type-pyrefly
+      - name: Pyright
+        id: pyright
+        continue-on-error: true
+        run: pixi run -e typecheck type-pyright
+      - name: Error if any check failed
+        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success'
+        run: |
+          echo "TY: ${{ steps.ty.outcome }}"
+          echo "mypy: ${{ steps.mypy.outcome }}"
+          echo "Pyrefly: ${{ steps.pyrefly.outcome }}"
+          echo "Pyright: ${{ steps.pyright.outcome }}"
+          exit 1
+
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}
     needs: [pre_commit]
@@ -175,7 +209,7 @@ jobs:
 
   result_test_suite:
     name: result:test
-    needs: [unit_test_suite, core_test_suite, pypy_test_suite]
+    needs: [unit_test_suite, core_test_suite, pypy_test_suite, typecheck]
     if: always()
     runs-on: ubuntu-latest
     steps:

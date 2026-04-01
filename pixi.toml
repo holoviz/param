@@ -15,6 +15,7 @@ default = [
     "example",
     "test-example",
     "lint",
+    "typecheck",
     "doc",
     "dev",
 ]
@@ -57,6 +58,10 @@ no-default-feature = true
 
 [environments.lint]
 features = ["py313", "lint"]
+no-default-feature = true
+
+[environments.typecheck]
+features = ["py313", "required", "typecheck"]
 no-default-feature = true
 
 [feature.required.dependencies]
@@ -195,3 +200,24 @@ pre-commit = "*"
 [feature.lint.tasks]
 lint = 'pre-commit run --all-files'
 lint-install = 'pre-commit install'
+
+# =============================================
+# =============== TYPECHECK ===================
+# =============================================
+[feature.typecheck.dependencies]
+ty = "*"
+mypy = "*"
+numpy = "*"
+pandas = "*"
+pyrefly = "*"
+pyright = "*"
+IPython = "*"
+typing_extensions = "*"
+tornado = "*"
+
+[feature.typecheck.tasks]
+type-ty = 'ty check'
+type-mypy = 'mypy'
+type-pyrefly = 'pyrefly check --output-format min-text --count-errors=0'
+type-pyright = 'pyright'
+type-all = { depends-on = ["type-ty", "type-mypy", "type-pyrefly", "type-pyright"] }

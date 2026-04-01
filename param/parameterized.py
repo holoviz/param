@@ -264,7 +264,8 @@ def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
             if isinstance(arg, str):
                 owner = get_method_owner(reference)
                 if owner is None:
-                    raise
+                    msg = f'Cannot resolve reference {arg!r} on {reference!r} since it is not a method.'
+                    raise ValueError(msg)
                 if arg in owner.param:
                     arg = owner.param[arg]
                 elif '.' in arg:
@@ -923,12 +924,14 @@ def extract_dependencies(function: t.Callable[..., t.Any]) -> list[Parameter]:
         if isinstance(p, str):
             owner = get_method_owner(function)
             if owner is None:
-                raise ValueError()
+                msg = f'Cannot resolve reference {p!r} on {function!r} since it is not a method.'
+                raise ValueError(msg)
             *subps, pname = p.split('.')
             for subp in subps:
                 subowner = getattr(owner, subp, None)
                 if subowner is None:
-                    raise ValueError(f'Cannot depend on undefined sub-parameter {pname!r}.')
+                    msg = f'Cannot depend on undefined sub-parameter {pname!r}.'
+                    raise ValueError(msg)
                 owner = subowner
             if pname in owner.param:
                 pobj = owner.param[pname]

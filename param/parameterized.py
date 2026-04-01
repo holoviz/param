@@ -1430,6 +1430,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
     allow_None: bool
     per_instance: bool
     default_factory: Callable[[], t.Any] | None
+    name: str | None
 
     if t.TYPE_CHECKING:
         @t.overload

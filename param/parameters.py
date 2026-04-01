@@ -2505,7 +2505,7 @@ class _SignatureSelector(Parameter[T]):
 
 
 class SelectorInitKwargs(ParameterKwargs, total=False):
-    objects: list[t.Any] | dict[str, t.Any] | None
+    objects: list[t.Any] | dict[str, t.Any]
     compute_default_fn: t.Callable[[], t.Any] | None
     check_on_set: bool
     empty_default: bool
@@ -2552,7 +2552,7 @@ class Selector(SelectorBase, _SignatureSelector[T]):
     def __init__(
         self,
         *,
-        objects: list[t.Any] | dict[str, t.Any] | None = t.cast("list[t.Any] | dict[str, t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        objects: list[t.Any] | dict[str, t.Any] = t.cast("list[t.Any] | dict[str, t.Any]", Undefined),  # pyrefly: ignore[bad-argument-type]
         default: t.Any =  Undefined,
         compute_default_fn: t.Callable[[], t.Any] | None = t.cast("t.Callable[[], t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         check_on_set: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -2601,7 +2601,7 @@ class Selector(SelectorBase, _SignatureSelector[T]):
         return ListProxy(self._objects, self)
 
     @objects.setter
-    def objects(self, objects):
+    def objects(self, objects: dict[str, t.Any] | list[t.Any]):
         if isinstance(objects, Mapping):
             self.names = dict(objects)
             self._objects = list(objects.values())

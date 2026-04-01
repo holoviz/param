@@ -1561,9 +1561,7 @@ class rx:
     def _current(self):
         if self._error_state:
             raise self._error_state
-        elif self._lazy:
-            pass
-        elif self._dirty or self._root._dirty_obj:
+        elif not self._lazy and (self._dirty or self._root._dirty_obj):
             self._resolve()
         return self._current_
 

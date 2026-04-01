@@ -879,7 +879,7 @@ def _resolve_mcs_deps(obj, resolved, dynamic, intermediate=True):
             dependencies.append(dep)
             continue
         inst = obj if dep.inst is None else dep.inst
-        dep = PInfo(inst, dep.cls, dep.name, inst.param[dep.name], what=dep.what)
+        dep = PInfo(inst=inst, cls=dep.cls, name=dep.name, pobj=inst.param[dep.name], what=dep.what)
         dependencies.append(dep)
     for dep in dynamic:
         subresolved, _ = obj.param._spec_to_obj(dep.spec, intermediate=intermediate)
@@ -1832,7 +1832,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
             raise RuntimeError(
                 "An event cannot be triggered for an unbound parameter."
             )
-        event = Event(attribute, self.name, None, self.owner, old, new, None)
+        event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
@@ -2001,7 +2001,7 @@ class Parameter(_ParameterBase, t.Generic[T]):
         if obj is None or not watchers:
             return
 
-        event = Event('value', name, obj, self.owner, _old, val, None)
+        event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
 
         # Copy watchers here since they may be modified inplace during iteration
         for watcher in sorted(watchers, key=lambda w: w.precedence):
@@ -3219,13 +3219,14 @@ class Parameters:
         self_._events += events
         self_._state_watchers += watchers
 
-    def _update_event_type(self_, watcher: Watcher, event: Event, triggered: bool):
+    @staticmethod
+    def _update_event_type(watcher: Watcher, event: Event, triggered: bool) -> Event:
         """Return an updated Event object with the type field set appropriately."""
         if triggered:
             event_type = 'triggered'
         else:
             event_type = 'changed' if watcher.onlychanged else 'set'
-        return Event(event.what, event.name, event.obj, event.cls, event.old, event.new, event_type)
+        return event._replace(type=event_type)
 
     def _execute_watcher(self, watcher: Watcher, events: Iterable[Event]):
         if watcher.mode == 'args':
@@ -3826,7 +3827,7 @@ class Parameters:
         [PInfo(inst=MyClass(a=None, b=None, name='MyClass...]
         """
         method = getattr(self_.self_or_cls, name)
-        minfo = MInfo(self_.self, self_.cls, name, method)
+        minfo = MInfo(inst=self_.self, cls=self_.cls, name=name, method=method)
         deps, dynamic = _params_depended_on(
             minfo, dynamic=False, intermediate=intermediate)
         if self_.self is None:
@@ -3927,7 +3928,7 @@ class Parameters:
         if isinstance(spec, Parameter):
             inst = spec.owner if isinstance(spec.owner, Parameterized) else None
             cls = spec.owner if inst is None else type(inst)
-            pinfo = PInfo(inst, cls, spec.name, spec, 'value')
+            pinfo = PInfo(inst=inst, cls=cls, name=spec.name, pobj=spec, what='value')
             return [] if intermediate == 'only' else [pinfo], []
 
         obj, attr, what = _parse_dependency_spec(spec)
@@ -3979,13 +3980,13 @@ class Parameters:
                 dynamic_deps += param_dynamic_deps
             return deps, dynamic_deps
         elif attr in src.param:
-            info = PInfo(inst, cls, attr, src.param[attr], what)
+            info = PInfo(inst=inst, cls=cls, name=attr, pobj=src.param[attr], what=what)
         elif hasattr(src, attr):
             attr_obj = getattr(src, attr)
             if isinstance(attr_obj, Parameterized):
                 return [], []
             elif isinstance(attr_obj, (FunctionType, MethodType)):
-                info = MInfo(inst, cls, attr, attr_obj)
+                info = MInfo(inst=inst, cls=cls, name=attr, method=attr_obj)
             else:
                 raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
         elif getattr(src, "abstract", None):
@@ -4706,7 +4707,7 @@ class ParameterizedMetaclass(type):
         for dname, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            minfo = MInfo(None, mcs, dname, method)
+            minfo = MInfo(inst=None, cls=mcs, name=dname, method=method)
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             if watch:
                 _watch.append((dname, watch == 'queued', on_init, deps, dynamic_deps))

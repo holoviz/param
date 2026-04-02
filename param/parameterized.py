@@ -3767,7 +3767,7 @@ class Parameters:
         """
         cls_or_slf = self_.self_or_cls
         if parameters and name in parameters:
-            param_obj = parameters[name]
+            param_obj: Parameter | None = parameters[name]
         else:
             param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 

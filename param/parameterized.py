@@ -3375,15 +3375,14 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]  # pyright: ignore[reportAttributeAccessIssue]
-        param_ns: Parameters = self_or_cls.param
-        param_objs = param_ns.objects('existing')
+        param_objs = self_.objects('existing')
 
         for n, p in param_objs.items():
             if not hasattr(p, '_value_is_dynamic'):
                 continue
             is_dynamic = p._value_is_dynamic(None, self_._cls) if self_.self is None else p._value_is_dynamic(self_.self)
             if is_dynamic:
-                g = param_ns.get_value_generator(n, param_objs)
+                g = self_.get_value_generator(n, param_objs)
                 g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -3692,9 +3691,7 @@ class Parameters:
         >>> p.param.values(onlychanged=True)
         {'a': 10}
         """
-        self_or_cls = self_.self_or_cls
-        param_ns = self_or_cls.param
-        param_objs = param_ns.objects('existing')  # type: ignore[union-attr, ty:unresolved-attribute]
+        param_objs = self_.objects('existing')  # type: ignore[union-attr, ty:unresolved-attribute]
 
         vals = []
         for name, val in param_objs.items():
@@ -3718,23 +3715,13 @@ class Parameters:
         If name is not dynamic, its current value is returned
         (i.e. equivalent to ``getattr(name)``).
         """
-        cls_or_slf = self_.self_or_cls
-        param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
-
+        param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
         if not param_obj:
-            return getattr(cls_or_slf, name)
-
-        cls, slf = None, None
-        if isinstance(cls_or_slf, type):
-            cls = cls_or_slf
+            return getattr(self_.self_or_cls, name)
+        elif not hasattr(param_obj, '_force'):
+            return param_obj.__get__(self_.self, self_.cls)
         else:
-            slf = cls_or_slf
-
-        if not hasattr(param_obj,'_force'):
-            return param_obj.__get__(slf, cls)
-        else:
-            return param_obj._force(slf, cls)
+            return param_obj._force(self_.self, self_.cls)
 
     def get_value_generator(self_, name: str, parameters: dict[str, Parameter] | None = None) -> t.Any:
         """
@@ -3779,18 +3766,17 @@ class Parameters:
         <UniformRandom UniformRandom ...>
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = cls_or_slf.param
         if parameters and name in parameters:
             param_obj = parameters[name]
         else:
-            param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
+            param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf, name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj, 'attribs'):
-            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
+            value = [self_.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj, '_value_is_dynamic'):
@@ -3800,7 +3786,7 @@ class Parameters:
         else:
             if self_.self is not None and name in self_.self._param__private.values:
                 # dealing with object and it's been set on this object
-                value = self_.self.values[name]
+                value = self_.self._param__private.values[name]
             elif not callable(param_obj.default):
                 value = getattr(cls_or_slf, name)
             else:
@@ -3845,17 +3831,16 @@ class Parameters:
         -0.7312715117751976
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
+        param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
+            value = [self_.inspect_value(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
         elif not hasattr(param_obj,'_inspect'):
-            value = getattr(cls_or_slf,name)
+            value = getattr(cls_or_slf, name)
         else:
-            if isinstance(cls_or_slf,type):
+            if isinstance(cls_or_slf, type):
                 value = param_obj._inspect(None, cls_or_slf)
             else:
                 value = param_obj._inspect(cls_or_slf, None)

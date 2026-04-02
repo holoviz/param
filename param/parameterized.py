@@ -3376,13 +3376,14 @@ class Parameters:
         self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]  # pyright: ignore[reportAttributeAccessIssue]
         param_ns: Parameters = self_or_cls.param
+        param_objs = param_ns.objects('existing')
 
-        for n, p in param_ns.objects('existing').items():
+        for n, p in param_objs.items():
             if not hasattr(p, '_value_is_dynamic'):
                 continue
             is_dynamic = p._value_is_dynamic(None, self_._cls) if self_.self is None else p._value_is_dynamic(self_.self)
             if is_dynamic:
-                g = param_ns.get_value_generator(n)
+                g = param_ns.get_value_generator(n, param_objs)
                 g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -3725,7 +3726,7 @@ class Parameters:
             return getattr(cls_or_slf, name)
 
         cls, slf = None, None
-        if isinstance(cls_or_slf,type):
+        if isinstance(cls_or_slf, type):
             cls = cls_or_slf
         else:
             slf = cls_or_slf
@@ -3798,7 +3799,7 @@ class Parameters:
         # Dynamic Parameter...
         else:
             # TODO: is this always an instance?
-            if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
+            if self_.self is not None and name in cls_or_slf._param__private.values:
                 # dealing with object and it's been set on this object
                 value = cls_or_slf._param__private.values[name]
             elif not callable(param_obj.default):

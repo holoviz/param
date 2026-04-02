@@ -3798,10 +3798,9 @@ class Parameters:
 
         # Dynamic Parameter...
         else:
-            # TODO: is this always an instance?
-            if self_.self is not None and name in cls_or_slf._param__private.values:
+            if self_.self is not None and name in self_.self._param__private.values:
                 # dealing with object and it's been set on this object
-                value = cls_or_slf._param__private.values[name]
+                value = self_.self.values[name]
             elif not callable(param_obj.default):
                 value = getattr(cls_or_slf, name)
             else:

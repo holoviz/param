@@ -4679,6 +4679,8 @@ class ParameterizedMetaclass(type):
     used to find out if a class is abstract or not.
     """
 
+    param: Parameters
+
     def __init__(mcs, name: str, bases: tuple[type, ...], dict_: dict[str, t.Any]):
         """
         Initialize the class object (not an instance of the class, but

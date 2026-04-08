@@ -209,7 +209,7 @@ ty = "*"
 mypy = "*"
 numpy = "*"
 pandas = "*"
-pyrefly = "*"
+pyrefly = "!=0.60.0"  # https://github.com/facebook/pyrefly/issues/3042
 pyright = "*"
 IPython = "*"
 typing_extensions = "*"

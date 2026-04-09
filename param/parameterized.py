@@ -2105,6 +2105,13 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         """
         return {slot: getattr(self, slot) for slot in getattr(self.__class__, "_all_slots_", ())}
 
+    def __copy__(self) -> Parameter:
+        cls = self.__class__
+        duplicate = cls.__new__(cls)
+        for slot in cls._all_slots_:
+            object.__setattr__(duplicate, slot, getattr(self, slot))
+        return duplicate
+
     def __setstate__(self, state: dict[str, t.Any]):
         # set values of __slots__ (instead of in non-existent __dict__)
         for k, v in state.items():

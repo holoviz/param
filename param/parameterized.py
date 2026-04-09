@@ -59,7 +59,6 @@ if t.TYPE_CHECKING:
     class _StringInitKwargs(_ParameterKwargs, total=False):
         regex: str | re.Pattern[str] | None
 
-
 _T = t.TypeVar("_T")
 _P = t.ParamSpec("_P")
 _R = t.TypeVar("_R", covariant=True)
@@ -83,6 +82,8 @@ from ._utils import (
     descendents,  # noqa: F401
     gen_types,
 )
+
+_IS_PYPY = sys.implementation.name == "pypy"
 
 CRITICAL = 50
 ERROR = 40
@@ -2104,6 +2105,17 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         pickle and deepcopy ourselves.
         """
         return {slot: getattr(self, slot) for slot in getattr(self.__class__, "_all_slots_", ())}
+
+    def __copy__(self) -> Parameter:
+        cls = self.__class__
+        duplicate = cls.__new__(cls)
+        if _IS_PYPY:
+            # Workaround for PyPy segfaults (https://github.com/pypy/pypy/issues/5400)
+            duplicate.__setstate__(self.__getstate__())
+        else:
+            for slot in cls._all_slots_:
+                object.__setattr__(duplicate, slot, getattr(self, slot))
+        return duplicate
 
     def __setstate__(self, state: dict[str, t.Any]):
         # set values of __slots__ (instead of in non-existent __dict__)

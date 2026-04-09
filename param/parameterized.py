@@ -84,7 +84,7 @@ from ._utils import (
     gen_types,
 )
 
-_IS_PYPY = platform.python_implementation() == "PyPy"
+_IS_PYPY = sys.implementation.name == "pypy"
 
 CRITICAL = 50
 ERROR = 40

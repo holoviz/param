@@ -17,7 +17,6 @@ import inspect
 import numbers
 import operator
 import os
-import platform
 import re
 import sys
 import types

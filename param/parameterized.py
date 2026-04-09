@@ -59,7 +59,6 @@ if t.TYPE_CHECKING:
     class _StringInitKwargs(_ParameterKwargs, total=False):
         regex: str | re.Pattern[str] | None
 
-
 _T = t.TypeVar("_T")
 _P = t.ParamSpec("_P")
 _R = t.TypeVar("_R", covariant=True)
@@ -83,6 +82,8 @@ from ._utils import (
     descendents,  # noqa: F401
     gen_types,
 )
+
+_IS_PYPY = sys.implementation.name == "pypy"
 
 CRITICAL = 50
 ERROR = 40
@@ -903,7 +904,7 @@ def _resolve_mcs_deps(obj, resolved, dynamic, intermediate=True):
             dependencies.append(dep)
             continue
         inst = obj if dep.inst is None else dep.inst
-        dep = PInfo(inst, dep.cls, dep.name, inst.param[dep.name], what=dep.what)
+        dep = PInfo(inst=inst, cls=dep.cls, name=dep.name, pobj=inst.param[dep.name], what=dep.what)
         dependencies.append(dep)
     for dep in dynamic:
         subresolved, _ = obj.param._spec_to_obj(dep.spec, intermediate=intermediate)
@@ -1863,7 +1864,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             raise RuntimeError(
                 "An event cannot be triggered for an unbound parameter."
             )
-        event = Event(attribute, self.name, None, self.owner, old, new, None)
+        event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
@@ -2049,7 +2050,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         if obj is None or not watchers:
             return
 
-        event = Event('value', name, obj, self.owner, _old, val, None)
+        event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
 
         # Copy watchers here since they may be modified inplace during iteration
         for watcher in sorted(watchers, key=lambda w: w.precedence):
@@ -2123,6 +2124,17 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         pickle and deepcopy ourselves.
         """
         return {slot: getattr(self, slot) for slot in getattr(self.__class__, "_all_slots_", ())}
+
+    def __copy__(self) -> Parameter:
+        cls = self.__class__
+        duplicate = cls.__new__(cls)
+        if _IS_PYPY:
+            # Workaround for PyPy segfaults (https://github.com/pypy/pypy/issues/5400)
+            duplicate.__setstate__(self.__getstate__())
+        else:
+            for slot in cls._all_slots_:
+                object.__setattr__(duplicate, slot, getattr(self, slot))
+        return duplicate
 
     def __setstate__(self, state: dict[str, t.Any]):
         # set values of __slots__ (instead of in non-existent __dict__)
@@ -3291,13 +3303,14 @@ class Parameters:
         self_._events += events
         self_._state_watchers += watchers
 
-    def _update_event_type(self_, watcher: Watcher, event: Event, triggered: bool):
+    @staticmethod
+    def _update_event_type(watcher: Watcher, event: Event, triggered: bool) -> Event:
         """Return an updated Event object with the type field set appropriately."""
         if triggered:
             event_type = 'triggered'
         else:
             event_type = 'changed' if watcher.onlychanged else 'set'
-        return Event(event.what, event.name, event.obj, event.cls, event.old, event.new, event_type)
+        return event._replace(type=event_type)
 
     def _execute_watcher(self, watcher: Watcher, events: Iterable[Event]):
         if watcher.mode == 'args':
@@ -3888,7 +3901,7 @@ class Parameters:
         [PInfo(inst=MyClass(a=None, b=None, name='MyClass...]
         """
         method = getattr(self_.self_or_cls, name)
-        minfo = MInfo(self_.self, self_.cls, name, method)
+        minfo = MInfo(inst=self_.self, cls=self_.cls, name=name, method=method)
         deps, dynamic = _params_depended_on(
             minfo, dynamic=False, intermediate=intermediate)
         if self_.self is None:
@@ -3989,7 +4002,7 @@ class Parameters:
         if isinstance(spec, Parameter):
             inst = spec.owner if isinstance(spec.owner, Parameterized) else None
             cls = spec.owner if inst is None else type(inst)
-            pinfo = PInfo(inst, cls, spec.name, spec, 'value')
+            pinfo = PInfo(inst=inst, cls=cls, name=spec.name, pobj=spec, what='value')
             return [] if intermediate == 'only' else [pinfo], []
 
         obj, attr, what = _parse_dependency_spec(spec)
@@ -4041,13 +4054,13 @@ class Parameters:
                 dynamic_deps += param_dynamic_deps
             return deps, dynamic_deps
         elif attr in src.param:
-            info = PInfo(inst, cls, attr, src.param[attr], what)
+            info = PInfo(inst=inst, cls=cls, name=attr, pobj=src.param[attr], what=what)
         elif hasattr(src, attr):
             attr_obj = getattr(src, attr)
             if isinstance(attr_obj, Parameterized):
                 return [], []
             elif isinstance(attr_obj, (FunctionType, MethodType)):
-                info = MInfo(inst, cls, attr, attr_obj)
+                info = MInfo(inst=inst, cls=cls, name=attr, method=attr_obj)
             else:
                 raise AttributeError(f"Attribute {attr!r} could not be resolved on {src}.")
         elif getattr(src, "abstract", None):
@@ -4713,6 +4726,8 @@ class ParameterizedMetaclass(type):
     used to find out if a class is abstract or not.
     """
 
+    param: Parameters
+
     def __init__(mcs, name: str, bases: tuple[type, ...], dict_: dict[str, t.Any]):
         """
         Initialize the class object (not an instance of the class, but
@@ -4768,7 +4783,7 @@ class ParameterizedMetaclass(type):
         for dname, method, dinfo in dependers:
             watch = dinfo.get('watch', False)
             on_init = dinfo.get('on_init', False)
-            minfo = MInfo(None, mcs, dname, method)
+            minfo = MInfo(inst=None, cls=mcs, name=dname, method=method)
             deps, dynamic_deps = _params_depended_on(minfo, dynamic=False)
             if watch:
                 _watch.append((dname, watch == 'queued', on_init, deps, dynamic_deps))
@@ -5658,15 +5673,7 @@ class _NS:
     def __get__(self, obj: C | None, objtype: type[C]) -> Parameters:
         if obj is None:
             return objtype._param__parameters
-        objdict = getattr(obj, "__dict__", None)
-        ns = objdict.get("_param__parameters") if objdict is not None else None
-        if ns is None:
-            ns = Parameters(objtype, self=obj)
-            if objdict is not None:
-                objdict["_param__parameters"] = ns
-            else:
-                setattr(obj, "_param__parameters", ns)
-        return ns
+        return Parameters(objtype, self=obj)
 
 
 class _PrivateNS:

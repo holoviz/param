@@ -22,6 +22,7 @@ import sys
 import types
 import typing as t
 import warnings
+import weakref
 from contextlib import contextmanager
 from inspect import getfullargspec
 
@@ -2400,8 +2401,12 @@ class Parameters:
         self is the instance if set.
         """
         self_.cls = cls
-        self_.self = self
+        self_._self = None if self is None else weakref.ref(self)
         self_._depends: dict[str, list[t.Any]] = {"watch": []}
+
+    @property
+    def self(self_):
+        return None if self_._self is None else self_._self()
 
     @property
     def _BATCH_WATCH(self_):
@@ -5870,7 +5875,10 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # Unclear why this is a copy and not simply state.update(self.__dict__)
         state = self.__dict__.copy()
         for slot in get_occupied_slots(self):
-            state[slot] = getattr(self,slot)
+            state[slot] = getattr(self, slot)
+
+        # Remove the cached Parameters instance (holding a weakref to self)
+        state.pop("_param__parameters", None)
 
         # Note that Parameterized object pickling assumes that
         # attributes to be saved are only in __dict__ or __slots__
@@ -5915,8 +5923,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                             watcher_args[2] = getattr(self, fn.__name__)
                         new_watchers.append(Watcher(*watcher_args))
                     param_watchers[p][attr] = new_watchers
-
-        state.pop('param', None)
 
         for name,value in state.items():
             setattr(self,name,value)

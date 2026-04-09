@@ -17,6 +17,7 @@ import inspect
 import numbers
 import operator
 import os
+import platform
 import re
 import sys
 import types
@@ -59,7 +60,6 @@ if t.TYPE_CHECKING:
     class _StringInitKwargs(_ParameterKwargs, total=False):
         regex: str | re.Pattern[str] | None
 
-
 _T = t.TypeVar("_T")
 _P = t.ParamSpec("_P")
 _R = t.TypeVar("_R", covariant=True)
@@ -83,6 +83,8 @@ from ._utils import (
     descendents,  # noqa: F401
     gen_types,
 )
+
+_IS_PYPY = platform.python_implementation() == "PyPy"
 
 CRITICAL = 50
 ERROR = 40
@@ -2107,6 +2109,9 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
     def __copy__(self) -> Parameter:
         cls = self.__class__
+        if _IS_PYPY:
+            # Workaround for PyPy segfaults (https://github.com/pypy/pypy/issues/5400)
+            return cls.__new__(cls).__setstate__(self.__getstate__())
         duplicate = cls.__new__(cls)
         for slot in cls._all_slots_:
             object.__setattr__(duplicate, slot, getattr(self, slot))

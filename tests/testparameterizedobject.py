@@ -2,6 +2,7 @@
 import abc
 import inspect
 import re
+import sys
 import unittest
 import warnings
 import weakref
@@ -1984,6 +1985,7 @@ def test_abc_basic_checks():
     assert gc.l == [10, 11]
 
 
+@pytest.mark.skipif(hasattr(sys, "pypy_version_info"), reason='Works differently on PyPy')
 def test_no_param_namespace_cycle():
     # Accessing .param on an instance must not create a reference cycle.
     # A cycle (obj -> obj.__dict__['_param__parameters'] -> Parameters.self -> obj)

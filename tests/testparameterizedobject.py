@@ -2,8 +2,10 @@
 import abc
 import inspect
 import re
+import sys
 import unittest
 import warnings
+import weakref
 
 import param
 import numbergen
@@ -1981,3 +1983,22 @@ def test_abc_basic_checks():
     assert gc.l == [10]
     gc.x += 1
     assert gc.l == [10, 11]
+
+
+@pytest.mark.skipif(hasattr(sys, "pypy_version_info"), reason='Works differently on PyPy')
+def test_no_param_namespace_cycle():
+    # Accessing .param on an instance must not create a reference cycle.
+    # A cycle (obj -> obj.__dict__['_param__parameters'] -> Parameters.self -> obj)
+    # would prevent CPython's reference-counting from immediately freeing the
+    # object, breaking weakref-based cleanup used by libraries like HoloViews.
+    class P(param.Parameterized):
+        x = param.Number(1)
+
+    freed = []
+    obj = P()
+    ref = weakref.ref(obj, lambda _: freed.append(True))  # noqa: F841
+
+    _ = obj.param.values()  # access .param to trigger any caching
+
+    del obj
+    assert freed, "Parameterized instance not freed immediately — likely a reference cycle via .param"

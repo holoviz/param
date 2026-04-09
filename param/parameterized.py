@@ -5617,15 +5617,7 @@ class _NS:
     def __get__(self, obj: C | None, objtype: type[C]) -> Parameters:
         if obj is None:
             return objtype._param__parameters
-        objdict = getattr(obj, "__dict__", None)
-        ns = objdict.get("_param__parameters") if objdict is not None else None
-        if ns is None:
-            ns = Parameters(objtype, self=obj)
-            if objdict is not None:
-                objdict["_param__parameters"] = ns
-            else:
-                setattr(obj, "_param__parameters", ns)
-        return ns
+        return Parameters(objtype, self=obj)
 
 
 class _PrivateNS:

@@ -2108,12 +2108,13 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
     def __copy__(self) -> Parameter:
         cls = self.__class__
+        duplicate = cls.__new__(cls)
         if _IS_PYPY:
             # Workaround for PyPy segfaults (https://github.com/pypy/pypy/issues/5400)
-            return cls.__new__(cls).__setstate__(self.__getstate__())
-        duplicate = cls.__new__(cls)
-        for slot in cls._all_slots_:
-            object.__setattr__(duplicate, slot, getattr(self, slot))
+            duplicate.__setstate__(self.__getstate__())
+        else:
+            for slot in cls._all_slots_:
+                object.__setattr__(duplicate, slot, getattr(self, slot))
         return duplicate
 
     def __setstate__(self, state: dict[str, t.Any]):

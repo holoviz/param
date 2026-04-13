@@ -2919,7 +2919,7 @@ class ClassSelector(SelectorBase[_T]):
             self: ClassSelector[CT],
             *,
             default: CT,
-            class_: type[CT] | tuple[type[CT], ...],
+            class_: type[CT],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
             doc: str | None = None,
@@ -2942,7 +2942,7 @@ class ClassSelector(SelectorBase[_T]):
             self: ClassSelector[CT | None],
             *,
             default: None = None,
-            class_: type[CT] | tuple[type[CT], ...],
+            class_: type[CT],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2954,7 +2954,7 @@ class ClassSelector(SelectorBase[_T]):
             self: ClassSelector[CT | None],
             *,
             default: CT | None = None,
-            class_: type[CT] | tuple[type[CT], ...],
+            class_: type[CT],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2963,10 +2963,21 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
+            self: ClassSelector[t.Any],
+            *,
+            default: t.Any = None,
+            class_: tuple[type, ...],
+            is_instance: t.Literal[True] = True,
+            allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None: ...
+
+        @t.overload
+        def __init__(
             self: ClassSelector[type[CT]],
             *,
             default: type[CT],
-            class_: type[CT] | tuple[type[CT], ...],
+            class_: type[CT],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2996,6 +3007,17 @@ class ClassSelector(SelectorBase[_T]):
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[t.Any],
+            *,
+            default: t.Any = None,
+            class_: tuple[type, ...],
+            is_instance: t.Literal[False] = False,
+            allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None: ...
 
     def __init__(
         self, *,

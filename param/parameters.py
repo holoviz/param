@@ -3471,7 +3471,7 @@ class List(Parameter[_T]):
             self: List[list[LT]],
             default: list[LT] = [],
             *,
-            item_type: type[LT] | tuple[type[LT], ...] | None = None,
+            item_type: type[LT] | tuple[type[LT], ...] = (),
             bounds: tuple[int, int | None] | None = (0, None),
             is_instance: bool = True,
             allow_None: t.Literal[False] = False,
@@ -3495,7 +3495,7 @@ class List(Parameter[_T]):
             self: List[list[LT] | None],
             default: list[LT] | None = None,
             *,
-            item_type: type[LT] | tuple[type[LT], ...] | None = None,
+            item_type: type[LT] | tuple[type[LT], ...] = (),
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:

@@ -2939,7 +2939,7 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self: ClassSelector[CT],
+            self: ClassSelector[CT | None],
             *,
             default: None = None,
             class_: type[CT],

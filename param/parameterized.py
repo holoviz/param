@@ -1190,6 +1190,7 @@ class ParameterMetaclass(type):
 
 
 _UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+_PARAMETER_CACHE_ATTRS = ('instantiate', 'constant', 'default_factory')
 
 
 class _ParameterBase(metaclass=ParameterMetaclass):
@@ -1854,7 +1855,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 pass
 
         super().__setattr__(attribute, value)
-        if is_slot and attribute in ('instantiate', 'constant', 'default_factory'):
+        if is_slot and attribute in _PARAMETER_CACHE_ATTRS:
             self._invalidate_init_cache()
         if has_watcher and old is not NotImplemented:
             self._trigger_event(attribute, old, value)

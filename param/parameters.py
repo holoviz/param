@@ -1639,11 +1639,11 @@ class NumericTuple(Tuple[_T]):
 
         @t.overload
         def __init__(
-            self: NumericTuple[tuple[float, ...] | None],
+            self: NumericTuple[tuple[float, ...]],
             default: tuple[float, ...] = (0.0, 0.0),
             *,
             length: int | None = None,
-            allow_None: t.Literal[True] = True,
+            allow_None: t.Literal[False] = False,
             doc: str | None = None,
             label: str | None = None,
             precedence: float | None = None,
@@ -1662,10 +1662,21 @@ class NumericTuple(Tuple[_T]):
         @t.overload
         def __init__(
             self: NumericTuple[tuple[float, ...] | None],
-            default: None = None,
+            default: tuple[float, ...] | None = (0.0, 0.0),
             *,
             length: int | None = None,
-            allow_None: t.Literal[False] = False,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: NumericTuple[tuple[float, ...] | None],
+            default: None,
+            *,
+            length: int | None = None,
+            allow_None: bool = False,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...

@@ -67,6 +67,7 @@ if t.TYPE_CHECKING:
     from .parameterized import _ParameterKwargs
 
     LT = t.TypeVar("LT")
+    CT = t.TypeVar("CT")
 
     AT = t.TypeVar("AT", np.ndarray, np.ndarray | None)
     DF = t.TypeVar("DF", pd.DataFrame, pd.DataFrame | None)
@@ -1638,11 +1639,11 @@ class NumericTuple(Tuple[_T]):
 
         @t.overload
         def __init__(
-            self: NumericTuple[tuple[float, ...] | None],
+            self: NumericTuple[tuple[float, ...]],
             default: tuple[float, ...] = (0.0, 0.0),
             *,
             length: int | None = None,
-            allow_None: t.Literal[True] = True,
+            allow_None: t.Literal[False] = False,
             doc: str | None = None,
             label: str | None = None,
             precedence: float | None = None,
@@ -1661,10 +1662,21 @@ class NumericTuple(Tuple[_T]):
         @t.overload
         def __init__(
             self: NumericTuple[tuple[float, ...] | None],
-            default: None = None,
+            default: tuple[float, ...] | None = (0.0, 0.0),
             *,
             length: int | None = None,
-            allow_None: t.Literal[False] = False,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: NumericTuple[tuple[float, ...] | None],
+            default: None,
+            *,
+            length: int | None = None,
+            allow_None: bool = False,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
@@ -2586,7 +2598,7 @@ class Selector(SelectorBase, _SignatureSelector[_T]):
         object.__setattr__(self, 'check_on_set', check_on_set)
 
         instantiate = params.pop("instantiate", Undefined)
-        params["instantiate"] = False if instantiate is Undefined else instantiate
+        params["instantiate"] = False if instantiate is Undefined else instantiate  # pyrefly: ignore[bad-typed-dict-key]
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:
@@ -2915,10 +2927,10 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[CT],
             *,
-            default: _T,
-            class_: type[_T] | tuple[type[_T], ...],
+            default: CT,
+            class_: type[CT],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
             doc: str | None = None,
@@ -2938,10 +2950,10 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[CT | None],
             *,
             default: None = None,
-            class_: type[_T] | tuple[type[_T], ...],
+            class_: type[CT],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2950,10 +2962,10 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[CT | None],
             *,
-            default: _T | None = None,
-            class_: type[_T] | tuple[type[_T], ...],
+            default: CT | None = None,
+            class_: type[CT],
             is_instance: t.Literal[True] = True,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2962,10 +2974,32 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[t.Any],
             *,
-            default: type[_T],
-            class_: type[_T] | tuple[type[_T], ...],
+            default: t.Any = None,
+            class_: tuple[type, ...],
+            is_instance: t.Literal[True] = True,
+            allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None: ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[t.Any],
+            *,
+            default: t.Any = None,
+            class_: tuple[type, ...],
+            is_instance: t.Literal[True] = True,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None: ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[type[CT]],
+            *,
+            default: type[CT],
+            class_: type[CT],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2974,10 +3008,10 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[type[CT] | None],
             *,
             default: None = None,
-            class_: type[_T] | tuple[type[_T], ...],
+            class_: type[CT] | tuple[type[CT], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
             **kwargs: Unpack[_ParameterKwargs]
@@ -2986,15 +3020,26 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: ClassSelector[type[CT] | None],
             *,
-            default: type[_T] | None = None,
-            class_: type[_T] | tuple[type[_T], ...],
+            default: type[CT] | None = None,
+            class_: type[CT] | tuple[type[CT], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
+
+        @t.overload
+        def __init__(
+            self: ClassSelector[t.Any],
+            *,
+            default: t.Any = None,
+            class_: tuple[type, ...],
+            is_instance: t.Literal[False] = False,
+            allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None: ...
 
     def __init__(
         self, *,
@@ -3158,7 +3203,7 @@ class Array(ClassSelector["AT"]):
         import numpy
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,  # type: ignore[arg-type]
-            class_=numpy.ndarray,
+            class_=numpy.ndarray,  # type: ignore[arg-type]
             is_instance=True,
             allow_None=allow_None,  # type: ignore[arg-type]
             **params,  # type: ignore[arg-type]
@@ -3471,7 +3516,7 @@ class List(Parameter[_T]):
             self: List[list[LT]],
             default: list[LT] = [],
             *,
-            item_type: type[LT] | tuple[type[LT], ...] | None = None,
+            item_type: type[LT] | tuple[type[LT], ...] = (),
             bounds: tuple[int, int | None] | None = (0, None),
             is_instance: bool = True,
             allow_None: t.Literal[False] = False,
@@ -3495,7 +3540,7 @@ class List(Parameter[_T]):
             self: List[list[LT] | None],
             default: list[LT] | None = None,
             *,
-            item_type: type[LT] | tuple[type[LT], ...] | None = None,
+            item_type: type[LT] | tuple[type[LT], ...] = (),
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:

@@ -15,11 +15,12 @@ if t.TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator
 
     _Y = t.TypeVar("_Y")
-    _S = t.TypeVar("_S")
     _T = t.TypeVar("_T")
 
 _P = t.ParamSpec("_P")
+_FullP = t.ParamSpec("_FullP")
 _R = t.TypeVar("_R", covariant=True)
+_S = t.TypeVar("_S")
 Dependency = Parameter | str
 
 class DependencyInfo(t.TypedDict):
@@ -28,6 +29,10 @@ class DependencyInfo(t.TypedDict):
     watch: bool
     on_init: bool
 
+class _DepsFn(t.Protocol[_FullP, _R]):
+    _dinfo: DependencyInfo
+    def __call__(self, *args: _FullP.args, **kwargs: _FullP.kwargs) -> _R: ...
+
 class DependsFunc(t.Protocol[_P, _R]):
     _dinfo: DependencyInfo
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R: ...
@@ -35,25 +40,25 @@ class DependsFunc(t.Protocol[_P, _R]):
 
 @t.overload
 def depends(
-    func: Callable[_P, _R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
+    func: Callable[t.Concatenate[_S, _P], _R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
 ) -> DependsFunc[_P, _R]:
     ...
 
 @t.overload
 def depends(
     *dependencies: str, watch: bool = False, on_init: bool = False
-) -> Callable[[Callable[_P, _R]], DependsFunc[_P, _R]]:
+) -> Callable[[Callable[t.Concatenate[_S, _P], _R]], DependsFunc[_P, _R]]:
     ...
 
 @t.overload
 def depends(
     *dependencies: Parameter, watch: bool = False, on_init: bool = False, **kw: Parameter
-) -> Callable[[Callable[_P, _R]], DependsFunc[_P, _R]]:
+) -> Callable[[Callable[t.Concatenate[_S, _P], _R]], DependsFunc[_P, _R]]:
     ...
 
 def depends(
-    *dependencies: Dependency | Callable[_P, _R], watch: bool = False, on_init: bool = False, **kw: Dependency
-) -> DependsFunc[_P, _R] | Callable[[Callable[_P, _R]], DependsFunc[_P, _R]]:
+    *dependencies: Dependency | Callable[t.Concatenate[_S, _P], _R], watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> DependsFunc[_P, _R] | Callable[[Callable[t.Concatenate[_S, _P], _R]], DependsFunc[_P, _R]]:
     """
     Annotates a function or :class:`Parameterized` method to express its dependencies.
 
@@ -74,51 +79,51 @@ def depends(
 
     """
     if dependencies and callable(dependencies[0]) and not isinstance(dependencies[0], (str, Parameter)):
-        func = t.cast("Callable[_P, _R]", dependencies[0])
+        func = t.cast("Callable[t.Concatenate[_S, _P], _R]", dependencies[0])
         deps = t.cast("tuple[Dependency, ...]", dependencies[1:])
-        return _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw)
+        return t.cast("DependsFunc[_P, _R]", _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw))
 
     deps = t.cast("tuple[Dependency, ...]", dependencies)
 
-    def _decorator(func: Callable[_P, _R]) -> DependsFunc[_P, _R]:
-        return _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw)
+    def _decorator(func: Callable[t.Concatenate[_S, _P], _R]) -> DependsFunc[_P, _R]:
+        return t.cast("DependsFunc[_P, _R]", _depends_impl(func, *deps, watch=watch, on_init=on_init, **kw))
 
     return _decorator
 
 
 def _depends_impl(
-    func: Callable[_P, _R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
-) -> DependsFunc[_P, _R]:
+    func: Callable[_FullP, _R], /, *dependencies: Dependency, watch: bool = False, on_init: bool = False, **kw: Dependency
+) -> _DepsFn[_FullP, _R]:
     dependencies, kw = (
         tuple(transform_reference(arg) for arg in dependencies),
         {key: transform_reference(arg) for key, arg in kw.items()}
     )
 
     if inspect.isgeneratorfunction(func):
-        func_gen = t.cast("Callable[_P, Generator[t.Any, t.Any, t.Any]]", func)
+        func_gen = t.cast("Callable[_FullP, Generator[t.Any, t.Any, t.Any]]", func)
         @wraps(func)
         def _depends_gen(*args, **kw):
             for val in func_gen(*args, **kw):
                 yield val
-        _depends = t.cast("Callable[_P, _R]", _depends_gen)
+        _depends = t.cast("Callable[_FullP, _R]", _depends_gen)
     elif inspect.isasyncgenfunction(func):
-        func_agen = t.cast("Callable[_P, AsyncGenerator[t.Any, t.Any]]", func)
+        func_agen = t.cast("Callable[_FullP, AsyncGenerator[t.Any, t.Any]]", func)
         @wraps(func)
         async def _depends_async_gen(*args, **kw):
             async for val in func_agen(*args, **kw):
                 yield val
-        _depends = t.cast("Callable[_P, _R]", _depends_async_gen)
+        _depends = t.cast("Callable[_FullP, _R]", _depends_async_gen)
     elif iscoroutinefunction(func):
-        F = t.cast("Callable[_P, t.Awaitable[_R]]", func)
+        F = t.cast("Callable[_FullP, t.Awaitable[_R]]", func)
         @wraps(func)
         async def _depends_coro(*args, **kw):
             return await F(*args, **kw)
-        _depends = t.cast("Callable[_P, _R]", _depends_coro)
+        _depends = t.cast("Callable[_FullP, _R]", _depends_coro)
     else:
         @wraps(func)
         def _depends_sync(*args, **kw):
             return func(*args, **kw)
-        _depends = t.cast("Callable[_P, _R]", _depends_sync)
+        _depends = t.cast("Callable[_FullP, _R]", _depends_sync)
 
     deps = list(dependencies)+list(kw.values())
     string_specs = False
@@ -155,7 +160,7 @@ def _depends_impl(
     _dinfo.update({'dependencies': dependencies,
                    'kw': kw, 'watch': watch, 'on_init': on_init})
 
-    typed_depends = t.cast("DependsFunc[_P, _R]", _depends)
+    typed_depends = t.cast("_DepsFn[_FullP, _R]", _depends)
     typed_depends._dinfo = _dinfo
 
     if string_specs or not watch:
@@ -196,7 +201,7 @@ def _depends_impl(
         def cb_gen(*events: Event):
             args = _resolve_args()
             dep_kwargs = _resolve_kwargs()
-            func_gen = t.cast("Callable[_P, Generator[t.Any, t.Any, t.Any]]", func)
+            func_gen = t.cast("Callable[_FullP, Generator[t.Any, t.Any, t.Any]]", func)
             for val in func_gen(*args, **dep_kwargs):
                 yield val
         cb = cb_gen
@@ -204,7 +209,7 @@ def _depends_impl(
         async def cb_async_gen(*events: Event):
             args = _resolve_args()
             dep_kwargs = _resolve_kwargs()
-            func_agen = t.cast("Callable[_P, AsyncGenerator[t.Any, t.Any]]", func)
+            func_agen = t.cast("Callable[_FullP, AsyncGenerator[t.Any, t.Any]]", func)
             async for val in func_agen(*args, **dep_kwargs):
                 yield val
         cb = cb_async_gen
@@ -212,7 +217,7 @@ def _depends_impl(
         async def cb_coro(*events: Event):
             args = _resolve_args()
             dep_kwargs = _resolve_kwargs()
-            func_coro = t.cast("Callable[_P, t.Awaitable[t.Any]]", func)
+            func_coro = t.cast("Callable[_FullP, t.Awaitable[t.Any]]", func)
             await func_coro(*args, **dep_kwargs)
         cb = cb_coro
     else:

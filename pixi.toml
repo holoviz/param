@@ -15,7 +15,7 @@ default = [
     "example",
     "test-example",
     "lint",
-    "typecheck",
+    "type",
     "doc",
     "dev",
 ]
@@ -60,8 +60,8 @@ no-default-feature = true
 features = ["py313", "lint"]
 no-default-feature = true
 
-[environments.typecheck]
-features = ["py313", "required", "typecheck"]
+[environments.type]
+features = ["py313", "required", "type", "type-task"]
 no-default-feature = true
 
 [feature.required.dependencies]
@@ -204,20 +204,29 @@ lint-install = 'pre-commit install'
 # =============================================
 # =============== TYPECHECK ===================
 # =============================================
-[feature.typecheck.dependencies]
+[feature.type.dependencies]
 ty = "*"
 mypy = "*"
 numpy = "*"
 pandas = "*"
-pyrefly = "!=0.60.0"  # https://github.com/facebook/pyrefly/issues/3042
+pyrefly = "*"
 pyright = "*"
 IPython = "*"
 typing_extensions = "*"
 tornado = "*"
 
-[feature.typecheck.tasks]
-type-ty = 'ty check'
-type-mypy = 'mypy'
-type-pyrefly = 'pyrefly check --output-format min-text --count-errors=0'
-type-pyright = 'pyright'
-type-all = { depends-on = ["type-ty", "type-mypy", "type-pyrefly", "type-pyright"] }
+[feature.type-task.tasks]
+type-ty = { cmd = 'ty check {{ file }}', args = [{ arg = "file", default = "" }] }
+type-mypy = { cmd = 'mypy {{ file }}', args = [{ arg = "file", default = "" }] }
+type-pyrefly = { cmd = 'pyrefly check --output-format min-text --count-errors=0 {{ file }}', args = [
+    { arg = "file", default = "" },
+] }
+type-pyright = { cmd = 'pyright {{ file }}', args = [{ arg = "file", default = "" }] }
+type-all = { depends-on = [
+    { task = "type-ty", args = [ { file = "{{ file }}" } ] },
+    { task = "type-mypy", args = [ { file = "{{ file }}" } ] },
+    { task = "type-pyrefly", args = [ { file = "{{ file }}" } ] },
+    { task = "type-pyright", args = [ { file = "{{ file }}" } ] },
+], args = [
+    { arg = "file", default = "" },
+] }

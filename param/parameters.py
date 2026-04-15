@@ -2974,6 +2974,17 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
+            self: ClassSelector[t.Any],
+            *,
+            default: t.Any = None,
+            class_: tuple[type, ...],
+            is_instance: t.Literal[True] = True,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None: ...
+
+        @t.overload
+        def __init__(
             self: ClassSelector[type[CT]],
             *,
             default: type[CT],

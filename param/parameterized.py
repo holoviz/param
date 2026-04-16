@@ -1190,6 +1190,7 @@ class ParameterMetaclass(type):
 
 
 _UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+_PARAMETER_CACHE_ATTRS = ('instantiate', 'constant', 'default_factory')
 
 
 class _ParameterBase(metaclass=ParameterMetaclass):
@@ -1854,6 +1855,8 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 pass
 
         super().__setattr__(attribute, value)
+        if is_slot and attribute in _PARAMETER_CACHE_ATTRS:
+            self._invalidate_init_cache()
         if has_watcher and old is not NotImplemented:
             self._trigger_event(attribute, old, value)
 
@@ -1867,6 +1870,20 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             self.owner.param._call_watcher(watcher, event)
         if not self.owner.param._BATCH_WATCH:
             self.owner.param._batch_call_watchers()
+
+    def _invalidate_init_cache(self):
+        try:
+            owner = object.__getattribute__(self, 'owner')
+        except AttributeError:
+            return
+        if owner is None:
+            return
+        private = owner._param__private
+        if not hasattr(private, 'params_to_deepcopy'):
+            return
+        private.params_to_deepcopy = None
+        private.params_to_ref = None
+        private.params_with_default_factory = None
 
     def __getattribute__(self, key: str) -> t.Any:
         """
@@ -2011,6 +2028,9 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 _old = obj._param__private.values.get(name, self.default)
                 obj._param__private.values[name] = val
         self._post_setter(obj, val)
+
+        if obj is None:
+            self._invalidate_init_cache()
 
         if obj is not None:
             if not hasattr(obj, '_param__private') or not getattr(obj._param__private, 'initialized', False):
@@ -2573,21 +2593,17 @@ class Parameters:
         defined as parameters.
         """
         self = self_.self
-        ## Deepcopy all 'instantiate=True' parameters
-        params_to_deepcopy = {}
-        params_to_ref = {}
         objects = self_._cls_parameters
-        for pname, p in objects.items():
-            if pname == 'name' or p.default_factory:
-                continue
-            if p.instantiate:
-                params_to_deepcopy[pname] = p
-            elif p.constant:
-                params_to_ref[pname] = p
+        private = self_.cls._param__private
+        params_to_deepcopy = private.params_to_deepcopy or []
+        params_to_ref = private.params_to_ref or []
 
-        for p in params_to_deepcopy.values():
+        if not params and not params_to_deepcopy and not params_to_ref:
+            return {}, {}
+
+        for p in params_to_deepcopy:
             self_._instantiate_param(p)
-        for p in params_to_ref.values():
+        for p in params_to_ref:
             self_._instantiate_param(p, deepcopy=False)
 
         ## keyword arg setting
@@ -3120,8 +3136,22 @@ class Parameters:
         and parameters are rarely added (and cannot be deleted).
         """
         cls = self_.cls
-        pdict = cls._param__private.params
+        private = cls._param__private
+        pdict = private.params
         if pdict:
+            if private.params_to_deepcopy is None or private.params_to_ref is None or private.params_with_default_factory is None:
+                private.params_to_deepcopy = []
+                private.params_to_ref = []
+                private.params_with_default_factory = []
+                for pname, pobj in pdict.items():
+                    if pname == 'name':
+                        continue
+                    if pobj.default_factory is not None:
+                        private.params_with_default_factory.append((pname, pobj))
+                    elif pobj.instantiate:
+                        private.params_to_deepcopy.append(pobj)
+                    elif pobj.constant:
+                        private.params_to_ref.append(pobj)
             return pdict
 
         paramdict = {}
@@ -3130,12 +3160,28 @@ class Parameters:
                 if isinstance(val, Parameter):
                     paramdict[name] = val
 
+        params_to_deepcopy: list[Parameter] = []
+        params_to_ref: list[Parameter] = []
+        params_with_default_factory: list[tuple[str, Parameter]] = []
+        for pname, pobj in paramdict.items():
+            if pname == 'name':
+                continue
+            if pobj.default_factory is not None:
+                params_with_default_factory.append((pname, pobj))
+            elif pobj.instantiate:
+                params_to_deepcopy.append(pobj)
+            elif pobj.constant:
+                params_to_ref.append(pobj)
+
         # We only want the cache to be visible to the cls on which
         # params() is called, so we mangle the name ourselves at
         # runtime (if we were to mangle it now, it would be
         # _Parameterized.__params for all classes).
         # cls._param__private.params[f'_{cls.__name__}__params'] = paramdict
-        cls._param__private.params = paramdict
+        private.params = paramdict
+        private.params_to_deepcopy = params_to_deepcopy
+        private.params_to_ref = params_to_ref
+        private.params_with_default_factory = params_with_default_factory
         return paramdict
 
     def objects(self_, instance: t.Literal[True, False, 'existing'] = True) -> dict[str, Parameter]:
@@ -3343,14 +3389,14 @@ class Parameters:
         """
         self_or_cls = self_.self_or_cls
         self_or_cls._Dynamic_time_fn = time_fn  # type: ignore[union-attr, ty:invalid-assignment]  # pyright: ignore[reportAttributeAccessIssue]
-        param_ns: Parameters = self_or_cls.param
+        param_objs = self_.objects('existing')
 
-        for n, p in param_ns.objects('existing').items():
+        for n, p in param_objs.items():
             if not hasattr(p, '_value_is_dynamic'):
                 continue
             is_dynamic = p._value_is_dynamic(None, self_._cls) if self_.self is None else p._value_is_dynamic(self_.self)
             if is_dynamic:
-                g = param_ns.get_value_generator(n)
+                g = self_.get_value_generator(n, param_objs)
                 g._Dynamic_time_fn = time_fn
 
         if sublistattr:
@@ -3659,12 +3705,12 @@ class Parameters:
         >>> p.param.values(onlychanged=True)
         {'a': 10}
         """
-        self_or_cls = self_.self_or_cls
-        param_ns = self_or_cls.param
+        param_objs = self_.objects('existing')  # type: ignore[union-attr, ty:unresolved-attribute]
+
         vals = []
-        for name, val in param_ns.objects('existing').items():  # type: ignore[union-attr, ty:unresolved-attribute,]
-            value = param_ns.get_value_generator(name)  # type: ignore[union-attr, ty:unresolved-attribute]
-            if name == 'name' and onlychanged and _is_auto_name(self_.cls.__name__, value):
+        for name, val in param_objs.items():
+            value = self_.get_value_generator(name, param_objs)
+            if name == 'name' and onlychanged and isinstance(value, str) and _is_auto_name(self_.cls.__name__, value):
                 continue
             if not onlychanged or not Comparator.is_equal(value, val.default):
                 vals.append((name, value))
@@ -3683,25 +3729,15 @@ class Parameters:
         If name is not dynamic, its current value is returned
         (i.e. equivalent to ``getattr(name)``).
         """
-        cls_or_slf = self_.self_or_cls
-        param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
-
+        param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
         if not param_obj:
-            return getattr(cls_or_slf, name)
-
-        cls, slf = None, None
-        if isinstance(cls_or_slf,type):
-            cls = cls_or_slf
+            return getattr(self_.self_or_cls, name)
+        elif not hasattr(param_obj, '_force'):
+            return param_obj.__get__(self_.self, self_.cls)
         else:
-            slf = cls_or_slf
+            return param_obj._force(self_.self, self_.cls)
 
-        if not hasattr(param_obj,'_force'):
-            return param_obj.__get__(slf, cls)
-        else:
-            return param_obj._force(slf, cls)
-
-    def get_value_generator(self_, name: str) -> t.Any:
+    def get_value_generator(self_, name: str, parameters: dict[str, Parameter] | None = None) -> t.Any:
         """
         Retrieve the value or value-generating object of a named parameter.
 
@@ -3744,15 +3780,17 @@ class Parameters:
         <UniformRandom UniformRandom ...>
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
+        if parameters and name in parameters:
+            param_obj: Parameter | None = parameters[name]
+        else:
+            param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
-            value = getattr(cls_or_slf,name)
+            value = getattr(cls_or_slf, name)
 
         # CompositeParameter detected by being a Parameter and having 'attribs'
         elif hasattr(param_obj, 'attribs'):
-            value = [param_ns.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
+            value = [self_.get_value_generator(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
 
         # not a Dynamic Parameter
         elif not hasattr(param_obj, '_value_is_dynamic'):
@@ -3760,10 +3798,9 @@ class Parameters:
 
         # Dynamic Parameter...
         else:
-            # TODO: is this always an instance?
-            if isinstance(cls_or_slf, Parameterized) and name in cls_or_slf._param__private.values:
+            if self_.self is not None and name in self_.self._param__private.values:
                 # dealing with object and it's been set on this object
-                value = cls_or_slf._param__private.values[name]
+                value = self_.self._param__private.values[name]
             elif not callable(param_obj.default):
                 value = getattr(cls_or_slf, name)
             else:
@@ -3808,17 +3845,16 @@ class Parameters:
         -0.7312715117751976
         """
         cls_or_slf = self_.self_or_cls
-        param_ns = cls_or_slf.param
-        param_obj = param_ns.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
+        param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
 
         if not param_obj:
             value = getattr(cls_or_slf,name)
         elif hasattr(param_obj,'attribs'):
-            value = [param_ns.inspect_value(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
+            value = [self_.inspect_value(a) for a in param_obj.attribs]  # type: ignore[union-attr, ty:unresolved-attribute]
         elif not hasattr(param_obj,'_inspect'):
-            value = getattr(cls_or_slf,name)
+            value = getattr(cls_or_slf, name)
         else:
-            if isinstance(cls_or_slf,type):
+            if isinstance(cls_or_slf, type):
                 value = param_obj._inspect(None, cls_or_slf)
             else:
                 value = param_obj._inspect(cls_or_slf, None)
@@ -5486,6 +5522,9 @@ class _ClassPrivate:
         'disable_instance_params',
         'renamed',
         'params',
+        'params_to_deepcopy',
+        'params_to_ref',
+        'params_with_default_factory',
         'initialized',
         'signature',
         'explicit_no_refs',
@@ -5495,6 +5534,9 @@ class _ClassPrivate:
     disable_instance_params: bool
     renamed: bool
     params: dict[str, Parameter]
+    params_to_deepcopy: list[Parameter] | None
+    params_to_ref: list[Parameter] | None
+    params_with_default_factory: list[tuple[str, Parameter]] | None
     initialized: bool
     signature: inspect.Signature | None
     explicit_no_refs: list[str]
@@ -5518,6 +5560,9 @@ class _ClassPrivate:
         self.disable_instance_params = disable_instance_params
         self.renamed = renamed
         self.params = {} if params is None else params
+        self.params_to_deepcopy = None
+        self.params_to_ref = None
+        self.params_with_default_factory = None
         self.initialized = False
         self.signature = None
         self.explicit_no_refs = [] if explicit_no_refs is None else explicit_no_refs
@@ -5838,21 +5883,19 @@ class Parameterized(metaclass=ParameterizedMetaclass):
 
         # Find parameters with default_factory through the class
         # parameters to avoid making a copy.
-        params_with_default_factory = [
-            pname
-            for pname, pobj in self.param._cls_parameters.items()
-            if pname not in params
-            and pobj.default_factory is not None
-        ]
+        params_with_default_factory = type(self)._param__private.params_with_default_factory or []
         # Set from default_factory once initialized so instance parameters
         # are copied.
         if params_with_default_factory:
-            for pname in params_with_default_factory:
-                pobj = self.param[pname]
+            for pname, pobj in params_with_default_factory:
+                if pname in params:
+                    continue
                 dfactory = pobj.default_factory
                 if dfactory is None:
                     continue
                 elif isinstance(dfactory, DefaultFactory):
+                    # DefaultFactory receives instance-level Parameter context.
+                    pobj = self.param[pname]
                     default_val = dfactory(cls=type(self), self=self, parameter=pobj)
                 else:
                     default_val = dfactory()

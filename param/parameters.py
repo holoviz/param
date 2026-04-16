@@ -2998,7 +2998,7 @@ class ClassSelector(SelectorBase[_T]):
         def __init__(
             self: ClassSelector[type[CT]],
             *,
-            default: type[CT],
+            default: type[t.Any],
             class_: type[CT],
             is_instance: t.Literal[False],
             allow_None: t.Literal[False] = False,
@@ -3022,7 +3022,7 @@ class ClassSelector(SelectorBase[_T]):
         def __init__(
             self: ClassSelector[type[CT] | None],
             *,
-            default: type[CT] | None = None,
+            default: type[t.Any] | None = None,
             class_: type[CT] | tuple[type[CT], ...],
             is_instance: t.Literal[False],
             allow_None: t.Literal[True] = True,

@@ -54,6 +54,7 @@ from .parameterized import shared_parameters
 from .parameterized import logging_level
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
 from .parameters import (
+    NoNone,
     guess_param_types,
     param_union,
     parameterized_class,
@@ -184,6 +185,7 @@ __all__ = (
     'ListSelector',
     'Magnitude',
     'MultiFileSelector',
+    'NoNone',
     'Number',
     'NumericTuple',
     'ObjectSelector',

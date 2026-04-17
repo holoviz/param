@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import enum
 import glob
 import inspect
 import numbers
@@ -2890,6 +2891,14 @@ class MultiFileSelector(ListSelector):
         return _abbreviate_paths(self.path, super().get_range())
 
 
+class NoNoneType(enum.Enum):
+    NO_NONE = enum.auto()
+
+
+NoNone = NoNoneType.NO_NONE
+
+
+
 class ClassSelector(SelectorBase[_T]):
     """
     Parameter allowing selection of either a subclass or an instance of a class
@@ -2951,6 +2960,18 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
+            self: ClassSelector[CT],
+            *,
+            default: CT | None = None,
+            class_: type[CT],
+            is_instance: t.Literal[True] = True,
+            allow_None: NoNoneType,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
             self: ClassSelector[CT | None],
             *,
             default: CT | None = None,
@@ -2997,6 +3018,18 @@ class ClassSelector(SelectorBase[_T]):
 
         @t.overload
         def __init__(
+            self: ClassSelector[type[CT]],
+            *,
+            default: type[CT] | None = None,
+            class_: type[CT],
+            is_instance: t.Literal[False],
+            allow_None: NoNoneType,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
             self: ClassSelector[type[CT] | None],
             *,
             default: None = None,
@@ -3035,9 +3068,10 @@ class ClassSelector(SelectorBase[_T]):
         class_: type | tuple[type, ...] = t.cast("type | tuple[type, ...]", Undefined),  # pyrefly: ignore[bad-argument-type]
         default: t.Any | None = Undefined,
         is_instance: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
-        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool | NoNoneType = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[_ParameterKwargs]
     ) -> None:
+        allow_None = t.cast("bool", Undefined if allow_None is NoNone else allow_None)
         object.__setattr__(self, 'class_', class_)
         object.__setattr__(self, 'is_instance', is_instance)  # type: ignore
         super().__init__(  # type: ignore[misc, call-overload]

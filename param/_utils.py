@@ -19,6 +19,7 @@ if t.TYPE_CHECKING:
 
     _P = t.ParamSpec("_P")
     _R = t.TypeVar("_R")
+    _T = t.TypeVar("_T")
     _CallableT = t.TypeVar("_CallableT", bound=abc.Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
@@ -443,7 +444,7 @@ def _is_abstract(class_: type) -> bool:
     return bool(getattr(class_, "abstract", False))
 
 
-def descendents(class_: type, concrete: bool = False) -> list[type]:
+def descendents(class_: type[_T], concrete: bool = False) -> list[type[_T]]:
     """
     Return a list of all descendent classes of a given class.
 
@@ -482,7 +483,7 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
     if not isinstance(class_, type):
         raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")
     q = [class_]
-    out: list[type] = []
+    out: list[type[_T]] = []
     while len(q):
         x = q.pop(0)
         out.insert(0, x)
@@ -499,7 +500,7 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
 
 
 # Could be a method of ClassSelector.
-def concrete_descendents(parentclass: type) -> dict[str, type]:
+def concrete_descendents(parentclass: type[_T]) -> dict[str, type[_T]]:
     """
     Return a dictionary containing all subclasses of the specified
     parentclass, including the parentclass (prefer :func:`descendents`).

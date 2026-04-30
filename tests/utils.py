@@ -146,8 +146,7 @@ async def async_wait_until(fn, timeout=5000, interval=100, delay=0):
     # Hide this function traceback from the pytest output if the test fails
     __tracebackhide__ = True
 
-    if delay:
-        await asyncio.sleep(delay)
+    await asyncio.sleep(delay)
 
     start = time.monotonic()
 

@@ -2,8 +2,10 @@
 import abc
 import inspect
 import re
+import sys
 import unittest
 import warnings
+import weakref
 
 import param
 import numbergen
@@ -22,6 +24,8 @@ from param.parameterized import (
     ParamOverrides,
     ParameterizedMetaclass,
     Undefined,
+    _ClassPrivate,
+    _InstancePrivate,
     default_label_formatter,
     edit_constant,
     no_instance_params,
@@ -348,6 +352,28 @@ class TestParameterized(unittest.TestCase):
 
         assert p.param.a.constant is True
         assert P.param.a.constant is False
+
+    def test_private_namespace_descriptor_class_access_returns_class_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        assert isinstance(P._param__private, _ClassPrivate)
+
+    def test_private_namespace_descriptor_uninitialized_instance_returns_class_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        # Bypass __init__ to verify descriptor behavior before instance setup.
+        p = P.__new__(P)
+        assert isinstance(p._param__private, _ClassPrivate)
+
+    def test_private_namespace_descriptor_initialized_instance_returns_instance_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        p = P()
+        assert isinstance(p._param__private, _InstancePrivate)
+        assert p._param__private is p.__dict__['_param__private']
 
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""
@@ -1957,3 +1983,22 @@ def test_abc_basic_checks():
     assert gc.l == [10]
     gc.x += 1
     assert gc.l == [10, 11]
+
+
+@pytest.mark.skipif(sys.implementation.name == "pypy", reason='Works differently on PyPy')
+def test_no_param_namespace_cycle():
+    # Accessing .param on an instance must not create a reference cycle.
+    # A cycle (obj -> obj.__dict__['_param__parameters'] -> Parameters.self -> obj)
+    # would prevent CPython's reference-counting from immediately freeing the
+    # object, breaking weakref-based cleanup used by libraries like HoloViews.
+    class P(param.Parameterized):
+        x = param.Number(1)
+
+    freed = []
+    obj = P()
+    ref = weakref.ref(obj, lambda _: freed.append(True))  # noqa: F841
+
+    _ = obj.param.values()  # access .param to trigger any caching
+
+    del obj
+    assert freed, "Parameterized instance not freed immediately — likely a reference cycle via .param"

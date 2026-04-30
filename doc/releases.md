@@ -1,5 +1,17 @@
 # Releases
 
+## Version 2.3.3
+
+Date: 2026-03-31
+
+This patch release fixes an issue where `rx` pipelines with shared provenance would not use a shared cache, resulting in unnecessary re-evaluation of shared inputs.
+
+Fixes:
+
+- Ensure shared `rx` inputs are reused ([#1117](https://github.com/holoviz/param/pull/1117))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.3.2...v2.3.3)
+
 ## Version 2.3.2
 
 Date: 2026-02-06

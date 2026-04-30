@@ -1,7 +1,7 @@
 import weakref
 
-_display_accessors = {}
-_reactive_display_objs = weakref.WeakSet()
+_display_accessors: dict[str, object] = {}
+_reactive_display_objs: weakref.WeakSet[object] = weakref.WeakSet()
 
 def register_display_accessor(name, accessor, force=False):
     if name in _display_accessors and not force:

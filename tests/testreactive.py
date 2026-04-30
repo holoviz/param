@@ -9,6 +9,7 @@ import pytest
 
 from param.parameterized import Skip
 from param.reactive import bind, rx
+from typing import Any, Callable
 
 from .utils import async_wait_until
 
@@ -103,17 +104,20 @@ def test_reactive_logic_binary_ops_reverse(op):
     assert op(False, rx(True)).rx.value == op(False, True)
     assert op(False, rx(False)).rx.value == op(False, False)
 
-def test_reactive_getitem_dict():
-    assert rx({'A': 1})['A'].rx.value == 1
-    assert rx({'A': 1, 'B': 2})['B'].rx.value == 2
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_getitem_dict(lazy):
+    assert rx({'A': 1}, lazy=lazy)['A'].rx.value == 1
+    assert rx({'A': 1, 'B': 2}, lazy=lazy)['B'].rx.value == 2
 
-def test_reactive_getitem_list():
-    assert rx([1, 2, 3])[1].rx.value == 2
-    assert rx([1, 2, 3])[2].rx.value == 3
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_getitem_list(lazy):
+    assert rx([1, 2, 3], lazy=lazy)[1].rx.value == 2
+    assert rx([1, 2, 3], lazy=lazy)[2].rx.value == 3
 
-def test_reactive_getitem_list_with_slice():
-    i = rx(1)
-    j = rx(5)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_getitem_list_with_slice(lazy):
+    i = rx(1, lazy=lazy)
+    j = rx(5, lazy=lazy)
     lst = list(range(10))
     lstx = rx(lst)
     sx = lstx[i: j]
@@ -121,12 +125,13 @@ def test_reactive_getitem_list_with_slice():
     i.rx.value = 2
     assert sx.rx.value == lst[i.rx.value: j.rx.value]
 
-def test_reactive_getitem_numpy_with_tuple():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_getitem_numpy_with_tuple(lazy):
     np = pytest.importorskip("numpy")
     i = rx(0)
     j = rx(1)
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    arrx = rx(arr)
+    arrx = rx(arr, lazy=lazy)
     selx = arrx[i, j]
     assert selx.rx.value == arr[i.rx.value, j.rx.value]
     i.rx.value = 1
@@ -141,51 +146,59 @@ def test_numpy_ufunc(ufunc):
     array = np.ndarray([1, 2, 3])
     assert ufunc(rx(array)).rx.value == ufunc(array)
 
-def test_reactive_empty_construct():
-    i = rx()
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_empty_construct(lazy):
+    i = rx(lazy=lazy)
     assert i.rx.value is None
     i.rx.value = 2
     assert i.rx.value == 2
 
-def test_reactive_set_new_value_assignment():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_set_new_value_assignment(lazy):
+    i = rx(1, lazy=lazy)
     assert i.rx.value == 1
     i.rx.value = 2
     assert i.rx.value == 2
 
-def test_reactive_set_new_value_method():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_set_new_value_method(lazy):
+    i = rx(1, lazy=lazy)
     assert i.rx.value == 1
     i.rx.set(2)
     assert i.rx.value == 2
 
-def test_reactive_increment_value():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_increment_value(lazy):
+    i = rx(1, lazy=lazy)
     assert i.rx.value == 1
     i.rx.value += 2
     assert i.rx.value == 3
 
-def test_reactive_multiply_value_inplace():
-    i = rx(3)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_multiply_value_inplace(lazy):
+    i = rx(3, lazy=lazy)
     assert i.rx.value == 3
     i.rx.value *= 2
     assert i.rx.value == 6
 
-def test_reactive_pipeline_set_new_value():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_pipeline_set_new_value(lazy):
+    i = rx(1, lazy=lazy)
     j = i + 2
     assert j.rx.value == 3
     i.rx.value = 2
     assert j.rx.value == 4
 
-def test_reactive_reflect_param_value():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_reflect_param_value(lazy):
     P = Parameters(integer=1)
-    i = rx(P.param.integer)
+    i = rx(P.param.integer, lazy=lazy)
     assert i.rx.value == 1
     P.integer = 2
     assert i.rx.value == 2
 
-def test_reactive_skip_value():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_skip_value(lazy):
     P = Parameters(integer=1)
 
     def skip_values(v):
@@ -194,14 +207,15 @@ def test_reactive_skip_value():
         else:
             return v+1
 
-    i = rx(P.param.integer).rx.pipe(skip_values)
+    i = rx(P.param.integer, lazy=lazy).rx.pipe(skip_values)
     assert i.rx.value == 2
     P.integer = 2
     assert i.rx.value == 3
     P.integer = 3
     assert i.rx.value == 3
 
-def test_reactive_skip_value_return():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_skip_value_return(lazy):
     P = Parameters(integer=1)
 
     def skip_values(v):
@@ -210,125 +224,142 @@ def test_reactive_skip_value_return():
         else:
             return v+1
 
-    i = rx(P.param.integer).rx.pipe(skip_values)
+    i = rx(P.param.integer, lazy=lazy).rx.pipe(skip_values)
     assert i.rx.value == 2
     P.integer = 2
     assert i.rx.value == 3
     P.integer = 3
     assert i.rx.value == 3
 
-def test_reactive_pipeline_reflect_param_value():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_pipeline_reflect_param_value(lazy):
     P = Parameters(integer=1)
-    i = rx(P.param.integer) + 2
+    i = rx(P.param.integer, lazy=lazy) + 2
     assert i.rx.value == 3
     P.integer = 2
     assert i.rx.value == 4
 
-def test_reactive_reactive_reflect_other_rx():
-    i = rx(1)
-    j = rx(i)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_reactive_reflect_other_rx(lazy):
+    i = rx(1, lazy=lazy)
+    j = rx(i, lazy=lazy)
     assert j.rx.value == 1
     i.rx.value = 2
     assert j.rx.value == 2
 
-def test_reactive_pipeline_reflect_other_reactive_expr():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_pipeline_reflect_other_reactive_expr(lazy):
+    i = rx(1, lazy=lazy)
     j = i + 2
-    k = rx(j)
+    k = rx(j, lazy=lazy)
     assert k.rx.value == 3
     i.rx.value = 2
     assert k.rx.value == 4
 
-def test_reactive_reflect_bound_method():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_reflect_bound_method(lazy):
     P = Parameters(integer=1)
-    i = rx(P.multiply_integer)
+    i = rx(P.multiply_integer, lazy=lazy)
     assert i.rx.value == 2
     P.integer = 2
     assert i.rx.value == 4
 
-def test_reactive_pipeline_reflect_bound_method():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_pipeline_reflect_bound_method(lazy):
     P = Parameters(integer=1)
-    i = rx(P.multiply_integer) + 2
+    i = rx(P.multiply_integer, lazy=lazy) + 2
     assert i.rx.value == 4
     P.integer = 2
     assert i.rx.value == 6
 
-def test_reactive_reflect_bound_function():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_reflect_bound_function(lazy):
     P = Parameters(integer=1)
-    i = rx(bind(lambda v: v * 2, P.param.integer))
+    i = rx(bind(lambda v: v * 2, P.param.integer), lazy=lazy)
     assert i.rx.value == 2
     P.integer = 2
     assert i.rx.value == 4
 
-def test_reactive_pipeline_reflect_bound_function():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_pipeline_reflect_bound_function(lazy):
     P = Parameters(integer=1)
-    i = rx(bind(lambda v: v * 2, P.param.integer)) + 2
+    i = rx(bind(lambda v: v * 2, P.param.integer), lazy=lazy) + 2
     assert i.rx.value == 4
     P.integer = 2
     assert i.rx.value == 6
 
-def test_reactive_dataframe_method_chain(dataframe):
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_dataframe_method_chain(dataframe, lazy):
     pd = pytest.importorskip("pandas")
-    dfi = rx(dataframe).groupby('str')[['float']].mean().reset_index()
+    dfi = rx(dataframe, lazy=lazy).groupby('str')[['float']].mean().reset_index()
     pd.testing.assert_frame_equal(dfi.rx.value, dataframe.groupby('str')[['float']].mean().reset_index())
 
-def test_reactive_dataframe_attribute_chain(dataframe):
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_dataframe_attribute_chain(dataframe, lazy):
     np = pytest.importorskip("numpy")
     array = rx(dataframe).str.values.rx.value
     np.testing.assert_array_equal(array, dataframe.str.values)
 
-def test_reactive_dataframe_param_value_method_chain(dataframe):
-    pd = pytest.importorskip("pd")
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_dataframe_param_value_method_chain(dataframe, lazy):
+    pd = pytest.importorskip("pandas")
     P = Parameters(string='str')
-    dfi = rx(dataframe).groupby(P.param.string)[['float']].mean().reset_index()
+    dfi = rx(dataframe, lazy=lazy).groupby(P.param.string)[['float']].mean().reset_index()
     pd.testing.assert_frame_equal(dfi.rx.value, dataframe.groupby('str')[['float']].mean().reset_index())
     P.string = 'int'
     pd.testing.assert_frame_equal(dfi.rx.value, dataframe.groupby('int')[['float']].mean().reset_index())
 
-def test_reactive_len():
-    i = rx([1, 2, 3])
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_len(lazy):
+    i = rx([1, 2, 3], lazy=lazy)
     l = i.rx.len()
     assert l.rx.value == 3
     i.rx.value = [1, 2]
     assert l.rx.value == 2
 
-def test_reactive_bool():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_bool(lazy):
+    i = rx(1, lazy=lazy)
     b = i.rx.bool()
     assert b.rx.value is True
     i.rx.value = 0
     assert b.rx.value is False
 
-def test_reactive_not_():
-    i = rx(1)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_not_(lazy):
+    i = rx(1, lazy=lazy)
     b = i.rx.not_()
     assert b.rx.value is False
     i.rx.value = 0
     assert b.rx.value is True
 
-def test_reactive_and_():
-    i = rx('')
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_and_(lazy):
+    i = rx('', lazy=lazy)
     b = i.rx.and_('foo')
     assert b.rx.value == ''
     i.rx.value = 'bar'
     assert b.rx.value == 'foo'
 
-def test_reactive_or_():
-    i = rx('')
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_or_(lazy):
+    i = rx('', lazy=lazy)
     b = i.rx.or_('')
     assert b.rx.value == ''
     i.rx.value = 'foo'
     assert b.rx.value == 'foo'
 
-def test_reactive_map():
-    i = rx(range(3))
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_map(lazy):
+    i = rx(range(3), lazy=lazy)
     b = i.rx.map(lambda x: x*2)
     assert b.rx.value == [0, 2, 4]
     i.rx.value = range(1, 4)
     assert b.rx.value == [2, 4, 6]
 
-async def test_reactive_async_map():
-    i = rx(range(3))
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_reactive_async_map(lazy):
+    i = rx(range(3), lazy=lazy)
     async def mul(x):
         await asyncio.sleep(0.05)
         return x*2
@@ -340,16 +371,19 @@ async def test_reactive_async_map():
     await async_wait_until(lambda: b.rx.value == [2, 4, 6])
     assert b.rx.value == [2, 4, 6]
 
-def test_reactive_map_args():
-    i = rx(range(3))
-    j = rx(2)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_map_args(lazy):
+    i = rx(range(3), lazy=lazy)
+    j = rx(2, lazy=lazy)
     b = i.rx.map(lambda x, m: x*m, j)
     assert b.rx.value == [0, 2, 4]
     j.rx.value = 3
     assert b.rx.value == [0, 3, 6]
 
-def test_reactive_iter():
-    i = rx(('a', 'b'))
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_iter(lazy):
+    i = rx(('a', 'b'), lazy=lazy)
+    if lazy: i.rx.value
     a, b = i
     assert a.rx.value == 'a'
     assert b.rx.value == 'b'
@@ -357,8 +391,15 @@ def test_reactive_iter():
     assert a.rx.value == 'b'
     assert b.rx.value == 'a'
 
-def test_reactive_multi_iter():
-    i = rx(('a', 'b'))
+def test_reactive_iter_lazy_fails():
+    i = rx(('a', 'b'), lazy=True)
+    with pytest.raises(RuntimeError):
+        a, b = i
+
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_multi_iter(lazy):
+    i = rx(('a', 'b'), lazy=lazy)
+    if lazy: i.rx.value
     a1, b1 = i
     a2, b2 = i
     assert a1.rx.value == 'a'
@@ -371,38 +412,43 @@ def test_reactive_multi_iter():
     assert a2.rx.value == 'b'
     assert b2.rx.value == 'a'
 
-def test_reactive_is():
-    i = rx(None)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_is(lazy):
+    i = rx(None, lazy=lazy)
     is_ = i.rx.is_(None)
     assert is_.rx.value
     i.rx.value = False
     assert not is_.rx.value
 
-def test_reactive_in():
-    i = rx(2)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_in(lazy):
+    i = rx(2, lazy=lazy)
     in_ = i.rx.in_([1, 2, 3])
     assert in_.rx.value
     i.rx.value = 4
     assert not in_.rx.value
 
-def test_reactive_is_not():
-    i = rx(None)
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_is_not(lazy):
+    i = rx(None, lazy=lazy)
     is_ = i.rx.is_not(None)
     assert not is_.rx.value
     i.rx.value = False
     assert is_.rx.value
 
-def test_reactive_where_expr():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_where_expr(lazy):
     p = Parameters()
-    r = p.param.boolean.rx.where('A', 'B')
+    r = rx(p.param.boolean, lazy=lazy).rx.where('A', 'B')
     assert r.rx.value == 'B'
     p.boolean = True
     assert r.rx.value == 'A'
 
-def test_reactive_where_expr_refs():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_where_expr_refs(lazy):
     p = Parameters()
     results = []
-    r = p.param.boolean.rx.where(p.param.string, p.param.number)
+    r = rx(p.param.boolean, lazy=lazy).rx.where(p.param.string, p.param.number)
     r.rx.watch(results.append)
     assert r.rx.value == 3.14
     p.boolean = True
@@ -422,53 +468,126 @@ def test_reactive_watch_on_set_input():
     string.rx.value = 'new string'
     assert items == ['new string!']
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
+def test_reactive_watch_lazy_on_set_input():
+    string = rx('string', lazy=True)
+    new_string = string + '!'
+    items = []
+    new_string.rx.watch(items.append)
+    string.rx.value = 'new string'
+    assert items == ['new string!']
+
 async def test_reactive_watch_async_on_event():
     p = Parameters()
-    event = p.param.event.rx()
+    event = rx(p.param.event)
     items = []
     event.rx.watch(items.append)
     p.param.trigger('event')
     await async_wait_until(lambda: items == [True])
 
-def test_reactive_set_value_non_root_raises():
-    rx_val = rx(1) + 1
+@pytest.mark.filterwarnings("ignore::UserWarning")
+async def test_reactive_watch_lazy_async_on_event():
+    p = Parameters()
+    event = rx(p.param.event, lazy=True)
+    items = []
+    event.rx.watch(items.append)
+    p.param.trigger('event')
+    await async_wait_until(lambda: items == [True])
+
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_set_value_non_root_raises(lazy):
+    rx_val = rx(1, lazy=lazy) + 1
     with pytest.raises(AttributeError):
         rx_val.rx.value = 3
 
-def test_reactive_clone_evaluates_once():
-    namex = rx('bob')
-
-    items = []
-    def debug(value):
-        items.append(value)
+@pytest.mark.parametrize(('input', 'op', 'expected'), [
+    ('bob', lambda _rx: _rx.title(), 'Bob'),
+    ('bob', lambda _rx: _rx.rx.map(str.upper), [*'BOB']),
+])
+def test_reactive_clone_evaluates_once_lazy(input: str, op: Callable[[rx], Any], expected: Any):
+    fcalls = 0
+    def debug_call_count(value):
+        nonlocal fcalls
+        fcalls += 1
         return value
 
-    assert namex.rx.pipe(debug).title().rx.value == 'Bob'
-    assert len(items) == 1
+    base = rx(input, lazy=True).rx.pipe(debug_call_count)
 
-def test_reactive_when():
+    assert fcalls == 0
+    result = op(base)
+    assert fcalls == 0
+
+    assert result.rx.value == expected
+    assert fcalls == 1
+
+@pytest.mark.parametrize(('input', 'op', 'expected'), [
+    ('bob', lambda _rx: _rx.title(), 'Bob'),
+    ('bob', lambda _rx: _rx.rx.map(str.upper), [*'BOB']),
+])
+def test_reactive_clone_evaluates_once_eager(input: str, op: Callable[[rx], Any], expected: Any):
+    fcalls = 0
+    def debug_call_count(value):
+        nonlocal fcalls
+        fcalls += 1
+        return value
+
+    base = rx(input, lazy=False).rx.pipe(debug_call_count)
+
+    assert fcalls == 0
+    result = op(base)
+    assert fcalls == 1
+
+    assert result.rx.value == expected
+    assert fcalls == 1
+
+
+@pytest.mark.parametrize(('inputs', 'op', 'expecteds', 'lazy'), [
+    (['alice', 'bob', 'charlie'], lambda _rx: _rx.title(), ['Alice', 'Bob', 'Charlie'], [True, False]),
+    (['alice', 'bob', 'charlie'], lambda _rx: _rx.rx.map(str.upper), [[*'ALICE'], [*'BOB'], [*'CHARLIE']], [True, False]),
+])
+def test_reactive_clone_reevaluates(inputs: list[str], op: Callable[[rx], Any], expecteds: list[Any], lazy: bool):
+    fcalls = 0
+    def debug_call_count(value):
+        nonlocal fcalls
+        fcalls += 1
+        return value
+
+    base = rx(inputs[0], lazy=lazy)
+    transformed = op(base.rx.pipe(debug_call_count))
+    assert transformed.rx.value == expecteds[0]
+    assert fcalls == 1
+
+    for prev_fcalls, (inpt, expec) in enumerate(zip(inputs[1:], expecteds[1:]), start=fcalls):
+        base.rx.value = inpt
+        assert transformed.rx.value == expec
+        assert fcalls == (prev_fcalls + 1)
+
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_when(lazy):
     p = Parameters(integer=3)
-    integer = p.param.integer.rx().rx.when(p.param.event)
+    integer = rx(p.param.integer, lazy=lazy).rx.when(p.param.event)
     assert integer.rx.value == 3
     p.integer = 4
     assert integer.rx.value == 3
     p.param.trigger('event')
     assert integer.rx.value == 4
 
-def test_reactive_when_initial():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_when_initial(lazy):
     p = Parameters(integer=3)
-    integer = p.param.integer.rx().rx.when(p.param.event, initial=None)
+    integer = rx(p.param.integer, lazy=lazy).rx.when(p.param.event, initial=None)
     assert integer.rx.value is None
     p.integer = 4
     assert integer.rx.value is None
     p.param.trigger('event')
     assert integer.rx.value == 4
 
-def test_reactive_resolve():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_resolve(lazy):
     p = Parameters(integer=3)
     p2 = Parameters(parameter=p.param.integer)
 
-    prx = p2.param.parameter.rx()
+    prx = rx(p2.param.parameter, lazy=lazy)
     assert prx.rx.value is p.param.integer
 
     resolved_prx = prx.rx.resolve()
@@ -492,11 +611,12 @@ def test_reactive_resolve():
     assert resolved_prx.rx.value == 3.14
     assert changes == [4, 3.14]
 
-def test_reactive_resolve_nested():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_resolve_nested(lazy):
     p = Parameters(integer=3)
     p2 = Parameters(parameter=[p.param.integer])
 
-    prx = p2.param.parameter.rx()
+    prx = rx(p2.param.parameter, lazy=lazy)
     assert prx.rx.value == [p.param.integer]
 
     resolved_prx = prx.rx.resolve(nested=True)
@@ -520,12 +640,13 @@ def test_reactive_resolve_nested():
     assert resolved_prx.rx.value == [3.14]
     assert changes == [[4], [3.14]]
 
-def test_reactive_resolve_recursive():
+@pytest.mark.parametrize('lazy', [False, True])
+def test_reactive_resolve_recursive(lazy):
     p = Parameters(integer=3)
     p2 = Parameters(parameter=p.param.integer)
     p3 = Parameters(parameter=p2.param.parameter)
 
-    prx = p3.param.parameter.rx()
+    prx = rx(p3.param.parameter, lazy=lazy).rx()
     assert prx.rx.value is p2.param.parameter
 
     resolved_prx = prx.rx.resolve(recursive=True)
@@ -554,22 +675,23 @@ def test_reactive_resolve_recursive():
     assert resolved_prx.rx.value == 'string'
     assert changes == [4, 3.14, 'string']
 
-async def test_reactive_async_func():
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_reactive_async_func(lazy):
     async def async_func():
         await asyncio.sleep(0.02)
         return 2
 
-    async_rx = rx(async_func) + 2
+    async_rx = rx(async_func, lazy=lazy) + 2
     assert async_rx.rx.value is param.Undefined
     await async_wait_until(lambda: async_rx.rx.value == 4)
 
-async def test_reactive_pipe_async_func():
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_reactive_pipe_async_func(lazy):
     async def async_func(value):
         await asyncio.sleep(0.02)
         return value+2
 
-    async_rx = rx(0).rx.pipe(async_func)
-    async_rx.rx.watch()
+    async_rx = rx(0, lazy=lazy).rx.pipe(async_func)
     assert async_rx.rx.value is param.Undefined
     await async_wait_until(lambda: async_rx.rx.value == 2)
 
@@ -581,7 +703,24 @@ async def test_reactive_gen():
 
     rxgen = rx(gen)
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10, delay=0.0001)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
+    await async_wait_until(lambda: rxgen.rx.value == 2)
+
+async def test_reactive_lazy_gen():
+    """
+    Ensure that while the generator emits the changed value the rx expression
+    does not update until the new value is requested.
+    """
+    def gen():
+        yield 1
+        time.sleep(0.05)
+        yield 2
+
+    rxgen = rx(gen)
+    assert rxgen.rx.value is param.Undefined
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
+    await asyncio.sleep(0.1)
+    assert rxgen._current_ == 1
     await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_gen_pipe():
@@ -592,12 +731,30 @@ async def test_reactive_gen_pipe():
 
     rxv = rx(0)
     rxgen = rxv.rx.pipe(gen)
-    rxgen.rx.watch()
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 2)
     rxv.rx.value = 2
-    await async_wait_until(lambda: rxgen.rx.value == 3, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 3, interval=10)
+    await async_wait_until(lambda: rxgen.rx.value == 4)
+
+async def test_reactive_lazy_gen_pipe():
+    def gen(val):
+        yield val+1
+        time.sleep(0.05)
+        yield val+2
+
+    rxv = rx(0)
+    rxgen = rxv.rx.pipe(gen)
+    assert rxgen.rx.value is param.Undefined
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
+    await async_wait_until(lambda: rxgen._current_ == 2)
+    assert rxgen.rx.value == 2
+
+    rxv.rx.value = 2
+    assert rxgen._current_ == 2
+    rxgen.rx.value
+    await async_wait_until(lambda: rxgen.rx.value == 3, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 4)
 
 async def test_reactive_gen_with_dep():
@@ -609,9 +766,9 @@ async def test_reactive_gen_with_dep():
     irx = rx(0)
     rxgen = rx(bind(gen, irx))
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     irx.rx.value = 3
-    await async_wait_until(lambda: rxgen.rx.value == 4, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 4, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 5)
 
 async def test_reactive_gen_pipe_with_dep():
@@ -625,12 +782,12 @@ async def test_reactive_gen_pipe_with_dep():
     rxgen = rxv.rx.pipe(bind(gen, irx))
     rxgen.rx.watch()
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     irx.rx.value = 3
-    await async_wait_until(lambda: rxgen.rx.value == 4, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 4, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 5)
     rxv.rx.value = 5
-    await async_wait_until(lambda: rxgen.rx.value == 9, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 9, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 10)
 
 async def test_reactive_async_gen():
@@ -641,8 +798,25 @@ async def test_reactive_async_gen():
 
     rxgen = rx(gen)
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 2)
+
+async def test_reactive_lazy_async_gen():
+    """
+    Ensure that while the generator emits the changed value the rx expression
+    does not update until the new value is requested.
+    """
+    async def gen():
+        yield 1
+        await asyncio.sleep(0.05)
+        yield 2
+
+    rxgen = rx(gen)
+    assert rxgen.rx.value is param.Undefined
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
+    await asyncio.sleep(0.1)
+    assert rxgen._current_ == 1
+    assert rxgen.rx.value == 2
 
 async def test_reactive_async_gen_pipe():
     async def gen(value):
@@ -652,7 +826,7 @@ async def test_reactive_async_gen_pipe():
 
     rxgen = rx(0).rx.pipe(gen)
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 2)
 
 async def test_reactive_async_gen_with_dep():
@@ -664,11 +838,11 @@ async def test_reactive_async_gen_with_dep():
     irx = rx(0)
     rxgen = rx(bind(gen, irx))
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.05)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     irx.rx.value = 3
     await asyncio.sleep(0.05)
     irx.rx.value = 4
-    await async_wait_until(lambda: rxgen.rx.value == 5, delay=0.1)
+    await async_wait_until(lambda: rxgen.rx.value == 5, interval=10)
 
 async def test_reactive_async_gen_pipe_with_dep():
     async def gen(value, i):
@@ -681,18 +855,19 @@ async def test_reactive_async_gen_pipe_with_dep():
     rxgen = rxv.rx.pipe(bind(gen, i=irx))
     rxgen.rx.watch()
     assert rxgen.rx.value is param.Undefined
-    await async_wait_until(lambda: rxgen.rx.value == 1, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
     irx.rx.value = 3
     await asyncio.sleep(0.04)
     irx.rx.value = 4
-    await async_wait_until(lambda: rxgen.rx.value == 5, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 5, interval=10)
     rxv.rx.value = 5
-    await async_wait_until(lambda: rxgen.rx.value == 10, delay=0.04)
+    await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 11)
 
-def test_root_invalidation():
-    arx = rx('a')
-    brx = rx('b')
+@pytest.mark.parametrize('lazy', [False, True])
+def test_root_invalidation(lazy):
+    arx = rx('a', lazy=lazy)
+    brx = rx('b', lazy=lazy)
 
     computed = []
     def debug(value, info):
@@ -775,3 +950,82 @@ def test_reactive_set_value_attributeerror():
     x = rx(1)
     with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
         x.value = 1
+
+def test_reactive_get_value_attributeerror():
+    x = rx(1)
+    with pytest.raises(AttributeError, match="'rx' object has no attribute 'value'"):
+        x.value
+
+def test_reactive_lazy_get_value_attributeerror():
+    x = rx(1, lazy=True)
+    xv = x.value
+    with pytest.raises(AttributeError, match="'int' object has no attribute 'value'"):
+        xv.rx.value
+
+@pytest.mark.parametrize('lazy', [False, True])
+def test_shared_rx_only_triggers_once(lazy):
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        return {"x": a + 1, "y": a * 2}
+
+    shared = rx(expensive_compute, lazy=lazy)(model.param.a)
+
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    assert call_count == 1
+
+    model.a = 2.0
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    assert call_count == 2
+
+
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_async_shared_rx_only_triggers_once(lazy):
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    async def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        return {"x": a + 1, "y": a * 2}
+
+    shared = rx(model.param.a, lazy=lazy).rx.pipe(expensive_compute)
+
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    await async_wait_until(lambda: call_count == 1)
+
+    model.a = 2.0
+
+    x_rx.rx.value
+    y_rx.rx.value
+
+    await async_wait_until(lambda: call_count == 2)
+
+    assert x_rx.rx.value == 3
+    assert y_rx.rx.value == 4
+
+    assert call_count == 2

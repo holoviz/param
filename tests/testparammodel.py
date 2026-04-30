@@ -57,6 +57,25 @@ def test_classvar_annotation_is_not_parameterized():
     assert P().value == 1
 
 
+def test_annotated_metadata_sets_doc_and_parameter_attributes():
+    class P(param.ParamModel):
+        title: t.Annotated[str, {"doc": "Title text", "constant": True}] = "hello"
+
+    assert isinstance(P.param.title, param.String)
+    assert P.param.title.doc == "Title text"
+    assert P.param.title.constant is True
+    assert P().title == "hello"
+
+
+def test_annotated_metadata_supports_inferred_parameter_kwargs():
+    class P(param.ParamModel):
+        value: t.Annotated[int, {"bounds": (0, 10)}] = 4
+
+    assert isinstance(P.param.value, param.Integer)
+    assert P.param.value.bounds == (0, 10)
+    assert P().value == 4
+
+
 def test_field_parameter_allows_overriding_inferred_parameter_class():
     class P(param.ParamModel):
         value: int = param.ParamField(default=1.5, parameter=param.Number, bounds=(0, None))

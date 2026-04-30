@@ -1986,7 +1986,7 @@ class DateRange(Range[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_DateInitKwargs]
     ) -> None:
-        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]  # ty: ignore[invalid-argument-type]
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload, ty:invalid-argument-type] 
 
     def _validate_bound_type(self, value, position, kind):
         if not isinstance(value, _dt_types):

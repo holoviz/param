@@ -606,7 +606,7 @@ class Dynamic(Parameter[_T]):
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
         """
-        super().__init__(default=default, allow_None=allow_None, **params)
+        super().__init__(default=default, allow_None=allow_None, **params)  # ty: ignore[no-matching-overload]
 
         if callable(self.default):
             self._set_instantiate(True)
@@ -1155,7 +1155,7 @@ class Magnitude(Number[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_NumberInitKwargs]
     ) -> None:
-        super().__init__( # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
 
@@ -1308,7 +1308,7 @@ class CalendarDate(Number[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_CalendarDateInitKwargs]
     ) -> None:
-        super().__init__( # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
 
@@ -1607,7 +1607,7 @@ class Tuple(Parameter[_T]):
             )
 
     def _validate_length(self, val, length):
-        if val is None and self.allow_None:
+        if val is None:
             return
 
         if not len(val) == length:
@@ -1899,16 +1899,17 @@ class Range(NumericTuple[_T]):
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
-        if bounds is not None:
-            for pos, v in zip(['lower', 'upper'], bounds):
-                if v is None:
-                    continue
-                self._validate_bound_type(v, pos, kind)
-        if kind == 'softbound':
+        if bounds is None:
             return
 
-        if bounds is None or (val is None and self.allow_None):
+        for pos, v in zip(['lower', 'upper'], bounds):
+            if v is None:
+                continue
+            self._validate_bound_type(v, pos, kind)
+
+        if val is None or kind == 'softbound':
             return
+
         vmin, vmax = bounds
         incmin, incmax = inclusive_bounds
         for bound, v in zip(['lower', 'upper'], val):
@@ -1985,7 +1986,7 @@ class DateRange(Range[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_DateInitKwargs]
     ) -> None:
-        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload, ty:invalid-argument-type]
 
     def _validate_bound_type(self, value, position, kind):
         if not isinstance(value, _dt_types):
@@ -2108,7 +2109,7 @@ class CalendarDateRange(Range[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_CalendarDateInitKwargs]
     ) -> None:
-        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]  # ty: ignore[invalid-argument-type]
 
     def _validate_value(self, value, allow_None):
         if allow_None and value is None:
@@ -2830,14 +2831,14 @@ class ListSelector(Selector):
                     self.objects.append(o)
 
     def _validate(self, val):
-        if (val is None and self.allow_None):
+        if val is None and self.allow_None:
             return
         self._validate_type(val)
 
         if self.check_on_set:
             self._validate_value(val)
         else:
-            for v in val:
+            for v in val:  # pyright: ignore[reportOptionalIterable]
                 self._ensure_value_is_in_objects(v)
 
     def _validate_type(self, val):
@@ -3097,7 +3098,9 @@ class ClassSelector(SelectorBase[_T]):
     def _validate_class_(self, val: t.Any, class_: type | tuple[type, ...], is_instance: bool):
         if (val is None and self.allow_None):
             return
-        if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
+        if (is_instance and isinstance(val, class_)) or (
+            not is_instance and isinstance(val, type) and issubclass(val, class_)
+        ):
             return
 
         if isinstance(class_, tuple):
@@ -3186,7 +3189,7 @@ class Dict(ClassSelector[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[_ClassSelectorKwargs]
     ) -> None:
-        super().__init__(  # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
             default=default, class_=dict, allow_None=allow_None, **params  # type: ignore[arg-type]
         )
 
@@ -3235,7 +3238,7 @@ class Array(ClassSelector["AT"]):
         **params: Unpack[_ClassSelectorKwargs]
     ) -> None:
         import numpy
-        super().__init__(  # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
             default=default,  # type: ignore[arg-type]
             class_=numpy.ndarray,  # type: ignore[arg-type]
             is_instance=True,
@@ -3630,7 +3633,7 @@ class List(Parameter[_T]):
 
     def _validate_bounds(self, val, bounds):
         """Check that the list is of the right length and has the right contents."""
-        if bounds is None or (val is None and self.allow_None):
+        if bounds is None or val is None:
             return
         min_length, max_length = bounds
         l = len(val)
@@ -4065,9 +4068,9 @@ class Color(Parameter[_T]):
             )
 
     def _validate_allow_named(self, val, allow_named):
-        if (val is None and self.allow_None):
+        if val is None:
             return
-        is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
+        is_hex = re.fullmatch('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
             if not is_hex and val.lower() not in self._named_colors:
                 raise ValueError(
@@ -4148,9 +4151,9 @@ class Bytes(Parameter[_T]):
         self._validate(self.default)
 
     def _validate_regex(self, val, regex):
-        if (val is None and self.allow_None):
+        if val is None or regex is None:
             return
-        if regex is not None and re.match(regex, val) is None:
+        if re.fullmatch(regex, val) is None:
             raise ValueError(
                 f"{_validate_error_prefix(self)} value {val!r} "
                 f"does not match regex {regex!r}."

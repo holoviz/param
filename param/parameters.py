@@ -606,7 +606,7 @@ class Dynamic(Parameter[_T]):
         Call the superclass's __init__ and set instantiate=True if the
         default is dynamic.
         """
-        super().__init__(default=default, allow_None=allow_None, **params)
+        super().__init__(default=default, allow_None=allow_None, **params)  # ty: ignore[no-matching-overload]
 
         if callable(self.default):
             self._set_instantiate(True)
@@ -1155,7 +1155,7 @@ class Magnitude(Number[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_NumberInitKwargs]
     ) -> None:
-        super().__init__( # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
 
@@ -1308,7 +1308,7 @@ class CalendarDate(Number[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_CalendarDateInitKwargs]
     ) -> None:
-        super().__init__( # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
             default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
         )
 
@@ -1985,7 +1985,7 @@ class DateRange(Range[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_DateInitKwargs]
     ) -> None:
-        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]  # ty: ignore[invalid-argument-type]
 
     def _validate_bound_type(self, value, position, kind):
         if not isinstance(value, _dt_types):
@@ -2108,7 +2108,7 @@ class CalendarDateRange(Range[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **kwargs: Unpack[_CalendarDateInitKwargs]
     ) -> None:
-        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]
+        super().__init__(default=default, allow_None=allow_None, **kwargs)  # type: ignore[misc, call-overload]  # ty: ignore[invalid-argument-type]
 
     def _validate_value(self, value, allow_None):
         if allow_None and value is None:
@@ -3186,7 +3186,7 @@ class Dict(ClassSelector[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[_ClassSelectorKwargs]
     ) -> None:
-        super().__init__(  # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
             default=default, class_=dict, allow_None=allow_None, **params  # type: ignore[arg-type]
         )
 
@@ -3235,7 +3235,7 @@ class Array(ClassSelector["AT"]):
         **params: Unpack[_ClassSelectorKwargs]
     ) -> None:
         import numpy
-        super().__init__(  # type: ignore[misc, call-overload]
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
             default=default,  # type: ignore[arg-type]
             class_=numpy.ndarray,  # type: ignore[arg-type]
             is_instance=True,

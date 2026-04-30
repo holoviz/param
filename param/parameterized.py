@@ -2253,9 +2253,9 @@ class String(Parameter[_T]):
         self._validate(self.default)
 
     def _validate_regex(self, val: t.Any, regex: str | re.Pattern[str] | None):
-        if (val is None and self.allow_None):
+        if val is None or regex is None:
             return
-        if regex is not None and re.match(regex, val) is None:
+        if re.fullmatch(regex, val) is None:
             raise ValueError(
                 f'{_validate_error_prefix(self)} value {val!r} does not '
                 f'match regex {regex!r}.'

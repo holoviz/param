@@ -1899,13 +1899,16 @@ class Range(NumericTuple[_T]):
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
-        if val is None or kind == 'softbound' or bounds is None:
+        if bounds is None:
             return
 
         for pos, v in zip(['lower', 'upper'], bounds):
             if v is None:
                 continue
             self._validate_bound_type(v, pos, kind)
+
+        if val is None or kind == 'softbound':
+            return
 
         vmin, vmax = bounds
         incmin, incmax = inclusive_bounds

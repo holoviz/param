@@ -2838,8 +2838,7 @@ class ListSelector(Selector):
         if self.check_on_set:
             self._validate_value(val)
         else:
-            assert val is not None
-            for v in val:
+            for v in val:  # pyright: ignore[reportOptionalIterable]
                 self._ensure_value_is_in_objects(v)
 
     def _validate_type(self, val):

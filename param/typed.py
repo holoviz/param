@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import importlib
 import sys
 import types
 import typing as t
@@ -196,6 +197,30 @@ def _build_parameter_from_field(
     return factory(**factory_kwargs)
 
 
+def _extract_namespace_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
+    annotations = dict(namespace.get("__annotations__", {}))
+    if annotations:
+        return annotations
+
+    # Python 3.14 may defer class annotation materialization to __annotate_func__.
+    annotate_func = namespace.get("__annotate_func__")
+    if not callable(annotate_func):
+        return {}
+
+    try:
+        annotationlib = importlib.import_module("annotationlib")
+        format_value = getattr(getattr(annotationlib, "Format", None), "VALUE", 1)
+        evaluated = annotate_func(format_value)
+    except Exception:
+        try:
+            # Fallback for runtimes where annotationlib is unavailable.
+            evaluated = annotate_func(1)
+        except Exception:
+            return {}
+
+    return dict(evaluated) if isinstance(evaluated, Mapping) else {}
+
+
 @dataclass_transform(field_specifiers=(ParamField,))
 class ParamModelMetaclass(ParameterizedMetaclass):
 
@@ -203,7 +228,7 @@ class ParamModelMetaclass(ParameterizedMetaclass):
         mcs, name: str, bases: tuple[type, ...], dict_: dict[str, Any]
     ) -> ParamModelMetaclass:
         namespace = dict_
-        annotations = dict(namespace.get("__annotations__", {}))
+        annotations = _extract_namespace_annotations(namespace)
         module_name = namespace.get("__module__", "")
         module_globals = getattr(sys.modules.get(module_name), "__dict__", {})
 

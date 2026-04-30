@@ -8,8 +8,6 @@ try:
 except (AttributeError, ModuleNotFoundError):
     # Not installed or PyPy on Windows
     cloudpickle = None
-except AttributeError:
-    cloudpickle = None  # PyPy on Windows
 try:
     import numpy as np
 except ModuleNotFoundError:

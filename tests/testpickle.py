@@ -5,7 +5,8 @@ import pytest
 
 try:
     import cloudpickle
-except ModuleNotFoundError:
+except (AttributeError, ModuleNotFoundError):
+    # Not installed or PyPy on Windows
     cloudpickle = None
 try:
     import numpy as np

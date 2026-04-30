@@ -4071,7 +4071,7 @@ class Color(Parameter[_T]):
     def _validate_allow_named(self, val, allow_named):
         if val is None:
             return
-        is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
+        is_hex = re.fullmatch('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
             if not is_hex and val.lower() not in self._named_colors:
                 raise ValueError(
@@ -4154,7 +4154,7 @@ class Bytes(Parameter[_T]):
     def _validate_regex(self, val, regex):
         if val is None or regex is None:
             return
-        if re.match(regex, val) is None:
+        if re.fullmatch(regex, val) is None:
             raise ValueError(
                 f"{_validate_error_prefix(self)} value {val!r} "
                 f"does not match regex {regex!r}."

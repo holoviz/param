@@ -5,7 +5,7 @@ import pytest
 
 
 def test_literal_annotation_infers_selector():
-    class P(param.TypedParameterized):
+    class P(param.ParamModel):
         mode: t.Literal["read", "write"]
 
     assert isinstance(P.param.mode, param.Selector)
@@ -21,7 +21,7 @@ def test_literal_annotation_infers_selector():
 
 
 def test_literal_annotation_supports_explicit_default_value():
-    class P(param.TypedParameterized):
+    class P(param.ParamModel):
         mode: t.Literal["read", "write"] = "write"
 
     assert isinstance(P.param.mode, param.Selector)
@@ -31,9 +31,9 @@ def test_literal_annotation_supports_explicit_default_value():
 
 
 def test_literal_field_specification_supports_default_and_optional():
-    class P(param.TypedParameterized):
-        mode: t.Literal["light", "dark"] = param.Field(default="dark")
-        optional_mode: t.Literal["auto", "manual"] | None = param.Field(default=None)
+    class P(param.ParamModel):
+        mode: t.Literal["light", "dark"] = param.ParamField(default="dark")
+        optional_mode: t.Literal["auto", "manual"] | None = param.ParamField(default=None)
 
     assert isinstance(P.param.mode, param.Selector)
     assert P.param.mode.objects == ["light", "dark"]
@@ -47,7 +47,7 @@ def test_literal_field_specification_supports_default_and_optional():
 
 
 def test_classvar_annotation_is_not_parameterized():
-    class P(param.TypedParameterized):
+    class P(param.ParamModel):
         shared: t.ClassVar[int] = 7
         value: int = 1
 
@@ -58,8 +58,8 @@ def test_classvar_annotation_is_not_parameterized():
 
 
 def test_field_parameter_allows_overriding_inferred_parameter_class():
-    class P(param.TypedParameterized):
-        value: int = param.Field(default=1.5, parameter=param.Number, bounds=(0, None))
+    class P(param.ParamModel):
+        value: int = param.ParamField(default=1.5, parameter=param.Number, bounds=(0, None))
 
     assert isinstance(P.param.value, param.Number)
 
@@ -71,8 +71,8 @@ def test_field_parameter_allows_overriding_inferred_parameter_class():
 
 
 def test_field_parameter_override_can_replace_literal_selector_behavior():
-    class P(param.TypedParameterized):
-        mode: t.Literal["light", "dark"] = param.Field(
+    class P(param.ParamModel):
+        mode: t.Literal["light", "dark"] = param.ParamField(
             default="sepia", parameter=param.String
         )
 

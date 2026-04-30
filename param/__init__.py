@@ -100,7 +100,7 @@ from .parameters import (
     Event,
 )
 from .reactive import bind, rx
-from .typed import Field, TypedParameterized
+from .typed import ParamField, ParamModel
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -173,7 +173,6 @@ __all__ = (
     'Dynamic',
     'ERROR',
     'Event',
-    'Field',
     'FileSelector',
     'Filename',
     'Foldername',
@@ -189,6 +188,8 @@ __all__ = (
     'Number',
     'NumericTuple',
     'ObjectSelector',
+    'ParamField',
+    'ParamModel',
     'ParamOverrides',
     'Parameter',
     'Parameterized',
@@ -203,7 +204,6 @@ __all__ = (
     'String',
     'Time',
     'Tuple',
-    'TypedParameterized',
     'Undefined',
     'VERBOSE',
     'WARNING',

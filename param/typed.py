@@ -20,7 +20,7 @@ from .parameterized import (
 FT = t.TypeVar("FT")
 
 
-class _FieldSpec:
+class _ParamFieldSpec:
 
     __slots__ = ("default", "default_factory", "parameter", "kwargs")
 
@@ -39,7 +39,7 @@ class _FieldSpec:
 
 
 @t.overload
-def Field(
+def ParamField(
     *,
     default: FT,
     default_factory: Callable[..., Any] | Any = Undefined,
@@ -50,7 +50,7 @@ def Field(
 
 
 @t.overload
-def Field(
+def ParamField(
     *,
     default: Any = Undefined,
     default_factory: Callable[[], FT],
@@ -61,7 +61,7 @@ def Field(
 
 
 @t.overload
-def Field(
+def ParamField(
     *,
     default: Any = Undefined,
     default_factory: Callable[..., Any] | Any = Undefined,
@@ -71,17 +71,17 @@ def Field(
     ...
 
 
-def Field(
+def ParamField(
     *,
     default: Any = Undefined,
     default_factory: Callable[..., Any] | Any = Undefined,
     parameter: type[Parameter] | Callable[..., Parameter] | Parameter | None = None,
     **kwargs: Any,
 ) -> Any:
-    """Field specifier for TypedParameterized attributes."""
+    """ParamField specifier for ParamModel attributes."""
     return t.cast(
         "Any",
-        _FieldSpec(
+        _ParamFieldSpec(
         default=default,
         default_factory=default_factory,
         parameter=parameter,
@@ -162,7 +162,7 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
 def _build_parameter_from_field(
     annotation: Any,
     *,
-    field_spec: _FieldSpec | None,
+    field_spec: _ParamFieldSpec | None,
     explicit_value: Any = Undefined,
     has_explicit_value: bool = False,
 ) -> Parameter:
@@ -196,12 +196,12 @@ def _build_parameter_from_field(
     return factory(**factory_kwargs)
 
 
-@dataclass_transform(field_specifiers=(Field,))
-class TypedParameterizedMetaclass(ParameterizedMetaclass):
+@dataclass_transform(field_specifiers=(ParamField,))
+class ParamModelMetaclass(ParameterizedMetaclass):
 
     def __new__(
         mcs, name: str, bases: tuple[type, ...], dict_: dict[str, Any]
-    ) -> TypedParameterizedMetaclass:
+    ) -> ParamModelMetaclass:
         namespace = dict_
         annotations = dict(namespace.get("__annotations__", {}))
         module_name = namespace.get("__module__", "")
@@ -223,9 +223,9 @@ class TypedParameterizedMetaclass(ParameterizedMetaclass):
             if isinstance(existing, Parameter):
                 continue
 
-            field_spec = existing if isinstance(existing, _FieldSpec) else None
+            field_spec = existing if isinstance(existing, _ParamFieldSpec) else None
             has_explicit_value = (
-                attr in namespace and not isinstance(existing, _FieldSpec)
+                attr in namespace and not isinstance(existing, _ParamFieldSpec)
             )
             explicit_value = existing if has_explicit_value else Undefined
             namespace[attr] = _build_parameter_from_field(
@@ -236,9 +236,9 @@ class TypedParameterizedMetaclass(ParameterizedMetaclass):
             )
 
         return t.cast(
-            "TypedParameterizedMetaclass", super().__new__(mcs, name, bases, namespace)
+            "ParamModelMetaclass", super().__new__(mcs, name, bases, namespace)
         )
 
 
-class TypedParameterized(Parameterized, metaclass=TypedParameterizedMetaclass):
+class ParamModel(Parameterized, metaclass=ParamModelMetaclass):
     """A Parameterized subclass that synthesizes Parameters from type annotations."""

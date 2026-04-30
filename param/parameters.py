@@ -1607,7 +1607,7 @@ class Tuple(Parameter[_T]):
             )
 
     def _validate_length(self, val, length):
-        if val is None and self.allow_None:
+        if val is None:
             return
 
         if not len(val) == length:
@@ -1899,16 +1899,14 @@ class Range(NumericTuple[_T]):
             )
 
     def _validate_bounds(self, val, bounds, inclusive_bounds, kind):
-        if bounds is not None:
-            for pos, v in zip(['lower', 'upper'], bounds):
-                if v is None:
-                    continue
-                self._validate_bound_type(v, pos, kind)
-        if kind == 'softbound':
+        if val is None or kind == 'softbound' or bounds is None:
             return
 
-        if bounds is None or (val is None and self.allow_None):
-            return
+        for pos, v in zip(['lower', 'upper'], bounds):
+            if v is None:
+                continue
+            self._validate_bound_type(v, pos, kind)
+
         vmin, vmax = bounds
         incmin, incmax = inclusive_bounds
         for bound, v in zip(['lower', 'upper'], val):
@@ -2830,13 +2828,14 @@ class ListSelector(Selector):
                     self.objects.append(o)
 
     def _validate(self, val):
-        if (val is None and self.allow_None):
+        if val is None and self.allow_None:
             return
         self._validate_type(val)
 
         if self.check_on_set:
             self._validate_value(val)
         else:
+            assert val is not None
             for v in val:
                 self._ensure_value_is_in_objects(v)
 
@@ -3097,7 +3096,9 @@ class ClassSelector(SelectorBase[_T]):
     def _validate_class_(self, val: t.Any, class_: type | tuple[type, ...], is_instance: bool):
         if (val is None and self.allow_None):
             return
-        if (is_instance and isinstance(val, class_)) or (not is_instance and issubclass(val, class_)):
+        if (is_instance and isinstance(val, class_)) or (
+            not is_instance and isinstance(val, type) and issubclass(val, class_)
+        ):
             return
 
         if isinstance(class_, tuple):
@@ -3630,7 +3631,7 @@ class List(Parameter[_T]):
 
     def _validate_bounds(self, val, bounds):
         """Check that the list is of the right length and has the right contents."""
-        if bounds is None or (val is None and self.allow_None):
+        if bounds is None or val is None:
             return
         min_length, max_length = bounds
         l = len(val)
@@ -4065,7 +4066,7 @@ class Color(Parameter[_T]):
             )
 
     def _validate_allow_named(self, val, allow_named):
-        if (val is None and self.allow_None):
+        if val is None:
             return
         is_hex = re.match('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
@@ -4148,9 +4149,9 @@ class Bytes(Parameter[_T]):
         self._validate(self.default)
 
     def _validate_regex(self, val, regex):
-        if (val is None and self.allow_None):
+        if val is None or regex is None:
             return
-        if regex is not None and re.match(regex, val) is None:
+        if re.match(regex, val) is None:
             raise ValueError(
                 f"{_validate_error_prefix(self)} value {val!r} "
                 f"does not match regex {regex!r}."

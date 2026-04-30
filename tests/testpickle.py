@@ -7,6 +7,8 @@ try:
     import cloudpickle
 except ModuleNotFoundError:
     cloudpickle = None
+except AttributeError:
+    cloudpickle = None  # PyPy on Windows
 try:
     import numpy as np
 except ModuleNotFoundError:

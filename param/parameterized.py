@@ -1944,7 +1944,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         return result
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized, val: _T):
+    def __set__(self, obj: Parameterized | None, val: _T):
         """
         Set the value for this Parameter.
 

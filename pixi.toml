@@ -205,7 +205,7 @@ lint-install = 'pre-commit install'
 # =============== TYPECHECK ===================
 # =============================================
 [feature.type.dependencies]
-ty = "*"
+ty = "==0.0.34"
 mypy = "*"
 numpy = "*"
 pandas = "*"
@@ -222,11 +222,13 @@ type-pyrefly = { cmd = 'pyrefly check --output-format min-text --count-errors=0 
     { arg = "file", default = "" },
 ] }
 type-pyright = { cmd = 'pyright {{ file }}', args = [{ arg = "file", default = "" }] }
+type-asserts = { depends-on = ["install"], cmd = 'pyright --project tests/pyrightconfig-bare.json tests/assert_types.py' }
 type-all = { depends-on = [
     { task = "type-ty", args = [ { file = "{{ file }}" } ] },
     { task = "type-mypy", args = [ { file = "{{ file }}" } ] },
     { task = "type-pyrefly", args = [ { file = "{{ file }}" } ] },
     { task = "type-pyright", args = [ { file = "{{ file }}" } ] },
+    { task = "type-asserts" },
 ], args = [
     { arg = "file", default = "" },
 ] }

@@ -2731,7 +2731,7 @@ class Parameters:
         except Skip:
             value = Undefined
         if is_async and pobj.name:
-            async_executor(partial(self_._async_ref, pobj.name, value))
+            async_executor(partial(self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value)))
             value = None
         return ref, deps, value, is_async
 

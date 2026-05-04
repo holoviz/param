@@ -2265,7 +2265,7 @@ class Action(Callable[_T]):
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[_ParameterKwargs]
     ) -> None:
-        super().__init__(default=default, **params)
+        super().__init__(default=default, **params)  # type: ignore[misc]  # pyrefly: ignore[bad-argument-type]
         self._validate(self.default)
 
 # Currently same implementation as Callable, but kept separate to allow different handling in GUIs
@@ -3853,7 +3853,7 @@ class Path(Parameter[_T]):
     __slots__ = ['search_paths', 'check_exists']
 
     _slot_defaults = dict(
-        Parameter._slot_defaults, check_exists=True,
+        Parameter._slot_defaults, check_exists=True, search_paths=None
     )
 
     search_paths: list[str | PathLike] | None
@@ -3866,9 +3866,9 @@ class Path(Parameter[_T]):
             self: Path[PathLike | str],
             default: PathLike | str = pathlib.Path(""),
             *,
-            allow_None: t.Literal[False] = False,
             search_paths: list[str | PathLike] | None = None,
             check_exists: bool = True,
+            allow_None: t.Literal[False] = False,
             doc: str | None = None,
             label: str | None = None,
             precedence: float | None = None,
@@ -3881,16 +3881,6 @@ class Path(Parameter[_T]):
             nested_refs: bool = False,
             default_factory: t.Callable[[], t.Any] | None = None,
             metadata: dict[str, t.Any] | None = None,
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Path[PathLike | str | None],
-            default: None = None,
-            *,
-            allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[_PathInitKwargs]
         ) -> None:
             ...
 
@@ -3965,7 +3955,6 @@ class Path(Parameter[_T]):
         return state
 
 
-
 class Filename(Path[_T]):
     """
     Parameter that can be set to a string specifying the path of a file.
@@ -4009,22 +3998,23 @@ class Filename(Path[_T]):
         @t.overload
         def __init__(
             self: Filename[PathLike | str | None],
-            default: None = None,
-            *,
-            allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[_PathInitKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Filename[PathLike | str | None],
             default: PathLike | str = pathlib.Path(""),
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_PathInitKwargs]
         ) -> None:
             ...
+
+    def __init__(
+        self,
+        default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[_PathInitKwargs]
+    ) -> None:
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
+            default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
+        )
 
     def _resolve(self, path):
         return resolve_path(path=path, path_to_file=True, search_paths=self.search_paths)
@@ -4073,22 +4063,23 @@ class Foldername(Path[_T]):
         @t.overload
         def __init__(
             self: Foldername[PathLike | str | None],
-            default: None = None,
-            *,
-            allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[_PathInitKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: Foldername[PathLike | str | None],
             default: PathLike | str = pathlib.Path(""),
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_PathInitKwargs]
         ) -> None:
             ...
+
+    def __init__(
+        self,
+        default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[_PathInitKwargs]
+    ) -> None:
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
+            default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
+        )
 
     def _resolve(self, path):
         return resolve_path(path=path, path_to_file=False, search_paths=self.search_paths)

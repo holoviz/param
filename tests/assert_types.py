@@ -244,11 +244,13 @@ class Foo: pass
 class ClassTypes(param.Parameterized):
     foo = param.ClassSelector(class_=Foo, allow_None=False, default=Foo())
     optional_foo = param.ClassSelector(class_=Foo, allow_None=True)
+    no_none_foo = param.ClassSelector(class_=Foo, allow_None=param.parameters.NoNone)
 
 ctypes = ClassTypes()
 
 assert_type(ctypes.foo, Foo)
 assert_type(ctypes.optional_foo, Foo | None)
+assert_type(ctypes.no_none_foo, Foo)
 
 class SelectorBaseTypes(param.Parameterized):
     selector_base = param.SelectorBase(default=1, allow_None=False)

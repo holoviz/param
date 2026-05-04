@@ -3894,6 +3894,16 @@ class Path(Parameter[_T]):
         ) -> None:
             ...
 
+        @t.overload
+        def __init__(
+            self: Path[PathLike | str | None],
+            default: PathLike | str | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
     def __init__(
         self,
         default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -4005,6 +4015,16 @@ class Filename(Path[_T]):
         ) -> None:
             ...
 
+        @t.overload
+        def __init__(
+            self: Filename[PathLike | str | None],
+            default: PathLike | str | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
     def __init__(
         self,
         default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
@@ -4064,6 +4084,16 @@ class Foldername(Path[_T]):
         def __init__(
             self: Foldername[PathLike | str | None],
             default: PathLike | str = pathlib.Path(""),
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Foldername[PathLike | str | None],
+            default: PathLike | str | None = None,
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_PathInitKwargs]

@@ -612,7 +612,7 @@ class Dynamic(Parameter[_T]):
             self._set_instantiate(True)
             self._initialize_generator(self.default)
 
-    def _initialize_generator(self, gen, obj=None):
+    def _initialize_generator(self, gen, obj: Parameterized | None = None):
         """Add 'last time' and 'last value' attributes to the generator."""
         # Could use a dictionary to hold these things.
         if obj is not None and hasattr(obj, "_Dynamic_time_fn"):
@@ -642,7 +642,7 @@ class Dynamic(Parameter[_T]):
             return t.cast("_T", self._produce_value(gen))
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized, val: _T):
+    def __set__(self, obj: Parameterized | None, val: _T):
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -653,8 +653,10 @@ class Dynamic(Parameter[_T]):
         super().__set__(obj, val)
 
         dynamic = callable(val)
-        if dynamic: self._initialize_generator(val,obj)
-        if obj is None: self._set_instantiate(dynamic)
+        if dynamic:
+            self._initialize_generator(val, obj)
+        if obj is None:
+            self._set_instantiate(dynamic)
 
     def _produce_value(self, gen, force: bool = False):
         """

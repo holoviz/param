@@ -159,13 +159,18 @@ jobs:
         id: pyright
         continue-on-error: true
         run: pixi run -e type type-pyright
+      - name: Asserts
+        id: asserts
+        continue-on-error: true
+        run: pixi run -e type type-asserts
       - name: Error if any check failed
-        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success'
+        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success' || steps.asserts.outcome != 'success'
         run: |
           echo "TY: ${{ steps.ty.outcome }}"
           echo "mypy: ${{ steps.mypy.outcome }}"
           echo "Pyrefly: ${{ steps.pyrefly.outcome }}"
           echo "Pyright: ${{ steps.pyright.outcome }}"
+          echo "Asserts: ${{ steps.asserts.outcome }}"
           exit 1
 
   pypy_test_suite:

@@ -205,7 +205,7 @@ lint-install = 'pre-commit install'
 # =============== TYPECHECK ===================
 # =============================================
 [feature.type.dependencies]
-ty = "*"
+ty = "0.0.34"
 mypy = "*"
 numpy = "*"
 pandas = "*"

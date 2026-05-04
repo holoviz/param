@@ -616,7 +616,7 @@ class Dynamic(Parameter[_T]):
         """Add 'last time' and 'last value' attributes to the generator."""
         # Could use a dictionary to hold these things.
         if obj is not None and hasattr(obj, "_Dynamic_time_fn"):
-            gen._Dynamic_time_fn = obj._Dynamic_time_fn
+            gen._Dynamic_time_fn = obj._Dynamic_time_fn  # type: ignore[attribute-access]
 
         gen._Dynamic_last = None
         # Would have usede None for this, but can't compare a fixedpoint

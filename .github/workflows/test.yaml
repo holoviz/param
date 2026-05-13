@@ -23,6 +23,8 @@ on:
   schedule:
     - cron: "0 13 * * SUN"
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -50,12 +52,14 @@ jobs:
       matrix: ${{ env.MATRIX }}
     steps:
       - name: Set matrix option
+        env:
+          GITHUB_EVENT_INPUTS_TARGET: ${{ github.event.inputs.target }}
         run: |
-          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
-            OPTION=${{ github.event.inputs.target }}
-          elif [[ '${{ github.event_name }}' == 'schedule' ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == 'workflow_dispatch' ]]; then
+            OPTION=${GITHUB_EVENT_INPUTS_TARGET}
+          elif [[ "${GITHUB_EVENT_NAME}" == 'schedule' ]]; then
             OPTION="full"
-          elif [[ '${{ github.event_name }}' == 'push' && '${{ github.ref_type }}' == 'tag' ]]; then
+          elif [[ "${GITHUB_EVENT_NAME}" == 'push' && "${GITHUB_REF_TYPE}" == 'tag' ]]; then
             OPTION="full"
           else
             OPTION="default"
@@ -102,16 +106,18 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     timeout-minutes: 30
+    env:
+      ENV: ${{ matrix.environment }}
     steps:
       - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
           environments: ${{ matrix.environment }}
       - name: Test Unit
         run: |
-          pixi run -e ${{ matrix.environment }} test-unit $COV
+          pixi run -e "${ENV}" test-unit $COV
       - name: Test Examples
         run: |
-          pixi run -e ${{ matrix.environment }} test-example
+          pixi run -e "${ENV}" test-example
       - uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -126,13 +132,15 @@ jobs:
         os: ["ubuntu-latest"]
         environment: ["test-core", "test-314t"]
     timeout-minutes: 30
+    env:
+      ENV: ${{ matrix.environment }}
     steps:
       - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
         with:
           environments: ${{ matrix.environment }}
       - name: Test Unit
         run: |
-          pixi run -e ${{ matrix.environment }} test-unit
+          pixi run -e "${ENV}" test-unit
 
   type_suite:
     name: type:ubuntu-latest
@@ -165,12 +173,18 @@ jobs:
         run: pixi run -e type type-asserts
       - name: Error if any check failed
         if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success' || steps.asserts.outcome != 'success'
+        env:
+          TY_OUTCOME: ${{ steps.ty.outcome }}
+          MYPY_OUTCOME: ${{ steps.mypy.outcome }}
+          PYREFLY_OUTCOME: ${{ steps.pyrefly.outcome }}
+          PYRIGHT_OUTCOME: ${{ steps.pyright.outcome }}
+          ASSERTS_OUTCOME: ${{ steps.asserts.outcome }}
         run: |
-          echo "TY: ${{ steps.ty.outcome }}"
-          echo "mypy: ${{ steps.mypy.outcome }}"
-          echo "Pyrefly: ${{ steps.pyrefly.outcome }}"
-          echo "Pyright: ${{ steps.pyright.outcome }}"
-          echo "Asserts: ${{ steps.asserts.outcome }}"
+          echo "TY: ${TY_OUTCOME}"
+          echo "mypy: ${MYPY_OUTCOME}"
+          echo "Pyrefly: ${PYREFLY_OUTCOME}"
+          echo "Pyright: ${PYRIGHT_OUTCOME}"
+          echo "Asserts: ${ASSERTS_OUTCOME}"
           exit 1
 
   pypy_test_suite:
@@ -187,6 +201,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: "100"
+          persist-credentials: false
       - name: Fetch
         run: git fetch --prune --tags -f
       - uses: actions/setup-python@v6

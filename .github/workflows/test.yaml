@@ -208,7 +208,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
       - name: Install project dependencies

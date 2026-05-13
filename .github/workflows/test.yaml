@@ -23,6 +23,8 @@ on:
   schedule:
     - cron: "0 13 * * SUN"
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -41,7 +43,7 @@ jobs:
     name: Run pre-commit
     runs-on: "ubuntu-latest"
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pre-commit@v0
+      - uses: holoviz-dev/holoviz_tasks/pre-commit@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
 
   setup:
     name: Setup workflow
@@ -50,12 +52,14 @@ jobs:
       matrix: ${{ env.MATRIX }}
     steps:
       - name: Set matrix option
+        env:
+          GITHUB_EVENT_INPUTS_TARGET: ${{ github.event.inputs.target }}
         run: |
-          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
-            OPTION=${{ github.event.inputs.target }}
-          elif [[ '${{ github.event_name }}' == 'schedule' ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == 'workflow_dispatch' ]]; then
+            OPTION=${GITHUB_EVENT_INPUTS_TARGET}
+          elif [[ "${GITHUB_EVENT_NAME}" == 'schedule' ]]; then
             OPTION="full"
-          elif [[ '${{ github.event_name }}' == 'push' && '${{ github.ref_type }}' == 'tag' ]]; then
+          elif [[ "${GITHUB_EVENT_NAME}" == 'push' && "${GITHUB_REF_TYPE}" == 'tag' ]]; then
             OPTION="full"
           else
             OPTION="default"
@@ -90,7 +94,7 @@ jobs:
     name: Pixi lock
     runs-on: ubuntu-latest
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_lock@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-lock@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
         with:
           cache: ${{ github.event.inputs.cache == 'true' || github.event.inputs.cache == '' }}
 
@@ -102,17 +106,19 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     timeout-minutes: 30
+    env:
+      ENV: ${{ matrix.environment }}
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-install@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
         with:
           environments: ${{ matrix.environment }}
       - name: Test Unit
         run: |
-          pixi run -e ${{ matrix.environment }} test-unit $COV
+          pixi run -e "${ENV}" test-unit $COV
       - name: Test Examples
         run: |
-          pixi run -e ${{ matrix.environment }} test-example
-      - uses: codecov/codecov-action@v6
+          pixi run -e "${ENV}" test-example
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -126,13 +132,15 @@ jobs:
         os: ["ubuntu-latest"]
         environment: ["test-core", "test-314t"]
     timeout-minutes: 30
+    env:
+      ENV: ${{ matrix.environment }}
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-install@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
         with:
           environments: ${{ matrix.environment }}
       - name: Test Unit
         run: |
-          pixi run -e ${{ matrix.environment }} test-unit
+          pixi run -e "${ENV}" test-unit
 
   type_suite:
     name: type:ubuntu-latest
@@ -140,7 +148,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-install@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
         with:
           environments: type
       - name: TY
@@ -165,12 +173,18 @@ jobs:
         run: pixi run -e type type-asserts
       - name: Error if any check failed
         if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success' || steps.asserts.outcome != 'success'
+        env:
+          TY_OUTCOME: ${{ steps.ty.outcome }}
+          MYPY_OUTCOME: ${{ steps.mypy.outcome }}
+          PYREFLY_OUTCOME: ${{ steps.pyrefly.outcome }}
+          PYRIGHT_OUTCOME: ${{ steps.pyright.outcome }}
+          ASSERTS_OUTCOME: ${{ steps.asserts.outcome }}
         run: |
-          echo "TY: ${{ steps.ty.outcome }}"
-          echo "mypy: ${{ steps.mypy.outcome }}"
-          echo "Pyrefly: ${{ steps.pyrefly.outcome }}"
-          echo "Pyright: ${{ steps.pyright.outcome }}"
-          echo "Asserts: ${{ steps.asserts.outcome }}"
+          echo "TY: ${TY_OUTCOME}"
+          echo "mypy: ${MYPY_OUTCOME}"
+          echo "Pyrefly: ${PYREFLY_OUTCOME}"
+          echo "Pyright: ${PYRIGHT_OUTCOME}"
+          echo "Asserts: ${ASSERTS_OUTCOME}"
           exit 1
 
   pypy_test_suite:
@@ -184,16 +198,17 @@ jobs:
         python-version: ["pypy3.11"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: "100"
+          persist-credentials: false
       - name: Fetch
         run: git fetch --prune --tags -f
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
       - name: Install project dependencies

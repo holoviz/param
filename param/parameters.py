@@ -3527,13 +3527,11 @@ class DataFrameLike(ClassSelector[t.Any]):
     Unlike :class:`DataFrame`, which is restricted to ``pandas.DataFrame``,
     ``DataFrameLike`` accepts any object supported by
     `Narwhals <https://narwhals-dev.github.io>`_. pandas, Polars and PyArrow
-    are exercised in this project's test suite; Modin and cuDF are supported
-    through the same Narwhals code path but are not run in CI (Modin's pinned
-    dependencies conflict with the test environment and cuDF is GPU-only).
-    The value is passed through unchanged, so reading the parameter returns
-    the original native object (no Narwhals wrapper). Authors who want a
-    backend-agnostic API can call ``narwhals.from_native`` on the value
-    themselves.
+    are exercised in this project's test suite; any other Narwhals-supported
+    backend uses the identical code path. The value is passed through
+    unchanged, so reading the parameter returns the original native object
+    (no Narwhals wrapper). Authors who want a backend-agnostic API can call
+    ``narwhals.from_native`` on the value themselves.
 
     Narwhals is an optional dependency, imported on instantiation; a clear
     ``ImportError`` with the install command is raised if it is missing. The
@@ -3652,8 +3650,8 @@ class DataFrameLike(ClassSelector[t.Any]):
             kind = 'a dataframe-like' if self.allow_lazy else 'an eager dataframe-like'
             raise ValueError(
                 f"{_validate_error_prefix(self)} value must be {kind} object "
-                f"that Narwhals recognises (pandas, Polars, PyArrow, cuDF, "
-                f"Modin), not {type(val).__name__!r}."
+                f"that Narwhals recognises (pandas, Polars, PyArrow, ...), "
+                f"not {type(val).__name__!r}."
             ) from e
 
     def _validate(self, val):

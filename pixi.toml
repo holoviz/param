@@ -209,8 +209,10 @@ lint-install = 'pre-commit install'
 [feature.type.dependencies]
 ty = "==0.0.34"
 mypy = "*"
+narwhals = "*"
 numpy = "*"
 pandas = "*"
+polars = "*"
 pyrefly = "*"
 pyright = "*"
 IPython = "*"

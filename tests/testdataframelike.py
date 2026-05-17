@@ -30,9 +30,17 @@ try:
 except ModuleNotFoundError:
     pa = None
 
+try:
+    import modin.pandas as mpd
+except Exception:
+    # modin import can fail for reasons beyond ModuleNotFoundError (missing
+    # execution engine), so guard broadly and skip rather than error.
+    mpd = None
+
 skip_no_pandas = pytest.mark.skipif(pd is None, reason="pandas not available")
 skip_no_polars = pytest.mark.skipif(pl is None, reason="polars not available")
 skip_no_pyarrow = pytest.mark.skipif(pa is None, reason="pyarrow not available")
+skip_no_modin = pytest.mark.skipif(mpd is None, reason="modin not available")
 
 
 class TestDataFrameLikeDefaults(unittest.TestCase):
@@ -76,6 +84,18 @@ class TestDataFrameLikeAccepts(unittest.TestCase):
             df = param.DataFrameLike(default=pd.DataFrame({'a': [1]}))
         src = pa.table({'a': [1, 2]})
         self.assertIs(P(df=src).df, src)
+
+    @skip_no_modin
+    def test_modin(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), rows=2, columns={'a'})
+        src = mpd.DataFrame({'a': [1, 2]})
+        p = P(df=src)
+        self.assertIs(p.df, src)
+        self.assertIsInstance(p.df, mpd.DataFrame)
+        with self.assertRaises(ValueError):
+            P(df=mpd.DataFrame({'a': [1]}))  # rows=2 mismatch
 
 
 @skip_no_pandas

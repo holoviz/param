@@ -3506,10 +3506,17 @@ def _get_narwhals():
     """Import and return the optional ``narwhals`` dependency.
 
     Deferred so ``param`` keeps no hard dependency on ``narwhals`` (the same
-    way pandas is deferred for :class:`DataFrame`). Raises ``ModuleNotFoundError``
-    naming ``narwhals`` if it is not installed.
+    way pandas is deferred for :class:`DataFrame`). Raises a clear
+    ``ImportError`` naming the feature and the install command if ``narwhals``
+    is not available.
     """
-    import narwhals
+    try:
+        import narwhals
+    except ModuleNotFoundError as e:
+        raise ImportError(
+            "param.DataFrameLike requires the optional 'narwhals' package. "
+            "Install it with: pip install narwhals"
+        ) from e
     return narwhals
 
 
@@ -3518,14 +3525,18 @@ class DataFrameLike(ClassSelector[t.Any]):
     Parameter whose value is any dataframe-like object that Narwhals recognises.
 
     Unlike :class:`DataFrame`, which is restricted to ``pandas.DataFrame``,
-    ``DataFrameLike`` accepts pandas, Polars, PyArrow, cuDF, Modin and any
-    other backend supported by `Narwhals <https://narwhals-dev.github.io>`_.
+    ``DataFrameLike`` accepts any object supported by
+    `Narwhals <https://narwhals-dev.github.io>`_. pandas, Polars and PyArrow
+    are exercised in this project's test suite; Modin and cuDF are supported
+    through the same Narwhals code path but are not run in CI (Modin's pinned
+    dependencies conflict with the test environment and cuDF is GPU-only).
     The value is passed through unchanged, so reading the parameter returns
     the original native object (no Narwhals wrapper). Authors who want a
     backend-agnostic API can call ``narwhals.from_native`` on the value
     themselves.
 
-    Narwhals is an optional dependency, imported on instantiation. The
+    Narwhals is an optional dependency, imported on instantiation; a clear
+    ``ImportError`` with the install command is raised if it is missing. The
     structure of the frame can be constrained by the rows and columns
     arguments:
 
@@ -3544,6 +3555,13 @@ class DataFrameLike(ClassSelector[t.Any]):
     ``allow_lazy=True`` to also accept lazy frames (Polars ``LazyFrame``,
     Dask, DuckDB). Row-count validation is skipped for lazy frames so the
     frame is never implicitly collected.
+
+    Serialization is intentionally backend-neutral: ``serialize`` emits a
+    list of records via Narwhals (a lazy frame is collected at this point),
+    and ``deserialize`` reconstructs a ``pandas.DataFrame`` because JSON
+    carries no backend information. Round-tripping therefore does not
+    preserve a non-pandas backend; callers needing another backend can
+    rebuild from the records form.
     """
 
     __slots__ = ['rows', 'columns', 'ordered', 'allow_lazy']
@@ -3671,6 +3689,10 @@ class DataFrameLike(ClassSelector[t.Any]):
               and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
             _length_bounds_check(self, self.columns, len(cols), 'columns')
         elif isinstance(self.columns, (list, set)):
+            # Mirrors DataFrame._validate exactly (including this in-place
+            # ``ordered`` defaulting) so the two classes behave identically;
+            # cleaning up the slot mutation is deferred to a cross-cutting
+            # change that touches both.
             self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
             difference = set(self.columns) - {str(el) for el in cols}
             if difference:

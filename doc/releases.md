@@ -1,5 +1,48 @@
 # Releases
 
+## Version 2.4.0
+
+Date: 2026-05-21
+
+Param 2.4.0 brings first-class static typing support to the entire Param ecosystem — all major parameter types now carry precise type information that flows through to your IDE and type checker, with types inferred directly from your existing parameter declarations. The release also adds a `lazy` mode to reactive expressions (`rx`) and includes performance optimizations that speed up parameter initialization in large class hierarchies.
+
+Many thanks to @philippjfr, @hoxbro and @camriddell for their contributions to this release.
+
+### 🚀 Features
+
+- Implement descriptor factory typing system by implementing `Parameter` generics (`Parameter[_T]`) and add typed overloads for all major Parameter subclasses ([#1066](https://github.com/holoviz/param/pull/1066))
+- Add `py.typed` PEP 561 marker so type checkers automatically recognize Param's inline annotations without requiring separate stubs ([#1066](https://github.com/holoviz/param/pull/1066))
+- Infer list element type from `item_type` on `List` parameters — `List(item_type=str)` resolves to `list[str]`; untyped `List` resolves to `list[Any]` ([#1130](https://github.com/holoviz/param/pull/1130))
+- Infer instance type from `class_` on `ClassSelector` parameters, including correct `NoNone` handling and tuple `class_` support ([#1131](https://github.com/holoviz/param/pull/1131), [#1132](https://github.com/holoviz/param/pull/1132), [#1136](https://github.com/holoviz/param/pull/1136))
+- Infer return types for `concrete_descendents` and `descendents` ([#1137](https://github.com/holoviz/param/pull/1137))
+- Add type annotation to `Parameter.rx` property ([#1112](https://github.com/holoviz/param/pull/1112))
+- Add `rx(..., lazy=)` argument ([#1106](https://github.com/holoviz/param/pull/1106))
+- Add `zizmor` for GitHub Actions security scanning ([#1143](https://github.com/holoviz/param/pull/1143))
+
+### ⚡ Performance
+
+- Add caches to speed up `Parameter` initialization ([#1124](https://github.com/holoviz/param/pull/1124))
+- Optimize `Parameter` instantiation ([#1122](https://github.com/holoviz/param/pull/1122))
+
+### 🐛 Bug Fixes
+
+- Fix type inference for class-level `Parameter` setter ([#1141](https://github.com/holoviz/param/pull/1141))
+- Fix `NumericTuple` type inference ([#1134](https://github.com/holoviz/param/pull/1134))
+- Fix cyclic reference in `Parameter` ([#1127](https://github.com/holoviz/param/pull/1127))
+- Fix `param.depends` method call in class context ([#1129](https://github.com/holoviz/param/pull/1129))
+- Use `re.search` for regex check ([#1142](https://github.com/holoviz/param/pull/1142))
+- Implement custom `__copy__` for `Parameter` ([#1128](https://github.com/holoviz/param/pull/1128))
+
+### 🧪 Tests & CI
+
+- Add `tests/assert_types.py` with `assert_type()` assertions verified in CI ([#1066](https://github.com/holoviz/param/pull/1066))
+- Add CI jobs for `mypy`, `pyright`, `pyrefly`, and `ty` ([#1066](https://github.com/holoviz/param/pull/1066), [#1140](https://github.com/holoviz/param/pull/1140))
+
+### 📚 Documentation
+
+- Add Typing user guide ([#1139](https://github.com/holoviz/param/pull/1139))
+
+
 ## Version 2.3.3
 
 Date: 2026-03-31

@@ -24,15 +24,15 @@ Many thanks to @philippjfr, @hoxbro and @camriddell for their contributions to t
 
 - Use `re.search` for `param.String` regex check ([#1142](https://github.com/holoviz/param/pull/1142))
 
+### 📚 Documentation
+
+- Add Typing user guide ([#1139](https://github.com/holoviz/param/pull/1139))
+
 ### 🧪 Tests & CI
 
 - Add `tests/assert_types.py` with `assert_type()` assertions verified in CI ([#1066](https://github.com/holoviz/param/pull/1066))
 - Add CI jobs for `mypy`, `pyright`, `pyrefly`, and `ty` ([#1066](https://github.com/holoviz/param/pull/1066), [#1140](https://github.com/holoviz/param/pull/1140))
 - Add `zizmor` for GitHub Actions security scanning ([#1143](https://github.com/holoviz/param/pull/1143))
-
-### 📚 Documentation
-
-- Add Typing user guide ([#1139](https://github.com/holoviz/param/pull/1139))
 
 
 ## Version 2.3.3

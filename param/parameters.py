@@ -3641,39 +3641,39 @@ class DataFrameLike(ClassSelector[t.Any]):
         nwframe = self._as_narwhals(val)
         narwhals = _get_narwhals()
         is_lazy = isinstance(nwframe, narwhals.LazyFrame)
-        need_cols = self.columns is not None or self.ordered
-        schema = nwframe.collect_schema() if (need_cols or (self.rows is not None and is_lazy)) else None
-        cols = list(schema.names()) if (schema is not None and need_cols) else None
 
-        if self.columns is None:
-            pass
-        elif (isinstance(self.columns, tuple) and len(self.columns)==2
-              and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
-            _length_bounds_check(self, self.columns, len(cols), 'columns')
-        elif isinstance(self.columns, (list, set)):
-            # Mirrors DataFrame._validate exactly (including this in-place
-            # ``ordered`` defaulting) so the two classes behave identically;
-            # cleaning up the slot mutation is deferred to a cross-cutting
-            # change that touches both.
-            self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
-            difference = set(self.columns) - {str(el) for el in cols}
-            if difference:
-                raise ValueError(
-                    f"{_validate_error_prefix(self)}: provided columns "
-                    f"{cols} does not contain required "
-                    f"columns {sorted(self.columns)}"
-                )
-        else:
-            _length_bounds_check(self, self.columns, len(cols), 'column')
+        # Resolve schema once if any column check or lazy row check needs it.
+        need_schema = self.columns is not None or (self.rows is not None and is_lazy)
+        schema = nwframe.collect_schema() if need_schema else None
 
-        if self.ordered and isinstance(self.columns, Iterable):
-            if cols != list(self.columns):
-                raise ValueError(
-                    f"{_validate_error_prefix(self)}: provided columns "
-                    f"{cols} must exactly match {self.columns}"
-                )
+        if self.columns is not None:
+            assert schema is not None
+            cols = list(schema.names())
+            if (isinstance(self.columns, tuple) and len(self.columns)==2
+                  and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
+                _length_bounds_check(self, self.columns, len(cols), 'columns')
+            elif isinstance(self.columns, (list, set)):
+                self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
+                difference = set(self.columns) - {str(el) for el in cols}
+                if difference:
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)}: provided columns "
+                        f"{cols} does not contain required "
+                        f"columns {sorted(self.columns)}"
+                    )
+            else:
+                _length_bounds_check(self, self.columns, len(cols), 'column')
+
+            if self.ordered and isinstance(self.columns, Iterable):
+                if cols != list(self.columns):
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)}: provided columns "
+                        f"{cols} must exactly match {self.columns}"
+                    )
+
         if self.rows is not None:
             if is_lazy:
+                assert schema is not None
                 first = next(iter(schema.names()), None)
                 n = (
                     nwframe.select(narwhals.col(first).count()).collect().item()

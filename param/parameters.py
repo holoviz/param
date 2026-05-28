@@ -45,6 +45,7 @@ from ._utils import (
     _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
+    _get_narwhals,
     _named_objs,
     _produce_value,
     _get_min_max_value,
@@ -118,7 +119,7 @@ if t.TYPE_CHECKING:
         rows: int | tuple[int | None, int | None] | None
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
         ordered: bool | None
-        allow_lazy: bool | None
+        eager_only: bool | None
 
     class _SeriesInitKwargs(_ParameterKwargs, total=False):
         rows: int | tuple[int | None, int | None] | None
@@ -3502,74 +3503,38 @@ class DataFrame(ClassSelector["DF"]):
             return pandas.DataFrame(value)
 
 
-def _get_narwhals():
-    """Import and return the optional ``narwhals`` dependency.
-
-    Deferred so ``param`` keeps no hard dependency on ``narwhals`` (the same
-    way pandas is deferred for :class:`DataFrame`). Raises a clear
-    ``ImportError`` naming the feature and the install command if ``narwhals``
-    is not available.
-    """
-    try:
-        import narwhals
-    except ModuleNotFoundError as e:
-        raise ImportError(
-            "param.DataFrameLike requires the optional 'narwhals' package. "
-            "Install it with: pip install narwhals"
-        ) from e
-    return narwhals
-
-
 class DataFrameLike(ClassSelector[t.Any]):
     """
     Parameter whose value is any dataframe-like object that Narwhals recognises.
 
     Unlike :class:`DataFrame`, which is restricted to ``pandas.DataFrame``,
     ``DataFrameLike`` accepts any object supported by
-    `Narwhals <https://narwhals-dev.github.io>`_. pandas, Polars and PyArrow
-    are exercised in this project's test suite; any other Narwhals-supported
-    backend uses the identical code path. The value is passed through
-    unchanged, so reading the parameter returns the original native object
-    (no Narwhals wrapper). Authors who want a backend-agnostic API can call
-    ``narwhals.from_native`` on the value themselves.
+    `Narwhals <https://narwhals-dev.github.io/narwhals/>`_ (pandas, Polars,
+    PyArrow, ...). The native value is passed through unchanged; authors who
+    want a backend-agnostic API can call ``narwhals.from_native`` themselves.
 
-    Narwhals is an optional dependency, imported on instantiation; a clear
-    ``ImportError`` with the install command is raised if it is missing. The
-    structure of the frame can be constrained by the rows and columns
-    arguments:
+    ``rows``: number or ``(lower, upper)`` bounds on row count.
 
-    ``rows``: If specified, may be a number or an integer bounds tuple to
-    constrain the allowable number of rows. Skipped for lazy frames.
+    ``columns``: number, ``(lower, upper)`` bounds, a list (exact columns,
+    same order unless ``ordered=False``), or a set (required subset).
 
-    ``columns``: If specified, may be a number, an integer bounds tuple, a
-    list or a set. If the argument is numeric, constrains the number of
-    columns using the same semantics as used for rows. If either a list
-    or set of strings, the column names will be validated. If a set is
-    used, the supplied frame must contain the specified columns and if a
-    list is given, the supplied frame must contain exactly the same
-    columns and in the same order and no other columns.
+    ``eager_only``: when ``True`` (default), reject lazy frames. Set
+    ``eager_only=False`` to also accept lazy frames (Polars ``LazyFrame``,
+    Dask, DuckDB); row counts on lazy frames are validated through a scalar
+    ``count()`` collect rather than materialising the frame.
 
-    ``allow_lazy``: By default only eager frames are accepted. Set
-    ``allow_lazy=True`` to also accept lazy frames (Polars ``LazyFrame``,
-    Dask, DuckDB). Row-count validation is skipped for lazy frames so the
-    frame is never implicitly collected.
-
-    Serialization is intentionally backend-neutral: ``serialize`` emits a
-    list of records via Narwhals (a lazy frame is collected at this point),
-    and ``deserialize`` reconstructs a ``pandas.DataFrame`` because JSON
-    carries no backend information. Round-tripping therefore does not
-    preserve a non-pandas backend; callers needing another backend can
-    rebuild from the records form.
+    Serialization emits a list of records via Narwhals; ``deserialize``
+    reconstructs a ``pandas.DataFrame`` because JSON carries no backend.
     """
 
-    __slots__ = ['rows', 'columns', 'ordered', 'allow_lazy']
+    __slots__ = ['rows', 'columns', 'ordered', 'eager_only']
 
     _slot_defaults = {
         **ClassSelector._slot_defaults,
         'rows': None,
         'columns': None,
         'ordered': None,
-        'allow_lazy': False,
+        'eager_only': True,
     }
 
     if t.TYPE_CHECKING:
@@ -3622,7 +3587,7 @@ class DataFrameLike(ClassSelector[t.Any]):
         rows: int | tuple[int | None, int | None] | None = t.cast("int | tuple[int | None, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = t.cast("int | tuple[int | None, int | None] | list[str] | set[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         ordered: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
-        allow_lazy: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        eager_only: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[_ParameterKwargs]
     ) -> None:
@@ -3630,7 +3595,7 @@ class DataFrameLike(ClassSelector[t.Any]):
         object.__setattr__(self, 'rows', rows)
         object.__setattr__(self, 'columns', columns)
         object.__setattr__(self, 'ordered', ordered)
-        object.__setattr__(self, 'allow_lazy', allow_lazy)
+        object.__setattr__(self, 'eager_only', eager_only)
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,  # type: ignore[arg-type]
             class_=object,  # type: ignore[arg-type]
@@ -3644,10 +3609,10 @@ class DataFrameLike(ClassSelector[t.Any]):
         narwhals = _get_narwhals()
         try:
             return narwhals.from_native(
-                val, eager_only=not self.allow_lazy, pass_through=False
+                val, eager_only=self.eager_only, pass_through=False
             )
         except TypeError as e:
-            kind = 'a dataframe-like' if self.allow_lazy else 'an eager dataframe-like'
+            kind = 'an eager dataframe-like' if self.eager_only else 'a dataframe-like'
             raise ValueError(
                 f"{_validate_error_prefix(self)} value must be {kind} object "
                 f"that Narwhals recognises (pandas, Polars, PyArrow, ...), "
@@ -3676,10 +3641,9 @@ class DataFrameLike(ClassSelector[t.Any]):
         nwframe = self._as_narwhals(val)
         narwhals = _get_narwhals()
         is_lazy = isinstance(nwframe, narwhals.LazyFrame)
-        # ``collect_schema().names()`` is the Narwhals-recommended way to read
-        # column names uniformly across eager and lazy frames; ``.columns`` on
-        # a lazy frame triggers a backend schema-resolution warning.
-        cols = list(nwframe.collect_schema().names())
+        need_cols = self.columns is not None or self.ordered
+        schema = nwframe.collect_schema() if (need_cols or (self.rows is not None and is_lazy)) else None
+        cols = list(schema.names()) if (schema is not None and need_cols) else None
 
         if self.columns is None:
             pass
@@ -3708,10 +3672,16 @@ class DataFrameLike(ClassSelector[t.Any]):
                     f"{_validate_error_prefix(self)}: provided columns "
                     f"{cols} must exactly match {self.columns}"
                 )
-        # Row count requires materialising a lazy frame; skip for lazy so
-        # the frame is never implicitly collected.
-        if self.rows is not None and not is_lazy:
-            _length_bounds_check(self, self.rows, nwframe.shape[0], 'row')
+        if self.rows is not None:
+            if is_lazy:
+                first = next(iter(schema.names()), None)
+                n = (
+                    nwframe.select(narwhals.col(first).count()).collect().item()
+                    if first is not None else 0
+                )
+            else:
+                n = nwframe.shape[0]
+            _length_bounds_check(self, self.rows, n, 'row')
 
     @classmethod
     def serialize(cls, value):

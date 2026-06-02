@@ -190,7 +190,7 @@ object_count = 0
 warning_count = 0
 
 # Hook to apply to depends and bind arguments to turn them into valid parameters
-_reference_transforms = []
+_reference_transforms: list[t.Callable[[t.Any], t.Any]] = []
 
 def register_reference_transform(transform):
     """

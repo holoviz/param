@@ -15,6 +15,8 @@ from textwrap import dedent
 from threading import get_ident
 
 if t.TYPE_CHECKING:
+    import asyncio
+
     from param.parameterized import Parameter
 
     _P = t.ParamSpec("_P")
@@ -604,7 +606,7 @@ def _in_ipython():
     except NameError:
         return False
 
-_running_tasks = set()
+_running_tasks: set[asyncio.Task] = set()
 
 def async_executor(func):
     import asyncio

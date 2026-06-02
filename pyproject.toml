@@ -184,8 +184,7 @@ infer-with-first-use = false
 
 [tool.mypy]
 files = ["param"]
-follow_imports = "skip"
-plugins = ["param._mypy_plugin"]
+plugins = ["param.mypy_plugin"]
 disable_error_code = ["import-untyped", "import-not-found"]
 
 [tool.pyright]

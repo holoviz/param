@@ -253,8 +253,8 @@ assert_type(ctypes.optional_foo, Foo | None)
 assert_type(ctypes.no_none_foo, Foo)
 
 class SelectorBaseTypes(param.Parameterized):
-    selector_base = param.SelectorBase(default=1, allow_None=False)
-    optional_selector_base = param.SelectorBase(default=None, allow_None=True)
+    selector_base = param.SelectorBase(default=1, allow_None=False)  # type: ignore[var-annotated]
+    optional_selector_base = param.SelectorBase(default=None, allow_None=True)  # type: ignore[var-annotated]
 
 sbtypes = SelectorBaseTypes()
 assert_type(sbtypes.selector_base, t.Any)
@@ -350,8 +350,8 @@ assert_type(comptypes.comp, list[t.Any])
 ##################
 
 class SelectorTypes(param.Parameterized):
-    selector = param.Selector(objects=[1,2,3], allow_None=False)
-    optional_selector = param.Selector(objects=[1,2,3], allow_None=True)
+    selector = param.Selector(objects=[1,2,3], allow_None=False)  # type: ignore[var-annotated]
+    optional_selector = param.Selector(objects=[1,2,3], allow_None=True)  # type: ignore[var-annotated]
 
 seltypes = SelectorTypes()
 assert_type(seltypes.selector, t.Any)

@@ -1442,7 +1442,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self,
+            self: Parameter[t.Any],
             default: t.Any = ...,
             *,
             doc: str | None = None,
@@ -1462,7 +1462,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: Parameter[t.Any],
             default: t.Any | None = ...,
             *,
             allow_None: t.Literal[True] = True,

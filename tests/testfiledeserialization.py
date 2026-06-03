@@ -29,7 +29,7 @@ except ModuleNotFoundError:
     xlsxm = None
 
 try:
-    import odf as ods
+    import odf as ods  # typos: ignore
 except ModuleNotFoundError:
     ods = None
 

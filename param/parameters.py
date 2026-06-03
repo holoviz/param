@@ -152,7 +152,7 @@ def param_union(*parameterizeds: Parameterized, warn: bool = True) -> dict[str, 
     Parameters
     ----------
     warn : bool, optional
-        Wether to warn if the same parameter have been given multiple values,
+        Whether to warn if the same parameter have been given multiple values,
         otherwise use the last value, by default True
 
     Returns

@@ -201,3 +201,21 @@ ignore = [
     "**/node_modules",
     "**/.git",
 ]
+
+[tool.typos.default]
+extend-ignore-re = [
+    ".*(?:#|--|//|/*).*(?:typos):\\s?ignore[^\\n]*\\n",
+    ".*(?:typos):\\s?ignore-next-line[^\\n]*\\n[^\\n]*",
+]
+
+[tool.typos.default.extend-words]
+arange = "arange"
+ba = "ba"
+iy = "iy"
+lod = "lod"
+nd = "nd"
+numbre = "numbre" # used as a spelling mistake in upgrade_guide.md
+pn = "pn"
+ser = "ser"
+spreaded = "spreaded"
+writeable = "writeable"

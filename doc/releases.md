@@ -278,7 +278,7 @@ This minor release focuses on improving reactive expressions and support for asy
 
 Enhancements:
 
-- Improvements for synchronous and asychronous generators ([#908](https://github.com/holoviz/param/pull/908))
+- Improvements for synchronous and asynchronous generators ([#908](https://github.com/holoviz/param/pull/908))
 - Additions to the .rx namespace including `and_`, `bool`, `map`, `not_`, `or_` and `updating` ([#906](https://github.com/holoviz/param/pull/906))
 - Add support for adding asynchronous watcher to `rx` ([#917](https://github.com/holoviz/param/pull/917))
 - Make it possible to resolve reactive expressions recursively with `.rx.resolve` ([#918](https://github.com/holoviz/param/pull/918))
@@ -363,7 +363,7 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 - Parameter slot values that are set to mutable containers (e.g. `Selector(objects=a_list)`) will now be shallow-copied on instantiation, so that the container is no longer confusingly shared between the class and its subclasses and instances ([#826](https://github.com/holoviz/param/pull/826))
 - To further clean up the Parameterized namespace (first started in version 1.7.0), the remaining private attributes haven been collected under two private namespaces `_param__private` and `_param__parameters` ([#766](https://github.com/holoviz/param/pull/766), [#790](https://github.com/holoviz/param/pull/790))
 - You can now use `.param.update` as a context manager for applying temporary updates ([#779](https://github.com/holoviz/param/pull/779))
-- The `name` Parameter has always had special behavior dating to its use in labeling objects in a GUI context, but this behavior is now able to be overriden at the class and instance level ([#740](https://github.com/holoviz/param/pull/740))
+- The `name` Parameter has always had special behavior dating to its use in labeling objects in a GUI context, but this behavior is now able to be overridden at the class and instance level ([#740](https://github.com/holoviz/param/pull/740))
 - Improved Parameter signatures for static and dynamic code analysis ([#742](https://github.com/holoviz/param/pull/742))
 - Removed inferred Parameterized docstring signature and add basic `__signature__` support ([#802](https://github.com/holoviz/param/pull/802))
 - For speed, only generate the Parameter docstring in an IPython context ([#774](https://github.com/holoviz/param/pull/774))
@@ -643,7 +643,7 @@ Compatibility (see [#543](https://github.com/holoviz/param/pull/543) for the com
     * `.param.log()`: Subsumes .debug/verbose/message; all are logging calls. ([#556](https://github.com/holoviz/param/pull/556))
     * `.param.update()`: Dictionary-style updates to parameter values, as a drop-in replacement for `set_param` except for its optional legacy positional-arg syntax ([#558](https://github.com/holoviz/param/pull/558))
     * `.values()`: Dictionary of name:value pairs for parameter values, replacing `get_param_values` but now a dict since python3 preserves order ([#558](https://github.com/holoviz/param/pull/558))
-    * `.param.log()`: General-purpose interface to the logging module functionailty; replaces .debug, .verbose, .message ([#556](https://github.com/holoviz/param/pull/556))
+    * `.param.log()`: General-purpose interface to the logging module functionality; replaces .debug, .verbose, .message ([#556](https://github.com/holoviz/param/pull/556))
 
 ## Version 1.11.1
 

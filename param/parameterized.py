@@ -1189,7 +1189,7 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs, name)
 
 
-_UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+_UPDATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
 _PARAMETER_CACHE_ATTRS = ('instantiate', 'constant', 'default_factory')
 
 
@@ -1208,7 +1208,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        if not _UDPATE_PARAMETER_SIGNATURE:
+        if not _UPDATE_PARAMETER_SIGNATURE:
             return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere
@@ -2323,7 +2323,7 @@ class Comparator:
     """
     Comparator defines methods for determining whether two objects
     should be considered equal. It works by registering custom
-    comparison functions, which may either be registed by type or with
+    comparison functions, which may either be registered by type or with
     a predicate function. If no matching comparison can be found for
     the two objects the comparison will return False.
 
@@ -2761,7 +2761,7 @@ class Parameters:
                     except Skip:
                         pass
         finally:
-            # Ensure we clean up but only if the task matches the currrent task
+            # Ensure we clean up but only if the task matches the current task
             if self_.self._param__private.async_refs.get(pname) is current_task:
                 del self_.self._param__private.async_refs[pname]
 
@@ -3377,7 +3377,7 @@ class Parameters:
 
         Additionally, sets ``_Dynamic_time_fn=time_fn`` on this class or
         instance object, so that any future changes to Dynamic
-        Parmeters can inherit ``time_fn`` (e.g. if a :class:`param.Number` is changed
+        Parameters can inherit ``time_fn`` (e.g. if a :class:`param.Number` is changed
         from a float to a number generator, the number generator will
         inherit ``time_fn``).
 
@@ -4659,7 +4659,7 @@ class Parameters:
         parameters = self.param.objects('existing')
         ordering = sorted(
             sorted(changed_params), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precedence
                            if parameters[k].precedence is None else
                            parameters[k].precedence))
 
@@ -4693,7 +4693,7 @@ class Parameters:
                 arglist.append(value)
             elif k in kwargs or (spec.varkw is not None):
                 # Explicit modified keywords or parameters in
-                # precendence order (if **kwargs present)
+                # precedence order (if **kwargs present)
                 keywords.append(f'{k}={value}')
 
             processed.append(k)
@@ -5121,7 +5121,7 @@ class ParameterizedMetaclass(type):
                         f'made it invalid. Please fix the Parameter type.'
                     )
                 else:
-                    # type_change and slot_overriden is not possible as when
+                    # type_change and slot_overridden is not possible as when
                     # the type changes checking the slots is aborted for
                     # performance reasons.
                     pass
@@ -5512,7 +5512,7 @@ class _ClassPrivate:
     disable_instance_params: bool
         Whether to disable instance parameters
     renamed: bool
-        Whethe the class has been renamed by a super class
+        Whether the class has been renamed by a super class
     params: dict
         Dict of parameter_name:parameter.
     """
@@ -5873,7 +5873,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
         # Skip generating a custom instance name when a class in the hierarchy
-        # has overriden the default of the `name` Parameter.
+        # has overridden the default of the `name` Parameter.
         if self.param.name.default == self.__class__.__name__:
             self.param._generate_name()
         refs, deps = self.param._setup_params(**params)

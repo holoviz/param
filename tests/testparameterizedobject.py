@@ -132,7 +132,7 @@ class TestParameterized(unittest.TestCase):
         with pytest.raises(AttributeError):
             testpo.param.const.name = 'notconst'
 
-    def test_name_overriden(self):
+    def test_name_overridden(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -142,7 +142,7 @@ class TestParameterized(unittest.TestCase):
 
         assert p.name == 'other'
 
-    def test_name_overriden_without_default(self):
+    def test_name_overridden_without_default(self):
         class A(param.Parameterized):
             pass
         class B(param.Parameterized):
@@ -156,7 +156,7 @@ class TestParameterized(unittest.TestCase):
         assert C.name == 'C'
         assert C.param.name.doc == 'some help'
 
-    def test_name_overriden_constructor(self):
+    def test_name_overridden_constructor(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -164,7 +164,7 @@ class TestParameterized(unittest.TestCase):
 
         assert p.name == 'another'
 
-    def test_name_overriden_subclasses(self):
+    def test_name_overridden_subclasses(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -195,7 +195,7 @@ class TestParameterized(unittest.TestCase):
         assert r2.name == 'last'
 
 
-    def test_name_overriden_subclasses_name_set(self):
+    def test_name_overridden_subclasses_name_set(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -214,7 +214,7 @@ class TestParameterized(unittest.TestCase):
 
         assert q.name == 'yetanother'
 
-    def test_name_overriden_error_not_String(self):
+    def test_name_overridden_error_not_String(self):
 
         msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
               "with type <class 'str'>. Overriding 'name' is only allowed with " \
@@ -247,7 +247,7 @@ class TestParameterized(unittest.TestCase):
         assert C.name == 'C'
         assert D.name == 'D'
 
-    def test_name_overriden_complex_hierarchy(self):
+    def test_name_overridden_complex_hierarchy(self):
         class Mixin1: pass
         class Mixin2: pass
         class Mixin3(param.Parameterized): pass
@@ -266,7 +266,7 @@ class TestParameterized(unittest.TestCase):
         assert C.name == 'another'
         assert D.name == 'another'
 
-    def test_name_overriden_multiple(self):
+    def test_name_overridden_multiple(self):
         class A(param.Parameterized):
             name = param.String(default='AA')
         class B(param.Parameterized):
@@ -1409,7 +1409,7 @@ def test_inheritance_constant_behavior():
     assert b.param.p.constant is True
 
 
-def test_inheritance_set_Parameter_instantiate_constant_before_instantation():
+def test_inheritance_set_Parameter_instantiate_constant_before_instantiation():
     # https://github.com/holoviz/param/issues/760
     class A(param.Parameterized):
         p0 = param.Parameter()

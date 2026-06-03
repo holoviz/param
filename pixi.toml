@@ -222,7 +222,12 @@ type-pyrefly = { cmd = 'pyrefly check --output-format min-text --count-errors=0 
     { arg = "file", default = "" },
 ] }
 type-pyright = { cmd = 'pyright {{ file }}', args = [{ arg = "file", default = "" }] }
-type-asserts = { depends-on = ["install"], cmd = 'pyright --project tests/pyrightconfig-bare.json tests/assert_types.py' }
+type-asserts-pyright = { depends-on = ["install"], cmd = 'pyright --project tests/pyrightconfig-bare.json tests/assert_types.py' }
+type-asserts-mypy = { depends-on = ["install"], cmd = 'mypy tests/assert_types.py' }
+type-asserts = { depends-on = [
+    { task = "type-asserts-mypy"},
+    { task = "type-asserts-pyright"},
+] }
 type-all = { depends-on = [
     { task = "type-ty", args = [ { file = "{{ file }}" } ] },
     { task = "type-mypy", args = [ { file = "{{ file }}" } ] },

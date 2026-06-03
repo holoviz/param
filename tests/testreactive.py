@@ -557,9 +557,9 @@ def test_reactive_clone_reevaluates(inputs: list[str], op: Callable[[rx], Any], 
     assert transformed.rx.value == expecteds[0]
     assert fcalls == 1
 
-    for prev_fcalls, (inpt, expec) in enumerate(zip(inputs[1:], expecteds[1:]), start=fcalls):
-        base.rx.value = inpt
-        assert transformed.rx.value == expec
+    for prev_fcalls, (input, expect) in enumerate(zip(inputs[1:], expecteds[1:]), start=fcalls):
+        base.rx.value = input
+        assert transformed.rx.value == expect
         assert fcalls == (prev_fcalls + 1)
 
 @pytest.mark.parametrize('lazy', [False, True])

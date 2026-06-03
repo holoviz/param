@@ -133,7 +133,7 @@ class TestPathParameters(unittest.TestCase):
 
         # Inheritance isn't working great with search_paths and this test
         # isn't designed to be run from the tmpdir directory.
-        startd = os.getcwd()
+        start_dir = os.getcwd()
         try:
             # a = param.Path()
             # b = param.Path(self.fb)
@@ -162,7 +162,7 @@ class TestPathParameters(unittest.TestCase):
             with pytest.raises(OSError, match='Path a.txt was not found'):
                 assert b.c is None
         finally:
-            os.chdir(startd)
+            os.chdir(start_dir)
 
     def test_notfound_instantiation_raises_error(self):
         with pytest.raises(

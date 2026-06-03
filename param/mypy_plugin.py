@@ -11,7 +11,7 @@ The fix: intercept class-attribute access via get_class_attribute_hook and,
 when it's an lvalue, return the Parameter's value type (the first type arg
 of Parameter[_T]) instead of the raw descriptor type.
 
-Usage: add ``plugins = ["param._mypy_plugin"]`` to your mypy configuration.
+Usage: add ``plugins = ["param.mypy_plugin"]`` to your mypy configuration.
 """
 
 from __future__ import annotations
@@ -23,23 +23,19 @@ from mypy.plugin import AttributeContext, Plugin
 from mypy.types import AnyType, Instance, Type, TypeOfAny, get_proper_type
 
 
-PARAMETER_BASE_FULLNAME = "param.parameterized.Parameter"
-PARAMETERIZED_FULLNAME = "param.parameterized.Parameterized"
-
-
 def _is_parameter_type(typ: Type) -> bool:
     proper = get_proper_type(typ)
     if not isinstance(proper, Instance):
         return False
     return any(
-        base.fullname == PARAMETER_BASE_FULLNAME
+        base.fullname == "param.parameterized.Parameter"
         for base in proper.type.mro
     )
 
 
 def _is_parameterized_class(info: TypeInfo) -> bool:
     return any(
-        base.fullname == PARAMETERIZED_FULLNAME
+        base.fullname == "param.parameterized.Parameterized"
         for base in info.mro
     )
 
@@ -69,7 +65,7 @@ def _class_attribute_hook(ctx: AttributeContext) -> Type:
     return AnyType(TypeOfAny.special_form)
 
 
-class ParamPlugin(Plugin):
+class _ParamPlugin(Plugin):
     def get_class_attribute_hook(
         self, fullname: str
     ) -> t.Callable[[AttributeContext], Type] | None:
@@ -96,4 +92,4 @@ class ParamPlugin(Plugin):
 
 
 def plugin(version: str) -> type[Plugin]:
-    return ParamPlugin
+    return _ParamPlugin

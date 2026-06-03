@@ -60,6 +60,8 @@ from ._utils import (
 #-----------------------------------------------------------------------------
 
 if t.TYPE_CHECKING:
+    from types import NoneType
+
     import numpy as np
     import pandas as pd
 
@@ -3175,7 +3177,7 @@ class ClassSelector(SelectorBase[_T]):
             # This will clobber separate classes with identical names.
             # Known historical issue, see https://github.com/holoviz/param/pull/1035
             all_classes.update({c.__name__: c for c in desc})
-        d = OrderedDict((name, class_) for name,class_ in all_classes.items())
+        d: dict[str, type | NoneType] = OrderedDict((name, class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None'] = None
         return d

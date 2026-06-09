@@ -1,5 +1,36 @@
 # Releases
 
+## Version 2.4.1
+
+Date: 2026-06-09
+
+This patch release adds a mypy plugin to handle the descriptor `__set__` type narrowing issue, reorders `param.List` overloads to allow default type inference, and fixes the conda build.
+
+Many thanks to @philippjfr and @hoxbro for their contributions to this release.
+
+### 🚀 Features
+
+- Add mypy plugin to handle descriptor `__set__` issue ([#1148](https://github.com/holoviz/param/pull/1148))
+
+### 🐛 Bug Fixes
+
+- Reorder `param.List` overloads to allow default type inference ([#1149](https://github.com/holoviz/param/pull/1149))
+
+### 🏗️ Build
+
+- Fix conda build ([b7bcd74](https://github.com/holoviz/param/commit/b7bcd74))
+
+### 📚 Documentation
+
+- Add instructions about basedpyright to Typing docs ([#1151](https://github.com/holoviz/param/pull/1151))
+
+### 🧹 Maintenance
+
+- Fix spelling mistakes and add typos to pre-commit ([#1152](https://github.com/holoviz/param/pull/1152))
+- Bump TY version ([#1150](https://github.com/holoviz/param/pull/1150))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.4.0...v2.4.1)
+
 ## Version 2.4.0
 
 Date: 2026-05-21

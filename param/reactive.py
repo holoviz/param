@@ -94,6 +94,7 @@ import math
 import operator
 import typing as t
 import warnings
+import weakref
 
 from collections.abc import (
     AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator, Sized
@@ -1359,6 +1360,39 @@ def bind(
         setattr(wrapped, name, t.cast('Callable', accessor)(wrapped))
     return wrapped
 
+class _WeakInvalidator:
+    """
+    A weakly-bound invalidation callback for an ``rx`` pipeline node.
+
+    ``rx`` nodes register invalidation callbacks on their *source* parameters.
+    If those callbacks were strong bound-method references the source (which is
+    typically long-lived) would keep every derived node — and anything it
+    captured, such as large arrays — alive indefinitely. Wrapping the bound
+    method in a :class:`weakref.WeakMethod` lets the derived node be garbage
+    collected as soon as nothing else references it; once collected the call
+    becomes a no-op and the now-dead watcher is removed by a finalizer (see
+    ``rx._watch_invalidation``).
+    """
+
+    __slots__ = ('_ref', '__weakref__')
+
+    def __init__(self, method):
+        self._ref = weakref.WeakMethod(method)
+
+    def __call__(self, *events):
+        method = self._ref()
+        if method is not None:
+            return method(*events)
+
+
+def _remove_watcher(owner, watcher):
+    """Unwatch ``watcher`` from ``owner``, ignoring if it is already gone."""
+    try:
+        owner.param.unwatch(watcher)
+    except Exception:
+        pass
+
+
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
@@ -1712,9 +1746,21 @@ class rx:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
                 fps = [p.name for p in params if p in self._root._fn_params]
                 if fps:
-                    params[0].owner.param._watch(self._invalidate_obj, fps, precedence=-1)
+                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps)
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
-            params[0].owner.param._watch(self._invalidate_current, [p.name for p in params], precedence=-1)
+            self._watch_invalidation(params[0].owner, self._invalidate_current, [p.name for p in params])
+
+    def _watch_invalidation(self, owner, method, names):
+        """
+        Register a *weak* invalidation watcher on a source parameter.
+
+        The callback only holds a weak reference to this node, so a long-lived
+        source does not pin the (potentially short-lived) derived node alive.
+        A finalizer removes the watcher automatically once this node is garbage
+        collected, keeping the source's watcher list from growing without bound.
+        """
+        watcher = owner.param._watch(_WeakInvalidator(method), names, precedence=-1)
+        weakref.finalize(self, _remove_watcher, owner, watcher)
 
     def _invalidate_current(self, *events):
         if all(event.obj is self._trigger for event in events):

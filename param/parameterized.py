@@ -6320,7 +6320,7 @@ class ParameterizedFunction(Parameterized, t.Generic[_P, _R]):
             params.pop('name')
             cls = self_or_cls.__class__
 
-        inst = Parameterized.__new__(cls)
+        inst = Parameterized.__new__(cls)  # pyrefly: ignore[bad-argument-type]
         Parameterized.__init__(inst, **params)
         if 'name' in params:
             setattr(inst, "__name__", params['name'])

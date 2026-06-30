@@ -701,3 +701,15 @@ def _find_stack_level() -> int:
         # https://docs.python.org/3/library/inspect.html#inspect.Traceback
         del frame
     return n
+
+
+def _get_narwhals():
+    """Import and return the optional ``narwhals`` stable API."""
+    try:
+        import narwhals.stable.v2 as narwhals
+    except ModuleNotFoundError as e:
+        raise ImportError(
+            "param.DataFrameLike requires the optional 'narwhals' package. "
+            "Install it with: pip install narwhals"
+        ) from e
+    return narwhals

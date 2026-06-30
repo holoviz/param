@@ -154,7 +154,7 @@ jobs:
       - parallel:
         - name: TY
           id: ty
-          run: pixi run -e type type-ty
+          run: pixi run -e type type-ty && exit 1
         - name: mypy
           id: mypy
           run: pixi run -e type type-mypy

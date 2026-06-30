@@ -153,35 +153,15 @@ jobs:
           environments: type
       - parallel:
         - name: TY
-          id: ty
-          run: pixi run -e type type-ty && exit 1
+          run: pixi run -e type type-ty
         - name: mypy
-          id: mypy
           run: pixi run -e type type-mypy
         - name: Pyrefly
-          id: pyrefly
           run: pixi run -e type type-pyrefly
         - name: Pyright
-          id: pyright
           run: pixi run -e type type-pyright
         - name: Asserts
-          id: asserts
           run: pixi run -e type type-asserts
-      - name: Error if any check failed
-        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success' || steps.asserts.outcome != 'success'
-        env:
-          TY_OUTCOME: ${{ steps.ty.outcome }}
-          MYPY_OUTCOME: ${{ steps.mypy.outcome }}
-          PYREFLY_OUTCOME: ${{ steps.pyrefly.outcome }}
-          PYRIGHT_OUTCOME: ${{ steps.pyright.outcome }}
-          ASSERTS_OUTCOME: ${{ steps.asserts.outcome }}
-        run: |
-          echo "TY: ${TY_OUTCOME}"
-          echo "mypy: ${MYPY_OUTCOME}"
-          echo "Pyrefly: ${PYREFLY_OUTCOME}"
-          echo "Pyright: ${PYRIGHT_OUTCOME}"
-          echo "Asserts: ${ASSERTS_OUTCOME}"
-          exit 1
 
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}

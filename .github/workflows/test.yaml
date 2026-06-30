@@ -151,41 +151,17 @@ jobs:
       - uses: holoviz-dev/holoviz_tasks/pixi-install@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
         with:
           environments: type
-      - name: TY
-        id: ty
-        continue-on-error: true
-        run: pixi run -e type type-ty
-      - name: mypy
-        id: mypy
-        continue-on-error: true
-        run: pixi run -e type type-mypy
-      - name: Pyrefly
-        id: pyrefly
-        continue-on-error: true
-        run: pixi run -e type type-pyrefly
-      - name: Pyright
-        id: pyright
-        continue-on-error: true
-        run: pixi run -e type type-pyright
-      - name: Asserts
-        id: asserts
-        continue-on-error: true
-        run: pixi run -e type type-asserts
-      - name: Error if any check failed
-        if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success' || steps.asserts.outcome != 'success'
-        env:
-          TY_OUTCOME: ${{ steps.ty.outcome }}
-          MYPY_OUTCOME: ${{ steps.mypy.outcome }}
-          PYREFLY_OUTCOME: ${{ steps.pyrefly.outcome }}
-          PYRIGHT_OUTCOME: ${{ steps.pyright.outcome }}
-          ASSERTS_OUTCOME: ${{ steps.asserts.outcome }}
-        run: |
-          echo "TY: ${TY_OUTCOME}"
-          echo "mypy: ${MYPY_OUTCOME}"
-          echo "Pyrefly: ${PYREFLY_OUTCOME}"
-          echo "Pyright: ${PYRIGHT_OUTCOME}"
-          echo "Asserts: ${ASSERTS_OUTCOME}"
-          exit 1
+      - parallel:
+        - name: TY
+          run: pixi run -e type type-ty
+        - name: mypy
+          run: pixi run -e type type-mypy
+        - name: Pyrefly
+          run: pixi run -e type type-pyrefly
+        - name: Pyright
+          run: pixi run -e type type-pyright
+        - name: Asserts
+          run: pixi run -e type type-asserts
 
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}

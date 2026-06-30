@@ -151,26 +151,22 @@ jobs:
       - uses: holoviz-dev/holoviz_tasks/pixi-install@ffddda04b2894fea39b407f64d3622d2f19e5a9f # v1
         with:
           environments: type
-      - name: TY
-        id: ty
-        continue-on-error: true
-        run: pixi run -e type type-ty
-      - name: mypy
-        id: mypy
-        continue-on-error: true
-        run: pixi run -e type type-mypy
-      - name: Pyrefly
-        id: pyrefly
-        continue-on-error: true
-        run: pixi run -e type type-pyrefly
-      - name: Pyright
-        id: pyright
-        continue-on-error: true
-        run: pixi run -e type type-pyright
-      - name: Asserts
-        id: asserts
-        continue-on-error: true
-        run: pixi run -e type type-asserts
+      - parallel:
+        - name: TY
+          id: ty
+          run: pixi run -e type type-ty
+        - name: mypy
+          id: mypy
+          run: pixi run -e type type-mypy
+        - name: Pyrefly
+          id: pyrefly
+          run: pixi run -e type type-pyrefly
+        - name: Pyright
+          id: pyright
+          run: pixi run -e type type-pyright
+        - name: Asserts
+          id: asserts
+          run: pixi run -e type type-asserts
       - name: Error if any check failed
         if: steps.ty.outcome != 'success' || steps.mypy.outcome != 'success' || steps.pyrefly.outcome != 'success' || steps.pyright.outcome != 'success' || steps.asserts.outcome != 'success'
         env:

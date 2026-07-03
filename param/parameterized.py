@@ -5172,6 +5172,15 @@ def script_repr(
     configuration. It captures only the state of the object's parameters, not
     its internal (non-parameter) attributes.
 
+    By default, script_repr prints only parameter values that have changed from
+    their defaults; for the complete set of parameter values, including 
+    all defaults, first run:
+
+    param.parameterized.script_repr_suppress_defaults=False
+    
+    For more details on this, see:
+    https://param.holoviz.org/en/docs/latest/user_guide/Serialization_and_Persistence.html#script-repr-limitations-and-workarounds
+
     Parameters
     ----------
     val : Parameterized
@@ -5215,7 +5224,6 @@ def script_repr(
     References
     ----------
     See https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#script-repr.
-
     Examples
     --------
     Create a Python script representation of a Parameterized object:

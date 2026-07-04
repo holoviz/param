@@ -5173,7 +5173,7 @@ def script_repr(
     its internal (non-parameter) attributes.
 
     Note: By default, script_repr prints only parameter values that have changed from
-    their defaults; for the complete set of parameter values, including 
+    their defaults; for the complete set of parameter values, including
     all defaults, first run:
 
     param.parameterized.script_repr_suppress_defaults=False

@@ -2846,7 +2846,7 @@ class FileSelector(Selector[_T]):
         self.default = self.objects[0] if self.objects else None
 
     def get_range(self) -> dict[str, str | PathLike]:
-        return _abbreviate_paths(self.path,super().get_range())
+        return _abbreviate_paths(self.path, super().get_range())
 
 
 class ListSelector(Selector):

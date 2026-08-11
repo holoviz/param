@@ -1,8 +1,10 @@
 import datetime as dt
 import os
 
+from collections import OrderedDict
 from collections.abc import Iterable
 from functools import partial
+from tempfile import TemporaryDirectory
 
 import param
 import pytest
@@ -11,6 +13,7 @@ from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod, Parameterized, ParameterizedABC
 from param._utils import (
     # ParamWarning,
+    _abbreviate_paths,
     _is_abstract,
     _is_mutable_container,
     concrete_descendents,
@@ -545,6 +548,18 @@ def test_concrete_descendents():
         'X': X,
         'Y': Y,
     }
+
+
+def test_abbreviate_paths():
+    ranges = OrderedDict()
+    expected = OrderedDict()
+    with TemporaryDirectory() as tempdir:
+        path = f"{tempdir}/*"
+        for filename in ("a.txt", "f.txt"):
+            fullpath = f"{tempdir}/{filename}"
+            ranges[fullpath] = fullpath
+            expected[filename] = fullpath
+    assert _abbreviate_paths(path, ranges) == expected
 
 
 # def test_concrete_descendents_same_name_warns():

@@ -45,7 +45,12 @@ except ModuleNotFoundError:
         xlsxm = None
 
 try:
+    import pyarrow
     import pyarrow.feather as feather
+    # pyarrow.feather.write_feather is deprecated as of pyarrow 24.0.0 in
+    # favor of pyarrow.ipc, which pandas.DataFrame.to_feather does not yet use.
+    if int(pyarrow.__version__.split('.')[0]) >= 24:
+        feather = None
 except ModuleNotFoundError:
     feather = None
 

@@ -635,3 +635,105 @@ class WatcherSuite:
 
     def time_trigger(self):
         self.p.x0 += 1
+
+
+# Parameter types exercised by the value get/set suites below, as
+# (type, constructor kwargs, a valid replacement value).
+_VALUE_TYPES = {
+    'Parameter': (param.Parameter, {'default': 1.0}, 2.0),
+    'Number': (param.Number, {'default': 1.0, 'bounds': (0, 100)}, 2.0),
+    'String': (param.String, {'default': 'a'}, 'b'),
+    'Boolean': (param.Boolean, {'default': True}, False),
+}
+
+
+def _value_class(ptype):
+    ptype_cls, kwargs, _ = _VALUE_TYPES[ptype]
+
+    class P(param.Parameterized):
+        x = ptype_cls(**kwargs)
+
+    return P
+
+
+class ParameterizedGetValueSuite:
+    """
+    Read a Parameter value, i.e. the Parameter.__get__ descriptor path.
+
+    This is the single hottest operation in param: every attribute read on
+    a Parameterized object dispatches through it.
+    """
+
+    params = list(_VALUE_TYPES)
+    param_names = ['ptype']
+
+    def setup(self, ptype):
+        self.P = _value_class(ptype)
+        self.p = self.P()
+        # Warm up so the instance Parameter object already exists and this
+        # measures the steady state rather than first-touch instantiation.
+        self.p.x = _VALUE_TYPES[ptype][2]
+        self.p.x
+
+    def time_instance(self, ptype):
+        self.p.x
+
+    def time_class(self, ptype):
+        self.P.x
+
+
+class ParameterizedSetValueSuite:
+    """
+    Set a Parameter value, i.e. the Parameter.__set__ descriptor path,
+    including validation and (absent) watcher dispatch.
+    """
+
+    params = list(_VALUE_TYPES)
+    param_names = ['ptype']
+
+    def setup(self, ptype):
+        self.P = _value_class(ptype)
+        self.p = self.P()
+        self.value = _VALUE_TYPES[ptype][2]
+        # Force instance Parameter creation up front so this measures the
+        # steady state, not the one-off copy done on the first set.
+        self.p.x = self.value
+
+    def time_instance(self, ptype):
+        self.p.x = self.value
+
+    def time_class(self, ptype):
+        self.P.x = self.value
+
+
+class ParameterizedFirstSetValueSuite:
+    """
+    First set of a per_instance Parameter, which shallow-copies the class
+    Parameter object onto the instance (see ``_instantiate_param_obj``).
+    """
+
+    def setup(self):
+        self.P = _value_class('Number')
+
+    def time_instantiate_and_first_set(self):
+        p = self.P()
+        p.x = 2.0
+
+
+class ParameterUnboundSlotSuite:
+    """
+    Slot access on an unbound Parameter, where a slot still holding
+    ``Undefined`` falls back to ``_slot_defaults`` in
+    ``Parameter.__getattribute__``.
+    """
+
+    def setup(self):
+        self.p = param.Number(default=1.0)
+
+    def time_undefined_slot(self):
+        # Never passed to the constructor, so resolved via _slot_defaults.
+        self.p.bounds
+
+    def time_concrete_slot(self):
+        # Explicitly passed to the constructor, so no fallback.
+        self.p.default

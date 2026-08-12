@@ -1,8 +1,10 @@
 import asyncio
+import gc
 import math
 import operator
 import re
 import time
+import weakref
 
 import param
 import pytest
@@ -1029,3 +1031,28 @@ async def test_async_shared_rx_only_triggers_once(lazy):
     assert y_rx.rx.value == 4
 
     assert call_count == 2
+
+
+def test_reactive_derived_node_is_garbage_collected():
+    def watcher_count(source):
+        watchers = source._internal_params[0].owner._param__private.watchers
+        return sum(len(lst) for what in watchers.values() for lst in what.values())
+
+    a = param.rx(1)
+    baseline = watcher_count(a)
+    assert baseline == 2
+
+    b = a + 1
+    assert b.rx.value == 2
+    assert watcher_count(a) > baseline
+
+    ref = weakref.ref(b)
+    del b
+    gc.collect()
+    assert ref() is None
+    assert watcher_count(a) == baseline
+
+    c = a + 10
+    a.rx.value = 5
+    assert c.rx.value == 15
+    assert watcher_count(a) > baseline

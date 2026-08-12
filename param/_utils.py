@@ -544,10 +544,10 @@ def _abbreviate_paths(pathspec,named_paths):
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
     Helps keep menu items short yet unambiguous.
     """
-    from os.path import commonprefix, dirname, sep
+    from os.path import commonpath, dirname, sep
 
-    prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
-    return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
+    prefix = commonpath([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
+    return OrderedDict([(name[len(prefix)+1:],path) for name,path in named_paths.items()])
 
 
 def _to_datetime(x):

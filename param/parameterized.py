@@ -1929,19 +1929,20 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         instance's value, if one has been set - otherwise produce the
         class's value (default).
         """
-        if self.name is None:
+        # Slot reads go through Parameter.__getattribute__, so `name` is
+        # bound to a local rather than read twice.
+        name = self.name
+        if name is None:
             raise ValueError("Parameter name is not set")
 
         if obj is None: # e.g. when __get__ called for a Parameterized class
-            result = self.default
-        else:
-            # Attribute error when .values does not exist (_ClassPrivate)
-            # and KeyError when there's no cached value for this parameter.
-            try:
-                result = obj._param__private.values[self.name]
-            except (AttributeError, KeyError):
-                result = self.default
-        return result
+            return self.default
+        # Attribute error when .values does not exist (_ClassPrivate)
+        # and KeyError when there's no cached value for this parameter.
+        try:
+            return obj._param__private.values[name]
+        except (AttributeError, KeyError):
+            return self.default
 
     @instance_descriptor
     def __set__(self, obj: Parameterized | None, val: _T):
@@ -1970,11 +1971,13 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         object stored in a constant or read-only Parameter (e.g. one
         item in a list).
         """
-        if self.name is None:
+        # Slot reads go through Parameter.__getattribute__, so `name` is bound
+        # to a local and reused below rather than re-read from the slot.
+        name = self.name
+        if name is None:
             raise RuntimeError(
                 "A parameter value cannot be set for an unbound parameter."
             )
-        name = self.name
 
         if obj is not None and self.allow_refs and obj._param__private.initialized:
             syncing = name in obj._param__private.syncing
@@ -1993,17 +1996,18 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
         _old = NotImplemented
         # obj can be None if __set__ is called for a Parameterized class
-        if self.constant or self.readonly:
-            if self.readonly:
+        readonly = self.readonly
+        if self.constant or readonly:
+            if readonly:
                 raise TypeError("Read-only parameter '%s' cannot be modified" % name)
             elif obj is None:
                 _old = self.default
                 self.default = val
             elif not obj._param__private.initialized:
-                _old = obj._param__private.values.get(self.name, self.default)
-                obj._param__private.values[self.name] = val
+                _old = obj._param__private.values.get(name, self.default)
+                obj._param__private.values[name] = val
             else:
-                _old = obj._param__private.values.get(self.name, self.default)
+                _old = obj._param__private.values.get(name, self.default)
                 if val is not _old:
                     raise TypeError("Constant parameter '%s' cannot be modified" % name)
         else:
@@ -2011,10 +2015,11 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 _old = self.default
                 self.default = val
             else:
+                private = obj._param__private
                 # When setting a Parameter before calling super.
-                if not isinstance(obj._param__private, _InstancePrivate):
+                if not isinstance(private, _InstancePrivate):
                     warnings.warn(
-                        f"Setting the Parameter {self.name!r} to {val!r} before "
+                        f"Setting the Parameter {name!r} to {val!r} before "
                         f"the Parameterized class {type(obj).__name__!r} is fully "
                         "instantiated is deprecated and will raise an error in "
                         "a future version. Ensure the value is set after calling "
@@ -2022,29 +2027,36 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                         category=_ParamPendingDeprecationWarning,
                         stacklevel=_find_stack_level(),
                     )
-                    obj.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
+                    private = _InstancePrivate(
                         explicit_no_refs=type(obj)._param__private.explicit_no_refs
                     )
-                _old = obj._param__private.values.get(name, self.default)
-                obj._param__private.values[name] = val
+                    obj.__dict__['_param__private'] = private  # pyright: ignore[reportIndexIssue]
+                values = private.values
+                # Only fall back to reading the `default` slot when there is no
+                # value stored yet, since that read is not free.
+                try:
+                    _old = values[name]
+                except KeyError:
+                    _old = self.default
+                values[name] = val
         self._post_setter(obj, val)
 
         if obj is None:
             self._invalidate_init_cache()
-
-        if obj is not None:
-            if not hasattr(obj, '_param__private') or not getattr(obj._param__private, 'initialized', False):
+            watchers = self.watchers.get("value")
+        else:
+            private = getattr(obj, '_param__private', None)
+            if private is None or not getattr(private, 'initialized', False):
                 return
             obj.param._update_deps(name)
 
-        if obj is None:
-            watchers = self.watchers.get("value")
-        elif name in obj._param__private.watchers:
-            watchers = obj._param__private.watchers[name].get('value')
-            if watchers is None:
-                watchers = self.watchers.get("value")
-        else:
-            watchers = None
+            instance_watchers = private.watchers
+            if name in instance_watchers:
+                watchers = instance_watchers[name].get('value')
+                if watchers is None:
+                    watchers = self.watchers.get("value")
+            else:
+                watchers = None
 
         obj = self.owner if obj is None and self.owner is not None else obj
 

@@ -628,6 +628,24 @@ class Dynamic(Parameter[_T]):
         gen._saved_Dynamic_last = []
         gen._saved_Dynamic_time = []
 
+    def _resolve_dynamic(
+        self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
+    ) -> tuple[t.Any, bool]:
+        """
+        Return ``(value, is_dynamic)`` for this Parameter.
+
+        Fetches the stored value once and, if it is a generator, asks it to
+        produce a value. Subclasses that need to know whether the value was
+        dynamically generated should use this rather than calling ``__get__``
+        and ``_value_is_dynamic`` in turn, which resolves the value twice.
+        """
+        gen = super().__get__(obj, objtype)
+        # Generators are always callable, so this avoids the more expensive
+        # hasattr() probe for the common case of a plain, static value.
+        if callable(gen) and hasattr(gen, '_Dynamic_last'):
+            return self._produce_value(gen), True
+        return gen, False
+
     def __get__(
         self, obj: Parameterized | None, objtype: type[Parameterized] | None = None
     ) -> _T:
@@ -636,12 +654,7 @@ class Dynamic(Parameter[_T]):
         return that result, otherwise ask that result to produce a
         value and return it.
         """
-        gen = super().__get__(obj, objtype)
-
-        if not hasattr(gen,'_Dynamic_last'):
-            return gen
-        else:
-            return t.cast("_T", self._produce_value(gen))
+        return t.cast("_T", self._resolve_dynamic(obj, objtype)[0])
 
     @instance_descriptor
     def __set__(self, obj: Parameterized | None, val: _T):
@@ -892,12 +905,11 @@ class Number(Dynamic[_T]):
         -------
         The value of the attribute, potentially after applying bounds checks.
         """
-        result = super().__get__(obj, objtype)
-
-        # Should be able to optimize this commonly used method by
-        # avoiding extra lookups (e.g. _value_is_dynamic() is also
-        # looking up 'result' - should just pass it in).
-        if self._value_is_dynamic(obj, objtype):
+        # Resolve the value and its dynamism in one pass. Calling
+        # super().__get__() and then _value_is_dynamic() would walk the
+        # descriptor chain twice, which is expensive on this very hot method.
+        result, is_dynamic = self._resolve_dynamic(obj, objtype)
+        if is_dynamic:
             self._validate(result)
         return result
 

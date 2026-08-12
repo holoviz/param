@@ -2045,12 +2045,12 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             self._invalidate_init_cache()
             watchers = self.watchers.get("value")
         else:
-            private = getattr(obj, '_param__private', None)
-            if private is None or not getattr(private, 'initialized', False):
+            instance_private = getattr(obj, '_param__private', None)
+            if instance_private is None or not getattr(instance_private, 'initialized', False):
                 return
             obj.param._update_deps(name)
 
-            instance_watchers = private.watchers
+            instance_watchers = instance_private.watchers
             if name in instance_watchers:
                 watchers = instance_watchers[name].get('value')
                 if watchers is None:

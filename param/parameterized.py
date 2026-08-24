@@ -1855,7 +1855,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 pass
 
         super().__setattr__(attribute, value)
-        if is_slot and attribute in _PARAMETER_CACHE_ATTRS:
+        if is_slot and attribute in _PARAMETER_CACHE_ATTRS and value is not old:
             self._invalidate_init_cache()
         if has_watcher and old is not NotImplemented:
             self._trigger_event(attribute, old, value)
@@ -2411,6 +2411,21 @@ class _ParametersRestorer:
             self._restore = {}
 
 
+def _find_descriptor(cls: type, attr: str) -> t.Any:
+    """
+    Return the descriptor implementing ``attr`` on ``cls``, or None.
+
+    Used to invoke a descriptor without going through attribute lookup on the
+    object, since an AttributeError raised inside a descriptor is
+    indistinguishable from a missing attribute to the attribute machinery,
+    which clears it and dispatches to ``__getattr__``.
+    """
+    for klass in cls.__mro__:
+        if attr in klass.__dict__:
+            return klass.__dict__[attr]
+    return None
+
+
 class Parameters:
     """
     Object that holds the ``.param`` namespace and implementation of
@@ -2562,9 +2577,26 @@ class Parameters:
         if cls is None: # Class not initialized
             raise AttributeError
 
-        if attr in self_._cls_parameters:
+        ns_type = type(self_)
+
+        # The cached parameters are read from _param__private directly rather
+        # than via the _cls_parameters property. If that property raised an
+        # AttributeError we would be called to handle it and recurse, so it is
+        # only invoked as a descriptor, i.e. without attribute lookup on self_.
+        params = cls._param__private.params
+        if not params:
+            params = _find_descriptor(ns_type, '_cls_parameters').__get__(self_, ns_type)
+        if attr in params:
             return self_.__getitem__(attr)
-        elif self_.self is None:
+
+        # attr is not a Parameter, so if it does exist on this class the
+        # AttributeError we are handling was raised inside its descriptor.
+        # Invoking it again surfaces that error instead of masking it.
+        descriptor = _find_descriptor(ns_type, attr)
+        if descriptor is not None:
+            return descriptor.__get__(self_, ns_type)
+
+        if self_.self is None:
             raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
@@ -3140,18 +3172,21 @@ class Parameters:
         pdict = private.params
         if pdict:
             if private.params_to_deepcopy is None or private.params_to_ref is None or private.params_with_default_factory is None:
-                private.params_to_deepcopy = []
-                private.params_to_ref = []
-                private.params_with_default_factory = []
+                to_deepcopy = []
+                to_ref = []
+                with_default_factory = []
                 for pname, pobj in pdict.items():
                     if pname == 'name':
                         continue
                     if pobj.default_factory is not None:
-                        private.params_with_default_factory.append((pname, pobj))
+                        with_default_factory.append((pname, pobj))
                     elif pobj.instantiate:
-                        private.params_to_deepcopy.append(pobj)
+                        to_deepcopy.append(pobj)
                     elif pobj.constant:
-                        private.params_to_ref.append(pobj)
+                        to_ref.append(pobj)
+                private.params_to_deepcopy = to_deepcopy
+                private.params_to_ref = to_ref
+                private.params_with_default_factory = with_default_factory
             return pdict
 
         paramdict = {}

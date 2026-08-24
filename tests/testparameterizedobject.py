@@ -2080,7 +2080,7 @@ def test_cls_parameters_rebuild_is_thread_safe():
                     po.constant = False
                 for po, constant in zip(params, constants):
                     po.constant = constant
-        except BaseException as e:
+        except Exception as e:
             errors.append(e)
             stop.set()
 

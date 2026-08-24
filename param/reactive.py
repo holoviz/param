@@ -1558,6 +1558,8 @@ class rx:
         self._dirty_obj = False
         self._current_task = None
         self._resolve_generation = 0
+        self._resolved_generation = 0
+        self._skipped = False
         self._error_state = None
         self._current_ = _current
         # _shared is used for branching rx pipelines where we clone the input.
@@ -1660,6 +1662,18 @@ class rx:
             inspect.isasyncgenfunction(fn) or
             inspect.isgeneratorfunction(fn)
         )
+
+    @property
+    def _awaiting(self) -> bool:
+        """
+        Whether an asynchronous resolution is in flight that has not yet
+        produced a value for the current generation.
+
+        While a node is awaiting, the cached ``_current_`` value was computed
+        from inputs that have since been superseded, so resolving the node
+        skips instead of reporting the stale value as if it were current.
+        """
+        return self._resolve_generation != self._resolved_generation
 
     @property
     def _current(self):
@@ -1792,6 +1806,7 @@ class rx:
                 if stale():
                     return
                 self._current_ = shared.rx.value
+                self._resolved_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
                 async for val in obj:
@@ -1807,12 +1822,14 @@ class rx:
                             )
                         break
                     self._current_ = val
+                    self._resolved_generation = generation
                     trigger.param.trigger('value')
             else:
                 value = await obj
                 if stale():
                     return
                 self._current_ = value
+                self._resolved_generation = generation
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
             return
@@ -1840,6 +1857,11 @@ class rx:
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
                     raise Skip
+                elif self._prev is not None and self._prev._skipped:
+                    # The previous node did not produce a value for the current
+                    # inputs, so applying this operation would compute on a
+                    # value that has already been superseded.
+                    raise Skip
                 elif (
                     self._shared is not None and
                     self._method is None and
@@ -1851,9 +1873,14 @@ class rx:
                     if self._is_async:
                         self._shared.rx.value # trigger async resolve
                         self._lazy_resolve()
-                    else:
-                        self._current_ = self._shared.rx.value
-                    raise Skip
+                        raise Skip
+                    # Mirroring the shared input is not a skip, it resolves to
+                    # a value, so it must report the shared node's skip state
+                    # rather than being treated as skipped itself.
+                    self._current_ = self._shared.rx.value
+                    self._skipped = self._shared._skipped
+                    self._dirty = False
+                    return self._current_
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
@@ -1864,13 +1891,19 @@ class rx:
                         raise Skip
             except Skip:
                 self._dirty = False
+                self._skipped = True
                 return self._current_
             except Exception as e:
                 self._error_state = e
                 raise e
             self._current_ = current = obj
+            self._skipped = False
         else:
             current = self._current_
+            # A node awaiting an asynchronous result still holds the value it
+            # computed from the previous inputs; report it as skipped so it is
+            # not propagated as if it were current.
+            self._skipped = self._awaiting
         self._dirty = False
         if self._method:
             # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
@@ -2210,6 +2243,14 @@ class rx:
 def _rx_transform(obj):
     if not isinstance(obj, rx):
         return obj
-    return bind(lambda *_: obj.rx.value, *obj._params)
+    def resolve(*_):
+        value = obj.rx.value
+        if obj._skipped or value is Skip or value is Undefined:
+            # The expression did not produce a value for the current inputs,
+            # e.g. because an asynchronous node has not resolved yet. Skipping
+            # ensures consumers are not handed a sentinel or a stale value.
+            raise Skip
+        return value
+    return bind(resolve, *obj._params)
 
 register_reference_transform(_rx_transform)

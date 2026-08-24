@@ -866,6 +866,97 @@ async def test_reactive_async_gen_pipe_with_dep():
     await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 11)
 
+async def mul_slowly(value):
+    await asyncio.sleep(0.02)
+    return value*2
+
+async def test_reactive_async_watcher_not_notified_while_awaiting():
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly)
+    items = []
+    async_rx.rx.watch(items.append)
+    assert async_rx.rx.value is param.Undefined
+    await async_wait_until(lambda: items == [2])
+    irx.rx.value = 2
+
+    # The awaited value has not resolved yet, so the watcher must not be
+    # notified with the value computed from the previous input.
+    assert items == [2]
+
+    await async_wait_until(lambda: items == [2, 4])
+
+async def test_reactive_async_downstream_watcher_not_notified_while_awaiting():
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul_slowly) + 10
+    items = []
+    downstream.rx.watch(items.append)
+    assert downstream.rx.value is param.Undefined
+    await async_wait_until(lambda: items == [12])
+    irx.rx.value = 2
+    assert items == [12]
+    await async_wait_until(lambda: items == [12, 14])
+
+async def test_reactive_async_downstream_not_computed_while_awaiting():
+    computed = []
+    def add(value):
+        computed.append(value)
+        return value+10
+
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul_slowly).rx.pipe(add)
+    downstream.rx.watch()
+    downstream.rx.value
+    await async_wait_until(lambda: computed == [2])
+    irx.rx.value = 2
+
+    # The downstream operation must not be applied to the superseded value.
+    assert computed == [2]
+
+    await async_wait_until(lambda: computed == [2, 4])
+
+async def test_reactive_async_rapid_updates_notify_once():
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])
+    for value in (2, 3, 4):
+        irx.rx.value = value
+    await async_wait_until(lambda: items == [2, 8])
+    assert items == [2, 8]
+
+def test_reactive_skip_value_does_not_notify_watcher():
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v > 2:
+            raise Skip
+        return v+1
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    items = []
+    i.rx.watch(items.append)
+    P.integer = 2
+    assert items == [3]
+
+    # The operation skipped, so the watcher must not be notified with the
+    # value computed from the previous input.
+    P.integer = 3
+    assert items == [3]
+    assert i.rx.value == 3
+
+async def test_reactive_async_ref_not_synced_while_awaiting():
+    class Ref(param.Parameterized):
+        value = param.Integer(default=0, allow_refs=True)
+
+    irx = rx(1)
+    p = Ref(value=irx.rx.pipe(mul_slowly))
+    await async_wait_until(lambda: p.value == 2)
+    irx.rx.value = 2
+    assert p.value == 2
+    await async_wait_until(lambda: p.value == 4)
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_root_invalidation(lazy):
     arx = rx('a', lazy=lazy)

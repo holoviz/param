@@ -1056,3 +1056,57 @@ def test_reactive_derived_node_is_garbage_collected():
     a.rx.value = 5
     assert c.rx.value == 15
     assert watcher_count(a) > baseline
+
+
+def _rx_from_closure():
+    """Build an object holding an rx pipeline whose root function closes over it."""
+    class Owner:
+        pass
+
+    owner = Owner()
+
+    def compute(x):
+        return x + len(repr(owner)) * 0
+
+    owner.expr = param.rx(compute)(41)
+    return owner
+
+
+def _rx_from_bound_method():
+    """Build an object holding an rx pipeline rooted in one of its own methods."""
+    class Owner:
+        def __init__(self):
+            self.expr = param.rx(self._compute)(41)
+
+        def _compute(self, x):
+            return x
+
+    return Owner()
+
+
+@pytest.mark.parametrize('factory', [_rx_from_closure, _rx_from_bound_method])
+def test_reactive_function_rooted_node_does_not_pin_its_owner(factory):
+    # weakref.finalize keeps its arguments alive in a process-global registry
+    # until the referent is collected, so the invalidation cleanup must not own
+    # a path back to the node it cleans up. A root function that can reach the
+    # object storing the pipeline used to close that path, making the object
+    # permanently reachable and therefore uncollectable.
+    owner = factory()
+    assert owner.expr.rx.value == 41
+
+    ref = weakref.ref(owner)
+    del owner
+    gc.collect()
+    assert ref() is None
+
+
+@pytest.mark.parametrize('factory', [_rx_from_closure, _rx_from_bound_method])
+def test_reactive_function_rooted_nodes_do_not_accumulate(factory):
+    refs = []
+    for _ in range(50):
+        owner = factory()
+        owner.expr.rx.value
+        refs.append(weakref.ref(owner))
+        del owner
+    gc.collect()
+    assert all(ref() is None for ref in refs)

@@ -1374,10 +1374,11 @@ class _WeakInvalidator:
     ``rx._watch_invalidation``).
     """
 
-    __slots__ = ('_ref', '__weakref__')
+    __slots__ = ('_ref', '_watcher', '__weakref__')
 
     def __init__(self, method):
         self._ref = weakref.WeakMethod(method)
+        self._watcher = None
 
     def __call__(self, *events):
         method = self._ref()
@@ -1385,10 +1386,25 @@ class _WeakInvalidator:
             return method(*events)
 
 
-def _remove_watcher(owner, watcher):
-    """Unwatch ``watcher`` from ``owner``, ignoring if it is already gone."""
+def _remove_watcher(owner_ref, invalidator_ref):
+    """
+    Unwatch a dead node's invalidation watcher, ignoring if it is already gone.
+
+    Both arguments are weak references. ``weakref.finalize`` keeps its callback
+    arguments alive in a process-global registry until the referent is
+    collected, so holding either the owner or the ``Watcher`` (whose ``inst``
+    field *is* the owner) strongly would risk making the referent permanently
+    reachable — and therefore uncollectable — whenever the owner can reach it,
+    e.g. a function-rooted pipeline whose root function closes over the object
+    that stores the pipeline. The ``Watcher`` cannot be referenced weakly (it
+    subclasses ``tuple``) so it is reached via the invalidator, which is kept
+    alive by the owner's watcher list for exactly as long as it is registered.
+    """
+    owner, invalidator = owner_ref(), invalidator_ref()
+    if owner is None or invalidator is None:
+        return
     try:
-        owner.param.unwatch(watcher)
+        owner.param.unwatch(invalidator._watcher)
     except Exception:
         pass
 
@@ -1758,9 +1774,14 @@ class rx:
         source does not pin the (potentially short-lived) derived node alive.
         A finalizer removes the watcher automatically once this node is garbage
         collected, keeping the source's watcher list from growing without bound.
+        The finalizer is handed weak references only, since anything it owns
+        strongly would keep this node alive forever (see ``_remove_watcher``).
         """
-        watcher = owner.param._watch(_WeakInvalidator(method), names, precedence=-1)
-        weakref.finalize(self, _remove_watcher, owner, watcher)
+        invalidator = _WeakInvalidator(method)
+        invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
+        weakref.finalize(
+            self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
+        )
 
     def _invalidate_current(self, *events):
         if all(event.obj is self._trigger for event in events):

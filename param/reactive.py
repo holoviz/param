@@ -1786,7 +1786,7 @@ class rx:
         t.cast('t.Any', self._root)._dirty_obj = True
         self._error_state = None
 
-    async def _resolve_async(self, obj=None, generation=None):
+    async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
         self._current_task = task = asyncio.current_task()
         trigger = self._trigger

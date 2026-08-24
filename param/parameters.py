@@ -3731,7 +3731,7 @@ class List(Parameter[_T]):
             if is_instance and not isinstance(v, item_type):
                 err_kind = "instances"
                 obj_display = lambda v: type(v)
-            elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
+            elif not is_instance and (not isinstance(v, type) or not issubclass(v, item_type)):
                 err_kind = "subclasses"
             if err_kind:
                 raise TypeError(

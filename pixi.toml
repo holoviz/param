@@ -138,8 +138,10 @@ pandas = "*"
 pyarrow = "*"
 pytables = "*"
 xlrd = "*"
-gmpy2 = "*"
 ipykernel = "!=7.0.0"  # temp pin: https://github.com/ipython/ipykernel/issues/1445
+
+[feature.test.target.unix.dependencies]
+gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
 
 [feature.test-314t.dependencies]
 cloudpickle = "*"

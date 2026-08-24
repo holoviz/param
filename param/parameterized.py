@@ -1855,7 +1855,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 pass
 
         super().__setattr__(attribute, value)
-        if is_slot and attribute in _PARAMETER_CACHE_ATTRS:
+        if is_slot and attribute in _PARAMETER_CACHE_ATTRS and value is not old and value != old:
             self._invalidate_init_cache()
         if has_watcher and old is not NotImplemented:
             self._trigger_event(attribute, old, value)
@@ -2411,6 +2411,23 @@ class _ParametersRestorer:
             self._restore = {}
 
 
+def _invoke_descriptor(obj: t.Any, attr: str) -> t.Any:
+    """
+    Invoke the descriptor implementing ``attr`` on ``type(obj)`` directly.
+
+    An AttributeError raised inside a descriptor (e.g. a property) is
+    indistinguishable from a missing attribute to the attribute machinery,
+    which clears it and dispatches to ``__getattr__``. Re-invoking the
+    descriptor from there surfaces the real error instead of masking it, and
+    does not recurse since no attribute lookup on ``obj`` is involved.
+    """
+    cls = type(obj)
+    for klass in cls.__mro__:
+        if attr in klass.__dict__:
+            return klass.__dict__[attr].__get__(obj, cls)
+    raise AttributeError(attr)
+
+
 class Parameters:
     """
     Object that holds the ``.param`` namespace and implementation of
@@ -2562,9 +2579,20 @@ class Parameters:
         if cls is None: # Class not initialized
             raise AttributeError
 
-        if attr in self_._cls_parameters:
+        # The cached class parameters are read directly instead of through the
+        # _cls_parameters property, both because the derived caches it also
+        # populates are not needed here and because an AttributeError raised
+        # inside it would be routed back to this method and recurse.
+        params = cls._param__private.params or _invoke_descriptor(self_, '_cls_parameters')
+        if attr in params:
             return self_.__getitem__(attr)
-        elif self_.self is None:
+
+        # Kept off the Parameter lookup path above since it is only relevant
+        # once we know the attribute is not a Parameter
+        if any(attr in klass.__dict__ for klass in type(self_).__mro__):
+            return _invoke_descriptor(self_, attr)
+
+        if self_.self is None:
             raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
@@ -3140,18 +3168,21 @@ class Parameters:
         pdict = private.params
         if pdict:
             if private.params_to_deepcopy is None or private.params_to_ref is None or private.params_with_default_factory is None:
-                private.params_to_deepcopy = []
-                private.params_to_ref = []
-                private.params_with_default_factory = []
+                to_deepcopy = []
+                to_ref = []
+                with_default_factory = []
                 for pname, pobj in pdict.items():
                     if pname == 'name':
                         continue
                     if pobj.default_factory is not None:
-                        private.params_with_default_factory.append((pname, pobj))
+                        with_default_factory.append((pname, pobj))
                     elif pobj.instantiate:
-                        private.params_to_deepcopy.append(pobj)
+                        to_deepcopy.append(pobj)
                     elif pobj.constant:
-                        private.params_to_ref.append(pobj)
+                        to_ref.append(pobj)
+                private.params_to_deepcopy = to_deepcopy
+                private.params_to_ref = to_ref
+                private.params_with_default_factory = with_default_factory
             return pdict
 
         paramdict = {}

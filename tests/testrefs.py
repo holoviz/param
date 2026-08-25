@@ -305,10 +305,6 @@ async def test_async_generator_ref_cancelled():
     assert p._param__private.async_refs['string'] is task2
 
 async def test_async_ref_cancelled_on_dependency_change():
-    """
-    A ref re-resolved because a dependency changed must cancel the resolution it
-    supersedes, otherwise a superseded coroutine goes on to write a stale value.
-    """
     started, finished = [], []
 
     class Source(param.Parameterized):
@@ -334,7 +330,6 @@ async def test_async_ref_cancelled_on_dependency_change():
     assert 'string' not in p._param__private.async_refs
 
 async def test_async_generator_ref_cancelled_on_dependency_change():
-    """A superseded async generator must stop emitting into the parameter."""
     emitted = []
 
     class Source(param.Parameterized):

@@ -2786,9 +2786,8 @@ class Parameters:
         if self_.self is None:
             return 0
         private = self_.self._param__private
-        generation = private.async_ref_scheduled.get(pname, 0) + 1
-        private.async_ref_scheduled[pname] = generation
-        return generation
+        private.async_ref_scheduled[pname] += 1
+        return private.async_ref_scheduled[pname]
 
     def _settle_async_ref(self_, pname: str, generation: int):
         """
@@ -2803,19 +2802,15 @@ class Parameters:
         """
         if self_.self is None or not generation:
             return
-        private = self_.self._param__private
-        if private.async_ref_settled.get(pname, 0) < generation:
-            private.async_ref_settled[pname] = generation
+        settled = self_.self._param__private.async_ref_settled
+        settled[pname] = max(settled[pname], generation)
 
     def _awaiting_ref(self_, pname: str) -> bool:
         """Whether an asynchronous reference has not yet produced a value."""
         if self_.self is None:
             return False
         private = self_.self._param__private
-        return (
-            private.async_ref_scheduled.get(pname, 0)
-            != private.async_ref_settled.get(pname, 0)
-        )
+        return private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
 
     async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any], generation: int = 0):
         if self_.self is None:
@@ -5708,8 +5703,8 @@ class _InstancePrivate:
     dynamic_watchers: defaultdict[str, list[Watcher]]
     params: dict[str, Parameter]
     async_refs: dict[str, t.Any]
-    async_ref_scheduled: dict[str, int]
-    async_ref_settled: dict[str, int]
+    async_ref_scheduled: defaultdict[str, int]
+    async_ref_settled: defaultdict[str, int]
     refs: dict[str, t.Any]
     ref_watchers: list[tuple[tuple[str, ...], Watcher]]
     syncing: set[str]
@@ -5740,8 +5735,8 @@ class _InstancePrivate:
             }
         self.ref_watchers = []
         self.async_refs = {}
-        self.async_ref_scheduled = {}
-        self.async_ref_settled = {}
+        self.async_ref_scheduled = defaultdict(int)
+        self.async_ref_settled = defaultdict(int)
         self.parameters_state = parameters_state
         self.dynamic_watchers = defaultdict(list, dynamic_watchers or ())
         self.params = {} if params is None else params

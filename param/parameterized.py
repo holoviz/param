@@ -2579,10 +2579,11 @@ class Parameters:
 
         ns_type = type(self_)
 
-        # The cached parameters are read from _param__private directly rather
-        # than via the _cls_parameters property. If that property raised an
-        # AttributeError we would be called to handle it and recurse, so it is
-        # only invoked as a descriptor, i.e. without attribute lookup on self_.
+        # Read the cached parameters from _param__private rather than from the
+        # _cls_parameters property: an AttributeError raised by that property is
+        # dispatched to this method, so accessing it as an attribute here would
+        # recurse. When the cache is empty the property is invoked directly as a
+        # descriptor instead, which bypasses that dispatch.
         params = cls._param__private.params
         if not params:
             params = _find_descriptor(ns_type, '_cls_parameters').__get__(self_, ns_type)
@@ -2827,11 +2828,6 @@ class Parameters:
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
         if running_task is not current_task:
-            # Take ownership of the reference before cancelling the resolution
-            # we supersede. Cancelling without registering would leave the
-            # registry empty once the cancelled task cleaned up, so the next
-            # resolution would find no owner to cancel and every other task
-            # would escape cancellation and go on writing superseded values.
             if running_task is not None:
                 running_task.cancel()
             self_.self._param__private.async_refs[pname] = current_task
@@ -2849,9 +2845,6 @@ class Parameters:
                         pass
                 self_._settle_async_ref(pname, generation)
         finally:
-            # A resolution that ends without producing a value, because it was
-            # cancelled or raised, still has to settle so the reference is not
-            # left looking like it is perpetually in flight.
             self_._settle_async_ref(pname, generation)
             # Ensure we clean up but only if the task matches the current task,
             # i.e. only the resolution that still owns the reference clears it.

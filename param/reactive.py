@@ -763,6 +763,67 @@ class reactive_ops:
         resolver = resolver_type(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
 
+    @property
+    def awaiting(self) -> bool:
+        """
+        Whether any asynchronous operation in this expression is still resolving.
+
+        ``True`` from the moment an asynchronous operation is scheduled until it
+        produces a value for the current inputs. While a node is awaiting, the
+        expression still holds the value it computed from the previous inputs,
+        so ``.rx.value`` reports :obj:`param.Undefined` rather than that stale
+        value; ``awaiting`` distinguishes "not resolved yet" from an operation
+        that deliberately skipped.
+
+        The whole graph feeding the expression is considered, not just the node
+        it is accessed on, so a synchronous operation downstream of an
+        asynchronous one reports ``True`` while its input resolves.
+
+        Reading this does not itself schedule anything, so an expression whose
+        value has never been requested reports ``False`` until something asks
+        for it.
+
+        Both routes an asynchronous callable can take are tracked: one applied
+        as an operation, e.g. passed to ``.rx.pipe``, and one passed to ``rx``
+        as the object itself, which is held on a parameter and resolved by the
+        reference machinery. A generator settles on each value it yields, so it
+        reports ``True`` only until its next value arrives rather than until it
+        is exhausted. Accessed on a parameter rather than an expression this is
+        always ``False``.
+
+        Returns
+        -------
+        bool
+            ``True`` while an asynchronous operation has not yet produced a
+            value for the current inputs, ``False`` otherwise.
+
+        Examples
+        --------
+        Pipe through a coroutine function and observe the expression settle:
+
+        >>> import asyncio, param
+        >>> async def double(value):
+        ...     await asyncio.sleep(0.1)
+        ...     return value * 2
+        >>> expr = param.rx(1).rx.pipe(double) + 1
+
+        Requesting the value schedules the operation:
+
+        >>> expr.rx.value is param.Undefined
+        True
+        >>> expr.rx.awaiting
+        True
+
+        Once the coroutine has resolved the expression reports a value again:
+
+        >>> expr.rx.awaiting  # doctest: +SKIP
+        False
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return False
+        return any(node._settling for node in reactive._upstream())
+
     def updating(self) -> 'rx':
         """
         Return a new expression that indicates whether the current expression is updating.
@@ -1708,8 +1769,63 @@ class rx:
         """
         Whether an asynchronous resolution is in flight that has not yet
         produced a value for the current generation.
+
+        While a node is awaiting, the cached ``_current_`` value was computed
+        from inputs that have since been superseded, so resolving the node
+        skips instead of reporting the stale value as if it were current.
         """
         return self._resolve_generation != self._finished_generation
+
+    @property
+    def _awaiting_ref(self) -> bool:
+        """
+        Whether an asynchronous reference feeding this node has not yet
+        produced a value for the current inputs.
+
+        A coroutine or generator function passed to ``rx`` as the object rather
+        than as an operation is held on a parameter and resolved by the
+        reference machinery, so its settlement is tracked there instead of by
+        this node's own generations.
+        """
+        for p in self._internal_params:
+            owner, name = p.owner, p.name
+            if name is None or not isinstance(owner, Parameterized):
+                continue
+            if owner.param._awaiting_ref(name):
+                return True
+        return False
+
+    @property
+    def _settling(self) -> bool:
+        """Whether this node is waiting on an asynchronous result of its own."""
+        return self._awaiting or self._awaiting_ref
+
+    def _upstream(self) -> Iterator[rx]:
+        """
+        Yield this node and every ``rx`` node it derives its value from.
+
+        Inputs reach a node by three routes, all of which have to be visited
+        because an operation is only as settled as the nodes feeding it: the
+        ``_prev`` chain of the pipeline the node belongs to, the ``_shared``
+        input it was cloned from when a pipeline branches, and any ``rx``
+        passed as an argument to one of its operations.
+        """
+        seen: set[int] = set()
+        stack: list[rx] = [self]
+        while stack:
+            node = stack.pop()
+            if id(node) in seen:
+                continue
+            seen.add(id(node))
+            yield node
+            for inp in (node._prev, node._shared):
+                if isinstance(inp, rx):
+                    stack.append(inp)
+            operation = node._operation
+            if operation:
+                stack.extend(_iter_rx((
+                    operation['fn'], operation.get('args', ()), operation.get('kwargs', {})
+                )))
 
     @property
     def _current(self):
@@ -2297,6 +2413,27 @@ class rx:
                 "'<reactive_expr>.rx.value = <val>'."
             )
         super().__setattr__(name, value)
+
+
+def _iter_rx(value: t.Any) -> Iterator[rx]:
+    """
+    Yield the reactive expressions nested anywhere inside a reference.
+
+    Mirrors the containers ``resolve_value`` descends into, so an ``rx`` used
+    as an operation argument is found wherever ``resolve_value`` would find it.
+    """
+    if isinstance(value, rx):
+        yield value
+    elif isinstance(value, (list, tuple, set)):
+        for v in value:
+            yield from _iter_rx(v)
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            yield from _iter_rx(k)
+            yield from _iter_rx(v)
+    elif isinstance(value, slice):
+        for v in (value.start, value.stop, value.step):
+            yield from _iter_rx(v)
 
 
 def _rx_transform(obj):

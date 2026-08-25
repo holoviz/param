@@ -1597,7 +1597,7 @@ class rx:
         self._dirty_obj = False
         self._current_task = None
         self._resolve_generation = 0
-        self._resolved_generation = 0
+        self._finished_generation = 0
         self._skipped = False
         self._error_state = None
         self._current_ = _current
@@ -1707,12 +1707,8 @@ class rx:
         """
         Whether an asynchronous resolution is in flight that has not yet
         produced a value for the current generation.
-
-        While a node is awaiting, the cached ``_current_`` value was computed
-        from inputs that have since been superseded, so resolving the node
-        skips instead of reporting the stale value as if it were current.
         """
-        return self._resolve_generation != self._resolved_generation
+        return self._resolve_generation != self._finished_generation
 
     @property
     def _current(self):
@@ -1858,7 +1854,7 @@ class rx:
                 if stale():
                     return
                 self._current_ = shared.rx.value
-                self._resolved_generation = generation
+                self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
                 async for val in obj:
@@ -1866,14 +1862,14 @@ class rx:
                         await _close_stale(obj)
                         break
                     self._current_ = val
-                    self._resolved_generation = generation
+                    self._finished_generation = generation
                     trigger.param.trigger('value')
             else:
                 value = await obj
                 if stale():
                     return
                 self._current_ = value
-                self._resolved_generation = generation
+                self._finished_generation = generation
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
             return
@@ -1902,9 +1898,6 @@ class rx:
                     self._current_ = Undefined
                     raise Skip
                 elif self._prev is not None and self._prev._skipped:
-                    # The previous node did not produce a value for the current
-                    # inputs, so applying this operation would compute on a
-                    # value that has already been superseded.
                     raise Skip
                 elif (
                     self._shared is not None and
@@ -1918,9 +1911,9 @@ class rx:
                         self._shared.rx.value # trigger async resolve
                         self._lazy_resolve()
                         raise Skip
-                    # Mirroring the shared input is not a skip, it resolves to
-                    # a value, so it must report the shared node's skip state
-                    # rather than being treated as skipped itself.
+                    # Returns instead of raising Skip because this path does
+                    # resolve to a value, so it must mirror the shared node's
+                    # skip state rather than be marked skipped by the handler.
                     self._current_ = self._shared.rx.value
                     self._skipped = self._shared._skipped
                     self._dirty = False
@@ -2290,9 +2283,6 @@ def _rx_transform(obj):
     def resolve(*_):
         value = obj.rx.value
         if obj._skipped or value is Skip or value is Undefined:
-            # The expression did not produce a value for the current inputs,
-            # e.g. because an asynchronous node has not resolved yet. Skipping
-            # ensures consumers are not handed a sentinel or a stale value.
             raise Skip
         return value
     return bind(resolve, *obj._params)

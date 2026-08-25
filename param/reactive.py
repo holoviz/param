@@ -1411,6 +1411,27 @@ def _remove_watcher(
         pass
 
 
+async def _close_stale(obj):
+    """
+    Discard an awaitable or async generator whose result is no longer needed.
+
+    Closing a coroutine that was never awaited also suppresses the warning
+    Python emits when it is garbage collected.
+    """
+    try:
+        if inspect.isasyncgen(obj):
+            await obj.aclose()
+        elif inspect.iscoroutine(obj):
+            obj.close()
+    except (StopAsyncIteration, GeneratorExit):
+        pass
+    except Exception:
+        logger.debug(
+            "Ignoring close error for stale reactive task.",
+            exc_info=True,
+        )
+
+
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
@@ -1576,6 +1597,8 @@ class rx:
         self._dirty_obj = False
         self._current_task = None
         self._resolve_generation = 0
+        self._finished_generation = 0
+        self._skipped = False
         self._error_state = None
         self._current_ = _current
         # _shared is used for branching rx pipelines where we clone the input.
@@ -1678,6 +1701,14 @@ class rx:
             inspect.isasyncgenfunction(fn) or
             inspect.isgeneratorfunction(fn)
         )
+
+    @property
+    def _awaiting(self) -> bool:
+        """
+        Whether an asynchronous resolution is in flight that has not yet
+        produced a value for the current generation.
+        """
+        return self._resolve_generation != self._finished_generation
 
     @property
     def _current(self):
@@ -1794,14 +1825,23 @@ class rx:
         t.cast('t.Any', self._root)._dirty_obj = True
         self._error_state = None
 
-    async def _resolve_async(self, obj=None, generation=None):
+    async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
-        self._current_task = task = asyncio.current_task()
-        trigger = self._trigger
 
         def stale():
             return generation != self._resolve_generation
 
+        if stale():
+            # A newer resolution was requested before this task was scheduled,
+            # so nothing has awaited obj yet and the operation has not begun.
+            # Close it instead of computing a result that is already superseded.
+            # This must happen before _current_task is claimed below, otherwise
+            # the finally clause would clear the genuinely current task and hide
+            # it from the next _lazy_resolve.
+            await _close_stale(obj)
+            return
+        self._current_task = task = asyncio.current_task()
+        trigger = self._trigger
         try:
             if trigger is None:
                 return
@@ -1814,27 +1854,22 @@ class rx:
                 if stale():
                     return
                 self._current_ = shared.rx.value
+                self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
                 async for val in obj:
                     if stale():
-                        try:
-                            await obj.aclose()
-                        except (StopAsyncIteration, GeneratorExit):
-                            pass
-                        except Exception:
-                            logger.debug(
-                                "Ignoring async generator close error for stale reactive task.",
-                                exc_info=True,
-                            )
+                        await _close_stale(obj)
                         break
                     self._current_ = val
+                    self._finished_generation = generation
                     trigger.param.trigger('value')
             else:
                 value = await obj
                 if stale():
                     return
                 self._current_ = value
+                self._finished_generation = generation
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
             return
@@ -1862,6 +1897,8 @@ class rx:
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
                     raise Skip
+                elif self._prev is not None and self._prev._skipped:
+                    raise Skip
                 elif (
                     self._shared is not None and
                     self._method is None and
@@ -1873,9 +1910,14 @@ class rx:
                     if self._is_async:
                         self._shared.rx.value # trigger async resolve
                         self._lazy_resolve()
-                    else:
-                        self._current_ = self._shared.rx.value
-                    raise Skip
+                        raise Skip
+                    # Returns instead of raising Skip because this path does
+                    # resolve to a value, so it must mirror the shared node's
+                    # skip state rather than be marked skipped by the handler.
+                    self._current_ = self._shared.rx.value
+                    self._skipped = self._shared._skipped
+                    self._dirty = False
+                    return self._current_
                 operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
@@ -1886,13 +1928,19 @@ class rx:
                         raise Skip
             except Skip:
                 self._dirty = False
+                self._skipped = True
                 return self._current_
             except Exception as e:
                 self._error_state = e
                 raise e
             self._current_ = current = obj
+            self._skipped = False
         else:
             current = self._current_
+            # A node awaiting an asynchronous result still holds the value it
+            # computed from the previous inputs; report it as skipped so it is
+            # not propagated as if it were current.
+            self._skipped = self._awaiting
         self._dirty = False
         if self._method:
             # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
@@ -2232,6 +2280,11 @@ class rx:
 def _rx_transform(obj):
     if not isinstance(obj, rx):
         return obj
-    return bind(lambda *_: obj.rx.value, *obj._params)
+    def resolve(*_):
+        value = obj.rx.value
+        if obj._skipped or value is Skip or value is Undefined:
+            raise Skip
+        return value
+    return bind(resolve, *obj._params)
 
 register_reference_transform(_rx_transform)

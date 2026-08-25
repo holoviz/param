@@ -866,6 +866,209 @@ async def test_reactive_async_gen_pipe_with_dep():
     await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 11)
 
+async def mul_slowly(value):
+    await asyncio.sleep(0.02)
+    return value*2
+
+async def test_reactive_async_watcher_not_notified_while_awaiting():
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly)
+    items = []
+    async_rx.rx.watch(items.append)
+    assert async_rx.rx.value is param.Undefined
+    await async_wait_until(lambda: items == [2])
+    irx.rx.value = 2
+
+    # The awaited value has not resolved yet, so the watcher must not be
+    # notified with the value computed from the previous input.
+    assert items == [2]
+
+    await async_wait_until(lambda: items == [2, 4])
+
+async def test_reactive_async_downstream_watcher_not_notified_while_awaiting():
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul_slowly) + 10
+    items = []
+    downstream.rx.watch(items.append)
+    assert downstream.rx.value is param.Undefined
+    await async_wait_until(lambda: items == [12])
+    irx.rx.value = 2
+    assert items == [12]
+    await async_wait_until(lambda: items == [12, 14])
+
+async def test_reactive_async_downstream_not_computed_while_awaiting():
+    computed = []
+    def add(value):
+        computed.append(value)
+        return value+10
+
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul_slowly).rx.pipe(add)
+    downstream.rx.watch()
+    downstream.rx.value
+    await async_wait_until(lambda: computed == [2])
+    irx.rx.value = 2
+
+    # The downstream operation must not be applied to the superseded value.
+    assert computed == [2]
+
+    await async_wait_until(lambda: computed == [2, 4])
+
+async def test_reactive_async_rapid_updates_notify_once():
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])
+    for value in (2, 3, 4):
+        irx.rx.value = value
+    await async_wait_until(lambda: items == [2, 8])
+    assert items == [2, 8]
+
+def test_reactive_skip_value_does_not_notify_watcher():
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v > 2:
+            raise Skip
+        return v+1
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    items = []
+    i.rx.watch(items.append)
+    P.integer = 2
+    assert items == [3]
+
+    # The operation skipped, so the watcher must not be notified with the
+    # value computed from the previous input.
+    P.integer = 3
+    assert items == [3]
+    assert i.rx.value == 3
+
+async def test_reactive_async_ref_not_synced_while_awaiting():
+    class Ref(param.Parameterized):
+        value = param.Integer(default=0, allow_refs=True)
+
+    irx = rx(1)
+    p = Ref(value=irx.rx.pipe(mul_slowly))
+    await async_wait_until(lambda: p.value == 2)
+    irx.rx.value = 2
+    assert p.value == 2
+    await async_wait_until(lambda: p.value == 4)
+
+async def test_reactive_async_superseded_updates_not_computed():
+    started, finished = [], []
+
+    async def mul(value):
+        started.append(value)
+        await asyncio.sleep(0.02)
+        finished.append(value)
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])
+    assert started == [1]
+
+    # The updates arrive without yielding to the event loop, so the tasks they
+    # schedule have not started by the time the next one supersedes them.
+    for value in (2, 3, 4, 5):
+        irx.rx.value = value
+
+    await async_wait_until(lambda: items == [2, 10])
+
+    # Only the final update was computed; the superseded coroutines were closed
+    # before their bodies began.
+    assert started == [1, 5]
+    assert finished == [1, 5]
+
+async def test_reactive_async_gen_superseded_updates_not_computed():
+    started = []
+
+    async def gen(value):
+        started.append(value)
+        yield value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(gen)
+    async_rx.rx.watch()
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 2)
+    assert started == [1]
+
+    for value in (2, 3, 4, 5):
+        irx.rx.value = value
+
+    await async_wait_until(lambda: async_rx.rx.value == 10)
+
+    # A superseded async generator is closed before it is first iterated, so
+    # its body never runs.
+    assert started == [1, 5]
+
+async def test_reactive_async_running_task_is_cancelled():
+    cancelled = []
+
+    async def mul(value):
+        try:
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            cancelled.append(value)
+            raise
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.watch()
+    async_rx.rx.value
+
+    # Yield to the event loop so the body is actually suspended on its await;
+    # a task in that state cannot be skipped, it has to be cancelled.
+    await asyncio.sleep(0.01)
+    irx.rx.value = 2
+
+    await async_wait_until(lambda: async_rx.rx.value == 4)
+    assert cancelled == [1]
+
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_async_shared_rx_superseded_updates_computed_once(lazy):
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    async def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.02)
+        return {"x": a + 1, "y": a * 2}
+
+    shared = rx(model.param.a, lazy=lazy).rx.pipe(expensive_compute)
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(lambda: call_count == 1)
+
+    for value in (2.0, 3.0, 4.0):
+        model.a = value
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(
+        lambda: x_rx.rx.value == 5 and y_rx.rx.value == 8
+    )
+
+    # The branches resolve through the shared node rather than recomputing, and
+    # the superseded updates are not computed at all.
+    assert call_count == 2
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_root_invalidation(lazy):
     arx = rx('a', lazy=lazy)

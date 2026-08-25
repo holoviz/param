@@ -1086,11 +1086,8 @@ def _rx_from_bound_method():
 
 @pytest.mark.parametrize('factory', [_rx_from_closure, _rx_from_bound_method])
 def test_reactive_function_rooted_node_does_not_pin_its_owner(factory):
-    # weakref.finalize keeps its arguments alive in a process-global registry
-    # until the referent is collected, so the invalidation cleanup must not own
-    # a path back to the node it cleans up. A root function that can reach the
-    # object storing the pipeline used to close that path, making the object
-    # permanently reachable and therefore uncollectable.
+    # weakref.finalize holds its arguments until the referent is collected, so
+    # the invalidation cleanup must not own a path back to the node it cleans up.
     owner = factory()
     assert owner.expr.rx.value == 41
 

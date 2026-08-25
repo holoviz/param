@@ -1386,19 +1386,17 @@ class _WeakInvalidator:
             return method(*events)
 
 
-def _remove_watcher(owner_ref, invalidator_ref):
+def _remove_watcher(
+    owner_ref: weakref.ref[Parameterized | type[Parameterized]],
+    invalidator_ref: weakref.ref[_WeakInvalidator],
+) -> None:
     """
     Unwatch a dead node's invalidation watcher, ignoring if it is already gone.
 
-    Both arguments are weak references. ``weakref.finalize`` keeps its callback
-    arguments alive in a process-global registry until the referent is
-    collected, so holding either the owner or the ``Watcher`` (whose ``inst``
-    field *is* the owner) strongly would risk making the referent permanently
-    reachable — and therefore uncollectable — whenever the owner can reach it,
-    e.g. a function-rooted pipeline whose root function closes over the object
-    that stores the pipeline. The ``Watcher`` cannot be referenced weakly (it
-    subclasses ``tuple``) so it is reached via the invalidator, which is kept
-    alive by the owner's watcher list for exactly as long as it is registered.
+    Both refs must be weak: ``weakref.finalize`` holds its arguments until the
+    referent dies, so a strong owner (or ``Watcher``, whose ``inst`` is the
+    owner) would make the node uncollectable. ``Watcher`` subclasses ``tuple``
+    and cannot be weakly referenced, so it is reached via the invalidator.
     """
     owner, invalidator = owner_ref(), invalidator_ref()
     if owner is None or invalidator is None:
@@ -1774,8 +1772,7 @@ class rx:
         source does not pin the (potentially short-lived) derived node alive.
         A finalizer removes the watcher automatically once this node is garbage
         collected, keeping the source's watcher list from growing without bound.
-        The finalizer is handed weak references only, since anything it owns
-        strongly would keep this node alive forever (see ``_remove_watcher``).
+        The finalizer is handed weak references only (see ``_remove_watcher``).
         """
         invalidator = _WeakInvalidator(method)
         invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)

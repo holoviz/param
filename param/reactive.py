@@ -115,6 +115,8 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .parameterized import Watcher
+
     _P = t.ParamSpec('_P')
     _R = t.TypeVar('_R')
     _Y = t.TypeVar('_Y')
@@ -1376,6 +1378,8 @@ class _WeakInvalidator:
 
     __slots__ = ('_ref', '_watcher', '__weakref__')
 
+    _watcher: Watcher | None
+
     def __init__(self, method):
         self._ref = weakref.WeakMethod(method)
         self._watcher = None
@@ -1399,7 +1403,7 @@ def _remove_watcher(
     and cannot be weakly referenced, so it is reached via the invalidator.
     """
     owner, invalidator = owner_ref(), invalidator_ref()
-    if owner is None or invalidator is None:
+    if owner is None or invalidator is None or invalidator._watcher is None:
         return
     try:
         owner.param.unwatch(invalidator._watcher)

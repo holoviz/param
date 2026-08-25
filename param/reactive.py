@@ -115,6 +115,8 @@ from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .parameterized import Watcher
+
     _P = t.ParamSpec('_P')
     _R = t.TypeVar('_R')
     _Y = t.TypeVar('_Y')
@@ -1374,10 +1376,13 @@ class _WeakInvalidator:
     ``rx._watch_invalidation``).
     """
 
-    __slots__ = ('_ref', '__weakref__')
+    __slots__ = ('_ref', '_watcher', '__weakref__')
+
+    _watcher: Watcher | None
 
     def __init__(self, method):
         self._ref = weakref.WeakMethod(method)
+        self._watcher = None
 
     def __call__(self, *events):
         method = self._ref()
@@ -1385,10 +1390,23 @@ class _WeakInvalidator:
             return method(*events)
 
 
-def _remove_watcher(owner, watcher):
-    """Unwatch ``watcher`` from ``owner``, ignoring if it is already gone."""
+def _remove_watcher(
+    owner_ref: weakref.ref[Parameterized | type[Parameterized]],
+    invalidator_ref: weakref.ref[_WeakInvalidator],
+) -> None:
+    """
+    Unwatch a dead node's invalidation watcher, ignoring if it is already gone.
+
+    Both refs must be weak: ``weakref.finalize`` holds its arguments until the
+    referent dies, so a strong owner (or ``Watcher``, whose ``inst`` is the
+    owner) would make the node uncollectable. ``Watcher`` subclasses ``tuple``
+    and cannot be weakly referenced, so it is reached via the invalidator.
+    """
+    owner, invalidator = owner_ref(), invalidator_ref()
+    if owner is None or invalidator is None or invalidator._watcher is None:
+        return
     try:
-        owner.param.unwatch(watcher)
+        owner.param.unwatch(invalidator._watcher)
     except Exception:
         pass
 
@@ -1793,9 +1811,13 @@ class rx:
         source does not pin the (potentially short-lived) derived node alive.
         A finalizer removes the watcher automatically once this node is garbage
         collected, keeping the source's watcher list from growing without bound.
+        The finalizer is handed weak references only (see ``_remove_watcher``).
         """
-        watcher = owner.param._watch(_WeakInvalidator(method), names, precedence=-1)
-        weakref.finalize(self, _remove_watcher, owner, watcher)
+        invalidator = _WeakInvalidator(method)
+        invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
+        weakref.finalize(
+            self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
+        )
 
     def _invalidate_current(self, *events):
         if all(event.obj is self._trigger for event in events):

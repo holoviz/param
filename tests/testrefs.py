@@ -304,6 +304,55 @@ async def test_async_generator_ref_cancelled():
     assert task2 is async_task2
     assert p._param__private.async_refs['string'] is task2
 
+async def test_async_ref_cancelled_on_dependency_change():
+    started, finished = [], []
+
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def slow(i):
+        started.append(i)
+        await asyncio.sleep(0.1)
+        finished.append(i)
+        return str(i)
+
+    source = Source()
+    p = Parameters(string=bind(slow, source.param.x))
+    for i in (1, 2, 3):
+        source.x = i
+        await asyncio.sleep(0.01)
+
+    await wait_for_value(p, 'string', '3', timeout=1)
+    assert started == [0, 1, 2, 3]
+    assert finished == [3]
+
+    await asyncio.sleep(0.05)
+    assert 'string' not in p._param__private.async_refs
+
+async def test_async_generator_ref_cancelled_on_dependency_change():
+    emitted = []
+
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def gen(i):
+        while True:
+            emitted.append(i)
+            yield str(i)
+            await asyncio.sleep(0.01)
+
+    source = Source()
+    p = Parameters(string=bind(gen, source.param.x))
+    await asyncio.sleep(0.05)
+    source.x = 1
+    await asyncio.sleep(0.05)
+    source.x = 2
+    await wait_for_value(p, 'string', '2', timeout=0.5)
+
+    emitted.clear()
+    await asyncio.sleep(0.05)
+    assert set(emitted) == {2}
+
 async def test_generator_ref_cancelled():
     threads = []
     def gen_strings1():

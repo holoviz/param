@@ -1393,6 +1393,27 @@ def _remove_watcher(owner, watcher):
         pass
 
 
+async def _close_stale(obj):
+    """
+    Discard an awaitable or async generator whose result is no longer needed.
+
+    Closing a coroutine that was never awaited also suppresses the warning
+    Python emits when it is garbage collected.
+    """
+    try:
+        if inspect.isasyncgen(obj):
+            await obj.aclose()
+        elif inspect.iscoroutine(obj):
+            obj.close()
+    except (StopAsyncIteration, GeneratorExit):
+        pass
+    except Exception:
+        logger.debug(
+            "Ignoring close error for stale reactive task.",
+            exc_info=True,
+        )
+
+
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
@@ -1788,12 +1809,21 @@ class rx:
 
     async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
-        self._current_task = task = asyncio.current_task()
-        trigger = self._trigger
 
         def stale():
             return generation != self._resolve_generation
 
+        if stale():
+            # A newer resolution was requested before this task was scheduled,
+            # so nothing has awaited obj yet and the operation has not begun.
+            # Close it instead of computing a result that is already superseded.
+            # This must happen before _current_task is claimed below, otherwise
+            # the finally clause would clear the genuinely current task and hide
+            # it from the next _lazy_resolve.
+            await _close_stale(obj)
+            return
+        self._current_task = task = asyncio.current_task()
+        trigger = self._trigger
         try:
             if trigger is None:
                 return
@@ -1811,15 +1841,7 @@ class rx:
             elif inspect.isasyncgen(obj):
                 async for val in obj:
                     if stale():
-                        try:
-                            await obj.aclose()
-                        except (StopAsyncIteration, GeneratorExit):
-                            pass
-                        except Exception:
-                            logger.debug(
-                                "Ignoring async generator close error for stale reactive task.",
-                                exc_info=True,
-                            )
+                        await _close_stale(obj)
                         break
                     self._current_ = val
                     self._resolved_generation = generation

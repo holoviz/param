@@ -957,6 +957,118 @@ async def test_reactive_async_ref_not_synced_while_awaiting():
     assert p.value == 2
     await async_wait_until(lambda: p.value == 4)
 
+async def test_reactive_async_superseded_updates_not_computed():
+    started, finished = [], []
+
+    async def mul(value):
+        started.append(value)
+        await asyncio.sleep(0.02)
+        finished.append(value)
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])
+    assert started == [1]
+
+    # The updates arrive without yielding to the event loop, so the tasks they
+    # schedule have not started by the time the next one supersedes them.
+    for value in (2, 3, 4, 5):
+        irx.rx.value = value
+
+    await async_wait_until(lambda: items == [2, 10])
+
+    # Only the final update was computed; the superseded coroutines were closed
+    # before their bodies began.
+    assert started == [1, 5]
+    assert finished == [1, 5]
+
+async def test_reactive_async_gen_superseded_updates_not_computed():
+    started = []
+
+    async def gen(value):
+        started.append(value)
+        yield value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(gen)
+    async_rx.rx.watch()
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 2)
+    assert started == [1]
+
+    for value in (2, 3, 4, 5):
+        irx.rx.value = value
+
+    await async_wait_until(lambda: async_rx.rx.value == 10)
+
+    # A superseded async generator is closed before it is first iterated, so
+    # its body never runs.
+    assert started == [1, 5]
+
+async def test_reactive_async_running_task_is_cancelled():
+    cancelled = []
+
+    async def mul(value):
+        try:
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            cancelled.append(value)
+            raise
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.watch()
+    async_rx.rx.value
+
+    # Yield to the event loop so the body is actually suspended on its await;
+    # a task in that state cannot be skipped, it has to be cancelled.
+    await asyncio.sleep(0.01)
+    irx.rx.value = 2
+
+    await async_wait_until(lambda: async_rx.rx.value == 4)
+    assert cancelled == [1]
+
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_async_shared_rx_superseded_updates_computed_once(lazy):
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    async def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.02)
+        return {"x": a + 1, "y": a * 2}
+
+    shared = rx(model.param.a, lazy=lazy).rx.pipe(expensive_compute)
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(lambda: call_count == 1)
+
+    for value in (2.0, 3.0, 4.0):
+        model.a = value
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(
+        lambda: x_rx.rx.value == 5 and y_rx.rx.value == 8
+    )
+
+    # The branches resolve through the shared node rather than recomputing, and
+    # the superseded updates are not computed at all.
+    assert call_count == 2
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_root_invalidation(lazy):
     arx = rx('a', lazy=lazy)

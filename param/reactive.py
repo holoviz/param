@@ -1616,6 +1616,12 @@ class rx:
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
+            # An asynchronous operation has not resolved yet, even when cloned
+            # from a node that has already settled, so the node must be marked
+            # dirty. Otherwise the discarded _current would leave it clean while
+            # holding Undefined, i.e. permanently stranded since nothing else
+            # will mark it dirty until an input changes.
+            self._dirty = True
         else:
             self._trigger = None
         self._root = self._compute_root()
@@ -1907,15 +1913,27 @@ class rx:
                     # If this rx is cloned from an shared input then we make use
                     # of the shared.rx.value to ensure branching pipelines do
                     # not have to recompute the inputs multiple times.
-                    if self._is_async:
-                        self._shared.rx.value # trigger async resolve
+                    shared = self._shared
+                    value = shared.rx.value # triggers async resolve
+                    if self._is_async and (
+                        shared._awaiting or shared._current_task is not None
+                    ):
+                        # The shared node has not settled on a value for the
+                        # current generation, so adopt it once its task is done.
                         self._lazy_resolve()
                         raise Skip
                     # Returns instead of raising Skip because this path does
                     # resolve to a value, so it must mirror the shared node's
                     # skip state rather than be marked skipped by the handler.
-                    self._current_ = self._shared.rx.value
-                    self._skipped = self._shared._skipped
+                    self._current_ = value
+                    self._skipped = shared._skipped
+                    if self._is_async:
+                        # The value was adopted without scheduling a task, so
+                        # claim a generation for it. This supersedes a task an
+                        # earlier read may have scheduled and keeps _awaiting
+                        # from reporting a resolution that is not in flight.
+                        self._resolve_generation += 1
+                        self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
                 operation = self._operation

@@ -1069,6 +1069,99 @@ async def test_async_shared_rx_superseded_updates_computed_once(lazy):
     # the superseded updates are not computed at all.
     assert call_count == 2
 
+async def _pair(value):
+    await asyncio.sleep(0.02)
+    return (value * 2, value * 3)
+
+async def test_async_shared_rx_branch_after_settling_resolves():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == (2, 3))
+
+    # The branch mirrors a node that has already settled, so it must resolve
+    # on its first read rather than being stranded on Undefined.
+    first = node[0]
+    assert first.rx.value == 2
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: first.rx.value == 6)
+
+async def test_async_shared_rx_branch_while_awaiting_resolves():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    node.rx.value
+
+    first = node[0]
+    assert first.rx.value is param.Undefined
+    await async_wait_until(lambda: first.rx.value == 2)
+
+async def test_async_shared_rx_branch_before_resolving_resolves():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    first, second = node[0], node[1]
+
+    assert first.rx.value is param.Undefined
+    await async_wait_until(lambda: first.rx.value == 2)
+
+    # The shared node has settled by now, so the sibling branch resolves on
+    # its first read.
+    assert second.rx.value == 3
+
+async def test_async_shared_rx_branch_computed_once():
+    call_count = 0
+
+    async def pair(value):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.02)
+        return (value * 2, value * 3)
+
+    irx = rx(1)
+    node = irx.rx.pipe(pair)
+    first, second = node[0], node[1]
+
+    first.rx.value
+    second.rx.value
+    await async_wait_until(lambda: first.rx.value == 2 and second.rx.value == 3)
+
+    # The branches resolve through the shared node rather than recomputing.
+    assert call_count == 1
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: first.rx.value == 6 and second.rx.value == 9)
+    assert call_count == 2
+
+async def test_async_shared_rx_branch_notifies_watcher():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == (2, 3))
+
+    items = []
+    first = node[0]
+    assert first.rx.value == 2
+    first.rx.watch(items.append)
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: items == [6])
+    assert items == [6]
+
+async def test_async_gen_shared_rx_branch_resolves():
+    async def gen(value):
+        for i in range(3):
+            await asyncio.sleep(0.02)
+            yield (value + i, i)
+
+    irx = rx(1)
+    node = irx.rx.pipe(gen)
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == (3, 2))
+
+    # A branch of a generator node adopts the value the generator settled on.
+    first = node[0]
+    assert first.rx.value == 3
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_root_invalidation(lazy):
     arx = rx('a', lazy=lazy)

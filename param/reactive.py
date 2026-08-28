@@ -1840,11 +1840,11 @@ class rx:
             # it from the next _lazy_resolve.
             await _close_stale(obj)
             return
-        self._current_task = task = asyncio.current_task()
         trigger = self._trigger
+        if trigger is None:
+            return
+        self._current_task = task = asyncio.current_task()
         try:
-            if trigger is None:
-                return
             if obj is None:
                 shared = self._shared
                 if shared is None:
@@ -1873,6 +1873,20 @@ class rx:
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
             return
+        except Exception as e:
+            if stale():
+                # A newer resolution superseded this one, so bail.
+                return
+            self._finished_generation = generation
+            if self._dirty or self._root._dirty_obj:
+                # The inputs were invalidated while this computation was in
+                # flight, so ignore the error.
+                return
+            # Mirror the synchronous path in _resolve: record the error so it is
+            # re-raised on every read until an invalidation clears it. For an
+            # async generator the raise ends the stream.
+            self._error_state = e
+            trigger.param.trigger('value')
         finally:
             if self._current_task is task:
                 self._current_task = None

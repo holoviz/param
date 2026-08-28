@@ -1069,6 +1069,114 @@ async def test_async_shared_rx_superseded_updates_computed_once(lazy):
     # the superseded updates are not computed at all.
     assert call_count == 2
 
+async def test_reactive_async_error_raised_on_read():
+    async def mul(value):
+        await asyncio.sleep(0.01)
+        if value == 2:
+            raise RuntimeError('boom')
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 2)
+
+    irx.rx.value = 2
+    async_rx.rx.value
+
+    # The failed operation must settle the node and store the error, so it is
+    # re-raised on every read instead of leaving the node awaiting forever.
+    await async_wait_until(lambda: async_rx._error_state is not None)
+    assert not async_rx._awaiting
+    with pytest.raises(RuntimeError, match='boom'):
+        async_rx.rx.value
+
+    # A new input clears the error and the pipeline recovers.
+    irx.rx.value = 3
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 6)
+
+async def test_reactive_async_error_propagates_downstream():
+    async def mul(value):
+        await asyncio.sleep(0.01)
+        raise RuntimeError('boom')
+
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul) + 10
+    downstream.rx.value
+    await async_wait_until(lambda: downstream._prev._error_state is not None)
+    with pytest.raises(RuntimeError, match='boom'):
+        downstream.rx.value
+
+async def test_reactive_async_error_propagates_to_shared_branches():
+    async def compute(value):
+        await asyncio.sleep(0.01)
+        raise RuntimeError('boom')
+
+    shared = rx(1).rx.pipe(compute)
+    x_rx = shared.rx.pipe(lambda d: d['x'])
+    y_rx = shared.rx.pipe(lambda d: d['y'])
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(lambda: not shared._awaiting)
+    for branch in (x_rx, y_rx):
+        with pytest.raises(RuntimeError, match='boom'):
+            branch.rx.value
+
+async def test_reactive_async_gen_error_ends_stream():
+    async def gen(value):
+        for i in range(3):
+            await asyncio.sleep(0.01)
+            if i == 2:
+                raise RuntimeError('boom')
+            yield value+i
+
+    async_rx = rx(1).rx.pipe(gen)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx._error_state is not None)
+
+    # The raise ends the generator's stream and is reported on the next read.
+    assert not async_rx._awaiting
+    with pytest.raises(RuntimeError, match='boom'):
+        async_rx.rx.value
+
+async def test_reactive_gen_error_ends_stream():
+    def gen(value):
+        yield value
+        raise RuntimeError('boom')
+
+    async_rx = rx(1).rx.pipe(gen)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx._error_state is not None)
+    assert not async_rx._awaiting
+    with pytest.raises(RuntimeError, match='boom'):
+        async_rx.rx.value
+
+async def test_reactive_async_superseded_error_not_recorded():
+    async def mul(value):
+        await asyncio.sleep(0.02)
+        if value == 2:
+            raise RuntimeError('boom')
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 2)
+
+    irx.rx.value = 2
+    async_rx.rx.value
+    # Yield to the event loop so the failing task is suspended on its await and
+    # is superseded while in flight.
+    await asyncio.sleep(0.01)
+    irx.rx.value = 3
+    async_rx.rx.value
+
+    # The error belongs to a superseded input, so it must not poison the node.
+    await async_wait_until(lambda: async_rx.rx.value == 6)
+    assert async_rx._error_state is None
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_root_invalidation(lazy):
     arx = rx('a', lazy=lazy)

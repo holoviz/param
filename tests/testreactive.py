@@ -1074,7 +1074,7 @@ async def test_reactive_async_error_raised_on_read():
         await asyncio.sleep(0.01)
         if value == 2:
             raise RuntimeError('boom')
-        return value*2
+        return 10 * value
 
     irx = rx(1)
     async_rx = irx.rx.pipe(mul)

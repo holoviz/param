@@ -1875,16 +1875,13 @@ class rx:
             return
         except Exception as e:
             if stale():
-                # A newer resolution superseded this one, so bail.
                 return
             self._finished_generation = generation
             if self._dirty or self._root._dirty_obj:
-                # The inputs were invalidated while this computation was in
-                # flight, so ignore the error.
+                # Ignoring as the inputs were invalidated while the async operation was running
                 return
-            # Mirror the synchronous path in _resolve: record the error so it is
-            # re-raised on every read until an invalidation clears it. For an
-            # async generator the raise ends the stream.
+            # Mirror the synchronous path in _resolve.
+            # For an async generator an raised exception ends the stream.
             self._error_state = e
             trigger.param.trigger('value')
         finally:

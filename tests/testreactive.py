@@ -1111,14 +1111,14 @@ async def test_async_shared_rx_branch_before_resolving_resolves():
 async def test_async_shared_rx_branch_computed_once():
     call_count = 0
 
-    async def pair(value):
+    async def count_pair(value):
         nonlocal call_count
         call_count += 1
         await asyncio.sleep(0.02)
         return (value * 2, value * 3)
 
     irx = rx(1)
-    node = irx.rx.pipe(pair)
+    node = irx.rx.pipe(count_pair)
     first, second = node[0], node[1]
 
     first.rx.value

@@ -1121,6 +1121,7 @@ async def test_async_shared_rx_branch_computed_once():
     node = irx.rx.pipe(count_pair)
     first, second = node[0], node[1]
 
+    # Request the value for both nodes
     first.rx.value
     second.rx.value
     await async_wait_until(lambda: first.rx.value == 2 and second.rx.value == 3)

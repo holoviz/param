@@ -1615,12 +1615,10 @@ class rx:
         self._trigger: Trigger | None
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
+            # An async node's value is owned by _resolve, so discard any
+            # _current a branching clone inherited and mark it dirty,
+            # otherwise it is stuck as Undefined.
             self._current_ = Undefined
-            # An asynchronous operation has not resolved yet, even when cloned
-            # from a node that has already settled, so the node must be marked
-            # dirty. Otherwise the discarded _current would leave it clean while
-            # holding Undefined, i.e. permanently stranded since nothing else
-            # will mark it dirty until an input changes.
             self._dirty = True
         else:
             self._trigger = None

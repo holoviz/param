@@ -44,6 +44,10 @@ no-default-feature = true
 features = ["py314t", "required", "test-core", "test-314t"]
 no-default-feature = true
 
+[environments.test-315]
+features = ["py315", "required", "test-core", "test-315"]
+no-default-feature = true
+
 [environments.test-core]
 features = ["py314", "required", "test-core"]
 no-default-feature = true
@@ -85,18 +89,31 @@ COVERAGE_CORE = "sysmon"
 
 [feature.py313.dependencies]
 python = "3.13.*"
+python-gil = "*"
 
 [feature.py313.activation.env]
 COVERAGE_CORE = "sysmon"
 
 [feature.py314.dependencies]
 python = "3.14.*"
+python-gil = "*"
 
 [feature.py314.activation.env]
 COVERAGE_CORE = "sysmon"
 
 [feature.py314t.dependencies]
 python-freethreading = "3.14.*"
+
+[feature.py315]
+channels = ["conda-forge/label/python_dev", "conda-forge/label/python_rc"]
+
+[feature.py315.dependencies]
+python = "3.15.*"
+_python_rc = "*"
+python-gil = "*"
+
+[feature.py315.activation.env]
+COVERAGE_CORE = "sysmon"
 
 [feature.example.dependencies]
 aiohttp = "*"
@@ -156,6 +173,23 @@ odfpy = "*"
 # pytables = "*"
 xlrd = "*"
 # gmpy2 = "*"
+
+[feature.test-315.dependencies]
+cloudpickle = "*"
+ipython = "*"
+# jsonschema = "*"
+nest-asyncio = "*"
+# numpy = "*"
+odfpy = "*"
+# openpyxl = "*"
+# pandas = "*"
+# pyarrow = "*"
+# pytables = "*"
+xlrd = "*"
+# ipykernel = "!=7.0.0" # temp pin: https://github.com/ipython/ipykernel/issues/1445
+
+# [feature.test-315.target.unix.dependencies]
+# gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'

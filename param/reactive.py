@@ -1615,11 +1615,8 @@ class rx:
         self._trigger: Trigger | None
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
-            # An async node's value is owned by _resolve, so discard any
-            # _current a branching clone inherited and mark it dirty,
-            # otherwise it is stuck as Undefined.
             self._current_ = Undefined
-            self._dirty = True
+            self._dirty = True  # Otherwise current will be stuck as Undefined.
         else:
             self._trigger = None
         self._root = self._compute_root()
@@ -1916,8 +1913,7 @@ class rx:
                     if self._is_async and (
                         shared._awaiting or shared._current_task is not None
                     ):
-                        # The shared node has not settled on a value for the
-                        # current generation, so adopt it once its task is done.
+                        # The shared node is still processing, resolve when finished
                         self._lazy_resolve()
                         raise Skip
                     # Returns instead of raising Skip because this path does
@@ -1928,8 +1924,7 @@ class rx:
                     if self._is_async:
                         # The value was adopted without scheduling a task, so
                         # claim a generation for it. This supersedes a task an
-                        # earlier read may have scheduled and keeps _awaiting
-                        # from reporting a resolution that is not in flight.
+                        # earlier operation may have scheduled and still awaits a resolution.
                         self._resolve_generation += 1
                         self._finished_generation = self._resolve_generation
                     self._dirty = False

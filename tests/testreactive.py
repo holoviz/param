@@ -1079,7 +1079,7 @@ async def test_reactive_async_error_raised_on_read():
     irx = rx(1)
     async_rx = irx.rx.pipe(mul)
     async_rx.rx.value
-    await async_wait_until(lambda: async_rx.rx.value == 2)
+    await async_wait_until(lambda: async_rx.rx.value == 10)
 
     irx.rx.value = 2
     async_rx.rx.value
@@ -1094,7 +1094,7 @@ async def test_reactive_async_error_raised_on_read():
     # A new input clears the error and the pipeline recovers.
     irx.rx.value = 3
     async_rx.rx.value
-    await async_wait_until(lambda: async_rx.rx.value == 6)
+    await async_wait_until(lambda: async_rx.rx.value == 30)
 
 async def test_reactive_async_error_propagates_downstream():
     async def mul(value):

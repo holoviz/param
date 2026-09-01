@@ -105,7 +105,7 @@ COVERAGE_CORE = "sysmon"
 python-freethreading = "3.14.*"
 
 [feature.py315]
-channels = ["conda-forge/label/python_dev", "conda-forge/label/python_rc"]
+channels = ["conda-forge/label/python_rc"]
 
 [feature.py315.dependencies]
 python = "3.15.*"
@@ -155,7 +155,7 @@ pandas = "*"
 pyarrow = "*"
 pytables = "*"
 xlrd = "*"
-ipykernel = "!=7.0.0"  # temp pin: https://github.com/ipython/ipykernel/issues/1445
+ipykernel = "*"
 
 [feature.test.target.unix.dependencies]
 gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
@@ -186,7 +186,7 @@ odfpy = "*"
 # pyarrow = "*"
 # pytables = "*"
 xlrd = "*"
-# ipykernel = "!=7.0.0" # temp pin: https://github.com/ipython/ipykernel/issues/1445
+# ipykernel = "*"
 
 # [feature.test-315.target.unix.dependencies]
 # gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52

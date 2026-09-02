@@ -156,9 +156,7 @@ pyarrow = "*"
 pytables = "*"
 xlrd = "*"
 ipykernel = "*"
-
-[feature.test.target.unix.dependencies]
-gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
+gmpy2 = "*"
 
 [feature.test-314t.dependencies]
 cloudpickle = "*"
@@ -187,8 +185,6 @@ odfpy = "*"
 # pytables = "*"
 xlrd = "*"
 # ipykernel = "*"
-
-# [feature.test-315.target.unix.dependencies]
 # gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
 
 [feature.test-example.tasks]

@@ -1561,6 +1561,14 @@ class rx:
         """
         Register an accessor that extends ``rx`` with custom behavior.
 
+        The accessor is not instantiated when the node is constructed. It is
+        instantiated lazily, the first time the accessor's name is accessed on
+        a given node, at which point ``predicate`` is evaluated against the
+        node's current value. This means registering an accessor never
+        forces a node to resolve, and a node whose value only later becomes
+        the type ``predicate`` looks for can still pick up the accessor at
+        that point, on the next access of its name.
+
         Parameters
         ----------
         name: str
@@ -1569,6 +1577,9 @@ class rx:
           A callable that will return the accessor namespace object
           given the ``rx`` object it is registered on.
         predicate: Callable[[Any], bool] | None
+          Called with the node's current value the first time ``name`` is
+          accessed on that node; the accessor is only instantiated if this
+          returns True (or is None).
 
         """
         cls._accessors[name] = (accessor, predicate)
@@ -1699,9 +1710,6 @@ class rx:
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, t.cast('Callable', accessor)(self))
-        for name, (accessor, predicate) in rx._accessors.items():
-            if predicate is None or predicate(self._current):
-                setattr(self, name, accessor(self))
 
     @property
     def rx(self) -> reactive_ops:
@@ -2136,14 +2144,22 @@ class rx:
         )
 
     def __dir__(self):
-        current = self._current
+        resolved = self._current
+        current = resolved
         if self._method:
             current = getattr(current, self._method)
         extras = {attr for attr in dir(current) if not attr.startswith('_')}
+        # Registered accessors are instantiated lazily (see __getattribute__),
+        # so list their names explicitly to keep discovery/tab-completion
+        # working for accessors not yet instantiated on this instance.
+        accessor_names = {
+            name for name, (_, predicate) in rx._accessors.items()
+            if name not in self.__dict__ and (predicate is None or predicate(resolved))
+        }
         try:
-            return sorted(set(super().__dir__()) | extras)
+            return sorted(set(super().__dir__()) | extras | accessor_names)
         except Exception:
-            return sorted(set(dir(type(self))) | set(self.__dict__) | extras)
+            return sorted(set(dir(type(self))) | set(self.__dict__) | extras | accessor_names)
 
     def _resolve_accessor(self) -> Self:
         if not self._method:
@@ -2180,6 +2196,18 @@ class rx:
         if dirty:
             self._resolve()
             current = self_dict['_current_']
+
+        # Registered accessors (see `register_accessor`) are instantiated
+        # lazily, on first access, rather than at construction time: this
+        # check must run before the expression-building fallback below, so a
+        # registered accessor name is never turned into a `getattr` operation
+        # on the wrapped value instead of returning the accessor.
+        if name in rx._accessors and name not in self_dict:
+            accessor, predicate = rx._accessors[name]
+            if predicate is None or predicate(current):
+                value = accessor(self)
+                setattr(self, name, value)
+                return value
 
         method = self_dict['_method']
         if method:

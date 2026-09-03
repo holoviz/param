@@ -1775,3 +1775,114 @@ def test_reactive_function_rooted_nodes_do_not_accumulate(factory):
         del owner
     gc.collect()
     assert all(ref() is None for ref in refs)
+# register_accessor laziness
+
+@pytest.fixture
+def clean_accessors():
+    before = dict(rx._accessors)
+    try:
+        yield
+    finally:
+        rx._accessors.clear()
+        rx._accessors.update(before)
+
+
+def test_reactive_register_accessor_predicate_not_evaluated_at_construction(clean_accessors):
+    predicate_calls = []
+
+    def predicate(value):
+        predicate_calls.append(value)
+        return False
+
+    rx.register_accessor('my_accessor', lambda node: node, predicate=predicate)
+
+    rx(1) + 1
+
+    assert predicate_calls == []
+
+
+async def test_reactive_register_accessor_does_not_resolve_async_node_at_construction(clean_accessors):
+    calls = []
+
+    async def body(x):
+        calls.append(x)
+        await asyncio.sleep(0.01)
+        return x * 2
+
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: False)
+
+    rx(1).rx.pipe(body)
+    await asyncio.sleep(0.1)
+
+    assert calls == []
+
+
+def test_reactive_accessor_installed_lazily_on_first_access(clean_accessors):
+    installed_for = []
+
+    def accessor(node):
+        installed_for.append(node)
+        return 'accessor-value'
+
+    rx.register_accessor('my_accessor', accessor, predicate=lambda value: isinstance(value, int))
+
+    n = rx(1)
+    assert installed_for == []
+
+    assert n.my_accessor == 'accessor-value'
+    assert installed_for == [n]
+
+    # Cached on the instance: accessing again does not re-instantiate.
+    assert n.my_accessor == 'accessor-value'
+    assert installed_for == [n]
+
+
+def test_reactive_accessor_installed_when_value_later_matches_predicate(clean_accessors):
+    rx.register_accessor(
+        'my_accessor', lambda node: 'matched', predicate=lambda value: isinstance(value, str)
+    )
+
+    n = rx(1)
+    with pytest.raises(AttributeError):
+        n.my_accessor
+
+    n.rx.value = 'a string now'
+    assert n.my_accessor == 'matched'
+
+
+def test_reactive_accessor_name_not_turned_into_getattr_operation(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx('a string with a my_accessor-like attribute? no.')
+    assert n.my_accessor == 'accessor-value'
+
+
+async def test_reactive_accessor_name_not_turned_into_getattr_operation_when_undefined(clean_accessors):
+    async def body(x):
+        await asyncio.sleep(0.05)
+        return x * 2
+
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(0).rx.pipe(body)
+    assert n._current is param.Undefined
+    assert n.my_accessor == 'accessor-value'
+
+    await async_wait_until(lambda: n.rx.value == 0)
+
+
+def test_reactive_dir_lists_registered_accessor_names(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: isinstance(value, int))
+
+    n = rx(1)
+    assert 'my_accessor' in dir(n)
+    # Still listed once it has actually been instantiated.
+    n.my_accessor
+    assert 'my_accessor' in dir(n)
+
+
+def test_reactive_dir_does_not_list_accessor_when_predicate_fails(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: isinstance(value, str))
+
+    n = rx(1)
+    assert 'my_accessor' not in dir(n)

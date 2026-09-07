@@ -1775,7 +1775,6 @@ def test_reactive_function_rooted_nodes_do_not_accumulate(factory):
         del owner
     gc.collect()
     assert all(ref() is None for ref in refs)
-# register_accessor laziness
 
 @pytest.fixture
 def clean_accessors():

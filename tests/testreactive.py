@@ -744,6 +744,34 @@ async def test_reactive_awaiting_visible_downstream_of_async_node():
     await async_wait_until(lambda: expr.rx.value == 12)
     assert not expr.rx.awaiting
 
+
+async def test_reactive_awaiting_subscript_skips_until_async_node_settles():
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return {'value': 42}
+
+    expr = rx(async_func)['value']
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 42)
+    assert not expr.rx.awaiting
+
+
+async def test_reactive_awaiting_subscript_argument_skips_until_async_node_settles():
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return {'value': 42}
+
+    source = rx(async_func)
+    expr = source[rx('value')]
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 42)
+    assert not expr.rx.awaiting
+
+
 async def test_reactive_awaiting_on_recompute():
     async def async_func(value):
         await asyncio.sleep(0.02)

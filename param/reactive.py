@@ -2386,12 +2386,16 @@ class rx:
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
         for arg in args:
+            if any(ref._settling for ref in _iter_rx(arg)):
+                raise Skip
             val = resolve_value(arg)
             if val is Skip or val is Undefined:
                 raise Skip
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
+            if any(ref._settling for ref in _iter_rx(arg)):
+                raise Skip
             val = resolve_value(arg)
             if val is Skip or val is Undefined:
                 raise Skip

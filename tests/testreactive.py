@@ -677,6 +677,246 @@ def test_reactive_resolve_recursive(lazy):
     assert resolved_prx.rx.value == 'string'
     assert changes == [4, 3.14, 'string']
 
+def test_reactive_awaiting_sync_expression():
+    expr = rx(1) + 2
+
+    assert expr.rx.value == 3
+    assert not expr.rx.awaiting
+
+def test_reactive_awaiting_on_parameter():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    assert not P().param.a.rx.awaiting
+
+def test_reactive_awaiting_skip_is_not_awaiting():
+    def maybe(value):
+        if value < 5:
+            raise Skip
+        return value
+
+    expr = rx(0).rx.pipe(maybe)
+
+    assert expr.rx.value != 0
+    assert expr._skipped
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_async_pipe():
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    expr = rx(0).rx.pipe(async_func)
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 2)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_not_scheduled_until_requested():
+    """
+    Reading awaiting must not itself schedule a resolution, so an expression
+    whose value has never been requested is not awaiting.
+    """
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    expr = rx(0).rx.pipe(async_func)
+
+    assert not expr.rx.awaiting
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+
+async def test_reactive_awaiting_visible_downstream_of_async_node():
+    """
+    Only the async node itself tracks its resolution, so awaiting has to
+    consider the whole graph feeding the expression it is accessed on.
+    """
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    expr = rx(0).rx.pipe(async_func) + 10
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 12)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_on_recompute():
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    number = rx(0)
+    expr = number.rx.pipe(async_func) + 10
+    expr.rx.watch()
+
+    await async_wait_until(lambda: expr.rx.value == 12)
+    assert not expr.rx.awaiting
+
+    number.rx.value = 5
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 17)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_through_operation_argument():
+    """An rx passed as an operation argument is upstream of the operation."""
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    inner = rx(0).rx.pipe(async_func)
+    expr = rx(100) + inner
+
+    # Requesting the value schedules the inner resolve
+    unsettled = expr.rx.value
+
+    assert unsettled != 102
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 102)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_branching_pipeline():
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    base = rx(0).rx.pipe(async_func)
+    branch1 = base + 100
+    branch2 = base + 200
+
+    assert branch1.rx.value is param.Undefined
+    assert branch2.rx.value is param.Undefined
+    assert branch1.rx.awaiting
+    assert branch2.rx.awaiting
+    await async_wait_until(lambda: branch1.rx.value == 102)
+    await async_wait_until(lambda: branch2.rx.value == 202)
+    assert not branch1.rx.awaiting
+    assert not branch2.rx.awaiting
+
+async def test_reactive_awaiting_async_gen_settles_per_emission():
+    async def gen(value):
+        yield value + 1
+        await asyncio.sleep(0.1)
+        yield value + 2
+
+    expr = rx(0).rx.pipe(gen)
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 1, interval=10)
+    assert not expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 2)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_root_async_func():
+    """
+    A coroutine function passed to rx as the object is held on a parameter and
+    resolved by the reference machinery rather than as an operation, so its
+    settlement is tracked there.
+    """
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return 2
+
+    expr = rx(async_func) + 2
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 4)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_root_async_func_on_recompute():
+    async def async_func(i):
+        await asyncio.sleep(0.02)
+        return i * 10
+
+    number = rx(1)
+    expr = rx(bind(async_func, number)) + 1
+
+    await async_wait_until(lambda: expr.rx.value == 11)
+    assert not expr.rx.awaiting
+
+    number.rx.value = 5
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 51)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_root_gen_settles_per_emission():
+    def gen():
+        yield 1
+        time.sleep(0.1)
+        yield 2
+
+    expr = rx(gen) + 100
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 101, interval=10)
+    assert not expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 102)
+    assert not expr.rx.awaiting
+
+async def test_reactive_awaiting_async_ref_on_parameterized():
+    """An async ref on a Parameterized feeding an expression is tracked too."""
+    class P(param.Parameterized):
+        value = param.Parameter(default=0, allow_refs=True)
+
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return 7
+
+    p = P()
+    expr = p.param.value.rx() + 1
+    expr.rx.watch()
+
+    assert expr.rx.value == 1
+    assert not expr.rx.awaiting
+
+    p.value = async_func
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 8)
+    assert not expr.rx.awaiting
+
+def test_reactive_awaiting_sync_ref_never_awaits():
+    class P(param.Parameterized):
+        source = param.Number(default=1)
+        target = param.Number(default=0, allow_refs=True)
+
+    p = P()
+    p.target = p.param.source
+    expr = p.param.target.rx() + 1
+
+    assert not expr.rx.awaiting
+    p.source = 5
+    assert not expr.rx.awaiting
+    assert expr.rx.value == 6
+
+async def test_reactive_awaiting_settles_when_async_ref_yields_nothing():
+    """A resolution that never produces a value must not stay in flight."""
+    def gen():
+        return
+        yield  # pragma: no cover
+
+    expr = rx(gen) + 100
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: not expr.rx.awaiting)
+
+def test_reactive_upstream_walk_terminates_on_reused_input():
+    a = rx(1)
+    b = a + 1
+    expr = b + a
+
+    nodes = list(expr._upstream())
+
+    assert expr.rx.value == 3
+    assert len(nodes) == len({id(node) for node in nodes})
+    assert any(node is expr for node in nodes)
+
 @pytest.mark.parametrize('lazy', [False, True])
 async def test_reactive_async_func(lazy):
     async def async_func():

@@ -1704,7 +1704,7 @@ class rx:
         self._skipped = False
         self._error_state = None
         self._current_ = _current
-        self._meta: dict[t.Any, t.Any] | None = None
+        self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         # _shared is used for branching rx pipelines where we clone the input.
         # Here we store the original shared input, which makes it possible to
         # cache the input value as long as the shared instance does not store

@@ -1815,9 +1815,9 @@ class rx:
         stack: list[rx] = [self]
         while stack:
             node = stack.pop()
-            if id(node) in seen:
+            if (id_node := id(node)) in seen:
                 continue
-            seen.add(id(node))
+            seen.add(id_node)
             yield node
             for inp in (node._prev, node._shared):
                 if isinstance(inp, rx):

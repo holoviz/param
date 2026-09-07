@@ -729,10 +729,6 @@ async def test_reactive_awaiting_not_scheduled_until_requested():
     assert expr.rx.awaiting
 
 async def test_reactive_awaiting_visible_downstream_of_async_node():
-    """
-    Only the async node itself tracks its resolution, so awaiting has to
-    consider the whole graph feeding the expression it is accessed on.
-    """
     async def async_func(value):
         await asyncio.sleep(0.02)
         return value + 2

@@ -2149,9 +2149,7 @@ class rx:
         if self._method:
             current = getattr(current, self._method)
         extras = {attr for attr in dir(current) if not attr.startswith('_')}
-        # Registered accessors are instantiated lazily (see __getattribute__),
-        # so list their names explicitly to keep discovery/tab-completion
-        # working for accessors not yet instantiated on this instance.
+        # Explicitly list registered but uninstantiated accessors
         accessor_names = {
             name for name, (_, predicate) in rx._accessors.items()
             if name not in self.__dict__ and (predicate is None or predicate(resolved))
@@ -2197,11 +2195,7 @@ class rx:
             self._resolve()
             current = self_dict['_current_']
 
-        # Registered accessors (see `register_accessor`) are instantiated
-        # lazily, on first access, rather than at construction time: this
-        # check must run before the expression-building fallback below, so a
-        # registered accessor name is never turned into a `getattr` operation
-        # on the wrapped value instead of returning the accessor.
+        # Capture uninstantiated accessor access
         if name in rx._accessors and name not in self_dict:
             accessor, predicate = rx._accessors[name]
             if predicate is None or predicate(current):

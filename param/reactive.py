@@ -142,7 +142,7 @@ class Error:
         return f"Error({self.exception!r})"
 
     def __getitem__(self, key):
-        return self.exception[key]
+        return t.cast('t.Any', self.exception)[key]
 
     def __getattr__(self, name):
         return getattr(self.exception, name)

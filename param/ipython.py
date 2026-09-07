@@ -58,7 +58,7 @@ class ParamPager:
 
     def get_param_info(self, obj, include_super=True):
         """
-        Get the parameter dictionary, the list of modifed parameters
+        Get the parameter dictionary, the list of modified parameters
         and the dictionary of parameter values. If include_super is
         True, parameters are also collected from the super classes.
         """

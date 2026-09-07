@@ -211,11 +211,11 @@ class DateTypes(param.Parameterized):
     calendar_date_param = param.CalendarDate(default=date(2024, 1, 1), allow_None=False)
     optional_calendar_date_param = param.CalendarDate(default=None, allow_None=True)
 
-dtypes = DateTypes()
-assert_type(dtypes.date_param, datetime | date)
-assert_type(dtypes.optional_date_param, datetime | date | None)
-assert_type(dtypes.calendar_date_param, date)
-assert_type(dtypes.optional_calendar_date_param, date | None)
+datetypes = DateTypes()
+assert_type(datetypes.date_param, datetime | date)
+assert_type(datetypes.optional_date_param, datetime | date | None)
+assert_type(datetypes.calendar_date_param, date)
+assert_type(datetypes.optional_calendar_date_param, date | None)
 
 class DateRangeTypes(param.Parameterized):
     date_range = param.DateRange(
@@ -253,8 +253,8 @@ assert_type(ctypes.optional_foo, Foo | None)
 assert_type(ctypes.no_none_foo, Foo)
 
 class SelectorBaseTypes(param.Parameterized):
-    selector_base = param.SelectorBase(default=1, allow_None=False)
-    optional_selector_base = param.SelectorBase(default=None, allow_None=True)
+    selector_base = param.SelectorBase(default=1, allow_None=False)  # type: ignore[var-annotated]
+    optional_selector_base = param.SelectorBase(default=None, allow_None=True)  # type: ignore[var-annotated]
 
 sbtypes = SelectorBaseTypes()
 assert_type(sbtypes.selector_base, t.Any)
@@ -272,9 +272,9 @@ class TypeTypes(param.Parameterized):
         allow_None=True, is_instance=False, class_=Foo
     )
 
-ttypes = TypeTypes()
-assert_type(ttypes.type_param, type[Foo])
-assert_type(ttypes.optional_type_param, type[Foo] | None)
+typtypes = TypeTypes()
+assert_type(typtypes.type_param, type[Foo])
+assert_type(typtypes.optional_type_param, type[Foo] | None)
 
 
 ##############
@@ -299,9 +299,9 @@ class SeriesTypes(param.Parameterized):
     series = param.Series(allow_None=False)
     optional_series = param.Series(allow_None=True)
 
-stypes = SeriesTypes()
-assert_type(stypes.series, pandas.Series)
-assert_type(stypes.optional_series, pandas.Series | None)
+sertypes = SeriesTypes()
+assert_type(sertypes.series, pandas.Series)
+assert_type(sertypes.optional_series, pandas.Series | None)
 
 ###########
 # Array   #
@@ -350,12 +350,12 @@ assert_type(comptypes.comp, list[t.Any])
 ##################
 
 class SelectorTypes(param.Parameterized):
-    selector = param.Selector(objects=[1,2,3], allow_None=False)
-    optional_selector = param.Selector(objects=[1,2,3], allow_None=True)
+    selector = param.Selector(objects=[1,2,3], allow_None=False)  # type: ignore[var-annotated]
+    optional_selector = param.Selector(objects=[1,2,3], allow_None=True)  # type: ignore[var-annotated]
 
-stypes = SelectorTypes()
-assert_type(stypes.selector, t.Any)
-assert_type(stypes.optional_selector, t.Any)
+seltypes = SelectorTypes()
+assert_type(seltypes.selector, t.Any)
+assert_type(seltypes.optional_selector, t.Any)
 
 class ObjectSelectorTypes(param.Parameterized):
     object_selector = param.ObjectSelector(default=1, objects=[1, 2, 3], allow_None=False)
@@ -389,13 +389,13 @@ class PathTypes(param.Parameterized):
     foldername = param.Foldername(default=pathlib.Path("."), allow_None=False)
     optional_foldername = param.Foldername(default=None, allow_None=True)
 
-ptypes = PathTypes()
-assert_type(ptypes.path_param, os.PathLike | str)
-assert_type(ptypes.optional_path_param, os.PathLike | str | None)
-assert_type(ptypes.filename, os.PathLike | str)
-assert_type(ptypes.optional_filename, os.PathLike | str | None)
-assert_type(ptypes.foldername, os.PathLike | str)
-assert_type(ptypes.optional_foldername, os.PathLike | str | None)
+pathtypes = PathTypes()
+assert_type(pathtypes.path_param, os.PathLike | str)
+assert_type(pathtypes.optional_path_param, os.PathLike | str | None)
+assert_type(pathtypes.filename, os.PathLike | str)
+assert_type(pathtypes.optional_filename, os.PathLike | str | None)
+assert_type(pathtypes.foldername, os.PathLike | str)
+assert_type(pathtypes.optional_foldername, os.PathLike | str | None)
 
 ##############
 # List Types #

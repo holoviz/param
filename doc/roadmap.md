@@ -18,7 +18,7 @@ Other items that are not yet scheduled but would be great to have:
 
 - Follow PEP8 more strictly: PEP8 definitely wasn't written with Parameters in mind, and it typically results in badly formatted files when applied to Parameterized code. But PEP8 could be applied to Param's own code, e.g. using Black.
 
-- Triaging open issues: The Param developer team consists of volunteers typically using Param on their projects but not explicity tasked with or funded to work on Param itself. It would thus be great if the more experienced Param users could help address some of the issues that have been raised but not yet solved.
+- Triaging open issues: The Param developer team consists of volunteers typically using Param on their projects but not explicitly tasked with or funded to work on Param itself. It would thus be great if the more experienced Param users could help address some of the issues that have been raised but not yet solved.
 
 - Improve test coverage
 

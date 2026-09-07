@@ -282,7 +282,7 @@ def test_default_factory_object_auto_name():
 
     def factory(cls, self, parameter):
         if self:
-            # When the class value is overriden.
+            # When the class value is overridden.
             if parameter and getattr(cls, parameter.name) != cls.__name__:
                 return getattr(cls, parameter.name)
             else:

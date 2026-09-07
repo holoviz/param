@@ -576,7 +576,7 @@ class TestWatch(unittest.TestCase):
         assert len(store) == 2
 
         p.x = 30
-        # Watcher not triggerd on instance update
+        # Watcher not triggered on instance update
         assert len(store) == 2
 
     def test_param_watch_multiple_instances(self):

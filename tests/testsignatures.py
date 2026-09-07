@@ -50,10 +50,10 @@ def test_signature_parameters_constructors_overloaded_updated_match():
         init_overloads = typing.get_overloads(p_type.__init__)
         if not init_overloads:
             continue
-        usig = inspect.signature(p_type)
+        sig = inspect.signature(p_type)
         if any(
             parameter.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-            for parameter in usig.parameters.values()
+            for parameter in sig.parameters.values()
         ):
             # Classes that still expose a variadic runtime signature cannot be
             # compared reliably to overload declarations.
@@ -68,7 +68,7 @@ def test_signature_parameters_constructors_overloaded_updated_match():
                     and parameter.kind not in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
                 ]
             )
-            if _is_overload_compatible(osig, usig):
+            if _is_overload_compatible(osig, sig):
                 compatible = True
                 break
         assert compatible, _

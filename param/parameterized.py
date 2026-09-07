@@ -190,7 +190,7 @@ object_count = 0
 warning_count = 0
 
 # Hook to apply to depends and bind arguments to turn them into valid parameters
-_reference_transforms = []
+_reference_transforms: list[t.Callable[[t.Any], t.Any]] = []
 
 def register_reference_transform(transform):
     """
@@ -1189,7 +1189,7 @@ class ParameterMetaclass(type):
             return type.__getattribute__(mcs, name)
 
 
-_UDPATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
+_UPDATE_PARAMETER_SIGNATURE = _in_ipython() or (os.getenv("PARAM_PARAMETER_SIGNATURE", "false").lower() in ("1" , "true"))
 _PARAMETER_CACHE_ATTRS = ('instantiate', 'constant', 'default_factory')
 
 
@@ -1208,7 +1208,7 @@ class _ParameterBase(metaclass=ParameterMetaclass):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        if not _UDPATE_PARAMETER_SIGNATURE:
+        if not _UPDATE_PARAMETER_SIGNATURE:
             return
         # _update_signature has been tested against the Parameters available
         # in Param, we don't want to break the Parameters created elsewhere
@@ -1442,7 +1442,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
     if t.TYPE_CHECKING:
         @t.overload
         def __init__(
-            self,
+            self: Parameter[t.Any],
             default: t.Any = ...,
             *,
             doc: str | None = None,
@@ -1462,7 +1462,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
         @t.overload
         def __init__(
-            self,
+            self: Parameter[t.Any],
             default: t.Any | None = ...,
             *,
             allow_None: t.Literal[True] = True,
@@ -1855,7 +1855,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 pass
 
         super().__setattr__(attribute, value)
-        if is_slot and attribute in _PARAMETER_CACHE_ATTRS:
+        if is_slot and attribute in _PARAMETER_CACHE_ATTRS and value is not old:
             self._invalidate_init_cache()
         if has_watcher and old is not NotImplemented:
             self._trigger_event(attribute, old, value)
@@ -2323,7 +2323,7 @@ class Comparator:
     """
     Comparator defines methods for determining whether two objects
     should be considered equal. It works by registering custom
-    comparison functions, which may either be registed by type or with
+    comparison functions, which may either be registered by type or with
     a predicate function. If no matching comparison can be found for
     the two objects the comparison will return False.
 
@@ -2409,6 +2409,21 @@ class _ParametersRestorer:
             self._parameters._update(dict(self._restore, **self._refs))
         finally:
             self._restore = {}
+
+
+def _find_descriptor(cls: type, attr: str) -> t.Any:
+    """
+    Return the descriptor implementing ``attr`` on ``cls``, or None.
+
+    Used to invoke a descriptor without going through attribute lookup on the
+    object, since an AttributeError raised inside a descriptor is
+    indistinguishable from a missing attribute to the attribute machinery,
+    which clears it and dispatches to ``__getattr__``.
+    """
+    for klass in cls.__mro__:
+        if attr in klass.__dict__:
+            return klass.__dict__[attr]
+    return None
 
 
 class Parameters:
@@ -2562,9 +2577,27 @@ class Parameters:
         if cls is None: # Class not initialized
             raise AttributeError
 
-        if attr in self_._cls_parameters:
+        ns_type = type(self_)
+
+        # Read the cached parameters from _param__private rather than from the
+        # _cls_parameters property: an AttributeError raised by that property is
+        # dispatched to this method, so accessing it as an attribute here would
+        # recurse. When the cache is empty the property is invoked directly as a
+        # descriptor instead, which bypasses that dispatch.
+        params = cls._param__private.params
+        if not params:
+            params = _find_descriptor(ns_type, '_cls_parameters').__get__(self_, ns_type)
+        if attr in params:
             return self_.__getitem__(attr)
-        elif self_.self is None:
+
+        # attr is not a Parameter, so if it does exist on this class the
+        # AttributeError we are handling was raised inside its descriptor.
+        # Invoking it again surfaces that error instead of masking it.
+        descriptor = _find_descriptor(ns_type, attr)
+        if descriptor is not None:
+            return descriptor.__get__(self_, ns_type)
+
+        if self_.self is None:
             raise AttributeError(f"type object '{self_.cls.__name__}.param' has no attribute {attr!r}")
         else:
             raise AttributeError(f"'{self_.cls.__name__}.param' object has no attribute {attr!r}")
@@ -2710,7 +2743,10 @@ class Parameters:
             if new_val is Skip or new_val is Undefined:
                 continue
             elif is_async:
-                async_executor(partial(self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val)))
+                generation = self_._schedule_async_ref(pname)
+                async_executor(partial(
+                    self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val), generation
+                ))
                 continue
 
             updates[pname] = new_val
@@ -2731,39 +2767,85 @@ class Parameters:
         except Skip:
             value = Undefined
         if is_async and pobj.name:
-            async_executor(partial(self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value)))
+            generation = self_._schedule_async_ref(pobj.name)
+            async_executor(partial(
+                self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value), generation
+            ))
             value = None
         return ref, deps, value, is_async
 
-    async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any]):
+    def _schedule_async_ref(self_, pname: str) -> int:
+        """
+        Record that an asynchronous reference resolution is about to be
+        scheduled and return the generation identifying it.
+
+        The generation is bumped synchronously, before the task is handed to
+        the executor, so that the reference reads as unsettled from the moment
+        it is superseded rather than only once the task starts running.
+        """
+        if self_.self is None:
+            return 0
+        private = self_.self._param__private
+        private.async_ref_scheduled[pname] += 1
+        return private.async_ref_scheduled[pname]
+
+    def _settle_async_ref(self_, pname: str, generation: int):
+        """
+        Record that the resolution identified by ``generation`` produced a
+        value, or gave up on producing one.
+
+        A superseded task settling late must not mark the reference settled for
+        the generation that superseded it, so the generation is recorded rather
+        than cleared. Generators settle on every value they yield, so a
+        reference is unsettled only until its next value arrives, not until the
+        generator is exhausted.
+        """
+        if self_.self is None or not generation:
+            return
+        settled = self_.self._param__private.async_ref_settled
+        settled[pname] = max(settled[pname], generation)
+
+    def _awaiting_ref(self_, pname: str) -> bool:
+        """Whether an asynchronous reference has not yet produced a value."""
+        if self_.self is None:
+            return False
+        private = self_.self._param__private
+        return private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
+
+    async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any], generation: int = 0):
         if self_.self is None:
             return
         if not self_.self._param__private.initialized:
-            async_executor(partial(self_._async_ref, pname, awaitable))
+            async_executor(partial(self_._async_ref, pname, awaitable, generation))
             return
 
         import asyncio
         current_task = asyncio.current_task()
         running_task = self_.self._param__private.async_refs.get(pname)
-        if running_task is None:
+        if running_task is not current_task:
+            if running_task is not None:
+                running_task.cancel()
             self_.self._param__private.async_refs[pname] = current_task
-        elif current_task is not running_task:
-            self_.self._param__private.async_refs[pname].cancel()
         try:
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
                     with _syncing(self_.self, (pname,)):
                         self_.update({pname: new_obj})
+                    self_._settle_async_ref(pname, generation)
             else:
                 with _syncing(self_.self, (pname,)):
                     try:
                         self_.update({pname: await awaitable})
                     except Skip:
                         pass
+                self_._settle_async_ref(pname, generation)
         finally:
-            # Ensure we clean up but only if the task matches the currrent task
-            if self_.self._param__private.async_refs.get(pname) is current_task:
-                del self_.self._param__private.async_refs[pname]
+            self_._settle_async_ref(pname, generation)
+            # Ensure we clean up but only if the task matches the current task,
+            # i.e. only the resolution that still owns the reference clears it.
+            async_refs = self_.self._param__private.async_refs
+            if pname in async_refs and async_refs[pname] is current_task:
+                del async_refs[pname]
 
     @classmethod
     def _changed(cls, event):
@@ -3140,18 +3222,21 @@ class Parameters:
         pdict = private.params
         if pdict:
             if private.params_to_deepcopy is None or private.params_to_ref is None or private.params_with_default_factory is None:
-                private.params_to_deepcopy = []
-                private.params_to_ref = []
-                private.params_with_default_factory = []
+                to_deepcopy = []
+                to_ref = []
+                with_default_factory = []
                 for pname, pobj in pdict.items():
                     if pname == 'name':
                         continue
                     if pobj.default_factory is not None:
-                        private.params_with_default_factory.append((pname, pobj))
+                        with_default_factory.append((pname, pobj))
                     elif pobj.instantiate:
-                        private.params_to_deepcopy.append(pobj)
+                        to_deepcopy.append(pobj)
                     elif pobj.constant:
-                        private.params_to_ref.append(pobj)
+                        to_ref.append(pobj)
+                private.params_to_deepcopy = to_deepcopy
+                private.params_to_ref = to_ref
+                private.params_with_default_factory = with_default_factory
             return pdict
 
         paramdict = {}
@@ -3377,7 +3462,7 @@ class Parameters:
 
         Additionally, sets ``_Dynamic_time_fn=time_fn`` on this class or
         instance object, so that any future changes to Dynamic
-        Parmeters can inherit ``time_fn`` (e.g. if a :class:`param.Number` is changed
+        Parameters can inherit ``time_fn`` (e.g. if a :class:`param.Number` is changed
         from a float to a number generator, the number generator will
         inherit ``time_fn``).
 
@@ -4659,7 +4744,7 @@ class Parameters:
         parameters = self.param.objects('existing')
         ordering = sorted(
             sorted(changed_params), # alphanumeric tie-breaker
-            key=lambda k: (- float('inf')  # No precedence is lowest possible precendence
+            key=lambda k: (- float('inf')  # No precedence is lowest possible precedence
                            if parameters[k].precedence is None else
                            parameters[k].precedence))
 
@@ -4693,7 +4778,7 @@ class Parameters:
                 arglist.append(value)
             elif k in kwargs or (spec.varkw is not None):
                 # Explicit modified keywords or parameters in
-                # precendence order (if **kwargs present)
+                # precedence order (if **kwargs present)
                 keywords.append(f'{k}={value}')
 
             processed.append(k)
@@ -5121,7 +5206,7 @@ class ParameterizedMetaclass(type):
                         f'made it invalid. Please fix the Parameter type.'
                     )
                 else:
-                    # type_change and slot_overriden is not possible as when
+                    # type_change and slot_overridden is not possible as when
                     # the type changes checking the slots is aborted for
                     # performance reasons.
                     pass
@@ -5512,7 +5597,7 @@ class _ClassPrivate:
     disable_instance_params: bool
         Whether to disable instance parameters
     renamed: bool
-        Whethe the class has been renamed by a super class
+        Whether the class has been renamed by a super class
     params: dict
         Dict of parameter_name:parameter.
     """
@@ -5603,6 +5688,8 @@ class _InstancePrivate:
         'dynamic_watchers',
         'params',
         'async_refs',
+        'async_ref_scheduled',
+        'async_ref_settled',
         'refs',
         'ref_watchers',
         'syncing',
@@ -5616,6 +5703,8 @@ class _InstancePrivate:
     dynamic_watchers: defaultdict[str, list[Watcher]]
     params: dict[str, Parameter]
     async_refs: dict[str, t.Any]
+    async_ref_scheduled: defaultdict[str, int]
+    async_ref_settled: defaultdict[str, int]
     refs: dict[str, t.Any]
     ref_watchers: list[tuple[tuple[str, ...], Watcher]]
     syncing: set[str]
@@ -5646,6 +5735,8 @@ class _InstancePrivate:
             }
         self.ref_watchers = []
         self.async_refs = {}
+        self.async_ref_scheduled = defaultdict(int)
+        self.async_ref_settled = defaultdict(int)
         self.parameters_state = parameters_state
         self.dynamic_watchers = defaultdict(list, dynamic_watchers or ())
         self.params = {} if params is None else params
@@ -5873,7 +5964,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
         # Skip generating a custom instance name when a class in the hierarchy
-        # has overriden the default of the `name` Parameter.
+        # has overridden the default of the `name` Parameter.
         if self.param.name.default == self.__class__.__name__:
             self.param._generate_name()
         refs, deps = self.param._setup_params(**params)
@@ -6320,7 +6411,7 @@ class ParameterizedFunction(Parameterized, t.Generic[_P, _R]):
             params.pop('name')
             cls = self_or_cls.__class__
 
-        inst = Parameterized.__new__(cls)
+        inst = Parameterized.__new__(cls)  # pyrefly: ignore[bad-argument-type]
         Parameterized.__init__(inst, **params)
         if 'name' in params:
             setattr(inst, "__name__", params['name'])

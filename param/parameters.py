@@ -61,6 +61,8 @@ from ._utils import (
 #-----------------------------------------------------------------------------
 
 if t.TYPE_CHECKING:
+    from types import NoneType
+
     import numpy as np
     import pandas as pd
 
@@ -157,7 +159,7 @@ def param_union(*parameterizeds: Parameterized, warn: bool = True) -> dict[str, 
     Parameters
     ----------
     warn : bool, optional
-        Wether to warn if the same parameter have been given multiple values,
+        Whether to warn if the same parameter have been given multiple values,
         otherwise use the last value, by default True
 
     Returns
@@ -2652,7 +2654,7 @@ class Selector(SelectorBase, _SignatureSelector[_T]):
         object.__setattr__(self, 'check_on_set', check_on_set)
 
         instantiate = params.pop("instantiate", Undefined)
-        params["instantiate"] = False if instantiate is Undefined else instantiate  # pyrefly: ignore[bad-typed-dict-key]
+        params["instantiate"] = False if instantiate is Undefined else instantiate  # pyrefly: ignore[bad-assignment]
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:
@@ -2851,7 +2853,7 @@ class FileSelector(Selector[_T]):
         self.default = self.objects[0] if self.objects else None
 
     def get_range(self) -> dict[str, str | PathLike]:
-        return _abbreviate_paths(self.path,super().get_range())
+        return _abbreviate_paths(self.path, super().get_range())
 
 
 class ListSelector(Selector):
@@ -3182,7 +3184,7 @@ class ClassSelector(SelectorBase[_T]):
             # This will clobber separate classes with identical names.
             # Known historical issue, see https://github.com/holoviz/param/pull/1035
             all_classes.update({c.__name__: c for c in desc})
-        d = OrderedDict((name, class_) for name,class_ in all_classes.items())
+        d: dict[str, type | NoneType] = OrderedDict((name, class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None'] = None
         return d
@@ -3826,7 +3828,7 @@ class List(Parameter[_T]):
             self: List[list[LT]],
             default: list[LT] = [],
             *,
-            item_type: type[LT] | tuple[type[LT], ...] = (),
+            item_type: type[LT] | tuple[type[LT], ...],
             bounds: tuple[int, int | None] | None = (0, None),
             is_instance: bool = True,
             allow_None: t.Literal[False] = False,
@@ -3850,17 +3852,7 @@ class List(Parameter[_T]):
             self: List[list[LT] | None],
             default: list[LT] | None = None,
             *,
-            item_type: type[LT] | tuple[type[LT], ...] = (),
-            allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[_ParameterKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: List[list[t.Any] | None],
-            default: list[t.Any] | None = None,
-            *,
+            item_type: type[LT] | tuple[type[LT], ...],
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
@@ -3873,6 +3865,16 @@ class List(Parameter[_T]):
             *,
             item_type: None = None,
             allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: List[list[t.Any] | None],
+            default: list[t.Any] | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
@@ -3947,7 +3949,7 @@ class List(Parameter[_T]):
             if is_instance and not isinstance(v, item_type):
                 err_kind = "instances"
                 obj_display = lambda v: type(v)
-            elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
+            elif not is_instance and (not isinstance(v, type) or not issubclass(v, item_type)):
                 err_kind = "subclasses"
             if err_kind:
                 raise TypeError(

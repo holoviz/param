@@ -244,21 +244,21 @@ class Hash:
         """Convert the given value to a rational, if necessary."""
         I32 = 4294967296 # Maximum 32 bit unsigned int (i.e. 'I') value
         if isinstance(val, int):
-            numer, denom = val, 1
+            numerator, denominator = val, 1
         elif isinstance(val, fractions.Fraction):
-            numer, denom = val.numerator, val.denominator
+            numerator, denominator = val.numerator, val.denominator
         elif hasattr(val, 'numerator') and hasattr(val, 'denominator'):
             # gmpy2 mpq objects have these attributes
-            numer, denom = val.numerator, val.denominator
-        elif hasattr(val, 'numer'):
+            numerator, denominator = val.numerator, val.denominator
+        elif hasattr(val, 'numer'): # typos: ignore
             # I think this branch supports gmpy (i.e. not gmpy2)
-            (numer, denom) = (int(val.numer()), int(val.denom()))
+            (numerator, denominator) = (int(val.numer()), int(val.denom()))  # typos: ignore
         else:
             param.main.param.log(param.WARNING, "Casting type '%s' to Fraction.fraction"
                                % type(val).__name__)
             frac = fractions.Fraction(str(val))
-            numer, denom = frac.numerator, frac.denominator
-        return numer % I32, denom % I32
+            numerator, denominator = frac.numerator, frac.denominator
+        return numerator % I32, denominator % I32
 
     def __getstate__(self):
         """Avoid Hashlib.md5 TypeError in deepcopy (hashlib issue)."""
@@ -279,7 +279,7 @@ class Hash:
         Given integer or rational inputs, generate a cross-platform,
         architecture-independent 32-bit integer hash.
         """
-        # Convert inputs to (numer, denom) pairs with integers
+        # Convert inputs to (numerator, denominator) pairs with integers
         # becoming (int, 1) pairs to match gmpy2.mpqs for int values.
         pairs = [self._rational(val) for val in vals]
         # Unpack pairs and fill struct with ints to update md5 hash

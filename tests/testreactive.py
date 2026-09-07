@@ -1,8 +1,10 @@
 import asyncio
+import gc
 import math
 import operator
 import re
 import time
+import weakref
 
 import param
 import pytest
@@ -557,9 +559,9 @@ def test_reactive_clone_reevaluates(inputs: list[str], op: Callable[[rx], Any], 
     assert transformed.rx.value == expecteds[0]
     assert fcalls == 1
 
-    for prev_fcalls, (inpt, expec) in enumerate(zip(inputs[1:], expecteds[1:]), start=fcalls):
-        base.rx.value = inpt
-        assert transformed.rx.value == expec
+    for prev_fcalls, (input, expect) in enumerate(zip(inputs[1:], expecteds[1:]), start=fcalls):
+        base.rx.value = input
+        assert transformed.rx.value == expect
         assert fcalls == (prev_fcalls + 1)
 
 @pytest.mark.parametrize('lazy', [False, True])
@@ -864,6 +866,410 @@ async def test_reactive_async_gen_pipe_with_dep():
     await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
     await async_wait_until(lambda: rxgen.rx.value == 11)
 
+async def mul_slowly(value):
+    await asyncio.sleep(0.02)
+    return value*2
+
+async def test_reactive_async_watcher_not_notified_while_awaiting():
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly)
+    items = []
+    async_rx.rx.watch(items.append)
+    assert async_rx.rx.value is param.Undefined
+    await async_wait_until(lambda: items == [2])
+    irx.rx.value = 2
+
+    # The awaited value has not resolved yet, so the watcher must not be
+    # notified with the value computed from the previous input.
+    assert items == [2]
+
+    await async_wait_until(lambda: items == [2, 4])
+
+async def test_reactive_async_downstream_watcher_not_notified_while_awaiting():
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul_slowly) + 10
+    items = []
+    downstream.rx.watch(items.append)
+    assert downstream.rx.value is param.Undefined
+    await async_wait_until(lambda: items == [12])
+    irx.rx.value = 2
+    assert items == [12]
+    await async_wait_until(lambda: items == [12, 14])
+
+async def test_reactive_async_downstream_not_computed_while_awaiting():
+    computed = []
+    def add(value):
+        computed.append(value)
+        return value+10
+
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul_slowly).rx.pipe(add)
+    downstream.rx.watch()
+    downstream.rx.value
+    await async_wait_until(lambda: computed == [2])
+    irx.rx.value = 2
+
+    # The downstream operation must not be applied to the superseded value.
+    assert computed == [2]
+
+    await async_wait_until(lambda: computed == [2, 4])
+
+async def test_reactive_async_rapid_updates_notify_once():
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])
+    for value in (2, 3, 4):
+        irx.rx.value = value
+    await async_wait_until(lambda: items == [2, 8])
+    assert items == [2, 8]
+
+def test_reactive_skip_value_does_not_notify_watcher():
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v > 2:
+            raise Skip
+        return v+1
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    items = []
+    i.rx.watch(items.append)
+    P.integer = 2
+    assert items == [3]
+
+    # The operation skipped, so the watcher must not be notified with the
+    # value computed from the previous input.
+    P.integer = 3
+    assert items == [3]
+    assert i.rx.value == 3
+
+async def test_reactive_async_ref_not_synced_while_awaiting():
+    class Ref(param.Parameterized):
+        value = param.Integer(default=0, allow_refs=True)
+
+    irx = rx(1)
+    p = Ref(value=irx.rx.pipe(mul_slowly))
+    await async_wait_until(lambda: p.value == 2)
+    irx.rx.value = 2
+    assert p.value == 2
+    await async_wait_until(lambda: p.value == 4)
+
+async def test_reactive_async_superseded_updates_not_computed():
+    started, finished = [], []
+
+    async def mul(value):
+        started.append(value)
+        await asyncio.sleep(0.02)
+        finished.append(value)
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])
+    assert started == [1]
+
+    # The updates arrive without yielding to the event loop, so the tasks they
+    # schedule have not started by the time the next one supersedes them.
+    for value in (2, 3, 4, 5):
+        irx.rx.value = value
+
+    await async_wait_until(lambda: items == [2, 10])
+
+    # Only the final update was computed; the superseded coroutines were closed
+    # before their bodies began.
+    assert started == [1, 5]
+    assert finished == [1, 5]
+
+async def test_reactive_async_gen_superseded_updates_not_computed():
+    started = []
+
+    async def gen(value):
+        started.append(value)
+        yield value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(gen)
+    async_rx.rx.watch()
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 2)
+    assert started == [1]
+
+    for value in (2, 3, 4, 5):
+        irx.rx.value = value
+
+    await async_wait_until(lambda: async_rx.rx.value == 10)
+
+    # A superseded async generator is closed before it is first iterated, so
+    # its body never runs.
+    assert started == [1, 5]
+
+async def test_reactive_async_running_task_is_cancelled():
+    cancelled = []
+
+    async def mul(value):
+        try:
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            cancelled.append(value)
+            raise
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.watch()
+    async_rx.rx.value
+
+    # Yield to the event loop so the body is actually suspended on its await;
+    # a task in that state cannot be skipped, it has to be cancelled.
+    await asyncio.sleep(0.01)
+    irx.rx.value = 2
+
+    await async_wait_until(lambda: async_rx.rx.value == 4)
+    assert cancelled == [1]
+
+@pytest.mark.parametrize('lazy', [False, True])
+async def test_async_shared_rx_superseded_updates_computed_once(lazy):
+    call_count = 0
+
+    class Model(param.Parameterized):
+        a = param.Number(1.0)
+
+    model = Model()
+
+    async def expensive_compute(a):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.02)
+        return {"x": a + 1, "y": a * 2}
+
+    shared = rx(model.param.a, lazy=lazy).rx.pipe(expensive_compute)
+    x_rx = shared.rx.pipe(lambda d: d["x"])
+    y_rx = shared.rx.pipe(lambda d: d["y"])
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(lambda: call_count == 1)
+
+    for value in (2.0, 3.0, 4.0):
+        model.a = value
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(
+        lambda: x_rx.rx.value == 5 and y_rx.rx.value == 8
+    )
+
+    # The branches resolve through the shared node rather than recomputing, and
+    # the superseded updates are not computed at all.
+    assert call_count == 2
+
+async def test_reactive_async_error_raised_on_read():
+    async def mul(value):
+        await asyncio.sleep(0.01)
+        if value == 2:
+            raise RuntimeError('boom')
+        return 10 * value
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 10)
+
+    irx.rx.value = 2
+    async_rx.rx.value
+
+    # The failed operation must settle the node and store the error, so it is
+    # re-raised on every read instead of leaving the node awaiting forever.
+    await async_wait_until(lambda: async_rx._error_state is not None)
+    assert not async_rx._awaiting
+    with pytest.raises(RuntimeError, match='boom'):
+        async_rx.rx.value
+
+    # A new input clears the error and the pipeline recovers.
+    irx.rx.value = 3
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 30)
+
+async def test_reactive_async_error_propagates_downstream():
+    async def mul(value):
+        await asyncio.sleep(0.01)
+        raise RuntimeError('boom')
+
+    irx = rx(1)
+    downstream = irx.rx.pipe(mul) + 10
+    downstream.rx.value
+    await async_wait_until(lambda: downstream._prev._error_state is not None)
+    with pytest.raises(RuntimeError, match='boom'):
+        downstream.rx.value
+
+async def test_reactive_async_error_propagates_to_shared_branches():
+    async def compute(value):
+        await asyncio.sleep(0.01)
+        raise RuntimeError('boom')
+
+    shared = rx(1).rx.pipe(compute)
+    x_rx = shared.rx.pipe(lambda d: d['x'])
+    y_rx = shared.rx.pipe(lambda d: d['y'])
+
+    x_rx.rx.value
+    y_rx.rx.value
+    await async_wait_until(lambda: not shared._awaiting)
+    for branch in (x_rx, y_rx):
+        with pytest.raises(RuntimeError, match='boom'):
+            branch.rx.value
+
+async def test_reactive_async_gen_error_ends_stream():
+    async def gen(value):
+        for i in range(3):
+            await asyncio.sleep(0.01)
+            if i == 2:
+                raise RuntimeError('boom')
+            yield value+i
+
+    async_rx = rx(1).rx.pipe(gen)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx._error_state is not None)
+
+    # The raise ends the generator's stream and is reported on the next read.
+    assert not async_rx._awaiting
+    with pytest.raises(RuntimeError, match='boom'):
+        async_rx.rx.value
+
+async def test_reactive_gen_error_ends_stream():
+    def gen(value):
+        yield value
+        raise RuntimeError('boom')
+
+    async_rx = rx(1).rx.pipe(gen)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx._error_state is not None)
+    assert not async_rx._awaiting
+    with pytest.raises(RuntimeError, match='boom'):
+        async_rx.rx.value
+
+async def test_reactive_async_superseded_error_not_recorded():
+    async def mul(value):
+        await asyncio.sleep(0.02)
+        if value == 2:
+            raise RuntimeError('boom')
+        return value*2
+
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul)
+    async_rx.rx.value
+    await async_wait_until(lambda: async_rx.rx.value == 2)
+
+    irx.rx.value = 2
+    async_rx.rx.value
+    # Yield to the event loop so the failing task is suspended on its await and
+    # is superseded while in flight.
+    await asyncio.sleep(0.01)
+    irx.rx.value = 3
+    async_rx.rx.value
+
+    # The error belongs to a superseded input, so it must not poison the node.
+    await async_wait_until(lambda: async_rx.rx.value == 6)
+    assert async_rx._error_state is None
+async def _pair(value):
+    await asyncio.sleep(0.02)
+    return (value * 2, value * 3)
+
+async def test_async_shared_rx_branch_after_settling_resolves():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == (2, 3))
+
+    # The branch mirrors a node that has already settled, so it must resolve
+    # on its first read rather than being stranded on Undefined.
+    first = node[0]
+    assert first.rx.value == 2
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: first.rx.value == 6)
+
+async def test_async_shared_rx_branch_while_awaiting_resolves():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    node.rx.value
+
+    first = node[0]
+    assert first.rx.value is param.Undefined
+    await async_wait_until(lambda: first.rx.value == 2)
+
+async def test_async_shared_rx_branch_before_resolving_resolves():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    first, second = node[0], node[1]
+
+    assert first.rx.value is param.Undefined
+    await async_wait_until(lambda: first.rx.value == 2)
+
+    # The shared node has settled by now, so the sibling branch resolves on
+    # its first read.
+    assert second.rx.value == 3
+
+async def test_async_shared_rx_branch_computed_once():
+    call_count = 0
+
+    async def count_pair(value):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.02)
+        return (value * 2, value * 3)
+
+    irx = rx(1)
+    node = irx.rx.pipe(count_pair)
+    first, second = node[0], node[1]
+
+    # Request the value for both nodes
+    first.rx.value
+    second.rx.value
+    await async_wait_until(lambda: first.rx.value == 2 and second.rx.value == 3)
+
+    # The branches resolve through the shared node rather than recomputing.
+    assert call_count == 1
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: first.rx.value == 6 and second.rx.value == 9)
+    assert call_count == 2
+
+async def test_async_shared_rx_branch_notifies_watcher():
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == (2, 3))
+
+    items = []
+    first = node[0]
+    assert first.rx.value == 2
+    first.rx.watch(items.append)
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: items == [6])
+    assert items == [6]
+
+async def test_async_gen_shared_rx_branch_resolves():
+    async def gen(value):
+        for i in range(3):
+            await asyncio.sleep(0.02)
+            yield (value + i, i)
+
+    irx = rx(1)
+    node = irx.rx.pipe(gen)
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == (3, 2))
+
+    # A branch of a generator node adopts the value the generator settled on.
+    first = node[0]
+    assert first.rx.value == 3
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_root_invalidation(lazy):
     arx = rx('a', lazy=lazy)
@@ -1029,3 +1435,79 @@ async def test_async_shared_rx_only_triggers_once(lazy):
     assert y_rx.rx.value == 4
 
     assert call_count == 2
+
+
+def test_reactive_derived_node_is_garbage_collected():
+    def watcher_count(source):
+        watchers = source._internal_params[0].owner._param__private.watchers
+        return sum(len(lst) for what in watchers.values() for lst in what.values())
+
+    a = param.rx(1)
+    baseline = watcher_count(a)
+    assert baseline == 2
+
+    b = a + 1
+    assert b.rx.value == 2
+    assert watcher_count(a) > baseline
+
+    ref = weakref.ref(b)
+    del b
+    gc.collect()
+    assert ref() is None
+    assert watcher_count(a) == baseline
+
+    c = a + 10
+    a.rx.value = 5
+    assert c.rx.value == 15
+    assert watcher_count(a) > baseline
+
+
+def _rx_from_closure():
+    """Build an object holding an rx pipeline whose root function closes over it."""
+    class Owner:
+        pass
+
+    owner = Owner()
+
+    def compute(x):
+        return x + len(repr(owner)) * 0
+
+    owner.expr = param.rx(compute)(41)
+    return owner
+
+
+def _rx_from_bound_method():
+    """Build an object holding an rx pipeline rooted in one of its own methods."""
+    class Owner:
+        def __init__(self):
+            self.expr = param.rx(self._compute)(41)
+
+        def _compute(self, x):
+            return x
+
+    return Owner()
+
+
+@pytest.mark.parametrize('factory', [_rx_from_closure, _rx_from_bound_method])
+def test_reactive_function_rooted_node_does_not_pin_its_owner(factory):
+    # weakref.finalize holds its arguments until the referent is collected, so
+    # the invalidation cleanup must not own a path back to the node it cleans up.
+    owner = factory()
+    assert owner.expr.rx.value == 41
+
+    ref = weakref.ref(owner)
+    del owner
+    gc.collect()
+    assert ref() is None
+
+
+@pytest.mark.parametrize('factory', [_rx_from_closure, _rx_from_bound_method])
+def test_reactive_function_rooted_nodes_do_not_accumulate(factory):
+    refs = []
+    for _ in range(50):
+        owner = factory()
+        owner.expr.rx.value
+        refs.append(weakref.ref(owner))
+        del owner
+    gc.collect()
+    assert all(ref() is None for ref in refs)

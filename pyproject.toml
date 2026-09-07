@@ -28,6 +28,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
     "Typing :: Typed"
@@ -122,7 +123,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
-omit = ["param/version.py", "tests/testimports.py"]
+omit = ["param/version.py", "param/mypy_plugin.py", "tests/testimports.py"]
 
 [tool.ruff]
 fix = true
@@ -186,7 +187,7 @@ infer-with-first-use = false
 
 [tool.mypy]
 files = ["param"]
-follow_imports = "skip"
+plugins = ["param.mypy_plugin"]
 disable_error_code = ["import-untyped", "import-not-found"]
 
 [tool.pyright]
@@ -203,3 +204,21 @@ ignore = [
     "**/node_modules",
     "**/.git",
 ]
+
+[tool.typos.default]
+extend-ignore-re = [
+    ".*(?:#|--|//|/*).*(?:typos):\\s?ignore[^\\n]*\\n",
+    ".*(?:typos):\\s?ignore-next-line[^\\n]*\\n[^\\n]*",
+]
+
+[tool.typos.default.extend-words]
+arange = "arange"
+ba = "ba"
+iy = "iy"
+lod = "lod"
+nd = "nd"
+numbre = "numbre" # used as a spelling mistake in upgrade_guide.md
+pn = "pn"
+ser = "ser"
+spreaded = "spreaded"
+writeable = "writeable"

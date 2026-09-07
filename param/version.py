@@ -162,7 +162,7 @@ class Version:
 
     @property
     def dirty(self):
-        """True if there are uncommited changes, False otherwise."""
+        """True if there are uncommitted changes, False otherwise."""
         return self.fetch()._dirty
 
 
@@ -644,7 +644,7 @@ class OldDeprecatedVersion:
 
     @property
     def dirty(self):
-        """True if there are uncommited changes, False otherwise."""
+        """True if there are uncommitted changes, False otherwise."""
         return self.fetch()._dirty
 
 

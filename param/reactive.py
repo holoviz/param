@@ -113,6 +113,7 @@ from .parameters import Boolean, Event
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 if t.TYPE_CHECKING:
+    import builtins
     from typing_extensions import Self
 
     from .parameterized import Watcher
@@ -764,7 +765,7 @@ class reactive_ops:
         return resolver.param.value.rx()
 
     @property
-    def awaiting(self) -> bool:
+    def awaiting(self) -> builtins.bool:
         """
         Whether any asynchronous operation in this expression is still resolving.
 
@@ -1800,7 +1801,7 @@ class rx:
         """Whether this node is waiting on an asynchronous result of its own."""
         return self._awaiting or self._awaiting_ref
 
-    def _upstream(self) -> Iterator[rx]:
+    def _upstream(self) -> Iterator[t.Any]:
         """
         Yield this node and every ``rx`` node it derives its value from.
 

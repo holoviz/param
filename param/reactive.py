@@ -1615,7 +1615,7 @@ class rx:
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
         _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
-        _error_mode=None, **kwargs
+        **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
         # specialized code.
@@ -1640,8 +1640,8 @@ class rx:
         self._finished_generation = 0
         self._skipped = False
         self._error_state = None
-        self._error_mode = error_mode if _error_mode is None else _error_mode
-        if self._error_mode not in ('raise', 'propagate'):
+        self._error_mode = error_mode
+        if error_mode not in ('raise', 'propagate'):
             raise ValueError("error_mode must be either 'raise' or 'propagate'")
         self._current_ = _current
         # _shared is used for branching rx pipelines where we clone the input.
@@ -2065,10 +2065,11 @@ class rx:
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
-        kwargs.setdefault('_error_mode', self._error_mode)
+        error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
         return type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
+            error_mode=error_mode,
             **kwargs
         )
 

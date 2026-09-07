@@ -233,6 +233,51 @@ def test_reactive_skip_value_return(lazy):
     P.integer = 3
     assert i.rx.value == 3
 
+
+def test_reactive_error_propagates_as_value():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    source = rx(1, error_mode="propagate")
+    failed = source.rx.pipe(fail)
+    downstream = failed + 1
+
+    assert isinstance(failed.rx.value, param.Error)
+    assert not failed.rx.value
+    assert str(failed.rx.value) == "bad 1"
+    assert failed.rx.value.exception.args == ("bad 1",)
+    assert downstream.rx.value is failed.rx.value
+    assert failed.rx.error is failed.rx.value
+
+
+def test_reactive_error_default_raises():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    failed = rx(1, lazy=True).rx.pipe(fail)
+    with pytest.raises(ValueError, match="bad 1"):
+        failed.rx.value
+    assert isinstance(failed.rx.error, ValueError)
+
+
+def test_reactive_error_mode_is_validated():
+    with pytest.raises(ValueError, match="error_mode"):
+        rx(1, error_mode="ignore")
+
+
+def test_reactive_error_process_failures():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    source = rx(1, error_mode="propagate")
+    failed = source.rx.pipe(fail)
+    handled = failed.rx.pipe(
+        lambda error: error.exception.args[0], process_failures=True
+    )
+
+    assert handled.rx.value == "bad 1"
+    assert handled.rx.error is None
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_reactive_pipeline_reflect_param_value(lazy):
     P = Parameters(integer=1)

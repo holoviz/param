@@ -2158,6 +2158,16 @@ class rx:
                     obj = self._eval_operation(obj, operation)
                     if self._is_async:
                         self._lazy_resolve(obj)
+                        if self._finished_generation == self._resolve_generation:
+                            # With no running event loop async_executor drives
+                            # the coroutine to completion synchronously, so the
+                            # value is already here and the node is not waiting
+                            # on anything. Reporting a skip would strand a
+                            # branch mirroring this node, which refuses to
+                            # resolve while its input reports one.
+                            self._skipped = False
+                            self._dirty = False
+                            return self._current_
                         obj = Skip
                     if obj is Skip:
                         raise Skip
@@ -2223,8 +2233,13 @@ class rx:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
+            # A mirror of an asynchronous node discards the value it is handed
+            # (__init__ resets _current_ to Undefined and marks it dirty), so
+            # reading the resolving _current here would schedule — or, with no
+            # running loop, run — a compute purely to throw its result away.
+            current = self._current_ if self._is_async else self._current
             kwargs = dict(
-                self._kwargs, _current=self._current, method=self._method,
+                self._kwargs, _current=current, method=self._method,
                 prev=self._prev, _shared=self, **kwargs
             )
         else:

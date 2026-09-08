@@ -596,6 +596,47 @@ class reactive_ops:
                 return [func(v, *args, **kwargs) for v in vs]
             return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
+    @property
+    def meta(self) -> dict[t.Any, t.Any]:
+        """
+        A per-node mapping of user metadata.
+
+        Unlike the reactive expression itself, metadata is local to this exact
+        node: it is not inherited by nodes derived from it (through operators,
+        attribute access, method calls, ``.rx.pipe``, indexing, etc.), and it is
+        not shared with mirrors created by branching (``expr[0]``, ``expr[1]``).
+        Each node starts with its own empty mapping.
+
+        Metadata takes no part in a node's identity or evaluation: mutating it
+        does not dirty the node, notify watchers, or otherwise affect
+        computation. It exists purely as a place for a library built on ``rx``
+        to attach state to a specific node, such as a provenance record or a
+        cache key.
+
+        Returns
+        -------
+        dict
+            The mutable metadata mapping for this node.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> a.rx.meta['trace'] = 'created at step 1'
+        >>> b = a + 1
+        >>> 'trace' in b.rx.meta
+        False
+        """
+        rxi = self._reactive
+        if not isinstance(rxi, rx):
+            raise AttributeError(
+                "'.rx.meta' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(rxi).__name__!r} object."
+            )
+        if rxi._meta is None:
+            rxi._meta = {}
+        return rxi._meta
+
     def not_(self) -> 'rx':
         """
         Perform a logical NOT operation on the current reactive value.
@@ -1674,6 +1715,7 @@ class rx:
         self._skipped = False
         self._error_state = None
         self._current_ = _current
+        self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         # _shared is used for branching rx pipelines where we clone the input.
         # Here we store the original shared input, which makes it possible to
         # cache the input value as long as the shared instance does not store

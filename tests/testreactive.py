@@ -1776,6 +1776,78 @@ def test_reactive_function_rooted_nodes_do_not_accumulate(factory):
     gc.collect()
     assert all(ref() is None for ref in refs)
 
+# .rx.meta
+
+def test_reactive_meta_starts_empty():
+    n = rx(1)
+    assert n.rx.meta == {}
+
+
+def test_reactive_meta_not_inherited_by_operation():
+    n = rx(1)
+    n.rx.meta['k'] = 'v'
+    derived = n + 10
+    assert derived.rx.meta == {}
+    assert n.rx.meta == {'k': 'v'}
+
+
+def test_reactive_meta_not_inherited_by_attribute_access():
+    n = rx('hello')
+    n.rx.meta['k'] = 'v'
+    derived = n.upper
+    assert derived.rx.meta == {}
+
+
+def test_reactive_meta_not_inherited_by_prev_chain():
+    n = rx(1)
+    n.rx.meta['k'] = 'v'
+    piped = n.rx.pipe(lambda x: x + 1)
+    assert piped.rx.meta == {}
+    assert n.rx.meta == {'k': 'v'}
+
+
+def test_reactive_meta_not_inherited_by_branch():
+    n = rx((1, 2))
+    n.rx.meta['k'] = 'v'
+    first, second = n[0], n[1]
+    assert first.rx.meta == {}
+    assert second.rx.meta == {}
+    assert n.rx.meta == {'k': 'v'}
+
+
+def test_reactive_meta_survives_own_invalidation_and_recompute():
+    p = Parameters()
+    n = rx(p.param.integer)
+    n.rx.meta['k'] = 'v'
+    assert n.rx.value == 7
+    p.integer = 42
+    assert n.rx.value == 42
+    assert n.rx.meta == {'k': 'v'}
+
+
+def test_reactive_meta_mutation_does_not_dirty_or_notify():
+    n = rx(1)
+    n.rx.value  # resolve so the node starts out clean
+    watched = []
+    n.rx.watch(watched.append)
+    generation = n._resolve_generation
+    dirty = n._dirty
+
+    n.rx.meta['k'] = 'v'
+
+    assert n._dirty == dirty
+    assert n._resolve_generation == generation
+    assert watched == []
+
+
+def test_reactive_meta_not_available_on_parameter_rx():
+    p = Parameters()
+    with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+        p.param.integer.rx.meta
+
+
+# register_accessor laziness
+
 @pytest.fixture
 def clean_accessors():
     before = dict(rx._accessors)
@@ -1786,7 +1858,44 @@ def clean_accessors():
         rx._accessors.update(before)
 
 
-def test_reactive_register_accessor_predicate_not_evaluated_at_construction(clean_accessors):
+def test_reactive_accessor_name_not_turned_into_getattr_operation(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx('a string with a my_accessor-like attribute? no.')
+    assert n.my_accessor == 'accessor-value'
+
+
+async def test_reactive_accessor_name_not_turned_into_getattr_operation_when_undefined(clean_accessors):
+    async def body(x):
+        await asyncio.sleep(0.05)
+        return x * 2
+
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(0).rx.pipe(body)
+    assert n._current is param.Undefined
+    assert n.my_accessor == 'accessor-value'
+
+    await async_wait_until(lambda: n.rx.value == 0)
+
+
+def test_reactive_dir_lists_registered_accessor_names(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: isinstance(value, int))
+
+    n = rx(1)
+    assert 'my_accessor' in dir(n)
+    # Still listed once it has actually been instantiated.
+    n.my_accessor
+    assert 'my_accessor' in dir(n)
+
+
+def test_reactive_dir_does_not_list_accessor_when_predicate_fails(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: isinstance(value, str))
+
+    n = rx(1)
+    assert 'my_accessor' not in dir(n)
+
+    def test_reactive_register_accessor_predicate_not_evaluated_at_construction(clean_accessors):
     predicate_calls = []
 
     def predicate(value):
@@ -1847,41 +1956,3 @@ def test_reactive_accessor_installed_when_value_later_matches_predicate(clean_ac
 
     n.rx.value = 'a string now'
     assert n.my_accessor == 'matched'
-
-
-def test_reactive_accessor_name_not_turned_into_getattr_operation(clean_accessors):
-    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
-
-    n = rx('a string with a my_accessor-like attribute? no.')
-    assert n.my_accessor == 'accessor-value'
-
-
-async def test_reactive_accessor_name_not_turned_into_getattr_operation_when_undefined(clean_accessors):
-    async def body(x):
-        await asyncio.sleep(0.05)
-        return x * 2
-
-    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
-
-    n = rx(0).rx.pipe(body)
-    assert n._current is param.Undefined
-    assert n.my_accessor == 'accessor-value'
-
-    await async_wait_until(lambda: n.rx.value == 0)
-
-
-def test_reactive_dir_lists_registered_accessor_names(clean_accessors):
-    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: isinstance(value, int))
-
-    n = rx(1)
-    assert 'my_accessor' in dir(n)
-    # Still listed once it has actually been instantiated.
-    n.my_accessor
-    assert 'my_accessor' in dir(n)
-
-
-def test_reactive_dir_does_not_list_accessor_when_predicate_fails(clean_accessors):
-    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: isinstance(value, str))
-
-    n = rx(1)
-    assert 'my_accessor' not in dir(n)

@@ -100,6 +100,7 @@ from .parameters import (
     Event,
 )
 from .reactive import bind, rx
+from .typed import ParamField, ParamModel
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -187,6 +188,8 @@ __all__ = (
     'Number',
     'NumericTuple',
     'ObjectSelector',
+    'ParamField',
+    'ParamModel',
     'ParamOverrides',
     'Parameter',
     'Parameterized',

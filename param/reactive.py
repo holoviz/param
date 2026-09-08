@@ -2159,12 +2159,8 @@ class rx:
                     if self._is_async:
                         self._lazy_resolve(obj)
                         if self._finished_generation == self._resolve_generation:
-                            # With no running event loop async_executor drives
-                            # the coroutine to completion synchronously, so the
-                            # value is already here and the node is not waiting
-                            # on anything. Reporting a skip would strand a
-                            # branch mirroring this node, which refuses to
-                            # resolve while its input reports one.
+                            # Handle case where async call is resolved synchronously
+                            # e.g. when there is no running event loop
                             self._skipped = False
                             self._dirty = False
                             return self._current_
@@ -2233,10 +2229,8 @@ class rx:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
-            # A mirror of an asynchronous node discards the value it is handed
-            # (__init__ resets _current_ to Undefined and marks it dirty), so
-            # reading the resolving _current here would schedule — or, with no
-            # running loop, run — a compute purely to throw its result away.
+            # Do not trigger resolve via self._current since result is discarded
+            # by the cloned nodes constructor anyway
             current = self._current_ if self._is_async else self._current
             kwargs = dict(
                 self._kwargs, _current=current, method=self._method,

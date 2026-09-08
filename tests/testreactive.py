@@ -1515,12 +1515,6 @@ async def test_async_shared_rx_branch_while_awaiting_resolves():
 
 def test_async_shared_rx_branch_does_not_resolve_on_creation():
     """Branching an async node must not compute to seed the mirror.
-
-    A mirror of an asynchronous node discards the value it is constructed
-    with, so resolving to obtain it is wasted work. With no running loop the
-    fallback executor runs the body to completion on the calling thread,
-    which is how this was found: taking a branch during graph construction
-    ran the compute there.
     """
     calls = []
 

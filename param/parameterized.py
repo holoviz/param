@@ -5257,6 +5257,15 @@ def script_repr(
     configuration. It captures only the state of the object's parameters, not
     its internal (non-parameter) attributes.
 
+    Note: By default, script_repr prints only parameter values that have changed from
+    their defaults; for the complete set of parameter values, including
+    all defaults, first run:
+
+    param.parameterized.script_repr_suppress_defaults=False
+
+    For more details on this, see:
+    https://param.holoviz.org/en/docs/latest/user_guide/Serialization_and_Persistence.html#script-repr-limitations-and-workarounds
+
     Parameters
     ----------
     val : Parameterized

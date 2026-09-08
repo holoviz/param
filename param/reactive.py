@@ -1602,6 +1602,12 @@ class rx:
         """
         Register an accessor that extends ``rx`` with custom behavior.
 
+        Accessors are instantiated lazily the first time it is accessed on a given
+        node. If a ``predicate`` is provided it is evaluated against the node's
+        current value at that point in time. If it does not evaluate as true the first
+        time, e.g. because the value has not yet settled, it may still be created on
+        subsequent accesses.
+
         Parameters
         ----------
         name: str
@@ -1610,6 +1616,9 @@ class rx:
           A callable that will return the accessor namespace object
           given the ``rx`` object it is registered on.
         predicate: Callable[[Any], bool] | None
+          Called with the node's current value the first time ``name`` is
+          accessed on that node; the accessor is only instantiated if a
+          callable returns True or if ``predicate`` is None.
 
         """
         cls._accessors[name] = (accessor, predicate)
@@ -1741,9 +1750,6 @@ class rx:
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, t.cast('Callable', accessor)(self))
-        for name, (accessor, predicate) in rx._accessors.items():
-            if predicate is None or predicate(self._current):
-                setattr(self, name, accessor(self))
 
     @property
     def rx(self) -> reactive_ops:
@@ -2178,14 +2184,20 @@ class rx:
         )
 
     def __dir__(self):
-        current = self._current
+        resolved = self._current
+        current = resolved
         if self._method:
             current = getattr(current, self._method)
         extras = {attr for attr in dir(current) if not attr.startswith('_')}
+        # Explicitly list registered but uninstantiated accessors
+        accessor_names = {
+            name for name, (_, predicate) in rx._accessors.items()
+            if name not in self.__dict__ and (predicate is None or predicate(resolved))
+        }
         try:
-            return sorted(set(super().__dir__()) | extras)
+            return sorted(set(super().__dir__()) | extras | accessor_names)
         except Exception:
-            return sorted(set(dir(type(self))) | set(self.__dict__) | extras)
+            return sorted(set(dir(type(self))) | set(self.__dict__) | extras | accessor_names)
 
     def _resolve_accessor(self) -> Self:
         if not self._method:
@@ -2222,6 +2234,14 @@ class rx:
         if dirty:
             self._resolve()
             current = self_dict['_current_']
+
+        # Capture uninstantiated accessor access
+        if name in rx._accessors and name not in self_dict:
+            accessor, predicate = rx._accessors[name]
+            if predicate is None or predicate(current):
+                value = accessor(self)
+                setattr(self, name, value)
+                return value
 
         method = self_dict['_method']
         if method:

@@ -45,6 +45,7 @@ from ._utils import (
     _find_stack_level,
     _validate_error_prefix,
     _deserialize_from_path,
+    _get_narwhals,
     _named_objs,
     _produce_value,
     _get_min_max_value,
@@ -115,6 +116,12 @@ if t.TYPE_CHECKING:
         rows: int | tuple[int | None, int | None] | None
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
         ordered: bool | None
+
+    class _DataFrameLikeInitKwargs(_ParameterKwargs, total=False):
+        rows: int | tuple[int | None, int | None] | None
+        columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
+        ordered: bool | None
+        eager_only: bool | None
 
     class _SeriesInitKwargs(_ParameterKwargs, total=False):
         rows: int | tuple[int | None, int | None] | None
@@ -3313,6 +3320,25 @@ class Array(ClassSelector["AT"]):
             return numpy.asarray(value)
 
 
+def _length_bounds_check(parameter, bounds, length, name):
+    """Check ``length`` against an int or ``(lower, upper)`` ``bounds``.
+
+    Shared by :class:`DataFrame` and :class:`DataFrameLike`; ``parameter`` is
+    only used for the error-message prefix.
+    """
+    message = f'{name} length {length} does not match declared bounds of {bounds}'
+    if not isinstance(bounds, tuple):
+        if (bounds != length):
+            raise ValueError(f"{_validate_error_prefix(parameter)}: {message}")
+        else:
+            return
+    (lower, upper) = bounds
+    failure = ((lower is not None and (length < lower))
+               or (upper is not None and length > upper))
+    if failure:
+        raise ValueError(f"{_validate_error_prefix(parameter)}: {message}")
+
+
 class DataFrame(ClassSelector["DF"]):
     """
     Parameter whose value is a pandas ``DataFrame``.
@@ -3408,17 +3434,7 @@ class DataFrame(ClassSelector["DF"]):
         self._validate(self.default)
 
     def _length_bounds_check(self, bounds, length, name):
-        message = f'{name} length {length} does not match declared bounds of {bounds}'
-        if not isinstance(bounds, tuple):
-            if (bounds != length):
-                raise ValueError(f"{_validate_error_prefix(self)}: {message}")
-            else:
-                return
-        (lower, upper) = bounds
-        failure = ((lower is not None and (length < lower))
-                   or (upper is not None and length > upper))
-        if failure:
-            raise ValueError(f"{_validate_error_prefix(self)}: {message}")
+        _length_bounds_check(self, bounds, length, name)
 
     def _validate(self, val):
         super()._validate(val)
@@ -3487,6 +3503,208 @@ class DataFrame(ClassSelector["DF"]):
                 }, value, 'DataFrame')
         else:
             return pandas.DataFrame(value)
+
+
+class DataFrameLike(ClassSelector[t.Any]):
+    """
+    Parameter whose value is any dataframe-like object that Narwhals recognises.
+
+    Unlike :class:`DataFrame`, which is restricted to ``pandas.DataFrame``,
+    ``DataFrameLike`` accepts any object supported by
+    `Narwhals <https://narwhals-dev.github.io/narwhals/>`_ (pandas, Polars,
+    PyArrow, ...). The native value is passed through unchanged; authors who
+    want a backend-agnostic API can call ``narwhals.from_native`` themselves.
+
+    ``rows``: number or ``(lower, upper)`` bounds on row count.
+
+    ``columns``: number, ``(lower, upper)`` bounds, a list (exact columns,
+    same order unless ``ordered=False``), or a set (required subset).
+
+    ``eager_only``: when ``True`` (default), reject lazy frames. Set
+    ``eager_only=False`` to also accept lazy frames (Polars ``LazyFrame``,
+    Dask, DuckDB); row counts on lazy frames are validated through a scalar
+    ``count()`` collect rather than materialising the frame.
+
+    Serialization emits a list of records via Narwhals; ``deserialize``
+    reconstructs a ``pandas.DataFrame`` because JSON carries no backend.
+    """
+
+    __slots__ = ['rows', 'columns', 'ordered', 'eager_only']
+
+    _slot_defaults = {
+        **ClassSelector._slot_defaults,
+        'rows': None,
+        'columns': None,
+        'ordered': None,
+        'eager_only': True,
+    }
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: DataFrameLike,
+            default: t.Any = None,
+            *,
+            allow_None: t.Literal[False] = False,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = True,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: t.Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: DataFrameLike,
+            default: t.Any | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_DataFrameLikeInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: DataFrameLike,
+            default: None = None,
+            *,
+            allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_DataFrameLikeInitKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: t.Any | None = t.cast("t.Any | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        rows: int | tuple[int | None, int | None] | None = t.cast("int | tuple[int | None, int | None] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = t.cast("int | tuple[int | None, int | None] | list[str] | set[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        ordered: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        eager_only: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[_ParameterKwargs]
+    ) -> None:
+        _get_narwhals()
+        object.__setattr__(self, 'rows', rows)
+        object.__setattr__(self, 'columns', columns)
+        object.__setattr__(self, 'ordered', ordered)
+        object.__setattr__(self, 'eager_only', eager_only)
+        super().__init__(  # type: ignore[misc, call-overload]
+            default=default,  # type: ignore[arg-type]
+            class_=object,  # type: ignore[arg-type]
+            is_instance=True,
+            allow_None=allow_None,  # type: ignore[arg-type]
+            **params,
+        )
+        self._validate(self.default)
+
+    def _as_narwhals(self, val):
+        narwhals = _get_narwhals()
+        try:
+            return narwhals.from_native(
+                val, eager_only=self.eager_only, pass_through=False
+            )
+        except TypeError as e:
+            kind = 'an eager dataframe-like' if self.eager_only else 'a dataframe-like'
+            raise ValueError(
+                f"{_validate_error_prefix(self)} value must be {kind} object "
+                f"that Narwhals recognises (pandas, Polars, PyArrow, ...), "
+                f"not {type(val).__name__!r}."
+            ) from e
+
+    def _validate(self, val):
+        super()._validate(val)
+
+        if isinstance(self.columns, set) and self.ordered is True:
+            raise ValueError(
+                f'{_validate_error_prefix(self)}: columns cannot be ordered '
+                f'when specified as a set'
+            )
+
+        if val is None:
+            # class_=object means ClassSelector accepts None even when
+            # allow_None is False, so reject it explicitly here.
+            if self.allow_None:
+                return
+            raise ValueError(
+                f"{_validate_error_prefix(self)} value must be a dataframe-like "
+                f"object that Narwhals recognises, not None."
+            )
+
+        nwframe = self._as_narwhals(val)
+        narwhals = _get_narwhals()
+        is_lazy = isinstance(nwframe, narwhals.LazyFrame)
+
+        # Resolve schema once if any column check or lazy row check needs it.
+        need_schema = self.columns is not None or (self.rows is not None and is_lazy)
+        schema = nwframe.collect_schema() if need_schema else None
+
+        if self.columns is not None:
+            assert schema is not None
+            cols = list(schema.names())
+            if (isinstance(self.columns, tuple) and len(self.columns)==2
+                  and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
+                _length_bounds_check(self, self.columns, len(cols), 'columns')
+            elif isinstance(self.columns, (list, set)):
+                self.ordered = isinstance(self.columns, list) if self.ordered is None else self.ordered
+                difference = set(self.columns) - {str(el) for el in cols}
+                if difference:
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)}: provided columns "
+                        f"{cols} does not contain required "
+                        f"columns {sorted(self.columns)}"
+                    )
+            else:
+                _length_bounds_check(self, self.columns, len(cols), 'column')
+
+            if self.ordered and isinstance(self.columns, Iterable):
+                if cols != list(self.columns):
+                    raise ValueError(
+                        f"{_validate_error_prefix(self)}: provided columns "
+                        f"{cols} must exactly match {self.columns}"
+                    )
+
+        if self.rows is not None:
+            if is_lazy:
+                assert schema is not None
+                first = next(iter(schema.names()), None)
+                n = (
+                    nwframe.select(narwhals.col(first).count()).collect().item()
+                    if first is not None else 0
+                )
+            else:
+                n = nwframe.shape[0]
+            _length_bounds_check(self, self.rows, n, 'row')
+
+    @classmethod
+    def serialize(cls, value):
+        # Backend-neutral list-of-records via Narwhals, so JSON output does
+        # not depend on the original library. A lazy frame must be collected
+        # here (unlike validation) because a computation graph cannot be
+        # serialized.
+        if value is None:
+            return None
+        narwhals = _get_narwhals()
+        nwframe = narwhals.from_native(value)
+        if isinstance(nwframe, narwhals.LazyFrame):
+            nwframe = nwframe.collect()
+        return nwframe.rows(named=True)
+
+    @classmethod
+    def deserialize(cls, value):
+        # JSON carries no backend information, so deserialization lands on
+        # pandas (the universal default), exactly like DataFrame. Callers
+        # needing another backend can reconstruct from the records form.
+        return DataFrame.deserialize(value)
 
 
 class Series(ClassSelector["ST"]):

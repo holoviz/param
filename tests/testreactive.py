@@ -1256,6 +1256,29 @@ def test_reactive_skip_value_does_not_notify_watcher():
     assert items == [3]
     assert i.rx.value == 3
 
+
+def test_reactive_skip_value_does_not_notify_later_watchers():
+    """A skipped resolution must remain skipped for every watcher reread."""
+    P = Parameters(integer=1)
+
+    def skip_values(v):
+        if v % 2 == 0:
+            return Skip
+        return v * 10
+
+    i = rx(P.param.integer).rx.pipe(skip_values)
+    first, second, third = [], [], []
+    i.rx.watch(first.append)
+    i.rx.watch(second.append)
+    i.rx.watch(third.append)
+
+    assert i.rx.value == 10
+    P.integer = 2
+    assert first == second == third == []
+
+    P.integer = 3
+    assert first == second == third == [30]
+
 async def test_reactive_async_ref_not_synced_while_awaiting():
     class Ref(param.Parameterized):
         value = param.Integer(default=0, allow_refs=True)
@@ -1503,6 +1526,24 @@ async def test_async_shared_rx_branch_after_settling_resolves():
 
     irx.rx.value = 3
     await async_wait_until(lambda: first.rx.value == 6)
+
+
+async def test_async_shared_rx_branch_does_not_republish_previous_value():
+    """An async branch must not notify later watchers with its prior value."""
+    irx = rx(1)
+    node = irx.rx.pipe(_pair)
+    branch = node[0]
+    first, second, third = [], [], []
+    branch.rx.watch(first.append)
+    branch.rx.watch(second.append)
+    branch.rx.watch(third.append)
+
+    branch.rx.value
+    await async_wait_until(lambda: first == second == third == [2])
+
+    irx.rx.value = 3
+    await async_wait_until(lambda: first == [2, 6])
+    await async_wait_until(lambda: second == [2, 6] and third == [2, 6])
 
 async def test_async_shared_rx_branch_while_awaiting_resolves():
     irx = rx(1)

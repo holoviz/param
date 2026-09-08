@@ -2161,6 +2161,12 @@ class rx:
                     obj = self._eval_operation(obj, operation)
                     if self._is_async:
                         self._lazy_resolve(obj)
+                        if self._finished_generation == self._resolve_generation:
+                            # Handle case where async call is resolved synchronously
+                            # e.g. when there is no running event loop
+                            self._skipped = False
+                            self._dirty = False
+                            return self._current_
                         obj = Skip
                     if obj is Skip:
                         raise Skip
@@ -2227,8 +2233,11 @@ class rx:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
+            # Do not trigger resolve via self._current since result is discarded
+            # by the cloned nodes constructor anyway
+            current = self._current_ if self._is_async else self._current
             kwargs = dict(
-                self._kwargs, _current=self._current, method=self._method,
+                self._kwargs, _current=current, method=self._method,
                 prev=self._prev, _shared=self, **kwargs
             )
         else:

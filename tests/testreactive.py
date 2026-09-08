@@ -1554,6 +1554,40 @@ async def test_async_shared_rx_branch_while_awaiting_resolves():
     assert first.rx.value is param.Undefined
     await async_wait_until(lambda: first.rx.value == 2)
 
+def test_async_shared_rx_branch_does_not_resolve_on_creation():
+    """Branching an async node must not compute to seed the mirror."""
+    calls = []
+
+    async def counted_pair(value):
+        calls.append(value)
+        await asyncio.sleep(0.02)
+        return (value * 2, value * 3)
+
+    node = rx(1).rx.pipe(counted_pair)
+    first, second = node[0], node[1]
+    assert calls == []
+
+    # Reading drives the compute; with no running loop async_executor runs it
+    # to completion, so both branches resolve off the one call.
+    assert first.rx.value == 2
+    assert second.rx.value == 3
+    assert calls == [1]
+
+def test_shared_rx_branch_still_reuses_a_synchronous_input():
+    """The synchronous mirror keeps its value, so branches share one compute."""
+    calls = []
+
+    def counted_pair(value):
+        calls.append(value)
+        return (value * 2, value * 3)
+
+    node = rx(1).rx.pipe(counted_pair)
+    first, second = node[0], node[1]
+    assert (first.rx.value, second.rx.value) == (2, 3)
+    assert calls == [1]
+
+
+
 async def test_async_shared_rx_branch_before_resolving_resolves():
     irx = rx(1)
     node = irx.rx.pipe(_pair)

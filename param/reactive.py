@@ -1602,13 +1602,11 @@ class rx:
         """
         Register an accessor that extends ``rx`` with custom behavior.
 
-        The accessor is not instantiated when the node is constructed. It is
-        instantiated lazily, the first time the accessor's name is accessed on
-        a given node, at which point ``predicate`` is evaluated against the
-        node's current value. This means registering an accessor never
-        forces a node to resolve, and a node whose value only later becomes
-        the type ``predicate`` looks for can still pick up the accessor at
-        that point, on the next access of its name.
+        Accessors are instantiated lazily the first time it is accessed on a given
+        node. If a ``predicate`` is provided it is evaluated against the node's
+        current value at that point in time. If it does not evaluate as true the first
+        time, e.g. because the value has not yet settled, it may still be created on
+        subsequent accesses.
 
         Parameters
         ----------
@@ -1619,8 +1617,8 @@ class rx:
           given the ``rx`` object it is registered on.
         predicate: Callable[[Any], bool] | None
           Called with the node's current value the first time ``name`` is
-          accessed on that node; the accessor is only instantiated if this
-          returns True (or is None).
+          accessed on that node; the accessor is only instantiated if a
+          callable returns True or if ``predicate`` is None.
 
         """
         cls._accessors[name] = (accessor, predicate)

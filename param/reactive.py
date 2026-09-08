@@ -113,7 +113,10 @@ from .parameters import Boolean, Event
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 if t.TYPE_CHECKING:
+    import builtins
     from typing_extensions import Self
+
+    from .parameterized import Watcher
 
     _P = t.ParamSpec('_P')
     _R = t.TypeVar('_R')
@@ -121,6 +124,29 @@ if t.TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+class ReactiveError:
+    """A value representing an error raised while evaluating a reactive expression."""
+
+    def __init__(self, exception: Exception, node=None):
+        self.exception = exception
+        self.node = weakref.ref(node) if node is not None else None
+
+    def __bool__(self):
+        return False
+
+    def __str__(self):
+        return str(self.exception)
+
+    def __repr__(self):
+        return f"ReactiveError({self.exception!r})"
+
+    def __getitem__(self, key):
+        return t.cast('t.Any', self.exception)[key]
+
+    def __getattr__(self, name):
+        return getattr(self.exception, name)
 
 
 class Wrapper(Parameterized):
@@ -247,6 +273,17 @@ class reactive_ops:
         """Create a reactive expression."""
         rxi = self._reactive
         return rxi if isinstance(rxi, rx) else rx(rxi)
+
+    @property
+    def error(self):
+        """Return the current :class:`ReactiveError` or exception, if any."""
+        if isinstance(self._reactive, rx):
+            try:
+                value = self._reactive._resolve()
+            except Exception as exc:
+                return exc
+            return value if isinstance(value, ReactiveError) else None
+        return None
 
     def and_(self, other) -> 'rx':
         """
@@ -593,6 +630,47 @@ class reactive_ops:
                 return [func(v, *args, **kwargs) for v in vs]
             return self._as_rx()._apply_operator(apply, *args, **kwargs)
 
+    @property
+    def meta(self) -> dict[t.Any, t.Any]:
+        """
+        A per-node mapping of user metadata.
+
+        Unlike the reactive expression itself, metadata is local to this exact
+        node: it is not inherited by nodes derived from it (through operators,
+        attribute access, method calls, ``.rx.pipe``, indexing, etc.), and it is
+        not shared with mirrors created by branching (``expr[0]``, ``expr[1]``).
+        Each node starts with its own empty mapping.
+
+        Metadata takes no part in a node's identity or evaluation: mutating it
+        does not dirty the node, notify watchers, or otherwise affect
+        computation. It exists purely as a place for a library built on ``rx``
+        to attach state to a specific node, such as a provenance record or a
+        cache key.
+
+        Returns
+        -------
+        dict
+            The mutable metadata mapping for this node.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> a.rx.meta['trace'] = 'created at step 1'
+        >>> b = a + 1
+        >>> 'trace' in b.rx.meta
+        False
+        """
+        rxi = self._reactive
+        if not isinstance(rxi, rx):
+            raise AttributeError(
+                "'.rx.meta' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(rxi).__name__!r} object."
+            )
+        if rxi._meta is None:
+            rxi._meta = {}
+        return rxi._meta
+
     def not_(self) -> 'rx':
         """
         Perform a logical NOT operation on the current reactive value.
@@ -666,7 +744,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
-    def pipe(self, func, /, *args, **kwargs)-> 'rx':
+    def pipe(self, func, /, *args, process_failures=False, **kwargs)-> 'rx':
         """
         Apply a chainable function to the current reactive value.
 
@@ -714,7 +792,9 @@ class reactive_ops:
         >>> rx_result.rx.value
         30
         """
-        return self._as_rx()._apply_operator(func, *args, **kwargs)
+        return self._as_rx()._apply_operator(
+            func, *args, process_failures=process_failures, **kwargs
+        )
 
     def resolve(self, nested=True, recursive=False) -> 'rx':
         """
@@ -760,6 +840,67 @@ class reactive_ops:
         resolver_type = NestedResolver if nested else Resolver
         resolver = resolver_type(object=self._reactive, recursive=recursive)
         return resolver.param.value.rx()
+
+    @property
+    def awaiting(self) -> builtins.bool:
+        """
+        Whether any asynchronous operation in this expression is still resolving.
+
+        ``True`` from the moment an asynchronous operation is scheduled until it
+        produces a value for the current inputs. While a node is awaiting, the
+        expression still holds the value it computed from the previous inputs,
+        so ``.rx.value`` reports :obj:`param.Undefined` rather than that stale
+        value; ``awaiting`` distinguishes "not resolved yet" from an operation
+        that deliberately skipped.
+
+        The whole graph feeding the expression is considered, not just the node
+        it is accessed on, so a synchronous operation downstream of an
+        asynchronous one reports ``True`` while its input resolves.
+
+        Reading this does not itself schedule anything, so an expression whose
+        value has never been requested reports ``False`` until something asks
+        for it.
+
+        Both routes an asynchronous callable can take are tracked: one applied
+        as an operation, e.g. passed to ``.rx.pipe``, and one passed to ``rx``
+        as the object itself, which is held on a parameter and resolved by the
+        reference machinery. A generator settles on each value it yields, so it
+        reports ``True`` only until its next value arrives rather than until it
+        is exhausted. Accessed on a parameter rather than an expression this is
+        always ``False``.
+
+        Returns
+        -------
+        bool
+            ``True`` while an asynchronous operation has not yet produced a
+            value for the current inputs, ``False`` otherwise.
+
+        Examples
+        --------
+        Pipe through a coroutine function and observe the expression settle:
+
+        >>> import asyncio, param
+        >>> async def double(value):
+        ...     await asyncio.sleep(0.1)
+        ...     return value * 2
+        >>> expr = param.rx(1).rx.pipe(double) + 1
+
+        Requesting the value schedules the operation:
+
+        >>> expr.rx.value is param.Undefined
+        True
+        >>> expr.rx.awaiting
+        True
+
+        Once the coroutine has resolved the expression reports a value again:
+
+        >>> expr.rx.awaiting  # doctest: +SKIP
+        False
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return False
+        return any(node._settling for node in reactive._upstream())
 
     def updating(self) -> 'rx':
         """
@@ -1374,10 +1515,13 @@ class _WeakInvalidator:
     ``rx._watch_invalidation``).
     """
 
-    __slots__ = ('_ref', '__weakref__')
+    __slots__ = ('_ref', '_watcher', '__weakref__')
+
+    _watcher: Watcher | None
 
     def __init__(self, method):
         self._ref = weakref.WeakMethod(method)
+        self._watcher = None
 
     def __call__(self, *events):
         method = self._ref()
@@ -1385,12 +1529,46 @@ class _WeakInvalidator:
             return method(*events)
 
 
-def _remove_watcher(owner, watcher):
-    """Unwatch ``watcher`` from ``owner``, ignoring if it is already gone."""
+def _remove_watcher(
+    owner_ref: weakref.ref[Parameterized | type[Parameterized]],
+    invalidator_ref: weakref.ref[_WeakInvalidator],
+) -> None:
+    """
+    Unwatch a dead node's invalidation watcher, ignoring if it is already gone.
+
+    Both refs must be weak: ``weakref.finalize`` holds its arguments until the
+    referent dies, so a strong owner (or ``Watcher``, whose ``inst`` is the
+    owner) would make the node uncollectable. ``Watcher`` subclasses ``tuple``
+    and cannot be weakly referenced, so it is reached via the invalidator.
+    """
+    owner, invalidator = owner_ref(), invalidator_ref()
+    if owner is None or invalidator is None or invalidator._watcher is None:
+        return
     try:
-        owner.param.unwatch(watcher)
+        owner.param.unwatch(invalidator._watcher)
     except Exception:
         pass
+
+
+async def _close_stale(obj):
+    """
+    Discard an awaitable or async generator whose result is no longer needed.
+
+    Closing a coroutine that was never awaited also suppresses the warning
+    Python emits when it is garbage collected.
+    """
+    try:
+        if inspect.isasyncgen(obj):
+            await obj.aclose()
+        elif inspect.iscoroutine(obj):
+            obj.close()
+    except (StopAsyncIteration, GeneratorExit):
+        pass
+    except Exception:
+        logger.debug(
+            "Ignoring close error for stale reactive task.",
+            exc_info=True,
+        )
 
 
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
@@ -1411,6 +1589,9 @@ class rx:
     obj : any
         The object to wrap, such as a number, string, list, or any supported
         data structure.
+    error_mode : {"raise", "propagate"}, default "raise"
+        Whether exceptions raised while evaluating the expression should be
+        re-raised or represented as :class:`ReactiveError` values.
 
     References
     ----------
@@ -1460,6 +1641,12 @@ class rx:
         """
         Register an accessor that extends ``rx`` with custom behavior.
 
+        Accessors are instantiated lazily the first time it is accessed on a given
+        node. If a ``predicate`` is provided it is evaluated against the node's
+        current value at that point in time. If it does not evaluate as true the first
+        time, e.g. because the value has not yet settled, it may still be created on
+        subsequent accesses.
+
         Parameters
         ----------
         name: str
@@ -1468,6 +1655,9 @@ class rx:
           A callable that will return the accessor namespace object
           given the ``rx`` object it is registered on.
         predicate: Callable[[Any], bool] | None
+          Called with the node's current value the first time ``name`` is
+          accessed on that node; the accessor is only instantiated if a
+          callable returns True or if ``predicate`` is None.
 
         """
         cls._accessors[name] = (accessor, predicate)
@@ -1536,7 +1726,8 @@ class rx:
 
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
-        _shared_obj=None, _current=None, _wrapper=None, _shared=None, **kwargs
+        _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
+        **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
         # specialized code.
@@ -1558,8 +1749,14 @@ class rx:
         self._dirty_obj = False
         self._current_task = None
         self._resolve_generation = 0
+        self._finished_generation = 0
+        self._skipped = False
         self._error_state = None
+        self._error_mode = error_mode
+        if error_mode not in ('raise', 'propagate'):
+            raise ValueError("error_mode must be either 'raise' or 'propagate'")
         self._current_ = _current
+        self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         # _shared is used for branching rx pipelines where we clone the input.
         # Here we store the original shared input, which makes it possible to
         # cache the input value as long as the shared instance does not store
@@ -1575,6 +1772,7 @@ class rx:
         if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
+            self._dirty = True  # Otherwise current will be stuck as Undefined.
         else:
             self._trigger = None
         self._root = self._compute_root()
@@ -1595,9 +1793,6 @@ class rx:
         self._init = True
         for name, accessor in _display_accessors.items():
             setattr(self, name, t.cast('Callable', accessor)(self))
-        for name, (accessor, predicate) in rx._accessors.items():
-            if predicate is None or predicate(self._current):
-                setattr(self, name, accessor(self))
 
     @property
     def rx(self) -> reactive_ops:
@@ -1660,6 +1855,69 @@ class rx:
             inspect.isasyncgenfunction(fn) or
             inspect.isgeneratorfunction(fn)
         )
+
+    @property
+    def _awaiting(self) -> bool:
+        """
+        Whether an asynchronous resolution is in flight that has not yet
+        produced a value for the current generation.
+
+        While a node is awaiting, the cached ``_current_`` value was computed
+        from inputs that have since been superseded, so resolving the node
+        skips instead of reporting the stale value as if it were current.
+        """
+        return self._resolve_generation != self._finished_generation
+
+    @property
+    def _awaiting_ref(self) -> bool:
+        """
+        Whether an asynchronous reference feeding this node has not yet
+        produced a value for the current inputs.
+
+        A coroutine or generator function passed to ``rx`` as the object rather
+        than as an operation is held on a parameter and resolved by the
+        reference machinery, so its settlement is tracked there instead of by
+        this node's own generations.
+        """
+        for p in self._internal_params:
+            owner, name = p.owner, p.name
+            if name is None or not isinstance(owner, Parameterized):
+                continue
+            if owner.param._awaiting_ref(name):
+                return True
+        return False
+
+    @property
+    def _settling(self) -> bool:
+        """Whether this node is waiting on an asynchronous result of its own."""
+        return self._awaiting or self._awaiting_ref
+
+    def _upstream(self) -> Iterator[t.Any]:
+        """
+        Yield this node and every ``rx`` node it derives its value from.
+
+        Inputs reach a node by three routes, all of which have to be visited
+        because an operation is only as settled as the nodes feeding it: the
+        ``_prev`` chain of the pipeline the node belongs to, the ``_shared``
+        input it was cloned from when a pipeline branches, and any ``rx``
+        passed as an argument to one of its operations.
+        """
+        seen: set[int] = set()
+        stack: list[rx] = [self]
+        while stack:
+            node = stack.pop()
+            if (id_node := id(node)) in seen:
+                continue
+            seen.add(id_node)
+            yield node
+            for inp in (node._prev, node._shared):
+                if isinstance(inp, rx):
+                    stack.append(inp)
+            operation = node._operation
+            if operation:
+                stack.extend(_iter_rx((
+                    operation['fn'], operation.get('args', ()), operation.get('kwargs', {})
+                )))
 
     @property
     def _current(self):
@@ -1758,9 +2016,13 @@ class rx:
         source does not pin the (potentially short-lived) derived node alive.
         A finalizer removes the watcher automatically once this node is garbage
         collected, keeping the source's watcher list from growing without bound.
+        The finalizer is handed weak references only (see ``_remove_watcher``).
         """
-        watcher = owner.param._watch(_WeakInvalidator(method), names, precedence=-1)
-        weakref.finalize(self, _remove_watcher, owner, watcher)
+        invalidator = _WeakInvalidator(method)
+        invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
+        weakref.finalize(
+            self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
+        )
 
     def _invalidate_current(self, *events):
         if all(event.obj is self._trigger for event in events):
@@ -1772,17 +2034,26 @@ class rx:
         t.cast('t.Any', self._root)._dirty_obj = True
         self._error_state = None
 
-    async def _resolve_async(self, obj=None, generation=None):
+    async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
-        self._current_task = task = asyncio.current_task()
-        trigger = self._trigger
 
         def stale():
             return generation != self._resolve_generation
 
+        if stale():
+            # A newer resolution was requested before this task was scheduled,
+            # so nothing has awaited obj yet and the operation has not begun.
+            # Close it instead of computing a result that is already superseded.
+            # This must happen before _current_task is claimed below, otherwise
+            # the finally clause would clear the genuinely current task and hide
+            # it from the next _lazy_resolve.
+            await _close_stale(obj)
+            return
+        trigger = self._trigger
+        if trigger is None:
+            return
+        self._current_task = task = asyncio.current_task()
         try:
-            if trigger is None:
-                return
             if obj is None:
                 shared = self._shared
                 if shared is None:
@@ -1792,30 +2063,36 @@ class rx:
                 if stale():
                     return
                 self._current_ = shared.rx.value
+                self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
                 async for val in obj:
                     if stale():
-                        try:
-                            await obj.aclose()
-                        except (StopAsyncIteration, GeneratorExit):
-                            pass
-                        except Exception:
-                            logger.debug(
-                                "Ignoring async generator close error for stale reactive task.",
-                                exc_info=True,
-                            )
+                        await _close_stale(obj)
                         break
                     self._current_ = val
+                    self._finished_generation = generation
                     trigger.param.trigger('value')
             else:
                 value = await obj
                 if stale():
                     return
                 self._current_ = value
+                self._finished_generation = generation
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
             return
+        except Exception as e:
+            if stale():
+                return
+            self._finished_generation = generation
+            if self._dirty or self._root._dirty_obj:
+                # Ignoring as the inputs were invalidated while the async operation was running
+                return
+            # Mirror the synchronous path in _resolve.
+            # For an async generator an raised exception ends the stream.
+            self._error_state = e
+            trigger.param.trigger('value')
         finally:
             if self._current_task is task:
                 self._current_task = None
@@ -1837,8 +2114,16 @@ class rx:
         elif self._dirty or self._root._dirty_obj:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
+                operation = self._operation
+                if isinstance(obj, ReactiveError) and not (operation or {}).get('process_failures'):
+                    self._current_ = obj
+                    self._skipped = False
+                    self._dirty = False
+                    return obj
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
+                    raise Skip
+                elif self._prev is not None and self._prev._skipped:
                     raise Skip
                 elif (
                     self._shared is not None and
@@ -1848,13 +2133,27 @@ class rx:
                     # If this rx is cloned from an shared input then we make use
                     # of the shared.rx.value to ensure branching pipelines do
                     # not have to recompute the inputs multiple times.
-                    if self._is_async:
-                        self._shared.rx.value # trigger async resolve
+                    shared = self._shared
+                    value = shared.rx.value # triggers async resolve
+                    if self._is_async and (
+                        shared._awaiting or shared._current_task is not None
+                    ):
+                        # The shared node is still processing, resolve when finished
                         self._lazy_resolve()
-                    else:
-                        self._current_ = self._shared.rx.value
-                    raise Skip
-                operation = self._operation
+                        raise Skip
+                    # Returns instead of raising Skip because this path does
+                    # resolve to a value, so it must mirror the shared node's
+                    # skip state rather than be marked skipped by the handler.
+                    self._current_ = value
+                    self._skipped = shared._skipped
+                    if self._is_async:
+                        # The value was adopted without scheduling a task, so
+                        # claim a generation for it. This supersedes a task an
+                        # earlier operation may have scheduled and still awaits a resolution.
+                        self._resolve_generation += 1
+                        self._finished_generation = self._resolve_generation
+                    self._dirty = False
+                    return self._current_
                 if operation:
                     obj = self._eval_operation(obj, operation)
                     if self._is_async:
@@ -1864,13 +2163,24 @@ class rx:
                         raise Skip
             except Skip:
                 self._dirty = False
+                self._skipped = True
                 return self._current_
             except Exception as e:
+                if self._error_mode == 'propagate':
+                    self._current_ = ReactiveError(e, self)
+                    self._dirty = False
+                    self._skipped = False
+                    return self._current_
                 self._error_state = e
                 raise e
             self._current_ = current = obj
+            self._skipped = False
         else:
             current = self._current_
+            # A node awaiting an asynchronous result still holds the value it
+            # computed from the previous inputs; report it as skipped so it is
+            # not propagated as if it were current.
+            self._skipped = self._awaiting
         self._dirty = False
         if self._method:
             # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.
@@ -1920,21 +2230,29 @@ class rx:
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
+        error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
         return type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
+            error_mode=error_mode,
             **kwargs
         )
 
     def __dir__(self):
-        current = self._current
+        resolved = self._current
+        current = resolved
         if self._method:
             current = getattr(current, self._method)
         extras = {attr for attr in dir(current) if not attr.startswith('_')}
+        # Explicitly list registered but uninstantiated accessors
+        accessor_names = {
+            name for name, (_, predicate) in rx._accessors.items()
+            if name not in self.__dict__ and (predicate is None or predicate(resolved))
+        }
         try:
-            return sorted(set(super().__dir__()) | extras)
+            return sorted(set(super().__dir__()) | extras | accessor_names)
         except Exception:
-            return sorted(set(dir(type(self))) | set(self.__dict__) | extras)
+            return sorted(set(dir(type(self))) | set(self.__dict__) | extras | accessor_names)
 
     def _resolve_accessor(self) -> Self:
         if not self._method:
@@ -1971,6 +2289,14 @@ class rx:
         if dirty:
             self._resolve()
             current = self_dict['_current_']
+
+        # Capture uninstantiated accessor access
+        if name in rx._accessors and name not in self_dict:
+            accessor, predicate = rx._accessors[name]
+            if predicate is None or predicate(current):
+                value = accessor(self)
+                setattr(self, name, value)
+                return value
 
         method = self_dict['_method']
         if method:
@@ -2024,7 +2350,8 @@ class rx:
         return new._clone(operation)
 
     def _apply_operator(
-        self, operator: Callable, *args, reverse: bool = False, **kwargs
+        self, operator: Callable, *args, reverse: bool = False, process_failures=False,
+        **kwargs
     ) -> Self:
         new = self._resolve_accessor()
         operation = {
@@ -2033,6 +2360,7 @@ class rx:
             'kwargs': kwargs,
             'reverse': reverse
         }
+        operation['process_failures'] = process_failures
         return new._clone(operation)
 
     # Builtin functions
@@ -2177,13 +2505,21 @@ class rx:
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
         for arg in args:
+            if any(ref._settling for ref in _iter_rx(arg)):
+                raise Skip
             val = resolve_value(arg)
+            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
+                return val
             if val is Skip or val is Undefined:
                 raise Skip
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
+            if any(ref._settling for ref in _iter_rx(arg)):
+                raise Skip
             val = resolve_value(arg)
+            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
+                return val
             if val is Skip or val is Undefined:
                 raise Skip
             resolved_kwargs[k] = val
@@ -2207,9 +2543,35 @@ class rx:
         super().__setattr__(name, value)
 
 
+def _iter_rx(value: t.Any) -> Iterator[rx]:
+    """
+    Yield the reactive expressions nested anywhere inside a reference.
+
+    Mirrors the containers ``resolve_value`` descends into, so an ``rx`` used
+    as an operation argument is found wherever ``resolve_value`` would find it.
+    """
+    if isinstance(value, rx):
+        yield value
+    elif isinstance(value, (list, tuple, set)):
+        for v in value:
+            yield from _iter_rx(v)
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            yield from _iter_rx(k)
+            yield from _iter_rx(v)
+    elif isinstance(value, slice):
+        for v in (value.start, value.stop, value.step):
+            yield from _iter_rx(v)
+
+
 def _rx_transform(obj):
     if not isinstance(obj, rx):
         return obj
-    return bind(lambda *_: obj.rx.value, *obj._params)
+    def resolve(*_):
+        value = obj.rx.value
+        if obj._skipped or value is Skip or value is Undefined:
+            raise Skip
+        return value
+    return bind(resolve, *obj._params)
 
 register_reference_transform(_rx_transform)

@@ -2647,7 +2647,10 @@ class Selector(SelectorBase, _SignatureSelector[_T]):
         object.__setattr__(self, 'check_on_set', check_on_set)
 
         instantiate = params.pop("instantiate", Undefined)
-        params["instantiate"] = False if instantiate is Undefined else instantiate  # pyrefly: ignore[bad-assignment]
+        if isinstance(instantiate, bool):
+            params["instantiate"] = instantiate
+        else:
+            params["instantiate"] = False
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:

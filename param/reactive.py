@@ -126,6 +126,29 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class ReactiveError:
+    """A value representing an error raised while evaluating a reactive expression."""
+
+    def __init__(self, exception: Exception, node=None):
+        self.exception = exception
+        self.node = weakref.ref(node) if node is not None else None
+
+    def __bool__(self):
+        return False
+
+    def __str__(self):
+        return str(self.exception)
+
+    def __repr__(self):
+        return f"ReactiveError({self.exception!r})"
+
+    def __getitem__(self, key):
+        return t.cast('t.Any', self.exception)[key]
+
+    def __getattr__(self, name):
+        return getattr(self.exception, name)
+
+
 class Wrapper(Parameterized):
     """Helper class to allow updating literal values easily."""
 
@@ -250,6 +273,17 @@ class reactive_ops:
         """Create a reactive expression."""
         rxi = self._reactive
         return rxi if isinstance(rxi, rx) else rx(rxi)
+
+    @property
+    def error(self):
+        """Return the current :class:`ReactiveError` or exception, if any."""
+        if isinstance(self._reactive, rx):
+            try:
+                value = self._reactive._resolve()
+            except Exception as exc:
+                return exc
+            return value if isinstance(value, ReactiveError) else None
+        return None
 
     def and_(self, other) -> 'rx':
         """
@@ -710,7 +744,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
-    def pipe(self, func, /, *args, **kwargs)-> 'rx':
+    def pipe(self, func, /, *args, process_failures=False, **kwargs)-> 'rx':
         """
         Apply a chainable function to the current reactive value.
 
@@ -758,7 +792,9 @@ class reactive_ops:
         >>> rx_result.rx.value
         30
         """
-        return self._as_rx()._apply_operator(func, *args, **kwargs)
+        return self._as_rx()._apply_operator(
+            func, *args, process_failures=process_failures, **kwargs
+        )
 
     def resolve(self, nested=True, recursive=False) -> 'rx':
         """
@@ -1553,6 +1589,9 @@ class rx:
     obj : any
         The object to wrap, such as a number, string, list, or any supported
         data structure.
+    error_mode : {"raise", "propagate"}, default "raise"
+        Whether exceptions raised while evaluating the expression should be
+        re-raised or represented as :class:`ReactiveError` values.
 
     References
     ----------
@@ -1687,7 +1726,8 @@ class rx:
 
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
-        _shared_obj=None, _current=None, _wrapper=None, _shared=None, **kwargs
+        _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
+        **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
         # specialized code.
@@ -1712,6 +1752,9 @@ class rx:
         self._finished_generation = 0
         self._skipped = False
         self._error_state = None
+        self._error_mode = error_mode
+        if error_mode not in ('raise', 'propagate'):
+            raise ValueError("error_mode must be either 'raise' or 'propagate'")
         self._current_ = _current
         self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         # _shared is used for branching rx pipelines where we clone the input.
@@ -2071,6 +2114,12 @@ class rx:
         elif self._dirty or self._root._dirty_obj:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
+                operation = self._operation
+                if isinstance(obj, ReactiveError) and not (operation or {}).get('process_failures'):
+                    self._current_ = obj
+                    self._skipped = False
+                    self._dirty = False
+                    return obj
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
                     raise Skip
@@ -2105,7 +2154,6 @@ class rx:
                         self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
-                operation = self._operation
                 if operation:
                     obj = self._eval_operation(obj, operation)
                     if self._is_async:
@@ -2118,6 +2166,11 @@ class rx:
                 self._skipped = True
                 return self._current_
             except Exception as e:
+                if self._error_mode == 'propagate':
+                    self._current_ = ReactiveError(e, self)
+                    self._dirty = False
+                    self._skipped = False
+                    return self._current_
                 self._error_state = e
                 raise e
             self._current_ = current = obj
@@ -2177,9 +2230,11 @@ class rx:
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
+        error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
         return type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
+            error_mode=error_mode,
             **kwargs
         )
 
@@ -2295,7 +2350,8 @@ class rx:
         return new._clone(operation)
 
     def _apply_operator(
-        self, operator: Callable, *args, reverse: bool = False, **kwargs
+        self, operator: Callable, *args, reverse: bool = False, process_failures=False,
+        **kwargs
     ) -> Self:
         new = self._resolve_accessor()
         operation = {
@@ -2304,6 +2360,7 @@ class rx:
             'kwargs': kwargs,
             'reverse': reverse
         }
+        operation['process_failures'] = process_failures
         return new._clone(operation)
 
     # Builtin functions
@@ -2451,6 +2508,8 @@ class rx:
             if any(ref._settling for ref in _iter_rx(arg)):
                 raise Skip
             val = resolve_value(arg)
+            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
+                return val
             if val is Skip or val is Undefined:
                 raise Skip
             resolved_args.append(val)
@@ -2459,6 +2518,8 @@ class rx:
             if any(ref._settling for ref in _iter_rx(arg)):
                 raise Skip
             val = resolve_value(arg)
+            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
+                return val
             if val is Skip or val is Undefined:
                 raise Skip
             resolved_kwargs[k] = val

@@ -1895,7 +1895,7 @@ def test_reactive_dir_does_not_list_accessor_when_predicate_fails(clean_accessor
     n = rx(1)
     assert 'my_accessor' not in dir(n)
 
-    def test_reactive_register_accessor_predicate_not_evaluated_at_construction(clean_accessors):
+def test_reactive_register_accessor_predicate_not_evaluated_at_construction(clean_accessors):
     predicate_calls = []
 
     def predicate(value):

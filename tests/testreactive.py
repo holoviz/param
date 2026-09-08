@@ -1514,8 +1514,7 @@ async def test_async_shared_rx_branch_while_awaiting_resolves():
     await async_wait_until(lambda: first.rx.value == 2)
 
 def test_async_shared_rx_branch_does_not_resolve_on_creation():
-    """Branching an async node must not compute to seed the mirror.
-    """
+    """Branching an async node must not compute to seed the mirror."""
     calls = []
 
     async def counted_pair(value):

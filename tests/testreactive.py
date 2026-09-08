@@ -242,10 +242,11 @@ def test_reactive_error_propagates_as_value():
     failed = source.rx.pipe(fail)
     downstream = failed + 1
 
-    assert isinstance(failed.rx.value, param.Error)
+    assert isinstance(failed.rx.value, param.ReactiveError)
     assert not failed.rx.value
     assert str(failed.rx.value) == "bad 1"
     assert failed.rx.value.exception.args == ("bad 1",)
+    assert failed.rx.value.node() is failed
     assert downstream.rx.value is failed.rx.value
     assert failed.rx.error is failed.rx.value
 

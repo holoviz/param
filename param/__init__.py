@@ -99,7 +99,7 @@ from .parameters import (
     CalendarDateRange,
     Event,
 )
-from .reactive import Error, bind, rx
+from .reactive import ReactiveError, bind, rx
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -171,7 +171,7 @@ __all__ = (
     'Dict',
     'Dynamic',
     'ERROR',
-    'Error',
+    'ReactiveError',
     'Event',
     'FileSelector',
     'Filename',

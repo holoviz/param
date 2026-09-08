@@ -21,7 +21,7 @@
 
 By default, exceptions raised while evaluating an expression are cached and
 re-raised when the expression is read. Pass `error_mode="propagate"` when
-constructing an expression to represent failures as falsy {py:class}`Error`
+constructing an expression to represent failures as falsy {py:class}`ReactiveError`
 values instead:
 
 ```python
@@ -33,13 +33,13 @@ def divide(value):
 value = param.rx(0, error_mode="propagate")
 result = value.rx.pipe(divide)
 
-isinstance(result.rx.value, param.Error)  # True
+isinstance(result.rx.value, param.ReactiveError)  # True
 str(result.rx.value)                      # "division by zero"
 result.rx.error is result.rx.value        # True
 ```
 
-An `Error` carries the original exception and the node that failed. Reactive
-operations receiving an `Error` pass it through without being called. Use
+`ReactiveError` carries the original exception and a weak reference to the node that failed. Reactive
+operations receiving a `ReactiveError` pass it through without being called. Use
 `process_failures=True` with `.rx.pipe` when an operation should inspect or
 transform the failure:
 
@@ -51,7 +51,7 @@ handled = result.rx.pipe(
 handled.rx.value  # "failed: division by zero"
 ```
 
-The `.rx.error` property returns the current `Error` or exception, and `None`
+The `.rx.error` property returns the current `ReactiveError` or exception, and `None`
 for an expression without a failure.
 
 ```{eval-rst}
@@ -60,7 +60,7 @@ for an expression without a failure.
 
    rx
    reactive_ops
-   Error
+   ReactiveError
 ```
 
 These methods and properties are available under the `.rx` namespace of reactive expressions ({py:class}`rx`):

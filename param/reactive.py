@@ -125,12 +125,12 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Error:
-    """A reactive value representing an error in an expression."""
+class ReactiveError:
+    """A value representing an error raised while evaluating a reactive expression."""
 
     def __init__(self, exception: Exception, node=None):
         self.exception = exception
-        self.node = node
+        self.node = weakref.ref(node) if node is not None else None
 
     def __bool__(self):
         return False
@@ -139,7 +139,7 @@ class Error:
         return str(self.exception)
 
     def __repr__(self):
-        return f"Error({self.exception!r})"
+        return f"ReactiveError({self.exception!r})"
 
     def __getitem__(self, key):
         return t.cast('t.Any', self.exception)[key]
@@ -275,13 +275,13 @@ class reactive_ops:
 
     @property
     def error(self):
-        """Return the current :class:`Error` or exception, if any."""
+        """Return the current :class:`ReactiveError` or exception, if any."""
         if isinstance(self._reactive, rx):
             try:
                 value = self._reactive._resolve()
             except Exception as exc:
                 return exc
-            return value if isinstance(value, Error) else None
+            return value if isinstance(value, ReactiveError) else None
         return None
 
     def and_(self, other) -> 'rx':
@@ -1488,7 +1488,7 @@ class rx:
         data structure.
     error_mode : {"raise", "propagate"}, default "raise"
         Whether exceptions raised while evaluating the expression should be
-        re-raised or represented as :class:`Error` values.
+        re-raised or represented as :class:`ReactiveError` values.
 
     References
     ----------
@@ -1950,7 +1950,7 @@ class rx:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
                 operation = self._operation
-                if isinstance(obj, Error) and not (operation or {}).get('process_failures'):
+                if isinstance(obj, ReactiveError) and not (operation or {}).get('process_failures'):
                     self._current_ = obj
                     self._skipped = False
                     self._dirty = False
@@ -2002,7 +2002,7 @@ class rx:
                 return self._current_
             except Exception as e:
                 if self._error_mode == 'propagate':
-                    self._current_ = Error(e, self)
+                    self._current_ = ReactiveError(e, self)
                     self._dirty = False
                     self._skipped = False
                     return self._current_
@@ -2327,7 +2327,7 @@ class rx:
         resolved_args = []
         for arg in args:
             val = resolve_value(arg)
-            if isinstance(val, Error) and not operation.get('process_failures'):
+            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
                 return val
             if val is Skip or val is Undefined:
                 raise Skip
@@ -2335,7 +2335,7 @@ class rx:
         resolved_kwargs = {}
         for k, arg in kwargs.items():
             val = resolve_value(arg)
-            if isinstance(val, Error) and not operation.get('process_failures'):
+            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
                 return val
             if val is Skip or val is Undefined:
                 raise Skip

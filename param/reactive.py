@@ -2063,6 +2063,7 @@ class rx:
                 if stale():
                     return
                 self._current_ = shared.rx.value
+                self._skipped = False
                 self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
@@ -2071,6 +2072,7 @@ class rx:
                         await _close_stale(obj)
                         break
                     self._current_ = val
+                    self._skipped = False
                     self._finished_generation = generation
                     trigger.param.trigger('value')
             else:
@@ -2078,6 +2080,7 @@ class rx:
                 if stale():
                     return
                 self._current_ = value
+                self._skipped = False
                 self._finished_generation = generation
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
@@ -2185,8 +2188,9 @@ class rx:
             current = self._current_
             # A node awaiting an asynchronous result still holds the value it
             # computed from the previous inputs; report it as skipped so it is
-            # not propagated as if it were current.
-            self._skipped = self._awaiting
+            # not propagated as if it were current. Preserve an explicit skip
+            # across rereads so a second watcher cannot publish that value.
+            self._skipped = self._skipped or self._awaiting
         self._dirty = False
         if self._method:
             # E.g. `pi = dfi.A` leads to `pi._method` equal to `'A'`.

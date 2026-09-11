@@ -1157,6 +1157,88 @@ def test_reactive_stale_skip_keeps_previous_value():
     assert expr.rx.value == 10
     assert not expr.rx.stale
 
+def test_reactive_stale_gated_by_when_ignores_upstream_change():
+    """
+    A gated expression reflects its inputs as of the last gate event, so an
+    upstream change alone does not make it stale.
+    """
+    class State(param.Parameterized):
+        submit = param.Event()
+
+    state = State()
+    number = rx(1)
+    gated = (number + 1).rx.when(state.param.submit)
+
+    assert gated.rx.value == 2
+    assert not gated.rx.stale
+
+    number.rx.value = 10
+    assert not gated.rx.stale
+    assert gated.rx.value == 2
+
+    state.submit = True
+    assert gated.rx.stale
+    assert gated.rx.value == 11
+    assert not gated.rx.stale
+
+def test_reactive_stale_downstream_of_when_gate():
+    class State(param.Parameterized):
+        submit = param.Event()
+
+    state = State()
+    number = rx(1)
+    expr = (number + 1).rx.when(state.param.submit) + 100
+
+    assert expr.rx.value == 102
+    assert not expr.rx.stale
+
+    number.rx.value = 10
+    assert not expr.rx.stale
+
+    state.submit = True
+    assert expr.rx.stale
+    assert expr.rx.value == 111
+    assert not expr.rx.stale
+
+def test_reactive_stale_where_tracks_selected_branch_only():
+    condition = rx(True)
+    x = rx('x')
+    y = rx('y')
+    expr = condition.rx.where(x, y).rx() + '!'
+
+    assert expr.rx.value == 'x!'
+    assert not expr.rx.stale
+
+    # The unselected branch cannot change the value
+    y.rx.value = 'y2'
+    assert not expr.rx.stale
+
+    x.rx.value = 'x2'
+    assert expr.rx.stale
+    assert expr.rx.value == 'x2!'
+    assert not expr.rx.stale
+
+    condition.rx.value = False
+    assert expr.rx.stale
+    assert expr.rx.value == 'y2!'
+    assert not expr.rx.stale
+
+def test_reactive_stale_on_bound_function():
+    """A bound function evaluates on every read, so it never holds a stale value."""
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    p = P()
+    fn = bind(lambda a: a + 1, p.param.a)
+
+    assert not fn.rx.stale
+    assert fn.rx.value == 2
+    assert not fn.rx.stale
+
+    p.a = 5
+    assert not fn.rx.stale
+    assert fn.rx.value == 6
+
 def test_reactive_upstream_walk_terminates_on_reused_input():
     a = rx(1)
     b = a + 1

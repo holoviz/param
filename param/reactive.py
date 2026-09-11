@@ -914,7 +914,9 @@ class reactive_ops:
         has never been requested. An asynchronous operation stays stale after it
         has been scheduled, since scheduling is not the same as producing a
         value, so ``stale`` and not ``.rx.awaiting`` means the next request for
-        the value recomputes it synchronously.
+        the value recomputes it synchronously. A generator streams values for
+        one set of inputs, so it is stale only until its next emission arrives
+        rather than until it is exhausted.
 
         The whole graph feeding the expression is considered, but only inputs
         that actually invalidate it, so an expression gated with ``.rx.when`` is

@@ -1239,6 +1239,73 @@ def test_reactive_stale_on_bound_function():
     assert not fn.rx.stale
     assert fn.rx.value == 6
 
+async def test_reactive_stale_generator_settles_per_emission():
+    """
+    A generator streams values for one set of inputs, so it is stale only until
+    its next emission arrives rather than until it is exhausted.
+    """
+    async def gen(value):
+        yield value + 1
+        await asyncio.sleep(0.1)
+        yield value + 2
+
+    number = rx(0)
+    expr = number.rx.pipe(gen)
+
+    assert expr.rx.stale
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.stale
+
+    await async_wait_until(lambda: expr.rx.value == 1, interval=10)
+    assert not expr.rx.stale
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+    assert not expr.rx.stale
+
+    # Exhausted, so the last emission stands
+    await asyncio.sleep(0.05)
+    assert not expr.rx.stale
+
+    number.rx.value = 10
+    assert expr.rx.stale
+    await async_wait_until(lambda: expr.rx.value == 11)
+    assert not expr.rx.stale
+
+async def test_reactive_stale_downstream_of_generator_until_emission_reflected():
+    """An emission leaves a downstream expression stale until it recomputes."""
+    async def gen(value):
+        yield value + 1
+
+    gen_node = rx(0).rx.pipe(gen)
+    downstream = gen_node + 100
+
+    assert downstream.rx.stale
+    await async_wait_until(lambda: gen_node.rx.value == 1)
+    assert not gen_node.rx.stale
+
+    # The emission has not been reflected downstream yet
+    assert downstream.rx.stale
+    assert downstream.rx.value == 101
+    assert not downstream.rx.stale
+
+async def test_reactive_stale_root_generator_settles_per_emission():
+    def gen():
+        yield 1
+        time.sleep(0.1)
+        yield 2
+
+    expr = rx(gen) + 100
+
+    assert expr.rx.stale
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.stale
+
+    await async_wait_until(lambda: expr.rx.value == 101, interval=10)
+    assert not expr.rx.stale
+
+    await async_wait_until(lambda: expr.rx.value == 102)
+    assert not expr.rx.stale
+
 def test_reactive_upstream_walk_terminates_on_reused_input():
     a = rx(1)
     b = a + 1

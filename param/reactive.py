@@ -916,13 +916,6 @@ class reactive_ops:
         value, so ``stale`` and not ``.rx.awaiting`` means the next request for
         the value recomputes it synchronously.
 
-        The whole graph feeding the expression is considered, but only inputs
-        that actually invalidate it, so an expression gated with ``.rx.when`` is
-        not stale until its gate fires. Reading this neither resolves nor
-        schedules anything. On a parameter or a bound function it is always
-        ``False``, since reading their value evaluates rather than returning a
-        cached one.
-
         Returns
         -------
         bool

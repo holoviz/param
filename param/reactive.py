@@ -773,12 +773,13 @@ class reactive_ops:
     @property
     def overrides(self) -> _InputOverrides:
         """
-        The overrides interposed on this node's inputs.
+        A mutable mapping of overrides for the inputs of this node.
 
-        A mutable mapping of the inputs this node was wired with, addressed by
-        keyword name or positional index. Setting one makes this node compute as
-        if that input held the given value, leaving the input itself — and
-        therefore its other consumers — untouched. ``None`` unmasks.
+        Allows assigning values in the mapping addressed by keyword
+        name or positional index. Setting one makes this node compute
+        as if that input held the given value, leaving the input
+        itself, and therefore its other consumers, untouched. Setting
+        the override to ``None`` unmasks the original input.
 
         >>> import param
         >>> fx = param.rx(2)
@@ -790,22 +791,19 @@ class reactive_ops:
         >>> expr.rx.value
         20
 
-        An override may also be a reference — a ``Parameter``, an expression, a
-        bound function, a widget — which the node then follows:
+        An override may also be a reference, e.g. a ``Parameter``, an expression, a
+        bound function, a widget, which the node then follows:
 
         >>> expr.rx.overrides['fx'] = param.rx(3)
         >>> expr.rx.value
         30
 
         The override stands in for the input and is resolved in its place, ahead
-        of the guards the input would have faced: it masks an input that failed,
-        has not resolved or skipped, without ``process_failures=True``, while a
-        reference that resolves to ``None`` unmasks and one that has not resolved
-        skips.
+        of the guards the input would have faced, i.e. it even overrides input
+        holding errors or undefined values.
 
         Overrides are node-local, like ``.rx.meta``: a derived node
-        (``expr + 1``) has its own, empty mapping, and an input this node does
-        not have raises ``KeyError``.
+        (``expr + 1``) has its own, empty mapping.
 
         Returns
         -------

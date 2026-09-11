@@ -1985,7 +1985,6 @@ def test_reactive_override_replaces_keyword_input():
 
     assert n.rx.value == 10
     assert dict(n.rx.overrides) == {'factor': 1}
-    # The input itself is untouched.
     assert factor.rx.value == 2
 
 
@@ -2103,7 +2102,6 @@ def test_reactive_override_leaves_other_consumer_of_same_input_alone():
     n.rx.overrides['factor'] = 1
 
     assert n.rx.value == 10
-    # The sibling is neither notified nor recomputed.
     assert watched == []
     assert sibling.rx.value == 102
     assert calls == [2]
@@ -2263,8 +2261,7 @@ def test_reactive_node_without_overrides_allocates_no_channel():
 
 
 def test_reactive_override_propagates_without_any_parameters():
-    # A node built from a parameterless function depends on nothing, so an
-    # override is the only thing that can invalidate it.
+    # Nothing else can invalidate a node that depends on no parameter.
     n = rx(bind(lambda: 10)).rx.pipe(lambda value, factor: value * factor, factor=2)
     derived = n + 1
     assert (n.rx.value, derived.rx.value) == (20, 21)
@@ -2376,8 +2373,7 @@ async def test_reactive_override_masks_while_its_reference_is_unresolved():
 
     n.rx.overrides['factor'] = pending
 
-    # The override is the input now, so an unresolved one skips rather than
-    # falling back to the live input.
+    # The override is the input now, so an unresolved one skips.
     assert n.rx.value == 20
     assert n._skipped
 

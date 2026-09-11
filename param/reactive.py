@@ -909,25 +909,19 @@ class reactive_ops:
         """
         Whether the expression has not yet produced a value for its current inputs.
 
-        ``True`` from the moment an input changes until the expression has
-        recomputed a value from it, and until the first evaluation of an
-        expression whose value has never been requested. While stale, the
-        expression either holds no value at all or the value it computed from
-        the previous inputs, so it should not be treated as up to date.
+        ``True`` from the moment an input invalidates the expression until it
+        recomputes, and before the first evaluation of an expression whose value
+        has never been requested. An asynchronous operation stays stale after it
+        has been scheduled, since scheduling is not the same as producing a
+        value, so ``stale`` and not ``.rx.awaiting`` means the next request for
+        the value recomputes it synchronously.
 
-        Both ways of falling behind the inputs are covered. A synchronous
-        operation is stale until the next request for the value recomputes it.
-        An asynchronous operation additionally remains stale after it has been
-        scheduled, since scheduling is not the same as producing a value;
-        ``.rx.awaiting`` reports that subcase, so ``stale and not awaiting``
-        means the next request for the value recomputes it synchronously.
-
-        The whole graph feeding the expression is considered, not just the node
-        it is accessed on, so an operation downstream of a stale one is itself
-        stale. Reading this neither resolves nor schedules anything, so it
-        reports ``True`` for an expression that has never been evaluated rather
-        than evaluating it. Accessed on a parameter rather than an expression
-        this is always ``False``.
+        The whole graph feeding the expression is considered, but only inputs
+        that actually invalidate it, so an expression gated with ``.rx.when`` is
+        not stale until its gate fires. Reading this neither resolves nor
+        schedules anything. On a parameter or a bound function it is always
+        ``False``, since reading their value evaluates rather than returning a
+        cached one.
 
         Returns
         -------
@@ -937,7 +931,8 @@ class reactive_ops:
 
         Examples
         --------
-        An expression is stale until its value is first requested:
+        An expression is stale until its value is requested, and again once an
+        input changes:
 
         >>> import param
         >>> a = param.rx(1)
@@ -948,16 +943,9 @@ class reactive_ops:
         2
         >>> expr.rx.stale
         False
-
-        Changing an input makes it stale again:
-
         >>> a.rx.value = 2
         >>> expr.rx.stale
         True
-        >>> expr.rx.value
-        3
-        >>> expr.rx.stale
-        False
         """
         reactive = self._reactive
         if not isinstance(reactive, rx):

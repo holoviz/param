@@ -2293,6 +2293,175 @@ def test_reactive_readers_do_not_keep_nodes_alive():
     assert reader.rx.value == 11
 
 
+def test_reactive_override_follows_a_parameter():
+    p = Parameters()
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    reader = n + 1
+    watched = []
+    reader.rx.watch(watched.append)
+    assert n.rx.value == 20
+
+    n.rx.overrides['factor'] = p.param.integer
+
+    assert n.rx.value == 70
+    assert watched == [71]
+
+    p.integer = 3
+
+    assert n.rx.value == 30
+    assert watched == [71, 31]
+    # The mapping reports what it was set to, not the resolved value.
+    assert n.rx.overrides['factor'] is p.param.integer
+
+
+def test_reactive_override_follows_an_expression():
+    other = rx(7)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = other
+    assert n.rx.value == 70
+
+    other.rx.value = 8
+
+    assert n.rx.value == 80
+
+
+def test_reactive_override_follows_a_bound_function():
+    p = Parameters()
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = bind(lambda integer: integer + 1, p.param.integer)
+    assert n.rx.value == 80
+
+    p.integer = 1
+
+    assert n.rx.value == 20
+
+
+def test_reactive_override_follows_nested_references():
+    p = Parameters()
+    n = rx(1).rx.pipe(lambda value, pair: (value, pair), pair=(0, 0))
+    n.rx.overrides['pair'] = [p.param.integer, 2]
+    assert n.rx.value == (1, [7, 2])
+
+    p.integer = 9
+
+    assert n.rx.value == (1, [9, 2])
+
+
+def test_reactive_override_resolving_to_none_unmasks():
+    class Nullable(param.Parameterized):
+        value = param.Number(default=3, allow_None=True)
+
+    p = Nullable()
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = p.param.value
+    assert n.rx.value == 30
+
+    p.value = None
+
+    assert n.rx.value == 20
+
+    p.value = 4
+
+    assert n.rx.value == 40
+
+
+async def test_reactive_override_masks_while_its_reference_is_unresolved():
+    async def slow(value):
+        await asyncio.sleep(0.05)
+        return value * 100
+
+    pending = rx(3).rx.pipe(slow)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    assert n.rx.value == 20
+
+    n.rx.overrides['factor'] = pending
+
+    # The override is the input now, so an unresolved one skips rather than
+    # falling back to the live input.
+    assert n.rx.value == 20
+    assert n._skipped
+
+    await async_wait_until(lambda: n.rx.value == 3000)
+
+
+async def test_reactive_override_follows_an_async_reference():
+    async def slow(value):
+        await asyncio.sleep(0.05)
+        return value * 100
+
+    source = rx(3)
+    pending = source.rx.pipe(slow)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = pending
+
+    await async_wait_until(lambda: n.rx.value == 3000)
+
+    source.rx.value = 4
+
+    await async_wait_until(lambda: n.rx.value == 4000)
+
+
+def test_reactive_override_propagates_a_failed_reference():
+    broken = rx(0, error_mode='propagate').rx.pipe(lambda divisor: 1 / divisor)
+    n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=1)
+    assert n.rx.value == 8
+
+    n.rx.overrides['extra'] = broken
+
+    assert isinstance(n.rx.value, param.ReactiveError)
+
+    n.rx.overrides['extra'] = 5
+
+    assert n.rx.value == 12
+
+
+def test_reactive_override_stops_following_a_replaced_reference():
+    p = Parameters()
+    other = Parameters(integer=100)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = p.param.integer
+    assert n.rx.value == 70
+
+    n.rx.overrides['factor'] = other.param.integer
+    assert n.rx.value == 1000
+
+    p.integer = 3
+
+    assert n.rx.value == 1000
+
+
+def test_reactive_override_stops_following_an_unmasked_reference():
+    p = Parameters()
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = p.param.integer
+    assert n.rx.value == 70
+
+    n.rx.overrides['factor'] = None
+    assert n.rx.value == 20
+
+    watched = []
+    n.rx.watch(watched.append)
+    p.integer = 3
+
+    assert n.rx.value == 20
+    assert watched == []
+    assert not n._operation['override_watchers']
+
+
+def test_reactive_override_reference_does_not_keep_the_node_alive():
+    p = Parameters()
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = p.param.integer
+    assert n.rx.value == 70
+    ref = weakref.ref(n)
+
+    del n
+    gc.collect()
+
+    assert ref() is None
+    assert not p.param.watchers.get('integer', {}).get('value', [])
+
+
 # register_accessor laziness
 
 @pytest.fixture

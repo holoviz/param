@@ -86,6 +86,27 @@ value.rx.overrides['fx'] = None  # None unmasks, so it cannot be an override val
 value.rx.value  # 500
 ```
 
+An override can also be set to a reference — a `Parameter`, another expression, a
+bound function, a widget — and the node then follows it, so a UI control can drive
+one node's view of an input without touching the input itself:
+
+```python
+class Scenario(param.Parameterized):
+    fx = param.Number(default=3)
+
+scenario = Scenario()
+value.rx.overrides['fx'] = scenario.param.fx
+value.rx.value  # 300
+
+scenario.fx = 4
+value.rx.value  # 400
+```
+
+A reference that resolves to `None` unmasks the input, and one that has not
+resolved yet skips, because the override stands in for the input rather than
+alongside it. Replacing or unmasking an override stops following the reference it
+was set to.
+
 The override replaces the input ahead of every guard the node applies to its
 inputs, so it also masks an input that failed, one that has not resolved yet and
 one that skipped, without the node having to be wired with `process_failures=True`:

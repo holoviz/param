@@ -976,6 +976,187 @@ async def test_reactive_awaiting_settles_when_async_ref_yields_nothing():
     assert expr.rx.awaiting
     await async_wait_until(lambda: not expr.rx.awaiting)
 
+def test_reactive_stale_until_first_evaluation():
+    expr = rx(1) + 2
+
+    assert expr.rx.stale
+    assert expr.rx.value == 3
+    assert not expr.rx.stale
+
+def test_reactive_stale_on_parameter():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    assert not P().param.a.rx.stale
+
+def test_reactive_stale_on_input_change():
+    number = rx(1)
+    expr = number + 2
+
+    assert expr.rx.value == 3
+    assert not expr.rx.stale
+
+    number.rx.value = 5
+    assert expr.rx.stale
+    assert expr.rx.value == 7
+    assert not expr.rx.stale
+
+def test_reactive_stale_visible_downstream():
+    """An expression downstream of a stale one is itself stale."""
+    number = rx(1)
+    upstream = number + 2
+    downstream = upstream * 2
+
+    assert downstream.rx.value == 6
+    assert not upstream.rx.stale
+    assert not downstream.rx.stale
+
+    number.rx.value = 5
+    assert upstream.rx.stale
+    assert downstream.rx.stale
+
+    # Resolving the upstream expression does not update the downstream one
+    assert upstream.rx.value == 7
+    assert not upstream.rx.stale
+    assert downstream.rx.stale
+
+def test_reactive_stale_on_bound_function_input_change():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    p = P()
+    expr = rx(bind(lambda a: a + 1, p.param.a)) + 1
+
+    assert expr.rx.value == 3
+    assert not expr.rx.stale
+
+    p.a = 5
+    assert expr.rx.stale
+    assert expr.rx.value == 7
+    assert not expr.rx.stale
+
+def test_reactive_stale_through_operation_argument():
+    number = rx(1)
+    inner = number + 1
+    expr = rx(100) + inner
+
+    assert expr.rx.value == 102
+    assert not expr.rx.stale
+
+    number.rx.value = 5
+    assert expr.rx.stale
+    assert expr.rx.value == 106
+    assert not expr.rx.stale
+
+def test_reactive_stale_not_evaluated_when_read():
+    """Reading stale must not itself resolve the expression."""
+    calls = []
+
+    def count(value):
+        calls.append(value)
+        return value
+
+    expr = rx(1).rx.pipe(count)
+
+    assert expr.rx.stale
+    assert calls == []
+    assert expr.rx.value == 1
+    assert calls == [1]
+
+async def test_reactive_stale_while_async_operation_in_flight():
+    """
+    An async operation is stale from the moment its inputs change until it has
+    produced a value, i.e. scheduling it does not make it up to date.
+    """
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    expr = rx(0).rx.pipe(async_func) + 10
+
+    assert expr.rx.stale
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.stale
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 12)
+    assert not expr.rx.stale
+    assert not expr.rx.awaiting
+
+async def test_reactive_stale_on_async_recompute():
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    number = rx(0)
+    expr = number.rx.pipe(async_func) + 10
+    expr.rx.watch()
+
+    await async_wait_until(lambda: expr.rx.value == 12)
+    assert not expr.rx.stale
+
+    number.rx.value = 5
+    assert expr.rx.stale
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 17)
+    assert not expr.rx.stale
+
+async def test_reactive_stale_while_async_ref_in_flight():
+    class P(param.Parameterized):
+        value = param.Parameter(default=0, allow_refs=True)
+
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return 7
+
+    p = P()
+    expr = p.param.value.rx() + 1
+    expr.rx.watch()
+
+    assert expr.rx.value == 1
+    assert not expr.rx.stale
+
+    p.value = async_func
+    assert expr.rx.stale
+    await async_wait_until(lambda: expr.rx.value == 8)
+    assert not expr.rx.stale
+
+async def test_reactive_stale_branching_pipeline():
+    number = rx(1)
+    base = number + 1
+    branch1 = base + 100
+    branch2 = base + 200
+
+    assert branch1.rx.value == 102
+    assert branch2.rx.value == 202
+    assert not branch1.rx.stale
+    assert not branch2.rx.stale
+
+    number.rx.value = 5
+    assert branch1.rx.stale
+    assert branch2.rx.stale
+
+    assert branch1.rx.value == 106
+    assert not branch1.rx.stale
+    assert branch2.rx.stale
+
+def test_reactive_stale_skip_keeps_previous_value():
+    """A skipped operation deliberately keeps its value, so it is not stale."""
+    def maybe(value):
+        if value < 5:
+            raise Skip
+        return value
+
+    number = rx(10)
+    expr = number.rx.pipe(maybe)
+
+    assert expr.rx.value == 10
+    assert not expr.rx.stale
+
+    number.rx.value = 0
+    assert expr.rx.stale
+    assert expr.rx.value == 10
+    assert not expr.rx.stale
+
 def test_reactive_upstream_walk_terminates_on_reused_input():
     a = rx(1)
     b = a + 1

@@ -70,7 +70,9 @@ the total number of reactive instances in a pipeline.
 Instances also track their dependencies to ensure accurate updates:
 - `_method`: Temporarily stores the method or attribute accessed (e.g., `'head'`
   in `dfi.head()`).
-- `_dirty`: Indicates whether the current value needs re-computation.
+- `_dirty`: Indicates whether the current value needs re-computation. Exposed
+  publicly, together with the state of the nodes feeding a node, as
+  `.rx.stale`.
 - `_current`: Stores the result of the most recent computation.
 
 Benefits and Use Cases
@@ -901,6 +903,69 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return False
         return any(node._settling for node in reactive._upstream())
+
+    @property
+    def stale(self) -> builtins.bool:
+        """
+        Whether the expression has not yet produced a value for its current inputs.
+
+        ``True`` from the moment an input changes until the expression has
+        recomputed a value from it, and until the first evaluation of an
+        expression whose value has never been requested. While stale, the
+        expression either holds no value at all or the value it computed from
+        the previous inputs, so it should not be treated as up to date.
+
+        Both ways of falling behind the inputs are covered. A synchronous
+        operation is stale until the next request for the value recomputes it.
+        An asynchronous operation additionally remains stale after it has been
+        scheduled, since scheduling is not the same as producing a value;
+        ``.rx.awaiting`` reports that subcase, so ``stale and not awaiting``
+        means the next request for the value recomputes it synchronously.
+
+        The whole graph feeding the expression is considered, not just the node
+        it is accessed on, so an operation downstream of a stale one is itself
+        stale. Reading this neither resolves nor schedules anything, so it
+        reports ``True`` for an expression that has never been evaluated rather
+        than evaluating it. Accessed on a parameter rather than an expression
+        this is always ``False``.
+
+        Returns
+        -------
+        bool
+            ``True`` while the current value does not reflect the current
+            inputs, ``False`` otherwise.
+
+        Examples
+        --------
+        An expression is stale until its value is first requested:
+
+        >>> import param
+        >>> a = param.rx(1)
+        >>> expr = a + 1
+        >>> expr.rx.stale
+        True
+        >>> expr.rx.value
+        2
+        >>> expr.rx.stale
+        False
+
+        Changing an input makes it stale again:
+
+        >>> a.rx.value = 2
+        >>> expr.rx.stale
+        True
+        >>> expr.rx.value
+        3
+        >>> expr.rx.stale
+        False
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return False
+        return any(
+            node._dirty or node._root._dirty_obj or node._settling
+            for node in reactive._upstream()
+        )
 
     def updating(self) -> 'rx':
         """

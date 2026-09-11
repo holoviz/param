@@ -56,75 +56,43 @@ for an expression without a failure.
 
 ### Overriding an input
 
-`.rx.overrides` interposes a value on one of a node's inputs, addressed by keyword
-name or by positional index. The node then computes as if that input held the
-given value:
+`.rx.overrides` makes one node compute as if one of its inputs held a different
+value, addressed by keyword name or positional index. It does not set the input, so
+every other consumer of that input keeps seeing the live value, and only this node
+and the nodes reading its result are invalidated. Setting it back to `None` unmasks
+the original input:
 
 ```python
 import param
 
 fx = param.rx(2)
-price = param.rx(100)
-value = price.rx.pipe(lambda price, fx: price * fx, fx=fx)
+value = param.rx(100).rx.pipe(lambda price, fx: price * fx, fx=fx)
 value.rx.value  # 200
 
 value.rx.overrides['fx'] = 1
 value.rx.value  # 100
-```
 
-This is not the same as setting `fx`: the interposition is local to this node's
-consumption of the input, so every other consumer of `fx` keeps seeing the live
-value, and only this node and the nodes reading its result are invalidated. While
-an input is overridden its updates are masked, and unmasking picks up whatever
-value arrived in the meantime:
-
-```python
 fx.rx.value = 5
-value.rx.value  # still 100
+value.rx.value  # still 100, the override masks the update
 
-value.rx.overrides['fx'] = None  # None unmasks, so it cannot be an override value
+value.rx.overrides['fx'] = None
 value.rx.value  # 500
 ```
 
-An override can also be set to a reference — a `Parameter`, another expression, a
-bound function, a widget — and the node then follows it, so a UI control can drive
-one node's view of an input without touching the input itself:
+An override may also be a reference, e.g. a `Parameter`, an expression, or a bound
+function, the node then follows, so a UI control can drive one
+node's view of an input:
 
 ```python
 class Scenario(param.Parameterized):
     fx = param.Number(default=3)
 
-scenario = Scenario()
-value.rx.overrides['fx'] = scenario.param.fx
+value.rx.overrides['fx'] = Scenario().param.fx
 value.rx.value  # 300
-
-scenario.fx = 4
-value.rx.value  # 400
 ```
 
-A reference that resolves to `None` unmasks the input, and one that has not
-resolved yet skips, because the override stands in for the input rather than
-alongside it. Replacing or unmasking an override stops following the reference it
-was set to.
-
-The override replaces the input ahead of every guard the node applies to its
-inputs, so it also masks an input that failed, one that has not resolved yet and
-one that skipped, without the node having to be wired with `process_failures=True`:
-
-```python
-broken = param.rx(0, error_mode="propagate").rx.pipe(lambda divisor: 1 / divisor)
-total = param.rx(7).rx.pipe(lambda value, extra: value + extra, extra=broken)
-isinstance(total.rx.value, param.ReactiveError)  # True
-
-total.rx.overrides['extra'] = 5
-total.rx.value  # 12
-```
-
-Overrides are node-local, like `.rx.meta`: a node derived from this one
-(`value + 1`) has its own, empty mapping, and only an input the node was wired
-with can be overridden, so `value.rx.overrides['unknown'] = 1` raises `KeyError`.
-Overriding is a plain replacement; a library that needs to merge an override into
-the live value should compute the merged value itself.
+The override stands in for the input and is resolved in its place, ahead of the
+guards the input would have faced.
 
 ```{eval-rst}
 .. autosummary::

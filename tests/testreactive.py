@@ -1967,6 +1967,332 @@ def test_reactive_meta_not_available_on_parameter_rx():
         p.param.integer.rx.meta
 
 
+# .rx.overrides
+
+def test_reactive_overrides_start_empty():
+    n = rx(1).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    assert dict(n.rx.overrides) == {}
+    assert len(n.rx.overrides) == 0
+    assert 'factor' not in n.rx.overrides
+
+
+def test_reactive_override_replaces_keyword_input():
+    factor = rx(2)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=factor)
+    assert n.rx.value == 20
+
+    n.rx.overrides['factor'] = 1
+
+    assert n.rx.value == 10
+    assert dict(n.rx.overrides) == {'factor': 1}
+    # The input itself is untouched.
+    assert factor.rx.value == 2
+
+
+def test_reactive_override_replaces_positional_input():
+    n = rx(1) + rx(2)
+    assert n.rx.value == 3
+
+    n.rx.overrides[0] = 10
+
+    assert n.rx.value == 11
+
+
+def test_reactive_override_accepts_negative_position():
+    n = rx(1).rx.pipe(lambda value, a, b: (value, a, b), 2, 3)
+    n.rx.overrides[-1] = 30
+    assert n.rx.value == (1, 2, 30)
+
+
+def test_reactive_override_masks_upstream_tick_until_unmasked():
+    factor = rx(2)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=factor)
+    n.rx.overrides['factor'] = 1
+    assert n.rx.value == 10
+
+    factor.rx.value = 5
+
+    assert n.rx.value == 10
+
+    n.rx.overrides['factor'] = None
+
+    assert n.rx.value == 50
+    assert dict(n.rx.overrides) == {}
+
+
+def test_reactive_override_deleted_unmasks():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = 1
+    assert n.rx.value == 10
+
+    del n.rx.overrides['factor']
+
+    assert n.rx.value == 20
+
+
+def test_reactive_override_unmasking_dormant_input_is_a_noop():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = None
+    assert n.rx.value == 20
+    with pytest.raises(KeyError):
+        del n.rx.overrides['factor']
+
+
+def test_reactive_override_invalidates_downstream_nodes():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    derived = n + 1
+    branched = (n / 2).rx.pipe(lambda value: [value])
+    assert derived.rx.value == 21
+    assert branched.rx.value == [10]
+
+    n.rx.overrides['factor'] = 1
+
+    assert derived.rx.value == 11
+    assert branched.rx.value == [5]
+
+
+def test_reactive_override_notifies_watcher_on_node_and_downstream():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    derived = n + 1
+    on_node, on_derived = [], []
+    n.rx.watch(on_node.append)
+    derived.rx.watch(on_derived.append)
+
+    n.rx.overrides['factor'] = 1
+
+    assert on_node == [10]
+    assert on_derived == [11]
+
+
+def test_reactive_override_notifies_bound_consumer():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    values = []
+    bind(values.append, n, watch=True)
+
+    n.rx.overrides['factor'] = 1
+
+    assert values == [10]
+
+
+def test_reactive_override_notifies_consumer_reading_node_as_reference():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    consumer = rx(1).rx.pipe(lambda value, other: value + other, other=n)
+    assert consumer.rx.value == 21
+
+    n.rx.overrides['factor'] = 1
+
+    assert consumer.rx.value == 11
+
+
+def test_reactive_override_leaves_other_consumer_of_same_input_alone():
+    factor = rx(2)
+    calls = []
+
+    def other(value, factor):
+        calls.append(factor)
+        return value + factor
+
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=factor)
+    sibling = rx(100).rx.pipe(other, factor=factor)
+    watched = []
+    sibling.rx.watch(watched.append)
+    assert n.rx.value == 20
+    assert sibling.rx.value == 102
+    assert calls == [2]
+
+    n.rx.overrides['factor'] = 1
+
+    assert n.rx.value == 10
+    # The sibling is neither notified nor recomputed.
+    assert watched == []
+    assert sibling.rx.value == 102
+    assert calls == [2]
+
+
+def test_reactive_override_masks_failed_input():
+    failing = rx(0, error_mode='propagate').rx.pipe(lambda divisor: 1 / divisor)
+    n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=failing)
+    assert isinstance(n.rx.value, param.ReactiveError)
+
+    n.rx.overrides['extra'] = 5
+
+    assert n.rx.value == 12
+
+    n.rx.overrides['extra'] = None
+
+    assert isinstance(n.rx.value, param.ReactiveError)
+
+
+def test_reactive_override_masks_skipped_input():
+    def skipping(value):
+        raise Skip
+
+    skipped = rx(1).rx.pipe(skipping)
+    n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=skipped)
+    assert n.rx.value is None
+
+    n.rx.overrides['extra'] = 2
+
+    assert n.rx.value == 9
+
+
+async def test_reactive_override_masks_unresolved_async_input():
+    async def slow(value):
+        await asyncio.sleep(0.05)
+        return value * 2
+
+    pending = rx(3).rx.pipe(slow)
+    n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=pending)
+    assert n.rx.value is None
+
+    n.rx.overrides['extra'] = 5
+
+    assert n.rx.value == 12
+
+    n.rx.overrides['extra'] = None
+
+    await async_wait_until(lambda: n.rx.value == 13)
+
+
+def test_reactive_override_does_not_evaluate_the_masked_input():
+    calls = []
+
+    def counted(value):
+        calls.append(value)
+        return value
+
+    source = rx(2)
+    masked = source.rx.pipe(counted)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=masked)
+    assert n.rx.value == 20
+    assert calls == [2]
+
+    n.rx.overrides['factor'] = 1
+    assert n.rx.value == 10
+
+    source.rx.value = 3
+
+    assert n.rx.value == 10
+    assert calls == [2]
+
+
+def test_reactive_override_applies_to_branches():
+    n = rx([1, 2]).rx.pipe(
+        lambda value, factor: [v * factor for v in value], factor=rx(2)
+    )
+    first, second = n
+    assert (first.rx.value, second.rx.value) == (2, 4)
+
+    n.rx.overrides['factor'] = 10
+
+    assert (first.rx.value, second.rx.value) == (10, 20)
+
+
+def test_reactive_overrides_not_inherited_by_derived_node():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n.rx.overrides['factor'] = 1
+    derived = n + 1
+
+    assert dict(derived.rx.overrides) == {}
+    with pytest.raises(KeyError, match="not an input of this node"):
+        derived.rx.overrides['factor'] = 2
+
+
+def test_reactive_overrides_not_inherited_by_branch():
+    n = rx([1, 2]).rx.pipe(
+        lambda value, factor: [v * factor for v in value], factor=rx(2)
+    )
+    n.rx.overrides['factor'] = 10
+    first = n[0]
+
+    assert dict(first.rx.overrides) == {}
+    with pytest.raises(KeyError, match="not an input of this node"):
+        first.rx.overrides['factor'] = 2
+
+
+def test_reactive_overrides_rejects_unknown_input():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, 5, factor=rx(2))
+    with pytest.raises(KeyError, match="positional indices 0-0 and keywords 'factor'"):
+        n.rx.overrides['unknown'] = 1
+    with pytest.raises(KeyError, match="not an input of this node"):
+        n.rx.overrides[1] = 1
+    with pytest.raises(KeyError):
+        n.rx.overrides['factor']
+
+
+def test_reactive_overrides_rejects_unsupported_key():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    with pytest.raises(TypeError, match="addressed by keyword name or positional index"):
+        n.rx.overrides[object()] = 1
+
+
+def test_reactive_overrides_mapping_interface():
+    n = rx(10).rx.pipe(lambda value, a, factor: value, 1, factor=rx(2))
+    overrides = n.rx.overrides
+    assert repr(overrides) == 'overrides({})'
+    assert overrides.get('factor') is None
+
+    overrides.update({'factor': 3, 0: 4})
+
+    assert dict(overrides) == {'factor': 3, 0: 4}
+    assert list(overrides) == ['factor', 0]
+    assert len(overrides) == 2
+    assert repr(overrides) == "overrides({'factor': 3, 0: 4})"
+
+    overrides.clear()
+
+    assert dict(n.rx.overrides) == {}
+
+
+def test_reactive_overrides_not_available_on_input_node():
+    with pytest.raises(AttributeError, match="applies an operation to inputs"):
+        rx(1).rx.overrides
+
+
+def test_reactive_overrides_not_available_on_parameter_rx():
+    p = Parameters()
+    with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+        p.param.integer.rx.overrides
+
+
+def test_reactive_node_without_overrides_allocates_no_channel():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=2)
+    assert n.rx.value == 20
+    assert n._override_channel is None
+    assert n._operation.get('overrides') is None
+
+
+def test_reactive_override_propagates_without_any_parameters():
+    # A node built from a parameterless function depends on nothing, so an
+    # override is the only thing that can invalidate it.
+    n = rx(bind(lambda: 10)).rx.pipe(lambda value, factor: value * factor, factor=2)
+    derived = n + 1
+    assert (n.rx.value, derived.rx.value) == (20, 21)
+
+    n.rx.overrides['factor'] = 1
+
+    assert (n.rx.value, derived.rx.value) == (10, 11)
+
+
+def test_reactive_readers_do_not_keep_nodes_alive():
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    refs = []
+    for _ in range(3):
+        reader = n + 1
+        refs.append(weakref.ref(reader))
+        del reader
+    gc.collect()
+
+    assert all(ref() is None for ref in refs)
+    assert not n._readers
+
+    # A surviving reader is still invalidated.
+    reader = n + 1
+    assert reader.rx.value == 21
+    n.rx.overrides['factor'] = 1
+    assert reader.rx.value == 11
+
+
 # register_accessor laziness
 
 @pytest.fixture

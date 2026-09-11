@@ -976,6 +976,88 @@ async def test_reactive_awaiting_settles_when_async_ref_yields_nothing():
     assert expr.rx.awaiting
     await async_wait_until(lambda: not expr.rx.awaiting)
 
+async def test_reactive_awaiting_settles_when_async_gen_operation_yields_nothing():
+    """
+    A generator operation whose stream ends without yielding declined to
+    produce a value, so it must settle rather than stay in flight forever.
+    """
+    async def gen(value):
+        return
+        yield  # pragma: no cover
+
+    expr = rx(1).rx.pipe(gen)
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: not expr.rx.awaiting)
+    assert expr._skipped
+
+async def test_reactive_awaiting_settles_when_gen_operation_yields_nothing():
+    """A synchronous generator operation is wrapped, so it settles too."""
+    def gen(value):
+        return
+        yield  # pragma: no cover
+
+    expr = rx(1).rx.pipe(gen)
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: not expr.rx.awaiting)
+
+async def test_reactive_awaiting_settles_when_async_gen_stream_becomes_empty():
+    """
+    A stream that yielded for earlier inputs and yields nothing for the current
+    ones settles, keeping its previous value without publishing it again.
+    """
+    async def gen(value):
+        if value > 0:
+            yield value * 2
+
+    number = rx(1)
+    expr = number.rx.pipe(gen)
+    items = []
+    expr.rx.watch(items.append)
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+    assert items == [2]
+    assert not expr.rx.awaiting
+
+    number.rx.value = 0
+    await async_wait_until(lambda: not expr.rx.awaiting)
+    assert items == [2]
+    assert expr._skipped
+    assert expr.rx.value == 2
+
+    # A later stream that does yield recovers
+    number.rx.value = 5
+    await async_wait_until(lambda: items == [2, 10])
+    assert not expr.rx.awaiting
+    assert not expr._skipped
+
+async def test_reactive_awaiting_superseded_stream_does_not_claim_generation():
+    """
+    A stream abandoned because its inputs changed must not settle the newer
+    resolution that superseded it.
+    """
+    started = []
+
+    async def gen(value):
+        started.append(value)
+        await asyncio.sleep(0.05)
+        yield value * 2
+
+    number = rx(1)
+    expr = number.rx.pipe(gen)
+    expr.rx.watch()
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    number.rx.value = 2
+    number.rx.value = 3
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 6)
+    assert not expr.rx.awaiting
+
 def test_reactive_upstream_walk_terminates_on_reused_input():
     a = rx(1)
     b = a + 1

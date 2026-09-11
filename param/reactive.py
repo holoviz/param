@@ -2075,6 +2075,18 @@ class rx:
                     self._skipped = False
                     self._finished_generation = generation
                     trigger.param.trigger('value')
+                else:
+                    if not stale() and self._finished_generation != generation:
+                        # The stream ended without yielding anything for these
+                        # inputs, so it declined to produce a value, like an
+                        # operation raising Skip. Claim the generation anyway,
+                        # otherwise the node stays in flight forever even though
+                        # nothing is running, and mark it skipped so the value it
+                        # computed from earlier inputs is not propagated as if it
+                        # were current. Nothing is triggered because there is no
+                        # new value to publish.
+                        self._skipped = True
+                        self._finished_generation = generation
             else:
                 value = await obj
                 if stale():

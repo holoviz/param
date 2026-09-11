@@ -70,7 +70,9 @@ the total number of reactive instances in a pipeline.
 Instances also track their dependencies to ensure accurate updates:
 - `_method`: Temporarily stores the method or attribute accessed (e.g., `'head'`
   in `dfi.head()`).
-- `_dirty`: Indicates whether the current value needs re-computation.
+- `_dirty`: Indicates whether the current value needs re-computation. Exposed
+  publicly, together with the state of the nodes feeding a node, as
+  `.rx.stale`.
 - `_current`: Stores the result of the most recent computation.
 
 Benefits and Use Cases
@@ -901,6 +903,50 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return False
         return any(node._settling for node in reactive._upstream())
+
+    @property
+    def stale(self) -> builtins.bool:
+        """
+        Whether the expression has not yet produced a value for its current inputs.
+
+        ``True`` from the moment an input invalidates the expression until it
+        recomputes, and before the first evaluation of an expression whose value
+        has never been requested. An asynchronous operation stays stale after it
+        has been scheduled, since scheduling is not the same as producing a
+        value, so ``stale`` and not ``.rx.awaiting`` means the next request for
+        the value recomputes it synchronously.
+
+        Returns
+        -------
+        bool
+            ``True`` while the current value does not reflect the current
+            inputs, ``False`` otherwise.
+
+        Examples
+        --------
+        An expression is stale until its value is requested, and again once an
+        input changes:
+
+        >>> import param
+        >>> a = param.rx(1)
+        >>> expr = a + 1
+        >>> expr.rx.stale
+        True
+        >>> expr.rx.value
+        2
+        >>> expr.rx.stale
+        False
+        >>> a.rx.value = 2
+        >>> expr.rx.stale
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return False
+        return any(
+            node._dirty or node._root._dirty_obj or node._settling
+            for node in reactive._upstream()
+        )
 
     def updating(self) -> 'rx':
         """

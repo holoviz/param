@@ -99,7 +99,8 @@ import warnings
 import weakref
 
 from collections.abc import (
-    AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator, Sized
+    AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator,
+    MutableMapping, Sized
 )
 from itertools import chain
 from functools import partial
@@ -219,6 +220,97 @@ class Resolver(Parameterized):
 class NestedResolver(Resolver):
 
     object: t.Any = Parameter(allow_refs=True, nested_refs=True)
+
+
+class InputOverrides(MutableMapping):
+    """
+    The mapping returned by :attr:`reactive_ops.overrides`.
+
+    Keys address the inputs a node was wired with, by keyword name or positional
+    index. Values are either plain values or references the node follows.
+    Deleting a key unmasks the input again.
+    """
+
+    def __init__(self, node: rx):
+        self._node = node
+
+    @property
+    def _overrides(self) -> dict[t.Any, t.Any] | None:
+        operation = self._node._operation
+        return None if operation is None else operation.get('overrides')
+
+    def _resolve_key(self, key: t.Any) -> t.Any:
+        operation = t.cast('dict', self._node._operation)
+        args = operation.get('args') or ()
+        kwargs = operation.get('kwargs') or {}
+        if isinstance(key, str):
+            if key in kwargs:
+                return key
+        elif isinstance(key, int) and not isinstance(key, bool):
+            if -len(args) <= key < len(args):
+                return key + len(args) if key < 0 else key
+        else:
+            raise TypeError(
+                "Input overrides are addressed by keyword name or positional "
+                f"index, not by {type(key).__name__!r}."
+            )
+        nargs, names = len(args), sorted(kwargs)
+        inputs = []
+        if nargs:
+            inputs.append(f"positional indices 0-{nargs-1}")
+        if names:
+            inputs.append("keywords " + ", ".join(repr(name) for name in names))
+        raise KeyError(
+            f"{key!r} is not an input of this node, which has "
+            f"{' and '.join(inputs) if inputs else 'no inputs'}. Only an input "
+            "the node was wired with can be overridden."
+        )
+
+    def _unwatch(self, key: t.Any):
+        """Stop following the references a previous override was set to."""
+        operation = t.cast('dict', self._node._operation)
+        for owner, invalidator in (operation.get('override_watchers') or {}).pop(key, ()):
+            _remove_watcher(weakref.ref(owner), weakref.ref(invalidator))
+
+    def __getitem__(self, key: t.Any) -> t.Any:
+        key = self._resolve_key(key)
+        overrides = self._overrides
+        if not overrides or key not in overrides:
+            raise KeyError(key)
+        return overrides[key]
+
+    def __setitem__(self, key: t.Any, value: t.Any):
+        key = self._resolve_key(key)
+        node = self._node
+        operation = t.cast('dict', node._operation)
+        overrides = operation.get('overrides')
+        if overrides is None:
+            overrides = operation['overrides'] = {}
+        self._unwatch(key)
+        overrides[key] = value
+        refs = resolve_ref(value, recursive=True)
+        if refs:
+            watchers = operation.setdefault('override_watchers', {})
+            watchers[key] = node._watch_override(refs)
+        node._invalidate_overrides()
+
+    def __delitem__(self, key: t.Any):
+        key = self._resolve_key(key)
+        overrides = self._overrides
+        if not overrides or key not in overrides:
+            raise KeyError(key)
+        del overrides[key]
+        self._unwatch(key)
+        self._node._invalidate_overrides()
+
+    def __iter__(self) -> Iterator[t.Any]:
+        return iter(self._overrides or {})
+
+    def __len__(self) -> int:
+        return len(self._overrides or {})
+
+    def __repr__(self) -> str:
+        return f"overrides({(self._overrides or {})!r})"
 
 
 class reactive_ops:
@@ -672,6 +764,68 @@ class reactive_ops:
         if rxi._meta is None:
             rxi._meta = {}
         return rxi._meta
+
+    @property
+    def overrides(self) -> InputOverrides:
+        """
+        A mutable mapping of overrides for the inputs of this node.
+
+        Allows assigning values in the mapping addressed by keyword
+        name or positional index. Setting one makes this node compute
+        as if that input held the given value, leaving the input
+        itself, and therefore its other consumers, untouched. Deleting
+        the key unmasks the original input.
+
+        >>> import param
+        >>> fx = param.rx(2)
+        >>> expr = param.rx(10).rx.pipe(lambda value, fx: value * fx, fx=fx)
+        >>> expr.rx.overrides['fx'] = 1
+        >>> expr.rx.value
+        10
+        >>> del expr.rx.overrides['fx']
+        >>> expr.rx.value
+        20
+
+        An override may also be a reference, e.g. a ``Parameter``, an expression, a
+        bound function, a widget, which the node then follows:
+
+        >>> expr.rx.overrides['fx'] = param.rx(3)
+        >>> expr.rx.value
+        30
+
+        The override stands in for the input and is resolved in its place, ahead
+        of the guards the input would have faced, i.e. it even overrides input
+        holding errors or undefined values. Any value masks the input, including
+        ``None``, so an override that follows a reference keeps masking when that
+        reference happens to hold ``None``.
+
+        Overrides are node-local, like ``.rx.meta``: a derived node
+        (``expr + 1``) has its own, empty mapping.
+
+        Returns
+        -------
+        InputOverrides
+            The mutable mapping of overridden inputs for this node.
+
+        Raises
+        ------
+        AttributeError
+            If the ``.rx`` namespace does not belong to an ``rx`` node, or if
+            the node has no inputs because it is the input of an expression.
+        """
+        rxi = self._reactive
+        if not isinstance(rxi, rx):
+            raise AttributeError(
+                "'.rx.overrides' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(rxi).__name__!r} object."
+            )
+        if rxi._operation is None:
+            raise AttributeError(
+                "'.rx.overrides' is only available on a node that applies an "
+                "operation to inputs. This node is the input of an expression; "
+                "set its value with '.rx.value' instead."
+            )
+        return InputOverrides(rxi)
 
     def not_(self) -> 'rx':
         """
@@ -1679,6 +1833,13 @@ class rx:
 
     _method_handlers: dict[str, Callable] = {}
 
+    # Declared on the class so a node using none of this allocates nothing.
+    _override_channel: Trigger | None = None
+
+    _readers: list[weakref.ref] | None = None
+
+    _ref_binding: Callable[..., t.Any] | None = None
+
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
@@ -1812,6 +1973,10 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
+        if self._prev is not None:
+            self._prev._register_reader(self)
+        if _shared is not None:
+            _shared._register_reader(self)
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
@@ -2054,7 +2219,7 @@ class rx:
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
             self._watch_invalidation(params[0].owner, self._invalidate_current, [p.name for p in params])
 
-    def _watch_invalidation(self, owner, method, names):
+    def _watch_invalidation(self, owner, method, names) -> _WeakInvalidator:
         """
         Register a *weak* invalidation watcher on a source parameter.
 
@@ -2069,6 +2234,7 @@ class rx:
         weakref.finalize(
             self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
         )
+        return invalidator
 
     def _invalidate_current(self, *events):
         if all(event.obj is self._trigger for event in events):
@@ -2079,6 +2245,83 @@ class rx:
     def _invalidate_obj(self, *events):
         t.cast('t.Any', self._root)._dirty_obj = True
         self._error_state = None
+
+    def _register_reader(self, reader: Self):
+        """
+        Record that ``reader`` computes its value from this node.
+
+        The reverse of ``_prev``, and of ``_shared`` so that the mirror a branch
+        creates is included. It carries the invalidation no parameter can, i.e.
+        an override, and is weak so that a node is not kept alive by the node it
+        derives from; dead entries drop out through the reference callback.
+        """
+        readers = self._readers
+        if readers is None:
+            readers = self._readers = []
+        readers.append(weakref.ref(reader, readers.remove))
+
+    def _ensure_override_channel(self) -> Trigger:
+        """
+        Return this node's override channel, creating it on first use.
+
+        The channel is the parameter a consumer watches to hear that this node's
+        inputs were overridden. A consumer resolves what it depends on once, when
+        it is created, so the channel is minted as soon as a node is consumed as
+        a reference (see ``_rx_transform``) rather than when an override is first
+        set. A node never consumed as a reference never allocates one.
+        """
+        if self._override_channel is None:
+            self._override_channel = Trigger(internal=True)
+        return self._override_channel
+
+    def _invalidate_overrides(self, *events):
+        """
+        Invalidate this node and its readers after one of its overrides changed.
+
+        An override is not a parameter, so ``_setup_invalidations`` does not cover
+        it: dirty this node and everything reading its result, then notify the
+        consumers watching their override channels. Nodes reading the same
+        *inputs* without reading this node's result are deliberately left alone.
+        """
+        nodes = []
+        seen = set()
+        queue = [self] if self._shared is None else [self, self._shared]
+        while queue:
+            node = queue.pop()
+            if id(node) in seen:
+                continue
+            seen.add(id(node))
+            nodes.append(node)
+            for ref in tuple(node._readers or ()):
+                reader = ref()
+                if reader is not None:
+                    queue.append(reader)
+        for node in nodes:
+            node._dirty = True
+            node._error_state = None
+        for node in nodes:
+            channel = node._override_channel
+            if channel is not None:
+                channel.param.trigger('value')
+
+    def _watch_override(self, refs) -> list[tuple[Parameterized, _WeakInvalidator]]:
+        """
+        Watch the references an override is set to.
+
+        They cannot join the node's parameters, which are fixed when it is
+        constructed, so they are routed to ``_invalidate_overrides`` instead. The
+        watchers are returned so unmasking or replacing the override can remove
+        them.
+        """
+        watchers = []
+        for _, params in full_groupby(refs, lambda x: id(x.owner)):
+            owner = params[0].owner
+            if owner is None:
+                continue
+            watchers.append((owner, self._watch_invalidation(
+                owner, self._invalidate_overrides, [p.name for p in params]
+            )))
+        return watchers
 
     async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
@@ -2560,27 +2803,37 @@ class rx:
             'expression value.'
         )
 
+    def _resolve_input(self, arg):
+        """
+        Resolve one input of an operation, or the override standing in for it.
+
+        Raises ``Skip`` for an input that is settling, unresolved or skipped, and
+        returns a ``ReactiveError`` for the caller to propagate or hand on.
+        """
+        if any(ref._settling for ref in _iter_rx(arg)):
+            raise Skip
+        val = resolve_value(arg)
+        if val is Skip or val is Undefined:
+            raise Skip
+        return val
+
     def _eval_operation(self, obj, operation):
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
+        # Resolving an override in its input's place is what lets it mask an
+        # input that failed or never arrived (see .rx.overrides).
+        overrides = operation.get('overrides') or {}
+        process_failures = operation.get('process_failures')
         resolved_args = []
-        for arg in args:
-            if any(ref._settling for ref in _iter_rx(arg)):
-                raise Skip
-            val = resolve_value(arg)
-            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
+        for i, arg in enumerate(args):
+            val = self._resolve_input(overrides[i] if i in overrides else arg)
+            if isinstance(val, ReactiveError) and not process_failures:
                 return val
-            if val is Skip or val is Undefined:
-                raise Skip
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
-            if any(ref._settling for ref in _iter_rx(arg)):
-                raise Skip
-            val = resolve_value(arg)
-            if isinstance(val, ReactiveError) and not operation.get('process_failures'):
+            val = self._resolve_input(overrides[k] if k in overrides else arg)
+            if isinstance(val, ReactiveError) and not process_failures:
                 return val
-            if val is Skip or val is Undefined:
-                raise Skip
             resolved_kwargs[k] = val
         if isinstance(fn, str):
             obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
@@ -2626,11 +2879,19 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
 def _rx_transform(obj):
     if not isinstance(obj, rx):
         return obj
+    binding = obj._ref_binding
+    if binding is not None:
+        return binding
     def resolve(*_):
         value = obj.rx.value
         if obj._skipped or value is Skip or value is Undefined:
             raise Skip
         return value
-    return bind(resolve, *obj._params)
+    # Binding the override channel wakes a consumer created before an override
+    # exists. Caching is sound because a node's parameters are fixed at
+    # construction, and this runs on every resolve of the reference.
+    binding = bind(resolve, *obj._params, obj._ensure_override_channel().param.value)
+    obj._ref_binding = binding
+    return binding
 
 register_reference_transform(_rx_transform)

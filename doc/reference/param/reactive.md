@@ -59,7 +59,7 @@ for an expression without a failure.
 `.rx.overrides` makes one node compute as if one of its inputs held a different
 value, addressed by keyword name or positional index. It does not set the input, so
 every other consumer of that input keeps seeing the live value, and only this node
-and the nodes reading its result are invalidated. Setting it back to `None` unmasks
+and the nodes reading its result are invalidated. Deleting the key unmasks
 the original input:
 
 ```python
@@ -75,7 +75,7 @@ value.rx.value  # 100
 fx.rx.value = 5
 value.rx.value  # still 100, the override masks the update
 
-value.rx.overrides['fx'] = None
+del value.rx.overrides['fx']
 value.rx.value  # 500
 ```
 
@@ -92,7 +92,8 @@ value.rx.value  # 300
 ```
 
 The override stands in for the input and is resolved in its place, ahead of the
-guards the input would have faced.
+guards the input would have faced. Any value masks the input, including `None`, so
+an override following a reference keeps masking when that reference holds `None`.
 
 ```{eval-rst}
 .. autosummary::
@@ -101,6 +102,7 @@ guards the input would have faced.
    rx
    reactive_ops
    ReactiveError
+   InputOverrides
 ```
 
 These methods and properties are available under the `.rx` namespace of reactive expressions ({py:class}`rx`):

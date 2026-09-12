@@ -220,13 +220,13 @@ class NestedResolver(Resolver):
     object: t.Any = Parameter(allow_refs=True, nested_refs=True)
 
 
-class _InputOverrides(MutableMapping):
+class InputOverrides(MutableMapping):
     """
     The mapping returned by :attr:`reactive_ops.overrides`.
 
     Keys address the inputs a node was wired with, by keyword name or positional
     index. Values are either plain values or references the node follows.
-    Assigning ``None``, or deleting a key, unmasks the input again.
+    Deleting a key unmasks the input again.
     """
 
     def __init__(self, node: rx):
@@ -282,13 +282,6 @@ class _InputOverrides(MutableMapping):
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides')
-        if value is None:
-            # Unmasking an input that was never overridden is not an error.
-            if overrides and key in overrides:
-                del overrides[key]
-                self._unwatch(key)
-                node._invalidate_overrides()
-            return
         if overrides is None:
             overrides = operation['overrides'] = {}
         self._unwatch(key)
@@ -771,15 +764,15 @@ class reactive_ops:
         return rxi._meta
 
     @property
-    def overrides(self) -> _InputOverrides:
+    def overrides(self) -> InputOverrides:
         """
         A mutable mapping of overrides for the inputs of this node.
 
         Allows assigning values in the mapping addressed by keyword
         name or positional index. Setting one makes this node compute
         as if that input held the given value, leaving the input
-        itself, and therefore its other consumers, untouched. Setting
-        the override to ``None`` unmasks the original input.
+        itself, and therefore its other consumers, untouched. Deleting
+        the key unmasks the original input.
 
         >>> import param
         >>> fx = param.rx(2)
@@ -787,7 +780,7 @@ class reactive_ops:
         >>> expr.rx.overrides['fx'] = 1
         >>> expr.rx.value
         10
-        >>> expr.rx.overrides['fx'] = None
+        >>> del expr.rx.overrides['fx']
         >>> expr.rx.value
         20
 
@@ -800,14 +793,16 @@ class reactive_ops:
 
         The override stands in for the input and is resolved in its place, ahead
         of the guards the input would have faced, i.e. it even overrides input
-        holding errors or undefined values.
+        holding errors or undefined values. Any value masks the input, including
+        ``None``, so an override that follows a reference keeps masking when that
+        reference happens to hold ``None``.
 
         Overrides are node-local, like ``.rx.meta``: a derived node
         (``expr + 1``) has its own, empty mapping.
 
         Returns
         -------
-        _InputOverrides
+        InputOverrides
             The mutable mapping of overridden inputs for this node.
 
         Raises
@@ -828,7 +823,7 @@ class reactive_ops:
                 "operation to inputs. This node is the input of an expression; "
                 "set its value with '.rx.value' instead."
             )
-        return _InputOverrides(rxi)
+        return InputOverrides(rxi)
 
     def not_(self) -> 'rx':
         """
@@ -2780,24 +2775,17 @@ class rx:
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         # Resolving an override in its input's place is what lets it mask an
         # input that failed or never arrived (see .rx.overrides).
-        overrides = operation.get('overrides')
+        overrides = operation.get('overrides') or {}
         process_failures = operation.get('process_failures')
         resolved_args = []
         for i, arg in enumerate(args):
-            override = overrides.get(i) if overrides else None
-            val = self._resolve_input(arg if override is None else override)
-            if override is not None and val is None:
-                # For consistency with assigning None.
-                val = self._resolve_input(arg)
+            val = self._resolve_input(overrides[i] if i in overrides else arg)
             if isinstance(val, ReactiveError) and not process_failures:
                 return val
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
-            override = overrides.get(k) if overrides else None
-            val = self._resolve_input(arg if override is None else override)
-            if override is not None and val is None:
-                val = self._resolve_input(arg)
+            val = self._resolve_input(overrides[k] if k in overrides else arg)
             if isinstance(val, ReactiveError) and not process_failures:
                 return val
             resolved_kwargs[k] = val

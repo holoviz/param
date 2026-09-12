@@ -2013,7 +2013,7 @@ def test_reactive_override_masks_upstream_tick_until_unmasked():
 
     assert n.rx.value == 10
 
-    n.rx.overrides['factor'] = None
+    del n.rx.overrides['factor']
 
     assert n.rx.value == 50
     assert dict(n.rx.overrides) == {}
@@ -2029,12 +2029,43 @@ def test_reactive_override_deleted_unmasks():
     assert n.rx.value == 20
 
 
-def test_reactive_override_unmasking_dormant_input_is_a_noop():
+def test_reactive_override_deleting_dormant_input_raises():
     n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
-    n.rx.overrides['factor'] = None
-    assert n.rx.value == 20
     with pytest.raises(KeyError):
         del n.rx.overrides['factor']
+    assert n.rx.value == 20
+
+
+def test_reactive_override_with_none_masks_the_input():
+    """``None`` is a value like any other, so it masks rather than unmasks."""
+    n = rx(10).rx.pipe(lambda value, factor: (value, factor), factor=rx(2))
+    assert n.rx.value == (10, 2)
+
+    n.rx.overrides['factor'] = None
+
+    assert n.rx.value == (10, None)
+    assert dict(n.rx.overrides) == {'factor': None}
+    assert n.rx.overrides['factor'] is None
+
+    del n.rx.overrides['factor']
+
+    assert n.rx.value == (10, 2)
+
+
+def test_reactive_override_reference_holding_none_keeps_masking():
+    """An override that follows a reference masks even when it holds ``None``."""
+    override = rx(5)
+    n = rx(10).rx.pipe(lambda value, factor: (value, factor), factor=rx(2))
+    n.rx.overrides['factor'] = override
+    assert n.rx.value == (10, 5)
+
+    override.rx.value = None
+
+    assert n.rx.value == (10, None)
+
+    override.rx.value = 3
+
+    assert n.rx.value == (10, 3)
 
 
 def test_reactive_override_invalidates_downstream_nodes():
@@ -2116,7 +2147,7 @@ def test_reactive_override_masks_failed_input():
 
     assert n.rx.value == 12
 
-    n.rx.overrides['extra'] = None
+    del n.rx.overrides['extra']
 
     assert isinstance(n.rx.value, param.ReactiveError)
 
@@ -2147,7 +2178,7 @@ async def test_reactive_override_masks_unresolved_async_input():
 
     assert n.rx.value == 12
 
-    n.rx.overrides['extra'] = None
+    del n.rx.overrides['extra']
 
     await async_wait_until(lambda: n.rx.value == 13)
 
@@ -2344,22 +2375,22 @@ def test_reactive_override_follows_nested_references():
     assert n.rx.value == (1, [9, 2])
 
 
-def test_reactive_override_resolving_to_none_unmasks():
+def test_reactive_override_parameter_resolving_to_none_keeps_masking():
     class Nullable(param.Parameterized):
         value = param.Number(default=3, allow_None=True)
 
     p = Nullable()
-    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
+    n = rx(10).rx.pipe(lambda value, factor: (value, factor), factor=rx(2))
     n.rx.overrides['factor'] = p.param.value
-    assert n.rx.value == 30
+    assert n.rx.value == (10, 3)
 
     p.value = None
 
-    assert n.rx.value == 20
+    assert n.rx.value == (10, None)
 
     p.value = 4
 
-    assert n.rx.value == 40
+    assert n.rx.value == (10, 4)
 
 
 async def test_reactive_override_masks_while_its_reference_is_unresolved():
@@ -2432,7 +2463,7 @@ def test_reactive_override_stops_following_an_unmasked_reference():
     n.rx.overrides['factor'] = p.param.integer
     assert n.rx.value == 70
 
-    n.rx.overrides['factor'] = None
+    del n.rx.overrides['factor']
     assert n.rx.value == 20
 
     watched = []

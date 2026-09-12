@@ -302,13 +302,13 @@ class InputOverrides(MutableMapping):
         self._node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
-        return iter(dict(self._overrides or {}))
+        return iter(self._overrides or {})
 
     def __len__(self) -> int:
         return len(self._overrides or {})
 
     def __repr__(self) -> str:
-        return f"overrides({dict(self._overrides or {})!r})"
+        return f"overrides({(self._overrides or {})!r})"
 
 
 class reactive_ops:

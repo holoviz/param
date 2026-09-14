@@ -107,10 +107,11 @@ from types import FunctionType, MethodType
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
-    Parameter, Parameterized, Skip, Undefined, eval_function_with_deps, get_method_owner,
-    register_reference_transform, resolve_ref, resolve_value, transform_reference
+    Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
+    get_method_owner, register_reference_transform, resolve_ref, resolve_value,
+    transform_reference
 )
-from .parameters import Boolean, Event
+from .parameters import Boolean, Event, String
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
 
 if t.TYPE_CHECKING:
@@ -164,6 +165,8 @@ class GenWrapper(Parameterized):
 
 class Trigger(Parameterized):
     """Helper class to allow triggering an event under some condition."""
+
+    name = String(default='trigger', constant=True)
 
     value = Event()
 
@@ -290,6 +293,7 @@ class InputOverrides(MutableMapping):
         if refs:
             watchers = operation.setdefault('override_watchers', {})
             watchers[key] = node._watch_override(refs)
+        rx._masking_generation += 1
         node._invalidate_overrides()
 
     def __delitem__(self, key: t.Any):
@@ -299,6 +303,7 @@ class InputOverrides(MutableMapping):
             raise KeyError(key)
         del overrides[key]
         self._unwatch(key)
+        rx._masking_generation += 1
         self._node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
@@ -1425,10 +1430,15 @@ class reactive_ops:
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
+        _unset = object()
+        last = [_unset]
         def cb(value):
             from .parameterized import async_executor
             if fn is None:
                 return
+            if onlychanged and last[0] is not _unset and Comparator.is_equal(value, last[0]):
+                return
+            last[0] = value
             if iscoroutinefunction(fn):
                 async_executor(partial(fn, value))
             else:
@@ -1794,6 +1804,8 @@ class rx:
 
     _ref_binding: Callable[..., t.Any] | None = None
 
+    _masking_generation: t.ClassVar[int] = 0
+
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
@@ -1918,6 +1930,7 @@ class rx:
             raise ValueError("error_mode must be either 'raise' or 'propagate'")
         self._current_ = _current
         self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
+        self._live_params_cache: tuple[int, set[tuple[int, str | None]]] | None = None
         # _shared is used for branching rx pipelines where we clone the input.
         # Here we store the original shared input, which makes it possible to
         # cache the input value as long as the shared instance does not store
@@ -2190,8 +2203,51 @@ class rx:
         )
         return invalidator
 
+    def _live_params(self) -> set[tuple[int, str | None]]:
+        """
+        Return the parameters that can still reach this node's value.
+
+        Every parameter feeding the node qualifies except those that only reach
+        it through an overridden input: masking an input makes the value
+        independent of it, so a tick of that input cannot change the result and
+        must not invalidate the node (see ``.rx.overrides``). Masks upstream
+        count too, since a node watches the parameters of its whole input graph
+        rather than only its immediate inputs.
+
+        Recomputed whenever an input is masked or unmasked anywhere, which is
+        the only thing that changes the answer for an already wired graph.
+        """
+        cache = self._live_params_cache
+        if cache is not None and cache[0] == rx._masking_generation:
+            return cache[1]
+        live = {(id(p.owner), p.name) for p in self._fn_params}
+        for trigger in (self._trigger, self._override_channel):
+            if trigger is not None:
+                live.add((id(trigger), 'value'))
+        for node in (self._prev, self._shared):
+            if node is not None:
+                live |= node._live_params()
+        operation = self._operation
+        if operation is not None:
+            live |= {(id(p.owner), p.name) for p in resolve_ref(operation['fn'])}
+            overrides = operation.get('overrides') or {}
+            args = operation.get('args') or ()
+            kwargs = operation.get('kwargs') or {}
+            for key, arg in chain(enumerate(args), kwargs.items()):
+                # A masked input is resolved from its override, which is watched
+                # separately, so nothing the input depends on is live.
+                if key not in overrides:
+                    live |= _input_live_params(arg)
+        self._live_params_cache = (rx._masking_generation, live)
+        return live
+
     def _invalidate_current(self, *events):
         if all(event.obj is self._trigger for event in events):
+            return
+        live = self._live_params()
+        if not any((id(event.obj), event.name) in live for event in events):
+            # Every parameter that changed only reaches this node through an
+            # input that is currently masked.
             return
         self._dirty = True
         self._error_state = None
@@ -2462,15 +2518,26 @@ class rx:
 
     @property
     def _callback(self) -> Callable[..., t.Any]:
-        params = self._params
+        # Consuming this node as a display callback is exactly the kind of
+        # reference consumption `_rx_transform` already handles correctly, so
+        # this mirrors it: the override channel makes a masked input's change
+        # visible, and the `_skipped` check stops a still-resolving async node
+        # from being rendered with its previous, stale value.
+        params = [*self._params, self._ensure_override_channel().param.value]
+        _unset = object()
+        last = [_unset]
         def evaluate(*args, **kwargs):
             out = self._current
+            if self._skipped:
+                raise Skip
             if self._method:
                 out = getattr(out, self._method)
-            return self._transform_output(out)
-        if params:
-            return bind(evaluate, *params)
-        return evaluate
+            out = self._transform_output(out)
+            if last[0] is not _unset and Comparator.is_equal(out, last[0]):
+                raise Skip
+            last[0] = out
+            return out
+        return bind(evaluate, *params)
 
     def _clone(self, operation=None, copy=False, **kwargs) -> Self:
         operation = operation or self._operation
@@ -2828,6 +2895,30 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
     elif isinstance(value, slice):
         for v in (value.start, value.stop, value.step):
             yield from _iter_rx(v)
+
+
+def _input_live_params(arg: t.Any) -> set[tuple[int, str | None]]:
+    """
+    Return the parameters through which ``arg`` can reach the value of the node
+    it is an input of.
+
+    An ``rx`` input contributes the parameters that are live for it rather than
+    every parameter it was wired with, so an input masked inside it stays
+    masked for its consumers, plus the channel it announces its own overrides
+    on. References that are not expressions contribute their parameters as is.
+    """
+    nested = list(_iter_rx(arg))
+    live: set[tuple[int, str | None]] = set()
+    covered: set[tuple[int, str | None]] = set()
+    for node in nested:
+        live |= node._live_params()
+        live.add((id(node._ensure_override_channel()), 'value'))
+        covered |= {(id(p.owner), p.name) for p in node._params}
+    for ref in resolve_ref(arg, recursive=True):
+        key = (id(ref.owner), ref.name)
+        if key not in covered:
+            live.add(key)
+    return live
 
 
 def _rx_transform(obj):

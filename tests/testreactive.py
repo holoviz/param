@@ -516,6 +516,55 @@ def test_reactive_watch_on_set_input():
     string.rx.value = 'new string'
     assert items == ['new string!']
 
+def test_reactive_watch_onlychanged_skips_a_masked_ticks_repeat_value():
+    a = rx(2)
+    b = rx(10) * a
+    items = []
+    b.rx.watch(items.append)
+
+    b.rx.overrides[0] = 1
+    a.rx.value = 5
+    a.rx.value = 9
+
+    assert items == [10]
+    assert b.rx.value == 10
+
+def test_reactive_watch_onlychanged_still_delivers_real_changes():
+    a = rx(1)
+    items = []
+    (a + 0).rx.watch(items.append)
+
+    a.rx.value = 2
+    a.rx.value = 2  # setting the same value does not even tick the parameter
+    a.rx.value = 3
+
+    assert items == [2, 3]
+
+def test_reactive_watch_onlychanged_false_delivers_every_recompute():
+    a = rx(2)
+    b = rx(10) * a
+    items = []
+    b.rx.watch(items.append, onlychanged=False)
+
+    b.rx.overrides[0] = 1
+    a.rx.value = 5
+    a.rx.value = 9
+
+    assert items == [10, 10, 10]
+
+def test_reactive_watch_onlychanged_tracks_each_watcher_independently():
+    a = rx(1)
+    first, second = [], []
+    a.rx.watch(first.append)
+    a.rx.value = 5
+    a.rx.watch(second.append)
+    a.rx.value = 7
+
+    assert first == [5, 7]
+    # The second watcher's own first delivery, unaffected by what the first
+    # watcher already recorded as its own last-seen value.
+    assert second == [7]
+
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_reactive_watch_lazy_on_set_input():
     string = rx('string', lazy=True)
@@ -1967,6 +2016,70 @@ def test_reactive_meta_not_available_on_parameter_rx():
         p.param.integer.rx.meta
 
 
+# _callback (the display-consumer adapter Panel's ReactiveExpr uses)
+
+def test_reactive_callback_sees_an_override():
+    factor = rx(2)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=factor)
+    cb = n._callback
+    assert cb() == 20
+
+    n.rx.overrides['factor'] = 1
+
+    assert cb() == 10
+
+
+def test_reactive_callback_skips_while_a_masked_tick_leaves_the_value_unchanged():
+    a = rx(2)
+    b = rx(10) * a
+    cb = b._callback
+    assert cb() == 20
+
+    b.rx.overrides[0] = 1
+    assert cb() == 10
+
+    a.rx.value = 5
+    with pytest.raises(Skip):
+        cb()
+    a.rx.value = 9
+    with pytest.raises(Skip):
+        cb()
+
+    del b.rx.overrides[0]
+    assert cb() == 90
+
+
+async def test_reactive_callback_skips_while_still_resolving():
+    async def slow(v):
+        await asyncio.sleep(0.05)
+        return v * 100
+
+    source = rx(1)
+    node = source.rx.pipe(slow)
+    cb = node._callback
+    node.rx.value
+    await async_wait_until(lambda: node.rx.value == 100)
+    assert cb() == 100
+
+    source.rx.value = 2
+
+    # Immediately after the input changed the node has not resolved yet, so
+    # the callback must not report the previous, now-stale value.
+    with pytest.raises(Skip):
+        cb()
+
+    await async_wait_until(lambda: node.rx.value == 200)
+    assert cb() == 200
+
+
+def test_reactive_callback_recomputes_for_a_constant_expression():
+    n = rx(1)
+    cb = n._callback
+    assert cb() == 1
+    n.rx.value = 2
+    assert cb() == 2
+
+
 # .rx.overrides
 
 def test_reactive_overrides_start_empty():
@@ -2079,6 +2192,142 @@ def test_reactive_override_invalidates_downstream_nodes():
 
     assert derived.rx.value == 11
     assert branched.rx.value == [5]
+
+
+def test_reactive_override_masked_tick_does_not_recompute_the_node():
+    """
+    A masked input cannot change the value, so a tick of it must not invalidate
+    the node.
+    """
+    calls = []
+    source = rx(2)
+    n = rx(10).rx.pipe(
+        lambda value, factor: calls.append(factor) or value * factor, factor=source
+    )
+    assert n.rx.value == 20
+
+    n.rx.overrides['factor'] = 1
+    assert n.rx.value == 10
+    assert calls == [2, 1]
+
+    source.rx.value = 5
+    source.rx.value = 9
+
+    assert n.rx.value == 10
+    assert calls == [2, 1]
+    assert not n._dirty
+
+
+def test_reactive_override_masked_tick_does_not_recompute_downstream():
+    """
+    A reader watches the parameters of its whole input graph, so a mask upstream
+    of it has to keep its own operation from re-running too.
+    """
+    downstream_calls = []
+    source = rx(2)
+    n = rx(10) * source
+    downstream = n.rx.pipe(
+        lambda value: downstream_calls.append(value) or value * 10
+    )
+    assert downstream.rx.value == 200
+
+    n.rx.overrides[0] = 1
+    assert downstream.rx.value == 100
+    assert downstream_calls == [20, 10]
+
+    source.rx.value = 5
+    source.rx.value = 9
+
+    assert downstream.rx.value == 100
+    assert downstream_calls == [20, 10]
+
+
+def test_reactive_override_unmasking_restores_invalidation():
+    calls = []
+    source = rx(2)
+    n = rx(10).rx.pipe(
+        lambda value, factor: calls.append(factor) or value * factor, factor=source
+    )
+    assert n.rx.value == 20
+
+    n.rx.overrides['factor'] = 1
+    assert n.rx.value == 10
+    source.rx.value = 5
+    assert calls == [2, 1]
+
+    del n.rx.overrides['factor']
+
+    assert n.rx.value == 50
+    source.rx.value = 9
+    assert n.rx.value == 90
+
+
+def test_reactive_override_keeps_invalidating_through_an_unmasked_route():
+    """A parameter feeding an unmasked input as well must still invalidate."""
+    calls = []
+    source = rx(2)
+    n = rx(10).rx.pipe(
+        lambda value, masked, live: calls.append((masked, live)) or value + masked + live,
+        masked=source,
+        live=source,
+    )
+    assert n.rx.value == 14
+
+    n.rx.overrides['masked'] = 1
+
+    assert n.rx.value == 13
+
+    source.rx.value = 5
+
+    assert n.rx.value == 16
+    assert calls[-1] == (1, 5)
+
+
+def test_reactive_override_keeps_invalidating_through_the_pipeline_input():
+    """A parameter feeding the input of the pipeline is never masked."""
+    source = rx(2)
+    n = (source + 0).rx.pipe(lambda value, factor: value * factor, factor=source)
+    assert n.rx.value == 4
+
+    n.rx.overrides['factor'] = 10
+
+    assert n.rx.value == 20
+
+    source.rx.value = 3
+
+    assert n.rx.value == 30
+
+
+def test_reactive_override_masked_tick_still_updates_other_consumers():
+    """Masking is node-local, so the input keeps serving everyone else."""
+    source = rx(2)
+    n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=source)
+    sibling = rx(100).rx.pipe(lambda value, factor: value + factor, factor=source)
+    n.rx.overrides['factor'] = 1
+    assert n.rx.value == 10
+    assert sibling.rx.value == 102
+
+    source.rx.value = 5
+
+    assert n.rx.value == 10
+    assert sibling.rx.value == 105
+
+
+def test_reactive_override_reference_tick_still_invalidates():
+    """The override's own reference is live, unlike the input it masks."""
+    calls = []
+    source = rx(2)
+    override = rx(1)
+    n = rx(10).rx.pipe(
+        lambda value, factor: calls.append(factor) or value * factor, factor=source
+    )
+    n.rx.overrides['factor'] = override
+    assert n.rx.value == 10
+
+    override.rx.value = 3
+
+    assert n.rx.value == 30
+    assert calls[-1] == 3
 
 
 def test_reactive_override_notifies_watcher_on_node_and_downstream():

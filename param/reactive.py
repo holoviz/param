@@ -2121,6 +2121,12 @@ class rx:
                     self._skipped = False
                     self._finished_generation = generation
                     trigger.param.trigger('value')
+                else:
+                    if not stale() and self._finished_generation != generation:
+                        # The generator did not yield anything, so we skip and keep
+                        # the previous output
+                        self._skipped = True
+                        self._finished_generation = generation
             else:
                 value = await obj
                 if stale():

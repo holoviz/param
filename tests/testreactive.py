@@ -1933,6 +1933,30 @@ def test_shared_rx_branch_still_reuses_a_synchronous_input():
 
 
 
+async def test_reactive_pipe_through_sync_child_does_not_resolve_async_ancestor():
+    calls = []
+
+    async def async_body(value):
+        calls.append(value)
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    def sync_fn(value):
+        return value + 1
+
+    a = rx(1).rx.pipe(async_body)
+    b = a.rx.pipe(sync_fn)
+    c = b.rx.pipe(lambda value: value * 10)
+
+    assert calls == []
+    assert a._dirty
+    assert a._resolve_generation == 0
+    assert a._current_task is None
+
+    await async_wait_until(lambda: c.rx.value == 30)
+    assert calls == [1]
+
+
 async def test_async_shared_rx_branch_before_resolving_resolves():
     irx = rx(1)
     node = irx.rx.pipe(_pair)
@@ -2386,6 +2410,27 @@ async def test_reactive_register_accessor_does_not_resolve_async_node_at_constru
     rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: False)
 
     rx(1).rx.pipe(body)
+    await asyncio.sleep(0.1)
+
+    assert calls == []
+
+
+async def test_reactive_register_accessor_does_not_resolve_async_ancestor_through_sync_child(clean_accessors):
+    calls = []
+
+    async def body(x):
+        calls.append(x)
+        await asyncio.sleep(0.01)
+        return x * 2
+
+    def sync_fn(x):
+        return x + 1
+
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: False)
+
+    a = rx(1).rx.pipe(body)
+    b = a.rx.pipe(sync_fn)
+    b.rx.pipe(lambda value: value * 10)
     await asyncio.sleep(0.1)
 
     assert calls == []

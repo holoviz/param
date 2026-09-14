@@ -2285,9 +2285,10 @@ class rx:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
-            # Do not trigger resolve via self._current since result is discarded
-            # by the cloned nodes constructor anyway
-            current = self._current_ if self._is_async else self._current
+            if any(node._is_async for node in self._upstream()):
+                current = self._current_
+            else:
+                current = self._current
             kwargs = dict(
                 self._kwargs, _current=current, method=self._method,
                 prev=self._prev, _shared=self, **kwargs

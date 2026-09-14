@@ -2422,3 +2422,94 @@ def test_reactive_accessor_installed_when_value_later_matches_predicate(clean_ac
 
     n.rx.value = 'a string now'
     assert n.my_accessor == 'matched'
+
+
+def test_reactive_setattr_on_registered_accessor_name_raises(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    assert n.my_accessor == 'accessor-value'
+
+    with pytest.raises(AttributeError, match="'my_accessor' is a registered accessor"):
+        n.my_accessor = 'oops'
+
+    # The accessor is not shadowed by the failed assignment.
+    assert n.my_accessor == 'accessor-value'
+
+
+def test_reactive_setattr_on_registered_accessor_name_raises_before_first_access(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    with pytest.raises(AttributeError, match="'my_accessor' is a registered accessor"):
+        n.my_accessor = 'oops'
+
+    assert n.my_accessor == 'accessor-value'
+
+
+def test_reactive_setattr_on_other_names_is_unaffected(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    n.some_other_name = 'fine'
+    assert n.some_other_name == 'fine'
+
+
+def test_reactive_dir_lists_accessor_name_blocked_from_shadowing(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    with pytest.raises(AttributeError):
+        n.my_accessor = 'oops'
+    assert 'my_accessor' in dir(n)
+
+
+def test_reactive_accessor_memoize_false_reinstantiates_on_each_access(clean_accessors):
+    calls = []
+
+    def accessor(node):
+        calls.append(node)
+        return f'accessor-value-{len(calls)}'
+
+    rx.register_accessor('my_accessor', accessor, memoize=False)
+
+    n = rx(1)
+    assert n.my_accessor == 'accessor-value-1'
+    assert n.my_accessor == 'accessor-value-2'
+    assert n.my_accessor == 'accessor-value-3'
+    assert calls == [n, n, n]
+
+
+def test_reactive_accessor_memoize_false_reevaluates_predicate_each_access(clean_accessors):
+    predicate_calls = []
+
+    def predicate(value):
+        predicate_calls.append(value)
+        return isinstance(value, int)
+
+    rx.register_accessor('my_accessor', lambda node: node.rx.value, predicate=predicate, memoize=False)
+
+    n = rx(1)
+    assert n.my_accessor == 1
+    assert n.my_accessor == 1
+    assert predicate_calls == [1, 1]
+
+    n.rx.value = 'a string now'
+    with pytest.raises(AttributeError):
+        n.my_accessor
+    assert predicate_calls == [1, 1, 'a string now']
+
+
+def test_reactive_accessor_memoize_true_still_instantiates_once(clean_accessors):
+    installed_for = []
+
+    def accessor(node):
+        installed_for.append(node)
+        return 'accessor-value'
+
+    rx.register_accessor('my_accessor', accessor, memoize=True)
+
+    n = rx(1)
+    assert n.my_accessor == 'accessor-value'
+    assert n.my_accessor == 'accessor-value'
+    assert installed_for == [n]

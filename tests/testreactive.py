@@ -279,6 +279,106 @@ def test_reactive_error_process_failures():
     assert handled.rx.value == "bad 1"
     assert handled.rx.error is None
 
+
+def test_reactive_error_label_is_none_by_default():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    failed = rx(1, error_mode="propagate").rx.pipe(fail)
+    assert failed.rx.value.label is None
+
+
+def test_reactive_error_label_round_trips_through_pipe_and_operator():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    source = rx(1, error_mode="propagate", label="price feed")
+
+    # The label is inherited across multiple .rx.pipe hops via _clone, and the
+    # ReactiveError minted where the pipeline finally fails carries it.
+    piped = source.rx.pipe(lambda v: v + 1).rx.pipe(fail)
+    assert piped.rx.value.label == "price feed"
+
+    # Same for a node reached through an operator overload.
+    operated = (source + 1).rx.pipe(fail)
+    assert operated.rx.value.label == "price feed"
+
+
+def test_reactive_label_getter_setter():
+    expr = rx(1)
+    assert expr.rx.label is None
+
+    expr.rx.label = "price feed"
+    assert expr.rx.label == "price feed"
+
+    piped = expr.rx.pipe(lambda v: v + 1)
+    assert piped.rx.label == "price feed"
+
+
+def test_reactive_label_setter_raises_on_non_rx():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    with pytest.raises(AttributeError):
+        P().param.a.rx.label = "nope"
+
+
+def test_bind_reactive_error_short_circuits_by_default():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    calls = []
+
+    def consumer(x):
+        calls.append(x)
+        return x
+
+    failing = rx(1, error_mode="propagate").rx.pipe(fail)
+    bound = bind(consumer, failing)
+
+    result = bound()
+    assert isinstance(result, param.ReactiveError)
+    assert calls == []
+
+
+def test_bind_reactive_error_process_failures_calls_function():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    calls = []
+
+    def consumer(x):
+        calls.append(x)
+        return x
+
+    failing = rx(1, error_mode="propagate").rx.pipe(fail)
+    bound = bind(consumer, failing, process_failures=True)
+
+    result = bound()
+    assert isinstance(result, param.ReactiveError)
+    assert calls == [result]
+
+
+async def test_bind_reactive_error_short_circuits_coroutine():
+    def fail(value):
+        raise ValueError(f"bad {value}")
+
+    calls = []
+
+    async def consumer(x):
+        calls.append(x)
+        return x
+
+    failing = rx(1, error_mode="propagate").rx.pipe(fail)
+
+    result = await bind(consumer, failing)()
+    assert isinstance(result, param.ReactiveError)
+    assert calls == []
+
+    result = await bind(consumer, failing, process_failures=True)()
+    assert isinstance(result, param.ReactiveError)
+    assert calls == [result]
+
 @pytest.mark.parametrize('lazy', [False, True])
 def test_reactive_pipeline_reflect_param_value(lazy):
     P = Parameters(integer=1)
@@ -2021,6 +2121,51 @@ async def test_reactive_gen_error_ends_stream():
     assert not async_rx._awaiting
     with pytest.raises(RuntimeError, match='boom'):
         async_rx.rx.value
+
+async def test_reactive_async_error_propagate_mode_no_unhandled_exception():
+    async def boom(value):
+        await asyncio.sleep(0.01)
+        raise RuntimeError('boom')
+
+    captured = []
+    loop = asyncio.get_running_loop()
+    previous_handler = loop.get_exception_handler()
+    loop.set_exception_handler(lambda loop, context: captured.append(context))
+    try:
+        source = rx(1, error_mode='propagate')
+        errored = source.rx.pipe(boom)
+        errored.rx.watch(lambda v: None)
+        errored.rx.value
+        await async_wait_until(lambda: isinstance(errored.rx.value, param.ReactiveError))
+        # Give the loop a chance to surface an unretrieved task exception, and
+        # force a collection since that is what triggers Task.__del__.
+        await asyncio.sleep(0.05)
+        gc.collect()
+        await asyncio.sleep(0)
+    finally:
+        loop.set_exception_handler(previous_handler)
+
+    assert isinstance(errored.rx.value, param.ReactiveError)
+    assert str(errored.rx.value) == 'boom'
+    assert captured == []
+
+async def test_reactive_async_gen_error_propagate_mode_ends_stream():
+    async def gen(value):
+        for i in range(3):
+            await asyncio.sleep(0.01)
+            if i == 2:
+                raise RuntimeError('boom')
+            yield value + i
+
+    async_rx = rx(1, error_mode='propagate').rx.pipe(gen)
+    async_rx.rx.value
+    await async_wait_until(lambda: isinstance(async_rx.rx.value, param.ReactiveError))
+
+    # The raise ends the generator's stream and resolves to a ReactiveError
+    # value rather than poisoning _error_state.
+    assert not async_rx._awaiting
+    assert async_rx._error_state is None
+    assert str(async_rx.rx.value) == 'boom'
 
 async def test_reactive_async_superseded_error_not_recorded():
     async def mul(value):

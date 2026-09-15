@@ -54,6 +54,24 @@ handled.rx.value  # "failed: division by zero"
 The `.rx.error` property returns the current `ReactiveError` or exception, and `None`
 for an expression without a failure.
 
+Pass `label` when constructing an expression, or set `.rx.label` on an existing
+one, to attach a human-readable name a `ReactiveError` can report back without
+the consumer having to dereference the failing node itself. `label` is
+inherited through `.rx.pipe` and operator overloads:
+
+```python
+feed = param.rx(0, error_mode="propagate", label="price feed")
+result = feed.rx.pipe(divide)
+result.rx.error.label  # "price feed"
+```
+
+`bind` also accepts `process_failures` (default `False`), matching `.rx.pipe`:
+a bound argument that resolves to a `ReactiveError` short-circuits the call,
+returning the `ReactiveError` unchanged, unless `process_failures=True`.
+
+*New in version 2.5.0: `label`, `ReactiveError.label`, `.rx.label`, and
+`process_failures` on `bind`.*
+
 ### Overriding an input
 
 `.rx.overrides` makes one node compute as if one of its inputs held a different
@@ -131,4 +149,5 @@ These methods and properties are available under the `.rx` namespace of reactive
    ~reactive_ops.watch
    ~reactive_ops.error
    ~reactive_ops.overrides
+   ~reactive_ops.label
 ```

@@ -136,7 +136,7 @@ class ReactiveError:
         self.node = weakref.ref(node) if node is not None else None
 
     @property
-    def label(self):
+    def label(self) -> str | None:
         """The label of the node that produced this error, or None if unset."""
         node = self.node() if self.node is not None else None
         return getattr(node, '_label', None) if node is not None else None
@@ -292,6 +292,30 @@ class reactive_ops:
                 return exc
             return value if isinstance(value, ReactiveError) else None
         return None
+
+    @property
+    def label(self) -> str | None:
+        """
+        Get or set a human-readable label for this node.
+
+        The label is inherited by nodes derived via `.rx.pipe` and operator
+        overloads, and is reported back on a :class:`ReactiveError` this node
+        (or a node derived from it) produces, via `ReactiveError.label`.
+
+        .. versionadded:: 2.5.0
+        """
+        if isinstance(self._reactive, rx):
+            return self._reactive._label
+        return None
+
+    @label.setter
+    def label(self, value: str | None):
+        if not isinstance(self._reactive, rx):
+            raise AttributeError(
+                "Cannot set a label on a reactive reference that is not an "
+                "rx expression."
+            )
+        self._reactive._label = value
 
     def and_(self, other) -> 'rx':
         """
@@ -1411,6 +1435,8 @@ def bind(
         and the `ReactiveError` is returned (or yielded) unchanged. If
         `True`, the `ReactiveError` is passed to `function` like any other
         value. Defaults to `False`.
+
+        .. versionadded:: 2.5.0
     **kwargs : object, Parameter, bound function or reactive expression rx
         Keyword arguments to bind to the function. These can also be constants,
         `param.Parameter` objects, bound functions or reactive expressions.
@@ -1420,6 +1446,13 @@ def bind(
     callable, generator, async generator, or coroutine
         A new function with the bound arguments, annotated with all dependencies.
         The function reflects changes to bound parameters or reactive expressions.
+
+    Notes
+    -----
+    `process_failures` is consumed by `bind` itself, so a `function` that
+    expects its own keyword argument literally named `process_failures` will
+    no longer have it forwarded from `**kwargs`; rename that argument on
+    `function` to avoid the collision.
 
     Examples
     --------
@@ -1683,7 +1716,10 @@ class rx:
         An optional human-readable label for this node. Read back via
         ``expr.rx.error.label`` on a `ReactiveError` this node (or a node
         derived from it while inheriting the label) produced. `None` if
-        never set.
+        never set. Can also be read and set after construction via
+        ``expr.rx.label``.
+
+        .. versionadded:: 2.5.0
 
     References
     ----------

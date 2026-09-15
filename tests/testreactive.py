@@ -304,6 +304,25 @@ def test_reactive_error_label_round_trips_through_pipe_and_operator():
     assert operated.rx.value.label == "price feed"
 
 
+def test_reactive_label_getter_setter():
+    expr = rx(1)
+    assert expr.rx.label is None
+
+    expr.rx.label = "price feed"
+    assert expr.rx.label == "price feed"
+
+    piped = expr.rx.pipe(lambda v: v + 1)
+    assert piped.rx.label == "price feed"
+
+
+def test_reactive_label_setter_raises_on_non_rx():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    with pytest.raises(AttributeError):
+        P().param.a.rx.label = "nope"
+
+
 def test_bind_reactive_error_short_circuits_by_default():
     def fail(value):
         raise ValueError(f"bad {value}")
@@ -1913,9 +1932,9 @@ async def test_reactive_gen_error_ends_stream():
         async_rx.rx.value
 
 async def test_reactive_async_error_propagate_mode_no_unhandled_exception():
-    # Regression test: error_mode='propagate' on the async path used to be
-    # ignored, and the watcher dispatch inside the exception handler used to
-    # re-raise the same exception, producing an unretrieved task exception.
+    # error_mode='propagate' on the async path used to be ignored, and the
+    # watcher dispatch inside the exception handler used to re-raise the same
+    # exception, producing an unretrieved task exception.
     async def boom(value):
         await asyncio.sleep(0.01)
         raise RuntimeError('boom')

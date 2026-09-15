@@ -1851,27 +1851,24 @@ class rx:
     @classmethod
     def gather(cls, *args, error_mode='raise', **kwargs) -> Self:
         """
-        Combine several inputs into one expression of whichever have settled.
+        Combine several inputs into a mapping of whichever have settled.
 
-        Unlike ``.rx.pipe``, ``gather`` does not call a function; the result
-        *is* the combination, a mapping from each input's position (for a
-        positional argument) or name (for a keyword one) to its latest
-        resolved value. A key only appears once its input has produced a
-        value; until every input has, ``.rx.awaiting`` is ``True`` and each
-        input that settles updates the mapping immediately rather than
-        waiting for the slowest one. A non-reactive input is included right
-        away. Once a key has a value it keeps it while its input is
-        unsettled again, rather than being removed from the mapping.
+        Unlike ``.rx.pipe``, ``gather`` does not call a function: the result
+        *is* the combination, keyed by each input's position (positional
+        argument) or name (keyword). A key appears once its input has
+        produced a value, and keeps that value while its input is
+        unsettled again rather than being removed. ``.rx.awaiting`` is
+        ``True`` until every input has settled at least once.
 
         Parameters
         ----------
         *args, **kwargs : any
-            The inputs to gather, typically ``rx`` expressions.
+            The inputs to gather, typically ``rx`` expressions. A
+            non-reactive value is included immediately.
         error_mode : {"raise", "propagate"}, default "raise"
-            With "propagate", an input that fails resolves to a
-            :class:`ReactiveError` at its key instead of failing every other
-            key too. With "raise" (the default) it fails the whole node, like
-            every other ``rx`` operation.
+            With "propagate", a failing input resolves to a
+            :class:`ReactiveError` at its key instead of failing the whole
+            node.
 
         Returns
         -------

@@ -957,6 +957,10 @@ class reactive_ops:
         can be useful for tracking or reacting to the update state of an expression,
         such as displaying loading indicators or triggering conditional logic.
 
+        Also tracks asynchronous operations feeding the expression (e.g. via
+        ``.rx.pipe``) for the whole time ``.rx.awaiting`` is ``True``, not just the
+        instant the operation is scheduled or finishes.
+
         Returns
         -------
         ReactiveExpression
@@ -982,9 +986,20 @@ class reactive_ops:
         >>> updating.rx.value  # Becomes True during the update process, then False.
         False
         """
-        wrapper = t.cast('Callable', Wrapper)(object=False)
+        reactive = self._reactive
+        upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
+        # Report the correct state immediately if already mid-flight.
+        initial = any(node._settling for node in upstream)
+        wrapper = t.cast('Callable', Wrapper)(object=initial)
+
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
+
+        # The watchers above only fire once a value is produced, which misses
+        # an asynchronous wait entirely, so also flip on scheduling.
+        for node in upstream:
+            node._watch_settle_change(wrapper)
+
         return wrapper.param.object.rx()
 
     def when(self, *dependencies, initial=Undefined) -> 'rx':
@@ -1679,6 +1694,9 @@ class rx:
 
     _method_handlers: dict[str, Callable] = {}
 
+    # Weak refs to targets notified when this node schedules async work.
+    _settle_watchers: list[weakref.ref] | None = None
+
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
@@ -2086,6 +2104,25 @@ class rx:
         t.cast('t.Any', self._root)._dirty_obj = True
         self._error_state = None
 
+    def _watch_settle_change(self, wrapper: Parameterized) -> None:
+        """Set ``wrapper.object`` to True when this node schedules an asynchronous resolution."""
+        watchers = self._settle_watchers
+        if watchers is None:
+            watchers = self._settle_watchers = []
+        # Weak so a long-lived upstream node does not keep the (possibly much
+        # shorter-lived) `.rx.updating()` wrapper alive; dropped automatically
+        # once `wrapper` is collected, like `_readers`.
+        watchers.append(weakref.ref(wrapper, watchers.remove))
+
+    def _notify_settle_change(self) -> None:
+        """Notify targets registered through `_watch_settle_change`."""
+        watchers = self._settle_watchers
+        if watchers:
+            for ref in tuple(watchers):
+                wrapper = ref()
+                if wrapper is not None:
+                    wrapper.param.update(object=True)
+
     async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
 
@@ -2167,6 +2204,7 @@ class rx:
         previous_task = self._current_task
         if previous_task is not None and not previous_task.done():
             previous_task.cancel()
+        self._notify_settle_change()
         async_executor(partial(self._resolve_async, obj, generation))
 
     def _resolve(self):

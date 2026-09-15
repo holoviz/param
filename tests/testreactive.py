@@ -1321,6 +1321,148 @@ def test_reactive_stale_on_bound_function():
     assert not fn.rx.stale
     assert fn.rx.value == 6
 
+def test_reactive_updating_sync_flips_true_then_false():
+    number = rx(1)
+    updating = number.rx.updating()
+    log = []
+    updating.rx.watch(log.append)
+
+    assert updating.rx.value is False
+
+    number.rx.value = 2
+
+    assert updating.rx.value is False
+    assert log == [True, False]
+
+async def test_reactive_updating_spans_async_wait():
+    """`.rx.updating()` must span the whole async wait, not just flip momentarily."""
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    updating = expr.rx.updating()
+    log = []
+    updating.rx.watch(log.append)
+    expr.rx.watch(lambda v: None)
+
+    assert expr.rx.value is param.Undefined
+    assert updating.rx.value is True
+    assert expr.rx.awaiting
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert updating.rx.value is False
+    assert not expr.rx.awaiting
+    assert log == [True, False]
+
+async def test_reactive_updating_visible_downstream_of_async_node():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double) + 1
+    updating = expr.rx.updating()
+    expr.rx.watch(lambda v: None)
+
+    assert expr.rx.value is param.Undefined
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: expr.rx.value == 3)
+
+    assert updating.rx.value is False
+
+async def test_reactive_updating_spans_chained_async_operations():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    stage1 = rx(1).rx.pipe(double)
+    stage2 = stage1.rx.pipe(double)
+    updating = stage2.rx.updating()
+    stage2.rx.watch(lambda v: None)
+
+    assert stage2.rx.value is param.Undefined
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: stage1.rx.value == 2, interval=5)
+    # stage1 has settled but stage2 is still resolving its own operation
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: stage2.rx.value == 4)
+    assert updating.rx.value is False
+
+async def test_reactive_updating_spans_async_wait_on_branching_pipeline():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    base = rx(0).rx.pipe(double)
+    branch1 = base + 100
+    branch2 = base + 200
+    updating1 = branch1.rx.updating()
+    updating2 = branch2.rx.updating()
+    branch1.rx.watch(lambda v: None)
+    branch2.rx.watch(lambda v: None)
+
+    assert branch1.rx.value is param.Undefined
+    assert branch2.rx.value is param.Undefined
+    assert updating1.rx.value is True
+    assert updating2.rx.value is True
+
+    await async_wait_until(lambda: branch1.rx.value == 102)
+    await async_wait_until(lambda: branch2.rx.value == 202)
+
+    assert updating1.rx.value is False
+    assert updating2.rx.value is False
+
+async def test_reactive_updating_true_when_created_already_awaiting():
+    """Attaching `.rx.updating()` mid-flight reports True immediately."""
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    expr.rx.watch(lambda v: None)
+    expr.rx.value
+
+    assert expr.rx.awaiting
+
+    updating = expr.rx.updating()
+
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert updating.rx.value is False
+
+async def test_reactive_updating_false_for_never_read_async_expression():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    updating = expr.rx.updating()
+
+    assert updating.rx.value is False
+
+def test_reactive_settle_watcher_does_not_pin_target():
+    """A settle watcher is a weak ref, so it does not keep a dropped target alive."""
+    class Target(param.Parameterized):
+        object = param.Parameter(default=False)
+
+    a = rx(1)
+    target = Target()
+    a._watch_settle_change(target)
+    assert len(a._settle_watchers) == 1
+
+    ref = weakref.ref(target)
+    del target
+    gc.collect()
+
+    assert ref() is None
+    assert a._settle_watchers == []
+
 def test_reactive_upstream_walk_terminates_on_reused_input():
     a = rx(1)
     b = a + 1

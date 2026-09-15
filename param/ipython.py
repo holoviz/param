@@ -408,9 +408,7 @@ class IPythonDisplay:
         except Skip:
             obj = None
         except TypeError:
-            # E.g. a partially bound function that still needs a positional
-            # argument: not displayable, so tell IPython to fall back to the
-            # plain repr instead of crashing the cell.
+            # Fall back to the plain repr for partially bound functions
             raise NotImplementedError
         else:
             if obj is Undefined:

@@ -99,7 +99,7 @@ from .parameters import (
     CalendarDateRange,
     Event,
 )
-from .reactive import ReactiveError, bind, rx
+from .reactive import ReactiveError, bind, coalesced, rx
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -209,6 +209,7 @@ __all__ = (
     '__version__',
     '_is_number',
     'bind',
+    'coalesced',
     'concrete_descendents',
     'depends',
     'descendents',

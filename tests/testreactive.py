@@ -10,7 +10,7 @@ import param
 import pytest
 
 from param.parameterized import Skip
-from param.reactive import bind, rx
+from param.reactive import bind, coalesced, rx
 from typing import Any, Callable
 
 from .utils import async_wait_until
@@ -2935,10 +2935,10 @@ async def test_reactive_pipe_multi_arg_still_waits_for_every_input():
     await async_wait_until(lambda: combined.rx.value == (1, 2))
 
 
-# `.rx.pipe(..., coalesce=True)`
+# `.rx.pipe(coalesced(fn))`
 
-async def test_reactive_pipe_coalesce_false_runs_every_push_even_off_loop():
-    """Without `coalesce`, cancellation cannot stop work already off the loop."""
+async def test_reactive_pipe_without_coalesced_runs_every_push_even_off_loop():
+    """Without `coalesced`, cancellation cannot stop work already off the loop."""
     started = []
 
     def blocking(v):
@@ -2962,7 +2962,7 @@ async def test_reactive_pipe_coalesce_false_runs_every_push_even_off_loop():
     await async_wait_until(lambda: rendered.rx.value == 9)
     assert started == list(range(10))
 
-async def test_reactive_pipe_coalesce_true_drops_superseded_off_loop_pushes():
+async def test_reactive_pipe_coalesced_drops_superseded_off_loop_pushes():
     started = []
 
     def blocking(v):
@@ -2974,7 +2974,7 @@ async def test_reactive_pipe_coalesce_true_drops_superseded_off_loop_pushes():
         return await asyncio.to_thread(blocking, v)
 
     src = rx(0)
-    rendered = src.rx.pipe(render, coalesce=True)
+    rendered = src.rx.pipe(coalesced(render))
     rendered.rx.watch()
     rendered.rx.value
     await async_wait_until(lambda: started == [0])
@@ -2990,11 +2990,19 @@ async def test_reactive_pipe_coalesce_true_drops_superseded_off_loop_pushes():
     assert 1 < len(started) < 10
     assert started[-1] == 9
 
-async def test_reactive_pipe_coalesce_true_behaves_like_default_for_a_single_update():
+async def test_reactive_pipe_coalesced_behaves_like_default_for_a_single_update():
     """The opt-in changes nothing when there is no burst to coalesce."""
     irx = rx(1)
-    async_rx = irx.rx.pipe(mul_slowly, coalesce=True)
+    async_rx = irx.rx.pipe(coalesced(mul_slowly))
     items = []
     async_rx.rx.watch(items.append)
     async_rx.rx.value
     await async_wait_until(lambda: items == [2])
+
+def test_reactive_pipe_coalesced_wrapped_fn_still_callable_directly():
+    """`coalesced` only changes `.rx.pipe`'s scheduling; the function itself is untouched."""
+    def double(v):
+        return v * 2
+
+    wrapped = coalesced(double)
+    assert wrapped(21) == 42

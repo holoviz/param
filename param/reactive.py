@@ -70,7 +70,9 @@ the total number of reactive instances in a pipeline.
 Instances also track their dependencies to ensure accurate updates:
 - `_method`: Temporarily stores the method or attribute accessed (e.g., `'head'`
   in `dfi.head()`).
-- `_dirty`: Indicates whether the current value needs re-computation.
+- `_dirty`: Indicates whether the current value needs re-computation. Exposed
+  publicly, together with the state of the nodes feeding a node, as
+  `.rx.stale`.
 - `_current`: Stores the result of the most recent computation.
 
 Benefits and Use Cases
@@ -1061,6 +1063,50 @@ class reactive_ops:
             return False
         return any(node._settling for node in reactive._upstream())
 
+    @property
+    def stale(self) -> builtins.bool:
+        """
+        Whether the expression has not yet produced a value for its current inputs.
+
+        ``True`` from the moment an input invalidates the expression until it
+        recomputes, and before the first evaluation of an expression whose value
+        has never been requested. An asynchronous operation stays stale after it
+        has been scheduled, since scheduling is not the same as producing a
+        value, so ``stale`` and not ``.rx.awaiting`` means the next request for
+        the value recomputes it synchronously.
+
+        Returns
+        -------
+        bool
+            ``True`` while the current value does not reflect the current
+            inputs, ``False`` otherwise.
+
+        Examples
+        --------
+        An expression is stale until its value is requested, and again once an
+        input changes:
+
+        >>> import param
+        >>> a = param.rx(1)
+        >>> expr = a + 1
+        >>> expr.rx.stale
+        True
+        >>> expr.rx.value
+        2
+        >>> expr.rx.stale
+        False
+        >>> a.rx.value = 2
+        >>> expr.rx.stale
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return False
+        return any(
+            node._dirty or node._root._dirty_obj or node._settling
+            for node in reactive._upstream()
+        )
+
     def updating(self) -> 'rx':
         """
         Return a new expression that indicates whether the current expression is updating.
@@ -1069,6 +1115,10 @@ class reactive_ops:
         current expression is in the process of updating and ``False`` otherwise. This
         can be useful for tracking or reacting to the update state of an expression,
         such as displaying loading indicators or triggering conditional logic.
+
+        Also tracks asynchronous operations feeding the expression (e.g. via
+        ``.rx.pipe``) for the whole time ``.rx.awaiting`` is ``True``, not just the
+        instant the operation is scheduled or finishes.
 
         Returns
         -------
@@ -1095,9 +1145,20 @@ class reactive_ops:
         >>> updating.rx.value  # Becomes True during the update process, then False.
         False
         """
-        wrapper = t.cast('Callable', Wrapper)(object=False)
+        reactive = self._reactive
+        upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
+        # Report the correct state immediately if already mid-flight.
+        initial = any(node._settling for node in upstream)
+        wrapper = t.cast('Callable', Wrapper)(object=initial)
+
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
+
+        # The watchers above only fire once a value is produced, which misses
+        # an asynchronous wait entirely, so also flip on scheduling.
+        for node in upstream:
+            node._watch_settle_change(wrapper)
+
         return wrapper.param.object.rx()
 
     def when(self, *dependencies, initial=Undefined) -> 'rx':
@@ -1789,7 +1850,7 @@ class rx:
     3
     """
 
-    _accessors: dict[str, tuple[Callable[[t.Any], t.Any], Callable[[t.Any], bool] | None]] = {}
+    _accessors: dict[str, tuple[Callable[[t.Any], t.Any], Callable[[t.Any], bool] | None, bool]] = {}
 
     _display_options: tuple[str, ...] = ()
 
@@ -1806,10 +1867,14 @@ class rx:
 
     _masking_generation: t.ClassVar[int] = 0
 
+    # Weak refs to targets notified when this node schedules async work.
+    _settle_watchers: list[weakref.ref] | None = None
+
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
-        predicate: Callable[[t.Any], bool] | None = None
+        predicate: Callable[[t.Any], bool] | None = None,
+        memoize: bool = True
     ):
         """
         Register an accessor that extends ``rx`` with custom behavior.
@@ -1831,9 +1896,14 @@ class rx:
           Called with the node's current value the first time ``name`` is
           accessed on that node; the accessor is only instantiated if a
           callable returns True or if ``predicate`` is None.
+        memoize: bool
+          Whether to cache the instantiated accessor on the node after the
+          first successful access (the default). If ``False`` the accessor
+          is re-instantiated, and its ``predicate`` re-evaluated against the
+          node's current value, on every access.
 
         """
-        cls._accessors[name] = (accessor, predicate)
+        cls._accessors[name] = (accessor, predicate, memoize)
 
     @classmethod
     def register_display_handler(cls, obj_type, handler, **kwargs):
@@ -2333,6 +2403,25 @@ class rx:
             )))
         return watchers
 
+    def _watch_settle_change(self, wrapper: Parameterized) -> None:
+        """Set ``wrapper.object`` to True when this node schedules an asynchronous resolution."""
+        watchers = self._settle_watchers
+        if watchers is None:
+            watchers = self._settle_watchers = []
+        # Weak so a long-lived upstream node does not keep the (possibly much
+        # shorter-lived) `.rx.updating()` wrapper alive; dropped automatically
+        # once `wrapper` is collected, like `_readers`.
+        watchers.append(weakref.ref(wrapper, watchers.remove))
+
+    def _notify_settle_change(self) -> None:
+        """Notify targets registered through `_watch_settle_change`."""
+        watchers = self._settle_watchers
+        if watchers:
+            for ref in tuple(watchers):
+                wrapper = ref()
+                if wrapper is not None:
+                    wrapper.param.update(object=True)
+
     async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
 
@@ -2374,6 +2463,12 @@ class rx:
                     self._skipped = False
                     self._finished_generation = generation
                     trigger.param.trigger('value')
+                else:
+                    if not stale() and self._finished_generation != generation:
+                        # The generator did not yield anything, so we skip and keep
+                        # the previous output
+                        self._skipped = True
+                        self._finished_generation = generation
             else:
                 value = await obj
                 if stale():
@@ -2408,6 +2503,7 @@ class rx:
         previous_task = self._current_task
         if previous_task is not None and not previous_task.done():
             previous_task.cancel()
+        self._notify_settle_change()
         async_executor(partial(self._resolve_async, obj, generation))
 
     def _resolve(self):
@@ -2543,9 +2639,10 @@ class rx:
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
-            # Do not trigger resolve via self._current since result is discarded
-            # by the cloned nodes constructor anyway
-            current = self._current_ if self._is_async else self._current
+            if any(node._is_async for node in self._upstream()):
+                current = self._current_
+            else:
+                current = self._current
             kwargs = dict(
                 self._kwargs, _current=current, method=self._method,
                 prev=self._prev, _shared=self, **kwargs
@@ -2569,8 +2666,9 @@ class rx:
         extras = {attr for attr in dir(current) if not attr.startswith('_')}
         # Explicitly list registered but uninstantiated accessors
         accessor_names = {
-            name for name, (_, predicate) in rx._accessors.items()
-            if name not in self.__dict__ and (predicate is None or predicate(resolved))
+            name for name, (_, predicate, memoize) in rx._accessors.items()
+            if (name not in self.__dict__ or not memoize)
+            and (predicate is None or predicate(resolved))
         }
         try:
             return sorted(set(super().__dir__()) | extras | accessor_names)
@@ -2614,11 +2712,15 @@ class rx:
             current = self_dict['_current_']
 
         # Capture uninstantiated accessor access
-        if name in rx._accessors and name not in self_dict:
-            accessor, predicate = rx._accessors[name]
+        if name in rx._accessors and (name not in self_dict or not rx._accessors[name][2]):
+            accessor, predicate, memoize = rx._accessors[name]
             if predicate is None or predicate(current):
                 value = accessor(self)
-                setattr(self, name, value)
+                if memoize:
+                    # Bypass __setattr__ (which blocks reassignment of
+                    # registered accessor names) to cache the instantiated
+                    # accessor directly on the instance.
+                    self_dict[name] = value
                 return value
 
         method = self_dict['_method']
@@ -2867,11 +2969,17 @@ class rx:
     def __setattr__(self, name, value):
         # Setting value instead of rx.value is a common user mistake.
         # They are more but we don't want to restrict __setattr__ too much
-        # so only catch value, for now.
+        # so only catch value and registered accessor names, for now.
         if name == "value":
             raise AttributeError(
                 "'rx' has no attribute 'value', try "
                 "'<reactive_expr>.rx.value = <val>'."
+            )
+        elif name in rx._accessors:
+            raise AttributeError(
+                f"{name!r} is a registered accessor and cannot be "
+                "reassigned; did you mean to set an attribute on the "
+                "node's value?"
             )
         super().__setattr__(name, value)
 

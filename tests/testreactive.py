@@ -1025,6 +1025,493 @@ async def test_reactive_awaiting_settles_when_async_ref_yields_nothing():
     assert expr.rx.awaiting
     await async_wait_until(lambda: not expr.rx.awaiting)
 
+async def test_reactive_awaiting_settles_when_async_gen_operation_yields_nothing():
+    """
+    A generator operation whose stream ends without yielding declined to
+    produce a value, so it must settle rather than stay in flight forever.
+    """
+    async def gen(value):
+        return
+        yield  # pragma: no cover
+
+    expr = rx(1).rx.pipe(gen)
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: not expr.rx.awaiting)
+    assert expr._skipped
+
+async def test_reactive_awaiting_settles_when_gen_operation_yields_nothing():
+    """A synchronous generator operation is wrapped, so it settles too."""
+    def gen(value):
+        return
+        yield  # pragma: no cover
+
+    expr = rx(1).rx.pipe(gen)
+
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: not expr.rx.awaiting)
+
+async def test_reactive_awaiting_settles_when_async_gen_stream_becomes_empty():
+    """
+    A stream that yielded for earlier inputs and yields nothing for the current
+    ones settles, keeping its previous value without publishing it again.
+    """
+    async def gen(value):
+        if value > 0:
+            yield value * 2
+
+    number = rx(1)
+    expr = number.rx.pipe(gen)
+    items = []
+    expr.rx.watch(items.append)
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+    assert items == [2]
+    assert not expr.rx.awaiting
+
+    number.rx.value = 0
+    await async_wait_until(lambda: not expr.rx.awaiting)
+    assert items == [2]
+    assert expr._skipped
+    assert expr.rx.value == 2
+
+    # A later stream that does yield recovers
+    number.rx.value = 5
+    await async_wait_until(lambda: items == [2, 10])
+    assert not expr.rx.awaiting
+    assert not expr._skipped
+
+async def test_reactive_awaiting_superseded_stream_does_not_claim_generation():
+    """
+    A stream abandoned because its inputs changed must not settle the newer
+    resolution that superseded it.
+    """
+    started = []
+
+    async def gen(value):
+        started.append(value)
+        await asyncio.sleep(0.05)
+        yield value * 2
+
+    number = rx(1)
+    expr = number.rx.pipe(gen)
+    expr.rx.watch()
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    number.rx.value = 2
+    number.rx.value = 3
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 6)
+    assert not expr.rx.awaiting
+
+def test_reactive_stale_until_first_evaluation():
+    expr = rx(1) + 2
+
+    assert expr.rx.stale
+    assert expr.rx.value == 3
+    assert not expr.rx.stale
+
+def test_reactive_stale_on_parameter():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    assert not P().param.a.rx.stale
+
+def test_reactive_stale_on_input_change():
+    number = rx(1)
+    expr = number + 2
+
+    assert expr.rx.value == 3
+    assert not expr.rx.stale
+
+    number.rx.value = 5
+    assert expr.rx.stale
+    assert expr.rx.value == 7
+    assert not expr.rx.stale
+
+def test_reactive_stale_visible_downstream():
+    """An expression downstream of a stale one is itself stale."""
+    number = rx(1)
+    upstream = number + 2
+    downstream = upstream * 2
+
+    assert downstream.rx.value == 6
+    assert not upstream.rx.stale
+    assert not downstream.rx.stale
+
+    number.rx.value = 5
+    assert upstream.rx.stale
+    assert downstream.rx.stale
+
+    # Resolving the upstream expression does not update the downstream one
+    assert upstream.rx.value == 7
+    assert not upstream.rx.stale
+    assert downstream.rx.stale
+
+def test_reactive_stale_on_bound_function_input_change():
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    p = P()
+    expr = rx(bind(lambda a: a + 1, p.param.a)) + 1
+
+    assert expr.rx.value == 3
+    assert not expr.rx.stale
+
+    p.a = 5
+    assert expr.rx.stale
+    assert expr.rx.value == 7
+    assert not expr.rx.stale
+
+def test_reactive_stale_through_operation_argument():
+    number = rx(1)
+    inner = number + 1
+    expr = rx(100) + inner
+
+    assert expr.rx.value == 102
+    assert not expr.rx.stale
+
+    number.rx.value = 5
+    assert expr.rx.stale
+    assert expr.rx.value == 106
+    assert not expr.rx.stale
+
+def test_reactive_stale_not_evaluated_when_read():
+    """Reading stale must not itself resolve the expression."""
+    calls = []
+
+    def count(value):
+        calls.append(value)
+        return value
+
+    expr = rx(1).rx.pipe(count)
+
+    assert expr.rx.stale
+    assert calls == []
+    assert expr.rx.value == 1
+    assert calls == [1]
+
+async def test_reactive_stale_while_async_operation_in_flight():
+    """
+    An async operation is stale from the moment its inputs change until it has
+    produced a value, i.e. scheduling it does not make it up to date.
+    """
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    expr = rx(0).rx.pipe(async_func) + 10
+
+    assert expr.rx.stale
+    assert expr.rx.value is param.Undefined
+    assert expr.rx.stale
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 12)
+    assert not expr.rx.stale
+    assert not expr.rx.awaiting
+
+async def test_reactive_stale_on_async_recompute():
+    async def async_func(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    number = rx(0)
+    expr = number.rx.pipe(async_func) + 10
+    expr.rx.watch()
+
+    await async_wait_until(lambda: expr.rx.value == 12)
+    assert not expr.rx.stale
+
+    number.rx.value = 5
+    assert expr.rx.stale
+    assert expr.rx.awaiting
+    await async_wait_until(lambda: expr.rx.value == 17)
+    assert not expr.rx.stale
+
+async def test_reactive_stale_while_async_ref_in_flight():
+    class P(param.Parameterized):
+        value = param.Parameter(default=0, allow_refs=True)
+
+    async def async_func():
+        await asyncio.sleep(0.02)
+        return 7
+
+    p = P()
+    expr = p.param.value.rx() + 1
+    expr.rx.watch()
+
+    assert expr.rx.value == 1
+    assert not expr.rx.stale
+
+    p.value = async_func
+    assert expr.rx.stale
+    await async_wait_until(lambda: expr.rx.value == 8)
+    assert not expr.rx.stale
+
+async def test_reactive_stale_branching_pipeline():
+    number = rx(1)
+    base = number + 1
+    branch1 = base + 100
+    branch2 = base + 200
+
+    assert branch1.rx.value == 102
+    assert branch2.rx.value == 202
+    assert not branch1.rx.stale
+    assert not branch2.rx.stale
+
+    number.rx.value = 5
+    assert branch1.rx.stale
+    assert branch2.rx.stale
+
+    assert branch1.rx.value == 106
+    assert not branch1.rx.stale
+    assert branch2.rx.stale
+
+def test_reactive_stale_skip_keeps_previous_value():
+    """A skipped operation deliberately keeps its value, so it is not stale."""
+    def maybe(value):
+        if value < 5:
+            raise Skip
+        return value
+
+    number = rx(10)
+    expr = number.rx.pipe(maybe)
+
+    assert expr.rx.value == 10
+    assert not expr.rx.stale
+
+    number.rx.value = 0
+    assert expr.rx.stale
+    assert expr.rx.value == 10
+    assert not expr.rx.stale
+
+def test_reactive_stale_gated_by_when_ignores_upstream_change():
+    """
+    A gated expression reflects its inputs as of the last gate event, so an
+    upstream change alone does not make it stale.
+    """
+    class State(param.Parameterized):
+        submit = param.Event()
+
+    state = State()
+    number = rx(1)
+    gated = (number + 1).rx.when(state.param.submit)
+
+    assert gated.rx.value == 2
+    assert not gated.rx.stale
+
+    number.rx.value = 10
+    assert not gated.rx.stale
+    assert gated.rx.value == 2
+
+    state.submit = True
+    assert gated.rx.stale
+    assert gated.rx.value == 11
+    assert not gated.rx.stale
+
+def test_reactive_stale_downstream_of_when_gate():
+    class State(param.Parameterized):
+        submit = param.Event()
+
+    state = State()
+    number = rx(1)
+    expr = (number + 1).rx.when(state.param.submit) + 100
+
+    assert expr.rx.value == 102
+    assert not expr.rx.stale
+
+    number.rx.value = 10
+    assert not expr.rx.stale
+
+    state.submit = True
+    assert expr.rx.stale
+    assert expr.rx.value == 111
+    assert not expr.rx.stale
+
+def test_reactive_stale_where_tracks_selected_branch_only():
+    condition = rx(True)
+    x = rx('x')
+    y = rx('y')
+    expr = condition.rx.where(x, y).rx() + '!'
+
+    assert expr.rx.value == 'x!'
+    assert not expr.rx.stale
+
+    # The unselected branch cannot change the value
+    y.rx.value = 'y2'
+    assert not expr.rx.stale
+
+    x.rx.value = 'x2'
+    assert expr.rx.stale
+    assert expr.rx.value == 'x2!'
+    assert not expr.rx.stale
+
+    condition.rx.value = False
+    assert expr.rx.stale
+    assert expr.rx.value == 'y2!'
+    assert not expr.rx.stale
+
+def test_reactive_stale_on_bound_function():
+    """A bound function evaluates on every read, so it never holds a stale value."""
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    p = P()
+    fn = bind(lambda a: a + 1, p.param.a)
+
+    assert not fn.rx.stale
+    assert fn.rx.value == 2
+    assert not fn.rx.stale
+
+    p.a = 5
+    assert not fn.rx.stale
+    assert fn.rx.value == 6
+
+def test_reactive_updating_sync_flips_true_then_false():
+    number = rx(1)
+    updating = number.rx.updating()
+    log = []
+    updating.rx.watch(log.append)
+
+    assert updating.rx.value is False
+
+    number.rx.value = 2
+
+    assert updating.rx.value is False
+    assert log == [True, False]
+
+async def test_reactive_updating_spans_async_wait():
+    """`.rx.updating()` must span the whole async wait, not just flip momentarily."""
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    updating = expr.rx.updating()
+    log = []
+    updating.rx.watch(log.append)
+    expr.rx.watch(lambda v: None)
+
+    assert expr.rx.value is param.Undefined
+    assert updating.rx.value is True
+    assert expr.rx.awaiting
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert updating.rx.value is False
+    assert not expr.rx.awaiting
+    assert log == [True, False]
+
+async def test_reactive_updating_visible_downstream_of_async_node():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double) + 1
+    updating = expr.rx.updating()
+    expr.rx.watch(lambda v: None)
+
+    assert expr.rx.value is param.Undefined
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: expr.rx.value == 3)
+
+    assert updating.rx.value is False
+
+async def test_reactive_updating_spans_chained_async_operations():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    stage1 = rx(1).rx.pipe(double)
+    stage2 = stage1.rx.pipe(double)
+    updating = stage2.rx.updating()
+    stage2.rx.watch(lambda v: None)
+
+    assert stage2.rx.value is param.Undefined
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: stage1.rx.value == 2, interval=5)
+    # stage1 has settled but stage2 is still resolving its own operation
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: stage2.rx.value == 4)
+    assert updating.rx.value is False
+
+async def test_reactive_updating_spans_async_wait_on_branching_pipeline():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value + 2
+
+    base = rx(0).rx.pipe(double)
+    branch1 = base + 100
+    branch2 = base + 200
+    updating1 = branch1.rx.updating()
+    updating2 = branch2.rx.updating()
+    branch1.rx.watch(lambda v: None)
+    branch2.rx.watch(lambda v: None)
+
+    assert branch1.rx.value is param.Undefined
+    assert branch2.rx.value is param.Undefined
+    assert updating1.rx.value is True
+    assert updating2.rx.value is True
+
+    await async_wait_until(lambda: branch1.rx.value == 102)
+    await async_wait_until(lambda: branch2.rx.value == 202)
+
+    assert updating1.rx.value is False
+    assert updating2.rx.value is False
+
+async def test_reactive_updating_true_when_created_already_awaiting():
+    """Attaching `.rx.updating()` mid-flight reports True immediately."""
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    expr.rx.watch(lambda v: None)
+    expr.rx.value
+
+    assert expr.rx.awaiting
+
+    updating = expr.rx.updating()
+
+    assert updating.rx.value is True
+
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert updating.rx.value is False
+
+async def test_reactive_updating_false_for_never_read_async_expression():
+    async def double(value):
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    updating = expr.rx.updating()
+
+    assert updating.rx.value is False
+
+def test_reactive_settle_watcher_does_not_pin_target():
+    """A settle watcher is a weak ref, so it does not keep a dropped target alive."""
+    class Target(param.Parameterized):
+        object = param.Parameter(default=False)
+
+    a = rx(1)
+    target = Target()
+    a._watch_settle_change(target)
+    assert len(a._settle_watchers) == 1
+
+    ref = weakref.ref(target)
+    del target
+    gc.collect()
+
+    assert ref() is None
+    assert a._settle_watchers == []
+
 def test_reactive_upstream_walk_terminates_on_reused_input():
     a = rx(1)
     b = a + 1
@@ -1635,6 +2122,30 @@ def test_shared_rx_branch_still_reuses_a_synchronous_input():
     assert (first.rx.value, second.rx.value) == (2, 3)
     assert calls == [1]
 
+
+
+async def test_reactive_pipe_through_sync_child_does_not_resolve_async_ancestor():
+    calls = []
+
+    async def async_body(value):
+        calls.append(value)
+        await asyncio.sleep(0.02)
+        return value * 2
+
+    def sync_fn(value):
+        return value + 1
+
+    a = rx(1).rx.pipe(async_body)
+    b = a.rx.pipe(sync_fn)
+    c = b.rx.pipe(lambda value: value * 10)
+
+    assert calls == []
+    assert a._dirty
+    assert a._resolve_generation == 0
+    assert a._current_task is None
+
+    await async_wait_until(lambda: c.rx.value == 30)
+    assert calls == [1]
 
 
 async def test_async_shared_rx_branch_before_resolving_resolves():
@@ -2817,6 +3328,27 @@ async def test_reactive_register_accessor_does_not_resolve_async_node_at_constru
     assert calls == []
 
 
+async def test_reactive_register_accessor_does_not_resolve_async_ancestor_through_sync_child(clean_accessors):
+    calls = []
+
+    async def body(x):
+        calls.append(x)
+        await asyncio.sleep(0.01)
+        return x * 2
+
+    def sync_fn(x):
+        return x + 1
+
+    rx.register_accessor('my_accessor', lambda node: node, predicate=lambda value: False)
+
+    a = rx(1).rx.pipe(body)
+    b = a.rx.pipe(sync_fn)
+    b.rx.pipe(lambda value: value * 10)
+    await asyncio.sleep(0.1)
+
+    assert calls == []
+
+
 def test_reactive_accessor_installed_lazily_on_first_access(clean_accessors):
     installed_for = []
 
@@ -2848,3 +3380,94 @@ def test_reactive_accessor_installed_when_value_later_matches_predicate(clean_ac
 
     n.rx.value = 'a string now'
     assert n.my_accessor == 'matched'
+
+
+def test_reactive_setattr_on_registered_accessor_name_raises(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    assert n.my_accessor == 'accessor-value'
+
+    with pytest.raises(AttributeError, match="'my_accessor' is a registered accessor"):
+        n.my_accessor = 'oops'
+
+    # The accessor is not shadowed by the failed assignment.
+    assert n.my_accessor == 'accessor-value'
+
+
+def test_reactive_setattr_on_registered_accessor_name_raises_before_first_access(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    with pytest.raises(AttributeError, match="'my_accessor' is a registered accessor"):
+        n.my_accessor = 'oops'
+
+    assert n.my_accessor == 'accessor-value'
+
+
+def test_reactive_setattr_on_other_names_is_unaffected(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    n.some_other_name = 'fine'
+    assert n.some_other_name == 'fine'
+
+
+def test_reactive_dir_lists_accessor_name_blocked_from_shadowing(clean_accessors):
+    rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+
+    n = rx(1)
+    with pytest.raises(AttributeError):
+        n.my_accessor = 'oops'
+    assert 'my_accessor' in dir(n)
+
+
+def test_reactive_accessor_memoize_false_reinstantiates_on_each_access(clean_accessors):
+    calls = []
+
+    def accessor(node):
+        calls.append(node)
+        return f'accessor-value-{len(calls)}'
+
+    rx.register_accessor('my_accessor', accessor, memoize=False)
+
+    n = rx(1)
+    assert n.my_accessor == 'accessor-value-1'
+    assert n.my_accessor == 'accessor-value-2'
+    assert n.my_accessor == 'accessor-value-3'
+    assert calls == [n, n, n]
+
+
+def test_reactive_accessor_memoize_false_reevaluates_predicate_each_access(clean_accessors):
+    predicate_calls = []
+
+    def predicate(value):
+        predicate_calls.append(value)
+        return isinstance(value, int)
+
+    rx.register_accessor('my_accessor', lambda node: node.rx.value, predicate=predicate, memoize=False)
+
+    n = rx(1)
+    assert n.my_accessor == 1
+    assert n.my_accessor == 1
+    assert predicate_calls == [1, 1]
+
+    n.rx.value = 'a string now'
+    with pytest.raises(AttributeError):
+        n.my_accessor
+    assert predicate_calls == [1, 1, 'a string now']
+
+
+def test_reactive_accessor_memoize_true_still_instantiates_once(clean_accessors):
+    installed_for = []
+
+    def accessor(node):
+        installed_for.append(node)
+        return 'accessor-value'
+
+    rx.register_accessor('my_accessor', accessor, memoize=True)
+
+    n = rx(1)
+    assert n.my_accessor == 'accessor-value'
+    assert n.my_accessor == 'accessor-value'
+    assert installed_for == [n]

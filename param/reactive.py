@@ -2614,11 +2614,6 @@ class rx:
 
     @property
     def _callback(self) -> Callable[..., t.Any]:
-        # Consuming this node as a display callback is exactly the kind of
-        # reference consumption `_rx_transform` already handles correctly, so
-        # this mirrors it: the override channel makes a masked input's change
-        # visible, and the `_skipped` check stops a still-resolving async node
-        # from being rendered with its previous, stale value.
         params = [*self._params, self._ensure_override_channel().param.value]
         _unset = object()
         last = [_unset]

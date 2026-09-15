@@ -787,10 +787,7 @@ class reactive_ops:
         Parameters
         ----------
         func : callable
-            The function to apply to the current value. Wrap an asynchronous
-            ``func`` in :func:`coalesced` to opt into dropping a superseded
-            in-flight call's result instead of cancelling it; see there for
-            when that is (and is not) an improvement.
+            The function to apply to the current value.
         *args : iterable, optional
             Positional arguments to pass to the function.
         **kwargs : dict, optional
@@ -1714,64 +1711,6 @@ def _gather_marker(*args, **kwargs):
     raise NotImplementedError
 
 
-class _Coalesced:
-    """
-    Mark a callable, for `_apply_operator` to unwrap, so `.rx.pipe` schedules
-    it with coalescing. See `coalesced`.
-    """
-
-    __slots__ = ('fn',)
-
-    def __init__(self, fn):
-        self.fn = fn
-
-    def __call__(self, *args, **kwargs):
-        return self.fn(*args, **kwargs)
-
-
-def coalesced(fn: Callable) -> Callable:
-    """
-    Wrap an asynchronous ``fn`` so ``.rx.pipe`` drops a superseded result.
-
-    ``.rx.pipe(coalesced(fn))`` changes what happens when a newer input
-    arrives while a call to ``fn`` is still running: instead of cancelling
-    that call and starting a new one immediately (the default), the newer
-    input is held back until the running call finishes, and only the latest
-    input is ever computed next. A superseded call's result, once it
-    arrives, is discarded rather than published.
-
-    This is a scheduling policy, not a correctness fix, and it is a trade-off
-    rather than a strict improvement: cancelling ``fn`` and starting over
-    gives a lower-latency result when ``fn`` responds promptly to
-    cancellation (e.g. it mostly awaits :class:`asyncio.sleep` or a
-    cancellable I/O call), since cancellation interrupts it almost
-    immediately. ``coalesced`` instead helps when ``fn`` does work
-    cancellation cannot stop, e.g. it awaits :func:`asyncio.to_thread`: a
-    source pushing faster than ``fn`` can keep up would otherwise start one
-    thread per push even though only the latest result is ever used.
-    Wrapping ``fn`` rather than adding a keyword to ``.rx.pipe`` means it
-    cannot collide with one of ``fn``'s own argument names.
-
-    Parameters
-    ----------
-    fn : callable
-        A coroutine function or async generator function.
-
-    Returns
-    -------
-    callable
-        ``fn`` wrapped for ``.rx.pipe``; calling it directly still calls ``fn``.
-
-    Examples
-    --------
-    >>> import param
-    >>> async def render(v):
-    ...     ...  # e.g. `await asyncio.to_thread(...)`
-    >>> expr = param.rx(0).rx.pipe(param.coalesced(render))
-    """
-    return _Coalesced(fn)
-
-
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
@@ -2015,10 +1954,6 @@ class rx:
         self._current_task = None
         self._resolve_generation = 0
         self._finished_generation = 0
-        # Set by _lazy_resolve when `coalesce=True` and a task is already
-        # running: the (obj, generation) to resolve once it finishes, instead
-        # of starting a concurrent one now. See _resolve_async's finally.
-        self._coalesce_pending: tuple[t.Any, int] | None = None
         self._skipped = False
         self._error_state = None
         self._error_mode = error_mode
@@ -2399,14 +2334,6 @@ class rx:
         finally:
             if self._current_task is task:
                 self._current_task = None
-            pending = self._coalesce_pending
-            if pending is not None:
-                # A newer input arrived while this task was running and
-                # `coalesce=True` held it back instead of running it
-                # alongside; resolve it now that this one is done.
-                self._coalesce_pending = None
-                from .parameterized import async_executor
-                async_executor(partial(self._resolve_async, *pending))
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
@@ -2415,19 +2342,6 @@ class rx:
         self._resolve_generation += 1
         generation = self._resolve_generation
         previous_task = self._current_task
-        coalesce = bool((self._operation or {}).get('coalesce'))
-        if coalesce and previous_task is not None and not previous_task.done():
-            # Let the running task finish rather than cancelling it or
-            # starting a concurrent one; _resolve_async's finally picks this
-            # up once it is done. Its own result is discarded as stale.
-            superseded_pending = self._coalesce_pending
-            self._coalesce_pending = (obj, generation)
-            self._notify_settle_change()
-            if superseded_pending is not None:
-                # An even newer input arrived before the previous one was
-                # ever reached; close it without awaiting it.
-                async_executor(partial(_close_stale, superseded_pending[0]))
-            return
         if previous_task is not None and not previous_task.done():
             previous_task.cancel()
         self._notify_settle_change()
@@ -2696,10 +2610,6 @@ class rx:
         **kwargs
     ) -> Self:
         new = self._resolve_accessor()
-        if isinstance(operator, _Coalesced):
-            coalesce, operator = True, operator.fn
-        else:
-            coalesce = False
         operation = {
             'fn': operator,
             'args': args,
@@ -2707,7 +2617,6 @@ class rx:
             'reverse': reverse
         }
         operation['process_failures'] = process_failures
-        operation['coalesce'] = coalesce
         return new._clone(operation)
 
     # Builtin functions

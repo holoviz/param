@@ -1849,7 +1849,7 @@ class rx:
         cls._method_handlers[method] = handler
 
     @classmethod
-    def gather(cls, *args, error_mode='raise', **kwargs) -> 'rx':
+    def gather(cls, *args, error_mode='raise', **kwargs) -> Self:
         """
         Combine several inputs into one expression of whichever have settled.
 

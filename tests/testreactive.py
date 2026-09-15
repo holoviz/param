@@ -1932,9 +1932,6 @@ async def test_reactive_gen_error_ends_stream():
         async_rx.rx.value
 
 async def test_reactive_async_error_propagate_mode_no_unhandled_exception():
-    # error_mode='propagate' on the async path used to be ignored, and the
-    # watcher dispatch inside the exception handler used to re-raise the same
-    # exception, producing an unretrieved task exception.
     async def boom(value):
         await asyncio.sleep(0.01)
         raise RuntimeError('boom')

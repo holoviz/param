@@ -413,10 +413,7 @@ class IPythonDisplay:
         else:
             if obj is Undefined:
                 obj = None
-        try:
-            handle = display(obj, display_id=uuid.uuid4().hex)
-        except TypeError:
-            raise NotImplementedError
+        handle = display(obj, display_id=uuid.uuid4().hex)
 
 def ipython_async_executor(func):
     event_loop = None

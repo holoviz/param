@@ -2845,3 +2845,156 @@ def test_reactive_accessor_memoize_true_still_instantiates_once(clean_accessors)
     assert n.my_accessor == 'accessor-value'
     assert n.my_accessor == 'accessor-value'
     assert installed_for == [n]
+
+
+# rx.gather
+
+async def test_reactive_gather_reports_partial_results_as_inputs_settle():
+    async def delayed(v, delay):
+        await asyncio.sleep(delay)
+        return v
+
+    # Spaced out well past the polling interval below, so each settlement is
+    # observed on its own rather than several being coalesced into one poll.
+    a = rx(1).rx.pipe(delayed, delay=0.05)
+    b = rx(2).rx.pipe(delayed, delay=0.15)
+    c = rx(3).rx.pipe(delayed, delay=0.25)
+    gathered = rx.gather(a=a, b=b, c=c)
+
+    values = []
+    gathered.rx.watch(values.append)
+    gathered.rx.value
+    assert gathered.rx.awaiting
+
+    await async_wait_until(lambda: values == [{'a': 1}], interval=10)
+    assert gathered.rx.awaiting
+
+    await async_wait_until(lambda: values == [{'a': 1}, {'a': 1, 'b': 2}], interval=10)
+    assert gathered.rx.awaiting
+
+    await async_wait_until(
+        lambda: values == [{'a': 1}, {'a': 1, 'b': 2}, {'a': 1, 'b': 2, 'c': 3}],
+        interval=10,
+    )
+    assert not gathered.rx.awaiting
+
+def test_reactive_gather_includes_non_reactive_and_positional_inputs():
+    gathered = rx.gather(rx(1), 2, c=rx(3))
+    assert gathered.rx.value == {0: 1, 1: 2, 'c': 3}
+    assert not gathered.rx.awaiting
+
+def test_reactive_gather_keeps_stale_key_while_its_input_resettles():
+    irx = rx(1)
+    b = rx(2)
+    gathered = rx.gather(a=irx, b=b)
+    assert gathered.rx.value == {'a': 1, 'b': 2}
+
+    irx.rx.value = 10
+    # 'a' is a plain (synchronous) input, so it updates immediately; the
+    # point under test is that 'b' is untouched rather than dropped.
+    assert gathered.rx.value == {'a': 10, 'b': 2}
+
+def test_reactive_gather_error_mode_propagate_holds_error_at_its_key():
+    def fail(v):
+        raise ValueError('boom')
+
+    a = rx(1)
+    b = rx(2).rx.pipe(fail)
+    c = rx(3)
+    gathered = rx.gather(a=a, b=b, c=c, error_mode='propagate')
+
+    value = gathered.rx.value
+    assert value['a'] == 1
+    assert value['c'] == 3
+    assert isinstance(value['b'], param.ReactiveError)
+
+def test_reactive_gather_error_mode_raise_fails_the_whole_node():
+    def fail(v):
+        raise ValueError('boom')
+
+    gathered = rx.gather(a=rx(1), b=rx(2).rx.pipe(fail))
+    with pytest.raises(ValueError, match='boom'):
+        gathered.rx.value
+
+async def test_reactive_pipe_multi_arg_still_waits_for_every_input():
+    """Without `gather`, `.rx.pipe` is unaffected: every argument must settle."""
+    async def delayed(v, delay):
+        await asyncio.sleep(delay)
+        return v
+
+    a = rx(1).rx.pipe(delayed, delay=0.01)
+    b = rx(2).rx.pipe(delayed, delay=0.05)
+    combined = a.rx.pipe(lambda x, y: (x, y), y=b)
+
+    combined.rx.watch()
+    combined.rx.value
+    await asyncio.sleep(0.02)
+    assert combined.rx.value is param.Undefined
+    assert combined.rx.awaiting
+
+    await async_wait_until(lambda: combined.rx.value == (1, 2))
+
+
+# `.rx.pipe(..., coalesce=True)`
+
+async def test_reactive_pipe_coalesce_false_runs_every_push_even_off_loop():
+    """Without `coalesce`, cancellation cannot stop work already off the loop."""
+    started = []
+
+    def blocking(v):
+        started.append(v)
+        time.sleep(0.02)
+        return v
+
+    async def render(v):
+        return await asyncio.to_thread(blocking, v)
+
+    src = rx(0)
+    rendered = src.rx.pipe(render)
+    rendered.rx.watch()
+    rendered.rx.value
+    await async_wait_until(lambda: started == [0])
+
+    for i in range(1, 10):
+        src.rx.value = i
+        await asyncio.sleep(0.005)
+
+    await async_wait_until(lambda: rendered.rx.value == 9)
+    assert started == list(range(10))
+
+async def test_reactive_pipe_coalesce_true_drops_superseded_off_loop_pushes():
+    started = []
+
+    def blocking(v):
+        started.append(v)
+        time.sleep(0.02)
+        return v
+
+    async def render(v):
+        return await asyncio.to_thread(blocking, v)
+
+    src = rx(0)
+    rendered = src.rx.pipe(render, coalesce=True)
+    rendered.rx.watch()
+    rendered.rx.value
+    await async_wait_until(lambda: started == [0])
+
+    for i in range(1, 10):
+        src.rx.value = i
+        await asyncio.sleep(0.005)
+
+    await async_wait_until(lambda: rendered.rx.value == 9)
+    # Far fewer bodies ran than pushes arrived, and the published value is
+    # still the result of the very last push, not of whichever body
+    # happened to finish first.
+    assert 1 < len(started) < 10
+    assert started[-1] == 9
+
+async def test_reactive_pipe_coalesce_true_behaves_like_default_for_a_single_update():
+    """The opt-in changes nothing when there is no burst to coalesce."""
+    irx = rx(1)
+    async_rx = irx.rx.pipe(mul_slowly, coalesce=True)
+    items = []
+    async_rx.rx.watch(items.append)
+    async_rx.rx.value
+    await async_wait_until(lambda: items == [2])

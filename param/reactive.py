@@ -776,7 +776,7 @@ class reactive_ops:
         """
         return self._as_rx()._apply_operator(lambda obj, other: obj or other, other)
 
-    def pipe(self, func, /, *args, process_failures=False, **kwargs)-> 'rx':
+    def pipe(self, func, /, *args, process_failures=False, coalesce=False, **kwargs)-> 'rx':
         """
         Apply a chainable function to the current reactive value.
 
@@ -790,6 +790,17 @@ class reactive_ops:
             The function to apply to the current value.
         *args : iterable, optional
             Positional arguments to pass to the function.
+        coalesce : bool, optional
+            For an asynchronous ``func``: if a newer input arrives while a
+            previous call is still running, do not start a new call until the
+            running one finishes, and discard its result rather than
+            publishing it. Only the latest input is ever computed next, so a
+            source that pushes faster than ``func`` can keep up does not pile
+            up concurrent, mostly-wasted calls. Does not affect a call already
+            in flight, which always runs to completion; ``False`` (the
+            default) starts a new call immediately and relies on cancelling
+            the superseded one, which does not stop work already off the
+            event loop (e.g. a body awaiting :func:`asyncio.to_thread`).
         **kwargs : dict, optional
             Keyword arguments to pass to the function.
 
@@ -825,7 +836,7 @@ class reactive_ops:
         30
         """
         return self._as_rx()._apply_operator(
-            func, *args, process_failures=process_failures, **kwargs
+            func, *args, process_failures=process_failures, coalesce=coalesce, **kwargs
         )
 
     def resolve(self, nested=True, recursive=False) -> 'rx':
@@ -1706,6 +1717,11 @@ async def _close_stale(obj):
         )
 
 
+def _gather_marker(*args, **kwargs):
+    """Serve as a placeholder `fn` for a `gather` operation; `_eval_gather` never calls it."""
+    raise NotImplementedError
+
+
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
@@ -1843,6 +1859,52 @@ class rx:
         """
         cls._method_handlers[method] = handler
 
+    @classmethod
+    def gather(cls, *args, error_mode='raise', **kwargs) -> 'rx':
+        """
+        Combine several inputs into one expression of whichever have settled.
+
+        Unlike ``.rx.pipe``, ``gather`` does not call a function; the result
+        *is* the combination, a mapping from each input's position (for a
+        positional argument) or name (for a keyword one) to its latest
+        resolved value. A key only appears once its input has produced a
+        value; until every input has, ``.rx.awaiting`` is ``True`` and each
+        input that settles updates the mapping immediately rather than
+        waiting for the slowest one. A non-reactive input is included right
+        away. Once a key has a value it keeps it while its input is
+        unsettled again, rather than being removed from the mapping.
+
+        Parameters
+        ----------
+        *args, **kwargs : any
+            The inputs to gather, typically ``rx`` expressions.
+        error_mode : {"raise", "propagate"}, default "raise"
+            With "propagate", an input that fails resolves to a
+            :class:`ReactiveError` at its key instead of failing every other
+            key too. With "raise" (the default) it fails the whole node, like
+            every other ``rx`` operation.
+
+        Returns
+        -------
+        rx
+            A reactive mapping of the settled inputs.
+
+        Examples
+        --------
+        >>> import param
+        >>> a, b = param.rx(1), param.rx(2)
+        >>> gathered = param.rx.gather(a=a, b=b)
+        >>> gathered.rx.value
+        {'a': 1, 'b': 2}
+        """
+        operation = {
+            'fn': _gather_marker,
+            'args': args,
+            'kwargs': kwargs,
+            'gather': True,
+        }
+        return cls(None, operation=operation, _current=Undefined, error_mode=error_mode)
+
     def __new__(cls, obj=None, **kwargs):
         wrapper = None
         obj = transform_reference(obj)
@@ -1903,6 +1965,10 @@ class rx:
         self._current_task = None
         self._resolve_generation = 0
         self._finished_generation = 0
+        # Set by _lazy_resolve when `coalesce=True` and a task is already
+        # running: the (obj, generation) to resolve once it finishes, instead
+        # of starting a concurrent one now. See _resolve_async's finally.
+        self._coalesce_pending: tuple[t.Any, int] | None = None
         self._skipped = False
         self._error_state = None
         self._error_mode = error_mode
@@ -2283,6 +2349,14 @@ class rx:
         finally:
             if self._current_task is task:
                 self._current_task = None
+            pending = self._coalesce_pending
+            if pending is not None:
+                # A newer input arrived while this task was running and
+                # `coalesce=True` held it back instead of running it
+                # alongside; resolve it now that this one is done.
+                self._coalesce_pending = None
+                from .parameterized import async_executor
+                async_executor(partial(self._resolve_async, *pending))
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
@@ -2291,6 +2365,19 @@ class rx:
         self._resolve_generation += 1
         generation = self._resolve_generation
         previous_task = self._current_task
+        coalesce = bool((self._operation or {}).get('coalesce'))
+        if coalesce and previous_task is not None and not previous_task.done():
+            # Let the running task finish rather than cancelling it or
+            # starting a concurrent one; _resolve_async's finally picks this
+            # up once it is done. Its own result is discarded as stale.
+            superseded_pending = self._coalesce_pending
+            self._coalesce_pending = (obj, generation)
+            self._notify_settle_change()
+            if superseded_pending is not None:
+                # An even newer input arrived before the previous one was
+                # ever reached; close it without awaiting it.
+                async_executor(partial(_close_stale, superseded_pending[0]))
+            return
         if previous_task is not None and not previous_task.done():
             previous_task.cancel()
         self._notify_settle_change()
@@ -2556,7 +2643,7 @@ class rx:
 
     def _apply_operator(
         self, operator: Callable, *args, reverse: bool = False, process_failures=False,
-        **kwargs
+        coalesce=False, **kwargs
     ) -> Self:
         new = self._resolve_accessor()
         operation = {
@@ -2566,6 +2653,7 @@ class rx:
             'reverse': reverse
         }
         operation['process_failures'] = process_failures
+        operation['coalesce'] = coalesce
         return new._clone(operation)
 
     # Builtin functions
@@ -2707,6 +2795,8 @@ class rx:
         )
 
     def _eval_operation(self, obj, operation):
+        if operation.get('gather'):
+            return self._eval_gather(operation)
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
         for arg in args:
@@ -2735,6 +2825,36 @@ class rx:
         else:
             obj = fn(obj, *resolved_args, **resolved_kwargs)
         return obj
+
+    def _eval_gather(self, operation):
+        """
+        Resolve each `gather` input independently instead of skipping the
+        whole node while any one input is unsettled.
+        """
+        result = dict(self._current_) if isinstance(self._current_, dict) else {}
+        settled = bool(result)
+        for key, arg in chain(enumerate(operation['args']), operation['kwargs'].items()):
+            if any(ref._settling for ref in _iter_rx(arg)):
+                continue
+            try:
+                val = resolve_value(arg)
+            except Skip:
+                # Not a failure, just not ready yet; keep this key's previous
+                # value (if any) and try again on the next recompute.
+                continue
+            except Exception as e:
+                if self._error_mode != 'propagate':
+                    raise
+                result[key] = ReactiveError(e, self)
+                settled = True
+                continue
+            if val is Skip or val is Undefined:
+                continue
+            result[key] = val
+            settled = True
+        if not settled:
+            raise Skip
+        return result
 
     def __setattr__(self, name, value):
         # Setting value instead of rx.value is a common user mistake.

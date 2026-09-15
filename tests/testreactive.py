@@ -3226,6 +3226,118 @@ def test_reactive_readers_do_not_keep_nodes_alive():
     assert reader.rx.value == 11
 
 
+def test_reactive_upstream_sees_prev_shared_and_operation_argument():
+    a = rx(1)
+    branch = rx((1, 2))
+    first, second = branch[0], branch[1]
+    piped = rx(2).rx.pipe(lambda x, y: x + y, y=a)
+
+    upstream = set(piped.rx.upstream())
+    assert a in upstream
+    assert branch not in upstream  # Unrelated graph.
+
+    branch_upstream = set(first.rx.upstream())
+    assert branch in branch_upstream
+    assert second not in branch_upstream
+
+
+def test_reactive_upstream_empty_for_an_input_node():
+    a = rx(1)
+    assert list(a.rx.upstream()) == []
+
+
+def test_reactive_upstream_empty_on_non_rx_namespace():
+    p = Parameters()
+    assert list(p.param.integer.rx.upstream()) == []
+
+
+def test_reactive_dependents_sees_reader_through_prev():
+    a = rx(1)
+    derived = a + 1
+    assert derived in set(a.rx.dependents())
+
+
+def test_reactive_dependents_sees_reader_through_shared_branch():
+    branch = rx((1, 2))
+    first, second = branch[0], branch[1]
+    dependents = set(branch.rx.dependents())
+    assert first in dependents
+    assert second in dependents
+
+
+def test_reactive_dependents_sees_reader_through_operation_argument():
+    # This is the route `_upstream()` already walked that `_readers` did not
+    # register a reader for until the operation-argument route was added to
+    # `_direct_inputs()`.
+    a = rx(1)
+    piped = rx(2).rx.pipe(lambda x, y: x + y, y=a)
+    assert piped in set(a.rx.dependents())
+
+
+def test_reactive_dependents_does_not_see_an_unconsumed_node():
+    a = rx(1)
+    rx(2)  # Never reads from `a`.
+    assert list(a.rx.dependents()) == []
+
+
+def test_reactive_dependents_transitively_walks_downstream():
+    a = rx(1)
+    b = a + 1
+    c = b * 2
+    dependents = set(a.rx.dependents())
+    assert b in dependents
+    assert c in dependents
+
+
+def test_reactive_dependents_drops_a_collected_node():
+    a = rx(1)
+    derived = a + 1
+    assert derived in set(a.rx.dependents())
+
+    del derived
+    gc.collect()
+
+    assert list(a.rx.dependents()) == []
+
+
+def test_reactive_dependents_excludes_self():
+    a = rx(1)
+    b = a + 1
+    assert a not in set(a.rx.dependents())
+    assert a not in set(b.rx.dependents())
+
+
+def test_reactive_dependents_empty_on_non_rx_namespace():
+    p = Parameters()
+    assert list(p.param.integer.rx.dependents()) == []
+
+
+def test_reactive_rx_is_hashable():
+    a = rx(1)
+    assert hash(a) == hash(a)
+    assert hash(a) == object.__hash__(a)
+
+
+def test_reactive_rx_hash_stable_across_value_assignment():
+    a = rx(1)
+    before = hash(a)
+    a.rx.value = 2
+    assert hash(a) == before
+
+
+def test_reactive_rx_hash_distinguishes_distinct_nodes():
+    a, b = rx(1), rx(1)
+    assert hash(a) != hash(b) or a is b
+
+
+def test_reactive_rx_usable_as_dict_key_and_set_member():
+    a, b = rx(1), rx(2)
+    mapping = {a: 'a', b: 'b'}
+    assert mapping[a] == 'a'
+    assert mapping[b] == 'b'
+    assert {a, b, a} == {a, b}
+
+
 def test_reactive_override_follows_a_parameter():
     p = Parameters()
     n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))

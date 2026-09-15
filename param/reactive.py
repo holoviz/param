@@ -1521,15 +1521,15 @@ class reactive_ops:
         self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
-        _unset = object()
-        last = [_unset]
+        last = _unset = object()
         def cb(value):
             from .parameterized import async_executor
+            nonlocal last
             if fn is None:
                 return
-            if onlychanged and last[0] is not _unset and Comparator.is_equal(value, last[0]):
+            if onlychanged and last is not _unset and Comparator.is_equal(value, last):
                 return
-            last[0] = value
+            last = value
             if iscoroutinefunction(fn):
                 async_executor(partial(fn, value))
             else:

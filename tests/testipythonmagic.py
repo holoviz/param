@@ -129,3 +129,27 @@ def test_ipython_display_of_a_never_overridden_expression():
     n = param.rx(1) + 1
     # Must not raise merely from being displayed.
     IPythonDisplay(n)
+
+
+def test_ipython_display_of_a_partially_bound_function_falls_back_to_repr(fake_ipython_display):
+    """
+    A callable that still needs a positional argument, such as a partial
+    ``param.bind``, is not evaluable yet and therefore not displayable.
+    ``IPythonDisplay`` must signal that to IPython by raising
+    ``NotImplementedError`` (which tells the formatter to fall back to the
+    plain repr) rather than letting the callable's own ``TypeError`` escape.
+    """
+    from param.ipython import IPythonDisplay
+
+    def add(a, b):
+        return a + b
+
+    class P(param.Parameterized):
+        a = param.Number(default=1)
+
+    p = P()
+    add_a = param.bind(add, p.param.a)
+
+    with pytest.raises(NotImplementedError):
+        IPythonDisplay(add_a)()
+    assert fake_ipython_display == []

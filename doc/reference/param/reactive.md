@@ -26,6 +26,10 @@
 
 `rx` allows wrapping objects and then operating on them interactively while recording any operations applied to them.
 
+`==` and `!=` build a comparison expression rather than compare identity, but `rx`
+instances are still hashable by identity, so a node can be used as a `dict` key or
+`set` member.
+
 ### Error handling
 
 By default, exceptions raised while evaluating an expression are cached and
@@ -145,6 +149,7 @@ These methods and properties are available under the `.rx` namespace of reactive
    ~reactive_ops.and_
   ~reactive_ops.bool
   ~reactive_ops.buffer
+  ~reactive_ops.dependents
   ~reactive_ops.in_
   ~reactive_ops.is_
   ~reactive_ops.is_not
@@ -156,6 +161,7 @@ These methods and properties are available under the `.rx` namespace of reactive
   ~reactive_ops.resolve
   ~reactive_ops.set
   ~reactive_ops.updating
+  ~reactive_ops.upstream
   ~reactive_ops.when
   ~reactive_ops.where
    ~reactive_ops.value

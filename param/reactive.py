@@ -1187,25 +1187,16 @@ class reactive_ops:
 
     def upstream(self) -> Iterator['rx']:
         """
-        Iterate over the ``rx`` nodes this expression derives its value from.
+        Iterate over the ``rx`` nodes this expression derives its value from,
+        directly or transitively, excluding itself.
 
-        An input reaches this expression by one of three routes: the
-        ``_prev`` chain of the pipeline it belongs to, the input it was
-        cloned from when a pipeline branches (``expr[0]``, ``expr[1]``), or
-        an ``rx`` passed as an argument to one of its operations, e.g. via
-        ``.rx.pipe``. All three are followed transitively, so the full set
-        of ancestors is returned, not just the direct inputs.
-
-        The traversal order is unspecified, and the set of nodes returned
-        can differ between two calls if the graph was rewired in between,
-        e.g. by an override being set. Iterating does not itself keep any
-        of the yielded nodes alive; a node with no other reference reachable
-        from a previous call may already be gone by the next one.
+        Traversal order is unspecified and may change between calls, e.g.
+        after an override is set. Nodes are held weakly, so iterating does
+        not keep them alive.
 
         Returns
         -------
         Iterator[rx]
-            Every node this expression reads from, directly or transitively.
             Empty if the ``.rx`` namespace does not belong to an ``rx`` node.
 
         Examples
@@ -1220,32 +1211,23 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return
         upstream = reactive._upstream()
-        next(upstream, None)  # The first node `_upstream()` yields is `reactive` itself.
+        next(upstream, None)  # Skip `reactive` itself.
         yield from upstream
 
     def dependents(self) -> Iterator['rx']:
         """
-        Iterate over the ``rx`` nodes that derive their value from this expression.
+        Iterate over the ``rx`` nodes that derive their value from this
+        expression, directly or transitively, excluding itself. The reverse
+        of :meth:`upstream`.
 
-        The reverse of :meth:`upstream`: a node appears here if this
-        expression reaches it by one of the same three routes ``upstream()``
-        follows, looked at from the other end — it is that node's ``_prev``,
-        the input it was cloned from, or an operation argument of it. All
-        three are followed transitively, so a node three pipes downstream of
-        this one is included, not just its immediate consumer.
-
-        Readers are held weakly, so this reflects only what is still alive:
-        a node built from this expression and then dropped, with nothing
-        else keeping it alive, does not appear. The traversal order is
-        unspecified, and the set can change between two calls as the graph
-        is extended or its nodes are collected.
+        Readers are held weakly, so this reflects only what is currently
+        alive, and traversal order is unspecified.
 
         Returns
         -------
         Iterator[rx]
-            Every node that reads from this expression, directly or
-            transitively. Empty if the ``.rx`` namespace does not belong to
-            an ``rx`` node, or if nothing currently reads from it.
+            Empty if the ``.rx`` namespace does not belong to an ``rx`` node,
+            or if nothing currently reads from it.
 
         Examples
         --------
@@ -1259,7 +1241,7 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return
         dependents = reactive._dependents()
-        next(dependents, None)  # The first node `_dependents()` yields is `reactive` itself.
+        next(dependents, None)  # Skip `reactive` itself.
         yield from dependents
 
     def updating(self) -> 'rx':
@@ -2122,15 +2104,10 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
-    # `__eq__` (below, under "Binary operators") builds a comparison
-    # expression rather than comparing identity, so Python's usual rule for
-    # a class overriding `__eq__` — set `__hash__` to `None` — does not apply
-    # here: nothing can observe `hash(a) == hash(b)` being inconsistent with
-    # `a == b` in the sense that rule protects against, since `a == b` is
-    # never a `bool` to compare against `True` in the first place. Restored
-    # explicitly rather than left to fall out of `__eq__`'s definition, so a
-    # node can be used as a `dict` key or put in a `set` like any other
-    # object identity can.
+    # `__eq__` (below) builds a comparison expression rather than a bool, so
+    # it can never be inconsistent with a hash, unlike the usual case Python's
+    # __eq__-without-__hash__ rule protects against. Restored explicitly so a
+    # node can be used as a `dict` key or `set` member.
     __hash__ = object.__hash__
 
     @classmethod
@@ -2275,8 +2252,7 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
-        # Register as a reader of every direct input so `dependents()` can
-        # walk the graph in the direction opposite `_upstream()`.
+        # Register as a reader of every direct input, the reverse of `_upstream()`.
         for inp in self._direct_inputs():
             inp._register_reader(self)
 
@@ -2415,12 +2391,9 @@ class rx:
 
     def _direct_inputs(self) -> Iterator[t.Any]:
         """
-        Yield the ``rx`` nodes this node reads directly from.
-
-        Inputs reach a node by three routes: the ``_prev`` predecessor in the
-        pipeline the node belongs to, the ``_shared`` input it was cloned
-        from when a pipeline branches, and any ``rx`` passed as an argument
-        to one of its operations.
+        Yield the ``rx`` nodes this node reads directly from: its ``_prev``
+        predecessor, the ``_shared`` input it was cloned from when a pipeline
+        branches, and any ``rx`` passed as an operation argument.
         """
         for inp in (self._prev, self._shared):
             if isinstance(inp, rx):
@@ -2432,15 +2405,7 @@ class rx:
             ))
 
     def _upstream(self) -> Iterator[t.Any]:
-        """
-        Yield this node and every ``rx`` node it derives its value from.
-
-        Inputs reach a node by three routes, all of which have to be visited
-        because an operation is only as settled as the nodes feeding it: the
-        ``_prev`` chain of the pipeline the node belongs to, the ``_shared``
-        input it was cloned from when a pipeline branches, and any ``rx``
-        passed as an argument to one of its operations. See ``_direct_inputs``.
-        """
+        """Yield this node and every ``rx`` node it derives its value from, transitively."""
         seen: set[int] = set()
         stack: list[rx] = [self]
         while stack:
@@ -2454,16 +2419,9 @@ class rx:
     def _dependents(self) -> Iterator[t.Any]:
         """
         Yield this node and every ``rx`` node that derives its value from it,
-        directly or transitively.
-
-        The reverse of ``_upstream()``: walks ``_readers`` instead of
-        ``_direct_inputs()``, so it reaches a reader through the ``_prev``
-        chain of a pipeline built on top of this node, through the
-        ``_shared`` mirror a branch was cloned from, or through this node
-        being passed as an operation argument elsewhere — the same three
-        routes ``_register_reader`` is called for. Weak by construction: a
-        reader collected between two calls simply drops out, and walking
-        this does not itself keep any reader alive.
+        transitively. The reverse of ``_upstream()``, walking ``_readers``
+        instead of ``_direct_inputs()``. Weak: a reader collected between two
+        calls simply drops out.
         """
         seen: set[int] = set()
         stack: list[rx] = [self]
@@ -2639,14 +2597,9 @@ class rx:
 
     def _register_reader(self, reader: Self):
         """
-        Record that ``reader`` computes its value from this node.
-
-        The reverse of ``_direct_inputs()``: called once for each of ``_prev``,
-        ``_shared``, and any ``rx`` passed as an operation argument, so that
-        ``reader`` is discoverable both by ``_invalidate_overrides`` and by
-        ``_dependents()``. It carries the invalidation no parameter can, i.e.
-        an override, and is weak so that a node is not kept alive by the node it
-        derives from; dead entries drop out through the reference callback.
+        Record that ``reader`` computes its value from this node, for
+        ``_invalidate_overrides`` and ``_dependents()``. Weak, so a node is
+        not kept alive by the node it derives from.
         """
         readers = self._readers
         if readers is None:

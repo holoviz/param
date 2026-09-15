@@ -135,6 +135,12 @@ class ReactiveError:
         self.exception = exception
         self.node = weakref.ref(node) if node is not None else None
 
+    @property
+    def label(self) -> str | None:
+        """The label of the node that produced this error, or None if unset."""
+        node = self.node() if self.node is not None else None
+        return getattr(node, '_label', None) if node is not None else None
+
     def __bool__(self):
         return False
 
@@ -286,6 +292,30 @@ class reactive_ops:
                 return exc
             return value if isinstance(value, ReactiveError) else None
         return None
+
+    @property
+    def label(self) -> str | None:
+        """
+        Get or set a human-readable label for this node.
+
+        The label is inherited by nodes derived via `.rx.pipe` and operator
+        overloads, and is reported back on a :class:`ReactiveError` this node
+        (or a node derived from it) produces, via `ReactiveError.label`.
+
+        .. versionadded:: 2.5.0
+        """
+        if isinstance(self._reactive, rx):
+            return self._reactive._label
+        return None
+
+    @label.setter
+    def label(self, value: str | None):
+        if not isinstance(self._reactive, rx):
+            raise AttributeError(
+                "Cannot set a label on a reactive reference that is not an "
+                "rx expression."
+            )
+        self._reactive._label = value
 
     def and_(self, other) -> 'rx':
         """
@@ -1343,36 +1373,47 @@ class reactive_ops:
         bind(cb, self._reactive, watch=True)
 
 
+def _first_reactive_error(args, kwargs):
+    for a in args:
+        if isinstance(a, ReactiveError):
+            return a
+    for v in kwargs.values():
+        if isinstance(v, ReactiveError):
+            return v
+    return None
+
+
 @t.overload
 def bind(
     function: Callable[_P, Generator[_Y, t.Any, t.Any]], *args: t.Any,
-    watch: bool = False, **kwargs: t.Any
+    watch: bool = False, process_failures: bool = False, **kwargs: t.Any
 ) -> Callable[_P, Generator[_Y, t.Any, t.Any]]: ...
 
 
 @t.overload
 def bind(
     function: Callable[_P, AsyncGenerator[_Y, t.Any]], *args: t.Any,
-    watch: bool = False, **kwargs: t.Any
+    watch: bool = False, process_failures: bool = False, **kwargs: t.Any
 ) -> Callable[_P, AsyncGenerator[_Y, t.Any]]: ...
 
 
 @t.overload
 def bind(
     function: Callable[_P, Coroutine[t.Any, t.Any, _R]], *args: t.Any,
-    watch: bool = False, **kwargs: t.Any
+    watch: bool = False, process_failures: bool = False, **kwargs: t.Any
 ) -> Callable[_P, Coroutine[t.Any, t.Any, _R]]: ...
 
 
 @t.overload
 def bind(
     function: Callable[_P, _R], *args: t.Any,
-    watch: bool = False, **kwargs: t.Any
+    watch: bool = False, process_failures: bool = False, **kwargs: t.Any
 ) -> Callable[_P, _R]: ...
 
 
 def bind(
-    function: Callable[..., t.Any], *args: t.Any, watch: bool = False, **kwargs: t.Any
+    function: Callable[..., t.Any], *args: t.Any, watch: bool = False,
+    process_failures: bool = False, **kwargs: t.Any
 ) -> Callable[..., t.Any]:
     """
     Bind constant values, parameters, bound functions or reactive expressions to a function.
@@ -1403,6 +1444,14 @@ def bind(
     watch : bool, optional
         If `True`, the function is automatically evaluated whenever a bound
         parameter or reactive expression changes. Defaults to `False`.
+    process_failures : bool, optional
+        If `False` (the default), a bound argument that resolves to a
+        `ReactiveError` short-circuits the call: `function` is not invoked
+        and the `ReactiveError` is returned (or yielded) unchanged. If
+        `True`, the `ReactiveError` is passed to `function` like any other
+        value. Defaults to `False`.
+
+        .. versionadded:: 2.5.0
     **kwargs : object, Parameter, bound function or reactive expression rx
         Keyword arguments to bind to the function. These can also be constants,
         `param.Parameter` objects, bound functions or reactive expressions.
@@ -1412,6 +1461,13 @@ def bind(
     callable, generator, async generator, or coroutine
         A new function with the bound arguments, annotated with all dependencies.
         The function reflects changes to bound parameters or reactive expressions.
+
+    Notes
+    -----
+    `process_failures` is consumed by `bind` itself, so a `function` that
+    expects its own keyword argument literally named `process_failures` will
+    no longer have it forwarded from `**kwargs`; rename that argument on
+    `function` to avoid the collision.
 
     Examples
     --------
@@ -1523,6 +1579,11 @@ def bind(
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
+            if not process_failures:
+                err = _first_reactive_error(combined_args, combined_kwargs)
+                if err is not None:
+                    yield err
+                    return
             evaled: Iterable[t.Any] = eval_fn()(*combined_args, **combined_kwargs)
             for val in evaled:
                 yield val
@@ -1534,6 +1595,11 @@ def bind(
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
+            if not process_failures:
+                err = _first_reactive_error(combined_args, combined_kwargs)
+                if err is not None:
+                    yield err
+                    return
             evaled: t.Any = eval_fn()(*combined_args, **combined_kwargs)
             async for val in evaled:
                 yield val
@@ -1546,6 +1612,10 @@ def bind(
             combined_args, combined_kwargs = combine_arguments(
                 wargs, wkwargs, asynchronous=True
             )
+            if not process_failures:
+                err = _first_reactive_error(combined_args, combined_kwargs)
+                if err is not None:
+                    return err
             evaled: t.Any = eval_fn()(*combined_args, **combined_kwargs)
             return await evaled
         wrapped = wrapped_coro
@@ -1553,6 +1623,10 @@ def bind(
         @t.cast('t.Any', depends)(**dependencies, watch=watch)
         def wrapped_sync(*wargs, **wkwargs):
             combined_args, combined_kwargs = combine_arguments(wargs, wkwargs)
+            if not process_failures:
+                err = _first_reactive_error(combined_args, combined_kwargs)
+                if err is not None:
+                    return err
             return eval_fn()(*combined_args, **combined_kwargs)
         wrapped = wrapped_sync
     t.cast('t.Any', wrapped).__bound_function__ = function
@@ -1653,6 +1727,14 @@ class rx:
     error_mode : {"raise", "propagate"}, default "raise"
         Whether exceptions raised while evaluating the expression should be
         re-raised or represented as :class:`ReactiveError` values.
+    label : str, optional
+        An optional human-readable label for this node. Read back via
+        ``expr.rx.error.label`` on a `ReactiveError` this node (or a node
+        derived from it while inheriting the label) produced. `None` if
+        never set. Can also be read and set after construction via
+        ``expr.rx.label``.
+
+        .. versionadded:: 2.5.0
 
     References
     ----------
@@ -1797,6 +1879,7 @@ class rx:
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
         _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
+        label=None,
         **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
@@ -1825,6 +1908,7 @@ class rx:
         self._error_mode = error_mode
         if error_mode not in ('raise', 'propagate'):
             raise ValueError("error_mode must be either 'raise' or 'propagate'")
+        self._label = label
         self._current_ = _current
         self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         # _shared is used for branching rx pipelines where we clone the input.
@@ -2187,6 +2271,11 @@ class rx:
             if self._dirty or self._root._dirty_obj:
                 # Ignoring as the inputs were invalidated while the async operation was running
                 return
+            if self._error_mode == 'propagate':
+                self._current_ = ReactiveError(e, self)
+                self._skipped = False
+                trigger.param.trigger('value')
+                return
             # Mirror the synchronous path in _resolve.
             # For an async generator an raised exception ends the stream.
             self._error_state = e
@@ -2341,10 +2430,11 @@ class rx:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = dict(self._display_opts, **kwargs)
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
+        label = kwargs.pop('label', self._label)
         return type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
-            error_mode=error_mode,
+            error_mode=error_mode, label=label,
             **kwargs
         )
 

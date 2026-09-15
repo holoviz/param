@@ -1671,7 +1671,7 @@ class rx:
     3
     """
 
-    _accessors: dict[str, tuple[Callable[[t.Any], t.Any], Callable[[t.Any], bool] | None]] = {}
+    _accessors: dict[str, tuple[Callable[[t.Any], t.Any], Callable[[t.Any], bool] | None, bool]] = {}
 
     _display_options: tuple[str, ...] = ()
 
@@ -1682,7 +1682,8 @@ class rx:
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
-        predicate: Callable[[t.Any], bool] | None = None
+        predicate: Callable[[t.Any], bool] | None = None,
+        memoize: bool = True
     ):
         """
         Register an accessor that extends ``rx`` with custom behavior.
@@ -1704,9 +1705,14 @@ class rx:
           Called with the node's current value the first time ``name`` is
           accessed on that node; the accessor is only instantiated if a
           callable returns True or if ``predicate`` is None.
+        memoize: bool
+          Whether to cache the instantiated accessor on the node after the
+          first successful access (the default). If ``False`` the accessor
+          is re-instantiated, and its ``predicate`` re-evaluated against the
+          node's current value, on every access.
 
         """
-        cls._accessors[name] = (accessor, predicate)
+        cls._accessors[name] = (accessor, predicate, memoize)
 
     @classmethod
     def register_display_handler(cls, obj_type, handler, **kwargs):
@@ -2311,8 +2317,9 @@ class rx:
         extras = {attr for attr in dir(current) if not attr.startswith('_')}
         # Explicitly list registered but uninstantiated accessors
         accessor_names = {
-            name for name, (_, predicate) in rx._accessors.items()
-            if name not in self.__dict__ and (predicate is None or predicate(resolved))
+            name for name, (_, predicate, memoize) in rx._accessors.items()
+            if (name not in self.__dict__ or not memoize)
+            and (predicate is None or predicate(resolved))
         }
         try:
             return sorted(set(super().__dir__()) | extras | accessor_names)
@@ -2356,11 +2363,15 @@ class rx:
             current = self_dict['_current_']
 
         # Capture uninstantiated accessor access
-        if name in rx._accessors and name not in self_dict:
-            accessor, predicate = rx._accessors[name]
+        if name in rx._accessors and (name not in self_dict or not rx._accessors[name][2]):
+            accessor, predicate, memoize = rx._accessors[name]
             if predicate is None or predicate(current):
                 value = accessor(self)
-                setattr(self, name, value)
+                if memoize:
+                    # Bypass __setattr__ (which blocks reassignment of
+                    # registered accessor names) to cache the instantiated
+                    # accessor directly on the instance.
+                    self_dict[name] = value
                 return value
 
         method = self_dict['_method']
@@ -2599,11 +2610,17 @@ class rx:
     def __setattr__(self, name, value):
         # Setting value instead of rx.value is a common user mistake.
         # They are more but we don't want to restrict __setattr__ too much
-        # so only catch value, for now.
+        # so only catch value and registered accessor names, for now.
         if name == "value":
             raise AttributeError(
                 "'rx' has no attribute 'value', try "
                 "'<reactive_expr>.rx.value = <val>'."
+            )
+        elif name in rx._accessors:
+            raise AttributeError(
+                f"{name!r} is a registered accessor and cannot be "
+                "reassigned; did you mean to set an attribute on the "
+                "node's value?"
             )
         super().__setattr__(name, value)
 

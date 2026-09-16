@@ -423,29 +423,26 @@ class reactive_ops:
         [2, 3, 4]
         """
         items = []
-        def collect(new, n):
+        def push(new, n):
             items.append(new)
             while len(items) > n:
                 items.pop(0)
             return items
-        return self._as_rx()._apply_operator(collect, n)
+        return self._as_rx()._apply_operator(push, n)
 
-    @staticmethod
-    def collect(*args, error_mode='raise', **kwargs) -> 'rx':
+    def collect(self, *args, error_mode='raise', **kwargs) -> 'rx':
         """
         Combine several inputs into a mapping of whichever have settled.
 
-        Unlike `.rx.pipe`, this does not call a function: the result is a
+        Unlike `.rx.pipe`, this does not call a function on the current
+        value, and the current value is not itself part of the result
+        unless also passed in ``*args``/``**kwargs``: the result is a
         mapping, keyed by each input's position (positional argument) or
         name (keyword), that grows as inputs settle rather than waiting for
         the slowest one. A key appears once its input has produced a value
         and keeps that value while the input is unsettled again.
-        `.rx.awaiting` is `True` while any input is unsettled, including one
-        that already has a key and is settling again.
-
-        Called on the class, not an existing expression, since it combines
-        several independent inputs rather than transforming one:
-        `param.rx.collect(...)`.
+        `.rx.awaiting` is `True` while any input is unsettled, including
+        one that already has a key and is settling again.
 
         Parameters
         ----------
@@ -467,7 +464,7 @@ class reactive_ops:
         --------
         >>> import param
         >>> a, b = param.rx(1), param.rx(2)
-        >>> collected = param.rx.collect(a=a, b=b)
+        >>> collected = a.rx.collect(a=a, b=b)
         >>> collected.rx.value
         {'a': 1, 'b': 2}
         """
@@ -1759,30 +1756,10 @@ def _collect_marker(*args, **kwargs):
     raise NotImplementedError
 
 
-class _rxmeta(type):
-    """
-    Forward a class-level lookup that `rx` doesn't resolve itself (e.g.
-    `rx.collect`) to `reactive_ops`. `reactive_ops` is where such helpers
-    live, since a plain method on `rx` would double as an attribute of
-    every `rx` *instance*, silently shadowing that name on whatever object
-    it wraps (e.g. `some_spark_df_rx.collect()` should reach
-    `pyspark.sql.DataFrame.collect`, not some unrelated `rx` classmethod of
-    the same name). A metaclass lookup only ever applies to `rx` itself,
-    never to an instance's own attribute resolution in
-    `rx.__getattribute__`.
-    """
-
-    def __getattr__(cls, name):
-        return getattr(reactive_ops, name)
-
-    def __dir__(cls):
-        return sorted(set(super().__dir__()) | set(dir(reactive_ops)))
-
-
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
-class rx(metaclass=_rxmeta):
+class rx:
     """
     A class for creating reactive expressions by wrapping objects.
 

@@ -2847,7 +2847,7 @@ def test_reactive_accessor_memoize_true_still_instantiates_once(clean_accessors)
     assert installed_for == [n]
 
 
-# rx.collect
+# .rx.collect
 
 async def test_reactive_collect_reports_partial_results_as_inputs_settle():
     async def delayed(v, delay):
@@ -2859,7 +2859,7 @@ async def test_reactive_collect_reports_partial_results_as_inputs_settle():
     a = rx(1).rx.pipe(delayed, delay=0.05)
     b = rx(2).rx.pipe(delayed, delay=0.15)
     c = rx(3).rx.pipe(delayed, delay=0.25)
-    collected = rx.collect(a=a, b=b, c=c)
+    collected = a.rx.collect(a=a, b=b, c=c)
 
     values = []
     collected.rx.watch(values.append)
@@ -2879,7 +2879,8 @@ async def test_reactive_collect_reports_partial_results_as_inputs_settle():
     assert not collected.rx.awaiting
 
 def test_reactive_collect_includes_non_reactive_and_positional_inputs():
-    collected = rx.collect(rx(1), 2, c=rx(3))
+    a = rx(1)
+    collected = a.rx.collect(a, 2, c=rx(3))
     assert collected.rx.value == {0: 1, 1: 2, 'c': 3}
     assert not collected.rx.awaiting
 
@@ -2887,7 +2888,7 @@ def test_reactive_collect_key_order_follows_argument_order_not_settle_order():
     """A key already present keeps its argument-order slot when it resettles."""
     a = rx(1)
     b = rx(2)
-    collected = rx.collect(b=b, a=a)
+    collected = a.rx.collect(b=b, a=a)
     assert list(collected.rx.value) == ['b', 'a']
 
     a.rx.value = 10
@@ -2895,7 +2896,7 @@ def test_reactive_collect_key_order_follows_argument_order_not_settle_order():
     assert collected.rx.value == {'b': 2, 'a': 10}
 
 def test_reactive_collect_empty_settles_immediately_to_an_empty_mapping():
-    collected = rx.collect()
+    collected = rx(1).rx.collect()
     assert collected.rx.value == {}
     assert not collected.rx.awaiting
 
@@ -2907,7 +2908,7 @@ async def test_reactive_collect_keeps_stale_key_while_its_input_resettles():
     src = rx(1)
     a = src.rx.pipe(delayed)
     b = rx(2)
-    collected = rx.collect(a=a, b=b)
+    collected = a.rx.collect(a=a, b=b)
 
     events = []
     collected.rx.watch(events.append)
@@ -2932,7 +2933,7 @@ def test_reactive_collect_error_mode_propagate_holds_error_at_its_key():
     a = rx(1)
     b = rx(2).rx.pipe(fail)
     c = rx(3)
-    collected = rx.collect(a=a, b=b, c=c, error_mode='propagate')
+    collected = a.rx.collect(a=a, b=b, c=c, error_mode='propagate')
 
     value = collected.rx.value
     assert value['a'] == 1
@@ -2943,24 +2944,30 @@ def test_reactive_collect_error_mode_raise_fails_the_whole_node():
     def fail(v):
         raise ValueError('boom')
 
-    collected = rx.collect(a=rx(1), b=rx(2).rx.pipe(fail))
+    a = rx(1)
+    collected = a.rx.collect(a=a, b=rx(2).rx.pipe(fail))
     with pytest.raises(ValueError, match='boom'):
         collected.rx.value
 
 def test_reactive_collect_does_not_shadow_a_method_of_the_wrapped_object():
-    """`collect` lives on `reactive_ops`, not `rx`, so it can't shadow an
-    instance's own attribute of the same name (e.g. a DataFrame's
-    `.collect()`), while `rx.collect(...)` (the class-level, no-instance
-    call) still works.
+    """`collect` is a regular method of `reactive_ops` (`.rx.collect`), not
+    of `rx`, so it can't shadow an instance's own attribute of the same
+    name (e.g. a DataFrame's `.collect()`).
     """
     class Obj:
         def collect(self, x):
             return f'collected {x}'
 
     assert rx(Obj()).collect(3).rx.value == 'collected 3'
-    assert 'collect' not in rx.__dict__
-    assert 'collect' in dir(rx)
-    assert rx.collect(a=rx(1)).rx.value == {'a': 1}
+    assert 'collect' not in dir(rx)
+
+def test_reactive_collect_ignores_the_anchor_its_called_on():
+    """The expression `.rx.collect` is called on is not itself part of the
+    result unless also passed explicitly.
+    """
+    a = rx(1)
+    b = rx(2)
+    assert a.rx.collect(b=b).rx.value == b.rx.collect(b=b).rx.value == {'b': 2}
 
 async def test_reactive_pipe_multi_arg_still_waits_for_every_input():
     """Without `collect`, `.rx.pipe` is unaffected: every argument must settle."""

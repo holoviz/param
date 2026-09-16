@@ -1,12 +1,13 @@
 """Unit test for watch mechanism."""
 import copy
 import re
+import threading
 import unittest
 
 import param
 import pytest
 
-from param.parameterized import Skip, discard_events
+from param.parameterized import Skip, batch, discard_events
 
 from .utils import MockLoggingHandler
 
@@ -1071,3 +1072,261 @@ class TestTrigger(unittest.TestCase):
         p.param.watch(runs.append, ["x", "x"])
         p.x = 1
         assert len(runs) == 1
+
+
+class TestBatch:
+
+    def test_without_batch_two_objects_glitch(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        calls = []
+        param.bind(lambda x, y: calls.append(x + y), a.param.x, b.param.y, watch=True)
+
+        a.x = 2
+        b.y = 20
+
+        assert calls == [12, 22]
+
+    def test_batch_across_two_parameterized_instances(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        calls = []
+        param.bind(lambda x, y: calls.append(x + y), a.param.x, b.param.y, watch=True)
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        # param.bind registers the same callback separately on each source,
+        # but batch() coalesces it into one call, seeing both settled.
+        assert calls == [22]
+
+    def test_batch_plain_multi_param_watcher(self):
+        class P(param.Parameterized):
+            a = param.Number(default=1)
+            b = param.Number(default=10)
+
+        p = P()
+        calls = []
+        p.param.watch(lambda *events: calls.append([e.new for e in events]), ['a', 'b'])
+
+        with batch():
+            p.a = 2
+            p.b = 20
+
+        assert calls == [[2, 20]]
+
+    def test_batch_depends_watch(self):
+        class Q(param.Parameterized):
+            a = param.Number(default=1)
+            b = param.Number(default=10)
+            log = param.List(default=[])
+
+            @param.depends('a', 'b', watch=True)
+            def _combine(self):
+                self.log.append(self.a + self.b)
+
+        q = Q()
+        with batch():
+            q.a = 2
+            q.b = 20
+
+        assert q.log == [22]
+
+    def test_batch_three_independent_classes(self):
+        class C(param.Parameterized):
+            p = param.Number(default=1)
+
+        class D(param.Parameterized):
+            q = param.Number(default=1)
+
+        class E(param.Parameterized):
+            r = param.Number(default=1)
+
+        c, d, e = C(), D(), E()
+        calls = []
+        param.bind(
+            lambda p, q, r: calls.append(p + q + r),
+            c.param.p, d.param.q, e.param.r, watch=True,
+        )
+
+        with batch():
+            c.p = 10
+            d.q = 100
+            e.r = 1000
+
+        assert calls == [1110]
+
+    def test_batch_nesting_drains_once_at_outermost_exit(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        calls = []
+        p.param.watch(lambda e: calls.append(e.new), 'x')
+
+        with batch():
+            with batch():
+                p.x = 5
+            assert calls == []
+        assert calls == [5]
+
+    def test_batch_composes_with_batch_call_watchers(self):
+        class P(param.Parameterized):
+            a = param.Number(default=1)
+            b = param.Number(default=10)
+
+        p = P()
+        calls = []
+        p.param.watch(lambda *events: calls.append([e.new for e in events]), ['a', 'b'])
+
+        with batch():
+            with param.parameterized.batch_call_watchers(p):
+                p.a = 2
+                p.b = 20
+
+        assert calls == [[2, 20]]
+
+    def test_batch_exception_still_notifies(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        calls = []
+        p.param.watch(lambda e: calls.append(e.new), 'x')
+
+        with pytest.raises(ValueError, match='boom'):
+            with batch():
+                p.x = 7
+                raise ValueError('boom')
+
+        assert calls == [7]
+
+    def test_batch_thread_isolation(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        class Q(param.Parameterized):
+            y = param.Number(default=1)
+
+        p, q = P(), Q()
+        p_calls, q_calls = [], []
+        p.param.watch(lambda e: p_calls.append(e.new), 'x')
+        q.param.watch(lambda e: q_calls.append(e.new), 'y')
+
+        def worker(obj, attr, value):
+            with batch():
+                setattr(obj, attr, value)
+
+        t1 = threading.Thread(target=worker, args=(p, 'x', 99))
+        t2 = threading.Thread(target=worker, args=(q, 'y', 88))
+        t1.start()
+        t1.join()
+        t2.start()
+        t2.join()
+
+        assert p_calls == [99]
+        assert q_calls == [88]
+
+    def test_batch_no_cost_when_unused(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        calls = []
+        p.param.watch(lambda e: calls.append(e.new), 'x')
+        p.x = 2
+        assert calls == [2]
+
+    def test_batch_coalesces_watch_values_across_owners(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        calls = []
+        cb = lambda **kwargs: calls.append(kwargs)
+        a.param.watch_values(cb, 'x')
+        b.param.watch_values(cb, 'y')
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        assert calls == [{'x': 2, 'y': 20}]
+
+    def test_batch_respects_precedence_across_owners_and_groups(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        order = []
+        shared = lambda *events: order.append('shared')
+        early = lambda *events: order.append('early')
+        a.param.watch(shared, 'x', precedence=5)
+        b.param.watch(shared, 'y', precedence=5)
+        a.param.watch(early, 'x', precedence=1)
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        assert order == ['early', 'shared']
+
+    def test_batch_uses_the_lowest_precedence_seen_across_a_merged_group(self):
+        # `shared` is registered with a different precedence on each
+        # owner; the merged group must sort by the lower of the two, not
+        # whichever happened to be encountered first while merging.
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        order = []
+        shared = lambda *events: order.append('shared')
+        middle = lambda *events: order.append('middle')
+        a.param.watch(shared, 'x', precedence=5)
+        b.param.watch(shared, 'y', precedence=1)
+        a.param.watch(middle, 'x', precedence=3)
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        assert order == ['shared', 'middle']
+
+    def test_batch_coalesces_a_queued_watcher_across_owners(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        calls = []
+        cb = lambda *events: calls.append('cb')
+        a.param.watch(cb, 'x', queued=True)
+        b.param.watch(cb, 'y', queued=True)
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        assert calls == ['cb']

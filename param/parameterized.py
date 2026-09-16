@@ -10,6 +10,7 @@ __init__.py (providing specialized Parameter types).
 from __future__ import annotations
 
 import abc
+import contextvars
 import copy
 import datetime as dt
 import enum
@@ -22,7 +23,7 @@ import sys
 import types
 import typing as t
 import warnings
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
@@ -424,6 +425,108 @@ def batch_call_watchers(parameterized):
         parameterized.param._BATCH_WATCH = BATCH_WATCH
         if not BATCH_WATCH:
             parameterized.param._batch_call_watchers()
+
+
+# Registry for the transaction active in this context, or None. A
+# ContextVar rather than a module attribute so concurrent transactions on
+# different threads/tasks never share one; nested `batch()` calls reuse it.
+_param_batch: contextvars.ContextVar[set[t.Any] | None] = contextvars.ContextVar(
+    'param_batch', default=None
+)
+
+
+def _flush_batch(objects):
+    """
+    Execute every watcher queued on ``objects``, coalescing watchers that
+    are the very same callback registered on more than one of them (how
+    `bind()`/`depends()` wire one callback across several source objects)
+    so the callback runs once for the transaction, not once per object.
+    """
+    groups: dict[int, list] = {}
+    for obj in objects:
+        self_ = obj.param
+        if not self_._events:
+            continue
+        # Only ever looked up by key below, never iterated, so a plain
+        # dict (insertion order or not) is enough.
+        event_dict = {(event.name, event.what): event for event in self_._events}
+        watchers, self_._events, self_._state_watchers = self_._state_watchers[:], [], []
+        for watcher in watchers:
+            events = [
+                self_._update_event_type(watcher, event_dict[(name, watcher.what)], self_._TRIGGER)
+                for name in watcher.parameter_names
+                if (name, watcher.what) in event_dict
+            ]
+            if not events:
+                continue
+            group = groups.setdefault(id(watcher.fn), [watcher, [], []])
+            if watcher.precedence < group[0].precedence:
+                # Keep the lowest-precedence watcher in the group as the
+                # representative, so sorting below is correct even if a
+                # caller registered the same callback with different
+                # precedences on different owners.
+                group[0] = watcher
+            group[1].append(obj)
+            group[2].extend(events)
+
+    # Lower precedence runs first, same as a single object's own
+    # `_batch_call_watchers` (`parameterized.py:3449`).
+    for watcher, owners, events in sorted(groups.values(), key=lambda g: g[0].precedence):
+        with ExitStack() as stack:
+            for owner in dict.fromkeys(owners):
+                stack.enter_context(_batch_call_watchers(owner, enable=watcher.queued, run=False))
+            owners[0].param._execute_watcher(watcher, events)
+
+
+@contextmanager
+def batch() -> Generator[None, None, None]:
+    """
+    Context manager that defers watcher notification for every
+    :class:`Parameterized` object touched inside it, discovered as it is
+    touched rather than named up front, and coalesces a callback registered
+    on more than one of them into a single call.
+
+    Where ``batch_call_watchers`` batches one object the caller already
+    knows about, ``batch`` covers a transaction spanning several objects,
+    or one whose full set of objects is only known once it runs (a sheet
+    of overrides, a dynamic graph rebuild). Every watcher still fires, just
+    once, after everything inside the block has landed, rather than once
+    per object it depends on and possibly seeing a mix of old and new
+    values along the way. This is why ``bind(fn, *refs, watch=True)``, which
+    registers the same callback on every distinct owner among ``refs``,
+    calls ``fn`` exactly once per transaction rather than once per owner
+    touched; the same coalescing applies to any callback registered, by
+    identity, on more than one object. Nesting is safe: only the outermost
+    block flushes anything, and composes with ``batch_call_watchers``/
+    ``.param.update()``.
+
+    Examples
+    --------
+    >>> import param
+    >>> class A(param.Parameterized):
+    ...     x = param.Number(default=1)
+    >>> class B(param.Parameterized):
+    ...     y = param.Number(default=10)
+    >>> a, b = A(), B()
+    >>> calls = []
+    >>> _ = param.bind(lambda x, y: calls.append(x + y), a.param.x, b.param.y, watch=True)
+    >>> with param.parameterized.batch():
+    ...     a.x = 2
+    ...     b.y = 20
+    >>> calls  # one call, seeing x=2, y=20; without `batch()` this would be [12, 22]
+    [22]
+    """
+    registry = _param_batch.get()
+    outermost = registry is None
+    if outermost:
+        registry = set()
+    token = _param_batch.set(registry)
+    try:
+        yield
+    finally:
+        _param_batch.reset(token)
+        if outermost and registry:
+            _flush_batch(registry)
 
 
 @contextmanager
@@ -2452,7 +2555,17 @@ class Parameters:
 
     @property
     def _BATCH_WATCH(self_):
-        return self_.self_or_cls._param__private.parameters_state['BATCH_WATCH']
+        # A `batch()` transaction makes every object it touches look
+        # individually batched, without writing to its BATCH_WATCH slot:
+        # by the time the transaction drains, its ContextVar is already
+        # reset, so this reads the real, untouched flag below again.
+        registry = _param_batch.get()
+        state = self_.self_or_cls._param__private.parameters_state
+        if registry is not None:
+            if not state['BATCH_WATCH']:
+                registry.add(self_.self_or_cls)
+            return True
+        return state['BATCH_WATCH']
 
     @_BATCH_WATCH.setter
     def _BATCH_WATCH(self_, value):

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import gc
 import math
 import operator
@@ -9,7 +10,7 @@ import weakref
 import param
 import pytest
 
-from param.parameterized import Skip
+from param.parameterized import Skip, batch
 from param.reactive import bind, current_node, rx
 from typing import Any, Callable
 
@@ -3468,6 +3469,37 @@ def test_reactive_override_propagates_without_any_parameters():
     n.rx.overrides['factor'] = 1
 
     assert (n.rx.value, derived.rx.value) == (10, 11)
+
+
+@pytest.mark.parametrize(('ctx', 'expected'), [
+    (contextlib.nullcontext(), [1100, 3000]),
+    (batch(), [3000]),
+], ids=['without_batch', 'inside_batch'])
+def test_reactive_override_sheet_across_nodes(ctx, expected):
+    """
+    ``node1`` and ``node2`` have distinct override channels, so setting one
+    then the other, without ``batch()``, delivers a value crossing the
+    first with the second's stale input; ``batch()`` avoids it.
+    """
+    class A(param.Parameterized):
+        x = param.Number(default=1)
+
+    class B(param.Parameterized):
+        y = param.Number(default=10)
+
+    a, b = A(), B()
+    node1 = rx(lambda x: x * 10)(x=a.param.x)
+    node2 = rx(lambda y: y * 10)(y=b.param.y)
+    combined = rx(lambda n1, n2: n1 + n2)(n1=node1, n2=node2)
+    calls = []
+    combined.rx.watch(calls.append)
+    calls.clear()
+
+    with ctx:
+        node1.rx.overrides['x'] = 100
+        node2.rx.overrides['y'] = 200
+
+    assert calls == expected
 
 
 def test_reactive_readers_do_not_keep_nodes_alive():

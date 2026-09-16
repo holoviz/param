@@ -26,6 +26,10 @@
 
 `rx` allows wrapping objects and then operating on them interactively while recording any operations applied to them.
 
+`==` and `!=` build a comparison expression rather than compare identity, but `rx`
+instances are still hashable by identity, so a node can be used as a `dict` key or
+`set` member.
+
 ### Error handling
 
 By default, exceptions raised while evaluating an expression are cached and
@@ -126,6 +130,17 @@ See the [Reactive Expressions user guide](../../user_guide/Reactive_Expressions.
 for `.rx.meta` and `current_node`, used together for per-node caching and
 provenance.
 
+### Walking the graph
+
+`.rx.upstream()` and `.rx.downstream()` walk a node's pipeline edges: what it was
+piped/branched/operated on (`upstream`), and what was in turn built from it
+(`downstream`), transitively in either direction. Both exclude the node itself,
+and neither covers a dependency reached only through `bind()`, `.rx.when`,
+`.rx.where`, or `.rx.overrides`, since those resolve their inputs outside the
+pipeline machinery `.rx.pipe` and the operators use. Test membership with
+`in set(...)`, not `in` on the iterator directly: `rx`'s overloaded `==` makes
+`in` on a bare iterator unreliable.
+
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
@@ -145,6 +160,7 @@ These methods and properties are available under the `.rx` namespace of reactive
    ~reactive_ops.and_
   ~reactive_ops.bool
   ~reactive_ops.buffer
+  ~reactive_ops.downstream
   ~reactive_ops.in_
   ~reactive_ops.is_
   ~reactive_ops.is_not
@@ -156,6 +172,7 @@ These methods and properties are available under the `.rx` namespace of reactive
   ~reactive_ops.resolve
   ~reactive_ops.set
   ~reactive_ops.updating
+  ~reactive_ops.upstream
   ~reactive_ops.when
   ~reactive_ops.where
    ~reactive_ops.value

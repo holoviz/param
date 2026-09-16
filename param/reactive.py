@@ -1185,6 +1185,74 @@ class reactive_ops:
             for node in reactive._upstream()
         )
 
+    def upstream(self) -> Iterator['rx']:
+        """
+        Iterate over the ``rx`` nodes this expression derives its value from,
+        directly or transitively, excluding itself. Only pipeline edges count:
+        ``.rx.pipe``/operator chaining, a branch (``expr[0]``), and an ``rx``
+        passed as an operation argument. A dependency reached only through
+        ``bind()``, ``.rx.when``, ``.rx.where``, or ``.rx.overrides`` is not
+        included.
+
+        Traversal order is unspecified and may change between calls as the
+        pipeline is extended. Do not use ``in`` on the iterator to test
+        membership: ``rx.__eq__`` builds a comparison expression rather than a
+        bool, so ``x in upstream()`` is not a reliable membership test. Use
+        ``x in set(upstream())`` instead.
+
+        Returns
+        -------
+        Iterator[rx]
+            Empty if the ``.rx`` namespace does not belong to an ``rx`` node.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> b = a.rx.pipe(lambda x, y: x + y, y=param.rx(2))
+        >>> a in set(b.rx.upstream())
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return
+        upstream = reactive._upstream()
+        next(upstream, None)  # Skip itself.
+        yield from upstream
+
+    def downstream(self) -> Iterator['rx']:
+        """
+        Iterate over the ``rx`` nodes that derive their value from this
+        expression, directly or transitively, excluding itself. The reverse
+        of :meth:`upstream`, with the same pipeline-edges-only scope: a node
+        that only reaches this one through ``bind()``, ``.rx.when``,
+        ``.rx.where``, or ``.rx.overrides`` is not included.
+
+        Readers are held weakly, so this reflects only what is currently
+        alive, and traversal order is unspecified. As with :meth:`upstream`,
+        use ``set(downstream())`` rather than ``in`` on the iterator directly.
+
+        Returns
+        -------
+        Iterator[rx]
+            Empty if the ``.rx`` namespace does not belong to an ``rx`` node,
+            or if nothing currently reads from it.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> b = a.rx.pipe(lambda x: x + 1)
+        >>> b in set(a.rx.downstream())
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return
+        downstream = reactive._downstream()
+        next(downstream, None)  # Skip itself.
+        yield from downstream
+
     def updating(self) -> 'rx':
         """
         Return a new expression that indicates whether the current expression is updating.
@@ -2045,6 +2113,10 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
+    # `__eq__` builds an expression, not a bool, so it can't disagree with a
+    # hash; restored explicitly so a node can be a `dict` key or `set` member.
+    __hash__ = object.__hash__
+
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
@@ -2187,10 +2259,9 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
-        if self._prev is not None:
-            self._prev._register_reader(self)
-        if _shared is not None:
-            _shared._register_reader(self)
+        # Register as a reader of every direct input, the reverse of `_upstream()`.
+        for inp in self._direct_inputs():
+            inp._register_reader(self)
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
@@ -2325,15 +2396,39 @@ class rx:
         """Whether this node is waiting on an asynchronous result of its own."""
         return self._awaiting or self._awaiting_ref
 
-    def _upstream(self) -> Iterator[t.Any]:
+    def _direct_inputs(self) -> Iterator[t.Any]:
         """
-        Yield this node and every ``rx`` node it derives its value from.
+        Yield the ``rx`` nodes this node reads directly from: its ``_prev``
+        predecessor, the ``_shared`` input it was cloned from when a pipeline
+        branches, and any ``rx`` passed as an operation argument.
+        """
+        for inp in (self._prev, self._shared):
+            if isinstance(inp, rx):
+                yield inp
+        operation = self._operation
+        if operation:
+            yield from _iter_rx((
+                operation['fn'], operation.get('args', ()), operation.get('kwargs', {})
+            ))
 
-        Inputs reach a node by three routes, all of which have to be visited
-        because an operation is only as settled as the nodes feeding it: the
-        ``_prev`` chain of the pipeline the node belongs to, the ``_shared``
-        input it was cloned from when a pipeline branches, and any ``rx``
-        passed as an argument to one of its operations.
+    def _upstream(self) -> Iterator[t.Any]:
+        """Yield this node and every ``rx`` node it derives its value from, transitively."""
+        seen: set[int] = set()
+        stack: list[rx] = [self]
+        while stack:
+            node = stack.pop()
+            if (id_node := id(node)) in seen:
+                continue
+            seen.add(id_node)
+            yield node
+            stack.extend(node._direct_inputs())
+
+    def _downstream(self) -> Iterator[t.Any]:
+        """
+        Yield this node and every ``rx`` node that derives its value from it,
+        transitively. The reverse of ``_upstream()``, walking ``_readers``
+        instead of ``_direct_inputs()``. Weak: a reader collected between two
+        calls simply drops out.
         """
         seen: set[int] = set()
         stack: list[rx] = [self]
@@ -2343,14 +2438,10 @@ class rx:
                 continue
             seen.add(id_node)
             yield node
-            for inp in (node._prev, node._shared):
-                if isinstance(inp, rx):
-                    stack.append(inp)
-            operation = node._operation
-            if operation:
-                stack.extend(_iter_rx((
-                    operation['fn'], operation.get('args', ()), operation.get('kwargs', {})
-                )))
+            for ref in tuple(node._readers or ()):
+                reader = ref()
+                if reader is not None:
+                    stack.append(reader)
 
     @property
     def _current(self):
@@ -2513,12 +2604,9 @@ class rx:
 
     def _register_reader(self, reader: Self):
         """
-        Record that ``reader`` computes its value from this node.
-
-        The reverse of ``_prev``, and of ``_shared`` so that the mirror a branch
-        creates is included. It carries the invalidation no parameter can, i.e.
-        an override, and is weak so that a node is not kept alive by the node it
-        derives from; dead entries drop out through the reference callback.
+        Record that ``reader`` computes its value from this node, for
+        ``_invalidate_overrides`` and ``_downstream()``. Weak, so a node is
+        not kept alive by the node it derives from.
         """
         readers = self._readers
         if readers is None:

@@ -3312,6 +3312,47 @@ def test_reactive_dependents_empty_on_non_rx_namespace():
     assert list(p.param.integer.rx.dependents()) == []
 
 
+def test_reactive_upstream_and_dependents_exclude_bind_only_dependency():
+    # `.rx.upstream()`/`.rx.dependents()` only walk pipeline edges (`_prev`,
+    # `_shared`, an rx operation argument). A plain `rx(bind(...))` reads its
+    # dependency through the bind/depends machinery instead, with no
+    # `_operation` of its own, so that route is not covered. Documenting the
+    # current scope rather than asserting it is desirable; broadening this is
+    # tracked separately.
+    a = rx(1)
+    b = rx(bind(lambda v: v + 1, a))
+    assert a not in set(b.rx.upstream())
+    assert b not in set(a.rx.dependents())
+
+
+def test_reactive_upstream_and_dependents_exclude_when_gate():
+    src = rx(1)
+    gate = rx(True)
+    gated = src.rx.when(gate)
+    assert src not in set(gated.rx.upstream())
+    assert gated not in set(src.rx.dependents())
+
+
+def test_reactive_upstream_and_dependents_exclude_where_branches():
+    cond = rx(True)
+    x, y = rx('a'), rx('b')
+    w = cond.rx.where(x, y)
+    assert cond not in set(w.rx.upstream())
+    assert w not in set(cond.rx.dependents())
+
+
+def test_reactive_upstream_and_dependents_exclude_override_value():
+    fx = rx(2)
+    override = rx(3)
+    value = rx(100).rx.pipe(lambda price, fx: price * fx, fx=fx)
+    value.rx.overrides['fx'] = override
+
+    upstream = set(value.rx.upstream())
+    assert override not in upstream
+    assert fx in upstream  # The masked input is still reported.
+    assert value not in set(override.rx.dependents())
+
+
 def test_reactive_rx_is_hashable():
     a = rx(1)
     assert hash(a) == hash(a)

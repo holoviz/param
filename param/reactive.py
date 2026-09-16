@@ -1188,11 +1188,17 @@ class reactive_ops:
     def upstream(self) -> Iterator['rx']:
         """
         Iterate over the ``rx`` nodes this expression derives its value from,
-        directly or transitively, excluding itself.
+        directly or transitively, excluding itself. Only pipeline edges count:
+        ``.rx.pipe``/operator chaining, a branch (``expr[0]``), and an ``rx``
+        passed as an operation argument. A dependency reached only through
+        ``bind()``, ``.rx.when``, ``.rx.where``, or ``.rx.overrides`` is not
+        included.
 
-        Traversal order is unspecified and may change between calls, e.g.
-        after an override is set. Nodes are held weakly, so iterating does
-        not keep them alive.
+        Traversal order is unspecified and may change between calls as the
+        pipeline is extended. Do not use ``in`` on the iterator to test
+        membership: ``rx.__eq__`` builds a comparison expression rather than a
+        bool, so ``x in upstream()`` is not a reliable membership test. Use
+        ``x in set(upstream())`` instead.
 
         Returns
         -------
@@ -1211,17 +1217,20 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return
         upstream = reactive._upstream()
-        next(upstream, None)  # Skip `reactive` itself.
+        next(upstream, None)  # Skip itself.
         yield from upstream
 
     def dependents(self) -> Iterator['rx']:
         """
         Iterate over the ``rx`` nodes that derive their value from this
         expression, directly or transitively, excluding itself. The reverse
-        of :meth:`upstream`.
+        of :meth:`upstream`, with the same pipeline-edges-only scope: a node
+        that only reaches this one through ``bind()``, ``.rx.when``,
+        ``.rx.where``, or ``.rx.overrides`` is not included.
 
         Readers are held weakly, so this reflects only what is currently
-        alive, and traversal order is unspecified.
+        alive, and traversal order is unspecified. As with :meth:`upstream`,
+        use ``set(dependents())`` rather than ``in`` on the iterator directly.
 
         Returns
         -------
@@ -1241,7 +1250,7 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return
         dependents = reactive._dependents()
-        next(dependents, None)  # Skip `reactive` itself.
+        next(dependents, None)  # Skip itself.
         yield from dependents
 
     def updating(self) -> 'rx':
@@ -2104,10 +2113,8 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
-    # `__eq__` (below) builds a comparison expression rather than a bool, so
-    # it can never be inconsistent with a hash, unlike the usual case Python's
-    # __eq__-without-__hash__ rule protects against. Restored explicitly so a
-    # node can be used as a `dict` key or `set` member.
+    # `__eq__` builds an expression, not a bool, so it can't disagree with a
+    # hash; restored explicitly so a node can be a `dict` key or `set` member.
     __hash__ = object.__hash__
 
     @classmethod

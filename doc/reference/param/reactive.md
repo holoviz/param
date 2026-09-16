@@ -130,6 +130,17 @@ See the [Reactive Expressions user guide](../../user_guide/Reactive_Expressions.
 for `.rx.meta` and `current_node`, used together for per-node caching and
 provenance.
 
+### Walking the graph
+
+`.rx.upstream()` and `.rx.dependents()` walk a node's pipeline edges: what it was
+piped/branched/operated on (`upstream`), and what was in turn built from it
+(`dependents`), transitively in either direction. Both exclude the node itself,
+and neither covers a dependency reached only through `bind()`, `.rx.when`,
+`.rx.where`, or `.rx.overrides`, since those resolve their inputs outside the
+pipeline machinery `.rx.pipe` and the operators use. Test membership with
+`in set(...)`, not `in` on the iterator directly: `rx`'s overloaded `==` makes
+`in` on a bare iterator unreliable.
+
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/

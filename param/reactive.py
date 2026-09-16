@@ -2704,18 +2704,18 @@ class rx:
     @property
     def _callback(self) -> Callable[..., t.Any]:
         params = [*self._params, self._ensure_override_channel().param.value]
-        _unset = object()
-        last = [_unset]
+        last = _unset = object()
         def evaluate(*args, **kwargs):
+            nonlocal last
             out = self._current
             if self._skipped:
                 raise Skip
             if self._method:
                 out = getattr(out, self._method)
             out = self._transform_output(out)
-            if last[0] is not _unset and Comparator.is_equal(out, last[0]):
+            if last is not _unset and Comparator.is_equal(out, last):
                 raise Skip
-            last[0] = out
+            last = out
             return out
         return bind(evaluate, *params)
 

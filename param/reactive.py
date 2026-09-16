@@ -90,6 +90,7 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 """
 from __future__ import annotations
 
+import contextvars
 import inspect
 import logging
 import math
@@ -524,12 +525,59 @@ class reactive_ops:
         [2, 3, 4]
         """
         items = []
-        def collect(new, n):
+        def push(new, n):
             items.append(new)
             while len(items) > n:
                 items.pop(0)
             return items
-        return self._as_rx()._apply_operator(collect, n)
+        return self._as_rx()._apply_operator(push, n)
+
+    def collect(self, *args, error_mode='raise', **kwargs) -> 'rx':
+        """
+        Combine the current expression with other inputs into a mapping of
+        whichever have settled.
+
+        Like `.rx.pipe`, the current expression is included, at position
+        0; unlike `.rx.pipe`, this does not call a function on it. The
+        result is a mapping keyed by each input's position (0 for the
+        current expression, 1, 2, ... for further positional arguments) or
+        name (keyword), that grows as inputs settle rather than waiting
+        for the slowest one. A key appears once its input has produced a
+        value and keeps that value while the input is unsettled again.
+        `.rx.awaiting` is `True` while any input is unsettled, including
+        one that already has a key and is settling again.
+
+        Parameters
+        ----------
+        *args, **kwargs : any
+            Further inputs to collect alongside the current expression,
+            typically ``rx`` expressions. A non-reactive value is included
+            immediately.
+        error_mode : {"raise", "propagate"}, default "raise"
+            With "propagate", a failing input resolves to a
+            :class:`ReactiveError` at its key instead of failing the whole
+            node. With "raise" (the default), a failing input drops every
+            key, including ones that already settled.
+
+        Returns
+        -------
+        rx
+            A reactive mapping of the settled inputs.
+
+        Examples
+        --------
+        >>> import param
+        >>> a, b = param.rx(1), param.rx(2)
+        >>> collected = a.rx.collect(b=b)
+        >>> collected.rx.value
+        {0: 1, 'b': 2}
+        """
+        operation = {
+            'fn': _collect_marker,
+            'args': (self._as_rx(), *args),
+            'kwargs': kwargs,
+        }
+        return rx(None, operation=operation, _current=Undefined, error_mode=error_mode)
 
     def in_(self, other) -> 'rx':
         """
@@ -1140,6 +1188,74 @@ class reactive_ops:
             node._dirty or node._root._dirty_obj or node._settling
             for node in reactive._upstream()
         )
+
+    def upstream(self) -> Iterator['rx']:
+        """
+        Iterate over the ``rx`` nodes this expression derives its value from,
+        directly or transitively, excluding itself. Only pipeline edges count:
+        ``.rx.pipe``/operator chaining, a branch (``expr[0]``), and an ``rx``
+        passed as an operation argument. A dependency reached only through
+        ``bind()``, ``.rx.when``, ``.rx.where``, or ``.rx.overrides`` is not
+        included.
+
+        Traversal order is unspecified and may change between calls as the
+        pipeline is extended. Do not use ``in`` on the iterator to test
+        membership: ``rx.__eq__`` builds a comparison expression rather than a
+        bool, so ``x in upstream()`` is not a reliable membership test. Use
+        ``x in set(upstream())`` instead.
+
+        Returns
+        -------
+        Iterator[rx]
+            Empty if the ``.rx`` namespace does not belong to an ``rx`` node.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> b = a.rx.pipe(lambda x, y: x + y, y=param.rx(2))
+        >>> a in set(b.rx.upstream())
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return
+        upstream = reactive._upstream()
+        next(upstream, None)  # Skip itself.
+        yield from upstream
+
+    def downstream(self) -> Iterator['rx']:
+        """
+        Iterate over the ``rx`` nodes that derive their value from this
+        expression, directly or transitively, excluding itself. The reverse
+        of :meth:`upstream`, with the same pipeline-edges-only scope: a node
+        that only reaches this one through ``bind()``, ``.rx.when``,
+        ``.rx.where``, or ``.rx.overrides`` is not included.
+
+        Readers are held weakly, so this reflects only what is currently
+        alive, and traversal order is unspecified. As with :meth:`upstream`,
+        use ``set(downstream())`` rather than ``in`` on the iterator directly.
+
+        Returns
+        -------
+        Iterator[rx]
+            Empty if the ``.rx`` namespace does not belong to an ``rx`` node,
+            or if nothing currently reads from it.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> b = a.rx.pipe(lambda x: x + 1)
+        >>> b in set(a.rx.downstream())
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            return
+        downstream = reactive._downstream()
+        next(downstream, None)  # Skip itself.
+        yield from downstream
 
     def updating(self) -> 'rx':
         """
@@ -1952,8 +2068,53 @@ async def _close_stale(obj):
         )
 
 
+def _collect_marker(*args, **kwargs):
+    """Serve as a placeholder `fn` for a `collect` operation; `_eval_collect` never calls it."""
+    raise NotImplementedError
+
+
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
+
+_current_node: contextvars.ContextVar[rx | None] = contextvars.ContextVar(
+    '_current_node', default=None
+)
+
+
+def current_node() -> rx | None:
+    """
+    Return the node currently being resolved, or ``None``.
+
+    Set only while a node's own operation function is actually running, using
+    a ``contextvars.ContextVar``, so concurrent async nodes on the same event
+    loop each see their own node. Not set while an operation's arguments are
+    being resolved, nor while watchers are notified of a new value, so it
+    never leaks into an unrelated function's execution.
+
+    Only meaningful when called from inside the body of a function passed
+    to an operation (``.rx.pipe``, ``bind``, an arithmetic operator, etc.)
+    while that operation is being evaluated for a specific node. Lets a
+    body attach data to ``.rx.meta`` on the exact node its computation
+    belongs to, without that node being passed to it as an argument:
+
+    >>> def kernel(price, fx):
+    ...     node = param.current_node()
+    ...     if node is not None:
+    ...         node.rx.meta['trace'] = {'fx_used': fx}
+    ...     return price * fx
+
+    Returns ``None`` outside of any operation body (including in plain user
+    code, tests, or a REPL), so callers should guard rather than chain
+    straight through to ``.rx.meta``.
+
+    Returns
+    -------
+    rx | None
+        The node being resolved, or ``None`` if called outside of an
+        operation's evaluation.
+    """
+    return _current_node.get()
+
 
 class rx:
     """
@@ -2041,6 +2202,10 @@ class rx:
     _watchers: list[Watcher] | None = None
 
     _disposed: bool = False
+
+    # `__eq__` builds an expression, not a bool, so it can't disagree with a
+    # hash; restored explicitly so a node can be a `dict` key or `set` member.
+    __hash__ = object.__hash__
 
     @classmethod
     def register_accessor(
@@ -2184,6 +2349,7 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
+        # Register as a reader of every direct input, the reverse of `_upstream()`.
         for inp in self._direct_inputs():
             inp._register_reader(self)
 
@@ -2248,10 +2414,18 @@ class rx:
     @property
     def _obj(self):
         if self._shared_obj is None:
-            self._obj = eval_function_with_deps(self._fn)
+            token = _current_node.set(self)
+            try:
+                self._obj = eval_function_with_deps(self._fn)
+            finally:
+                _current_node.reset(token)
         elif self._root._dirty_obj:
             root = self._root
-            root._shared_obj[0] = eval_function_with_deps(root._fn)
+            token = _current_node.set(root)
+            try:
+                root._shared_obj[0] = eval_function_with_deps(root._fn)
+            finally:
+                _current_node.reset(token)
             t.cast('t.Any', root)._dirty_obj = False
         shared_obj = self._shared_obj
         if shared_obj is None:
@@ -2313,7 +2487,11 @@ class rx:
         return self._awaiting or self._awaiting_ref
 
     def _direct_inputs(self) -> Iterator[t.Any]:
-        """Yield the ``rx`` nodes this node reads directly from."""
+        """
+        Yield the ``rx`` nodes this node reads directly from: its ``_prev``
+        predecessor, the ``_shared`` input it was cloned from when a pipeline
+        branches, and any ``rx`` passed as an operation argument.
+        """
         for inp in (self._prev, self._shared):
             if isinstance(inp, rx):
                 yield inp
@@ -2324,15 +2502,7 @@ class rx:
             ))
 
     def _upstream(self) -> Iterator[t.Any]:
-        """
-        Yield this node and every ``rx`` node it derives its value from.
-
-        Inputs reach a node by three routes, all of which have to be visited
-        because an operation is only as settled as the nodes feeding it: the
-        ``_prev`` chain of the pipeline the node belongs to, the ``_shared``
-        input it was cloned from when a pipeline branches, and any ``rx``
-        passed as an argument to one of its operations.
-        """
+        """Yield this node and every ``rx`` node it derives its value from, transitively."""
         seen: set[int] = set()
         stack: list[rx] = [self]
         while stack:
@@ -2342,6 +2512,26 @@ class rx:
             seen.add(id_node)
             yield node
             stack.extend(node._direct_inputs())
+
+    def _downstream(self) -> Iterator[t.Any]:
+        """
+        Yield this node and every ``rx`` node that derives its value from it,
+        transitively. The reverse of ``_upstream()``, walking ``_readers``
+        instead of ``_direct_inputs()``. Weak: a reader collected between two
+        calls simply drops out.
+        """
+        seen: set[int] = set()
+        stack: list[rx] = [self]
+        while stack:
+            node = stack.pop()
+            if (id_node := id(node)) in seen:
+                continue
+            seen.add(id_node)
+            yield node
+            for ref in tuple(node._readers or ()):
+                reader = ref()
+                if reader is not None:
+                    stack.append(reader)
 
     def _check_disposed(self) -> None:
         if self._disposed:
@@ -2516,12 +2706,9 @@ class rx:
 
     def _register_reader(self, reader: Self):
         """
-        Record that ``reader`` computes its value from this node.
-
-        The reverse of ``_direct_inputs()``. It carries the invalidation no
-        parameter can, i.e. an override, and is weak so that a node is not
-        kept alive by the node it derives from; dead entries drop out
-        through the reference callback.
+        Record that ``reader`` computes its value from this node, for
+        ``_invalidate_overrides``, ``_downstream()``, and ``_dispose()``.
+        Weak, so a node is not kept alive by the node it derives from.
         """
         readers = self._readers
         if readers is None:
@@ -2683,22 +2870,36 @@ class rx:
                 self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
-                async for val in obj:
+                # Manually drive generator (as opposed to async for) to ensure
+                # current_node is only set while generator body is advancing
+                broke = False
+                while True:
+                    token = _current_node.set(self)
+                    try:
+                        val = await obj.__anext__()
+                    except StopAsyncIteration:
+                        break
+                    finally:
+                        _current_node.reset(token)
                     if stale():
                         await _close_stale(obj)
+                        broke = True
                         break
                     self._current_ = val
                     self._skipped = False
                     self._finished_generation = generation
                     trigger.param.trigger('value')
-                else:
-                    if not stale() and self._finished_generation != generation:
-                        # The generator did not yield anything, so we skip and keep
-                        # the previous output
-                        self._skipped = True
-                        self._finished_generation = generation
+                if not broke and not stale() and self._finished_generation != generation:
+                    # The generator did not yield anything, so we skip and keep
+                    # the previous output
+                    self._skipped = True
+                    self._finished_generation = generation
             else:
-                value = await obj
+                token = _current_node.set(self)
+                try:
+                    value = await obj
+                finally:
+                    _current_node.reset(token)
                 if stale():
                     return
                 self._current_ = value
@@ -3173,6 +3374,8 @@ class rx:
         return val
 
     def _eval_operation(self, obj, operation):
+        if operation['fn'] is _collect_marker:
+            return self._eval_collect(operation)
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         # Resolving an override in its input's place is what lets it mask an
         # input that failed or never arrived (see .rx.overrides).
@@ -3190,13 +3393,57 @@ class rx:
             if isinstance(val, ReactiveError) and not process_failures:
                 return val
             resolved_kwargs[k] = val
-        if isinstance(fn, str):
-            obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
-        elif operation.get('reverse'):
-            obj = fn(resolved_args[0], obj, *resolved_args[1:], **resolved_kwargs)
-        else:
-            obj = fn(obj, *resolved_args, **resolved_kwargs)
+        token = _current_node.set(self)
+        try:
+            if isinstance(fn, str):
+                obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
+            elif operation.get('reverse'):
+                obj = fn(resolved_args[0], obj, *resolved_args[1:], **resolved_kwargs)
+            else:
+                obj = fn(obj, *resolved_args, **resolved_kwargs)
+        finally:
+            _current_node.reset(token)
         return obj
+
+    def _eval_collect(self, operation):
+        """
+        Resolve each `collect` input independently instead of skipping the
+        whole node while any one input is unsettled.
+        """
+        args, kwargs = operation['args'], operation['kwargs']
+        if not args and not kwargs:
+            return {}
+        previous = self._current_ if isinstance(self._current_, dict) else {}
+        result = {}
+        for key, arg in chain(enumerate(args), kwargs.items()):
+            if any(ref._settling for ref in _iter_rx(arg)):
+                # Not ready yet; carry the previous value (if any) forward
+                # in this key's argument-order slot rather than dropping it.
+                if key in previous:
+                    result[key] = previous[key]
+                continue
+            try:
+                val = resolve_value(arg)
+            except Skip:
+                if key in previous:
+                    result[key] = previous[key]
+                continue
+            except Exception as e:
+                if self._error_mode != 'propagate':
+                    raise
+                result[key] = ReactiveError(e, self)
+                continue
+            if val is Skip or val is Undefined:
+                if key in previous:
+                    result[key] = previous[key]
+                continue
+            result[key] = val
+        if result == previous:
+            # Nothing actually changed this round (e.g. an already-settled
+            # input resolved to the same value while another one is
+            # unsettled again); don't republish the unchanged mapping.
+            raise Skip
+        return result
 
     def __setattr__(self, name, value):
         # Setting value instead of rx.value is a common user mistake.

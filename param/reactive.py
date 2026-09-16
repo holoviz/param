@@ -521,12 +521,59 @@ class reactive_ops:
         [2, 3, 4]
         """
         items = []
-        def collect(new, n):
+        def push(new, n):
             items.append(new)
             while len(items) > n:
                 items.pop(0)
             return items
-        return self._as_rx()._apply_operator(collect, n)
+        return self._as_rx()._apply_operator(push, n)
+
+    def collect(self, *args, error_mode='raise', **kwargs) -> 'rx':
+        """
+        Combine the current expression with other inputs into a mapping of
+        whichever have settled.
+
+        Like `.rx.pipe`, the current expression is included, at position
+        0; unlike `.rx.pipe`, this does not call a function on it. The
+        result is a mapping keyed by each input's position (0 for the
+        current expression, 1, 2, ... for further positional arguments) or
+        name (keyword), that grows as inputs settle rather than waiting
+        for the slowest one. A key appears once its input has produced a
+        value and keeps that value while the input is unsettled again.
+        `.rx.awaiting` is `True` while any input is unsettled, including
+        one that already has a key and is settling again.
+
+        Parameters
+        ----------
+        *args, **kwargs : any
+            Further inputs to collect alongside the current expression,
+            typically ``rx`` expressions. A non-reactive value is included
+            immediately.
+        error_mode : {"raise", "propagate"}, default "raise"
+            With "propagate", a failing input resolves to a
+            :class:`ReactiveError` at its key instead of failing the whole
+            node. With "raise" (the default), a failing input drops every
+            key, including ones that already settled.
+
+        Returns
+        -------
+        rx
+            A reactive mapping of the settled inputs.
+
+        Examples
+        --------
+        >>> import param
+        >>> a, b = param.rx(1), param.rx(2)
+        >>> collected = a.rx.collect(b=b)
+        >>> collected.rx.value
+        {0: 1, 'b': 2}
+        """
+        operation = {
+            'fn': _collect_marker,
+            'args': (self._as_rx(), *args),
+            'kwargs': kwargs,
+        }
+        return rx(None, operation=operation, _current=Undefined, error_mode=error_mode)
 
     def in_(self, other) -> 'rx':
         """
@@ -1871,6 +1918,11 @@ async def _close_stale(obj):
         )
 
 
+def _collect_marker(*args, **kwargs):
+    """Serve as a placeholder `fn` for a `collect` operation; `_eval_collect` never calls it."""
+    raise NotImplementedError
+
+
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
@@ -3089,6 +3141,8 @@ class rx:
         return val
 
     def _eval_operation(self, obj, operation):
+        if operation['fn'] is _collect_marker:
+            return self._eval_collect(operation)
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         # Resolving an override in its input's place is what lets it mask an
         # input that failed or never arrived (see .rx.overrides).
@@ -3117,6 +3171,46 @@ class rx:
         finally:
             _current_node.reset(token)
         return obj
+
+    def _eval_collect(self, operation):
+        """
+        Resolve each `collect` input independently instead of skipping the
+        whole node while any one input is unsettled.
+        """
+        args, kwargs = operation['args'], operation['kwargs']
+        if not args and not kwargs:
+            return {}
+        previous = self._current_ if isinstance(self._current_, dict) else {}
+        result = {}
+        for key, arg in chain(enumerate(args), kwargs.items()):
+            if any(ref._settling for ref in _iter_rx(arg)):
+                # Not ready yet; carry the previous value (if any) forward
+                # in this key's argument-order slot rather than dropping it.
+                if key in previous:
+                    result[key] = previous[key]
+                continue
+            try:
+                val = resolve_value(arg)
+            except Skip:
+                if key in previous:
+                    result[key] = previous[key]
+                continue
+            except Exception as e:
+                if self._error_mode != 'propagate':
+                    raise
+                result[key] = ReactiveError(e, self)
+                continue
+            if val is Skip or val is Undefined:
+                if key in previous:
+                    result[key] = previous[key]
+                continue
+            result[key] = val
+        if result == previous:
+            # Nothing actually changed this round (e.g. an already-settled
+            # input resolved to the same value while another one is
+            # unsettled again); don't republish the unchanged mapping.
+            raise Skip
+        return result
 
     def __setattr__(self, name, value):
         # Setting value instead of rx.value is a common user mistake.

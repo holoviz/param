@@ -253,6 +253,61 @@ class TestWatch(unittest.TestCase):
         # Idempotent, not error raised.
         obj.param.unwatch(watcher)
 
+    def test_watcher_remove(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, 'a')
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+        watcher.remove()
+        obj.a = 2
+        self.assertEqual(self.accumulator, 1)
+
+    def test_watcher_remove_idempotent(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, 'a')
+        watcher.remove()
+        # Idempotent, no error raised.
+        watcher.remove()
+
+    def test_watcher_remove_class_level(self):
+        accumulator = Accumulator()
+
+        obj = SimpleWatchSubclass
+        watcher = obj.param.watch(accumulator, ['a', 'b'])
+        obj.param.update(a=23, b=42)
+        self.assertEqual(accumulator.call_count(), 1)
+
+        watcher.remove()
+        obj.param.update(a=0, b=0)
+        self.assertEqual(accumulator.call_count(), 1)
+
+    def test_watcher_remove_only_removes_itself(self):
+        # Two watchers with identical fields (same callback, same
+        # parameter, same options) are tuple-equal but must not be
+        # conflated when removed.
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        watcher1 = obj.param.watch(accumulator, 'a')
+        watcher2 = obj.param.watch(accumulator, 'a')
+        self.assertEqual(watcher1, watcher2)
+        self.assertIsNot(watcher1, watcher2)
+
+        watcher1.remove()
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+
+        watcher2.remove()
+        obj.a = 2
+        self.assertEqual(self.accumulator, 1)
+
     def test_simple_batched_watch_setattr(self):
 
         accumulator = Accumulator()

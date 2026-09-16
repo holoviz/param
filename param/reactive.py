@@ -1689,12 +1689,12 @@ class reactive_ops:
         """
         watchers = watcher if isinstance(watcher, list) else [watcher]
         for w in watchers:
-            (w.inst or w.cls).param.unwatch(w)
+            w.remove()
         reactive = self._reactive
         if isinstance(reactive, rx) and reactive._watchers:
-            for w in watchers:
-                if w in reactive._watchers:
-                    reactive._watchers.remove(w)
+            reactive._watchers = [
+                w for w in reactive._watchers if not any(w is rw for rw in watchers)
+            ]
 
     def dispose(self, cascade: builtins.bool = True) -> None:
         """

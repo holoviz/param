@@ -282,9 +282,18 @@ class InputOverrides(MutableMapping):
 
     def _unwatch(self, key: t.Any):
         """Stop following the references a previous override was set to."""
-        operation = t.cast('dict', self._node._operation)
-        for owner, invalidator in (operation.get('override_watchers') or {}).pop(key, ()):
-            _remove_watcher(weakref.ref(owner), weakref.ref(invalidator))
+        node = self._node
+        operation = t.cast('dict', node._operation)
+        finalizers = node._finalizers
+        for finalizer in (operation.get('override_watchers') or {}).pop(key, ()):
+            # Firing the finalizer now both unwatches the source and
+            # marks it dead, so it is safe to drop from `_finalizers`.
+            finalizer()
+            if finalizers is not None:
+                try:
+                    finalizers.remove(finalizer)
+                except ValueError:
+                    pass
 
     def __getitem__(self, key: t.Any) -> t.Any:
         key = self._resolve_key(key)
@@ -306,7 +315,6 @@ class InputOverrides(MutableMapping):
         if refs:
             watchers = operation.setdefault('override_watchers', {})
             watchers[key] = node._watch_override(refs)
-        rx._masking_generation += 1
         node._invalidate_overrides()
 
     def __delitem__(self, key: t.Any):
@@ -316,7 +324,6 @@ class InputOverrides(MutableMapping):
             raise KeyError(key)
         del overrides[key]
         self._unwatch(key)
-        rx._masking_generation += 1
         self._node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
@@ -1090,11 +1097,11 @@ class reactive_ops:
         Whether any asynchronous operation in this expression is still resolving.
 
         ``True`` from the moment an asynchronous operation is scheduled until it
-        produces a value for the current inputs. While a node is awaiting, the
-        expression still holds the value it computed from the previous inputs,
-        so ``.rx.value`` reports :obj:`param.Undefined` rather than that stale
-        value; ``awaiting`` distinguishes "not resolved yet" from an operation
-        that deliberately skipped.
+        produces a value for the current inputs. While a node is awaiting,
+        ``.rx.value`` keeps reporting the value it computed from the previous
+        inputs (or :obj:`param.Undefined` if no value has been produced yet);
+        ``awaiting`` is what lets you tell that value is stale and still
+        resolving, as opposed to final or the result of a deliberate skip.
 
         The whole graph feeding the expression is considered, not just the node
         it is accessed on, so a synchronous operation downstream of an
@@ -2190,8 +2197,6 @@ class rx:
 
     _ref_binding: Callable[..., t.Any] | None = None
 
-    _masking_generation: t.ClassVar[int] = 0
-
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
@@ -2339,7 +2344,7 @@ class rx:
         self._label = label
         self._current_ = _current
         self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
-        self._live_params_cache: tuple[int, set[tuple[int, str | None]]] | None = None
+        self._live_params_cache: set[tuple[int, str | None]] | None = None
         # _shared is used for branching rx pipelines where we clone the input.
         # Here we store the original shared input, which makes it possible to
         # cache the input value as long as the shared instance does not store
@@ -2630,7 +2635,7 @@ class rx:
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
             self._watch_invalidation(params[0].owner, self._invalidate_current, [p.name for p in params])
 
-    def _watch_invalidation(self, owner, method, names) -> _WeakInvalidator:
+    def _watch_invalidation(self, owner, method, names) -> tuple[_WeakInvalidator, weakref.finalize]:
         """
         Register a *weak* invalidation watcher on a source parameter.
 
@@ -2639,6 +2644,9 @@ class rx:
         A finalizer removes the watcher automatically once this node is garbage
         collected, keeping the source's watcher list from growing without bound.
         The finalizer is handed weak references only (see ``_remove_watcher``).
+        It is also returned so a caller that can unwatch sooner than
+        disposal (e.g. ``.rx.overrides``) can fire and drop it right away
+        instead of letting it pile up in ``_finalizers`` until then.
         """
         invalidator = _WeakInvalidator(method)
         invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
@@ -2649,7 +2657,7 @@ class rx:
         if finalizers is None:
             finalizers = self._finalizers = []
         finalizers.append(finalizer)
-        return invalidator
+        return invalidator, finalizer
 
     def _live_params(self) -> set[tuple[int, str | None]]:
         """
@@ -2662,12 +2670,14 @@ class rx:
         count too, since a node watches the parameters of its whole input graph
         rather than only its immediate inputs.
 
-        Recomputed whenever an input is masked or unmasked anywhere, which is
-        the only thing that changes the answer for an already wired graph.
+        Recomputed whenever one of this node's own inputs is masked or unmasked,
+        or a node it (transitively) reads from has its overrides invalidated —
+        the only things that change the answer for an already wired graph. See
+        ``_invalidate_overrides``, which clears the cache for exactly this set.
         """
         cache = self._live_params_cache
-        if cache is not None and cache[0] == rx._masking_generation:
-            return cache[1]
+        if cache is not None:
+            return cache
         live = {(id(p.owner), p.name) for p in self._fn_params}
         for trigger in (self._trigger, self._override_channel):
             if trigger is not None:
@@ -2686,7 +2696,7 @@ class rx:
                 # separately, so nothing the input depends on is live.
                 if key not in overrides:
                     live |= _input_live_params(arg)
-        self._live_params_cache = (rx._masking_generation, live)
+        self._live_params_cache = live
         return live
 
     def _invalidate_current(self, *events):
@@ -2774,8 +2784,9 @@ class rx:
         Invalidate this node and its readers after one of its overrides changed.
 
         An override is not a parameter, so ``_setup_invalidations`` does not cover
-        it: dirty this node and everything reading its result, then notify the
-        consumers watching their override channels. Nodes reading the same
+        it: dirty this node and everything reading its result, drop their cached
+        ``_live_params()`` (masking a different set of inputs now), then notify
+        the consumers watching their override channels. Nodes reading the same
         *inputs* without reading this node's result are deliberately left alone.
         """
         nodes = []
@@ -2794,29 +2805,32 @@ class rx:
         for node in nodes:
             node._dirty = True
             node._error_state = None
+            node._live_params_cache = None
         for node in nodes:
             channel = node._override_channel
             if channel is not None:
                 channel.param.trigger('value')
 
-    def _watch_override(self, refs) -> list[tuple[Parameterized, _WeakInvalidator]]:
+    def _watch_override(self, refs) -> list[weakref.finalize]:
         """
         Watch the references an override is set to.
 
         They cannot join the node's parameters, which are fixed when it is
-        constructed, so they are routed to ``_invalidate_overrides`` instead. The
-        watchers are returned so unmasking or replacing the override can remove
-        them.
+        constructed, so they are routed to ``_invalidate_overrides`` instead.
+        The finalizers are returned so unmasking or replacing the override can
+        fire and drop them right away, instead of leaving them to accumulate in
+        ``_finalizers`` until this node is disposed of.
         """
-        watchers = []
+        finalizers = []
         for _, params in full_groupby(refs, lambda x: id(x.owner)):
             owner = params[0].owner
             if owner is None:
                 continue
-            watchers.append((owner, self._watch_invalidation(
+            _, finalizer = self._watch_invalidation(
                 owner, self._invalidate_overrides, [p.name for p in params]
-            )))
-        return watchers
+            )
+            finalizers.append(finalizer)
+        return finalizers
 
     def _watch_settle_change(self, wrapper: Parameterized) -> None:
         """Set ``wrapper.object`` to True when this node schedules an asynchronous resolution."""
@@ -3413,9 +3427,11 @@ class rx:
         args, kwargs = operation['args'], operation['kwargs']
         if not args and not kwargs:
             return {}
+        overrides = operation.get('overrides') or {}
         previous = self._current_ if isinstance(self._current_, dict) else {}
         result = {}
         for key, arg in chain(enumerate(args), kwargs.items()):
+            arg = overrides[key] if key in overrides else arg
             if any(ref._settling for ref in _iter_rx(arg)):
                 # Not ready yet; carry the previous value (if any) forward
                 # in this key's argument-order slot rather than dropping it.

@@ -1,4 +1,5 @@
 """Unit test for watch mechanism."""
+import asyncio
 import copy
 import re
 import threading
@@ -7,7 +8,7 @@ import unittest
 import param
 import pytest
 
-from param.parameterized import Skip, batch, discard_events
+from param.parameterized import Skip, batch, batch_call_watchers, discard_events
 
 from .utils import MockLoggingHandler
 
@@ -1224,21 +1225,27 @@ class TestBatch:
         p.param.watch(lambda e: p_calls.append(e.new), 'x')
         q.param.watch(lambda e: q_calls.append(e.new), 'y')
 
+        # Both threads are inside their own, still-open `batch()` at the
+        # same time (forced by the barrier), to prove two concurrent
+        # transactions do not share one registry.
+        barrier = threading.Barrier(2)
+
         def worker(obj, attr, value):
             with batch():
                 setattr(obj, attr, value)
+                barrier.wait(timeout=5)
 
         t1 = threading.Thread(target=worker, args=(p, 'x', 99))
         t2 = threading.Thread(target=worker, args=(q, 'y', 88))
         t1.start()
-        t1.join()
         t2.start()
+        t1.join()
         t2.join()
 
         assert p_calls == [99]
         assert q_calls == [88]
 
-    def test_batch_no_cost_when_unused(self):
+    def test_batch_does_not_change_ordinary_unbatched_watch_behavior(self):
         class P(param.Parameterized):
             x = param.Number(default=1)
 
@@ -1288,10 +1295,11 @@ class TestBatch:
 
         assert order == ['early', 'shared']
 
-    def test_batch_uses_the_lowest_precedence_seen_across_a_merged_group(self):
+    def test_batch_does_not_merge_the_same_callback_registered_with_different_settings(self):
         # `shared` is registered with a different precedence on each
-        # owner; the merged group must sort by the lower of the two, not
-        # whichever happened to be encountered first while merging.
+        # owner: merging them would leave one owner's precedence
+        # silently overridden, so they stay separate calls instead,
+        # each still running at its own precedence.
         class A(param.Parameterized):
             x = param.Number(default=1)
 
@@ -1310,7 +1318,101 @@ class TestBatch:
             a.x = 2
             b.y = 20
 
-        assert order == ['shared', 'middle']
+        assert order == ['shared', 'middle', 'shared']
+
+    def test_batch_does_not_merge_watchers_with_different_onlychanged(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        calls = []
+        shared = lambda *events: calls.append(len(events))
+        a.param.watch(shared, 'x')
+        b.param.watch(shared, 'y', onlychanged=False)
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        # Two separate calls, not one merged call with two events.
+        assert calls == [1, 1]
+
+    def test_batch_does_not_merge_watchers_with_different_modes(self):
+        # `a` is watched positionally (`mode='args'`), `b` by keyword
+        # (`mode='kwargs'` via `watch_values`); merging would have to
+        # guess which mode wins and silently drop the other owner's event.
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        received = []
+        shared = lambda *args, **kwargs: received.append((args, kwargs))
+        a.param.watch(shared, 'x')
+        b.param.watch_values(shared, 'y')
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        assert len(received) == 2
+        assert received[0][0][0].new == 2
+        assert received[1][1] == {'y': 20}
+
+    def test_batch_keeps_a_keyword_name_collision_across_owners_separate(self):
+        # Both `a` and `c` are watched with `watch_values` for a parameter
+        # named `x`; merging into one kwargs call would let one owner's
+        # value silently overwrite the other's under the same key.
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class C(param.Parameterized):
+            x = param.Number(default=100)
+
+        a, c = A(), C()
+        calls = []
+        shared = lambda **kwargs: calls.append(dict(kwargs))
+        a.param.watch_values(shared, 'x')
+        c.param.watch_values(shared, 'x')
+
+        with batch():
+            a.x = 2
+            c.x = 200
+
+        assert sorted(calls, key=lambda d: d['x']) == [{'x': 2}, {'x': 200}]
+
+    def test_batch_merges_bound_methods_of_the_same_instance(self):
+        # `obj.method` creates a new bound-method object on every access,
+        # but two of them referring to the same instance and function
+        # compare equal, so they merge like any other shared callback.
+        calls = []
+
+        class Logger(param.Parameterized):
+            def log(self, *events):
+                calls.append(len(events))
+
+        logger = Logger()
+
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+        a.param.watch(logger.log, 'x')
+        b.param.watch(logger.log, 'y')
+
+        with batch():
+            a.x = 2
+            b.y = 20
+
+        assert calls == [2]
 
     def test_batch_coalesces_a_queued_watcher_across_owners(self):
         class A(param.Parameterized):
@@ -1330,3 +1432,155 @@ class TestBatch:
             b.y = 20
 
         assert calls == ['cb']
+
+    @pytest.mark.parametrize('use', [
+        lambda obj: batch_call_watchers(obj),
+        lambda obj: obj.param.update(x=2),
+        lambda obj: discard_events(obj),
+    ], ids=['batch_call_watchers', 'update', 'discard_events'])
+    def test_batch_does_not_leave_an_object_permanently_batched(self, use):
+        # `batch_call_watchers`/`.param.update()`/`discard_events` save
+        # `_BATCH_WATCH`, temporarily set it, then restore it. Used inside
+        # `batch()`, the saved value must be the real prior flag, not a
+        # value that only looks true because a transaction happens to be
+        # open, or the object is left permanently "batched" afterwards.
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        with batch():
+            use(p)
+
+        assert p._param__private.parameters_state['BATCH_WATCH'] is False
+
+        calls = []
+        p.param.watch(lambda e: calls.append(e.new), 'x')
+        p.x = 5
+        assert calls == [5]
+
+    def test_batch_delivers_a_queued_watchers_own_side_effect(self):
+        # A `queued=True` watcher that sets another attribute on its own
+        # owner queues that new event rather than firing inline; `batch()`
+        # must keep draining until that queued event is also delivered,
+        # not stop after the first pass.
+        class P(param.Parameterized):
+            a = param.Number(default=1)
+            b = param.Number(default=1)
+
+        p = P()
+        log = []
+        p.param.watch(lambda *e: (log.append(('a', p.a)), setattr(p, 'b', p.b + 1)), 'a', queued=True)
+        p.param.watch(lambda *e: log.append(('b', p.b)), 'b')
+
+        with batch():
+            p.a = 5
+
+        assert log == [('a', 5), ('b', 2)]
+
+    def test_batch_delivers_a_cascading_sets_settled_value_not_a_mix(self):
+        # A watcher on `a` sets an attribute on an unrelated `b` as a side
+        # effect; a callback watching two of `b`'s parameters must see the
+        # fully settled state for both, never a value from partway through.
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+            z = param.Number(default=0)
+
+        a, b = A(), B()
+        seen = []
+        param.bind(lambda y, z: seen.append((y, z)), b.param.y, b.param.z, watch=True)
+        a.param.watch(lambda *e: setattr(b, 'z', 2), 'x')
+
+        with batch():
+            a.x = 20
+            b.y = 20
+
+        assert all(pair == (20, 2) for pair in seen)
+
+    def test_batch_still_delivers_other_objects_when_one_watcher_raises(self):
+        class A(param.Parameterized):
+            x = param.Number(default=1)
+
+        class B(param.Parameterized):
+            y = param.Number(default=10)
+
+        a, b = A(), B()
+
+        def bad(*events):
+            raise ValueError('boom')
+
+        calls = []
+        a.param.watch(bad, 'x')
+        b.param.watch(lambda *events: calls.append(events[0].new), 'y')
+
+        with pytest.raises(ValueError, match='boom'):
+            with batch():
+                a.x = 2
+                b.y = 20
+
+        assert calls == [20]
+
+    def test_batch_flushes_touched_objects_in_touch_order(self):
+        classes = [type(f'_BatchOrder{i}', (param.Parameterized,), {'x': param.Number(default=1)})
+                   for i in range(5)]
+        objs = [cls() for cls in classes]
+        order = []
+        for i, obj in enumerate(objs):
+            obj.param.watch(lambda e, i=i: order.append(i), 'x')
+
+        with batch():
+            for obj in objs:
+                obj.x = 2
+
+        assert order == [0, 1, 2, 3, 4]
+
+    def test_batch_ignores_a_transaction_already_closed_by_the_time_it_runs(self):
+        # A task started inside the block inherits the same `batch()`
+        # transaction through `contextvars` (`asyncio.create_task` copies
+        # the current `Context`), but by the time it actually runs, the
+        # block may already have exited and flushed. It must fall back to
+        # ordinary, immediate behavior rather than queuing into a
+        # transaction that will never drain again.
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        calls = []
+        p.param.watch(lambda e: calls.append(e.new), 'x')
+
+        async def main():
+            with batch():
+                task = asyncio.ensure_future(asyncio.sleep(0))
+                await task
+
+                async def setter():
+                    p.x = 99
+                deferred = asyncio.ensure_future(setter())
+            # `batch()` has already exited and flushed by this point; the
+            # task above hasn't run its body yet.
+            await deferred
+
+        asyncio.run(main())
+        assert calls == [99]
+
+    def test_batch_body_error_is_not_masked_by_a_flush_error(self):
+        # A watcher raising during the flush must not replace the error
+        # that was already propagating out of the block; it is reported
+        # as a warning instead, so it is not silently lost either.
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+
+        def bad(*events):
+            raise RuntimeError('flush boom')
+
+        p.param.watch(bad, 'x')
+
+        with pytest.warns(RuntimeWarning, match='flush boom'):
+            with pytest.raises(ValueError, match='body boom'):
+                with batch():
+                    p.x = 2
+                    raise ValueError('body boom')

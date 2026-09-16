@@ -1167,7 +1167,7 @@ class Watcher(_Watcher):
         >>> watcher = instance.param.watch(instance.callback, 'a')
         >>> watcher.remove()
         """
-        (self.inst or self.cls).param.unwatch(self)
+        (self.cls if self.inst is None else self.inst).param.unwatch(self)
 
 
 class ParameterMetaclass(type):
@@ -4218,12 +4218,14 @@ class Parameters:
             if action == 'append':
                 watchers.append(watcher)
             else:
-                # Remove by identity, not equality, so two Watchers with
-                # identical fields can't be mixed up; missing is a no-op.
-                for i, w in enumerate(watchers):
-                    if w is watcher:
-                        del watchers[i]
-                        break
+                # Matches by value (Watcher is a namedtuple), which is
+                # what lets unwatch keep working on a Watcher rebuilt
+                # with the same fields, e.g. by Parameterized.__setstate__
+                # after a copy or unpickle. Missing is a no-op.
+                try:
+                    watchers.remove(watcher)
+                except ValueError:
+                    pass
 
     def watch(
         self_,
@@ -4365,6 +4367,7 @@ class Parameters:
         --------
         watch : Registers a new watcher to observe parameter changes.
         watch_values : Registers a watcher specifically for value changes.
+        Watcher.remove : Equivalent, callable directly on the ``Watcher``.
 
         Examples
         --------

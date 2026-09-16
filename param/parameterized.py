@@ -4305,7 +4305,7 @@ class Parameters:
         precedence: int = -1,
     ) -> Watcher:
         if isinstance(parameter_names, (list, tuple)):
-            parameter_names = tuple(parameter_names)
+            parameter_names = tuple(dict.fromkeys(parameter_names))
         else:
             parameter_names = (parameter_names,)
         watcher = Watcher(

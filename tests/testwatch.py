@@ -1061,3 +1061,13 @@ class TestTrigger(unittest.TestCase):
                     self.param.trigger('x')
 
         P()
+
+    def test_watch_multiple_same_parameter_name(self):
+        class P(param.Parameterized):
+            x = param.Integer()
+
+        p = P()
+        runs = []
+        p.param.watch(runs.append, ["x", "x"])
+        p.x = 1
+        assert len(runs) == 1

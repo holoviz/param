@@ -1623,6 +1623,269 @@ def test_reactive_upstream_walk_terminates_on_reused_input():
     assert len(nodes) == len({id(node) for node in nodes})
     assert any(node is expr for node in nodes)
 
+
+class _Source(param.Parameterized):
+    x = param.Number(default=1)
+
+def _watcher_count(owner):
+    watchers = owner._param__private.watchers
+    return sum(len(lst) for what in watchers.values() for lst in what.values())
+
+def test_reactive_watch_returns_watcher_unwatch_stops_only_that_callback():
+    calls = []
+    other_calls = []
+    a = rx(1)
+    watcher = a.rx.watch(calls.append)
+    a.rx.watch(other_calls.append)
+
+    a.rx.value = 2
+    assert calls == [2]
+    assert other_calls == [2]
+
+    a.rx.unwatch(watcher)
+    a.rx.value = 3
+    assert calls == [2]
+    assert other_calls == [2, 3]
+
+def test_reactive_dispose_removes_watchers_on_every_upstream_source():
+    source = _Source()
+    a = rx(1)
+    b = rx(source.param.x)
+    c = a + b
+    assert c.rx.value == 2
+
+    a_owner = a._internal_params[0].owner
+    assert _watcher_count(a_owner) > 0
+    assert _watcher_count(source) > 0
+
+    c.rx.dispose()
+
+    assert _watcher_count(a_owner) == 0
+    assert _watcher_count(source) == 0
+
+def test_reactive_dispose_cascades_when_sole_reader():
+    a = rx(1)
+    b = a + 1
+    assert b.rx.value == 2
+
+    b.rx.dispose()
+
+    assert b._disposed
+    assert a._disposed
+    with pytest.raises(RuntimeError, match='disposed'):
+        a.rx.value
+
+def test_reactive_dispose_raises_when_node_has_rx_reader():
+    a = rx(1)
+    b = a + 1
+    c = b * 2
+    assert c.rx.value == 4
+
+    with pytest.raises(RuntimeError, match='still read'):
+        b.rx.dispose()
+
+    a.rx.value = 10
+    assert c.rx.value == 22
+
+def test_reactive_dispose_leaves_ancestor_with_remaining_rx_reader_alone():
+    a = rx(1)
+    b = a + 1
+    c = a + 2
+    assert b.rx.value == 2
+    assert c.rx.value == 3
+
+    b.rx.dispose()
+
+    a.rx.value = 10
+    assert c.rx.value == 12
+
+    c.rx.dispose()
+    assert a._disposed
+
+def test_reactive_dispose_follows_operation_argument_route():
+    a = rx(2)
+    b = rx(3).rx.pipe(lambda x, y: x + y, y=a)
+    assert b.rx.value == 5
+    assert len(a._readers) == 1
+
+    b.rx.dispose()
+    assert a._disposed
+
+def test_reactive_dispose_handles_input_reused_within_same_expression():
+    """`a + a` gives `a` two readers; dispose must drop both to detach it."""
+    a = rx(2)
+    b = a + a
+    assert b.rx.value == 4
+    assert len(a._readers) == 2
+
+    b.rx.dispose()
+    assert a._disposed
+
+def test_reactive_dispose_is_idempotent():
+    a = rx(1)
+    b = a + 1
+    assert b.rx.value == 2
+    b.rx.dispose()
+    b.rx.dispose()  # no-op
+    assert a._disposed
+
+def test_reactive_dispose_raises_when_node_has_active_watch():
+    a = rx(1)
+    watcher = a.rx.watch(lambda v: None)
+
+    with pytest.raises(RuntimeError, match='still read'):
+        a.rx.dispose()
+    assert not a._disposed
+
+    a.rx.unwatch(watcher)
+    a.rx.dispose()
+    assert a._disposed
+
+def test_reactive_dispose_cascade_leaves_ancestor_with_active_watch_alone():
+    a = rx(1)
+    b = a + 1
+    assert b.rx.value == 2
+
+    got = []
+    a.rx.watch(got.append)
+
+    b.rx.dispose()
+    assert not a._disposed
+
+    a.rx.value = 5
+    assert a.rx.value == 5
+    assert got == [5]
+
+def test_reactive_dispose_cascade_false_leaves_inputs_alone():
+    a = rx(1)
+    b = a + 1
+    assert b.rx.value == 2
+
+    b.rx.dispose(cascade=False)
+
+    assert b._disposed
+    assert not a._disposed
+    a.rx.value = 7
+    assert a.rx.value == 7
+
+def test_reactive_disposed_node_raises_on_value_read():
+    a = rx(1)
+    b = a + 1
+    assert b.rx.value == 2
+    b.rx.dispose(cascade=False)
+
+    with pytest.raises(RuntimeError, match='disposed'):
+        b.rx.value
+
+def test_reactive_disposed_node_raises_on_attribute_access():
+    a = rx('hello')
+    a.rx.dispose(cascade=False)
+
+    with pytest.raises(RuntimeError, match='disposed'):
+        a.upper
+
+def test_reactive_disposed_node_raises_when_extended_with_new_operation():
+    a = rx(1)
+    b = a + 1
+    assert b.rx.value == 2
+    b.rx.dispose(cascade=False)
+
+    with pytest.raises(RuntimeError, match='disposed'):
+        b + 1
+
+def test_reactive_dispose_is_not_a_plain_attribute():
+    class Wrapped:
+        def __init__(self):
+            self.disposed = False
+
+        def dispose(self):
+            self.disposed = True
+            return 'disposed'
+
+    wrapped = Wrapped()
+    expr = rx(wrapped)
+
+    result = expr.dispose()
+    assert result.rx.value == 'disposed'
+    assert wrapped.disposed is True
+
+def test_reactive_readers_pruned_on_gc():
+    a = rx(1)
+    b = a + 1
+    assert len(a._readers) == 1
+
+    ref = weakref.ref(b)
+    del b
+    gc.collect()
+
+    assert ref() is None
+    assert a._readers == []
+
+def test_reactive_dispose_cascade_needs_gc_for_transient_branch():
+    """A branch's hidden clone sits in a reference cycle; only gc.collect() frees it."""
+    a = rx(1)
+    tmp = a + 5
+    assert tmp.rx.value == 6
+    assert len(a._readers) == 1
+
+    del tmp
+    assert len(a._readers) == 1
+
+    gc.collect()
+    assert a._readers == []
+
+def test_reactive_resolve_does_not_pin_ref_owner():
+    """The resolver backing ``.rx.resolve()`` must not outlive the resolved expression."""
+    owner = _Source()
+    baseline = _watcher_count(owner)
+
+    expr = rx([owner.param.x]).rx.resolve()
+    assert expr.rx.value == [1]
+    assert _watcher_count(owner) > baseline
+
+    del expr
+    gc.collect()
+    assert _watcher_count(owner) == baseline
+
+def test_reactive_watch_on_bind_function_returns_watchers():
+    a = rx(1)
+    bound = bind(lambda v: v + 1, a)
+
+    watchers = bound.rx.watch(lambda v: None)
+    assert len(watchers) > 0
+
+    bound.rx.unwatch(watchers)
+
+async def test_reactive_dispose_cancels_pending_async_task():
+    async def double(value):
+        await asyncio.sleep(0.05)
+        return value * 2
+
+    expr = rx(1).rx.pipe(double)
+    expr.rx.value
+    await asyncio.sleep(0)  # let the scheduled resolution start
+    task = expr._current_task
+    assert task is not None
+
+    expr.rx.dispose(cascade=False)
+
+    await asyncio.sleep(0.1)
+    assert expr._current_ is param.Undefined
+
+def test_reactive_when_derived_node_is_not_tracked_as_reader_but_raises_on_stale_read():
+    """``.rx.when()`` reads its source through a closure, invisible to `_readers`."""
+    a = rx(1)
+    b = a + 1
+    gated = b.rx.when(a)
+    assert gated.rx.value == 2
+    assert b._readers is None
+
+    b.rx.dispose()
+
+    a.rx.value = 10
+    with pytest.raises(RuntimeError, match='disposed'):
+        gated.rx.value
+
 @pytest.mark.parametrize('lazy', [False, True])
 async def test_reactive_async_func(lazy):
     async def async_func():

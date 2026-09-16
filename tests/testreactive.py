@@ -10,7 +10,7 @@ import param
 import pytest
 
 from param.parameterized import Skip
-from param.reactive import bind, rx
+from param.reactive import bind, current_node, rx
 from typing import Any, Callable
 
 from .utils import async_wait_until
@@ -3392,6 +3392,332 @@ def test_reactive_override_reference_does_not_keep_the_node_alive():
 
     assert ref() is None
     assert not p.param.watchers.get('integer', {}).get('value', [])
+# current_node()
+
+def test_current_node_is_none_outside_operation_body():
+    assert current_node() is None
+
+
+def test_current_node_is_none_for_a_body_never_invoked():
+    # Simply constructing/piping does not evaluate the body.
+    def kernel(value):
+        return value  # pragma: no cover
+
+    rx(1).rx.pipe(kernel)
+    assert current_node() is None
+
+
+def test_current_node_returns_the_node_in_a_sync_operation_body():
+    seen = []
+
+    def kernel(value):
+        seen.append(current_node())
+        return value
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+
+    assert len(seen) == 1 and seen[0] is expr
+    assert current_node() is None
+
+
+def test_current_node_lets_a_body_write_its_own_meta():
+    def kernel(value):
+        node = current_node()
+        node.rx.meta['trace'] = {'value': value}
+        return value * 2
+
+    expr = rx(1).rx.pipe(kernel)
+
+    assert expr.rx.value == 2
+    assert expr.rx.meta == {'trace': {'value': 1}}
+
+
+def test_current_node_meta_not_inherited_by_derived_node():
+    def kernel(value):
+        current_node().rx.meta['trace'] = {'value': value}
+        return value
+
+    expr = rx(1).rx.pipe(kernel)
+    derived = expr + 1
+
+    assert derived.rx.value == 2
+    assert expr.rx.meta == {'trace': {'value': 1}}
+    assert derived.rx.meta == {}
+
+
+def test_current_node_meta_overwritten_on_recompute():
+    p = Parameters()
+
+    def kernel(value):
+        current_node().rx.meta['trace'] = {'value': value}
+        return value
+
+    expr = rx(p.param.integer).rx.pipe(kernel)
+    assert expr.rx.value == 7
+    assert expr.rx.meta == {'trace': {'value': 7}}
+
+    p.integer = 42
+    assert expr.rx.value == 42
+    assert expr.rx.meta == {'trace': {'value': 42}}
+
+
+def test_current_node_body_that_does_not_use_it_is_unaffected():
+    def kernel(value):
+        return value + 1
+
+    expr = rx(1).rx.pipe(kernel)
+
+    assert expr.rx.value == 2
+    assert expr.rx.meta == {}
+
+
+def test_current_node_nested_resolution_restores_outer_node():
+    inner_seen = []
+
+    def inner_kernel(value):
+        inner_seen.append(current_node())
+        return value
+
+    inner = rx(5).rx.pipe(inner_kernel)
+
+    outer_seen = []
+
+    def kernel(value):
+        outer_seen.append(current_node())
+        inner.rx.value  # resolves a second, unrelated node
+        outer_seen.append(current_node())
+        return value
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+
+    assert len(outer_seen) == 2 and outer_seen[0] is expr and outer_seen[1] is expr
+    assert len(inner_seen) == 1 and inner_seen[0] is inner
+
+
+def test_current_node_does_not_see_argument_bodies():
+    """
+    A bound function used as a plain (non-``rx``) argument is not itself an
+    operation body of any node, so it sees no current node, before or after
+    this fix moved the var's scope to exclude argument resolution.
+    """
+    seen = []
+
+    def arg_fn(value):
+        seen.append(current_node())
+        return value
+
+    def kernel(value, extra):
+        return value
+
+    p = Parameters()
+    expr = rx(1).rx.pipe(kernel, bind(arg_fn, p.param.integer))
+    expr.rx.value
+
+    assert len(seen) == 1 and seen[0] is None
+
+
+def test_current_node_nested_rx_argument_sees_its_own_node():
+    inner_seen = []
+
+    def inner_kernel(value):
+        inner_seen.append(current_node())
+        return value
+
+    inner = rx(5).rx.pipe(inner_kernel)
+
+    outer_seen = []
+
+    def kernel(value, extra):
+        outer_seen.append(current_node())
+        return value
+
+    expr = rx(1).rx.pipe(kernel, inner)
+    expr.rx.value
+
+    assert len(inner_seen) == 1 and inner_seen[0] is inner
+    assert len(outer_seen) == 1 and outer_seen[0] is expr
+
+
+def test_current_node_reset_after_sync_exception():
+    def kernel(value):
+        raise ValueError('boom')
+
+    expr = rx(1).rx.pipe(kernel)
+    with pytest.raises(ValueError, match='boom'):
+        expr.rx.value
+
+    assert current_node() is None
+
+
+def test_current_node_root_bind_function():
+    p = Parameters()
+    seen = []
+
+    def g(value):
+        seen.append(current_node())
+        return value
+
+    expr = rx(bind(g, p.param.integer))
+
+    assert expr.rx.value == 7
+    assert len(seen) == 1 and seen[0] is expr
+
+
+async def test_current_node_returns_the_node_in_an_async_operation_body():
+    seen = []
+
+    async def kernel(value):
+        await asyncio.sleep(0.01)
+        seen.append(current_node())
+        return value * 2
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert len(seen) == 1 and seen[0] is expr
+
+
+async def test_current_node_returns_the_node_across_a_sync_generator_body():
+    seen = []
+
+    def kernel(value):
+        seen.append(current_node())
+        yield value
+        time.sleep(0.02)
+        seen.append(current_node())
+        yield value * 2
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert len(seen) == 2 and seen[0] is expr and seen[1] is expr
+
+
+async def test_current_node_returns_the_node_across_an_async_generator_body():
+    seen = []
+
+    async def kernel(value):
+        seen.append(current_node())
+        yield value
+        await asyncio.sleep(0.02)
+        seen.append(current_node())
+        yield value * 2
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert len(seen) == 2 and seen[0] is expr and seen[1] is expr
+
+
+async def test_current_node_isolated_between_concurrent_async_nodes():
+    seen = {}
+
+    async def kernel(label, value):
+        await asyncio.sleep(0.02 if label == 'A' else 0.01)
+        seen[label] = current_node()
+        await asyncio.sleep(0.02)
+        assert current_node() is seen[label]
+        return value
+
+    async def kernel_a(value):
+        return await kernel('A', value)
+
+    async def kernel_b(value):
+        return await kernel('B', value)
+
+    expr_a = rx(1).rx.pipe(kernel_a)
+    expr_b = rx(2).rx.pipe(kernel_b)
+    expr_a.rx.value
+    expr_b.rx.value
+
+    await async_wait_until(lambda: 'A' in seen and 'B' in seen)
+    await asyncio.sleep(0.03)
+
+    assert seen['A'] is expr_a
+    assert seen['B'] is expr_b
+
+
+async def test_current_node_visible_inside_asyncio_to_thread():
+    seen = []
+
+    def blocking_kernel(value):
+        seen.append(current_node())
+        return value * 2
+
+    async def kernel(value):
+        return await asyncio.to_thread(blocking_kernel, value)
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert len(seen) == 1 and seen[0] is expr
+
+
+async def test_current_node_not_leaked_into_watcher_of_async_node():
+    """
+    ``trigger.param.trigger('value')`` runs on the same asyncio Task as the
+    operation body, so the var must be reset before it fires, not just before
+    the Task ends, or a watcher fired synchronously from settlement sees the
+    async node as if it were still inside that node's own body.
+    """
+    async def kernel(value):
+        await asyncio.sleep(0.01)
+        return value * 2
+
+    expr = rx(1).rx.pipe(kernel)
+    seen = []
+    expr.rx.watch(lambda event: seen.append(current_node()))
+
+    expr.rx.value
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert len(seen) == 1 and seen[0] is None
+
+
+async def test_current_node_not_leaked_into_watcher_of_async_generator_node():
+    async def kernel(value):
+        yield value
+        await asyncio.sleep(0.01)
+        yield value * 2
+
+    expr = rx(1).rx.pipe(kernel)
+    seen = []
+    expr.rx.watch(lambda event: seen.append(current_node()))
+
+    expr.rx.value
+    await async_wait_until(lambda: expr.rx.value == 2)
+
+    assert len(seen) == 2 and seen[0] is None and seen[1] is None
+
+
+async def test_current_node_reset_after_async_exception():
+    async def kernel(value):
+        await asyncio.sleep(0.01)
+        raise ValueError('boom')
+
+    expr = rx(1).rx.pipe(kernel)
+    expr.rx.value
+    await async_wait_until(lambda: expr._error_state is not None)
+
+    assert current_node() is None
+
+
+async def test_current_node_reset_on_propagated_async_error():
+    async def kernel(value):
+        await asyncio.sleep(0.01)
+        raise ValueError('boom')
+
+    expr = rx(1, error_mode='propagate').rx.pipe(kernel)
+    expr.rx.value
+    await async_wait_until(lambda: isinstance(expr.rx.value, param.ReactiveError))
+
+    assert current_node() is None
 
 
 # register_accessor laziness

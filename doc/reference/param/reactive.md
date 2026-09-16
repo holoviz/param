@@ -13,6 +13,15 @@
    bind
 ```
 
+## `current_node`
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   current_node
+```
+
 ## `rx`
 
 `rx` allows wrapping objects and then operating on them interactively while recording any operations applied to them.
@@ -113,6 +122,10 @@ The override stands in for the input and is resolved in its place, ahead of the
 guards the input would have faced. Any value masks the input, including `None`, so
 an override following a reference keeps masking when that reference holds `None`.
 
+See the [Reactive Expressions user guide](../../user_guide/Reactive_Expressions.ipynb)
+for `.rx.meta` and `current_node`, used together for per-node caching and
+provenance.
+
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
@@ -145,9 +158,10 @@ These methods and properties are available under the `.rx` namespace of reactive
   ~reactive_ops.updating
   ~reactive_ops.when
   ~reactive_ops.where
-  ~reactive_ops.value
+   ~reactive_ops.value
    ~reactive_ops.watch
    ~reactive_ops.error
    ~reactive_ops.overrides
    ~reactive_ops.label
+   ~reactive_ops.meta
 ```

@@ -90,6 +90,7 @@ powerful and intuitive way to manage dynamic behavior in Python applications.
 """
 from __future__ import annotations
 
+import contextvars
 import inspect
 import logging
 import math
@@ -1873,6 +1874,46 @@ async def _close_stale(obj):
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
+_current_node: contextvars.ContextVar[rx | None] = contextvars.ContextVar(
+    '_current_node', default=None
+)
+
+
+def current_node() -> rx | None:
+    """
+    Return the node currently being resolved, or ``None``.
+
+    Set only while a node's own operation function is actually running, using
+    a ``contextvars.ContextVar``, so concurrent async nodes on the same event
+    loop each see their own node. Not set while an operation's arguments are
+    being resolved, nor while watchers are notified of a new value, so it
+    never leaks into an unrelated function's execution.
+
+    Only meaningful when called from inside the body of a function passed
+    to an operation (``.rx.pipe``, ``bind``, an arithmetic operator, etc.)
+    while that operation is being evaluated for a specific node. Lets a
+    body attach data to ``.rx.meta`` on the exact node its computation
+    belongs to, without that node being passed to it as an argument:
+
+    >>> def kernel(price, fx):
+    ...     node = param.current_node()
+    ...     if node is not None:
+    ...         node.rx.meta['trace'] = {'fx_used': fx}
+    ...     return price * fx
+
+    Returns ``None`` outside of any operation body (including in plain user
+    code, tests, or a REPL), so callers should guard rather than chain
+    straight through to ``.rx.meta``.
+
+    Returns
+    -------
+    rx | None
+        The node being resolved, or ``None`` if called outside of an
+        operation's evaluation.
+    """
+    return _current_node.get()
+
+
 class rx:
     """
     A class for creating reactive expressions by wrapping objects.
@@ -2160,10 +2201,18 @@ class rx:
     @property
     def _obj(self):
         if self._shared_obj is None:
-            self._obj = eval_function_with_deps(self._fn)
+            token = _current_node.set(self)
+            try:
+                self._obj = eval_function_with_deps(self._fn)
+            finally:
+                _current_node.reset(token)
         elif self._root._dirty_obj:
             root = self._root
-            root._shared_obj[0] = eval_function_with_deps(root._fn)
+            token = _current_node.set(root)
+            try:
+                root._shared_obj[0] = eval_function_with_deps(root._fn)
+            finally:
+                _current_node.reset(token)
             t.cast('t.Any', root)._dirty_obj = False
         shared_obj = self._shared_obj
         if shared_obj is None:
@@ -2539,22 +2588,36 @@ class rx:
                 self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
-                async for val in obj:
+                # Manually drive generator (as opposed to async for) to ensure
+                # current_node is only set while generator body is advancing
+                broke = False
+                while True:
+                    token = _current_node.set(self)
+                    try:
+                        val = await obj.__anext__()
+                    except StopAsyncIteration:
+                        break
+                    finally:
+                        _current_node.reset(token)
                     if stale():
                         await _close_stale(obj)
+                        broke = True
                         break
                     self._current_ = val
                     self._skipped = False
                     self._finished_generation = generation
                     trigger.param.trigger('value')
-                else:
-                    if not stale() and self._finished_generation != generation:
-                        # The generator did not yield anything, so we skip and keep
-                        # the previous output
-                        self._skipped = True
-                        self._finished_generation = generation
+                if not broke and not stale() and self._finished_generation != generation:
+                    # The generator did not yield anything, so we skip and keep
+                    # the previous output
+                    self._skipped = True
+                    self._finished_generation = generation
             else:
-                value = await obj
+                token = _current_node.set(self)
+                try:
+                    value = await obj
+                finally:
+                    _current_node.reset(token)
                 if stale():
                     return
                 self._current_ = value
@@ -3043,12 +3106,16 @@ class rx:
             if isinstance(val, ReactiveError) and not process_failures:
                 return val
             resolved_kwargs[k] = val
-        if isinstance(fn, str):
-            obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
-        elif operation.get('reverse'):
-            obj = fn(resolved_args[0], obj, *resolved_args[1:], **resolved_kwargs)
-        else:
-            obj = fn(obj, *resolved_args, **resolved_kwargs)
+        token = _current_node.set(self)
+        try:
+            if isinstance(fn, str):
+                obj = getattr(obj, fn)(*resolved_args, **resolved_kwargs)
+            elif operation.get('reverse'):
+                obj = fn(resolved_args[0], obj, *resolved_args[1:], **resolved_kwargs)
+            else:
+                obj = fn(obj, *resolved_args, **resolved_kwargs)
+        finally:
+            _current_node.reset(token)
         return obj
 
     def __setattr__(self, name, value):

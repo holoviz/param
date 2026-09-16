@@ -99,7 +99,7 @@ from .parameters import (
     CalendarDateRange,
     Event,
 )
-from .reactive import InputOverrides, ReactiveError, bind, rx
+from .reactive import ReactiveError, bind, current_node, rx
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -178,7 +178,6 @@ __all__ = (
     'Foldername',
     'HookList',
     'INFO',
-    'InputOverrides',
     'Infinity',
     'Integer',
     'List',
@@ -211,6 +210,7 @@ __all__ = (
     '_is_number',
     'bind',
     'concrete_descendents',
+    'current_node',
     'depends',
     'descendents',
     'discard_events',

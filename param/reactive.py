@@ -286,10 +286,8 @@ class InputOverrides(MutableMapping):
         operation = t.cast('dict', node._operation)
         finalizers = node._finalizers
         for finalizer in (operation.get('override_watchers') or {}).pop(key, ()):
-            # Firing the finalizer now (instead of calling `_remove_watcher`
-            # out-of-band) both unwatches the source and marks it dead, so it
-            # is safe to drop from `_finalizers` instead of accumulating there
-            # until the node itself is disposed or collected.
+            # Firing the finalizer now both unwatches the source and
+            # marks it dead, so it is safe to drop from `_finalizers`.
             finalizer()
             if finalizers is not None:
                 try:

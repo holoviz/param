@@ -3472,8 +3472,8 @@ def test_reactive_override_propagates_without_any_parameters():
 
 
 @pytest.mark.parametrize(('ctx', 'expected'), [
-    (contextlib.nullcontext(), [1100, 3000]),
-    (batch(), [3000]),
+    (contextlib.nullcontext, [1100, 3000]),
+    (batch, [3000]),
 ], ids=['without_batch', 'inside_batch'])
 def test_reactive_override_sheet_across_nodes(ctx, expected):
     """

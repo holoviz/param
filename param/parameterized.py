@@ -1117,7 +1117,7 @@ class Watcher(_Watcher):
     with higher priority.
 
     Call `.remove()` on the returned `Watcher` to stop it from being
-    triggered, as an alternative to `(inst or cls).param.unwatch(watcher)`.
+    triggered.
     """
 
     def __new__(cls_, *args, **kwargs):
@@ -1153,10 +1153,6 @@ class Watcher(_Watcher):
         """
         Remove this watcher, stopping it from being triggered by
         subsequent events on the parameters it is watching.
-
-        Equivalent to `(self.inst or self.cls).param.unwatch(self)` but
-        does not require holding a reference to the watched object.
-        Calling `remove` on an already removed watcher is a no-op.
 
         Examples
         --------
@@ -4222,12 +4218,8 @@ class Parameters:
             if action == 'append':
                 watchers.append(watcher)
             else:
-                # Remove by identity rather than equality: two separately
-                # constructed Watcher objects with identical field values
-                # (e.g. the same callback watched twice) are indistinguishable
-                # to list.remove, which could remove the wrong (but equal)
-                # entry. Already-removed watchers are silently ignored since
-                # unwatch is idempotent.
+                # Remove by identity, not equality, so two Watchers with
+                # identical fields can't be mixed up; missing is a no-op.
                 for i, w in enumerate(watchers):
                     if w is watcher:
                         del watchers[i]

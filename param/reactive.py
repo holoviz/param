@@ -1220,7 +1220,7 @@ class reactive_ops:
         next(upstream, None)  # Skip itself.
         yield from upstream
 
-    def dependents(self) -> Iterator['rx']:
+    def downstream(self) -> Iterator['rx']:
         """
         Iterate over the ``rx`` nodes that derive their value from this
         expression, directly or transitively, excluding itself. The reverse
@@ -1230,7 +1230,7 @@ class reactive_ops:
 
         Readers are held weakly, so this reflects only what is currently
         alive, and traversal order is unspecified. As with :meth:`upstream`,
-        use ``set(dependents())`` rather than ``in`` on the iterator directly.
+        use ``set(downstream())`` rather than ``in`` on the iterator directly.
 
         Returns
         -------
@@ -1243,15 +1243,15 @@ class reactive_ops:
         >>> import param
         >>> a = param.rx(1)
         >>> b = a.rx.pipe(lambda x: x + 1)
-        >>> b in set(a.rx.dependents())
+        >>> b in set(a.rx.downstream())
         True
         """
         reactive = self._reactive
         if not isinstance(reactive, rx):
             return
-        dependents = reactive._dependents()
-        next(dependents, None)  # Skip itself.
-        yield from dependents
+        downstream = reactive._downstream()
+        next(downstream, None)  # Skip itself.
+        yield from downstream
 
     def updating(self) -> 'rx':
         """
@@ -2423,7 +2423,7 @@ class rx:
             yield node
             stack.extend(node._direct_inputs())
 
-    def _dependents(self) -> Iterator[t.Any]:
+    def _downstream(self) -> Iterator[t.Any]:
         """
         Yield this node and every ``rx`` node that derives its value from it,
         transitively. The reverse of ``_upstream()``, walking ``_readers``
@@ -2605,7 +2605,7 @@ class rx:
     def _register_reader(self, reader: Self):
         """
         Record that ``reader`` computes its value from this node, for
-        ``_invalidate_overrides`` and ``_dependents()``. Weak, so a node is
+        ``_invalidate_overrides`` and ``_downstream()``. Weak, so a node is
         not kept alive by the node it derives from.
         """
         readers = self._readers

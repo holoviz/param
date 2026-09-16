@@ -3251,69 +3251,69 @@ def test_reactive_upstream_empty_on_non_rx_namespace():
     assert list(p.param.integer.rx.upstream()) == []
 
 
-def test_reactive_dependents_sees_reader_through_prev():
+def test_reactive_downstream_sees_reader_through_prev():
     a = rx(1)
     derived = a + 1
-    assert derived in set(a.rx.dependents())
+    assert derived in set(a.rx.downstream())
 
 
-def test_reactive_dependents_sees_reader_through_shared_branch():
+def test_reactive_downstream_sees_reader_through_shared_branch():
     branch = rx((1, 2))
     first, second = branch[0], branch[1]
-    dependents = set(branch.rx.dependents())
-    assert first in dependents
-    assert second in dependents
+    downstream = set(branch.rx.downstream())
+    assert first in downstream
+    assert second in downstream
 
 
-def test_reactive_dependents_sees_reader_through_operation_argument():
+def test_reactive_downstream_sees_reader_through_operation_argument():
     # This is the route `_upstream()` already walked that `_readers` did not
     # register a reader for until the operation-argument route was added to
     # `_direct_inputs()`.
     a = rx(1)
     piped = rx(2).rx.pipe(lambda x, y: x + y, y=a)
-    assert piped in set(a.rx.dependents())
+    assert piped in set(a.rx.downstream())
 
 
-def test_reactive_dependents_does_not_see_an_unconsumed_node():
+def test_reactive_downstream_does_not_see_an_unconsumed_node():
     a = rx(1)
     rx(2)  # Never reads from `a`.
-    assert list(a.rx.dependents()) == []
+    assert list(a.rx.downstream()) == []
 
 
-def test_reactive_dependents_transitively_walks_downstream():
+def test_reactive_downstream_transitively_walks_further_nodes():
     a = rx(1)
     b = a + 1
     c = b * 2
-    dependents = set(a.rx.dependents())
-    assert b in dependents
-    assert c in dependents
+    downstream = set(a.rx.downstream())
+    assert b in downstream
+    assert c in downstream
 
 
-def test_reactive_dependents_drops_a_collected_node():
+def test_reactive_downstream_drops_a_collected_node():
     a = rx(1)
     derived = a + 1
-    assert derived in set(a.rx.dependents())
+    assert derived in set(a.rx.downstream())
 
     del derived
     gc.collect()
 
-    assert list(a.rx.dependents()) == []
+    assert list(a.rx.downstream()) == []
 
 
-def test_reactive_dependents_excludes_self():
+def test_reactive_downstream_excludes_self():
     a = rx(1)
     b = a + 1
-    assert a not in set(a.rx.dependents())
-    assert a not in set(b.rx.dependents())
+    assert a not in set(a.rx.downstream())
+    assert a not in set(b.rx.downstream())
 
 
-def test_reactive_dependents_empty_on_non_rx_namespace():
+def test_reactive_downstream_empty_on_non_rx_namespace():
     p = Parameters()
-    assert list(p.param.integer.rx.dependents()) == []
+    assert list(p.param.integer.rx.downstream()) == []
 
 
-def test_reactive_upstream_and_dependents_exclude_bind_only_dependency():
-    # `.rx.upstream()`/`.rx.dependents()` only walk pipeline edges (`_prev`,
+def test_reactive_upstream_and_downstream_exclude_bind_only_dependency():
+    # `.rx.upstream()`/`.rx.downstream()` only walk pipeline edges (`_prev`,
     # `_shared`, an rx operation argument). A plain `rx(bind(...))` reads its
     # dependency through the bind/depends machinery instead, with no
     # `_operation` of its own, so that route is not covered. Documenting the
@@ -3322,26 +3322,26 @@ def test_reactive_upstream_and_dependents_exclude_bind_only_dependency():
     a = rx(1)
     b = rx(bind(lambda v: v + 1, a))
     assert a not in set(b.rx.upstream())
-    assert b not in set(a.rx.dependents())
+    assert b not in set(a.rx.downstream())
 
 
-def test_reactive_upstream_and_dependents_exclude_when_gate():
+def test_reactive_upstream_and_downstream_exclude_when_gate():
     src = rx(1)
     gate = rx(True)
     gated = src.rx.when(gate)
     assert src not in set(gated.rx.upstream())
-    assert gated not in set(src.rx.dependents())
+    assert gated not in set(src.rx.downstream())
 
 
-def test_reactive_upstream_and_dependents_exclude_where_branches():
+def test_reactive_upstream_and_downstream_exclude_where_branches():
     cond = rx(True)
     x, y = rx('a'), rx('b')
     w = cond.rx.where(x, y)
     assert cond not in set(w.rx.upstream())
-    assert w not in set(cond.rx.dependents())
+    assert w not in set(cond.rx.downstream())
 
 
-def test_reactive_upstream_and_dependents_exclude_override_value():
+def test_reactive_upstream_and_downstream_exclude_override_value():
     fx = rx(2)
     override = rx(3)
     value = rx(100).rx.pipe(lambda price, fx: price * fx, fx=fx)
@@ -3350,7 +3350,7 @@ def test_reactive_upstream_and_dependents_exclude_override_value():
     upstream = set(value.rx.upstream())
     assert override not in upstream
     assert fx in upstream  # The masked input is still reported.
-    assert value not in set(override.rx.dependents())
+    assert value not in set(override.rx.downstream())
 
 
 def test_reactive_rx_is_hashable():

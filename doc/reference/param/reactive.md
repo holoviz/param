@@ -132,9 +132,9 @@ provenance.
 
 ### Walking the graph
 
-`.rx.upstream()` and `.rx.dependents()` walk a node's pipeline edges: what it was
+`.rx.upstream()` and `.rx.downstream()` walk a node's pipeline edges: what it was
 piped/branched/operated on (`upstream`), and what was in turn built from it
-(`dependents`), transitively in either direction. Both exclude the node itself,
+(`downstream`), transitively in either direction. Both exclude the node itself,
 and neither covers a dependency reached only through `bind()`, `.rx.when`,
 `.rx.where`, or `.rx.overrides`, since those resolve their inputs outside the
 pipeline machinery `.rx.pipe` and the operators use. Test membership with
@@ -160,7 +160,7 @@ These methods and properties are available under the `.rx` namespace of reactive
    ~reactive_ops.and_
   ~reactive_ops.bool
   ~reactive_ops.buffer
-  ~reactive_ops.dependents
+  ~reactive_ops.downstream
   ~reactive_ops.in_
   ~reactive_ops.is_
   ~reactive_ops.is_not

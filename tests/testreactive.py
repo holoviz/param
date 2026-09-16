@@ -3495,7 +3495,7 @@ def test_reactive_override_sheet_across_nodes(ctx, expected):
     combined.rx.watch(calls.append)
     calls.clear()
 
-    with ctx:
+    with ctx():
         node1.rx.overrides['x'] = 100
         node2.rx.overrides['y'] = 200
 

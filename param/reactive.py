@@ -430,6 +430,54 @@ class reactive_ops:
             return items
         return self._as_rx()._apply_operator(collect, n)
 
+    @staticmethod
+    def collect(*args, error_mode='raise', **kwargs) -> 'rx':
+        """
+        Combine several inputs into a mapping of whichever have settled.
+
+        Unlike `.rx.pipe`, this does not call a function: the result is a
+        mapping, keyed by each input's position (positional argument) or
+        name (keyword), that grows as inputs settle rather than waiting for
+        the slowest one. A key appears once its input has produced a value
+        and keeps that value while the input is unsettled again.
+        `.rx.awaiting` is `True` while any input is unsettled, including one
+        that already has a key and is settling again.
+
+        Called on the class, not an existing expression, since it combines
+        several independent inputs rather than transforming one:
+        `param.rx.collect(...)`.
+
+        Parameters
+        ----------
+        *args, **kwargs : any
+            The inputs to collect, typically ``rx`` expressions. A
+            non-reactive value is included immediately.
+        error_mode : {"raise", "propagate"}, default "raise"
+            With "propagate", a failing input resolves to a
+            :class:`ReactiveError` at its key instead of failing the whole
+            node. With "raise" (the default), a failing input drops every
+            key, including ones that already settled.
+
+        Returns
+        -------
+        rx
+            A reactive mapping of the settled inputs.
+
+        Examples
+        --------
+        >>> import param
+        >>> a, b = param.rx(1), param.rx(2)
+        >>> collected = param.rx.collect(a=a, b=b)
+        >>> collected.rx.value
+        {'a': 1, 'b': 2}
+        """
+        operation = {
+            'fn': _collect_marker,
+            'args': args,
+            'kwargs': kwargs,
+        }
+        return rx(None, operation=operation, _current=Undefined, error_mode=error_mode)
+
     def in_(self, other) -> 'rx':
         """
         Check if the current object is contained "in" the given operand.
@@ -1706,15 +1754,35 @@ async def _close_stale(obj):
         )
 
 
-def _gather_marker(*args, **kwargs):
-    """Serve as a placeholder `fn` for a `gather` operation; `_eval_gather` never calls it."""
+def _collect_marker(*args, **kwargs):
+    """Serve as a placeholder `fn` for a `collect` operation; `_eval_collect` never calls it."""
     raise NotImplementedError
+
+
+class _rxmeta(type):
+    """
+    Forward a class-level lookup that `rx` doesn't resolve itself (e.g.
+    `rx.collect`) to `reactive_ops`. `reactive_ops` is where such helpers
+    live, since a plain method on `rx` would double as an attribute of
+    every `rx` *instance*, silently shadowing that name on whatever object
+    it wraps (e.g. `some_spark_df_rx.collect()` should reach
+    `pyspark.sql.DataFrame.collect`, not some unrelated `rx` classmethod of
+    the same name). A metaclass lookup only ever applies to `rx` itself,
+    never to an instance's own attribute resolution in
+    `rx.__getattribute__`.
+    """
+
+    def __getattr__(cls, name):
+        return getattr(reactive_ops, name)
+
+    def __dir__(cls):
+        return sorted(set(super().__dir__()) | set(dir(reactive_ops)))
 
 
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
 # See https://peps.python.org/pep-0673/
 
-class rx:
+class rx(metaclass=_rxmeta):
     """
     A class for creating reactive expressions by wrapping objects.
 
@@ -1847,49 +1915,6 @@ class rx:
         an object is called.
         """
         cls._method_handlers[method] = handler
-
-    @classmethod
-    def gather(cls, *args, error_mode='raise', **kwargs) -> Self:
-        """
-        Combine several inputs into a mapping of whichever have settled.
-
-        Unlike ``.rx.pipe``, ``gather`` does not call a function: the result
-        *is* the combination, keyed by each input's position (positional
-        argument) or name (keyword). A key appears once its input has
-        produced a value, and keeps that value while its input is
-        unsettled again rather than being removed. ``.rx.awaiting`` is
-        ``True`` until every input has settled at least once.
-
-        Parameters
-        ----------
-        *args, **kwargs : any
-            The inputs to gather, typically ``rx`` expressions. A
-            non-reactive value is included immediately.
-        error_mode : {"raise", "propagate"}, default "raise"
-            With "propagate", a failing input resolves to a
-            :class:`ReactiveError` at its key instead of failing the whole
-            node.
-
-        Returns
-        -------
-        rx
-            A reactive mapping of the settled inputs.
-
-        Examples
-        --------
-        >>> import param
-        >>> a, b = param.rx(1), param.rx(2)
-        >>> gathered = param.rx.gather(a=a, b=b)
-        >>> gathered.rx.value
-        {'a': 1, 'b': 2}
-        """
-        operation = {
-            'fn': _gather_marker,
-            'args': args,
-            'kwargs': kwargs,
-            'gather': True,
-        }
-        return cls(None, operation=operation, _current=Undefined, error_mode=error_mode)
 
     def __new__(cls, obj=None, **kwargs):
         wrapper = None
@@ -2755,8 +2780,8 @@ class rx:
         )
 
     def _eval_operation(self, obj, operation):
-        if operation.get('gather'):
-            return self._eval_gather(operation)
+        if operation['fn'] is _collect_marker:
+            return self._eval_collect(operation)
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
         resolved_args = []
         for arg in args:
@@ -2786,33 +2811,43 @@ class rx:
             obj = fn(obj, *resolved_args, **resolved_kwargs)
         return obj
 
-    def _eval_gather(self, operation):
+    def _eval_collect(self, operation):
         """
-        Resolve each `gather` input independently instead of skipping the
+        Resolve each `collect` input independently instead of skipping the
         whole node while any one input is unsettled.
         """
-        result = dict(self._current_) if isinstance(self._current_, dict) else {}
-        settled = bool(result)
-        for key, arg in chain(enumerate(operation['args']), operation['kwargs'].items()):
+        args, kwargs = operation['args'], operation['kwargs']
+        if not args and not kwargs:
+            return {}
+        previous = self._current_ if isinstance(self._current_, dict) else {}
+        result = {}
+        for key, arg in chain(enumerate(args), kwargs.items()):
             if any(ref._settling for ref in _iter_rx(arg)):
+                # Not ready yet; carry the previous value (if any) forward
+                # in this key's argument-order slot rather than dropping it.
+                if key in previous:
+                    result[key] = previous[key]
                 continue
             try:
                 val = resolve_value(arg)
             except Skip:
-                # Not a failure, just not ready yet; keep this key's previous
-                # value (if any) and try again on the next recompute.
+                if key in previous:
+                    result[key] = previous[key]
                 continue
             except Exception as e:
                 if self._error_mode != 'propagate':
                     raise
                 result[key] = ReactiveError(e, self)
-                settled = True
                 continue
             if val is Skip or val is Undefined:
+                if key in previous:
+                    result[key] = previous[key]
                 continue
             result[key] = val
-            settled = True
-        if not settled:
+        if result == previous:
+            # Nothing actually changed this round (e.g. an already-settled
+            # input resolved to the same value while another one is
+            # unsettled again); don't republish the unchanged mapping.
             raise Skip
         return result
 

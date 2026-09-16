@@ -2847,9 +2847,9 @@ def test_reactive_accessor_memoize_true_still_instantiates_once(clean_accessors)
     assert installed_for == [n]
 
 
-# rx.gather
+# rx.collect
 
-async def test_reactive_gather_reports_partial_results_as_inputs_settle():
+async def test_reactive_collect_reports_partial_results_as_inputs_settle():
     async def delayed(v, delay):
         await asyncio.sleep(delay)
         return v
@@ -2859,76 +2859,122 @@ async def test_reactive_gather_reports_partial_results_as_inputs_settle():
     a = rx(1).rx.pipe(delayed, delay=0.05)
     b = rx(2).rx.pipe(delayed, delay=0.15)
     c = rx(3).rx.pipe(delayed, delay=0.25)
-    gathered = rx.gather(a=a, b=b, c=c)
+    collected = rx.collect(a=a, b=b, c=c)
 
     values = []
-    gathered.rx.watch(values.append)
-    gathered.rx.value
-    assert gathered.rx.awaiting
+    collected.rx.watch(values.append)
+    collected.rx.value
+    assert collected.rx.awaiting
 
     await async_wait_until(lambda: values == [{'a': 1}], interval=10)
-    assert gathered.rx.awaiting
+    assert collected.rx.awaiting
 
     await async_wait_until(lambda: values == [{'a': 1}, {'a': 1, 'b': 2}], interval=10)
-    assert gathered.rx.awaiting
+    assert collected.rx.awaiting
 
     await async_wait_until(
         lambda: values == [{'a': 1}, {'a': 1, 'b': 2}, {'a': 1, 'b': 2, 'c': 3}],
         interval=10,
     )
-    assert not gathered.rx.awaiting
+    assert not collected.rx.awaiting
 
-def test_reactive_gather_includes_non_reactive_and_positional_inputs():
-    gathered = rx.gather(rx(1), 2, c=rx(3))
-    assert gathered.rx.value == {0: 1, 1: 2, 'c': 3}
-    assert not gathered.rx.awaiting
+def test_reactive_collect_includes_non_reactive_and_positional_inputs():
+    collected = rx.collect(rx(1), 2, c=rx(3))
+    assert collected.rx.value == {0: 1, 1: 2, 'c': 3}
+    assert not collected.rx.awaiting
 
-def test_reactive_gather_keeps_stale_key_while_its_input_resettles():
-    irx = rx(1)
+def test_reactive_collect_key_order_follows_argument_order_not_settle_order():
+    """A key already present keeps its argument-order slot when it resettles."""
+    a = rx(1)
     b = rx(2)
-    gathered = rx.gather(a=irx, b=b)
-    assert gathered.rx.value == {'a': 1, 'b': 2}
+    collected = rx.collect(b=b, a=a)
+    assert list(collected.rx.value) == ['b', 'a']
 
-    irx.rx.value = 10
-    # 'a' is a plain (synchronous) input, so it updates immediately; the
-    # point under test is that 'b' is untouched rather than dropped.
-    assert gathered.rx.value == {'a': 10, 'b': 2}
+    a.rx.value = 10
+    assert list(collected.rx.value) == ['b', 'a']
+    assert collected.rx.value == {'b': 2, 'a': 10}
 
-def test_reactive_gather_error_mode_propagate_holds_error_at_its_key():
+def test_reactive_collect_empty_settles_immediately_to_an_empty_mapping():
+    collected = rx.collect()
+    assert collected.rx.value == {}
+    assert not collected.rx.awaiting
+
+async def test_reactive_collect_keeps_stale_key_while_its_input_resettles():
+    async def delayed(v, delay=0.05):
+        await asyncio.sleep(delay)
+        return v
+
+    src = rx(1)
+    a = src.rx.pipe(delayed)
+    b = rx(2)
+    collected = rx.collect(a=a, b=b)
+
+    events = []
+    collected.rx.watch(events.append)
+    collected.rx.value
+    await async_wait_until(lambda: events == [{'a': 1, 'b': 2}])
+
+    src.rx.value = 10
+    # 'a' is settling again; the mapping keeps its previous value at 'a'
+    # rather than dropping it, and no spurious duplicate of the unchanged
+    # mapping is published to watchers while 'a' is unsettled.
+    assert collected.rx.value == {'a': 1, 'b': 2}
+    assert collected.rx.awaiting
+    assert events == [{'a': 1, 'b': 2}]
+
+    await async_wait_until(lambda: events == [{'a': 1, 'b': 2}, {'a': 10, 'b': 2}])
+    assert not collected.rx.awaiting
+
+def test_reactive_collect_error_mode_propagate_holds_error_at_its_key():
     def fail(v):
         raise ValueError('boom')
 
     a = rx(1)
     b = rx(2).rx.pipe(fail)
     c = rx(3)
-    gathered = rx.gather(a=a, b=b, c=c, error_mode='propagate')
+    collected = rx.collect(a=a, b=b, c=c, error_mode='propagate')
 
-    value = gathered.rx.value
+    value = collected.rx.value
     assert value['a'] == 1
     assert value['c'] == 3
     assert isinstance(value['b'], param.ReactiveError)
 
-def test_reactive_gather_error_mode_raise_fails_the_whole_node():
+def test_reactive_collect_error_mode_raise_fails_the_whole_node():
     def fail(v):
         raise ValueError('boom')
 
-    gathered = rx.gather(a=rx(1), b=rx(2).rx.pipe(fail))
+    collected = rx.collect(a=rx(1), b=rx(2).rx.pipe(fail))
     with pytest.raises(ValueError, match='boom'):
-        gathered.rx.value
+        collected.rx.value
+
+def test_reactive_collect_does_not_shadow_a_method_of_the_wrapped_object():
+    """`collect` lives on `reactive_ops`, not `rx`, so it can't shadow an
+    instance's own attribute of the same name (e.g. a DataFrame's
+    `.collect()`), while `rx.collect(...)` (the class-level, no-instance
+    call) still works.
+    """
+    class Obj:
+        def collect(self, x):
+            return f'collected {x}'
+
+    assert rx(Obj()).collect(3).rx.value == 'collected 3'
+    assert 'collect' not in rx.__dict__
+    assert 'collect' in dir(rx)
+    assert rx.collect(a=rx(1)).rx.value == {'a': 1}
 
 async def test_reactive_pipe_multi_arg_still_waits_for_every_input():
-    """Without `gather`, `.rx.pipe` is unaffected: every argument must settle."""
+    """Without `collect`, `.rx.pipe` is unaffected: every argument must settle."""
     async def delayed(v, delay):
         await asyncio.sleep(delay)
         return v
 
-    a = rx(1).rx.pipe(delayed, delay=0.01)
-    b = rx(2).rx.pipe(delayed, delay=0.05)
+    a = rx(1).rx.pipe(delayed, delay=0.02)
+    b = rx(2).rx.pipe(delayed, delay=0.15)
     combined = a.rx.pipe(lambda x, y: (x, y), y=b)
 
     combined.rx.watch()
     combined.rx.value
-    await asyncio.sleep(0.02)
+    await asyncio.sleep(0.05)
     assert combined.rx.value is param.Undefined
     assert combined.rx.awaiting
 

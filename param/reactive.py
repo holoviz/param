@@ -1696,7 +1696,7 @@ class reactive_ops:
         """
         watchers = watcher if isinstance(watcher, list) else [watcher]
         for w in watchers:
-            (w.inst or w.cls).param.unwatch(w)
+            w.remove()
         reactive = self._reactive
         if isinstance(reactive, rx) and reactive._watchers:
             for w in watchers:

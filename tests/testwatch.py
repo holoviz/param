@@ -1,5 +1,6 @@
 """Unit test for watch mechanism."""
 import copy
+import pickle
 import re
 import unittest
 
@@ -252,6 +253,125 @@ class TestWatch(unittest.TestCase):
         obj.param.unwatch(watcher)
         # Idempotent, not error raised.
         obj.param.unwatch(watcher)
+
+    def test_watcher_remove(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, 'a')
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+        watcher.remove()
+        obj.a = 2
+        self.assertEqual(self.accumulator, 1)
+
+    def test_watcher_remove_idempotent(self):
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, 'a')
+        watcher.remove()
+        # Idempotent, no error raised.
+        watcher.remove()
+
+    def test_watcher_remove_class_level(self):
+        accumulator = Accumulator()
+
+        obj = SimpleWatchSubclass
+        watcher = obj.param.watch(accumulator, ['a', 'b'])
+        obj.param.update(a=23, b=42)
+        self.assertEqual(accumulator.call_count(), 1)
+
+        watcher.remove()
+        obj.param.update(a=0, b=0)
+        self.assertEqual(accumulator.call_count(), 1)
+
+    def test_watcher_remove_only_removes_one_registration(self):
+        # Two watchers registered with identical fields (same callback,
+        # same parameter, same options) are tuple-equal. Removing one
+        # must only drop a single registration, not both.
+        def accumulator(change):
+            self.accumulator += change.new
+
+        obj = SimpleWatchExample()
+        watcher1 = obj.param.watch(accumulator, 'a')
+        watcher2 = obj.param.watch(accumulator, 'a')
+        self.assertEqual(watcher1, watcher2)
+        self.assertIsNot(watcher1, watcher2)
+
+        watcher1.remove()
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+
+        watcher2.remove()
+        obj.a = 2
+        self.assertEqual(self.accumulator, 1)
+
+    def test_watcher_remove_on_falsy_instance(self):
+        # remove() must resolve the owner via `inst is None`, not
+        # `inst or cls`: an inst that is falsy (e.g. defines __len__)
+        # must not be mistaken for a missing inst and routed to cls.
+        class FalsyWatchExample(param.Parameterized):
+            a = param.Parameter(default=0)
+
+            def __len__(self):
+                return 0
+
+        obj = FalsyWatchExample()
+        self.assertFalse(obj)
+
+        def accumulator(change):
+            self.accumulator += change.new
+
+        watcher = obj.param.watch(accumulator, 'a')
+        obj.a = 1
+        self.assertEqual(self.accumulator, 1)
+
+        watcher.remove()
+        obj.a = 2
+        self.assertEqual(self.accumulator, 1)
+
+    def test_watcher_survives_deepcopy_and_can_be_unwatched(self):
+        # Parameterized.__setstate__ rebuilds each stored watcher as a
+        # new Watcher with the same field values, so a watcher copied
+        # alongside its object must still be usable to unwatch it.
+        calls = []
+
+        def accumulator(change):
+            calls.append(change.new)
+
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(accumulator, 'a')
+
+        obj2, watcher2 = copy.deepcopy((obj, watcher))
+        self.assertIsNot(watcher2, watcher)
+        self.assertIs(watcher2.inst, obj2)
+
+        obj2.param.unwatch(watcher2)
+        obj2.a = 1
+        self.assertEqual(calls, [])
+
+        # The original watcher and object are unaffected.
+        obj.a = 5
+        self.assertEqual(calls, [5])
+
+    def test_watcher_survives_pickle_roundtrip_and_can_be_unwatched(self):
+        obj = SimpleWatchExample()
+        watcher = obj.param.watch(obj.method, 'a')
+
+        obj2, watcher2 = pickle.loads(pickle.dumps((obj, watcher)))
+        self.assertIsNot(watcher2, watcher)
+        self.assertIs(watcher2.inst, obj2)
+
+        watcher2.remove()
+        obj2.a = 1
+        self.assertEqual(obj2.b, 0)
+
+        # The original watcher and object are unaffected.
+        obj.a = 5
+        self.assertEqual(obj.b, 10)
 
     def test_simple_batched_watch_setattr(self):
 

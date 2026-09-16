@@ -99,7 +99,7 @@ from .parameters import (
     CalendarDateRange,
     Event,
 )
-from .reactive import ReactiveError, bind, current_node, rx
+from .reactive import Collected, ReactiveError, bind, current_node, rx
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -162,6 +162,7 @@ __all__ = (
     'CalendarDateRange',
     'Callable',
     'ClassSelector',
+    'Collected',
     'Color',
     'Composite',
     'DEBUG',

@@ -113,6 +113,34 @@ The override stands in for the input and is resolved in its place, ahead of the
 guards the input would have faced. Any value masks the input, including `None`, so
 an override following a reference keeps masking when that reference holds `None`.
 
+### Disposing an expression
+
+`.rx.watch()` returns the watcher(s) it registers; pass them to `.rx.unwatch()`
+to stop just that callback. `.rx.dispose()` releases the watchers an
+expression's own construction set up, immediately rather than waiting for it
+to be garbage collected, and disposes an input too if the expression being
+disposed was its only reader:
+
+```python
+a = param.rx(1)
+b = a + 1
+b.rx.value  # 2
+b.rx.dispose()  # releases b's watchers, and a's too, since b was its only reader
+```
+
+`.rx.dispose()` raises if the expression still has a reader, whether another
+node built from it or a live `.rx.watch()` callback on it, since disposing it
+would leave that reader looking at a value that has stopped tracking its
+inputs. Pass `cascade=False` to release only the expression's own watchers,
+without ever touching its inputs; this matters if an input feeds a consumer
+`.rx.dispose()` cannot see, such as a `Parameter` with `allow_refs=True`, or a
+`bind`/`pn.bind` consumer. Once disposed, resolving the expression, reading
+its value, or building a new expression from it raises rather than silently
+returning a stale value.
+
+*New in version 2.5.0: `.rx.dispose()`, `.rx.unwatch()`, and `.rx.watch()`
+returning its watcher(s).*
+
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
@@ -147,6 +175,8 @@ These methods and properties are available under the `.rx` namespace of reactive
   ~reactive_ops.where
   ~reactive_ops.value
    ~reactive_ops.watch
+   ~reactive_ops.unwatch
+   ~reactive_ops.dispose
    ~reactive_ops.error
    ~reactive_ops.overrides
    ~reactive_ops.label

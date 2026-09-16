@@ -193,7 +193,7 @@ class Resolver(Parameterized):
     value: t.Any = Parameter()
 
     def __init__(self, **params):
-        self._watchers = []
+        self._finalizers: list[weakref.finalize] = []
         super().__init__(**params)
 
     def _resolve_value(self, *events):
@@ -217,13 +217,17 @@ class Resolver(Parameterized):
         self._update_refs(refs)
 
     def _update_refs(self, refs):
-        for w in self._watchers:
-            (w.inst or w.cls).param.unwatch(w)
-        self._watchers = []
+        """Weakly watch every ``Parameterized`` a resolved reference points to."""
+        for finalizer in self._finalizers:
+            finalizer()
+        self._finalizers = []
         for _, params in full_groupby(refs, lambda x: id(x.owner)):
-            self._watchers.append(
-                params[0].owner.param.watch(self._resolve_value, [p.name for p in params])
-            )
+            owner = params[0].owner
+            invalidator = _WeakInvalidator(self._resolve_value)
+            invalidator._watcher = owner.param.watch(invalidator, [p.name for p in params])
+            self._finalizers.append(weakref.finalize(
+                self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
+            ))
 
 
 class NestedResolver(Resolver):
@@ -1480,6 +1484,12 @@ class reactive_ops:
             of the reactive expression. If no function provided, the expression
             is simply evaluated eagerly.
 
+        Returns
+        -------
+        list[param.parameterized.Watcher]
+            The watcher(s) this call registered. Pass to :meth:`unwatch` to
+            stop just this callback.
+
         Raises
         ------
         ValueError
@@ -1492,7 +1502,7 @@ class reactive_ops:
 
         >>> import param
         >>> rx_value = param.rx(10)
-        >>> rx_value.rx.watch(lambda v: print(f"Updated value: {v}"))
+        >>> watcher = rx_value.rx.watch(lambda v: print(f"Updated value: {v}"))
 
         Update the reactive value to trigger the callback:
 
@@ -1505,7 +1515,7 @@ class reactive_ops:
         >>> async def async_callback(value):
         ...     await asyncio.sleep(1)
         ...     print(f"Async updated value: {value}")
-        >>> rx_value.rx.watch(async_callback)
+        >>> _ = rx_value.rx.watch(async_callback)
 
         Trigger the async callback:
 
@@ -1518,7 +1528,7 @@ class reactive_ops:
                              "are reserved for internal Watchers.")
         elif isinstance(self._reactive, rx) and self._reactive._lazy:
             warnings.warn("Watching a lazy expressions converts it into an eager expression.")
-        self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
+        return self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
         last = _unset = object()
@@ -1534,7 +1544,77 @@ class reactive_ops:
                 async_executor(partial(fn, value))
             else:
                 fn(value)
-        bind(cb, self._reactive, watch=True)
+        bound = t.cast('t.Any', bind(cb, self._reactive, watch=True))
+        watchers = list(bound._watchers)
+        reactive = self._reactive
+        if isinstance(reactive, rx):
+            live = reactive._watchers
+            if live is None:
+                live = reactive._watchers = []
+            live.extend(watchers)
+        return watchers
+
+    def unwatch(self, watcher) -> None:
+        """
+        Undo a previous call to :meth:`watch`.
+
+        Parameters
+        ----------
+        watcher : param.parameterized.Watcher or list[param.parameterized.Watcher]
+            The value :meth:`watch` returned.
+
+        Examples
+        --------
+        >>> import param
+        >>> rx_value = param.rx(10)
+        >>> watcher = rx_value.rx.watch(lambda v: print(f"Updated value: {v}"))
+        >>> rx_value.rx.unwatch(watcher)
+        >>> rx_value.rx.value = 20  # No longer prints anything.
+        """
+        watchers = watcher if isinstance(watcher, list) else [watcher]
+        for w in watchers:
+            (w.inst or w.cls).param.unwatch(w)
+        reactive = self._reactive
+        if isinstance(reactive, rx) and reactive._watchers:
+            for w in watchers:
+                if w in reactive._watchers:
+                    reactive._watchers.remove(w)
+
+    def dispose(self, cascade: builtins.bool = True) -> None:
+        """
+        Release the invalidation watchers this expression attached to its
+        upstream ``Parameterized`` sources, instead of waiting for it to be
+        garbage collected.
+
+        Raises if the expression still has a reader, another node built
+        from it or a live :meth:`watch` on it (call :meth:`unwatch` first),
+        rather than leaving that reader looking at a value that has stopped
+        updating. If this was the only reader of one of its inputs, that
+        input is disposed too; one still read elsewhere is left alone.
+        ``cascade=False`` disposes only this expression, never its inputs,
+        for a reader ``dispose()`` cannot see, e.g. a ``Parameter`` with
+        ``allow_refs=True``, or a :func:`bind`/``pn.bind`` consumer. Either
+        way, using a disposed expression afterwards (reading its value, or
+        building a new one from it) raises rather than returning a stale
+        value.
+
+        Whether an input actually gets disposed can depend on
+        ``gc.collect()`` having run first: branching (``b = a + 1``) clones
+        the input into a hidden reader that sits in a reference cycle only
+        the cyclic collector can break.
+
+        A no-op if ``self`` does not wrap an ``rx`` expression, or if called
+        more than once.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(1)
+        >>> b = a + 1
+        >>> b.rx.dispose()
+        """
+        if isinstance(self._reactive, rx):
+            self._reactive._dispose(cascade=cascade)
 
 
 def _first_reactive_error(args, kwargs):
@@ -1753,6 +1833,7 @@ def bind(
                 yield val
         wrapper_fn = t.cast('Callable', depends)(**dependencies, watch=watch)(wrapped_gen)
         t.cast('t.Any', wrapped_gen)._dinfo = wrapper_fn._dinfo
+        t.cast('t.Any', wrapped_gen)._watchers = wrapper_fn._watchers
         wrapped = wrapped_gen
     elif inspect.isasyncgenfunction(function):
         async def wrapped_async_gen(*wargs, **wkwargs):
@@ -1769,6 +1850,7 @@ def bind(
                 yield val
         wrapper_fn = t.cast('Callable', depends)(**dependencies, watch=watch)(wrapped_async_gen)
         t.cast('t.Any', wrapped_async_gen)._dinfo = wrapper_fn._dinfo
+        t.cast('t.Any', wrapped_async_gen)._watchers = wrapper_fn._watchers
         wrapped = wrapped_async_gen
     elif iscoroutinefunction(function):
         @t.cast('Callable', depends)(**dependencies, watch=watch)
@@ -1952,6 +2034,14 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
+    # This node's own invalidation watchers, run early by `_dispose()`.
+    _finalizers: list[weakref.finalize] | None = None
+
+    # Watchers registered through `.rx.watch()`; a reader like `_readers`.
+    _watchers: list[Watcher] | None = None
+
+    _disposed: bool = False
+
     @classmethod
     def register_accessor(
         cls, name: str, accessor: Callable[[t.Any], t.Any],
@@ -2094,10 +2184,8 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
-        if self._prev is not None:
-            self._prev._register_reader(self)
-        if _shared is not None:
-            _shared._register_reader(self)
+        for inp in self._direct_inputs():
+            inp._register_reader(self)
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
@@ -2224,6 +2312,17 @@ class rx:
         """Whether this node is waiting on an asynchronous result of its own."""
         return self._awaiting or self._awaiting_ref
 
+    def _direct_inputs(self) -> Iterator[t.Any]:
+        """Yield the ``rx`` nodes this node reads directly from."""
+        for inp in (self._prev, self._shared):
+            if isinstance(inp, rx):
+                yield inp
+        operation = self._operation
+        if operation:
+            yield from _iter_rx((
+                operation['fn'], operation.get('args', ()), operation.get('kwargs', {})
+            ))
+
     def _upstream(self) -> Iterator[t.Any]:
         """
         Yield this node and every ``rx`` node it derives its value from.
@@ -2242,17 +2341,18 @@ class rx:
                 continue
             seen.add(id_node)
             yield node
-            for inp in (node._prev, node._shared):
-                if isinstance(inp, rx):
-                    stack.append(inp)
-            operation = node._operation
-            if operation:
-                stack.extend(_iter_rx((
-                    operation['fn'], operation.get('args', ()), operation.get('kwargs', {})
-                )))
+            stack.extend(node._direct_inputs())
+
+    def _check_disposed(self) -> None:
+        if self._disposed:
+            raise RuntimeError(
+                f"{self!r} has been disposed by .rx.dispose() and can no "
+                "longer be resolved, read, or extended with new operations."
+            )
 
     @property
     def _current(self):
+        self._check_disposed()
         if self._error_state:
             raise self._error_state
         elif not self._lazy and (self._dirty or self._root._dirty_obj):
@@ -2352,9 +2452,13 @@ class rx:
         """
         invalidator = _WeakInvalidator(method)
         invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
-        weakref.finalize(
+        finalizer = weakref.finalize(
             self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
         )
+        finalizers = self._finalizers
+        if finalizers is None:
+            finalizers = self._finalizers = []
+        finalizers.append(finalizer)
         return invalidator
 
     def _live_params(self) -> set[tuple[int, str | None]]:
@@ -2414,15 +2518,55 @@ class rx:
         """
         Record that ``reader`` computes its value from this node.
 
-        The reverse of ``_prev``, and of ``_shared`` so that the mirror a branch
-        creates is included. It carries the invalidation no parameter can, i.e.
-        an override, and is weak so that a node is not kept alive by the node it
-        derives from; dead entries drop out through the reference callback.
+        The reverse of ``_direct_inputs()``. It carries the invalidation no
+        parameter can, i.e. an override, and is weak so that a node is not
+        kept alive by the node it derives from; dead entries drop out
+        through the reference callback.
         """
         readers = self._readers
         if readers is None:
             readers = self._readers = []
         readers.append(weakref.ref(reader, readers.remove))
+
+    def _drop_reader(self, reader: Self) -> bool:
+        """Drop `reader`, pruning dead entries, and return whether any reader remains."""
+        readers = self._readers
+        if readers is None:
+            return False
+        for ref in list(readers):
+            target = ref()
+            if target is None or target is reader:
+                readers.remove(ref)
+        return bool(readers)
+
+    def _dispose(self, cascade: bool = True, _cascaded: bool = False) -> None:
+        """
+        See ``reactive_ops.dispose``; a plain method, not ``dispose``, so it
+        does not shadow a same-named method on the wrapped value. Raises if
+        called directly with a reader still present; reached via a cascade
+        instead, it is left alone rather than raising.
+        """
+        if self._disposed:
+            return
+        if self._readers or self._watchers:
+            if _cascaded:
+                return
+            raise RuntimeError(
+                f"Cannot dispose {self!r}: it is still read by another node "
+                "and/or has an active .rx.watch() callback. Dispose the "
+                "reader(s) first, or call .rx.unwatch() to remove the watch."
+            )
+        self._disposed = True
+        task = self._current_task
+        if task is not None and not task.done():
+            task.cancel()
+        finalizers, self._finalizers = self._finalizers, None
+        for finalizer in finalizers or ():
+            finalizer()
+        if cascade:
+            for node in self._direct_inputs():
+                if not node._drop_reader(self):
+                    node._dispose(cascade=cascade, _cascaded=True)
 
     def _ensure_override_channel(self) -> Trigger:
         """
@@ -2596,6 +2740,7 @@ class rx:
         async_executor(partial(self._resolve_async, obj, generation))
 
     def _resolve(self):
+        self._check_disposed()
         if self._error_state:
             raise self._error_state
         elif self._dirty or self._root._dirty_obj:
@@ -2780,6 +2925,8 @@ class rx:
         self_dict = super().__getattribute__('__dict__')
         if not self_dict.get('_init') or name == 'rx' or name.startswith('_'):
             return super().__getattribute__(name)
+        if self_dict.get('_disposed'):
+            super().__getattribute__('_check_disposed')()
 
         current = self_dict['_current_']
         dirty = self_dict['_dirty']

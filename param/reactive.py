@@ -432,23 +432,25 @@ class reactive_ops:
 
     def collect(self, *args, error_mode='raise', **kwargs) -> 'rx':
         """
-        Combine several inputs into a mapping of whichever have settled.
+        Combine the current expression with other inputs into a mapping of
+        whichever have settled.
 
-        Unlike `.rx.pipe`, this does not call a function on the current
-        value, and the current value is not itself part of the result
-        unless also passed in ``*args``/``**kwargs``: the result is a
-        mapping, keyed by each input's position (positional argument) or
-        name (keyword), that grows as inputs settle rather than waiting for
-        the slowest one. A key appears once its input has produced a value
-        and keeps that value while the input is unsettled again.
+        Like `.rx.pipe`, the current expression is included, at position
+        0; unlike `.rx.pipe`, this does not call a function on it. The
+        result is a mapping keyed by each input's position (0 for the
+        current expression, 1, 2, ... for further positional arguments) or
+        name (keyword), that grows as inputs settle rather than waiting
+        for the slowest one. A key appears once its input has produced a
+        value and keeps that value while the input is unsettled again.
         `.rx.awaiting` is `True` while any input is unsettled, including
         one that already has a key and is settling again.
 
         Parameters
         ----------
         *args, **kwargs : any
-            The inputs to collect, typically ``rx`` expressions. A
-            non-reactive value is included immediately.
+            Further inputs to collect alongside the current expression,
+            typically ``rx`` expressions. A non-reactive value is included
+            immediately.
         error_mode : {"raise", "propagate"}, default "raise"
             With "propagate", a failing input resolves to a
             :class:`ReactiveError` at its key instead of failing the whole
@@ -464,13 +466,13 @@ class reactive_ops:
         --------
         >>> import param
         >>> a, b = param.rx(1), param.rx(2)
-        >>> collected = a.rx.collect(a=a, b=b)
+        >>> collected = a.rx.collect(b=b)
         >>> collected.rx.value
-        {'a': 1, 'b': 2}
+        {0: 1, 'b': 2}
         """
         operation = {
             'fn': _collect_marker,
-            'args': args,
+            'args': (self._as_rx(), *args),
             'kwargs': kwargs,
         }
         return rx(None, operation=operation, _current=Undefined, error_mode=error_mode)

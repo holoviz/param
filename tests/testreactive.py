@@ -2859,28 +2859,35 @@ async def test_reactive_collect_reports_partial_results_as_inputs_settle():
     a = rx(1).rx.pipe(delayed, delay=0.05)
     b = rx(2).rx.pipe(delayed, delay=0.15)
     c = rx(3).rx.pipe(delayed, delay=0.25)
-    collected = a.rx.collect(a=a, b=b, c=c)
+    collected = a.rx.collect(b=b, c=c)  # 'a' is the calling expression, key 0
 
     values = []
     collected.rx.watch(values.append)
     collected.rx.value
     assert collected.rx.awaiting
 
-    await async_wait_until(lambda: values == [{'a': 1}], interval=10)
+    await async_wait_until(lambda: values == [{0: 1}], interval=10)
     assert collected.rx.awaiting
 
-    await async_wait_until(lambda: values == [{'a': 1}, {'a': 1, 'b': 2}], interval=10)
+    await async_wait_until(lambda: values == [{0: 1}, {0: 1, 'b': 2}], interval=10)
     assert collected.rx.awaiting
 
     await async_wait_until(
-        lambda: values == [{'a': 1}, {'a': 1, 'b': 2}, {'a': 1, 'b': 2, 'c': 3}],
+        lambda: values == [{0: 1}, {0: 1, 'b': 2}, {0: 1, 'b': 2, 'c': 3}],
         interval=10,
     )
     assert not collected.rx.awaiting
 
-def test_reactive_collect_includes_non_reactive_and_positional_inputs():
+def test_reactive_collect_includes_the_calling_expression_at_position_0():
     a = rx(1)
-    collected = a.rx.collect(a, 2, c=rx(3))
+    b = rx(2)
+    collected = a.rx.collect(b)
+    assert collected.rx.value == {0: 1, 1: 2}
+    assert not collected.rx.awaiting
+
+def test_reactive_collect_includes_non_reactive_and_further_positional_inputs():
+    a = rx(1)
+    collected = a.rx.collect(2, c=rx(3))
     assert collected.rx.value == {0: 1, 1: 2, 'c': 3}
     assert not collected.rx.awaiting
 
@@ -2888,16 +2895,16 @@ def test_reactive_collect_key_order_follows_argument_order_not_settle_order():
     """A key already present keeps its argument-order slot when it resettles."""
     a = rx(1)
     b = rx(2)
-    collected = a.rx.collect(b=b, a=a)
-    assert list(collected.rx.value) == ['b', 'a']
+    collected = b.rx.collect(a=a)
+    assert list(collected.rx.value) == [0, 'a']
 
     a.rx.value = 10
-    assert list(collected.rx.value) == ['b', 'a']
-    assert collected.rx.value == {'b': 2, 'a': 10}
+    assert list(collected.rx.value) == [0, 'a']
+    assert collected.rx.value == {0: 2, 'a': 10}
 
-def test_reactive_collect_empty_settles_immediately_to_an_empty_mapping():
+def test_reactive_collect_empty_settles_immediately_to_just_the_calling_expression():
     collected = rx(1).rx.collect()
-    assert collected.rx.value == {}
+    assert collected.rx.value == {0: 1}
     assert not collected.rx.awaiting
 
 async def test_reactive_collect_keeps_stale_key_while_its_input_resettles():
@@ -2908,22 +2915,22 @@ async def test_reactive_collect_keeps_stale_key_while_its_input_resettles():
     src = rx(1)
     a = src.rx.pipe(delayed)
     b = rx(2)
-    collected = a.rx.collect(a=a, b=b)
+    collected = a.rx.collect(b=b)  # 'a' is the calling expression, key 0
 
     events = []
     collected.rx.watch(events.append)
     collected.rx.value
-    await async_wait_until(lambda: events == [{'a': 1, 'b': 2}])
+    await async_wait_until(lambda: events == [{0: 1, 'b': 2}])
 
     src.rx.value = 10
-    # 'a' is settling again; the mapping keeps its previous value at 'a'
+    # 'a' is settling again; the mapping keeps its previous value at key 0
     # rather than dropping it, and no spurious duplicate of the unchanged
     # mapping is published to watchers while 'a' is unsettled.
-    assert collected.rx.value == {'a': 1, 'b': 2}
+    assert collected.rx.value == {0: 1, 'b': 2}
     assert collected.rx.awaiting
-    assert events == [{'a': 1, 'b': 2}]
+    assert events == [{0: 1, 'b': 2}]
 
-    await async_wait_until(lambda: events == [{'a': 1, 'b': 2}, {'a': 10, 'b': 2}])
+    await async_wait_until(lambda: events == [{0: 1, 'b': 2}, {0: 10, 'b': 2}])
     assert not collected.rx.awaiting
 
 def test_reactive_collect_error_mode_propagate_holds_error_at_its_key():
@@ -2933,10 +2940,10 @@ def test_reactive_collect_error_mode_propagate_holds_error_at_its_key():
     a = rx(1)
     b = rx(2).rx.pipe(fail)
     c = rx(3)
-    collected = a.rx.collect(a=a, b=b, c=c, error_mode='propagate')
+    collected = a.rx.collect(b=b, c=c, error_mode='propagate')  # 'a' -> key 0
 
     value = collected.rx.value
-    assert value['a'] == 1
+    assert value[0] == 1
     assert value['c'] == 3
     assert isinstance(value['b'], param.ReactiveError)
 
@@ -2945,7 +2952,7 @@ def test_reactive_collect_error_mode_raise_fails_the_whole_node():
         raise ValueError('boom')
 
     a = rx(1)
-    collected = a.rx.collect(a=a, b=rx(2).rx.pipe(fail))
+    collected = a.rx.collect(b=rx(2).rx.pipe(fail))
     with pytest.raises(ValueError, match='boom'):
         collected.rx.value
 
@@ -2960,14 +2967,6 @@ def test_reactive_collect_does_not_shadow_a_method_of_the_wrapped_object():
 
     assert rx(Obj()).collect(3).rx.value == 'collected 3'
     assert 'collect' not in dir(rx)
-
-def test_reactive_collect_ignores_the_anchor_its_called_on():
-    """The expression `.rx.collect` is called on is not itself part of the
-    result unless also passed explicitly.
-    """
-    a = rx(1)
-    b = rx(2)
-    assert a.rx.collect(b=b).rx.value == b.rx.collect(b=b).rx.value == {'b': 2}
 
 async def test_reactive_pipe_multi_arg_still_waits_for_every_input():
     """Without `collect`, `.rx.pipe` is unaffected: every argument must settle."""

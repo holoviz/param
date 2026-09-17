@@ -1,3 +1,4 @@
+import sys
 import typing as t
 
 import param
@@ -99,3 +100,124 @@ def test_field_parameter_override_can_replace_literal_selector_behavior():
     p = P()
     assert p.mode == "sepia"
     p.mode = "custom-theme"
+
+
+def test_annotation_only_field_is_required():
+    class P(param.ParamModel):
+        name: str
+        count: int = 0
+
+    with pytest.raises(TypeError, match="name"):
+        P()
+
+    p = P(name="bob")
+    assert p.name == "bob"
+    assert p.count == 0
+
+
+def test_field_without_default_is_required():
+    class P(param.ParamModel):
+        value: int = param.ParamField(bounds=(0, None))
+
+    with pytest.raises(TypeError, match="value"):
+        P()
+
+    assert P(value=1).value == 1
+
+
+def test_multiple_missing_required_fields_are_all_reported():
+    class P(param.ParamModel):
+        a: str
+        b: int
+        c: float = 1.0
+
+    with pytest.raises(TypeError, match="'a', 'b'"):
+        P()
+
+    assert P(a="x", b=1).a == "x"
+
+
+def test_required_fields_are_inherited_by_subclasses():
+    class Base(param.ParamModel):
+        name: str
+
+    class Sub(Base):
+        extra: int
+
+    with pytest.raises(TypeError, match="extra"):
+        Sub(name="ok")
+
+    with pytest.raises(TypeError, match="name"):
+        Sub(extra=1)
+
+    s = Sub(name="ok", extra=1)
+    assert s.name == "ok"
+    assert s.extra == 1
+
+
+def test_subclass_can_satisfy_inherited_required_field_with_a_default():
+    class Base(param.ParamModel):
+        name: str
+
+    class Sub(Base):
+        name: str = "default-name"
+
+    assert Sub().name == "default-name"
+
+
+def test_literal_annotation_remains_not_required():
+    # Selector infers a usable default (the first `objects` entry) from the
+    # annotation alone, so it should never be treated as a required field.
+    class P(param.ParamModel):
+        mode: t.Literal["read", "write"]
+
+    P()  # should not raise
+
+
+@pytest.mark.parametrize(
+    "annotation,expected_type,extra_check",
+    [
+        (list, param.List, None),
+        (dict, param.Dict, None),
+        (tuple, param.Tuple, None),
+        (set, param.ClassSelector, lambda p: p.class_ is set),
+    ],
+)
+def test_bare_container_annotations_infer_typed_parameters(annotation, expected_type, extra_check):
+    class P(param.ParamModel):
+        value: annotation = param.ParamField(default_factory=annotation)
+
+    assert isinstance(P.param.value, expected_type)
+    if extra_check is not None:
+        assert extra_check(P.param.value)
+
+
+def test_parameter_override_preserves_optional_derived_allow_none():
+    class P(param.ParamModel):
+        value: int | None = param.ParamField(default=1, parameter=param.Number)
+
+    assert isinstance(P.param.value, param.Number)
+    assert P.param.value.allow_None is True
+
+    p = P()
+    p.value = None
+    assert p.value is None
+
+
+def test_parameter_override_explicit_allow_none_takes_precedence():
+    class P(param.ParamModel):
+        value: int | None = param.ParamField(
+            default=1, parameter=param.Number, allow_None=False
+        )
+
+    assert P.param.value.allow_None is False
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="__annotate_func__ deferred evaluation is Python 3.14+ (PEP 649)",
+)
+def test_broken_forward_reference_raises_instead_of_silently_dropping_fields():
+    with pytest.raises(NameError):
+        class P(param.ParamModel):
+            value: DoesNotExist  # noqa: F821

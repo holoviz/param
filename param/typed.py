@@ -135,22 +135,22 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
     if ann is str:
         return String, kwargs
 
-    if origin in (list, t.List):
+    if ann is list or origin in (list, t.List):
         list_args = t.get_args(ann)
         if list_args and isinstance(list_args[0], type):
             kwargs["item_type"] = list_args[0]
         return List, kwargs
 
-    if origin in (tuple, t.Tuple):
+    if ann is tuple or origin in (tuple, t.Tuple):
         tuple_args = t.get_args(ann)
         if tuple_args and tuple_args[-1] is not Ellipsis:
             kwargs["length"] = len(tuple_args)
         return Tuple, kwargs
 
-    if origin in (dict, t.Dict):
+    if ann is dict or origin in (dict, t.Dict):
         return Dict, kwargs
 
-    if origin in (set, t.Set):
+    if ann is set or origin in (set, t.Set):
         kwargs["class_"] = set
         return ClassSelector, kwargs
 
@@ -166,10 +166,18 @@ def _build_parameter_from_field(
     field_spec: _ParamFieldSpec | None,
     explicit_value: Any = Undefined,
     has_explicit_value: bool = False,
-) -> Parameter:
+) -> tuple[Parameter, bool]:
     factory_kwargs: dict[str, Any] = {}
     if field_spec is not None and field_spec.parameter is not None:
         factory: type[Parameter] | Callable[..., Parameter] | Parameter | None = field_spec.parameter
+        # Overriding the parameter class/instance bypasses the rest of the
+        # inferred kwargs (e.g. `objects`, `item_type`), which may not apply
+        # to the chosen parameter, but `allow_None` derived from `T | None` /
+        # `Optional[T]` is universally applicable and should still be honored
+        # unless the caller already specified it explicitly.
+        _, inferred = _annotation_parameter_factory(annotation)
+        if inferred.get("allow_None"):
+            factory_kwargs["allow_None"] = True
     else:
         factory, inferred = _annotation_parameter_factory(annotation)
         factory_kwargs.update(inferred)
@@ -181,20 +189,32 @@ def _build_parameter_from_field(
         if field_spec.default_factory is not Undefined:
             factory_kwargs["default_factory"] = field_spec.default_factory
 
+    is_required = False
     if has_explicit_value:
         factory_kwargs["default"] = explicit_value
     elif "default" not in factory_kwargs and "default_factory" not in factory_kwargs:
-        # Checker-facing required semantics for annotation-only declarations.
+        from .parameters import Selector
+
+        # No default was supplied anywhere (annotation, Field, or class body).
+        # `Selector` is the one built-in Parameter that computes its own
+        # sensible default (the first entry of `objects`) when none is given
+        # — e.g. for `Literal["read", "write"]` — so it's exempt from being
+        # treated as required. Everything else is required at __init__ time.
+        # `default` is left as `Undefined` so the underlying Parameter still
+        # falls back to its own slot default for introspection (e.g.
+        # `P.param.name.default`), but `ParamModel.__init__` enforces that a
+        # value must be passed explicitly for required fields.
         factory_kwargs["default"] = Undefined
+        is_required = not (factory is Selector and factory_kwargs.get("objects"))
 
     if isinstance(factory, Parameter):
         pobj = copy.copy(factory)
         for key, value in factory_kwargs.items():
             setattr(pobj, key, value)
-        return pobj
+        return pobj, is_required
     if factory is None:
-        return Parameter(**factory_kwargs)
-    return factory(**factory_kwargs)
+        return Parameter(**factory_kwargs), is_required
+    return factory(**factory_kwargs), is_required
 
 
 def _extract_namespace_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
@@ -210,13 +230,13 @@ def _extract_namespace_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
     try:
         annotationlib = importlib.import_module("annotationlib")
         format_value = getattr(getattr(annotationlib, "Format", None), "VALUE", 1)
-        evaluated = annotate_func(format_value)
-    except Exception:
-        try:
-            # Fallback for runtimes where annotationlib is unavailable.
-            evaluated = annotate_func(1)
-        except Exception:
-            return {}
+    except ImportError:
+        # annotationlib is unavailable on this runtime; VALUE format is 1.
+        format_value = 1
+
+    # Let genuine evaluation errors (e.g. a broken forward reference) raise
+    # rather than silently producing an empty annotation set.
+    evaluated = annotate_func(format_value)
 
     return dict(evaluated) if isinstance(evaluated, Mapping) else {}
 
@@ -232,6 +252,10 @@ class ParamModelMetaclass(ParameterizedMetaclass):
         module_name = namespace.get("__module__", "")
         module_globals = getattr(sys.modules.get(module_name), "__dict__", {})
 
+        required: set[str] = set()
+        for base in bases:
+            required |= getattr(base, "_param_model_required", frozenset())
+
         for attr, annotation in annotations.items():
             if isinstance(annotation, str):
                 try:
@@ -246,6 +270,7 @@ class ParamModelMetaclass(ParameterizedMetaclass):
 
             existing = namespace.get(attr, Undefined)
             if isinstance(existing, Parameter):
+                required.discard(attr)
                 continue
 
             field_spec = existing if isinstance(existing, _ParamFieldSpec) else None
@@ -253,12 +278,18 @@ class ParamModelMetaclass(ParameterizedMetaclass):
                 attr in namespace and not isinstance(existing, _ParamFieldSpec)
             )
             explicit_value = existing if has_explicit_value else Undefined
-            namespace[attr] = _build_parameter_from_field(
+            namespace[attr], is_required = _build_parameter_from_field(
                 annotation,
                 field_spec=field_spec,
                 explicit_value=explicit_value,
                 has_explicit_value=has_explicit_value,
             )
+            if is_required:
+                required.add(attr)
+            else:
+                required.discard(attr)
+
+        namespace["_param_model_required"] = frozenset(required)
 
         return t.cast(
             "ParamModelMetaclass", super().__new__(mcs, name, bases, namespace)
@@ -267,3 +298,19 @@ class ParamModelMetaclass(ParameterizedMetaclass):
 
 class ParamModel(Parameterized, metaclass=ParamModelMetaclass):
     """A Parameterized subclass that synthesizes Parameters from type annotations."""
+
+    _param_model_required: t.ClassVar[frozenset[str]] = frozenset()
+
+    # No return annotation: ParameterizedMetaclass.__get_signature only expands
+    # __init__ into per-parameter keywords for introspection/tab-completion
+    # when it matches DEFAULT_SIGNATURE exactly, including the (empty) return
+    # annotation.
+    def __init__(self, **params):
+        missing = sorted(self._param_model_required - params.keys())
+        if missing:
+            missing_str = ", ".join(repr(name) for name in missing)
+            raise TypeError(
+                f"{type(self).__name__}.__init__() missing required "
+                f"argument(s): {missing_str}"
+            )
+        super().__init__(**params)

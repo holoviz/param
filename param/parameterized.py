@@ -428,16 +428,10 @@ def batch_call_watchers(parameterized):
 
 
 class _Batch:
-    """
-    The state for one `batch()` transaction: the objects touched so far,
-    kept in a plain ``dict`` rather than a ``set`` so draining them is in
-    the order they were touched rather than hash order, and a ``closed``
-    flag so a task started inside the block (which inherits this same
-    object through `contextvars`, since `asyncio.create_task` copies the
-    current `Context`) but that runs after the block has already flushed
-    does not queue into a transaction that will never drain again; once
-    closed, touching an object falls back to its own, real, per-instance
-    state instead.
+    """State for one `batch()` transaction: objects touched so far, in
+    touch order, and whether it has already been flushed (so a task
+    that outlives the block falls back to ordinary behavior instead of
+    queuing into a transaction that will never drain again).
     """
 
     __slots__ = ('touched', 'closed')
@@ -456,43 +450,26 @@ _param_batch: contextvars.ContextVar[_Batch | None] = contextvars.ContextVar(
 
 
 def _is_batched(obj) -> bool:
-    """
-    Whether ``obj`` should defer watcher notification right now: either it
-    is individually batched (`batch_call_watchers`, `.param.update()`, the
-    per-watcher `queued` handling), or an open `batch()` transaction is
-    active, in which case ``obj`` is also recorded as touched by it.
-
-    This is deliberately not the same thing as reading `_BATCH_WATCH`:
-    that property is the raw per-instance flag a save/restore site needs
-    to put back afterwards, and does not know about `batch()` at all, so
-    that a transaction can never leave an object's own flag corrupted.
-
-    The transaction is checked, and ``obj`` registered into it, before
-    falling back to the raw flag rather than after: a watcher wrapped in
-    the per-watcher `queued` handling below has its raw flag set to
-    `True` for the duration regardless of any transaction, and if that
-    check ran first, an object touched only while already individually
-    (rather than transactionally) batched would never be registered, so
-    a transaction's drain would never learn there is more to flush.
+    """Whether ``obj`` should defer watcher notification right now, and
+    the only thing that should ask that: individually batched
+    (`batch_call_watchers`, `.param.update()`, the per-watcher `queued`
+    handling) or touched by an open `batch()` transaction, which ``obj``
+    is then registered into. Deliberately not the same as reading
+    `_BATCH_WATCH`, the raw flag a save/restore site needs back
+    unchanged; checking the transaction first also matters, since an
+    object already individually batched must still be registered.
     """
     current = _param_batch.get()
     if current is not None and not current.closed:
         current.touched[obj] = None
         return True
-    if obj._param__private.parameters_state['BATCH_WATCH']:
-        return True
-    return False
+    return bool(obj._param__private.parameters_state['BATCH_WATCH'])
 
 
 def _watcher_group_key(watcher: Watcher):
-    """
-    Return the identity of a watcher for coalescing purposes across
-    owners: everything but `inst`/`cls`/`parameter_names`, which are
-    expected to differ per owner for what is otherwise the same
-    registration (as `bind()`/`depends()` wire one callback across
-    several source objects). Two registrations that differ in anything
-    else, including `fn` itself, are kept separate rather than guessing
-    which one should win.
+    """Return a watcher's identity for coalescing across owners:
+    everything but `inst`/`cls`/`parameter_names`, which are expected
+    to differ per owner for what is otherwise one shared registration.
     """
     try:
         hash(watcher.fn)
@@ -506,9 +483,8 @@ def _watcher_group_key(watcher: Watcher):
 
 class _WatcherGroup:
     """One coalesced group inside `_flush_batch`: a watcher, the owners
-    it is being merged across, the union of their events, and (for
-    anything but positional 'args' mode) the parameter names contributed
-    so far, to detect a keyword collision before merging one in.
+    merged into it, their combined events, and (outside 'args' mode)
+    the names contributed so far, to catch a keyword collision.
     """
 
     __slots__ = ('watcher', 'owners', 'events', 'names')
@@ -521,23 +497,18 @@ class _WatcherGroup:
 
 
 def _flush_batch(objects):
-    """
-    Execute every watcher queued on ``objects``, coalescing watchers that
-    are the very same callback registered on more than one of them (how
-    `bind()`/`depends()` wire one callback across several source objects)
-    so the callback runs once for the transaction, not once per object.
-
-    Every object's queued events are gathered before any watcher runs, so
-    a watcher that raises does not stop the others from being delivered;
-    the first exception is re-raised once every group has been attempted.
+    """Execute every watcher queued on ``objects``, coalescing the same
+    callback registered on more than one of them into a single call.
+    Every object's events are gathered before any watcher runs, so one
+    raising does not stop the rest; the first exception is re-raised
+    once every group has been attempted.
     """
     groups: dict[t.Any, _WatcherGroup] = {}
     for obj in objects:
         self_ = obj.param
         if not self_._events:
             continue
-        # Only ever looked up by key below, never iterated, so a plain
-        # dict (insertion order or not) is enough.
+        # Only looked up by key below, never iterated, so plain dict is enough.
         event_dict = {(event.name, event.what): event for event in self_._events}
         watchers, self_._events, self_._state_watchers = self_._state_watchers[:], [], []
         for watcher in watchers:
@@ -551,9 +522,8 @@ def _flush_batch(objects):
             key = _watcher_group_key(watcher)
             group = groups.get(key)
             if group is not None and watcher.mode != 'args':
-                # Merging would silently let this owner's value overwrite
-                # (or be overwritten by) another owner's same-named kwarg;
-                # keep this owner's call separate instead of guessing.
+                # A same-named kwarg would silently overwrite another
+                # owner's; keep this owner's call separate instead.
                 if group.names & {event.name for event in events}:
                     key = (key, id(obj))
                     group = groups.get(key)
@@ -564,9 +534,8 @@ def _flush_batch(objects):
             if watcher.mode != 'args':
                 group.names.update(event.name for event in events)
 
-    # Lower precedence runs first, same as a single object's own
-    # `_batch_call_watchers` (`parameterized.py:3562`). Grouping already
-    # keys on precedence, so every watcher in a group shares one.
+    # Lower precedence runs first; grouping already keys on precedence,
+    # so every watcher in a group shares one.
     errors = []
     for group in sorted(groups.values(), key=lambda g: g.watcher.precedence):
         owners = list(group.owners)
@@ -591,26 +560,22 @@ def batch() -> Generator[None, None, None]:
 
     Where ``batch_call_watchers`` batches one object the caller already
     knows about, ``batch`` covers a transaction spanning several objects,
-    or one whose full set of objects is only known once it runs (a sheet
-    of overrides, a dynamic graph rebuild). Every watcher still fires, just
-    once, after everything inside the block has landed, rather than once
-    per object it depends on and possibly seeing a mix of old and new
-    values along the way; a cascading set made by a watcher while the
-    block is flushing is caught by the same transaction rather than
-    firing immediately. This is why ``bind(fn, *refs, watch=True)``, which
-    registers the same callback on every distinct owner among ``refs``,
-    calls ``fn`` exactly once per transaction rather than once per owner
-    touched. The same coalescing applies to any watcher registered on more
-    than one object with the same callback and settings; one registered
-    with different settings (a different ``precedence`` or ``onlychanged``,
-    for instance) on different objects is left uncoalesced rather than
-    guessing which registration should win. Nesting is safe: only the
-    outermost block flushes anything, and composes with
-    ``batch_call_watchers``/``.param.update()``/``discard_events`` used
-    inside it. If more than one watcher raises while flushing, every other
-    one still runs and the first exception is re-raised once the block has
-    finished; if the block itself already raised, a later error while
-    flushing is reported as a warning rather than replacing it.
+    or one whose full set is only known once it runs (a sheet of
+    overrides, a dynamic graph rebuild). Every watcher fires once, after
+    everything inside the block has landed, including a cascading set
+    made by another watcher while flushing, rather than once per object
+    and possibly on a mix of old and new values. The same callback
+    registered with the same settings on more than one touched object,
+    as ``bind(fn, *refs, watch=True)`` does across every distinct owner
+    among ``refs``, is called once rather than once per owner; one
+    registered with different settings (a different ``precedence`` or
+    ``onlychanged``, say) is left uncoalesced rather than guessing which
+    should win. Nesting is safe: only the outermost block flushes, and
+    it composes with ``batch_call_watchers``/``.param.update()``/
+    ``discard_events`` used inside it. If more than one watcher raises
+    while flushing, the rest still run and the first exception is
+    re-raised once the block has finished; if the block itself already
+    raised, a later error while flushing is a warning instead.
 
     Examples
     --------
@@ -641,12 +606,10 @@ def batch() -> Generator[None, None, None]:
         raise
     finally:
         if outermost:
-            # The transaction stays open (the ContextVar keeps pointing at
-            # `current`) for the whole drain, not just the block above, so
-            # a watcher's own side effects, on the object it just fired on
-            # or on another one entirely, are captured by `_is_batched`
-            # into the same `current.touched` rather than firing live; keep
-            # draining until a pass adds nothing new.
+            # Stays open for the whole drain, not just the block, so a
+            # watcher's own side effects are also captured by
+            # `_is_batched` rather than firing live; keep draining until
+            # a pass adds nothing new.
             while current.touched:
                 touched = list(current.touched)
                 current.touched.clear()
@@ -660,10 +623,8 @@ def batch() -> Generator[None, None, None]:
         if outermost and flush_error is not None:
             if error is None:
                 raise flush_error
-            # The block itself already raised; a second failure while
-            # unwinding for the first would only replace it (Python's own
-            # `finally`-can-hide-an-exception behavior), so it is reported
-            # rather than raised over the top of the block's own error.
+            # The block already raised; a second error here would only
+            # replace it, so report it instead of raising over the top.
             warnings.warn(
                 f"batch() failed to notify some watchers while unwinding "
                 f"from {error!r}: {flush_error!r}",

@@ -2483,8 +2483,11 @@ class rx:
         # possibly hold a ref, so `_ref_inputs()` - called from `_upstream()`
         # on every node on every walk - has nothing to do for the common
         # case of a node with no `Parameter(allow_refs=True)` dependency.
-        self._ref_capable_params = [
-            p for p in self._fn_params if p.name is not None and isinstance(p.owner, Parameterized)
+        # `(owner, name)` pairs, not `Parameter` objects, so `name`'s `str |
+        # None` is narrowed to `str` once here rather than at every use.
+        self._ref_capable_params: list[tuple[Parameterized, str]] = [
+            (p.owner, p.name) for p in self._fn_params
+            if p.name is not None and isinstance(p.owner, Parameterized)
         ]
         self._internal_params = self._compute_params()
         # Filter params that external objects depend on, ensuring
@@ -2652,8 +2655,8 @@ class rx:
         ref. Not part of ``_direct_inputs()`` (see there for why), so this is
         purely informational: it plays no part in reader/dispose bookkeeping.
         """
-        for p in self._ref_capable_params:
-            ref = p.owner._param__private.refs.get(p.name)
+        for owner, name in self._ref_capable_params:
+            ref = owner._param__private.refs.get(name)
             if ref is not None:
                 yield from _iter_rx(ref)
 
@@ -3049,8 +3052,8 @@ class rx:
             # Also register per ref-capable fn param: `_invalidate_current`
             # alone would miss a reassignment to a fresh async ref, which
             # resolves to `Undefined` and never fires a normal watcher.
-            for p in self._ref_capable_params:
-                _watch_ref_change(p.owner, p.name, self._notify_graph_change)
+            for owner, name in self._ref_capable_params:
+                _watch_ref_change(owner, name, self._notify_graph_change)
         ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
         watchers.append(ref_type(callback, watchers.remove))
 

@@ -219,6 +219,34 @@ def transform_reference(arg):
         arg = transform(arg)
     return arg
 
+_ref_change_callbacks: list[t.Callable[['Parameterized', str], None]] = []
+
+def register_ref_change_callback(callback):
+    """
+    Register a callback invoked whenever a ``Parameter``'s raw dynamic
+    reference (``obj._param__private.refs[name]``) is replaced with a
+    different one, including by the constructor.
+
+    This fires independent of whether the newly resolved *value* differs
+    from the old one: a reference that resolves asynchronously (e.g. a
+    fresh ``rx`` expression whose own operation has not settled yet) always
+    resolves to ``Undefined`` at assignment time, which does not fire an
+    ordinary parameter-changed watcher, so a consumer that needs to know
+    "this Parameter's reference was rewired" as opposed to "this Parameter's
+    value changed" cannot rely on ``obj.param.watch`` for that case and needs
+    this instead.
+
+    Parameters
+    ----------
+    callback: Callable[[Parameterized, str], None]
+        Called with the owning instance and the parameter name.
+    """
+    return _ref_change_callbacks.append(callback)
+
+def _notify_ref_change(owner, name):
+    for callback in _ref_change_callbacks:
+        callback(owner, name)
+
 def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
     Evaluate a function after resolving its dependencies.
@@ -2948,6 +2976,7 @@ class Parameters:
         deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
+        _notify_ref_change(self_.self, name)
 
     def _sync_refs(self_, *events):
         if self_.self is None:
@@ -6228,6 +6257,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)
         self._param__private.refs = refs
+        for name in refs:
+            _notify_ref_change(self, name)
 
     # 'Special' methods
 

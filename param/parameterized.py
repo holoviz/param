@@ -222,17 +222,15 @@ def transform_reference(arg):
 
 def watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
-    Weakly register ``callback`` (a bound method or plain zero-arg callable)
-    to run whenever ``owner``'s raw dynamic reference for parameter ``name``
-    (``owner._param__private.refs[name]``) is replaced, including by the
-    constructor.
+    Weakly register ``callback`` to run whenever ``owner``'s raw dynamic
+    reference for parameter ``name`` (``owner._param__private.refs[name]``)
+    is replaced, including by the constructor and regardless of whether the
+    resolved *value* changed.
 
-    Fires regardless of whether the resolved *value* changed. An asynchronous
-    reference (e.g. a fresh, unsettled ``rx``) always resolves to
-    ``Undefined`` at assignment time, which does not trigger an ordinary
-    parameter-changed watcher, so this is the only way to learn a reference
-    was rewired. Storage lives on ``owner`` itself, so it is dropped
-    automatically once ``owner`` is garbage collected.
+    An asynchronous reference (e.g. a fresh, unsettled ``rx``) always
+    resolves to ``Undefined`` at assignment time, which does not trigger an
+    ordinary parameter-changed watcher, so this is the only way to learn a
+    reference was rewired.
     """
     private = owner._param__private
     watchers = private.ref_change_watchers
@@ -5947,9 +5945,8 @@ class _InstancePrivate:
     values: dict
         Dict of parameter name: value.
     ref_change_watchers: dict | None
-        Dict of parameter name: list of weak refs notified when this
-        instance's raw reference for that parameter is replaced (see
-        ``watch_ref_change``). Lazy; ``None`` until something registers.
+        Dict of parameter name: weak refs notified by ``watch_ref_change``.
+        Lazy; ``None`` until something registers.
     """
 
     __slots__ = [

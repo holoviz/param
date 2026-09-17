@@ -2909,11 +2909,10 @@ class rx:
             node._error_state = None
             node._live_params_cache = None
         # Only `seeds` had their own `_direct_inputs()` change; a downstream
-        # reader learns of it transitively once it re-derives (see
-        # `.rx.updating()`). Notify before triggering the override channels
-        # below, since an active `.rx.watch()` resolves eagerly as soon as a
-        # channel fires, which can itself schedule async work a freshly
-        # re-derived subscription needs to see coming.
+        # reader learns of it transitively once it re-derives (`.rx.updating()`).
+        # Notify before triggering the override channels below, since an
+        # active `.rx.watch()` resolves eagerly and could schedule async work
+        # a freshly re-derived subscription needs to see coming.
         for node in seeds:
             node._notify_graph_change()
         for node in nodes:
@@ -2965,23 +2964,18 @@ class rx:
         """
         Register ``callback`` to run when this node's own direct inputs may
         have changed shape: an override set/cleared, or an
-        ``allow_refs=True`` fn param reassigned. See
-        ``_invalidate_overrides()``/``_invalidate_current()``, the call sites.
-
-        Lets a consumer like ``.rx.updating()`` extend its subscriptions to a
-        node that enters the reachable graph later, instead of only seeing
-        ``_upstream()`` as it was at construction time. Weak, like
-        ``_watch_settle_change``: dropped once ``callback`` is collected, so
-        the caller must keep it alive for as long as it wants to keep
-        listening.
+        ``allow_refs=True`` fn param reassigned. Lets ``.rx.updating()``
+        extend its subscriptions to a node that enters the graph later,
+        instead of only seeing ``_upstream()`` as it was at construction
+        time. Weak like ``_watch_settle_change``: dropped once ``callback``
+        is collected, so the caller must keep it alive to keep listening.
         """
         watchers = self._graph_watchers
         if watchers is None:
             watchers = self._graph_watchers = []
-            # Also register with each ref-capable fn param (see
-            # `_ref_inputs()`): `_invalidate_current` alone would miss a
-            # reassignment to a fresh async ref, which resolves to
-            # `Undefined` and so never fires a parameter-changed watcher.
+            # Also register per ref-capable fn param: `_invalidate_current`
+            # alone would miss a reassignment to a fresh async ref, which
+            # resolves to `Undefined` and never fires a normal watcher.
             for p in self._fn_params:
                 owner, name = p.owner, p.name
                 if name is not None and isinstance(owner, Parameterized):

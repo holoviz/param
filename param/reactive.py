@@ -113,7 +113,7 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, watch_ref_change
+    transform_reference, _watch_ref_change
 )
 from .parameters import Boolean, Event, String
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
@@ -1206,11 +1206,14 @@ class reactive_ops:
         """
         Iterate over the ``rx`` nodes that derive their value from this
         expression, directly or transitively, excluding itself. The reverse
-        of :meth:`upstream`, with the same scope: a node that only reaches
-        this one through ``bind()``, ``.rx.when``, or ``.rx.where`` is not
-        included, but a node that installed this expression as its
-        ``.rx.overrides`` replacement, or reads it through a
-        ``Parameter(allow_refs=True)``, is.
+        of :meth:`upstream`, but not a perfect mirror of its scope: a node
+        that installed this expression as its ``.rx.overrides`` replacement
+        is included, same as :meth:`upstream`, but a node that only reaches
+        this one through ``bind()``, ``.rx.when``, ``.rx.where``, or a
+        ``Parameter(allow_refs=True)`` is not. The owning ``Parameterized``
+        keeps a ref'd expression alive on its own, so it is deliberately
+        excluded from the reader bookkeeping this method (and
+        :meth:`dispose`'s cascade) relies on.
 
         Readers are held weakly, so this reflects only what is currently
         alive, and traversal order is unspecified. As with :meth:`upstream`,
@@ -1279,6 +1282,7 @@ class reactive_ops:
         """
         reactive = self._reactive
         tracked: set[rx] = set()
+        gates: list[Callable[[], None]] = []
 
         def subscribe(node: 'rx') -> None:
             if node in tracked:
@@ -1289,9 +1293,20 @@ class reactive_ops:
                 # is discovered, e.g. via a `.rx.watch()`-driven eager resolve
                 # triggered by the same rewire that made it reachable.
                 wrapper.param.update(object=True)
+
+            def mark_settling() -> None:
+                # `node` may since have dropped out of `_upstream()` (e.g. a
+                # cleared override); acting on a stale notification from it
+                # would leave `wrapper` stuck True forever, since nothing
+                # ties its eventual completion back to this expression once
+                # it is no longer part of the computation.
+                if isinstance(reactive, rx) and any(n is node for n in reactive._upstream()):
+                    wrapper.param.update(object=True)
+
+            gates.append(mark_settling)  # Keep alive; see `wrapper._settle_gates` below.
             # Settle-watcher only fires once a value is produced, missing an
             # async wait entirely, so also flip on scheduling.
-            node._watch_settle_change(wrapper)
+            node._watch_settle_change(mark_settling)
             # Re-derive if this node's own inputs later change shape, so a
             # node added through an override/ref rewire gets found too.
             node._watch_graph_change(rederive)
@@ -1305,9 +1320,11 @@ class reactive_ops:
         # Report the correct state immediately if already mid-flight.
         initial = any(node._settling for node in upstream)
         wrapper = t.cast('Callable', Wrapper)(object=initial)
-        # `_watch_graph_change` holds `rederive` weakly, so keep it alive for
-        # as long as `wrapper` (and thus the returned expression) is.
+        # `_watch_graph_change`/`_watch_settle_change` hold their callbacks
+        # weakly, so keep them alive for as long as `wrapper` (and thus the
+        # returned expression) is.
         wrapper._rederive = rederive
+        wrapper._settle_gates = gates
 
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
@@ -2423,6 +2440,9 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
+        # Register as a reader of every direct input, the reverse of `_upstream()`.
+        for inp in self._direct_inputs():
+            inp._register_reader(self)
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
@@ -2435,11 +2455,6 @@ class rx:
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
         self._internal_params = self._compute_params()
-        # Register as a reader of every direct input, the reverse of
-        # `_upstream()`. Done after `_fn_params` is computed, since
-        # `_direct_inputs()` -> `_ref_inputs()` reads it.
-        for inp in self._direct_inputs():
-            inp._register_reader(self)
         # Filter params that external objects depend on, ensuring
         # that Trigger parameters do not cause double execution
         self._params = [
@@ -2564,12 +2579,20 @@ class rx:
 
     def _direct_inputs(self) -> Iterator[t.Any]:
         """
-        Yield the ``rx`` nodes this node reads directly from: its ``_prev``
-        predecessor, the ``_shared`` input it was cloned from when a pipeline
-        branches, any ``rx`` passed as an operation argument (a masked
-        argument is substituted with its override, mirroring
-        ``_live_params()``), and any ``rx`` reached through a
-        ``Parameter(allow_refs=True)`` (see ``_ref_inputs()``).
+        Yield the ``rx`` nodes this node reads directly from *and* is
+        registered as a reader of: its ``_prev`` predecessor, the
+        ``_shared`` input it was cloned from when a pipeline branches, and
+        any ``rx`` passed as an operation argument (a masked argument is
+        substituted with its override, mirroring ``_live_params()``).
+
+        Backs reader registration (``__init__``) and ``_dispose()``'s
+        cascade, so deliberately excludes ``_ref_inputs()``: a ref held by a
+        ``Parameter(allow_refs=True)`` is kept alive by its owning
+        ``Parameterized``, not by this node, so treating it as something
+        this node reads would let disposing a throwaway
+        ``outlet.param.x.rx()`` view take the ref down with it too, even
+        while ``outlet`` still holds it. ``_upstream()`` adds
+        ``_ref_inputs()`` back in for its own traversal.
         """
         for inp in (self._prev, self._shared):
             if isinstance(inp, rx):
@@ -2583,7 +2606,6 @@ class rx:
                 args = [overrides.get(i, a) for i, a in enumerate(args)]
                 kwargs = {k: overrides.get(k, v) for k, v in kwargs.items()}
             yield from _iter_rx((operation['fn'], args, kwargs))
-        yield from self._ref_inputs()
 
     def _ref_inputs(self) -> Iterator[t.Any]:
         """
@@ -2594,7 +2616,9 @@ class rx:
         ``_awaiting_ref`` only recognizes a bare async callable as "still
         resolving", not an already-constructed ``rx`` that is itself awaiting.
         Joining ``_upstream()`` here is what lets
-        ``.rx.awaiting``/``.rx.stale``/``.rx.updating()`` see through the ref.
+        ``.rx.awaiting``/``.rx.stale``/``.rx.updating()`` see through the
+        ref. Not part of ``_direct_inputs()`` (see there for why), so this is
+        purely informational: it plays no part in reader/dispose bookkeeping.
         """
         for p in self._fn_params:
             owner, name = p.owner, p.name
@@ -2615,6 +2639,7 @@ class rx:
             seen.add(id_node)
             yield node
             stack.extend(node._direct_inputs())
+            stack.extend(node._ref_inputs())
 
     def _downstream(self) -> Iterator[t.Any]:
         """
@@ -2807,9 +2832,6 @@ class rx:
             return
         self._dirty = True
         self._error_state = None
-        # An allow_refs=True fn param being reassigned reaches here too, and
-        # is itself a change to `_ref_inputs()`, so tell `.rx.updating()`.
-        self._notify_graph_change()
 
     def _invalidate_obj(self, *events):
         t.cast('t.Any', self._root)._dirty_obj = True
@@ -2827,14 +2849,24 @@ class rx:
         readers.append(weakref.ref(reader, readers.remove))
 
     def _drop_reader(self, reader: Self) -> bool:
-        """Drop `reader`, pruning dead entries, and return whether any reader remains."""
+        """
+        Drop one occurrence of `reader` (pruning dead entries along the way)
+        and return whether any reader remains. One occurrence, not every
+        one: `reader` may be registered more than once (e.g. as both an
+        operation argument and an override of a different argument), and
+        each call here should undo exactly one `_register_reader()` call.
+        """
         readers = self._readers
         if readers is None:
             return False
+        dropped = False
         for ref in list(readers):
             target = ref()
-            if target is None or target is reader:
+            if target is None:
                 readers.remove(ref)
+            elif target is reader and not dropped:
+                readers.remove(ref)
+                dropped = True
         return bool(readers)
 
     def _dispose(self, cascade: bool = True, _cascaded: bool = False) -> None:
@@ -2941,24 +2973,24 @@ class rx:
             finalizers.append(finalizer)
         return finalizers
 
-    def _watch_settle_change(self, wrapper: Parameterized) -> None:
-        """Set ``wrapper.object`` to True when this node schedules an asynchronous resolution."""
+    def _watch_settle_change(self, callback: Callable[[], None]) -> None:
+        """Run ``callback`` when this node schedules an asynchronous resolution."""
         watchers = self._settle_watchers
         if watchers is None:
             watchers = self._settle_watchers = []
         # Weak so a long-lived upstream node does not keep the (possibly much
         # shorter-lived) `.rx.updating()` wrapper alive; dropped automatically
-        # once `wrapper` is collected, like `_readers`.
-        watchers.append(weakref.ref(wrapper, watchers.remove))
+        # once `callback` is collected, like `_readers`.
+        watchers.append(weakref.ref(callback, watchers.remove))
 
     def _notify_settle_change(self) -> None:
         """Notify targets registered through `_watch_settle_change`."""
         watchers = self._settle_watchers
         if watchers:
             for ref in tuple(watchers):
-                wrapper = ref()
-                if wrapper is not None:
-                    wrapper.param.update(object=True)
+                callback = ref()
+                if callback is not None:
+                    callback()
 
     def _watch_graph_change(self, callback: Callable[[], None]) -> None:
         """
@@ -2979,7 +3011,7 @@ class rx:
             for p in self._fn_params:
                 owner, name = p.owner, p.name
                 if name is not None and isinstance(owner, Parameterized):
-                    watch_ref_change(owner, name, self._notify_graph_change)
+                    _watch_ref_change(owner, name, self._notify_graph_change)
         watchers.append(weakref.ref(callback, watchers.remove))
 
     def _notify_graph_change(self) -> None:

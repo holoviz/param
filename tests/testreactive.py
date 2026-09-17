@@ -1798,6 +1798,57 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: expr.rx.value == 20)
         assert updating.rx.value is False
 
+    def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
+        """
+        A plain value tick is not a structural change, so it must not
+        trigger a graph re-derivation walk (only an override set/cleared or
+        a ref reassigned does, via `_invalidate_overrides()`/
+        `watch_ref_change()`). Regression test for an O(chain length) walk
+        `_invalidate_current()` used to trigger on every single tick.
+        """
+        calls = []
+        original = rx._notify_graph_change
+        def spy(self):
+            calls.append(self)
+            return original(self)
+        monkeypatch.setattr(rx, '_notify_graph_change', spy)
+
+        a = rx(1)
+        b = a + 1
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        a.rx.value = 2
+
+        assert calls == []
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_ignores_settle_from_node_no_longer_upstream(self):
+        """
+        A node that was briefly an override, then removed, must not be able
+        to stick `.rx.updating()` at True forever just because it happens to
+        settle again later for an unrelated reason.
+        """
+        async def double(value):
+            await asyncio.sleep(0.02)
+            return value * 2
+
+        b = rx(1) * rx(1)
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        src = rx(10)
+        override = src.rx.pipe(double)
+        b.rx.overrides[0] = override
+        await async_wait_until(lambda: not b.rx.awaiting)
+        del b.rx.overrides[0]
+        await async_wait_until(lambda: updating.rx.value is False)
+
+        override.rx.watch(lambda v: None)
+        src.rx.value = 20
+        await async_wait_until(lambda: not override.rx.awaiting)
+        assert updating.rx.value is False
+
 class TestReaderBookkeeping:
     """Settle-watcher and upstream-walk bookkeeping."""
 
@@ -1936,6 +1987,73 @@ class TestDisposeAndLifecycle:
         del b.rx.overrides[0]
         override.rx.dispose()  # No longer masking anything, so this now succeeds.
         assert override._disposed
+
+    def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
+        """
+        A ref held by a `Parameter(allow_refs=True)` is kept alive by its
+        owning `Parameterized`, not by whatever `rx` view was built from it,
+        so disposing a throwaway `outlet.param.x.rx()` view must not take
+        `src` down with it, even though `src` has no other reader.
+        """
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        src = rx(1)
+        outlet = Outlet(x=src)
+        outlet.param.x.rx().rx.dispose()
+
+        src.rx.value = 5
+        assert outlet.x == 5
+
+    def test_reactive_ref_reassignment_leaves_no_stale_reader_link(self):
+        """
+        Refs are not reader-tracked at all (see `_direct_inputs()`), so
+        reassigning a `Parameter(allow_refs=True)` must not leave the node
+        built from the old ref holding a dangling link on the new one:
+        disposing either side afterward should behave the same as disposing
+        an unrelated pair of expressions.
+        """
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        outlet = Outlet(x=rx(1))
+        expr = outlet.param.x.rx()
+        new = rx(2)
+        outlet.x = new
+        assert expr.rx.value == 2
+        assert expr not in set(new.rx.downstream())
+
+        expr.rx.dispose()
+        new.rx.value = 3
+        assert new.rx.value == 3
+
+    def test_reactive_override_reader_link_is_per_occurrence(self):
+        """
+        `a` is read both directly (as an operation argument) and, briefly,
+        as an override of a different argument. Removing the override must
+        drop only that occurrence, leaving the direct read intact, not wipe
+        out `a`'s reader list entirely.
+        """
+        a = rx(1)
+        b = rx(1).rx.pipe(lambda x, y, z: x + y + z, a, rx(0))
+        b.rx.overrides[1] = a
+        del b.rx.overrides[1]
+
+        assert b in set(a.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            a.rx.dispose()
+
+    def test_reactive_override_reader_link_survives_clearing_a_different_key(self):
+        """Overriding the same node at two keys and clearing one leaves the other's reader link."""
+        a = rx(1)
+        b = rx(1).rx.pipe(lambda x, y, z: x + y + z, rx(0), rx(0))
+        b.rx.overrides[0] = a
+        b.rx.overrides[1] = a
+        del b.rx.overrides[0]
+
+        assert b in set(a.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            a.rx.dispose()
 
     def test_reactive_dispose_handles_input_reused_within_same_expression(self):
         """`a + a` gives `a` two readers; dispose must drop both to detach it."""

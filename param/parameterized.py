@@ -220,25 +220,31 @@ def transform_reference(arg):
         arg = transform(arg)
     return arg
 
-def watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
+def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
-    Weakly register ``callback`` to run whenever ``owner``'s raw dynamic
-    reference for parameter ``name`` (``owner._param__private.refs[name]``)
-    is replaced, including by the constructor and regardless of whether the
-    resolved *value* changed.
+    Weakly register ``callback`` to run whenever ``owner``'s reference for
+    parameter ``name`` is replaced via ``obj.x = ref``, regardless of
+    whether the resolved *value* changed. Not called for a reference already
+    in place when ``owner`` is constructed, since nothing could have
+    registered a ``callback`` before ``owner`` exists to register it against.
 
     An asynchronous reference (e.g. a fresh, unsettled ``rx``) always
     resolves to ``Undefined`` at assignment time, which does not trigger an
     ordinary parameter-changed watcher, so this is the only way to learn a
     reference was rewired.
+
+    ``callback`` is referenced via ``weakref.WeakMethod`` if it is a bound
+    method, or a plain ``weakref.ref`` otherwise; a ``functools.partial``
+    wrapping a method is not unwrapped, so pass the bound method itself, or
+    keep the partial alive independently for as long as it should listen.
     """
     private = owner._param__private
     watchers = private.ref_change_watchers
     if watchers is None:
         watchers = private.ref_change_watchers = {}
-    listeners = watchers.setdefault(name, [])
+    listeners = watchers.setdefault(name, set())
     ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
-    listeners.append(ref_type(callback, listeners.remove))
+    listeners.add(ref_type(callback, listeners.discard))
 
 def _notify_ref_change(owner, name):
     watchers = owner._param__private.ref_change_watchers
@@ -5944,8 +5950,8 @@ class _InstancePrivate:
                 parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
         Dict of parameter name: value.
-    ref_change_watchers: dict | None
-        Dict of parameter name: weak refs notified by ``watch_ref_change``.
+    ref_change_watchers: dict[str, set[weakref.ReferenceType]] | None
+        Dict of parameter name: weak refs notified by ``_watch_ref_change``.
         Lazy; ``None`` until something registers.
     """
 
@@ -5975,7 +5981,7 @@ class _InstancePrivate:
     async_ref_settled: defaultdict[str, int]
     refs: dict[str, t.Any]
     ref_watchers: list[tuple[tuple[str, ...], Watcher]]
-    ref_change_watchers: dict[str, list[weakref.ReferenceType]] | None
+    ref_change_watchers: dict[str, set[weakref.ReferenceType]] | None
     syncing: set[str]
     watchers: dict[str, dict[str, list[Watcher]]]
     values: dict[str, t.Any]
@@ -6266,8 +6272,6 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)
         self._param__private.refs = refs
-        for name in refs:
-            _notify_ref_change(self, name)
 
     # 'Special' methods
 

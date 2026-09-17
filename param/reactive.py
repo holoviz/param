@@ -2282,8 +2282,7 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
-    # Weak refs to callbacks notified when this node's own inputs change
-    # shape (an override set/cleared, or an allow_refs=True param rewired).
+    # See `_watch_graph_change()`.
     _graph_watchers: list[weakref.ref] | None = None
 
     # This node's own invalidation watchers, run early by `_dispose()`.

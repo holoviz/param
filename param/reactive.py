@@ -99,13 +99,14 @@ import typing as t
 import warnings
 import weakref
 
+from collections import namedtuple
 from collections.abc import (
     AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator,
     MutableMapping, Sized
 )
 from itertools import chain
 from functools import partial
-from types import FunctionType, MethodType
+from types import FunctionType, MethodType, MappingProxyType
 
 from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
@@ -538,53 +539,6 @@ class reactive_ops:
                 items.pop(0)
             return items
         return self._as_rx()._apply_operator(push, n)
-
-    def collect(self, *args, error_mode='raise', **kwargs) -> 'rx':
-        """
-        Combine the current expression with other inputs into a mapping of
-        whichever have settled.
-
-        Like `.rx.pipe`, the current expression is included, at position
-        0; unlike `.rx.pipe`, this does not call a function on it. The
-        result is a mapping keyed by each input's position (0 for the
-        current expression, 1, 2, ... for further positional arguments) or
-        name (keyword), that grows as inputs settle rather than waiting
-        for the slowest one. A key appears once its input has produced a
-        value and keeps that value while the input is unsettled again.
-        `.rx.awaiting` is `True` while any input is unsettled, including
-        one that already has a key and is settling again.
-
-        Parameters
-        ----------
-        *args, **kwargs : any
-            Further inputs to collect alongside the current expression,
-            typically ``rx`` expressions. A non-reactive value is included
-            immediately.
-        error_mode : {"raise", "propagate"}, default "raise"
-            With "propagate", a failing input resolves to a
-            :class:`ReactiveError` at its key instead of failing the whole
-            node. With "raise" (the default), a failing input drops every
-            key, including ones that already settled.
-
-        Returns
-        -------
-        rx
-            A reactive mapping of the settled inputs.
-
-        Examples
-        --------
-        >>> import param
-        >>> a, b = param.rx(1), param.rx(2)
-        >>> collected = a.rx.collect(b=b)
-        >>> collected.rx.value
-        {0: 1, 'b': 2}
-        """
-        operation = {
-            'fn': _collect_marker,
-            'args': (self._as_rx(), *args),
-            'kwargs': kwargs,
-        }
-        return rx(None, operation=operation, _current=Undefined, error_mode=error_mode)
 
     def in_(self, other) -> 'rx':
         """
@@ -1696,7 +1650,7 @@ class reactive_ops:
         """
         watchers = watcher if isinstance(watcher, list) else [watcher]
         for w in watchers:
-            (w.inst or w.cls).param.unwatch(w)
+            w.remove()
         reactive = self._reactive
         if isinstance(reactive, rx) and reactive._watchers:
             for w in watchers:
@@ -2078,6 +2032,72 @@ async def _close_stale(obj):
 def _collect_marker(*args, **kwargs):
     """Serve as a placeholder `fn` for a `collect` operation; `_eval_collect` never calls it."""
     raise NotImplementedError
+
+
+def _safe_is_equal(a, b):
+    """
+    Like `Comparator.is_equal`, but never lets a value's own `==` (e.g. a
+    numpy array's, which is elementwise and not a bool) raise or produce a
+    non-bool result; either case is treated as "not equal" so it doesn't
+    wrongly skip publishing a genuinely changed slot.
+    """
+    if a is b:
+        return True
+    try:
+        return bool(Comparator.is_equal(a, b))
+    except Exception:
+        return False
+
+
+Collected = namedtuple('Collected', ['args', 'kwargs'])
+
+
+def collect(*args, error_mode='raise', **kwargs) -> 'rx':
+    """
+    Combine several inputs into a :class:`Collected` namedtuple of
+    whichever have settled, without waiting for the slowest one.
+
+    ``args``/``kwargs`` fields hold each positional/keyword input's latest
+    value, and can be piped further, e.g. ``collect(a, b).args.rx.pipe(sum)``.
+    A slot keeps its last value while its input is unsettled again, or
+    holds ``Undefined`` if it has never settled; a downstream function fed
+    an unsettled slot should account for that, e.g. by checking
+    ``.rx.awaiting`` first.
+
+    Parameters
+    ----------
+    *args, **kwargs : any
+        The inputs to collect, typically ``rx`` expressions. A
+        non-reactive value is included immediately. ``error_mode`` is
+        reserved and can't be one of the collected keyword inputs.
+    error_mode : {"raise", "propagate"}, default "raise"
+        With "propagate", a failing input resolves to a
+        :class:`ReactiveError` in its slot instead of failing every other
+        slot too. With "raise" (the default), a failing input fails the
+        whole node.
+
+    Returns
+    -------
+    rx
+        A reactive :class:`Collected` namedtuple of the inputs' latest
+        values.
+
+    Examples
+    --------
+    >>> import param
+    >>> a, b = param.rx(1), param.rx(2)
+    >>> collected = param.reactive.collect(a, b)
+    >>> collected.rx.value
+    Collected(args=(1, 2), kwargs=mappingproxy({}))
+    >>> collected.args.rx.pipe(sum).rx.value
+    3
+    """
+    operation = {
+        'fn': _collect_marker,
+        'args': args,
+        'kwargs': kwargs,
+    }
+    return rx(None, operation=operation, _current=Undefined, error_mode=error_mode)
 
 
 # When we only support python >= 3.11 we should exchange 'rx' with Self type annotation below.
@@ -3425,41 +3445,45 @@ class rx:
         whole node while any one input is unsettled.
         """
         args, kwargs = operation['args'], operation['kwargs']
-        if not args and not kwargs:
-            return {}
         overrides = operation.get('overrides') or {}
-        previous = self._current_ if isinstance(self._current_, dict) else {}
-        result = {}
-        for key, arg in chain(enumerate(args), kwargs.items()):
+        previous = self._current_
+        prev_args = previous.args if isinstance(previous, Collected) else ()
+        prev_kwargs = previous.kwargs if isinstance(previous, Collected) else {}
+
+        def resolve_one(key, arg, prev_val):
             arg = overrides[key] if key in overrides else arg
-            if any(ref._settling for ref in _iter_rx(arg)):
-                # Not ready yet; carry the previous value (if any) forward
-                # in this key's argument-order slot rather than dropping it.
-                if key in previous:
-                    result[key] = previous[key]
-                continue
             try:
-                val = resolve_value(arg)
+                val = self._resolve_input(arg)
             except Skip:
-                if key in previous:
-                    result[key] = previous[key]
-                continue
+                # Not ready; keep the slot's previous value (or Undefined).
+                return prev_val
             except Exception as e:
                 if self._error_mode != 'propagate':
                     raise
-                result[key] = ReactiveError(e, self)
-                continue
-            if val is Skip or val is Undefined:
-                if key in previous:
-                    result[key] = previous[key]
-                continue
-            result[key] = val
-        if result == previous:
-            # Nothing actually changed this round (e.g. an already-settled
-            # input resolved to the same value while another one is
-            # unsettled again); don't republish the unchanged mapping.
-            raise Skip
-        return result
+                return ReactiveError(e, self)
+            if isinstance(val, ReactiveError) and self._error_mode != 'propagate':
+                raise val.exception  # upstream propagated; this node doesn't
+            return val
+
+        new_args = tuple(
+            resolve_one(i, arg, prev_args[i] if i < len(prev_args) else Undefined)
+            for i, arg in enumerate(args)
+        )
+        new_kwargs = {
+            k: resolve_one(k, arg, prev_kwargs.get(k, Undefined))
+            for k, arg in kwargs.items()
+        }
+        if (
+            isinstance(previous, Collected)
+            and len(new_args) == len(prev_args)
+            and all(map(_safe_is_equal, new_args, prev_args))
+            and new_kwargs.keys() == prev_kwargs.keys()
+            and all(_safe_is_equal(v, prev_kwargs[k]) for k, v in new_kwargs.items())
+        ):
+            raise Skip  # nothing changed; don't republish the same value
+        # A read-only view, so a watcher mutating a slot in place (a user
+        # error) can't corrupt the previous-value fallback above.
+        return Collected(args=new_args, kwargs=MappingProxyType(new_kwargs))
 
     def __setattr__(self, name, value):
         # Setting value instead of rx.value is a common user mistake.

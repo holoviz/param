@@ -99,7 +99,7 @@ from .parameters import (
     CalendarDateRange,
     Event,
 )
-from .reactive import ReactiveError, bind, current_node, rx
+from .reactive import ReactiveError, bind, collect, current_node, rx
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -210,6 +210,7 @@ __all__ = (
     '_is_number',
     'batch',
     'bind',
+    'collect',
     'concrete_descendents',
     'current_node',
     'depends',

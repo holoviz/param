@@ -22,6 +22,15 @@
    current_node
 ```
 
+## `collect`
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   collect
+```
+
 ## `rx`
 
 `rx` allows wrapping objects and then operating on them interactively while recording any operations applied to them.
@@ -39,8 +48,8 @@ for error handling (`error_mode`, `ReactiveError`, `.rx.error`, `.rx.label`,
 
 *New in version 2.5.0: `label`, `ReactiveError.label`, `.rx.label`,
 `process_failures` on `bind`, `.rx.dispose()`, `.rx.unwatch()`,
-`.rx.watch()` returning its watcher(s), `.rx.upstream()`, and
-`.rx.downstream()`.*
+`.rx.watch()` returning its watcher(s), `.rx.upstream()`,
+`.rx.downstream()`, and `collect`.*
 
 ```{eval-rst}
 .. autosummary::
@@ -50,6 +59,7 @@ for error handling (`error_mode`, `ReactiveError`, `.rx.error`, `.rx.label`,
    reactive_ops
    ReactiveError
    InputOverrides
+   Collected
 ```
 
 These methods and properties are available under the `.rx` namespace of reactive expressions ({py:class}`rx`):

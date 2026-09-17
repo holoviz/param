@@ -1360,6 +1360,9 @@ class Watcher(_Watcher):
     `precedence` : A numeric value which determines the precedence of
     the watcher.  Lower precedence values are executed
     with higher priority.
+
+    Call `.remove()` on the returned `Watcher` to stop it from being
+    triggered.
     """
 
     def __new__(cls_, *args, **kwargs):
@@ -1391,6 +1394,25 @@ class Watcher(_Watcher):
         attrs = ', '.join([f'{f}={getattr(self, f)!r}' for f in cls._fields])
         return f"{cls.__name__}({attrs})"
 
+    def remove(self) -> None:
+        """
+        Remove this watcher, stopping it from being triggered by
+        subsequent events on the parameters it is watching.
+
+        Examples
+        --------
+        >>> import param
+        >>> class MyClass(param.Parameterized):
+        ...     a = param.Number(default=1)
+        ...
+        ...     def callback(self, event):
+        ...         print(f"Triggered by {event.name}")
+        ...
+        >>> instance = MyClass()
+        >>> watcher = instance.param.watch(instance.callback, 'a')
+        >>> watcher.remove()
+        """
+        (self.cls if self.inst is None else self.inst).param.unwatch(self)
 
 
 class ParameterMetaclass(type):
@@ -2966,8 +2988,7 @@ class Parameters:
         if name in param_private.async_refs:
             param_private.async_refs.pop(name).cancel()
         for _, watcher in param_private.ref_watchers:
-            dep_obj = watcher.cls if watcher.inst is None else watcher.inst
-            dep_obj.param.unwatch(watcher)
+            watcher.remove()
         self_.self._param__private.ref_watchers = []
         refs = dict(self_.self._param__private.refs, **{name: ref})
         deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
@@ -3169,7 +3190,7 @@ class Parameters:
                     init_methods.append(m)
             elif dynamic:
                 for w in obj._param__private.dynamic_watchers.pop(method, []):
-                    (w.cls if w.inst is None else w.inst).param.unwatch(w)
+                    w.remove()
             else:
                 continue
 
@@ -4438,19 +4459,24 @@ class Parameters:
                     instance_watchers[parameter_name] = {}
                 if what not in instance_watchers[parameter_name]:
                     instance_watchers[parameter_name][what] = []
-                method = getattr(instance_watchers[parameter_name][what], action)
+                watchers = instance_watchers[parameter_name][what]
             else:
                 param_watchers = self_[parameter_name].watchers
                 if what not in param_watchers:
                     param_watchers[what] = []
-                method = getattr(param_watchers[what], action)
-            try:
-                method(watcher)
-            except ValueError:
-                # ValueError raised when attempting to remove an already
-                # removed watcher. Error swallowed as unwatch is idempotent.
-                if action != 'remove':
-                    raise
+                watchers = param_watchers[what]
+
+            if action == 'append':
+                watchers.append(watcher)
+            else:
+                # Matches by value (Watcher is a namedtuple), which is
+                # what lets unwatch keep working on a Watcher rebuilt
+                # with the same fields, e.g. by Parameterized.__setstate__
+                # after a copy or unpickle. Missing is a no-op.
+                try:
+                    watchers.remove(watcher)
+                except ValueError:
+                    pass
 
     def watch(
         self_,
@@ -4592,6 +4618,7 @@ class Parameters:
         --------
         watch : Registers a new watcher to observe parameter changes.
         watch_values : Registers a watcher specifically for value changes.
+        Watcher.remove : Equivalent, callable directly on the ``Watcher``.
 
         Examples
         --------

@@ -49,7 +49,7 @@ from .parameterized import (
     ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
 from .parameterized import (output, script_repr,
-                            discard_events, edit_constant)
+                            discard_events, edit_constant, batch)
 from .parameterized import shared_parameters
 from .parameterized import logging_level
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
@@ -208,6 +208,7 @@ __all__ = (
     'XYCoordinates',
     '__version__',
     '_is_number',
+    'batch',
     'bind',
     'collect',
     'concrete_descendents',

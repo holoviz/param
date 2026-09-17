@@ -10,6 +10,7 @@ __init__.py (providing specialized Parameter types).
 from __future__ import annotations
 
 import abc
+import contextvars
 import copy
 import datetime as dt
 import enum
@@ -22,7 +23,7 @@ import sys
 import types
 import typing as t
 import warnings
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
@@ -402,7 +403,7 @@ def _batch_call_watchers(parameterized, enable=True, run=True):
         yield
     finally:
         parameterized.param._BATCH_WATCH = BATCH_WATCH
-        if run and not BATCH_WATCH:
+        if run and not _is_batched(parameterized):
             parameterized.param._batch_call_watchers()
 
 
@@ -422,8 +423,212 @@ def batch_call_watchers(parameterized):
         yield
     finally:
         parameterized.param._BATCH_WATCH = BATCH_WATCH
-        if not BATCH_WATCH:
+        if not _is_batched(parameterized):
             parameterized.param._batch_call_watchers()
+
+
+class _Batch:
+    """State for one `batch()` transaction: objects touched so far, in
+    touch order, and whether it has already been flushed (so a task
+    that outlives the block falls back to ordinary behavior instead of
+    queuing into a transaction that will never drain again).
+    """
+
+    __slots__ = ('touched', 'closed')
+
+    def __init__(self):
+        self.touched: dict[t.Any, None] = {}
+        self.closed = False
+
+
+# The transaction active in this context, or None. A ContextVar rather
+# than a module attribute so concurrent transactions on different
+# threads/tasks never share one; nested `batch()` calls reuse it.
+_param_batch: contextvars.ContextVar[_Batch | None] = contextvars.ContextVar(
+    'param_batch', default=None
+)
+
+
+def _is_batched(obj) -> bool:
+    """Whether ``obj`` should defer watcher notification right now, and
+    the only thing that should ask that: individually batched
+    (`batch_call_watchers`, `.param.update()`, the per-watcher `queued`
+    handling) or touched by an open `batch()` transaction, which ``obj``
+    is then registered into. Deliberately not the same as reading
+    `_BATCH_WATCH`, the raw flag a save/restore site needs back
+    unchanged; checking the transaction first also matters, since an
+    object already individually batched must still be registered.
+    """
+    current = _param_batch.get()
+    if current is not None and not current.closed:
+        current.touched[obj] = None
+        return True
+    return bool(obj._param__private.parameters_state['BATCH_WATCH'])
+
+
+def _watcher_group_key(watcher: Watcher):
+    """Return a watcher's identity for coalescing across owners:
+    everything but `inst`/`cls`/`parameter_names`, which are expected
+    to differ per owner for what is otherwise one shared registration.
+    """
+    try:
+        hash(watcher.fn)
+    except TypeError:
+        fn_key = id(watcher.fn)
+    else:
+        fn_key = watcher.fn
+    return (fn_key, watcher.mode, watcher.onlychanged, watcher.what,
+            watcher.queued, watcher.precedence)
+
+
+class _WatcherGroup:
+    """One coalesced group inside `_flush_batch`: a watcher, the owners
+    merged into it, their combined events, and (outside 'args' mode)
+    the names contributed so far, to catch a keyword collision.
+    """
+
+    __slots__ = ('watcher', 'owners', 'events', 'names')
+
+    def __init__(self, watcher: Watcher):
+        self.watcher = watcher
+        self.owners: dict[t.Any, None] = {}
+        self.events: list[Event] = []
+        self.names: set[t.Any] = set()
+
+
+def _flush_batch(objects):
+    """Execute every watcher queued on ``objects``, coalescing the same
+    callback registered on more than one of them into a single call.
+    Every object's events are gathered before any watcher runs, so one
+    raising does not stop the rest; the first exception is re-raised
+    once every group has been attempted.
+    """
+    groups: dict[t.Any, _WatcherGroup] = {}
+    for obj in objects:
+        self_ = obj.param
+        if not self_._events:
+            continue
+        event_dict = {(event.name, event.what): event for event in self_._events}
+        watchers, self_._events, self_._state_watchers = self_._state_watchers[:], [], []
+        for watcher in watchers:
+            events = [
+                self_._update_event_type(watcher, event_dict[(name, watcher.what)], self_._TRIGGER)
+                for name in watcher.parameter_names
+                if (name, watcher.what) in event_dict
+            ]
+            if not events:
+                continue
+            key = _watcher_group_key(watcher)
+            group = groups.get(key)
+            if group is not None and watcher.mode != 'args':
+                # A same-named kwarg would silently overwrite another
+                # owner's; keep this owner's call separate instead.
+                if group.names & {event.name for event in events}:
+                    key = (key, id(obj))
+                    group = groups.get(key)
+            if group is None:
+                group = groups[key] = _WatcherGroup(watcher)
+            group.owners[obj] = None
+            group.events.extend(events)
+            if watcher.mode != 'args':
+                group.names.update(event.name for event in events)
+
+    # Lower precedence runs first; grouping already keys on precedence,
+    # so every watcher in a group shares one.
+    errors = []
+    for group in sorted(groups.values(), key=lambda g: g.watcher.precedence):
+        owners = list(group.owners)
+        try:
+            with ExitStack() as stack:
+                for owner in owners:
+                    stack.enter_context(_batch_call_watchers(owner, enable=group.watcher.queued, run=False))
+                owners[0].param._execute_watcher(group.watcher, group.events)
+        except Exception as e:
+            errors.append(e)
+    if errors:
+        raise errors[0]
+
+
+@contextmanager
+def batch() -> Generator[None, None, None]:
+    """
+    Context manager that defers watcher notification for every
+    :class:`Parameterized` object touched inside it, discovered as it is
+    touched rather than named up front, and coalesces the same watcher
+    registered on more than one of them into a single call.
+
+    Where ``batch_call_watchers`` batches one object the caller already
+    knows about, ``batch`` covers a transaction spanning several objects,
+    or one whose full set is only known once it runs (a sheet of
+    overrides, a dynamic graph rebuild). Every watcher fires once, after
+    everything inside the block has landed, including a cascading set
+    made by another watcher while flushing, rather than once per object
+    and possibly on a mix of old and new values. The same callback
+    registered with the same settings on more than one touched object,
+    as ``bind(fn, *refs, watch=True)`` does across every distinct owner
+    among ``refs``, is called once rather than once per owner; one
+    registered with different settings (a different ``precedence`` or
+    ``onlychanged``, say) is left uncoalesced rather than guessing which
+    should win. Nesting is safe: only the outermost block flushes, and
+    it composes with ``batch_call_watchers``/``.param.update()``/
+    ``discard_events`` used inside it. If more than one watcher raises
+    while flushing, the rest still run and the first exception is
+    re-raised once the block has finished; if the block itself already
+    raised, a later error while flushing is a warning instead.
+
+    Examples
+    --------
+    >>> import param
+    >>> class A(param.Parameterized):
+    ...     x = param.Number(default=1)
+    >>> class B(param.Parameterized):
+    ...     y = param.Number(default=10)
+    >>> a, b = A(), B()
+    >>> calls = []
+    >>> _ = param.bind(lambda x, y: calls.append(x + y), a.param.x, b.param.y, watch=True)
+    >>> with param.batch():
+    ...     a.x = 2
+    ...     b.y = 20
+    >>> calls  # one call, seeing x=2, y=20; without `batch()` this would be [12, 22]
+    [22]
+    """
+    outer = _param_batch.get()
+    outermost = outer is None
+    current: _Batch = outer if outer is not None else _Batch()
+    token = _param_batch.set(current)
+    error = None
+    flush_error = None
+    try:
+        yield
+    except BaseException as exc:
+        error = exc
+        raise
+    finally:
+        if outermost:
+            # Stays open for the whole drain, not just the block, so a
+            # watcher's own side effects are also captured by
+            # `_is_batched` rather than firing live; keep draining until
+            # a pass adds nothing new.
+            while current.touched:
+                touched = list(current.touched)
+                current.touched.clear()
+                try:
+                    _flush_batch(touched)
+                except Exception as exc:
+                    if flush_error is None:
+                        flush_error = exc
+            current.closed = True
+        _param_batch.reset(token)
+        if outermost and flush_error is not None:
+            if error is None:
+                raise flush_error
+            # The block already raised; a second error here would only
+            # replace it, so report it instead of raising over the top.
+            warnings.warn(
+                f"batch() failed to notify some watchers while unwinding "
+                f"from {error!r}: {flush_error!r}",
+                RuntimeWarning, stacklevel=2,
+            )
 
 
 @contextmanager
@@ -1890,7 +2095,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
         for watcher in self.watchers[attribute]:
             self.owner.param._call_watcher(watcher, event)
-        if not self.owner.param._BATCH_WATCH:
+        if not _is_batched(self.owner):
             self.owner.param._batch_call_watchers()
 
     def _invalidate_init_cache(self):
@@ -2078,7 +2283,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         # Copy watchers here since they may be modified inplace during iteration
         for watcher in sorted(watchers, key=lambda w: w.precedence):
             obj.param._call_watcher(watcher, event)
-        if not obj.param._BATCH_WATCH:
+        if not _is_batched(obj):
             obj.param._batch_call_watchers()
 
     def _validate_value(self, value, allow_None):
@@ -3222,7 +3427,7 @@ class Parameters:
                 raise
 
         self_._BATCH_WATCH = BATCH_WATCH
-        if not BATCH_WATCH:
+        if not _is_batched(self_or_cls):
             self_._batch_call_watchers()
 
         for tp in trigger_params:
@@ -3446,7 +3651,7 @@ class Parameters:
         elif watcher.onlychanged and (not self_._changed(event)):
             return
 
-        if self_._BATCH_WATCH:
+        if _is_batched(self_.self_or_cls):
             self_._events.append(event)
             if not any(watcher is w for w in self_._state_watchers):
                 self_._state_watchers.append(watcher)

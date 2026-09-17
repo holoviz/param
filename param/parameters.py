@@ -1226,6 +1226,9 @@ class Date(Number[_T]):
         if self.allow_None and value is None:
             return
 
+        if callable(value) and not inspect.isgeneratorfunction(value):
+            return
+
         if not isinstance(value, _dt_types) and not (allow_None and value is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
@@ -1322,6 +1325,9 @@ class CalendarDate(Number[_T]):
         bounds; if not, an exception is raised.
         """
         if self.allow_None and value is None:
+            return
+
+        if callable(value) and not inspect.isgeneratorfunction(value):
             return
 
         if (not isinstance(value, dt.date) or isinstance(value, dt.datetime)) and not (allow_None and value is None):

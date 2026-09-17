@@ -60,6 +60,8 @@ from ._utils import (
 #-----------------------------------------------------------------------------
 
 if t.TYPE_CHECKING:
+    from types import NoneType
+
     import numpy as np
     import pandas as pd
 
@@ -150,7 +152,7 @@ def param_union(*parameterizeds: Parameterized, warn: bool = True) -> dict[str, 
     Parameters
     ----------
     warn : bool, optional
-        Wether to warn if the same parameter have been given multiple values,
+        Whether to warn if the same parameter have been given multiple values,
         otherwise use the last value, by default True
 
     Returns
@@ -612,11 +614,11 @@ class Dynamic(Parameter[_T]):
             self._set_instantiate(True)
             self._initialize_generator(self.default)
 
-    def _initialize_generator(self, gen, obj=None):
+    def _initialize_generator(self, gen, obj: Parameterized | None = None):
         """Add 'last time' and 'last value' attributes to the generator."""
         # Could use a dictionary to hold these things.
         if obj is not None and hasattr(obj, "_Dynamic_time_fn"):
-            gen._Dynamic_time_fn = obj._Dynamic_time_fn
+            gen._Dynamic_time_fn = obj._Dynamic_time_fn  # type: ignore[attribute-access]
 
         gen._Dynamic_last = None
         # Would have usede None for this, but can't compare a fixedpoint
@@ -642,7 +644,7 @@ class Dynamic(Parameter[_T]):
             return t.cast("_T", self._produce_value(gen))
 
     @instance_descriptor
-    def __set__(self, obj: Parameterized, val: _T):
+    def __set__(self, obj: Parameterized | None, val: _T):
         """
         Call the superclass's set and keep this parameter's
         instantiate value up to date (dynamic parameters
@@ -653,8 +655,10 @@ class Dynamic(Parameter[_T]):
         super().__set__(obj, val)
 
         dynamic = callable(val)
-        if dynamic: self._initialize_generator(val,obj)
-        if obj is None: self._set_instantiate(dynamic)
+        if dynamic:
+            self._initialize_generator(val, obj)
+        if obj is None:
+            self._set_instantiate(dynamic)
 
     def _produce_value(self, gen, force: bool = False):
         """
@@ -2218,11 +2222,54 @@ class Callable(Parameter[_T]):
         self._validate_value(val, self.allow_None)
 
 
-class Action(Callable):
+class Action(Callable[_T]):
     """
     A user-provided function that can be invoked like a class or object method using ().
     In a GUI, this might be mapped to a button, but it can be invoked directly as well.
     """
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Action[t.Callable[[], t.Any]],
+            default: t.Callable[[], t.Any] = lambda: None,
+            *,
+            allow_None: t.Literal[False] = False,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = False,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: t.Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Action[t.Callable[[], t.Any] | None],
+            default: None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **params: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+    def __init__(self,
+        default: t.Callable[[], t.Any] | None = t.cast("t.Callable[[], t.Any] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[_ParameterKwargs]
+    ) -> None:
+        super().__init__(default=default, **params)  # type: ignore[misc]  # pyrefly: ignore[bad-argument-type]
+        self._validate(self.default)
+
 # Currently same implementation as Callable, but kept separate to allow different handling in GUIs
 
 #-----------------------------------------------------------------------------
@@ -2600,7 +2647,10 @@ class Selector(SelectorBase, _SignatureSelector[_T]):
         object.__setattr__(self, 'check_on_set', check_on_set)
 
         instantiate = params.pop("instantiate", Undefined)
-        params["instantiate"] = False if instantiate is Undefined else instantiate  # pyrefly: ignore[bad-typed-dict-key]
+        if isinstance(instantiate, bool):
+            params["instantiate"] = instantiate
+        else:
+            params["instantiate"] = False
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:
@@ -2799,7 +2849,7 @@ class FileSelector(Selector[_T]):
         self.default = self.objects[0] if self.objects else None
 
     def get_range(self) -> dict[str, str | PathLike]:
-        return _abbreviate_paths(self.path,super().get_range())
+        return _abbreviate_paths(self.path, super().get_range())
 
 
 class ListSelector(Selector):
@@ -3130,7 +3180,7 @@ class ClassSelector(SelectorBase[_T]):
             # This will clobber separate classes with identical names.
             # Known historical issue, see https://github.com/holoviz/param/pull/1035
             all_classes.update({c.__name__: c for c in desc})
-        d = OrderedDict((name, class_) for name,class_ in all_classes.items())
+        d: dict[str, type | NoneType] = OrderedDict((name, class_) for name,class_ in all_classes.items())
         if self.allow_None:
             d['None'] = None
         return d
@@ -3323,6 +3373,16 @@ class DataFrame(ClassSelector["DF"]):
             default: pd.DataFrame | None = None,
             *,
             allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_DataFrameInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: DataFrame[pd.DataFrame | None],
+            default: None = None,
+            *,
+            allow_None: t.Literal[False] = False,
             **kwargs: Unpack[_DataFrameInitKwargs]
         ) -> None:
             ...
@@ -3553,7 +3613,7 @@ class List(Parameter[_T]):
             self: List[list[LT]],
             default: list[LT] = [],
             *,
-            item_type: type[LT] | tuple[type[LT], ...] = (),
+            item_type: type[LT] | tuple[type[LT], ...],
             bounds: tuple[int, int | None] | None = (0, None),
             is_instance: bool = True,
             allow_None: t.Literal[False] = False,
@@ -3577,17 +3637,7 @@ class List(Parameter[_T]):
             self: List[list[LT] | None],
             default: list[LT] | None = None,
             *,
-            item_type: type[LT] | tuple[type[LT], ...] = (),
-            allow_None: t.Literal[True] = True,
-            **kwargs: Unpack[_ParameterKwargs]
-        ) -> None:
-            ...
-
-        @t.overload
-        def __init__(
-            self: List[list[t.Any] | None],
-            default: list[t.Any] | None = None,
-            *,
+            item_type: type[LT] | tuple[type[LT], ...],
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
@@ -3600,6 +3650,16 @@ class List(Parameter[_T]):
             *,
             item_type: None = None,
             allow_None: t.Literal[False] = False,
+            **kwargs: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: List[list[t.Any] | None],
+            default: list[t.Any] | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_ParameterKwargs]
         ) -> None:
             ...
@@ -3674,7 +3734,7 @@ class List(Parameter[_T]):
             if is_instance and not isinstance(v, item_type):
                 err_kind = "instances"
                 obj_display = lambda v: type(v)
-            elif not is_instance and (type(v) is not type or not issubclass(v, item_type)):
+            elif not is_instance and (not isinstance(v, type) or not issubclass(v, item_type)):
                 err_kind = "subclasses"
             if err_kind:
                 raise TypeError(
@@ -3798,7 +3858,7 @@ class Path(Parameter[_T]):
     __slots__ = ['search_paths', 'check_exists']
 
     _slot_defaults = dict(
-        Parameter._slot_defaults, check_exists=True,
+        Parameter._slot_defaults, check_exists=True, search_paths=None
     )
 
     search_paths: list[str | PathLike] | None
@@ -3811,9 +3871,9 @@ class Path(Parameter[_T]):
             self: Path[PathLike | str],
             default: PathLike | str = pathlib.Path(""),
             *,
-            allow_None: t.Literal[False] = False,
             search_paths: list[str | PathLike] | None = None,
             check_exists: bool = True,
+            allow_None: t.Literal[False] = False,
             doc: str | None = None,
             label: str | None = None,
             precedence: float | None = None,
@@ -3832,7 +3892,7 @@ class Path(Parameter[_T]):
         @t.overload
         def __init__(
             self: Path[PathLike | str | None],
-            default: None = None,
+            default: PathLike | str = pathlib.Path(""),
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_PathInitKwargs]
@@ -3842,7 +3902,7 @@ class Path(Parameter[_T]):
         @t.overload
         def __init__(
             self: Path[PathLike | str | None],
-            default: PathLike | str = pathlib.Path(""),
+            default: PathLike | str | None = None,
             *,
             allow_None: t.Literal[True] = True,
             **kwargs: Unpack[_PathInitKwargs]
@@ -3910,8 +3970,7 @@ class Path(Parameter[_T]):
         return state
 
 
-
-class Filename(Path):
+class Filename(Path[_T]):
     """
     Parameter that can be set to a string specifying the path of a file.
 
@@ -3926,11 +3985,67 @@ class Filename(Path):
       is ``None``).
     """
 
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Filename[PathLike | str],
+            default: PathLike | str = pathlib.Path(""),
+            *,
+            allow_None: t.Literal[False] = False,
+            search_paths: list[str | PathLike] | None = None,
+            check_exists: bool = True,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = False,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: t.Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Filename[PathLike | str | None],
+            default: PathLike | str = pathlib.Path(""),
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Filename[PathLike | str | None],
+            default: PathLike | str | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[_PathInitKwargs]
+    ) -> None:
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
+            default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
+        )
+
     def _resolve(self, path):
         return resolve_path(path=path, path_to_file=True, search_paths=self.search_paths)
 
 
-class Foldername(Path):
+class Foldername(Path[_T]):
     """
     Parameter that can be set to a string specifying the path of a folder.
 
@@ -3944,6 +4059,62 @@ class Foldername(Path):
     * any of the paths searched by resolve_dir_path() (if ``search_paths``
       is ``None``).
     """
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: Foldername[PathLike | str],
+            default: PathLike | str = pathlib.Path(""),
+            *,
+            allow_None: t.Literal[False] = False,
+            search_paths: list[str | PathLike] | None = None,
+            check_exists: bool = True,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = False,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: t.Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Foldername[PathLike | str | None],
+            default: PathLike | str = pathlib.Path(""),
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: Foldername[PathLike | str | None],
+            default: PathLike | str | None = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **kwargs: Unpack[_PathInitKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: str | PathLike | None = t.cast("str | PathLike | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **kwargs: Unpack[_PathInitKwargs]
+    ) -> None:
+        super().__init__(  # type: ignore[misc, call-overload]  # ty: ignore[no-matching-overload]
+            default=default, allow_None=allow_None, **kwargs  # type: ignore[arg-type]
+        )
 
     def _resolve(self, path):
         return resolve_path(path=path, path_to_file=False, search_paths=self.search_paths)
@@ -4070,7 +4241,7 @@ class Color(Parameter[_T]):
     def _validate_allow_named(self, val, allow_named):
         if val is None:
             return
-        is_hex = re.fullmatch('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
+        is_hex = re.search('^#?(([0-9a-fA-F]{2}){3}|([0-9a-fA-F]){3})$', val)
         if self.allow_named:
             if not is_hex and val.lower() not in self._named_colors:
                 raise ValueError(
@@ -4153,7 +4324,7 @@ class Bytes(Parameter[_T]):
     def _validate_regex(self, val, regex):
         if val is None or regex is None:
             return
-        if re.fullmatch(regex, val) is None:
+        if re.search(regex, val) is None:
             raise ValueError(
                 f"{_validate_error_prefix(self)} value {val!r} "
                 f"does not match regex {regex!r}."

@@ -6,6 +6,7 @@ This user guide provides detailed information about how to use Param, assuming y
 - [Parameters](./Parameters): Using parameters (Class vs. instance parameters, setting defaults, etc.)
 - [Parameter Types](./Parameter_Types): Predefined Parameter classes available for your use
 - [Dependencies and Watchers](./Dependencies_and_Watchers): Expressing relationships between parameters and parameters or code, and triggering events.
+- [Typing](./Typing): How type inference on Parameterized classes works, current limitations, best practices and the future of typing in Param.
 - [References](./References): Allowing parameters to resolve references to other parameters, reactive expressions, functions and generators.
 - [Reactive Expressions](./Reactive_Expressions): How to write expressions and functions that automatically re-evaluate when their parameter inputs change.
 - [Generators](./Generators): Using (asynchronous) generators to drive events on parameters and expressions in a "push" based model.
@@ -27,6 +28,7 @@ Simplifying Codebases <Simplifying_Codebases>
 Parameters <Parameters>
 Parameter Types <Parameter_Types>
 Dependencies and Watchers <Dependencies_and_Watchers>
+Typing <Typing>
 References <References>
 Reactive Expressions <Reactive_Expressions>
 Generators <Generators>

@@ -218,7 +218,7 @@ def test_script_repr_parameterized_other():
     assert param.script_repr('2') == "\n\n'2'"
 
 
-def test_pprint_signature_overriden():
+def test_pprint_signature_overridden():
     # https://github.com/holoviz/param/issues/785
 
     class P(param.Parameterized):

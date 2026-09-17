@@ -121,6 +121,32 @@ def test_parameter_ref_update():
     p3.string = 'newly linked'
     assert p2.string == 'newly linked'
 
+def test_parameter_ref_update_falsy_source():
+    # _update_ref removes the old ref's watcher via Watcher.remove(),
+    # which must resolve the owner via `inst is None`, not `inst or
+    # cls`: a falsy source (e.g. one defining __len__) must not be
+    # mistaken for a missing inst, or its watcher leaks (registered on
+    # the instance, but "removed" from the class, which is a no-op).
+    class FalsySource(param.Parameterized):
+        string = param.String(default="string")
+
+        def __len__(self):
+            return 0
+
+    src1 = FalsySource(string="from src1")
+    assert not src1
+
+    p2 = Parameters(string=src1.param.string)
+    assert src1._param__private.watchers['string']['value']
+
+    p3 = Parameters(string="from src3")
+    p2.string = p3.param.string
+    assert p2.string == "from src3"
+
+    # The watcher registered on src1 while it was the ref source must
+    # be gone now that p2 points at p3 instead.
+    assert src1._param__private.watchers['string']['value'] == []
+
 def test_parameter_ref_update_context():
     p = Parameters(string='linked')
     p2 = Parameters(string=p.param.string)
@@ -303,6 +329,55 @@ async def test_async_generator_ref_cancelled():
     assert task1 is async_task1
     assert task2 is async_task2
     assert p._param__private.async_refs['string'] is task2
+
+async def test_async_ref_cancelled_on_dependency_change():
+    started, finished = [], []
+
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def slow(i):
+        started.append(i)
+        await asyncio.sleep(0.1)
+        finished.append(i)
+        return str(i)
+
+    source = Source()
+    p = Parameters(string=bind(slow, source.param.x))
+    for i in (1, 2, 3):
+        source.x = i
+        await asyncio.sleep(0.01)
+
+    await wait_for_value(p, 'string', '3', timeout=1)
+    assert started == [0, 1, 2, 3]
+    assert finished == [3]
+
+    await asyncio.sleep(0.05)
+    assert 'string' not in p._param__private.async_refs
+
+async def test_async_generator_ref_cancelled_on_dependency_change():
+    emitted = []
+
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def gen(i):
+        while True:
+            emitted.append(i)
+            yield str(i)
+            await asyncio.sleep(0.01)
+
+    source = Source()
+    p = Parameters(string=bind(gen, source.param.x))
+    await asyncio.sleep(0.05)
+    source.x = 1
+    await asyncio.sleep(0.05)
+    source.x = 2
+    await wait_for_value(p, 'string', '2', timeout=0.5)
+
+    emitted.clear()
+    await asyncio.sleep(0.05)
+    assert set(emitted) == {2}
 
 async def test_generator_ref_cancelled():
     threads = []

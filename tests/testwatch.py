@@ -1228,8 +1228,6 @@ class TestBatch:
             a.x = 2
             b.y = 20
 
-        # param.bind registers the same callback separately on each source,
-        # but batch() coalesces it into one call, seeing both settled.
         assert calls == [22]
 
     def test_batch_plain_multi_param_watcher(self):
@@ -1457,7 +1455,6 @@ class TestBatch:
             a.x = 2
             b.y = 20
 
-        # Two separate calls, not one merged call with two events.
         assert calls == [1, 1]
 
     def test_batch_does_not_merge_watchers_with_different_modes(self):

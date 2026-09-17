@@ -508,7 +508,6 @@ def _flush_batch(objects):
         self_ = obj.param
         if not self_._events:
             continue
-        # Only looked up by key below, never iterated, so plain dict is enough.
         event_dict = {(event.name, event.what): event for event in self_._events}
         watchers, self_._events, self_._state_watchers = self_._state_watchers[:], [], []
         for watcher in watchers:
@@ -2680,12 +2679,6 @@ class Parameters:
 
     @property
     def _BATCH_WATCH(self_):
-        # Deliberately just the raw per-instance flag, with no knowledge
-        # of a `batch()` transaction: every save/restore site (this
-        # property's own callers) needs the real prior value to restore,
-        # not a value that lies while a transaction happens to be open.
-        # `_is_batched()` below is what call sites that need to know
-        # "should this defer right now" should use instead.
         return self_.self_or_cls._param__private.parameters_state['BATCH_WATCH']
 
     @_BATCH_WATCH.setter

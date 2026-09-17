@@ -2604,7 +2604,7 @@ class rx:
             yield from _iter_rx((operation['fn'], args, kwargs))
         yield from self._ref_inputs()
 
-    def _ref_inputs(self) -> Iterator['rx']:
+    def _ref_inputs(self) -> Iterator[t.Any]:
         """
         Yield any ``rx`` node backing a raw reference this node depends on
         through a ``Parameter(allow_refs=True)``, e.g. ``outlet.param.x.rx()``

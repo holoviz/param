@@ -205,9 +205,9 @@ class TestDataFrameLikeLazy:
         with pytest.raises(ValueError):
             P(df=pl.LazyFrame({'x': [1]}))
 
-    def test_lazy_rows_validated_via_count(self):
+    def test_lazy_rows_validated_via_len(self):
         # rows=2 must be validated against a LazyFrame without materialising
-        # the whole frame; narwhals .count() is used to pull only a scalar.
+        # the whole frame; narwhals .len() is used to pull only a scalar.
         class P(param.Parameterized):
             df = param.DataFrameLike(
                 default=pl.DataFrame({'a': [1, 2]}),
@@ -217,6 +217,18 @@ class TestDataFrameLikeLazy:
         # Non-matching row count fails (proves rows are actually checked).
         with pytest.raises(ValueError):
             P(df=pl.LazyFrame({'a': [1, 2, 3]}))
+
+    def test_lazy_rows_validated_with_nulls_in_first_column(self):
+        # Row count must reflect total rows, not non-null values in the
+        # first column: .count() would undercount nulls and wrongly reject
+        # this otherwise-valid 4-row frame.
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pl.DataFrame({'a': [1, 2, 3, 4]}),
+                rows=4, eager_only=False)
+        P(df=pl.LazyFrame({'a': [1, None, 3, None]}))
+        with pytest.raises(ValueError):
+            P(df=pl.LazyFrame({'a': [1, None, 3]}))
 
 
 @skip_no_pandas

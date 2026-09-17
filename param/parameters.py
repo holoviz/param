@@ -3644,9 +3644,8 @@ class DataFrameLike(ClassSelector[t.Any]):
         narwhals = _get_narwhals()
         is_lazy = isinstance(nwframe, narwhals.LazyFrame)
 
-        # Resolve schema once if any column check or lazy row check needs it.
-        need_schema = self.columns is not None or (self.rows is not None and is_lazy)
-        schema = nwframe.collect_schema() if need_schema else None
+        # Resolve schema once if the column check needs it.
+        schema = nwframe.collect_schema() if self.columns is not None else None
 
         if self.columns is not None:
             assert schema is not None
@@ -3675,12 +3674,10 @@ class DataFrameLike(ClassSelector[t.Any]):
 
         if self.rows is not None:
             if is_lazy:
-                assert schema is not None
-                first = next(iter(schema.names()), None)
-                n = (
-                    nwframe.select(narwhals.col(first).count()).collect().item()
-                    if first is not None else 0
-                )
+                # narwhals.len() counts rows regardless of nulls; counting a
+                # column instead (e.g. col(name).count()) would undercount
+                # rows with nulls in that column.
+                n = nwframe.select(narwhals.len()).collect().item()
             else:
                 n = nwframe.shape[0]
             _length_bounds_check(self, self.rows, n, 'row')

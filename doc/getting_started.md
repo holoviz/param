@@ -67,6 +67,24 @@ The types in Param may remind you of the static types found in some languages, b
 
 The [User Guide](user_guide/index) explains all the other Param features for simplifying your codebase, improving input validation, allowing flexible configuration, and supporting serialization.
 
+## Declaring parameters from type annotations
+
+If you'd rather declare parameters with plain Python type annotations instead of spelling out each `Parameter` explicitly, `param.ParamModel` gives you a `dataclass`-like shorthand that synthesizes the underlying `Parameter` objects for you, while still giving you all the validation and configuration behavior described above:
+
+```{code-block} python
+import param
+
+class Sum(param.ParamModel):
+    title: str = "sum"
+    a: int = param.ParamField(default=2, bounds=(0, 10), doc="First addend")
+    b: int = param.ParamField(default=3, bounds=(0, 10), doc="Second addend")
+
+    def __call__(self):
+        return self.title + ": " + str(self.a + self.b)
+```
+
+Leave off the `=` and the annotation becomes required: omitting that parameter when constructing the class raises a clear `TypeError` naming the missing field, rather than silently filling in an empty string or zero. See the [Typing](user_guide/Typing) user guide for the full set of supported annotations (`Literal`, `Optional`, containers, and more) and for how `ParamModel` interacts with static type checkers.
+
 ## Using Param for configuration
 
 Once you have declared your Parameters, they are now fully accessible from Python in a way that helps users of your code configure it and control it if they wish. Without any extra work by the author of the class, a user can use Python to reconfigure any of the defaults that will be used when they use these objects:

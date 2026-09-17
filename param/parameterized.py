@@ -23,6 +23,7 @@ import sys
 import types
 import typing as t
 import warnings
+import weakref
 from contextlib import contextmanager, ExitStack
 from inspect import getfullargspec
 
@@ -219,25 +220,37 @@ def transform_reference(arg):
         arg = transform(arg)
     return arg
 
-_ref_change_callbacks: list[t.Callable[['Parameterized', str], None]] = []
-
-def register_ref_change_callback(callback):
+def watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
-    Register a callback invoked with ``(owner, name)`` whenever a
-    ``Parameter``'s raw dynamic reference (``obj._param__private.refs[name]``)
-    is replaced, including by the constructor.
+    Weakly register ``callback`` (a bound method or plain zero-arg callable)
+    to run whenever ``owner``'s raw dynamic reference for parameter ``name``
+    (``owner._param__private.refs[name]``) is replaced, including by the
+    constructor.
 
     Fires regardless of whether the resolved *value* changed. An asynchronous
     reference (e.g. a fresh, unsettled ``rx``) always resolves to
     ``Undefined`` at assignment time, which does not trigger an ordinary
     parameter-changed watcher, so this is the only way to learn a reference
-    was rewired.
+    was rewired. Storage lives on ``owner`` itself, so it is dropped
+    automatically once ``owner`` is garbage collected.
     """
-    return _ref_change_callbacks.append(callback)
+    private = owner._param__private
+    watchers = private.ref_change_watchers
+    if watchers is None:
+        watchers = private.ref_change_watchers = {}
+    listeners = watchers.setdefault(name, [])
+    ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
+    listeners.append(ref_type(callback, listeners.remove))
 
 def _notify_ref_change(owner, name):
-    for callback in _ref_change_callbacks:
-        callback(owner, name)
+    watchers = owner._param__private.ref_change_watchers
+    listeners = watchers.get(name) if watchers else None
+    if not listeners:
+        return
+    for ref in tuple(listeners):
+        callback = ref()
+        if callback is not None:
+            callback()
 
 def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
@@ -5933,6 +5946,10 @@ class _InstancePrivate:
                 parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
         Dict of parameter name: value.
+    ref_change_watchers: dict | None
+        Dict of parameter name: list of weak refs notified when this
+        instance's raw reference for that parameter is replaced (see
+        ``watch_ref_change``). Lazy; ``None`` until something registers.
     """
 
     __slots__ = [
@@ -5945,6 +5962,7 @@ class _InstancePrivate:
         'async_ref_settled',
         'refs',
         'ref_watchers',
+        'ref_change_watchers',
         'syncing',
         'watchers',
         'values',
@@ -5960,6 +5978,7 @@ class _InstancePrivate:
     async_ref_settled: defaultdict[str, int]
     refs: dict[str, t.Any]
     ref_watchers: list[tuple[tuple[str, ...], Watcher]]
+    ref_change_watchers: dict[str, list[weakref.ReferenceType]] | None
     syncing: set[str]
     watchers: dict[str, dict[str, list[Watcher]]]
     values: dict[str, t.Any]
@@ -5987,6 +6006,7 @@ class _InstancePrivate:
                 "watchers": [] # Queue of batched watchers
             }
         self.ref_watchers = []
+        self.ref_change_watchers = None
         self.async_refs = {}
         self.async_ref_scheduled = defaultdict(int)
         self.async_ref_settled = defaultdict(int)

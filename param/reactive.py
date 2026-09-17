@@ -112,8 +112,8 @@ from .depends import depends
 from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
-    get_method_owner, register_reference_transform, register_ref_change_callback,
-    resolve_ref, resolve_value, transform_reference
+    get_method_owner, register_reference_transform, resolve_ref, resolve_value,
+    transform_reference, watch_ref_change
 )
 from .parameters import Boolean, Event, String
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
@@ -2985,7 +2985,7 @@ class rx:
             for p in self._fn_params:
                 owner, name = p.owner, p.name
                 if name is not None and isinstance(owner, Parameterized):
-                    _watch_ref_change(owner, name, self)
+                    watch_ref_change(owner, name, self._notify_graph_change)
         watchers.append(weakref.ref(callback, watchers.remove))
 
     def _notify_graph_change(self) -> None:
@@ -3693,32 +3693,3 @@ def _rx_transform(obj):
     return binding
 
 register_reference_transform(_rx_transform)
-
-
-# Bridges `register_ref_change_callback` to the `rx` nodes interested in a
-# given `(owner, name)`, registered lazily by `_watch_graph_change()` and
-# pruned once `owner` or the interested node is garbage collected.
-_ref_change_listeners: dict[int, dict[str, list[weakref.ref]]] = {}
-
-
-def _watch_ref_change(owner: Parameterized, name: str, node: 'rx') -> None:
-    per_owner = _ref_change_listeners.get(id(owner))
-    if per_owner is None:
-        per_owner = _ref_change_listeners[id(owner)] = {}
-        weakref.finalize(owner, _ref_change_listeners.pop, id(owner), None)
-    listeners = per_owner.setdefault(name, [])
-    listeners.append(weakref.ref(node, listeners.remove))
-
-
-def _on_ref_change(owner: Parameterized, name: str) -> None:
-    per_owner = _ref_change_listeners.get(id(owner))
-    listeners = per_owner.get(name) if per_owner else None
-    if not listeners:
-        return
-    for ref in tuple(listeners):
-        node = ref()
-        if node is not None:
-            node._notify_graph_change()
-
-
-register_ref_change_callback(_on_ref_change)

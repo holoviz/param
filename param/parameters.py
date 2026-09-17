@@ -3522,8 +3522,10 @@ class DataFrameLike(ClassSelector[t.Any]):
 
     ``eager_only``: when ``True`` (default), reject lazy frames. Set
     ``eager_only=False`` to also accept lazy frames (Polars ``LazyFrame``,
-    Dask, DuckDB); row counts on lazy frames are validated through a scalar
-    ``count()`` collect rather than materialising the frame.
+    Dask, DuckDB) with no implicit execution of the query plan. Because
+    counting rows requires running the plan, ``rows`` is not enforced on
+    lazy values; ``columns``/``ordered`` still are, since resolving a
+    schema is metadata-only and does not execute the plan.
 
     Serialization emits a list of records via Narwhals; ``deserialize``
     reconstructs a ``pandas.DataFrame`` because JSON carries no backend.
@@ -3672,15 +3674,11 @@ class DataFrameLike(ClassSelector[t.Any]):
                         f"{cols} must exactly match {self.columns}"
                     )
 
-        if self.rows is not None:
-            if is_lazy:
-                # narwhals.len() counts rows regardless of nulls; counting a
-                # column instead (e.g. col(name).count()) would undercount
-                # rows with nulls in that column.
-                n = nwframe.select(narwhals.len()).collect().item()
-            else:
-                n = nwframe.shape[0]
-            _length_bounds_check(self, self.rows, n, 'row')
+        # Row count is only checked for eager frames: counting rows on a
+        # lazy frame requires running its query plan, which would defeat
+        # the purpose of eager_only=False (no implicit execution).
+        if self.rows is not None and not is_lazy:
+            _length_bounds_check(self, self.rows, nwframe.shape[0], 'row')
 
     @classmethod
     def serialize(cls, value):

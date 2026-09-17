@@ -205,30 +205,17 @@ class TestDataFrameLikeLazy:
         with pytest.raises(ValueError):
             P(df=pl.LazyFrame({'x': [1]}))
 
-    def test_lazy_rows_validated_via_len(self):
-        # rows=2 must be validated against a LazyFrame without materialising
-        # the whole frame; narwhals .len() is used to pull only a scalar.
+    def test_lazy_rows_not_enforced(self):
+        # Counting rows requires running the query plan, which would
+        # contradict the no-implicit-execution contract of eager_only=False,
+        # so rows is silently not enforced on lazy values.
         class P(param.Parameterized):
             df = param.DataFrameLike(
                 default=pl.DataFrame({'a': [1, 2]}),
                 rows=2, eager_only=False)
-        # Matching row count passes.
         P(df=pl.LazyFrame({'a': [1, 2]}))
-        # Non-matching row count fails (proves rows are actually checked).
-        with pytest.raises(ValueError):
-            P(df=pl.LazyFrame({'a': [1, 2, 3]}))
-
-    def test_lazy_rows_validated_with_nulls_in_first_column(self):
-        # Row count must reflect total rows, not non-null values in the
-        # first column: .count() would undercount nulls and wrongly reject
-        # this otherwise-valid 4-row frame.
-        class P(param.Parameterized):
-            df = param.DataFrameLike(
-                default=pl.DataFrame({'a': [1, 2, 3, 4]}),
-                rows=4, eager_only=False)
-        P(df=pl.LazyFrame({'a': [1, None, 3, None]}))
-        with pytest.raises(ValueError):
-            P(df=pl.LazyFrame({'a': [1, None, 3]}))
+        # A mismatching row count does not raise for a lazy frame.
+        P(df=pl.LazyFrame({'a': [1, 2, 3]}))
 
 
 @skip_no_pandas

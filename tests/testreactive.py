@@ -1988,6 +1988,43 @@ class TestDisposeAndLifecycle:
         override.rx.dispose()  # No longer masking anything, so this now succeeds.
         assert override._disposed
 
+    def test_reactive_override_drops_the_masked_raw_input_reader_link(self):
+        """
+        Masking an input for the first time must drop the reader link the
+        raw input received at construction time (`rx.__init__`), not just a
+        previous override's: otherwise the raw input keeps thinking this
+        node reads it after `_direct_inputs()`/`_upstream()` have already
+        stopped reporting that, leaking a reader link that blocks disposal.
+        """
+        placeholder = rx(1)
+        override = rx(2)
+        b = rx(10) * placeholder
+        assert b in set(placeholder.rx.downstream())
+
+        b.rx.overrides[0] = override
+        assert b not in set(placeholder.rx.downstream())
+        placeholder.rx.dispose()  # No longer masked as a reader, so this now succeeds.
+        assert placeholder._disposed
+
+        b.rx.dispose()
+        override.rx.dispose()
+
+    def test_reactive_unmasking_restores_the_raw_input_reader_link(self):
+        """The reverse of the above: clearing an override must re-register the raw input as a reader."""
+        placeholder = rx(1)
+        override = rx(2)
+        b = rx(10) * placeholder
+        b.rx.overrides[0] = override
+        del b.rx.overrides[0]
+
+        assert b in set(placeholder.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            placeholder.rx.dispose()
+
+        override.rx.dispose()
+        b.rx.dispose()
+        placeholder.rx.dispose()
+
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
         """
         A ref held by a `Parameter(allow_refs=True)` is kept alive by its

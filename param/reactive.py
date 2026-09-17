@@ -281,22 +281,35 @@ class InputOverrides(MutableMapping):
             "the node was wired with can be overridden."
         )
 
+    def _resolve_raw(self, key: t.Any) -> t.Any:
+        """Return the raw, un-overridden ``args``/``kwargs`` value at ``key``."""
+        operation = t.cast('dict', self._node._operation)
+        if isinstance(key, str):
+            return operation.get('kwargs', {})[key]
+        return operation.get('args', ())[key]
+
     def _unwatch(self, key: t.Any):
         """
-        Stop following the previous override at ``key``, if any: drop the
+        Stop following whatever is currently active at ``key`` - the
+        override if one is set, otherwise the raw wired input - dropping the
         reader link it held (the reverse of ``rx.__init__``'s reader
-        registration) and stop watching whatever references it depended on.
+        registration for the raw input, or of ``__setitem__``'s for an
+        override) and stop watching whatever references it depended on.
 
         Called before the ``overrides`` dict is mutated, in both
         ``__setitem__`` and ``__delitem__``, so ``self._overrides`` still
-        reflects the value being replaced or removed.
+        reflects the value being replaced or removed. Dropping the raw
+        input's reader link the first time a key is masked matters just as
+        much as dropping a previous override's: otherwise the raw input
+        keeps thinking this node reads it after ``_direct_inputs()`` has
+        already stopped reporting that, and it can never be disposed.
         """
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides') or {}
-        if key in overrides:
-            for target in _iter_rx(overrides[key]):
-                target._drop_reader(node)
+        current = overrides[key] if key in overrides else self._resolve_raw(key)
+        for target in _iter_rx(current):
+            target._drop_reader(node)
         finalizers = node._finalizers
         for finalizer in (operation.get('override_watchers') or {}).pop(key, ()):
             # Firing the finalizer now both unwatches the source and
@@ -341,6 +354,11 @@ class InputOverrides(MutableMapping):
             raise KeyError(key)
         self._unwatch(key)
         del overrides[key]
+        # The raw input is masked no longer, so it is a direct input again -
+        # re-register the reader link `rx.__init__` would have set up had
+        # the override never existed, mirroring `__setitem__` above.
+        for target in _iter_rx(self._resolve_raw(key)):
+            target._register_reader(self._node)
         self._node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
@@ -1282,6 +1300,10 @@ class reactive_ops:
         """
         reactive = self._reactive
         tracked: set[rx] = set()
+        # Nodes `_upstream()` currently reports, kept in sync by `rederive()`
+        # so `mark_settling()` below can check membership in O(1) instead of
+        # re-walking the graph on every settle notification.
+        current: set[rx] = set()
         gates: list[Callable[[], None]] = []
 
         def subscribe(node: 'rx') -> None:
@@ -1299,8 +1321,9 @@ class reactive_ops:
                 # cleared override); acting on a stale notification from it
                 # would leave `wrapper` stuck True forever, since nothing
                 # ties its eventual completion back to this expression once
-                # it is no longer part of the computation.
-                if isinstance(reactive, rx) and any(n is node for n in reactive._upstream()):
+                # it is no longer part of the computation. `current` is kept
+                # up to date by `rederive()`, so no graph walk is needed here.
+                if node in current:
                     wrapper.param.update(object=True)
 
             gates.append(mark_settling)  # Keep alive; see `wrapper._settle_gates` below.
@@ -1313,10 +1336,13 @@ class reactive_ops:
 
         def rederive() -> None:
             if isinstance(reactive, rx):
+                current.clear()
                 for node in reactive._upstream():
+                    current.add(node)
                     subscribe(node)
 
         upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
+        current.update(upstream)
         # Report the correct state immediately if already mid-flight.
         initial = any(node._settling for node in upstream)
         wrapper = t.cast('Callable', Wrapper)(object=initial)
@@ -2453,6 +2479,13 @@ class rx:
             self._trigger = None
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
+        # Precompute the (usually empty) subset of `_fn_params` that can
+        # possibly hold a ref, so `_ref_inputs()` - called from `_upstream()`
+        # on every node on every walk - has nothing to do for the common
+        # case of a node with no `Parameter(allow_refs=True)` dependency.
+        self._ref_capable_params = [
+            p for p in self._fn_params if p.name is not None and isinstance(p.owner, Parameterized)
+        ]
         self._internal_params = self._compute_params()
         # Filter params that external objects depend on, ensuring
         # that Trigger parameters do not cause double execution
@@ -2619,11 +2652,8 @@ class rx:
         ref. Not part of ``_direct_inputs()`` (see there for why), so this is
         purely informational: it plays no part in reader/dispose bookkeeping.
         """
-        for p in self._fn_params:
-            owner, name = p.owner, p.name
-            if name is None or not isinstance(owner, Parameterized):
-                continue
-            ref = owner._param__private.refs.get(name)
+        for p in self._ref_capable_params:
+            ref = p.owner._param__private.refs.get(p.name)
             if ref is not None:
                 yield from _iter_rx(ref)
 
@@ -2973,14 +3003,23 @@ class rx:
         return finalizers
 
     def _watch_settle_change(self, callback: Callable[[], None]) -> None:
-        """Run ``callback`` when this node schedules an asynchronous resolution."""
+        """
+        Run ``callback`` when this node schedules an asynchronous resolution.
+
+        ``callback`` is referenced via ``weakref.WeakMethod`` if it is a
+        bound method, or a plain ``weakref.ref`` otherwise, like
+        ``_watch_ref_change``: a bare ``weakref.ref`` to a bound method is
+        collected immediately, since nothing else keeps that transient
+        bound-method object alive.
+        """
         watchers = self._settle_watchers
         if watchers is None:
             watchers = self._settle_watchers = []
         # Weak so a long-lived upstream node does not keep the (possibly much
         # shorter-lived) `.rx.updating()` wrapper alive; dropped automatically
         # once `callback` is collected, like `_readers`.
-        watchers.append(weakref.ref(callback, watchers.remove))
+        ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
+        watchers.append(ref_type(callback, watchers.remove))
 
     def _notify_settle_change(self) -> None:
         """Notify targets registered through `_watch_settle_change`."""
@@ -3000,6 +3039,9 @@ class rx:
         instead of only seeing ``_upstream()`` as it was at construction
         time. Weak like ``_watch_settle_change``: dropped once ``callback``
         is collected, so the caller must keep it alive to keep listening.
+        As with ``_watch_settle_change``, a bound-method ``callback`` is
+        referenced via ``weakref.WeakMethod`` rather than a plain
+        ``weakref.ref``, which would collect it immediately.
         """
         watchers = self._graph_watchers
         if watchers is None:
@@ -3007,11 +3049,10 @@ class rx:
             # Also register per ref-capable fn param: `_invalidate_current`
             # alone would miss a reassignment to a fresh async ref, which
             # resolves to `Undefined` and never fires a normal watcher.
-            for p in self._fn_params:
-                owner, name = p.owner, p.name
-                if name is not None and isinstance(owner, Parameterized):
-                    _watch_ref_change(owner, name, self._notify_graph_change)
-        watchers.append(weakref.ref(callback, watchers.remove))
+            for p in self._ref_capable_params:
+                _watch_ref_change(p.owner, p.name, self._notify_graph_change)
+        ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
+        watchers.append(ref_type(callback, watchers.remove))
 
     def _notify_graph_change(self) -> None:
         """Notify targets registered through `_watch_graph_change`."""

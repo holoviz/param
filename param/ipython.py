@@ -379,17 +379,22 @@ class IPythonDisplay:
         from IPython.display import display
 
         from param.depends import depends
-        from param.parameterized import Undefined, resolve_ref
+        from param.parameterized import Skip, Undefined, resolve_ref
         from param.reactive import rx
 
         handle = None
         cb: t.Callable[..., t.Any]
         if isinstance(self._reactive, rx):
             cb_rx_cb = self._reactive._callback
-            @depends(*self._reactive._params, watch=True)
+            @depends(*resolve_ref(cb_rx_cb), watch=True)
             def update_handle(*args, **kwargs):
-                if handle is not None:
-                    handle.update(cb_rx_cb())
+                if handle is None:
+                    return
+                try:
+                    value = cb_rx_cb()
+                except Skip:
+                    return
+                handle.update(value)
             cb = cb_rx_cb
         else:
             cb_reactive_cb = self._reactive
@@ -400,11 +405,15 @@ class IPythonDisplay:
             cb = cb_reactive_cb
         try:
             obj = cb()
+        except Skip:
+            obj = None
+        except TypeError:
+            # Fall back to the plain repr for partially bound functions
+            raise NotImplementedError
+        else:
             if obj is Undefined:
                 obj = None
-            handle = display(obj, display_id=uuid.uuid4().hex)
-        except TypeError:
-            raise NotImplementedError
+        handle = display(obj, display_id=uuid.uuid4().hex)
 
 def ipython_async_executor(func):
     event_loop = None

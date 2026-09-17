@@ -174,7 +174,6 @@ class TestFileDeserialization(unittest.TestCase):
 
     @pd_skip
     @ods_skip
-    @skipIf(sys.version_info[0] < 3, "py2k pandas does not support 'ods'")
     def test_data_frame_ods(self):
         path = '{}/val.ods'.format(self.temp_dir)
         P.data_frame.to_excel(path, index=False)
@@ -182,6 +181,7 @@ class TestFileDeserialization(unittest.TestCase):
 
     @pd_skip
     @feather_skip
+    @skipIf(sys.version_info[:2] == (3, 10), "mismatch of pyarrow and pandas version")
     def test_data_frame_feather(self):
         path = '{}/val.feather'.format(self.temp_dir)
         P.data_frame.to_feather(path)

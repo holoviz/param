@@ -1258,10 +1258,7 @@ class TestAwaiting:
         assert b.rx.value == 20
 
     async def test_reactive_awaiting_visible_through_ref_holding_rx(self):
-        """
-        A `Parameter(allow_refs=True)` holding an already-constructed `rx`
-        (the "stable outlet" idiom) is itself awaiting through `_ref_inputs()`.
-        """
+        """A `Parameter(allow_refs=True)` holding an `rx` is awaiting through `_ref_inputs()`."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1566,11 +1563,7 @@ class TestStale:
         assert fn.rx.value == 6
 
     async def test_reactive_stale_visible_through_override(self):
-        """
-        An async op reached only through an `.rx.overrides` replacement keeps
-        the overriding node stale for as long as it is settling, even once a
-        read has cleared the overriding node's own dirty flag.
-        """
+        """An override's settling op keeps its node stale even after a read clears its own dirty flag."""
         async def async_func(value):
             await asyncio.sleep(0.02)
             return value + 2
@@ -1585,8 +1578,8 @@ class TestStale:
         b.rx.value  # Clears `b`'s own dirty flag; `override` is still settling.
         assert b.rx.stale
 
-        # `.rx.stale` only clears on the next read/recompute, not on its own,
-        # so wait for the override itself to settle, then re-read `b`.
+        # `.rx.stale` only clears on the next read, so wait for the override
+        # to settle, then re-read `b`.
         await async_wait_until(lambda: not override.rx.awaiting)
         assert b.rx.value == 20
         assert not b.rx.stale
@@ -1740,9 +1733,7 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_override_set_before_construction(self):
-        """A baseline: an override already in place when `updating()` is
-        constructed is picked up by the initial `_upstream()` walk alone.
-        """
+        """Baseline: an override already in place is picked up by the initial `_upstream()` walk."""
         async def double(value):
             await asyncio.sleep(0.02)
             return value * 2
@@ -1762,11 +1753,7 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_override_set_after_construction(self):
-        """
-        The residual bug Part 3 fixes: `updating()` constructed *before* the
-        rewire must still flip for async work reached only through an
-        override installed afterwards, not just one already in place.
-        """
+        """`updating()` constructed before the rewire must still flip for an override set afterward."""
         async def double(value):
             await asyncio.sleep(0.02)
             return value * 2
@@ -1789,9 +1776,7 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_ref_reassigned_after_construction(self):
-        """Same residual bug, for a `Parameter(allow_refs=True)` reassigned
-        to a new `rx` after `updating()` was constructed.
-        """
+        """Same, for a `Parameter(allow_refs=True)` reassigned after `updating()` was constructed."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1936,12 +1921,7 @@ class TestDisposeAndLifecycle:
         assert a._disposed
 
     def test_reactive_dispose_raises_on_override_value_still_masking_an_input(self):
-        """
-        An override's value is registered as a reader of nothing new, but it
-        is *read by* the overriding node, so disposing it while it is still
-        masking an input must raise like any other still-read node, not
-        silently succeed the way it did before overrides registered readers.
-        """
+        """An override's value is read by the overriding node, so disposing it while still masking raises."""
         placeholder = rx(1)
         override = rx(2)
         b = rx(10) * placeholder

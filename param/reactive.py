@@ -284,11 +284,8 @@ class InputOverrides(MutableMapping):
     def _unwatch(self, key: t.Any):
         """
         Stop following the previous override at ``key``, if any: drop the
-        reader link it held on this node (the reverse of
-        ``rx.__init__``'s reader registration, kept symmetric so
-        ``_downstream()``/``_dispose()`` see an override the same way they
-        see an ordinary operation argument), and stop watching whatever
-        references it depended on for invalidation.
+        reader link it held (the reverse of ``rx.__init__``'s reader
+        registration) and stop watching whatever references it depended on.
 
         Called before the ``overrides`` dict is mutated, in both
         ``__setitem__`` and ``__delitem__``, so ``self._overrides`` still
@@ -327,9 +324,8 @@ class InputOverrides(MutableMapping):
             overrides = operation['overrides'] = {}
         self._unwatch(key)
         overrides[key] = value
-        # Register as a reader of the override, the same way `rx.__init__`
-        # does for an ordinary operation argument, so `_downstream()` and
-        # `_dispose()`'s cascade-safety check can see through it too.
+        # Register as a reader, same as `rx.__init__` does for an ordinary
+        # operation argument, so `_downstream()`/`_dispose()` see through it.
         for target in _iter_rx(value):
             target._register_reader(node)
         refs = resolve_ref(value, recursive=True)
@@ -1175,11 +1171,10 @@ class reactive_ops:
         Iterate over the ``rx`` nodes this expression derives its value from,
         directly or transitively, excluding itself. Pipeline edges count:
         ``.rx.pipe``/operator chaining, a branch (``expr[0]``), an ``rx``
-        passed as an operation argument (or set as its ``.rx.overrides``
-        replacement, once masked), and an ``rx`` reached through a
-        ``Parameter(allow_refs=True)`` this expression depends on. A
-        dependency reached only through ``bind()``, ``.rx.when``, or
-        ``.rx.where`` is not included.
+        passed as an operation argument (or its ``.rx.overrides`` replacement,
+        once masked), and an ``rx`` reached through a
+        ``Parameter(allow_refs=True)``. A dependency reached only through
+        ``bind()``, ``.rx.when``, or ``.rx.where`` is not included.
 
         Traversal order is unspecified and may change between calls as the
         pipeline is extended. Do not use ``in`` on the iterator to test
@@ -1253,11 +1248,9 @@ class reactive_ops:
 
         Also tracks asynchronous operations feeding the expression (e.g. via
         ``.rx.pipe``) for the whole time ``.rx.awaiting`` is ``True``, not just the
-        instant the operation is scheduled or finishes. This includes an
-        operation reached only through an ``.rx.overrides`` replacement or a
-        ``Parameter(allow_refs=True)`` fn param, and keeps tracking correctly
-        across a rewire through either one that happens after this method was
-        called, not just one already in place beforehand.
+        instant the operation is scheduled or finishes, including one reached only
+        through an ``.rx.overrides`` replacement or a ``Parameter(allow_refs=True)``
+        fn param, even if the override/ref is set after this method was called.
 
         Returns
         -------
@@ -1292,22 +1285,15 @@ class reactive_ops:
                 return
             tracked.add(node)
             if node._settling:
-                # `node` may have started (and even finished scheduling)
-                # settling before this subscription was added, e.g. a
-                # `.rx.watch()`-driven eager resolve that ran synchronously
-                # as part of the very override/ref rewire that made `node`
-                # reachable in the first place, before `_watch_settle_change`
-                # below had a chance to be registered on it. Catch up rather
-                # than waiting for a settle-change notification that already
-                # happened.
+                # May already be (or have finished) settling by the time it
+                # is discovered, e.g. via a `.rx.watch()`-driven eager resolve
+                # triggered by the same rewire that made it reachable.
                 wrapper.param.update(object=True)
-            # The watcher above only fires once a value is produced, which
-            # misses an asynchronous wait entirely, so also flip on scheduling.
+            # Settle-watcher only fires once a value is produced, missing an
+            # async wait entirely, so also flip on scheduling.
             node._watch_settle_change(wrapper)
-            # A node entering the graph later, through an override or a ref
-            # rewire, needs the same two subscriptions `upstream` gets below,
-            # not just a one-time snapshot of what was reachable when this
-            # method was called.
+            # Re-derive if this node's own inputs later change shape, so a
+            # node added through an override/ref rewire gets found too.
             node._watch_graph_change(rederive)
 
         def rederive() -> None:
@@ -1319,10 +1305,8 @@ class reactive_ops:
         # Report the correct state immediately if already mid-flight.
         initial = any(node._settling for node in upstream)
         wrapper = t.cast('Callable', Wrapper)(object=initial)
-        # `_watch_graph_change` holds `rederive` only weakly, so it must be
-        # kept alive for as long as `wrapper` is, i.e. for as long as the
-        # expression returned below is: `rederive` closes over `tracked` and
-        # `subscribe`, which is everything this method needs to keep working.
+        # `_watch_graph_change` holds `rederive` weakly, so keep it alive for
+        # as long as `wrapper` (and thus the returned expression) is.
         wrapper._rederive = rederive
 
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
@@ -2281,9 +2265,8 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: list[weakref.ref] | None = None
 
-    # Weak refs to callbacks notified when this node's own direct inputs may
-    # have changed shape (an override set/cleared, or a
-    # `Parameter(allow_refs=True)` fn param reassigned to a new ref).
+    # Weak refs to callbacks notified when this node's own inputs change
+    # shape (an override set/cleared, or an allow_refs=True param rewired).
     _graph_watchers: list[weakref.ref] | None = None
 
     # This node's own invalidation watchers, run early by `_dispose()`.
@@ -2453,9 +2436,8 @@ class rx:
         self._fn_params = self._compute_fn_params()
         self._internal_params = self._compute_params()
         # Register as a reader of every direct input, the reverse of
-        # `_upstream()`. Done after `_fn_params`/`_internal_params` are
-        # computed, since `_direct_inputs()` -> `_ref_inputs()` reads the
-        # cached `_fn_params` rather than recomputing it on every call.
+        # `_upstream()`. Done after `_fn_params` is computed, since
+        # `_direct_inputs()` -> `_ref_inputs()` reads it.
         for inp in self._direct_inputs():
             inp._register_reader(self)
         # Filter params that external objects depend on, ensuring
@@ -2584,11 +2566,10 @@ class rx:
         """
         Yield the ``rx`` nodes this node reads directly from: its ``_prev``
         predecessor, the ``_shared`` input it was cloned from when a pipeline
-        branches, any ``rx`` passed as an operation argument (masked
-        arguments are substituted with their override, mirroring
+        branches, any ``rx`` passed as an operation argument (a masked
+        argument is substituted with its override, mirroring
         ``_live_params()``), and any ``rx`` reached through a
-        ``Parameter(allow_refs=True)`` this node depends on (see
-        ``_ref_inputs()``).
+        ``Parameter(allow_refs=True)`` (see ``_ref_inputs()``).
         """
         for inp in (self._prev, self._shared):
             if isinstance(inp, rx):
@@ -2606,16 +2587,14 @@ class rx:
 
     def _ref_inputs(self) -> Iterator[t.Any]:
         """
-        Yield any ``rx`` node backing a raw reference this node depends on
-        through a ``Parameter(allow_refs=True)``, e.g. ``outlet.param.x.rx()``
-        where ``outlet.x`` was set to an ``rx`` expression rather than a plain
-        value.
+        Yield any ``rx`` backing a raw reference this node depends on through
+        a ``Parameter(allow_refs=True)``, e.g. ``outlet.param.x.rx()`` where
+        ``outlet.x`` was set to an ``rx`` rather than a plain value.
 
         ``_awaiting_ref`` only recognizes a bare async callable as "still
-        resolving"; it does not know an already-constructed ``rx`` can itself
-        be awaiting. Walking into it here, so it joins ``_upstream()``, is
-        what lets ``.rx.awaiting``/``.rx.stale``/``.rx.updating()`` see through
-        the ref without changing ``_resolve_ref``'s async detection at all.
+        resolving", not an already-constructed ``rx`` that is itself awaiting.
+        Joining ``_upstream()`` here is what lets
+        ``.rx.awaiting``/``.rx.stale``/``.rx.updating()`` see through the ref.
         """
         for p in self._fn_params:
             owner, name = p.owner, p.name
@@ -2828,12 +2807,8 @@ class rx:
             return
         self._dirty = True
         self._error_state = None
-        # A `Parameter(allow_refs=True)` fn param being reassigned to a new
-        # ref (e.g. a new `rx`) reaches here like any other dirtying event,
-        # and is itself a change to `_direct_inputs()`/`_ref_inputs()`, so
-        # tell `.rx.updating()`-style consumers to re-derive their
-        # subscriptions rather than only ever seeing the ref graph as it was
-        # when they were constructed.
+        # An allow_refs=True fn param being reassigned reaches here too, and
+        # is itself a change to `_ref_inputs()`, so tell `.rx.updating()`.
         self._notify_graph_change()
 
     def _invalidate_obj(self, *events):
@@ -2933,16 +2908,12 @@ class rx:
             node._dirty = True
             node._error_state = None
             node._live_params_cache = None
-        # Only `seeds` had their own `_direct_inputs()` change (they are the
-        # node(s) whose `operation['overrides']` dict was just mutated); a
-        # reader further downstream still reads the same input it always did,
-        # it just needs telling that *that* input's shape may have changed,
-        # which happens transitively once it re-derives from a seed it is
-        # itself subscribed to (see `.rx.updating()`). Done before triggering
-        # the override channels below, since a node with an active
-        # `.rx.watch()` resolves eagerly and synchronously as soon as that
-        # channel fires, which can itself schedule the very async work a
-        # freshly re-derived subscription needs to see coming.
+        # Only `seeds` had their own `_direct_inputs()` change; a downstream
+        # reader learns of it transitively once it re-derives (see
+        # `.rx.updating()`). Notify before triggering the override channels
+        # below, since an active `.rx.watch()` resolves eagerly as soon as a
+        # channel fires, which can itself schedule async work a freshly
+        # re-derived subscription needs to see coming.
         for node in seeds:
             node._notify_graph_change()
         for node in nodes:
@@ -2993,33 +2964,24 @@ class rx:
     def _watch_graph_change(self, callback: Callable[[], None]) -> None:
         """
         Register ``callback`` to run when this node's own direct inputs may
-        have changed shape: one of its overrides was set or cleared, or one
-        of its ``Parameter(allow_refs=True)`` fn params was reassigned to a
-        new ref. See ``_invalidate_overrides()``/``_invalidate_current()``,
-        the two call sites.
+        have changed shape: an override set/cleared, or an
+        ``allow_refs=True`` fn param reassigned. See
+        ``_invalidate_overrides()``/``_invalidate_current()``, the call sites.
 
-        Lets a consumer like ``.rx.updating()`` extend its subscriptions when
-        a node it did not previously know about enters the reachable graph,
-        instead of only ever seeing ``_upstream()`` as it was at construction
-        time. Weak, like ``_watch_settle_change``: the registration is
-        dropped automatically once ``callback`` is garbage collected, so the
-        caller must keep it alive for as long as it wants to keep listening,
-        typically by stashing it on whatever it is already keeping alive for
-        the same purpose (e.g. the ``Wrapper`` instance backing
-        ``.rx.updating()``'s return value).
+        Lets a consumer like ``.rx.updating()`` extend its subscriptions to a
+        node that enters the reachable graph later, instead of only seeing
+        ``_upstream()`` as it was at construction time. Weak, like
+        ``_watch_settle_change``: dropped once ``callback`` is collected, so
+        the caller must keep it alive for as long as it wants to keep
+        listening.
         """
         watchers = self._graph_watchers
         if watchers is None:
             watchers = self._graph_watchers = []
-            # First subscriber: also register with each ref-capable fn param
-            # this node has (see `_ref_inputs()`), so reassigning one to a
-            # new reference notifies this node even when the new reference
-            # resolves asynchronously. An ordinary parameter-changed watcher
-            # (`_invalidate_current`, the other call site of
-            # `_notify_graph_change()`) does not fire on its own for that
-            # case: a fresh async reference always resolves to `Undefined` at
-            # assignment time, which `Parameter.__set__` treats as "nothing to
-            # publish yet" and does not turn into a change event.
+            # Also register with each ref-capable fn param (see
+            # `_ref_inputs()`): `_invalidate_current` alone would miss a
+            # reassignment to a fresh async ref, which resolves to
+            # `Undefined` and so never fires a parameter-changed watcher.
             for p in self._fn_params:
                 owner, name = p.owner, p.name
                 if name is not None and isinstance(owner, Parameterized):
@@ -3733,11 +3695,9 @@ def _rx_transform(obj):
 register_reference_transform(_rx_transform)
 
 
-# Bridges `Parameterized`'s ref-change notifications (see
-# `register_ref_change_callback`) to whichever `rx` nodes have registered
-# interest in a given `(owner, name)` through `_watch_graph_change()`.
-# Populated lazily there, and pruned automatically once `owner` or an
-# interested node is garbage collected.
+# Bridges `register_ref_change_callback` to the `rx` nodes interested in a
+# given `(owner, name)`, registered lazily by `_watch_graph_change()` and
+# pruned once `owner` or the interested node is garbage collected.
 _ref_change_listeners: dict[int, dict[str, list[weakref.ref]]] = {}
 
 

@@ -223,23 +223,15 @@ _ref_change_callbacks: list[t.Callable[['Parameterized', str], None]] = []
 
 def register_ref_change_callback(callback):
     """
-    Register a callback invoked whenever a ``Parameter``'s raw dynamic
-    reference (``obj._param__private.refs[name]``) is replaced with a
-    different one, including by the constructor.
+    Register a callback invoked with ``(owner, name)`` whenever a
+    ``Parameter``'s raw dynamic reference (``obj._param__private.refs[name]``)
+    is replaced, including by the constructor.
 
-    This fires independent of whether the newly resolved *value* differs
-    from the old one: a reference that resolves asynchronously (e.g. a
-    fresh ``rx`` expression whose own operation has not settled yet) always
-    resolves to ``Undefined`` at assignment time, which does not fire an
-    ordinary parameter-changed watcher, so a consumer that needs to know
-    "this Parameter's reference was rewired" as opposed to "this Parameter's
-    value changed" cannot rely on ``obj.param.watch`` for that case and needs
-    this instead.
-
-    Parameters
-    ----------
-    callback: Callable[[Parameterized, str], None]
-        Called with the owning instance and the parameter name.
+    Fires regardless of whether the resolved *value* changed. An asynchronous
+    reference (e.g. a fresh, unsettled ``rx``) always resolves to
+    ``Undefined`` at assignment time, which does not trigger an ordinary
+    parameter-changed watcher, so this is the only way to learn a reference
+    was rewired.
     """
     return _ref_change_callbacks.append(callback)
 

@@ -2240,7 +2240,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
         if obj is not None and self.allow_refs and obj._param__private.initialized:
             syncing = name in obj._param__private.syncing
-            ref, deps, val, is_async = obj.param._resolve_ref(self, val)
+            ref, deps, val, is_async, scheduled = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 obj.param._update_ref(name, ref)
@@ -2249,6 +2249,8 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
                 _notify_ref_change(obj, name)
+            if scheduled:
+                _notify_async_ref_settle_change(obj, name)
             if is_async or val is Undefined:
                 return
 
@@ -2895,7 +2897,7 @@ class Parameters:
         params_to_ref = private.params_to_ref or []
 
         if not params and not params_to_deepcopy and not params_to_ref:
-            return {}, {}
+            return {}, {}, set()
 
         for p in params_to_deepcopy:
             self_._instantiate_param(p)
@@ -2903,7 +2905,7 @@ class Parameters:
             self_._instantiate_param(p, deepcopy=False)
 
         ## keyword arg setting
-        deps, refs = {}, {}
+        deps, refs, scheduled = {}, {}, set()
         for name, val in params.items():
             desc = self_.cls.get_param_descriptor(name)[0]
             if not desc:
@@ -2924,7 +2926,7 @@ class Parameters:
                 if name not in self_.cls._param__private.explicit_no_refs:
                     resolved = val
                     try:
-                        ref, _, resolved, _ = self_._resolve_ref(pobj, val)
+                        ref, _, resolved, _, _ = self_._resolve_ref(pobj, val)
                     except Exception:
                         ref = None
                     if ref:
@@ -2943,13 +2945,15 @@ class Parameters:
                 continue
 
             # Resolve references
-            ref, ref_deps, resolved, is_async = self_._resolve_ref(pobj, val)
+            ref, ref_deps, resolved, is_async, scheduled_ref = self_._resolve_ref(pobj, val)
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
+                if scheduled_ref:
+                    scheduled.add(name)
             if not is_async and not (resolved is Undefined or resolved is Skip):
                 setattr(self, name, resolved)
-        return refs, deps
+        return refs, deps, scheduled
 
     def _setup_refs(self_, refs: Mapping[str, Iterable[t.Any]]):
         if self_.self is None:
@@ -2989,6 +2993,7 @@ class Parameters:
     def _sync_refs(self_, *events):
         if self_.self is None:
             return
+        scheduled = []
         updates = {}
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
@@ -3010,7 +3015,7 @@ class Parameters:
                 async_executor(partial(
                     self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val), generation
                 ))
-                _notify_async_ref_settle_change(self_.self, pname)
+                scheduled.append(pname)
                 continue
 
             updates[pname] = new_val
@@ -3018,13 +3023,15 @@ class Parameters:
         with edit_constant(self_.self):
             with _syncing(self_.self, updates):
                 self_.update(updates)
+        for pname in scheduled:
+            _notify_async_ref_settle_change(self_.self, pname)
 
     def _resolve_ref(self_, pobj: Parameter, value: t.Any):
         is_gen = inspect.isgeneratorfunction(value)
         is_async = iscoroutinefunction(value) or is_gen
         deps = resolve_ref(value, recursive=pobj.nested_refs)
         if not (deps or is_async or is_gen):
-            return None, None, value, False
+            return None, None, value, False, False
         ref = value
         try:
             value = resolve_value(value, recursive=pobj.nested_refs)
@@ -3035,9 +3042,8 @@ class Parameters:
             async_executor(partial(
                 self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value), generation
             ))
-            _notify_async_ref_settle_change(self_.self, pobj.name)
             value = None
-        return ref, deps, value, is_async
+        return ref, deps, value, is_async, bool(is_async and pobj.name)
 
     def _schedule_async_ref(self_, pname: str) -> int:
         """
@@ -6255,7 +6261,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # has overridden the default of the `name` Parameter.
         if self.param.name.default == self.__class__.__name__:
             self.param._generate_name()
-        refs, deps = self.param._setup_params(**params)
+        refs, deps, scheduled = self.param._setup_params(**params)
         object_count += 1
 
         self._param__private.initialized = True
@@ -6284,6 +6290,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)
         self._param__private.refs = refs
+        for pname in scheduled:
+            _notify_async_ref_settle_change(self, pname)
 
     # 'Special' methods
 

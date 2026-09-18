@@ -2090,9 +2090,9 @@ class TestUpdatingStatus:
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
-        async def const(value):
+        async def double(value):
             await asyncio.sleep(0.05)
-            return 1
+            return value * 2
 
         def boom(scheduled):
             if scheduled:
@@ -2103,12 +2103,20 @@ class TestUpdatingStatus:
         expr = outlet.param.x.rx() + 1
         updating = expr.rx.updating()
         expr.rx.watch(lambda v: None)
-        updating.rx.watch(boom)
+        watcher = updating.rx.watch(boom)
 
         with pytest.raises(ValueError, match="watcher failed"):
-            outlet.x = bind(const, src)
+            outlet.x = bind(double, src)
 
         await async_wait_until(lambda: not expr.rx.awaiting)
+        assert outlet.x == 2
+        assert 'x' in outlet._param__private.refs
+        assert updating.rx.value is False
+
+        updating.rx.unwatch(watcher)
+        src.rx.value = 5
+        await async_wait_until(lambda: outlet.x == 10)
+        assert expr.rx.value == 11
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):

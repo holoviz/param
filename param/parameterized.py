@@ -2249,6 +2249,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
                 _notify_ref_change(obj, name)
+                _notify_async_ref_settle_change(obj, name)
             if scheduled:
                 _notify_async_ref_settle_change(obj, name)
             if is_async or val is Undefined:
@@ -2989,6 +2990,7 @@ class Parameters:
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
         _notify_ref_change(self_.self, name)
+        _notify_async_ref_settle_change(self_.self, name)
 
     def _sync_refs(self_, *events):
         if self_.self is None:
@@ -3086,7 +3088,9 @@ class Parameters:
         if self_.self is None:
             return False
         private = self_.self._param__private
-        return private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
+        ref = private.refs.get(pname)
+        is_async = iscoroutinefunction(ref) or inspect.isgeneratorfunction(ref)
+        return is_async and private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
 
     async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any], generation: int = 0):
         if self_.self is None:

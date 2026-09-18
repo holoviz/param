@@ -1817,6 +1817,43 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: old_ref.rx.value == 10)
         assert updating.rx.value is False
 
+    async def test_reactive_status_clears_when_async_ref_is_replaced_synchronously(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        class Source(param.Parameterized):
+            value = param.Integer(default=4)
+
+        async def slow():
+            await asyncio.Event().wait()
+
+        source = Source()
+        outlet = Outlet(x=slow)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        assert expr.rx.awaiting
+        assert updating.rx.value is True
+
+        outlet.x = 3
+        assert expr.rx.value == 4
+        assert not expr.rx.awaiting
+        assert not expr.rx.stale
+        await asyncio.sleep(0)
+        assert updating.rx.value is False
+
+        outlet.x = slow
+        assert expr.rx.awaiting
+        assert updating.rx.value is True
+
+        outlet.x = source.param.value
+        assert expr.rx.value == 5
+        assert not expr.rx.awaiting
+        assert not expr.rx.stale
+        await asyncio.sleep(0)
+        assert updating.rx.value is False
+
     def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
         calls = []
         original = rx._notify_graph_change

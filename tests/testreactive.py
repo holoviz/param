@@ -1799,13 +1799,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_after_ref_replaced_by_plain_value(self):
-        """
-        Replacing a `Parameter(allow_refs=True)` ref with a plain value must
-        notify `.rx.updating()` too, the same as replacing it with another
-        ref does: otherwise the old ref stays in the live upstream set
-        `rederive()` never gets told to drop, and if that now-unrelated node
-        settles again later, `updating()` sticks at `True` forever.
-        """
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2024,13 +2017,6 @@ class TestDisposeAndLifecycle:
         assert override._disposed
 
     def test_reactive_override_drops_the_masked_raw_input_reader_link(self):
-        """
-        Masking an input for the first time must drop the reader link the
-        raw input received at construction time (`rx.__init__`), not just a
-        previous override's: otherwise the raw input keeps thinking this
-        node reads it after `_direct_inputs()`/`_upstream()` have already
-        stopped reporting that, leaking a reader link that blocks disposal.
-        """
         placeholder = rx(1)
         override = rx(2)
         b = rx(10) * placeholder
@@ -2045,7 +2031,6 @@ class TestDisposeAndLifecycle:
         override.rx.dispose()
 
     def test_reactive_unmasking_restores_the_raw_input_reader_link(self):
-        """The reverse of the above: clearing an override must re-register the raw input as a reader."""
         placeholder = rx(1)
         override = rx(2)
         b = rx(10) * placeholder
@@ -2061,15 +2046,8 @@ class TestDisposeAndLifecycle:
         placeholder.rx.dispose()
 
     def test_reactive_masking_a_shared_input_drops_the_right_readers_entry(self):
-        """
-        `_drop_reader()` must not rely on `list.remove()` for a live entry:
-        `weakref.ref.__eq__` falls back to comparing the referents when both
-        are alive, which for two `rx` nodes runs `rx.__eq__` and returns a
-        truthy expression rather than a plain bool, so `list.remove(ref)`
-        would drop whichever entry happens to compare "equal" first rather
-        than the one actually being dropped. `a` here has two readers before
-        the mask, so a naive removal is exercised.
-        """
+        # `a` has two readers before the mask, so `rx.__eq__`-vs-identity
+        # confusion in a naive `list.remove()` would drop the wrong one.
         a = rx(1)
         other = rx(0).rx.pipe(lambda x, y: x + y, a)
         b = rx(0).rx.pipe(lambda x, y: x + y, a)
@@ -2083,13 +2061,6 @@ class TestDisposeAndLifecycle:
         assert b._disposed
 
     def test_reactive_delitem_raises_before_mutating_if_masked_input_was_disposed(self):
-        """
-        A masked input is not read while masked, so it can be disposed in
-        the meantime (see `test_reactive_override_drops_the_masked_raw_input_reader_link`).
-        Unmasking it would silently wire this node to an `rx` that raises on
-        every future read, so `__delitem__` must raise before mutating
-        anything, leaving the override (and this node) intact and usable.
-        """
         placeholder = rx(1)
         b = rx(10) + placeholder
         b.rx.overrides[0] = rx(2)
@@ -2102,14 +2073,8 @@ class TestDisposeAndLifecycle:
         assert b.rx.value == 12
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
-        """
-        `b.upper()` clones `b` internally (`_clone(copy=True)`), sharing
-        `b`'s `_operation` dict rather than copying it (see
-        `_operation_siblings()`). An override set or cleared on `b` must
-        update the clone's reader links too, not just `b`'s, or the input
-        keeps a stale link (blocking its disposal) or loses a link it still
-        needs (once unmasked again).
-        """
+        # `b.upper()` clones `b` sharing its `_operation` dict (see
+        # `_operation_siblings()`); the clone's reader links must track `b`'s.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)

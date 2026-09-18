@@ -2229,6 +2229,20 @@ def current_node() -> rx | None:
     return _current_node.get()
 
 
+_PREV_GENERATION = object()
+
+
+def _untracked_reference(value) -> bool:
+    """Whether settle counts cannot prove this reference unchanged."""
+    if isinstance(value, rx):
+        return False
+    if isinstance(value, (list, tuple, dict, slice)):
+        return True
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
+        return True
+    return isinstance(value, Parameter) and value.name is not None
+
+
 class rx:
     """
     A class for creating reactive expressions by wrapping objects.
@@ -2443,6 +2457,8 @@ class rx:
         self._resolve_generation = 0
         self._finished_generation = 0
         self._skipped = False
+        self._settle_count = 0
+        self._input_generations: dict[t.Any, int] | None = None
         self._error_state = None
         self._error_mode = error_mode
         if error_mode not in ('raise', 'propagate'):
@@ -2987,6 +3003,7 @@ class rx:
                     return
                 self._current_ = shared.rx.value
                 self._skipped = False
+                self._settle_count += 1
                 self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
@@ -3007,6 +3024,7 @@ class rx:
                         break
                     self._current_ = val
                     self._skipped = False
+                    self._settle_count += 1
                     self._finished_generation = generation
                     trigger.param.trigger('value')
                 if not broke and not stale() and self._finished_generation != generation:
@@ -3024,6 +3042,7 @@ class rx:
                     return
                 self._current_ = value
                 self._skipped = False
+                self._settle_count += 1
                 self._finished_generation = generation
                 trigger.param.trigger('value')
         except asyncio.CancelledError:
@@ -3038,6 +3057,7 @@ class rx:
             if self._error_mode == 'propagate':
                 self._current_ = ReactiveError(e, self)
                 self._skipped = False
+                self._settle_count += 1
                 trigger.param.trigger('value')
                 return
             # Mirror the synchronous path in _resolve.
@@ -3071,12 +3091,16 @@ class rx:
                 if isinstance(obj, ReactiveError) and not (operation or {}).get('process_failures'):
                     self._current_ = obj
                     self._skipped = False
+                    self._settle_count += 1
                     self._dirty = False
                     return obj
                 if obj is Skip or obj is Undefined:
                     self._current_ = Undefined
                     raise Skip
-                elif self._prev is not None and self._prev._skipped:
+                elif (
+                    self._prev is not None and self._prev._skipped
+                    and self._prev._settle_count == 0
+                ):
                     raise Skip
                 elif (
                     self._shared is not None and
@@ -3099,6 +3123,7 @@ class rx:
                     # skip state rather than be marked skipped by the handler.
                     self._current_ = value
                     self._skipped = shared._skipped
+                    self._settle_count = shared._settle_count
                     if self._is_async:
                         # The value was adopted without scheduling a task, so
                         # claim a generation for it. This supersedes a task an
@@ -3107,19 +3132,29 @@ class rx:
                         self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
+                generations = (
+                    {_PREV_GENERATION: self._prev._settle_count}
+                    if self._prev is not None else {}
+                )
+                fresh = self._prev is not None and not self._prev._skipped
                 if operation:
-                    obj = self._eval_operation(obj, operation)
+                    obj = self._eval_operation(obj, operation, generations, fresh)
                     if self._is_async:
                         self._lazy_resolve(obj)
                         if self._finished_generation == self._resolve_generation:
                             # Handle case where async call is resolved synchronously
                             # e.g. when there is no running event loop
                             self._skipped = False
+                            self._settle_count += 1
                             self._dirty = False
                             return self._current_
                         obj = Skip
                     if obj is Skip:
                         raise Skip
+                elif generations and self._nothing_new(generations, fresh):
+                    raise Skip
+                else:
+                    self._input_generations = generations
             except Skip:
                 self._dirty = False
                 self._skipped = True
@@ -3129,11 +3164,13 @@ class rx:
                     self._current_ = ReactiveError(e, self)
                     self._dirty = False
                     self._skipped = False
+                    self._settle_count += 1
                     return self._current_
                 self._error_state = e
                 raise e
             self._current_ = current = obj
             self._skipped = False
+            self._settle_count += 1
         else:
             current = self._current_
             # A node awaiting an asynchronous result still holds the value it
@@ -3481,9 +3518,26 @@ class rx:
         """
         Resolve one input of an operation, or the override standing in for it.
 
-        Raises ``Skip`` for an input that is settling, unresolved or skipped, and
-        returns a ``ReactiveError`` for the caller to propagate or hand on.
+        Raises ``Skip`` for an input that is settling or has never produced
+        a value, and returns a ``ReactiveError`` for the caller to propagate
+        or hand on.
+
+        A bare ``rx`` argument that is skipped but has settled before
+        resolves to its current value rather than raising: the general
+        ``resolve_value``/``_rx_transform`` path raises ``Skip`` for an
+        unchanged reference, correct for a direct watcher but wrong here,
+        where a sibling argument may have genuinely changed. Nested ``rx``
+        references inside a container argument are not covered yet.
         """
+        if isinstance(arg, rx):
+            if arg._settling:
+                raise Skip
+            value = arg.rx.value
+            if value is Skip or value is Undefined:
+                raise Skip
+            if arg._skipped and arg._settle_count == 0:
+                raise Skip
+            return value
         if any(ref._settling for ref in _iter_rx(arg)):
             raise Skip
         val = resolve_value(arg)
@@ -3491,26 +3545,59 @@ class rx:
             raise Skip
         return val
 
-    def _eval_operation(self, obj, operation):
+    def _nothing_new(self, generations, fresh):
+        """Avoid publishing an all-skipped first evaluation."""
+        if self._input_generations is None:
+            return not fresh
+        return generations == self._input_generations
+
+    def _eval_operation(self, obj, operation, generations, fresh):
         if operation['fn'] is _collect_marker:
             return self._eval_collect(operation)
         fn, args, kwargs = operation['fn'], operation['args'], operation['kwargs']
+        if generations is not None and _untracked_reference(fn):
+            generations = None
         # Resolving an override in its input's place is what lets it mask an
         # input that failed or never arrived (see .rx.overrides).
         overrides = operation.get('overrides') or {}
         process_failures = operation.get('process_failures')
         resolved_args = []
         for i, arg in enumerate(args):
-            val = self._resolve_input(overrides[i] if i in overrides else arg)
+            overridden = i in overrides
+            target = overrides[i] if overridden else arg
+            val = self._resolve_input(target)
             if isinstance(val, ReactiveError) and not process_failures:
+                self._input_generations = None
                 return val
+            if generations is not None:
+                if overridden:
+                    generations = None
+                elif isinstance(target, rx):
+                    generations[i] = target._settle_count
+                    fresh = fresh or not target._skipped
+                elif _untracked_reference(target):
+                    generations = None
             resolved_args.append(val)
         resolved_kwargs = {}
         for k, arg in kwargs.items():
-            val = self._resolve_input(overrides[k] if k in overrides else arg)
+            overridden = k in overrides
+            target = overrides[k] if overridden else arg
+            val = self._resolve_input(target)
             if isinstance(val, ReactiveError) and not process_failures:
+                self._input_generations = None
                 return val
+            if generations is not None:
+                if overridden:
+                    generations = None
+                elif isinstance(target, rx):
+                    generations[k] = target._settle_count
+                    fresh = fresh or not target._skipped
+                elif _untracked_reference(target):
+                    generations = None
             resolved_kwargs[k] = val
+        if generations and self._nothing_new(generations, fresh):
+            raise Skip
+        self._input_generations = generations
         token = _current_node.set(self)
         try:
             if isinstance(fn, str):

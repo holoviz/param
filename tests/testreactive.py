@@ -4619,3 +4619,162 @@ class TestDistinct:
         assert node.rx.value == 1
         a.rx.value = 4
         assert node.rx.value == 0
+
+
+class TestSkipSiblingArguments:
+    """A skipped reference must not discard a sibling argument's genuine
+    change. Predates ``.rx.distinct()`` (a plain ``Skip`` triggers it too),
+    which just makes staying skipped a common shape rather than a rare one.
+    """
+
+    def test_distinct_sibling_sharing_an_upstream_still_updates(self):
+        # `a` and `b` both derive from the same shared root; only `b`
+        # changes, `a` settles into "unchanged" via .rx.distinct() and
+        # stays there.
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        quotes = rx({'TGT': 42.1, 'ACME': 46.0})
+        def select(q, ticker):
+            return q[ticker]
+
+        a = quotes.rx.pipe(select, 'TGT').rx.pipe(lambda v: v).rx.distinct()
+        b = quotes.rx.pipe(select, 'ACME').rx.pipe(lambda v: v).rx.distinct()
+        out = rx(combine)(a=a, b=b)
+        assert out.rx.value == 88.1
+        assert calls == [(42.1, 46.0)]
+
+        quotes.rx.value = {'TGT': 42.1, 'ACME': 50.0}  # only ACME changes
+        assert out.rx.value == 92.1
+        assert calls == [(42.1, 46.0), (42.1, 50.0)]
+
+    def test_plain_skip_sibling_still_updates(self):
+        # The same failure mode with no .rx.distinct() involved at all:
+        # a kernel raising Skip directly, once its own upstream crosses a
+        # threshold, must not stop an unrelated sibling argument's later
+        # change from propagating.
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        def skip_if_negative(v):
+            if v < 0:
+                raise Skip
+            return v
+
+        x, y = rx(1), rx(10)
+        a = x.rx.pipe(skip_if_negative)
+        out = rx(combine)(a, y)
+        assert out.rx.value == 11
+
+        x.rx.value = -1  # a skips and stays skipped from here on
+        assert a.rx.value == 1
+        y.rx.value = 20  # sibling, unrelated to a, genuinely changes
+        assert out.rx.value == 21
+        assert calls == [(1, 10), (1, 20)]
+
+    def test_both_siblings_changing_together_still_resolves_correctly(self):
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        quotes = rx({'TGT': 42.1, 'ACME': 46.0})
+        def select(q, ticker):
+            return q[ticker]
+
+        a = quotes.rx.pipe(select, 'TGT').rx.pipe(lambda v: v).rx.distinct()
+        b = quotes.rx.pipe(select, 'ACME').rx.pipe(lambda v: v).rx.distinct()
+        out = rx(combine)(a=a, b=b)
+        assert out.rx.value == 88.1
+
+        quotes.rx.value = {'TGT': 40.0, 'ACME': 48.0}  # both change
+        assert out.rx.value == 88.0
+        assert calls == [(42.1, 46.0), (40.0, 48.0)]
+
+    def test_a_reference_that_has_never_settled_still_skips(self):
+        # The case the fix must NOT break: an argument whose every
+        # resolve, including its first, has raised Skip has no valid
+        # value to fall back to, and the operation must still decline.
+        def skipping(value):
+            raise Skip
+
+        skipped = rx(1).rx.pipe(skipping)
+        n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=skipped)
+        assert n.rx.value is None
+        assert skipped._skipped and skipped._settle_count == 0
+
+        n.rx.overrides['extra'] = 2
+        assert n.rx.value == 9
+
+    async def test_a_settling_reference_still_skips_the_whole_operation(self):
+        # _settling takes priority over a settled skip: publishing a's stale
+        # value alongside b's fresh one while a is genuinely in flight is
+        # what #1173 introduced _settling to prevent.
+        async def slow(v):
+            await asyncio.sleep(0.05)
+            return v
+
+        trigger = rx(1)
+        a = trigger.rx.pipe(slow)
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+        b = rx(10)
+        out = rx(combine)(a, b)
+        out.rx.watch(lambda v: None)
+        out.rx.value
+        await async_wait_until(lambda: out.rx.value == 11)
+
+        trigger.rx.value = 2  # schedules a's async re-resolution
+        assert a._settling
+        assert a._settle_count > 0
+        calls.clear()
+        b.rx.value = 20  # sibling changes while a is mid-flight
+        assert out.rx.value == 11  # unchanged -- still skipping, correctly
+        assert calls == []
+
+        await async_wait_until(lambda: calls == [(2, 20)])
+
+    def test_distinct_siblings_that_all_skip_do_not_recompute_or_notify(self):
+        calls, events = [], []
+        quotes = rx({'TGT': 42.1, 'ACME': 46.0, 'XYZ': 1.0})
+
+        def select(q, ticker):
+            return q[ticker]
+
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        a = quotes.rx.pipe(select, 'TGT').rx.distinct()
+        b = quotes.rx.pipe(select, 'ACME').rx.distinct()
+        out = rx(combine)(a=a, b=b)
+        out.rx.watch(events.append)
+        assert out.rx.value == 88.1
+
+        quotes.rx.value = {'TGT': 42.1, 'ACME': 46.0, 'XYZ': 2.0}
+        quotes.rx.value = {'TGT': 42.1, 'ACME': 46.0, 'XYZ': 3.0}
+
+        assert calls == [(42.1, 46.0)]
+        assert events == []
+
+    def test_skipped_left_operand_does_not_discard_right_operand_change(self):
+        def skip_if_negative(v):
+            if v < 0:
+                raise Skip
+            return v
+
+        x, y = rx(1), rx(10)
+        a = x.rx.pipe(skip_if_negative)
+        out = a + y
+        assert out.rx.value == 11
+
+        x.rx.value = -1
+        y.rx.value = 20
+
+        assert out.rx.value == 21

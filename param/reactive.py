@@ -1324,16 +1324,29 @@ class reactive_ops:
         # `WeakSet` comparisons can invoke `rx.__eq__`.
         tracked: weakref.WeakValueDictionary[int, 'rx'] = weakref.WeakValueDictionary()
         current: set[rx] = set()
-        settling_ids: set[int] = set()
+        current_refs: dict[tuple[int, str], tuple[Parameterized, str]] = {}
+        ref_callbacks: dict[tuple[int, str], Callable[[], None]] = {}
+        settling: set[int | tuple[int, str]] = set()
 
         def mark_settling(node: 'rx') -> None:
             if node not in current:
                 return
-            if node._settling:
-                settling_ids.add(id(node))
+            if node._awaiting:
+                settling.add(id(node))
             else:
-                settling_ids.discard(id(node))
-            wrapper.param.update(object=bool(settling_ids))
+                settling.discard(id(node))
+            wrapper.param.update(object=bool(settling))
+
+        def mark_ref_settling(key: tuple[int, str]) -> None:
+            ref = current_refs.get(key)
+            if ref is None:
+                return
+            owner, name = ref
+            if owner.param._awaiting_ref(name):
+                settling.add(key)
+            else:
+                settling.discard(key)
+            wrapper.param.update(object=bool(settling))
 
         def subscribe(node: 'rx') -> None:
             node_id = id(node)
@@ -1345,27 +1358,42 @@ class reactive_ops:
 
         def rederive() -> None:
             if isinstance(reactive, rx):
-                nonlocal current, settling_ids
+                nonlocal current, current_refs, settling
                 new_current = set(reactive._upstream())
                 for node in new_current:
                     subscribe(node)
                 current = new_current
-                settling_ids = {id(node) for node in current if node._settling}
-                wrapper.param.update(object=bool(settling_ids))
+                new_refs = {
+                    (id(owner), name): (owner, name)
+                    for node in current for owner, name in node._settle_ref_params
+                }
+                for key in ref_callbacks.keys() - new_refs.keys():
+                    del ref_callbacks[key]
+                for key, (owner, name) in new_refs.items():
+                    if key in ref_callbacks:
+                        continue
+                    callback = partial(mark_ref_settling, key)
+                    ref_callbacks[key] = callback
+                    _watch_async_ref_settle_change(owner, name, callback)
+                current_refs = new_refs
+                new_settling: set[int | tuple[int, str]] = {
+                    id(node) for node in current if node._awaiting
+                }
+                new_settling.update(
+                    key for key, (owner, name) in current_refs.items()
+                    if owner.param._awaiting_ref(name)
+                )
+                settling = new_settling
+                wrapper.param.update(object=bool(settling))
 
-        upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
-        current.update(upstream)
-        settling_ids.update(id(node) for node in upstream if node._settling)
-        initial = bool(settling_ids)
-        wrapper = t.cast('Callable', Wrapper)(object=initial)
+        wrapper = t.cast('Callable', Wrapper)(object=False)
         wrapper._rederive = rederive
         wrapper._mark_settling = mark_settling
 
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
 
-        for node in upstream:
-            subscribe(node)
+        rederive()
 
         return wrapper.param.object.rx()
 
@@ -3088,24 +3116,12 @@ class rx:
 
     def _watch_settle_change(self, callback: Callable[[t.Any], None]) -> None:
         """
-        Run ``callback(self)`` when this node schedules or settles an
-        asynchronous resolution of its own, or of a
-        ``Parameter(allow_refs=True)`` it depends on (see
-        `_compute_settle_ref_params()`). Passes the node so one shared
-        callback can serve many, instead of a per-node closure holding a
-        strong reference back to it. Weak, like `_readers`, so a long-lived
-        upstream node does not keep the (possibly much shorter-lived)
-        `.rx.updating()` wrapper alive.
+        Run ``callback(self)`` when this node schedules or settles its own
+        asynchronous resolution.
         """
         watchers = self._settle_watchers
         if watchers is None:
             watchers = self._settle_watchers = set()
-            # Also register per settle-ref-capable param (see
-            # `_compute_settle_ref_params()`): a bare async callable ref
-            # (e.g. `param.bind(coro, ...)`) settling to an unchanged value
-            # notifies no one otherwise.
-            for owner, name in self._settle_ref_params:
-                _watch_async_ref_settle_change(owner, name, self._notify_settle_change)
         _register_weak_listener(watchers, callback)
 
     def _notify_settle_change(self) -> None:

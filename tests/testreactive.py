@@ -1969,6 +1969,31 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not expr.rx.awaiting)
         assert updating.rx.value is False
 
+    async def test_reactive_updating_registers_one_listener_for_an_inherited_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.01)
+            return 1
+
+        src = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = rx(1).rx.pipe(lambda x, y: x + (y or 0), outlet.param.x)
+        for _ in range(50):
+            expr = expr + 1
+
+        updating = expr.rx.updating()
+        listeners = outlet._param__private.async_ref_settle_watchers['x']
+
+        assert len(listeners) == 1
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
     async def test_reactive_updating_unsticks_for_a_ref_nested_in_a_bind_argument(self):
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)

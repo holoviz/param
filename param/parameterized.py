@@ -220,6 +220,23 @@ def transform_reference(arg):
         arg = transform(arg)
     return arg
 
+def _register_weak_listener(store: set, callback: Callable[..., t.Any]) -> None:
+    """
+    Weakly add ``callback`` to ``store``, tolerating a bound method (which a
+    plain ``weakref.ref`` would not keep resolvable).
+    """
+    ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
+    store.add(ref_type(callback, store.discard))
+
+def _notify_weak_listeners(store: set | None, *args: t.Any) -> None:
+    """Call every live callback weakly registered in ``store`` with ``args``."""
+    if not store:
+        return
+    for ref in tuple(store):
+        callback = ref()
+        if callback is not None:
+            callback(*args)
+
 def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
     Weakly notify ``callback`` when ``owner``'s reference for ``name`` is
@@ -227,22 +244,13 @@ def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], 
     resolves to ``Undefined`` at assignment, which no ordinary watcher catches.
     """
     private = owner._param__private
-    watchers = private.ref_change_watchers
-    if watchers is None:
-        watchers = private.ref_change_watchers = {}
-    listeners = watchers.setdefault(name, set())
-    ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
-    listeners.add(ref_type(callback, listeners.discard))
+    if private.ref_change_watchers is None:
+        private.ref_change_watchers = {}
+    _register_weak_listener(private.ref_change_watchers.setdefault(name, set()), callback)
 
 def _notify_ref_change(owner, name):
     watchers = owner._param__private.ref_change_watchers
-    listeners = watchers.get(name) if watchers else None
-    if not listeners:
-        return
-    for ref in tuple(listeners):
-        callback = ref()
-        if callback is not None:
-            callback()
+    _notify_weak_listeners(watchers.get(name) if watchers else None)
 
 def _watch_async_ref_settle_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
@@ -251,22 +259,13 @@ def _watch_async_ref_settle_change(owner: 'Parameterized', name: str, callback: 
     an unchanged value, which fires no ordinary watcher.
     """
     private = owner._param__private
-    watchers = private.async_ref_settle_watchers
-    if watchers is None:
-        watchers = private.async_ref_settle_watchers = {}
-    listeners = watchers.setdefault(name, set())
-    ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
-    listeners.add(ref_type(callback, listeners.discard))
+    if private.async_ref_settle_watchers is None:
+        private.async_ref_settle_watchers = {}
+    _register_weak_listener(private.async_ref_settle_watchers.setdefault(name, set()), callback)
 
 def _notify_async_ref_settle_change(owner, name):
     watchers = owner._param__private.async_ref_settle_watchers
-    listeners = watchers.get(name) if watchers else None
-    if not listeners:
-        return
-    for ref in tuple(listeners):
-        callback = ref()
-        if callback is not None:
-            callback()
+    _notify_weak_listeners(watchers.get(name) if watchers else None)
 
 def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """

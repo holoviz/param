@@ -2033,7 +2033,7 @@ class TestReaderBookkeeping:
         gc.collect()
 
         assert ref() is None
-        assert a._settle_watchers == []
+        assert a._settle_watchers == set()
 
     def test_reactive_upstream_walk_terminates_on_reused_input(self):
         a = rx(1)

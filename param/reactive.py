@@ -113,7 +113,8 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, _watch_async_ref_settle_change, _watch_ref_change
+    transform_reference, _notify_weak_listeners, _register_weak_listener,
+    _watch_async_ref_settle_change, _watch_ref_change
 )
 from .parameters import Boolean, Event, String
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
@@ -314,6 +315,13 @@ class InputOverrides(MutableMapping):
             return operation.get('kwargs', {})[key]
         return operation.get('args', ())[key]
 
+    def _relink(self, value: t.Any, siblings: tuple, method: str) -> None:
+        """Call ``target.<method>(reader)`` on every ``rx`` in ``value``, for this node and each sibling."""
+        readers = (self._node, *siblings)
+        for target in _iter_rx(value):
+            for reader in readers:
+                getattr(target, method)(reader)
+
     def _unwatch(self, key: t.Any, siblings: tuple = ()):
         """
         Drop the raw wired input's reader link too, the first time a key is
@@ -326,10 +334,7 @@ class InputOverrides(MutableMapping):
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides') or {}
         current = overrides[key] if key in overrides else self._resolve_raw(key)
-        readers = (node, *siblings)
-        for target in _iter_rx(current):
-            for reader in readers:
-                target._drop_reader(reader)
+        self._relink(current, siblings, '_drop_reader')
         finalizers = node._finalizers
         for finalizer in (operation.get('override_watchers') or {}).pop(key, ()):
             # Firing the finalizer now both unwatches the source and
@@ -358,10 +363,7 @@ class InputOverrides(MutableMapping):
         siblings = tuple(node._operation_siblings())
         self._unwatch(key, siblings)
         overrides[key] = value
-        readers = (node, *siblings)
-        for target in _iter_rx(value):
-            for reader in readers:
-                target._register_reader(reader)
+        self._relink(value, siblings, '_register_reader')
         refs = resolve_ref(value, recursive=True)
         if refs:
             watchers = operation.setdefault('override_watchers', {})
@@ -387,10 +389,7 @@ class InputOverrides(MutableMapping):
         siblings = tuple(node._operation_siblings())
         self._unwatch(key, siblings)
         del overrides[key]
-        readers = (node, *siblings)
-        for target in _iter_rx(raw):
-            for reader in readers:
-                target._register_reader(reader)
+        self._relink(raw, siblings, '_register_reader')
         node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
@@ -1333,9 +1332,9 @@ class reactive_ops:
         reactive = self._reactive
         # Keyed by `id()`, not the node: a `WeakSet` wraps each check in a
         # fresh `weakref.ref`, whose `__eq__` unconditionally compares
-        # referents (no identity fast path), calling `rx.__eq__`. Weak
-        # values so a node dropped from the graph isn't pinned here forever.
-        tracked: dict[int, weakref.ref] = {}
+        # referents (no identity fast path), calling `rx.__eq__`. Values are
+        # weak so a node dropped from the graph isn't pinned here forever.
+        tracked: weakref.WeakValueDictionary[int, 'rx'] = weakref.WeakValueDictionary()
         current: set[rx] = set()
         # Maintained incrementally rather than recomputed with `any(...)`
         # on every notification: O(N) per notification is O(N^2) overall
@@ -1361,7 +1360,7 @@ class reactive_ops:
             node_id = id(node)
             if node_id in tracked:
                 return
-            tracked[node_id] = weakref.ref(node, lambda ref: tracked.pop(node_id, None))
+            tracked[node_id] = node
             node._watch_settle_change(mark_settling)
             # Re-derive if this node's own inputs change shape, so a node
             # added through an override/ref rewire gets found too.
@@ -2407,10 +2406,10 @@ class rx:
     _ref_binding: Callable[..., t.Any] | None = None
 
     # Weak refs to targets notified when this node schedules async work.
-    _settle_watchers: list[weakref.ref] | None = None
+    _settle_watchers: set[weakref.ref] | None = None
 
     # See `_watch_graph_change()`.
-    _graph_watchers: list[weakref.ref] | None = None
+    _graph_watchers: set[weakref.ref] | None = None
 
     # This node's own invalidation watchers, run early by `_dispose()`.
     _finalizers: list[weakref.finalize] | None = None
@@ -2791,38 +2790,20 @@ class rx:
         """
         Yield every other ``rx`` node sharing this node's exact ``_operation``
         dict by identity: a method-chaining clone (``_clone(copy=True)``)
-        defaults to sharing ``self._operation`` rather than copying it.
-        Overriding an argument on one such node must update the reader link
+        defaults to sharing ``self._operation`` rather than copying it, so
+        overriding an argument on one such node must update the reader link
         on every sibling too, or its link goes stale once the override
-        changes. A cousin clone - one made from a shared ancestor rather
-        than from ``self`` - is reachable only by walking downstream from
-        that ancestor, not from ``self`` directly, so every ancestor is a
-        seed for one shared downstream walk (not a separate walk per
-        ancestor, which is quadratic in a long chain: U ancestors each
-        re-walking an O(U)-ish downstream).
+        changes. ``_clone()`` tracks this directly on the operation dict at
+        the one point such aliasing occurs, rather than rediscovering it
+        here with a graph walk.
         """
         operation = self._operation
         if operation is None:
             return
-        seen = {id(self)}
-        stack = [self]
-        for ancestor in self._upstream():
-            if id(ancestor) in seen:
-                continue
-            seen.add(id(ancestor))
-            stack.append(ancestor)
-            if ancestor._operation is operation:
-                yield ancestor
-        while stack:
-            node = stack.pop()
-            for ref in tuple(node._readers or ()):
-                reader = ref()
-                if reader is None or id(reader) in seen:
-                    continue
-                seen.add(id(reader))
-                stack.append(reader)
-                if reader._operation is operation:
-                    yield reader
+        for ref in tuple(operation.get('_shared_nodes', ())):
+            node = ref()
+            if node is not None and node is not self:
+                yield node
 
     def _check_disposed(self) -> None:
         if self._disposed:
@@ -3181,29 +3162,22 @@ class rx:
         Run ``callback(self)`` when this node schedules an asynchronous
         resolution. Passes the node so one shared callback can serve many,
         instead of a per-node closure holding a strong reference back to it.
+        Weak, like `_readers`, so a long-lived upstream node does not keep
+        the (possibly much shorter-lived) `.rx.updating()` wrapper alive.
         """
         watchers = self._settle_watchers
         if watchers is None:
-            watchers = self._settle_watchers = []
+            watchers = self._settle_watchers = set()
             # Also register per ref-capable fn param: a bare async callable
             # ref (e.g. `param.bind(coro, ...)`) settling to an unchanged
             # value notifies no one otherwise.
             for owner, name in self._ref_capable_params:
                 _watch_async_ref_settle_change(owner, name, self._notify_settle_change)
-        # Weak so a long-lived upstream node does not keep the (possibly much
-        # shorter-lived) `.rx.updating()` wrapper alive; dropped automatically
-        # once `callback` is collected, like `_readers`.
-        ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
-        watchers.append(ref_type(callback, watchers.remove))
+        _register_weak_listener(watchers, callback)
 
     def _notify_settle_change(self) -> None:
         """Notify targets registered through `_watch_settle_change`."""
-        watchers = self._settle_watchers
-        if watchers:
-            for ref in tuple(watchers):
-                callback = ref()
-                if callback is not None:
-                    callback(self)
+        _notify_weak_listeners(self._settle_watchers, self)
 
     def _watch_graph_change(self, callback: Callable[[], None]) -> None:
         """
@@ -3215,23 +3189,17 @@ class rx:
         """
         watchers = self._graph_watchers
         if watchers is None:
-            watchers = self._graph_watchers = []
+            watchers = self._graph_watchers = set()
             # Also register per ref-capable fn param: `_invalidate_current`
             # alone would miss a reassignment to a fresh async ref, which
             # resolves to `Undefined` and never fires a normal watcher.
             for owner, name in self._ref_capable_params:
                 _watch_ref_change(owner, name, self._notify_graph_change)
-        ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
-        watchers.append(ref_type(callback, watchers.remove))
+        _register_weak_listener(watchers, callback)
 
     def _notify_graph_change(self) -> None:
         """Notify targets registered through `_watch_graph_change`."""
-        watchers = self._graph_watchers
-        if watchers:
-            for ref in tuple(watchers):
-                callback = ref()
-                if callback is not None:
-                    callback()
+        _notify_weak_listeners(self._graph_watchers)
 
     async def _resolve_async(self, obj=None, generation: int = 0):
         import asyncio
@@ -3464,6 +3432,9 @@ class rx:
         return bind(evaluate, *params)
 
     def _clone(self, operation=None, copy=False, **kwargs) -> Self:
+        # Aliases `self._operation` by identity rather than copying it,
+        # which `_operation_siblings()` needs to know about below.
+        reuse = operation is None and self._operation is not None
         operation = operation or self._operation
         depth = self._depth + 1
         if copy:
@@ -3480,12 +3451,18 @@ class rx:
         kwargs = dict(self._display_opts, **kwargs)
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
         label = kwargs.pop('label', self._label)
-        return type(self)(
+        new = type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
             _shared_obj=self._shared_obj, _wrapper=self._wrapper,
             error_mode=error_mode, label=label,
             **kwargs
         )
+        if reuse and operation is not None:
+            siblings = operation.setdefault('_shared_nodes', [])
+            if not siblings:
+                siblings.append(weakref.ref(self, siblings.remove))
+            siblings.append(weakref.ref(new, siblings.remove))
+        return new
 
     def __dir__(self):
         resolved = self._current

@@ -1877,6 +1877,42 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not override.rx.awaiting)
         assert updating.rx.value is False
 
+    def test_reactive_updating_does_not_pin_a_cleared_override(self):
+        """Subscribing to a node must not itself keep it alive after it drops out."""
+        b = rx(1) * rx(1)
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        override = rx(99)
+        ref = weakref.ref(override)
+        b.rx.overrides[0] = override
+        del b.rx.overrides[0]
+        del override
+        gc.collect()
+
+        assert ref() is None
+        assert updating.rx.value is False
+
+    def test_reactive_updating_does_not_pin_a_replaced_ref(self):
+        """Same, for a `Parameter(allow_refs=True)` ref replaced by a plain value."""
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        outlet = Outlet()
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        old_ref = rx(5)
+        ref = weakref.ref(old_ref)
+        outlet.x = old_ref
+        del old_ref
+        outlet.x = 3  # A plain value, not another ref.
+        gc.collect()
+
+        assert ref() is None
+        assert updating.rx.value is False
+
 class TestReaderBookkeeping:
     """Settle-watcher and upstream-walk bookkeeping."""
 

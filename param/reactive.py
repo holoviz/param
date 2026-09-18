@@ -1314,45 +1314,45 @@ class reactive_ops:
         False
         """
         reactive = self._reactive
-        tracked: set[rx] = set()
-        # Nodes `_upstream()` currently reports; kept in sync by `rederive()`
-        # so `mark_settling()` can check membership in O(1), not by walking.
+        # Keyed by `id()`, not the node: a `set`/`WeakSet` of `rx` nodes can
+        # hash-collide into calling `rx.__eq__`, which builds a comparison
+        # expression rather than a bool. Weak values so a node dropped from
+        # the graph (e.g. a cleared override) isn't pinned here forever.
+        tracked: dict[int, weakref.ref] = {}
+        # `_upstream()` as of the last `rederive()`, so `mark_settling()` can
+        # check membership in O(1).
         current: set[rx] = set()
-        gates: list[Callable[[], None]] = []
 
-        def subscribe(node: 'rx') -> None:
-            if node in tracked:
-                return
-            tracked.add(node)
-            if node._settling:
-                # May already be (or have finished) settling by the time it
-                # is discovered, e.g. via a `.rx.watch()`-driven eager resolve
-                # triggered by the same rewire that made it reachable.
+        def mark_settling(node: 'rx') -> None:
+            # `node` may have since dropped out of `_upstream()`; a stale
+            # notification must not stick `wrapper` at True forever. Shared
+            # across every node (told apart by the argument) rather than a
+            # closure per node, so nothing here holds a reference back to it.
+            if node in current:
                 wrapper.param.update(object=True)
 
-            def mark_settling() -> None:
-                # `node` may since have dropped out of `_upstream()` (e.g. a
-                # cleared override); acting on a stale notification would
-                # leave `wrapper` stuck True forever, since nothing ties its
-                # eventual completion back to this expression any more.
-                if node in current:
-                    wrapper.param.update(object=True)
-
-            gates.append(mark_settling)  # Keep alive; see `wrapper._settle_gates` below.
-            # Settle-watcher only fires once a value is produced, missing an
-            # async wait entirely, so also flip on scheduling.
+        def subscribe(node: 'rx') -> None:
+            node_id = id(node)
+            if node_id in tracked:
+                return
+            tracked[node_id] = weakref.ref(node, lambda _, node_id=node_id: tracked.pop(node_id, None))
+            if node._settling:
+                # May already be (or have finished) settling by the time it
+                # is discovered, e.g. via a rewire that also eagerly resolves.
+                wrapper.param.update(object=True)
+            # The settle-watcher only fires once a value is produced, so also
+            # flip on scheduling to cover the async wait itself.
             node._watch_settle_change(mark_settling)
-            # Re-derive if this node's own inputs later change shape, so a
-            # node added through an override/ref rewire gets found too.
+            # Re-derive if this node's own inputs change shape, so a node
+            # added through an override/ref rewire gets found too.
             node._watch_graph_change(rederive)
 
         def rederive() -> None:
             if isinstance(reactive, rx):
                 nonlocal current
-                # Swap in a fully-built replacement rather than clearing and
-                # refilling `current` in place, so a `mark_settling()` call
-                # arriving mid-rebuild never sees a node's membership
-                # toggled off before it is toggled back on.
+                # Swap in a full replacement rather than mutating `current`
+                # in place, so a concurrent `mark_settling()` never sees a
+                # node's membership toggled off before it toggles back on.
                 new_current = set(reactive._upstream())
                 for node in new_current:
                     subscribe(node)
@@ -1367,7 +1367,7 @@ class reactive_ops:
         # weakly, so keep them alive for as long as `wrapper` (and thus the
         # returned expression) is.
         wrapper._rederive = rederive
-        wrapper._settle_gates = gates
+        wrapper._mark_settling = mark_settling
 
         self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
@@ -3048,9 +3048,14 @@ class rx:
             finalizers.append(finalizer)
         return finalizers
 
-    def _watch_settle_change(self, callback: Callable[[], None]) -> None:
+    def _watch_settle_change(self, callback: Callable[['rx'], None]) -> None:
         """
-        Run ``callback`` when this node schedules an asynchronous resolution.
+        Run ``callback(self)`` when this node schedules an asynchronous
+        resolution.
+
+        Passing the node lets one shared callback serve many nodes, instead
+        of a per-node closure over ``self`` that would hold a strong
+        reference back to it, defeating the point of watching it weakly.
 
         Uses ``weakref.WeakMethod`` for a bound-method ``callback``, like
         ``_watch_ref_change``: a plain ``weakref.ref`` to a bound method is
@@ -3072,7 +3077,7 @@ class rx:
             for ref in tuple(watchers):
                 callback = ref()
                 if callback is not None:
-                    callback()
+                    callback(self)
 
     def _watch_graph_change(self, callback: Callable[[], None]) -> None:
         """

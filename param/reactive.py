@@ -2724,16 +2724,17 @@ class rx:
         defaults to sharing ``self._operation`` rather than copying it.
         Overriding an argument on one such node must update the reader link
         on every sibling too, or its link goes stale once the override
-        changes. A clone reads from the node it was cloned from, so that
-        node is reachable only via ``_upstream()`` if the override is set
-        through the clone rather than the other way around. Look both ways.
+        changes. A cousin clone - one made from a shared ancestor rather
+        than from ``self`` - is reachable only by walking downstream from
+        that ancestor, not from ``self`` directly, so check every ancestor's
+        downstream rather than just this node's.
         """
         operation = self._operation
         if operation is None:
             return
         seen = {id(self)}
-        for walk in (self._downstream(), self._upstream()):
-            for node in walk:
+        for ancestor in self._upstream():
+            for node in ancestor._downstream():
                 if id(node) not in seen and node._operation is operation:
                     seen.add(id(node))
                     yield node

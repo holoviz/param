@@ -2216,6 +2216,21 @@ class TestDisposeAndLifecycle:
         assert b in set(override.rx.downstream())
         assert b not in set(placeholder.rx.downstream())
 
+    def test_reactive_override_reader_links_follow_a_cousin_clone(self):
+        # `accessor1`/`accessor2` are independent clones of `b`, neither
+        # upstream nor downstream of each other, so finding one from the
+        # other needs walking every shared ancestor's downstream, not just
+        # `self`'s own `_upstream()`/`_downstream()`.
+        placeholder = rx('a')
+        override = rx('z')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        accessor1 = b.upper
+        accessor2 = b.lower
+        accessor1.rx.overrides[0] = override
+
+        assert accessor2 in set(override.rx.downstream())
+        assert accessor2 not in set(placeholder.rx.downstream())
+
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
         """
         A ref held by a `Parameter(allow_refs=True)` is kept alive by its

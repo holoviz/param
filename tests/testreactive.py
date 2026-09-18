@@ -1224,7 +1224,6 @@ class TestAwaiting:
         assert not expr.rx.awaiting
 
     async def test_reactive_awaiting_visible_through_override(self):
-        """An async op reached only through an `.rx.overrides` replacement counts."""
         async def async_func(value):
             await asyncio.sleep(0.02)
             return value + 2
@@ -1242,7 +1241,6 @@ class TestAwaiting:
         assert b.rx.value == 20
 
     async def test_reactive_awaiting_visible_through_override_set_before_first_read(self):
-        """Same as above, but the override is already in place before `b` is ever read."""
         async def async_func(value):
             await asyncio.sleep(0.02)
             return value + 2
@@ -1258,7 +1256,6 @@ class TestAwaiting:
         assert b.rx.value == 20
 
     async def test_reactive_awaiting_visible_through_ref_holding_rx(self):
-        """A `Parameter(allow_refs=True)` holding an `rx` is awaiting through `_ref_inputs()`."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1276,7 +1273,6 @@ class TestAwaiting:
         assert expr.rx.value == 2
 
     async def test_reactive_awaiting_visible_through_ref_holding_rx_set_after_construction(self):
-        """Same as above, but the ref is assigned after the expression already exists."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1563,7 +1559,6 @@ class TestStale:
         assert fn.rx.value == 6
 
     async def test_reactive_stale_visible_through_override(self):
-        """An override's settling op keeps its node stale even after a read clears its own dirty flag."""
         async def async_func(value):
             await asyncio.sleep(0.02)
             return value + 2
@@ -1585,7 +1580,6 @@ class TestStale:
         assert not b.rx.stale
 
     async def test_reactive_stale_visible_through_ref_holding_rx(self):
-        """Same, for a `Parameter(allow_refs=True)` holding an already-constructed `rx`."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1733,7 +1727,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_override_set_before_construction(self):
-        """Baseline: an override already in place is picked up by the initial `_upstream()` walk."""
         async def double(value):
             await asyncio.sleep(0.02)
             return value * 2
@@ -1753,7 +1746,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_override_set_after_construction(self):
-        """`updating()` constructed before the rewire must still flip for an override set afterward."""
         async def double(value):
             await asyncio.sleep(0.02)
             return value * 2
@@ -1776,7 +1768,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_ref_reassigned_after_construction(self):
-        """Same, for a `Parameter(allow_refs=True)` reassigned after `updating()` was constructed."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1827,13 +1818,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
-        """
-        A plain value tick is not a structural change, so it must not
-        trigger a graph re-derivation walk (only an override set/cleared or
-        a ref reassigned does, via `_invalidate_overrides()`/
-        `_watch_ref_change()`). Regression test for an O(chain length) walk
-        `_invalidate_current()` used to trigger on every single tick.
-        """
         calls = []
         original = rx._notify_graph_change
         def spy(self):
@@ -1852,11 +1836,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_ignores_settle_from_node_no_longer_upstream(self):
-        """
-        A node that was briefly an override, then removed, must not be able
-        to stick `.rx.updating()` at True forever just because it happens to
-        settle again later for an unrelated reason.
-        """
         async def double(value):
             await asyncio.sleep(0.02)
             return value * 2
@@ -1900,10 +1879,8 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_tracks_a_bare_async_callable_ref(self):
-        # `param.bind(...)` is a bare async callable, not an `rx`, exercising
-        # `_awaiting_ref` directly rather than `_ref_inputs()`. Also settles
-        # to the same value each time, so this cannot rely on a
-        # value-changed watcher.
+        # `param.bind(...)` exercises `_awaiting_ref` directly, not
+        # `_ref_inputs()`, and settles to the same value each time.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2142,7 +2119,6 @@ class TestDisposeAndLifecycle:
         assert a._disposed
 
     def test_reactive_dispose_raises_on_override_value_still_masking_an_input(self):
-        """An override's value is read by the overriding node, so disposing it while still masking raises."""
         placeholder = rx(1)
         override = rx(2)
         b = rx(10) * placeholder
@@ -2264,12 +2240,8 @@ class TestDisposeAndLifecycle:
         assert accessor2 not in set(placeholder.rx.downstream())
 
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
-        """
-        A ref held by a `Parameter(allow_refs=True)` is kept alive by its
-        owning `Parameterized`, not by whatever `rx` view was built from it,
-        so disposing a throwaway `outlet.param.x.rx()` view must not take
-        `src` down with it, even though `src` has no other reader.
-        """
+        # `src` is kept alive by `outlet`, not by the `rx` view built from
+        # it, so disposing the view must not cascade into `src`.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2281,13 +2253,8 @@ class TestDisposeAndLifecycle:
         assert outlet.x == 5
 
     def test_reactive_ref_reassignment_leaves_no_stale_reader_link(self):
-        """
-        Refs are not reader-tracked at all (see `_direct_inputs()`), so
-        reassigning a `Parameter(allow_refs=True)` must not leave the node
-        built from the old ref holding a dangling link on the new one:
-        disposing either side afterward should behave the same as disposing
-        an unrelated pair of expressions.
-        """
+        # Refs are not reader-tracked (see `_direct_inputs()`), so
+        # reassigning must not leave `expr` holding a link on the new ref.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2303,12 +2270,9 @@ class TestDisposeAndLifecycle:
         assert new.rx.value == 3
 
     def test_reactive_override_reader_link_is_per_occurrence(self):
-        """
-        `a` is read both directly (as an operation argument) and, briefly,
-        as an override of a different argument. Removing the override must
-        drop only that occurrence, leaving the direct read intact, not wipe
-        out `a`'s reader list entirely.
-        """
+        # `a` is read both directly and, briefly, as an override of a
+        # different argument; removing the override must drop only that
+        # occurrence, not `a`'s reader list entirely.
         a = rx(1)
         b = rx(1).rx.pipe(lambda x, y, z: x + y + z, a, rx(0))
         b.rx.overrides[1] = a
@@ -2319,7 +2283,6 @@ class TestDisposeAndLifecycle:
             a.rx.dispose()
 
     def test_reactive_override_reader_link_survives_clearing_a_different_key(self):
-        """Overriding the same node at two keys and clearing one leaves the other's reader link."""
         a = rx(1)
         b = rx(1).rx.pipe(lambda x, y, z: x + y + z, rx(0), rx(0))
         b.rx.overrides[0] = a

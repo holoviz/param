@@ -222,21 +222,9 @@ def transform_reference(arg):
 
 def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
-    Weakly register ``callback`` to run whenever ``owner``'s reference for
-    parameter ``name`` is replaced via ``obj.x = ref``, regardless of
-    whether the resolved *value* changed. Not called for a reference already
-    in place when ``owner`` is constructed, since nothing could have
-    registered a ``callback`` before ``owner`` exists to register it against.
-
-    An asynchronous reference (e.g. a fresh, unsettled ``rx``) always
-    resolves to ``Undefined`` at assignment time, which does not trigger an
-    ordinary parameter-changed watcher, so this is the only way to learn a
-    reference was rewired.
-
-    ``callback`` is referenced via ``weakref.WeakMethod`` if it is a bound
-    method, or a plain ``weakref.ref`` otherwise; a ``functools.partial``
-    wrapping a method is not unwrapped, so pass the bound method itself, or
-    keep the partial alive independently for as long as it should listen.
+    Weakly notify ``callback`` when ``owner``'s reference for ``name`` is
+    replaced, even if the resolved value is unchanged - an async reference
+    resolves to ``Undefined`` at assignment, which no ordinary watcher catches.
     """
     private = owner._param__private
     watchers = private.ref_change_watchers
@@ -258,12 +246,9 @@ def _notify_ref_change(owner, name):
 
 def _watch_async_ref_settle_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """
-    Weakly register ``callback`` to run whenever a bare async callable
-    reference (e.g. ``param.bind(coro, ...)``) for parameter ``name``
-    schedules or settles - unlike ``_watch_ref_change``, which only fires
-    when the reference itself is replaced. Scheduling and settling only
-    bump private counters; if the resolved value equals the previous one,
-    no ordinary watcher fires, so this is the only way to hear about it.
+    Weakly notify ``callback`` when a bare async callable reference (e.g.
+    ``param.bind(coro, ...)``) for ``name`` schedules or settles, even to
+    an unchanged value, which fires no ordinary watcher.
     """
     private = owner._param__private
     watchers = private.async_ref_settle_watchers
@@ -2277,8 +2262,8 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
-                # Mirror `_update_ref()`: a plain value replacing a ref is
-                # still a reference change that `rx._watch_graph_change()` needs.
+                # A plain value replacing a ref is still a reference change
+                # that rx._watch_graph_change() needs to hear about.
                 _notify_ref_change(obj, name)
             if is_async or val is Undefined:
                 return

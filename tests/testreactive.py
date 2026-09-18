@@ -1798,12 +1798,47 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: expr.rx.value == 20)
         assert updating.rx.value is False
 
+    async def test_reactive_updating_unsticks_after_ref_replaced_by_plain_value(self):
+        """
+        Replacing a `Parameter(allow_refs=True)` ref with a plain value must
+        notify `.rx.updating()` too, the same as replacing it with another
+        ref does: otherwise the old ref stays in the live upstream set
+        `rederive()` never gets told to drop, and if that now-unrelated node
+        settles again later, `updating()` sticks at `True` forever.
+        """
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return value
+
+        src = rx(1)
+        old_ref = src.rx.pipe(slow)
+        old_ref.rx.watch(lambda v: None)
+        outlet = Outlet(x=0)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        outlet.x = old_ref
+        await async_wait_until(lambda: expr.rx.value == 2)
+        assert updating.rx.value is False
+
+        outlet.x = 3  # A plain value, not another ref.
+        assert expr.rx.value == 4
+        assert not any(n is old_ref for n in expr.rx.upstream())
+
+        src.rx.value = 10  # `old_ref` settles again, but is no longer part of `expr`.
+        await async_wait_until(lambda: old_ref.rx.value == 10)
+        assert updating.rx.value is False
+
     def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
         """
         A plain value tick is not a structural change, so it must not
         trigger a graph re-derivation walk (only an override set/cleared or
         a ref reassigned does, via `_invalidate_overrides()`/
-        `watch_ref_change()`). Regression test for an O(chain length) walk
+        `_watch_ref_change()`). Regression test for an O(chain length) walk
         `_invalidate_current()` used to trigger on every single tick.
         """
         calls = []
@@ -2024,6 +2059,74 @@ class TestDisposeAndLifecycle:
         override.rx.dispose()
         b.rx.dispose()
         placeholder.rx.dispose()
+
+    def test_reactive_masking_a_shared_input_drops_the_right_readers_entry(self):
+        """
+        `_drop_reader()` must not rely on `list.remove()` for a live entry:
+        `weakref.ref.__eq__` falls back to comparing the referents when both
+        are alive, which for two `rx` nodes runs `rx.__eq__` and returns a
+        truthy expression rather than a plain bool, so `list.remove(ref)`
+        would drop whichever entry happens to compare "equal" first rather
+        than the one actually being dropped. `a` here has two readers before
+        the mask, so a naive removal is exercised.
+        """
+        a = rx(1)
+        other = rx(0).rx.pipe(lambda x, y: x + y, a)
+        b = rx(0).rx.pipe(lambda x, y: x + y, a)
+        assert {other, b} == set(a.rx.downstream()) - {a}
+
+        b.rx.overrides[0] = rx(10)
+
+        assert set(a.rx.downstream()) - {a} == {other}
+        assert not (b._readers or ())
+        b.rx.dispose()  # No longer masked as a reader of `a`, so this succeeds.
+        assert b._disposed
+
+    def test_reactive_delitem_raises_before_mutating_if_masked_input_was_disposed(self):
+        """
+        A masked input is not read while masked, so it can be disposed in
+        the meantime (see `test_reactive_override_drops_the_masked_raw_input_reader_link`).
+        Unmasking it would silently wire this node to an `rx` that raises on
+        every future read, so `__delitem__` must raise before mutating
+        anything, leaving the override (and this node) intact and usable.
+        """
+        placeholder = rx(1)
+        b = rx(10) + placeholder
+        b.rx.overrides[0] = rx(2)
+        placeholder.rx.dispose()
+
+        with pytest.raises(RuntimeError, match='Cannot remove this override'):
+            del b.rx.overrides[0]
+
+        assert 0 in b.rx.overrides
+        assert b.rx.value == 12
+
+    def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
+        """
+        `b.upper()` clones `b` internally (`_clone(copy=True)`), sharing
+        `b`'s `_operation` dict rather than copying it (see
+        `_operation_siblings()`). An override set or cleared on `b` must
+        update the clone's reader links too, not just `b`'s, or the input
+        keeps a stale link (blocking its disposal) or loses a link it still
+        needs (once unmasked again).
+        """
+        placeholder = rx('a')
+        override = rx('z')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        b.rx.overrides[0] = override
+        c = b.upper()
+        assert c.rx.value == 'XZ'
+
+        del b.rx.overrides[0]
+        assert c.rx.value == 'XA'
+
+        assert not (override._readers or ())
+        override.rx.dispose()  # No clone-held link left over from the mask.
+        assert override._disposed
+
+        assert b in set(placeholder.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            placeholder.rx.dispose()  # `b` and the clone both read it again, once unmasked.
 
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
         """

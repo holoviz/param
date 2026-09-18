@@ -290,26 +290,25 @@ class InputOverrides(MutableMapping):
 
     def _unwatch(self, key: t.Any):
         """
-        Stop following whatever is currently active at ``key`` - the
-        override if one is set, otherwise the raw wired input - dropping the
-        reader link it held (the reverse of ``rx.__init__``'s reader
-        registration for the raw input, or of ``__setitem__``'s for an
-        override) and stop watching whatever references it depended on.
+        Drop the reader link on whatever is currently active at ``key`` -
+        the override if one is set, otherwise the raw wired input, whose
+        link must go too the first time a key is masked or it can never be
+        disposed - and stop watching whatever references it depended on.
+        Also drops the link for every ``_operation_siblings()`` node, since
+        they read the same ``operation`` dict.
 
-        Called before the ``overrides`` dict is mutated, in both
-        ``__setitem__`` and ``__delitem__``, so ``self._overrides`` still
-        reflects the value being replaced or removed. Dropping the raw
-        input's reader link the first time a key is masked matters just as
-        much as dropping a previous override's: otherwise the raw input
-        keeps thinking this node reads it after ``_direct_inputs()`` has
-        already stopped reporting that, and it can never be disposed.
+        Called before ``overrides`` is mutated, in both ``__setitem__`` and
+        ``__delitem__``, so ``self._overrides`` still reflects the value
+        being replaced or removed.
         """
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides') or {}
         current = overrides[key] if key in overrides else self._resolve_raw(key)
+        readers = (node, *node._operation_siblings())
         for target in _iter_rx(current):
-            target._drop_reader(node)
+            for reader in readers:
+                target._drop_reader(reader)
         finalizers = node._finalizers
         for finalizer in (operation.get('override_watchers') or {}).pop(key, ()):
             # Firing the finalizer now both unwatches the source and
@@ -337,10 +336,12 @@ class InputOverrides(MutableMapping):
             overrides = operation['overrides'] = {}
         self._unwatch(key)
         overrides[key] = value
-        # Register as a reader, same as `rx.__init__` does for an ordinary
-        # operation argument, so `_downstream()`/`_dispose()` see through it.
+        # Register as a reader, like `rx.__init__` does for an ordinary
+        # operation argument, on `node` and every `_operation_siblings()`.
+        readers = (node, *node._operation_siblings())
         for target in _iter_rx(value):
-            target._register_reader(node)
+            for reader in readers:
+                target._register_reader(reader)
         refs = resolve_ref(value, recursive=True)
         if refs:
             watchers = operation.setdefault('override_watchers', {})
@@ -352,14 +353,28 @@ class InputOverrides(MutableMapping):
         overrides = self._overrides
         if not overrides or key not in overrides:
             raise KeyError(key)
+        raw = self._resolve_raw(key)
+        # A masked input isn't read (see `_unwatch()`), so it may already be
+        # disposed; unmasking it would then silently wire this node to an
+        # `rx` that raises on every future read, so check before mutating.
+        disposed = next((target for target in _iter_rx(raw) if target._disposed), None)
+        if disposed is not None:
+            raise RuntimeError(
+                f"Cannot remove this override: the input it was masking, {disposed!r}, "
+                "was disposed by .rx.dispose() while masked and can no longer be read. "
+                "Dispose the overriding node instead of removing the override."
+            )
         self._unwatch(key)
         del overrides[key]
-        # The raw input is masked no longer, so it is a direct input again -
-        # re-register the reader link `rx.__init__` would have set up had
-        # the override never existed, mirroring `__setitem__` above.
-        for target in _iter_rx(self._resolve_raw(key)):
-            target._register_reader(self._node)
-        self._node._invalidate_overrides()
+        # Unmasked again, so re-register the reader link `rx.__init__`
+        # would have set up had the override never existed, on `node` and
+        # every `_operation_siblings()`.
+        node = self._node
+        readers = (node, *node._operation_siblings())
+        for target in _iter_rx(raw):
+            for reader in readers:
+                target._register_reader(reader)
+        node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
         return iter(self._overrides or {})
@@ -1300,9 +1315,8 @@ class reactive_ops:
         """
         reactive = self._reactive
         tracked: set[rx] = set()
-        # Nodes `_upstream()` currently reports, kept in sync by `rederive()`
-        # so `mark_settling()` below can check membership in O(1) instead of
-        # re-walking the graph on every settle notification.
+        # Nodes `_upstream()` currently reports; kept in sync by `rederive()`
+        # so `mark_settling()` can check membership in O(1), not by walking.
         current: set[rx] = set()
         gates: list[Callable[[], None]] = []
 
@@ -1318,11 +1332,9 @@ class reactive_ops:
 
             def mark_settling() -> None:
                 # `node` may since have dropped out of `_upstream()` (e.g. a
-                # cleared override); acting on a stale notification from it
-                # would leave `wrapper` stuck True forever, since nothing
-                # ties its eventual completion back to this expression once
-                # it is no longer part of the computation. `current` is kept
-                # up to date by `rederive()`, so no graph walk is needed here.
+                # cleared override); acting on a stale notification would
+                # leave `wrapper` stuck True forever, since nothing ties its
+                # eventual completion back to this expression any more.
                 if node in current:
                     wrapper.param.update(object=True)
 
@@ -1336,10 +1348,15 @@ class reactive_ops:
 
         def rederive() -> None:
             if isinstance(reactive, rx):
-                current.clear()
-                for node in reactive._upstream():
-                    current.add(node)
+                nonlocal current
+                # Swap in a fully-built replacement rather than clearing and
+                # refilling `current` in place, so a `mark_settling()` call
+                # arriving mid-rebuild never sees a node's membership
+                # toggled off before it is toggled back on.
+                new_current = set(reactive._upstream())
+                for node in new_current:
                     subscribe(node)
+                current = new_current
 
         upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
         current.update(upstream)
@@ -2465,7 +2482,8 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
-        # Register as a reader of every direct input, the reverse of `_upstream()`.
+        # Reverse of `_direct_inputs()`, not `_upstream()` (see
+        # `_direct_inputs()` for why refs are excluded).
         for inp in self._direct_inputs():
             inp._register_reader(self)
 
@@ -2479,12 +2497,11 @@ class rx:
             self._trigger = None
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
-        # Precompute the (usually empty) subset of `_fn_params` that can
-        # possibly hold a ref, so `_ref_inputs()` - called from `_upstream()`
-        # on every node on every walk - has nothing to do for the common
-        # case of a node with no `Parameter(allow_refs=True)` dependency.
-        # `(owner, name)` pairs, not `Parameter` objects, so `name`'s `str |
-        # None` is narrowed to `str` once here rather than at every use.
+        # Precompute the (usually empty) ref-capable subset of `_fn_params`,
+        # so `_ref_inputs()` - called from `_upstream()` on every node on
+        # every walk - has nothing to do for a node with no
+        # `Parameter(allow_refs=True)` dependency. `(owner, name)` pairs, so
+        # `name`'s `str | None` is narrowed to `str` once, not per use.
         self._ref_capable_params: list[tuple[Parameterized, str]] = [
             (p.owner, p.name) for p in self._fn_params
             if p.name is not None and isinstance(p.owner, Parameterized)
@@ -2693,6 +2710,23 @@ class rx:
                 if reader is not None:
                     stack.append(reader)
 
+    def _operation_siblings(self) -> Iterator[t.Any]:
+        """
+        Yield every other ``rx`` node sharing this node's exact ``_operation``
+        dict by identity: a method-chaining clone (``_clone(copy=True)``)
+        defaults to sharing ``self._operation`` rather than copying it.
+        Overriding an argument on one such node must update the reader link
+        on every sibling too, or its link goes stale once the override
+        changes. Always reachable via ``_downstream()``, since a clone
+        registers itself as a reader of the node it was cloned from.
+        """
+        operation = self._operation
+        if operation is None:
+            return
+        for node in self._downstream():
+            if node is not self and node._operation is operation:
+                yield node
+
     def _check_disposed(self) -> None:
         if self._disposed:
             raise RuntimeError(
@@ -2887,19 +2921,28 @@ class rx:
         one: `reader` may be registered more than once (e.g. as both an
         operation argument and an override of a different argument), and
         each call here should undo exactly one `_register_reader()` call.
+
+        Rebuilds `self._readers` instead of calling `list.remove()` on a
+        live entry: `weakref.ref.__eq__` compares referents when both are
+        alive, which for two `rx` nodes runs `rx.__eq__` and returns a
+        truthy expression rather than a bool, so `list.remove()` would drop
+        whichever entry compares "equal" first rather than the right one.
         """
         readers = self._readers
         if readers is None:
             return False
         dropped = False
-        for ref in list(readers):
+        kept = []
+        for ref in readers:
             target = ref()
             if target is None:
-                readers.remove(ref)
+                continue
             elif target is reader and not dropped:
-                readers.remove(ref)
                 dropped = True
-        return bool(readers)
+            else:
+                kept.append(ref)
+        self._readers = kept
+        return bool(kept)
 
     def _dispose(self, cascade: bool = True, _cascaded: bool = False) -> None:
         """
@@ -3009,11 +3052,9 @@ class rx:
         """
         Run ``callback`` when this node schedules an asynchronous resolution.
 
-        ``callback`` is referenced via ``weakref.WeakMethod`` if it is a
-        bound method, or a plain ``weakref.ref`` otherwise, like
-        ``_watch_ref_change``: a bare ``weakref.ref`` to a bound method is
-        collected immediately, since nothing else keeps that transient
-        bound-method object alive.
+        Uses ``weakref.WeakMethod`` for a bound-method ``callback``, like
+        ``_watch_ref_change``: a plain ``weakref.ref`` to a bound method is
+        collected immediately, since nothing else keeps it alive.
         """
         watchers = self._settle_watchers
         if watchers is None:
@@ -3040,11 +3081,8 @@ class rx:
         ``allow_refs=True`` fn param reassigned. Lets ``.rx.updating()``
         extend its subscriptions to a node that enters the graph later,
         instead of only seeing ``_upstream()`` as it was at construction
-        time. Weak like ``_watch_settle_change``: dropped once ``callback``
-        is collected, so the caller must keep it alive to keep listening.
-        As with ``_watch_settle_change``, a bound-method ``callback`` is
-        referenced via ``weakref.WeakMethod`` rather than a plain
-        ``weakref.ref``, which would collect it immediately.
+        time. Weak, and handles a bound-method ``callback``, like
+        ``_watch_settle_change``.
         """
         watchers = self._graph_watchers
         if watchers is None:

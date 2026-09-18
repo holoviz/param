@@ -2250,6 +2250,9 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
+                # Mirror `_update_ref()`: a plain value replacing a ref is
+                # still a reference change that `rx._watch_graph_change()` needs.
+                _notify_ref_change(obj, name)
             if is_async or val is Undefined:
                 return
 

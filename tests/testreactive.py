@@ -1908,6 +1908,37 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not expr.rx.awaiting)
         assert updating.rx.value is False
 
+    async def test_reactive_updating_tracks_a_bare_async_callable_ref_passed_as_operation_arg(self):
+        # `outlet.param.x` is passed directly as an operation argument, not
+        # wrapped in `.rx()`, so this exercises `_ref_capable_params`'
+        # operation-args branch, not `_fn_params`.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = a.rx.pipe(add, outlet.param.x)
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
     async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):
         async def slow(value):
             await asyncio.sleep(0.02)
@@ -2191,8 +2222,10 @@ class TestDisposeAndLifecycle:
         assert b.rx.value == 12
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
-        # `b.upper()` clones `b` sharing its `_operation` dict (see
-        # `_operation_siblings()`); the clone's reader links must track `b`'s.
+        # `c = b.upper()` reads `b` as an operation argument, not via a
+        # shared `_operation` dict, so it never holds its own direct link
+        # on `placeholder`/`override` - only `b` does, and only `b`'s link
+        # needs to move.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
@@ -2238,6 +2271,20 @@ class TestDisposeAndLifecycle:
 
         assert accessor2 in set(override.rx.downstream())
         assert accessor2 not in set(placeholder.rx.downstream())
+
+    def test_reactive_operation_siblings_is_not_quadratic_in_chain_length(self):
+        # One shared downstream walk seeded by every ancestor, not one
+        # per-ancestor walk: O(N^2) here would take over a second at this
+        # depth, not milliseconds.
+        head = rx(0)
+        for _ in range(700):
+            head = head + 1
+        b = head.rx.pipe(lambda x, y: x + y, rx(1))
+
+        start = time.perf_counter()
+        b.rx.overrides[0] = rx(2)
+        del b.rx.overrides[0]
+        assert time.perf_counter() - start < 1.5
 
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
         # `src` is kept alive by `outlet`, not by the `rx` view built from

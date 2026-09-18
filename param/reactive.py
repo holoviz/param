@@ -314,18 +314,19 @@ class InputOverrides(MutableMapping):
             return operation.get('kwargs', {})[key]
         return operation.get('args', ())[key]
 
-    def _unwatch(self, key: t.Any):
+    def _unwatch(self, key: t.Any, siblings: tuple = ()):
         """
         Drop the raw wired input's reader link too, the first time a key is
         masked, or it could never be disposed. Must run before ``overrides``
         is mutated, while ``self._overrides`` still reflects the value being
-        replaced or removed.
+        replaced or removed. ``siblings`` is precomputed by the caller,
+        which needs it again right after, rather than walked twice.
         """
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides') or {}
         current = overrides[key] if key in overrides else self._resolve_raw(key)
-        readers = (node, *node._operation_siblings())
+        readers = (node, *siblings)
         for target in _iter_rx(current):
             for reader in readers:
                 target._drop_reader(reader)
@@ -354,9 +355,10 @@ class InputOverrides(MutableMapping):
         overrides = operation.get('overrides')
         if overrides is None:
             overrides = operation['overrides'] = {}
-        self._unwatch(key)
+        siblings = tuple(node._operation_siblings())
+        self._unwatch(key, siblings)
         overrides[key] = value
-        readers = (node, *node._operation_siblings())
+        readers = (node, *siblings)
         for target in _iter_rx(value):
             for reader in readers:
                 target._register_reader(reader)
@@ -381,10 +383,11 @@ class InputOverrides(MutableMapping):
                 "was disposed by .rx.dispose() while masked and can no longer be read. "
                 "Dispose the overriding node instead of removing the override."
             )
-        self._unwatch(key)
-        del overrides[key]
         node = self._node
-        readers = (node, *node._operation_siblings())
+        siblings = tuple(node._operation_siblings())
+        self._unwatch(key, siblings)
+        del overrides[key]
+        readers = (node, *siblings)
         for target in _iter_rx(raw):
             for reader in readers:
                 target._register_reader(reader)
@@ -2581,10 +2584,7 @@ class rx:
         # Precomputed so `_ref_inputs()`, called on every node on every
         # `_upstream()` walk, has nothing to do for the common case of no
         # `Parameter(allow_refs=True)` dependency.
-        self._ref_capable_params: list[tuple[Parameterized, str]] = [
-            (p.owner, p.name) for p in self._fn_params
-            if p.name is not None and isinstance(p.owner, Parameterized)
-        ]
+        self._ref_capable_params = self._compute_ref_capable_params()
         self._internal_params = self._compute_params()
         # Filter params that external objects depend on, ensuring
         # that Trigger parameters do not cause double execution
@@ -2796,18 +2796,33 @@ class rx:
         on every sibling too, or its link goes stale once the override
         changes. A cousin clone - one made from a shared ancestor rather
         than from ``self`` - is reachable only by walking downstream from
-        that ancestor, not from ``self`` directly, so check every ancestor's
-        downstream rather than just this node's.
+        that ancestor, not from ``self`` directly, so every ancestor is a
+        seed for one shared downstream walk (not a separate walk per
+        ancestor, which is quadratic in a long chain: U ancestors each
+        re-walking an O(U)-ish downstream).
         """
         operation = self._operation
         if operation is None:
             return
         seen = {id(self)}
+        stack = [self]
         for ancestor in self._upstream():
-            for node in ancestor._downstream():
-                if id(node) not in seen and node._operation is operation:
-                    seen.add(id(node))
-                    yield node
+            if id(ancestor) in seen:
+                continue
+            seen.add(id(ancestor))
+            stack.append(ancestor)
+            if ancestor._operation is operation:
+                yield ancestor
+        while stack:
+            node = stack.pop()
+            for ref in tuple(node._readers or ()):
+                reader = ref()
+                if reader is None or id(reader) in seen:
+                    continue
+                seen.add(id(reader))
+                stack.append(reader)
+                if reader._operation is operation:
+                    yield reader
 
     def _check_disposed(self) -> None:
         if self._disposed:
@@ -2848,6 +2863,33 @@ class rx:
         args = list(dinfo.get('dependencies', []))
         kwargs = list(dinfo.get('kw', {}).values())
         return args + kwargs
+
+    def _compute_ref_capable_params(self) -> list[tuple[Parameterized, str]]:
+        """
+        `(owner, name)` for every ``Parameter(allow_refs=True)`` this node
+        introduces itself, through `_fn_params` or a bare `Parameter`
+        passed directly as one of its own operation's arguments (not
+        inherited from `_prev`, that node's own responsibility). Uses
+        `_iter_bare_params()`, not `resolve_ref(arg, recursive=True)` like
+        `_compute_params()`: an argument can itself be an `rx`, and
+        resolving one through `resolve_ref` picks up its internal
+        ``Trigger``-based override channel too - not a genuine
+        ``allow_refs=True`` reference, so it has no business here.
+        """
+        params = list(self._fn_params)
+        operation = self._operation
+        if operation is not None:
+            for ref in resolve_ref(operation['fn']):
+                if ref not in params:
+                    params.append(ref)
+            for arg in chain(operation.get('args', ()), operation.get('kwargs', {}).values()):
+                for ref in _iter_bare_params(arg):
+                    if ref not in params:
+                        params.append(ref)
+        return [
+            (p.owner, p.name) for p in params
+            if p.name is not None and isinstance(p.owner, Parameterized)
+        ]
 
     def _compute_params(self) -> list[Parameter]:
         ps = list(self._fn_params)
@@ -3844,6 +3886,31 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
     elif isinstance(value, slice):
         for v in (value.start, value.stop, value.step):
             yield from _iter_rx(v)
+
+
+def _iter_bare_params(value: t.Any) -> Iterator[Parameter]:
+    """
+    Yield ``Parameter`` objects nested anywhere inside an operation
+    argument, mirroring ``_iter_rx``'s traversal - but, unlike
+    ``resolve_ref``, does not descend into an ``rx`` (already handled by
+    ``_direct_inputs()``) or invoke ``transform_reference``, which for an
+    ``rx`` resolves to its internal override-channel ``Trigger`` rather
+    than anything a caller here is looking for.
+    """
+    if isinstance(value, Parameter):
+        yield value
+    elif isinstance(value, rx):
+        return
+    elif isinstance(value, (list, tuple, set)):
+        for v in value:
+            yield from _iter_bare_params(v)
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            yield from _iter_bare_params(k)
+            yield from _iter_bare_params(v)
+    elif isinstance(value, slice):
+        for v in (value.start, value.stop, value.step):
+            yield from _iter_bare_params(v)
 
 
 def _input_live_params(arg: t.Any) -> set[tuple[int, str | None]]:

@@ -10,7 +10,7 @@ import weakref
 import param
 import pytest
 
-from param.parameterized import Skip, batch
+from param.parameterized import Comparator, Skip, batch
 from param.reactive import Collected, bind, collect, current_node, rx
 from typing import Any, Callable
 
@@ -5084,3 +5084,103 @@ class TestCollect:
         assert combined.rx.awaiting
 
         await async_wait_until(lambda: combined.rx.value == (1, 2))
+
+
+class TestDistinct:
+    """``.rx.distinct()``."""
+
+    def test_reactive_distinct_suppresses_downstream_recompute_when_value_repeats(self):
+        trigger = rx(0)
+        parity_calls, doubled_calls = [], []
+
+        def parity(v):
+            parity_calls.append(v)
+            return v % 2
+
+        def doubled(v):
+            doubled_calls.append(v)
+            return v * 1000
+
+        parity_node = trigger.rx.pipe(parity).rx.distinct()
+        doubled_node = parity_node.rx.pipe(doubled)
+        results = []
+        doubled_node.rx.watch(results.append)
+
+        trigger.rx.value = 2  # same parity as 0 -- distinct() must swallow this
+        trigger.rx.value = 3  # parity flips -- must propagate
+
+        # `parity` has to run on every recompute to find out whether the
+        # output changed; `doubled`, downstream of `.rx.distinct()`, only
+        # runs for the genuinely distinct values.
+        assert parity_calls == [0, 2, 3]
+        assert doubled_calls == [1]
+        assert results == [1000]
+
+    def test_reactive_distinct_default_equality_matches_comparator_is_equal(self):
+        # `a`'s value genuinely changes each time (so this isn't just Param's
+        # own equal-value assignment no-op); only the *piped* list result
+        # repeats, structurally, via Comparator.is_equal's list comparison.
+        a = rx(0)
+        node = a.rx.pipe(lambda v: [v % 2]).rx.distinct()
+        results = []
+        node.rx.watch(results.append)
+
+        a.rx.value = 1  # first-ever recompute -- produces [1], nothing to compare against yet
+        assert results == [[1]]
+        a.rx.value = 3  # produces [1] again -- equal per Comparator.is_equal
+        assert results == [[1]]
+        a.rx.value = 4  # produces [0] -- distinct
+        assert results == [[1], [0]]
+
+    def test_reactive_distinct_custom_fn_overrides_default_equality(self):
+        a = rx(0)
+        node = a.rx.pipe(lambda v: v).rx.distinct(fn=lambda old, new: old % 3 == new % 3)
+        results = []
+        node.rx.watch(results.append)
+
+        a.rx.value = 1  # first-ever recompute -- nothing to compare against yet
+        assert results == [1]
+        a.rx.value = 4  # 4 % 3 == 1 % 3 -- considered equal by the custom fn
+        assert results == [1]
+        a.rx.value = 5  # 5 % 3 != 1 % 3
+        assert results == [1, 5]
+
+    def test_reactive_distinct_uses_comparator_equalities_registry(self):
+        class Frame:
+            def __init__(self, v):
+                self.v = v
+
+        Comparator.equalities[Frame] = lambda a, b: a.v == b.v
+        try:
+            trigger = rx(0)
+            node = trigger.rx.pipe(lambda v: Frame(v % 2)).rx.distinct()
+            results = []
+            node.rx.pipe(lambda f: f.v).rx.watch(results.append)
+
+            trigger.rx.value = 2  # Frame(0) == Frame(0) via the registered equality
+            trigger.rx.value = 5  # Frame(1) != Frame(0)
+
+            assert results == [1]
+        finally:
+            del Comparator.equalities[Frame]
+
+    def test_reactive_distinct_fn_exception_is_not_swallowed(self):
+        def bad_fn(old, new):
+            raise RuntimeError('boom')
+
+        a = rx(1)
+        node = a.rx.pipe(lambda v: v).rx.distinct(fn=bad_fn)
+        node.rx.watch(lambda v: None)
+
+        a.rx.value = 2  # first-ever recompute -- bad_fn isn't consulted yet
+        with pytest.raises(RuntimeError, match='boom'):
+            a.rx.value = 3  # second recompute -- now bad_fn actually runs
+
+    def test_reactive_distinct_value_reflects_latest_distinct_result(self):
+        a = rx(1)
+        node = a.rx.pipe(lambda v: v % 2).rx.distinct()
+        assert node.rx.value == 1
+        a.rx.value = 3
+        assert node.rx.value == 1
+        a.rx.value = 4
+        assert node.rx.value == 0

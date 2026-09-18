@@ -2077,6 +2077,34 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not expr.rx.awaiting)
         assert updating.rx.value is False
 
+    async def test_reactive_awaiting_ref_unsticks_when_a_settle_listener_raises(self):
+        # A raising `.rx.watch()` callback must not be able to unwind the
+        # assignment between the scheduled-counter bump and the task handoff,
+        # or nothing is left to ever settle the reference.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.05)
+            return 1
+
+        def boom(scheduled):
+            if scheduled:
+                raise ValueError("watcher failed")
+
+        src = rx(1)
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        updating.rx.watch(boom)
+
+        with pytest.raises(ValueError, match="watcher failed"):
+            outlet.x = bind(const, src)
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
     async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):
         async def slow(value):
             await asyncio.sleep(0.02)

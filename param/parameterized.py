@@ -3025,6 +3025,8 @@ class Parameters:
                 async_executor(partial(
                     self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val), generation
                 ))
+                # Notify after scheduling, not before - see _schedule_async_ref().
+                _notify_async_ref_settle_change(self_.self, pname)
                 continue
 
             updates[pname] = new_val
@@ -3049,6 +3051,8 @@ class Parameters:
             async_executor(partial(
                 self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value), generation
             ))
+            # Notify after scheduling, not before - see _schedule_async_ref().
+            _notify_async_ref_settle_change(self_.self, pobj.name)
             value = None
         return ref, deps, value, is_async
 
@@ -3060,12 +3064,15 @@ class Parameters:
         The generation is bumped synchronously, before the task is handed to
         the executor, so that the reference reads as unsettled from the moment
         it is superseded rather than only once the task starts running.
+
+        Does not notify here: a raising listener must not be able to abort
+        the schedule before the task exists to ever settle it. The caller
+        notifies once the task has been handed to ``async_executor``.
         """
         if self_.self is None:
             return 0
         private = self_.self._param__private
         private.async_ref_scheduled[pname] += 1
-        _notify_async_ref_settle_change(self_.self, pname)
         return private.async_ref_scheduled[pname]
 
     def _settle_async_ref(self_, pname: str, generation: int):
@@ -3120,12 +3127,16 @@ class Parameters:
                         pass
                 self_._settle_async_ref(pname, generation)
         finally:
-            self_._settle_async_ref(pname, generation)
-            # Ensure we clean up but only if the task matches the current task,
-            # i.e. only the resolution that still owns the reference clears it.
-            async_refs = self_.self._param__private.async_refs
-            if pname in async_refs and async_refs[pname] is current_task:
-                del async_refs[pname]
+            # Guarded: a raising listener must not skip the cleanup below.
+            try:
+                self_._settle_async_ref(pname, generation)
+            finally:
+                # Ensure we clean up but only if the task matches the current
+                # task, i.e. only the resolution that still owns the
+                # reference clears it.
+                async_refs = self_.self._param__private.async_refs
+                if pname in async_refs and async_refs[pname] is current_task:
+                    del async_refs[pname]
 
     @classmethod
     def _changed(cls, event):

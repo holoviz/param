@@ -2412,6 +2412,29 @@ class TestDisposeAndLifecycle:
         with pytest.raises(RuntimeError, match='still read'):
             placeholder.rx.dispose()
 
+    def test_reactive_override_does_not_relink_disposed_method_chain_clones(self):
+        placeholder = rx('a')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        watcher = b.rx.watch(lambda v: None)
+        clone = b.upper()
+        clone.rx.value
+        clone.rx.dispose()
+
+        override = rx('z')
+        b.rx.overrides[0] = override
+        assert set(override.rx.downstream()) == {b}
+
+        b.rx.overrides[0] = 'plain'
+        assert not (override._readers or ())
+        override.rx.dispose()
+
+        del b.rx.overrides[0]
+        assert set(placeholder.rx.downstream()) == {b}
+
+        b.rx.unwatch(watcher)
+        b.rx.dispose()
+        assert placeholder._disposed
+
     def test_reactive_override_reader_links_follow_a_method_chain_clone_reversed(self):
         placeholder = rx('a')
         override = rx('z')

@@ -2769,7 +2769,7 @@ class rx:
             return
         for ref in tuple(operation.get('_shared_nodes', ())):
             node = ref()
-            if node is not None and node is not self:
+            if node is not None and node is not self and not node._disposed:
                 yield node
 
     def _check_disposed(self) -> None:

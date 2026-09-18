@@ -1302,7 +1302,9 @@ class reactive_ops:
         ``.rx.pipe``) for the whole time ``.rx.awaiting`` is ``True``, not just the
         instant the operation is scheduled or finishes, including one reached only
         through an ``.rx.overrides`` replacement or a ``Parameter(allow_refs=True)``
-        fn param, even if the override/ref is set after this method was called.
+        anywhere upstream - as a direct operation argument, inherited from ``_prev``,
+        or nested in a ``bind()``/``@param.depends`` argument - even if the
+        override/ref is set after this method was called.
 
         Returns
         -------
@@ -3187,11 +3189,14 @@ class rx:
 
     def _watch_settle_change(self, callback: Callable[[t.Any], None]) -> None:
         """
-        Run ``callback(self)`` when this node schedules an asynchronous
-        resolution. Passes the node so one shared callback can serve many,
-        instead of a per-node closure holding a strong reference back to it.
-        Weak, like `_readers`, so a long-lived upstream node does not keep
-        the (possibly much shorter-lived) `.rx.updating()` wrapper alive.
+        Run ``callback(self)`` when this node schedules or settles an
+        asynchronous resolution of its own, or of a
+        ``Parameter(allow_refs=True)`` it depends on (see
+        `_compute_settle_ref_params()`). Passes the node so one shared
+        callback can serve many, instead of a per-node closure holding a
+        strong reference back to it. Weak, like `_readers`, so a long-lived
+        upstream node does not keep the (possibly much shorter-lived)
+        `.rx.updating()` wrapper alive.
         """
         watchers = self._settle_watchers
         if watchers is None:
@@ -3212,14 +3217,14 @@ class rx:
         """
         Register ``callback`` to run when this node's own direct inputs may
         have changed shape: an override set/cleared, or an
-        ``allow_refs=True`` fn param reassigned. Lets ``.rx.updating()``
+        ``allow_refs=True`` param reassigned. Lets ``.rx.updating()``
         extend its subscriptions to a node that enters the graph later,
         instead of only seeing ``_upstream()`` as it was at construction time.
         """
         watchers = self._graph_watchers
         if watchers is None:
             watchers = self._graph_watchers = set()
-            # Also register per ref-capable fn param: `_invalidate_current`
+            # Also register per ref-capable param: `_invalidate_current`
             # alone would miss a reassignment to a fresh async ref, which
             # resolves to `Undefined` and never fires a normal watcher.
             for owner, name in self._ref_capable_params:

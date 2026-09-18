@@ -2388,10 +2388,10 @@ class TestDisposeAndLifecycle:
         assert b.rx.value == 12
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
-        # `c = b.upper()` reads `b` as an operation argument, not via a
-        # shared `_operation` dict, so it never holds its own direct link
-        # on `placeholder`/`override` - only `b` does, and only `b`'s link
-        # needs to move.
+        # `c = b.upper()` goes through two intermediate copy-clones sharing
+        # `b._operation` by identity (kept alive via `c._prev`/`._shared`),
+        # each with its own direct reader link on `placeholder`/`override`
+        # that also needs to move - not just `b`'s.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)

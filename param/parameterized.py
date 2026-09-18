@@ -23,6 +23,7 @@ import sys
 import types
 import typing as t
 import warnings
+import weakref
 from contextlib import contextmanager, ExitStack
 from inspect import getfullargspec
 
@@ -218,6 +219,40 @@ def transform_reference(arg):
             break
         arg = transform(arg)
     return arg
+
+def _register_weak_listener(store: set, callback: Callable[..., t.Any]) -> None:
+    ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
+    store.add(ref_type(callback, store.discard))
+
+def _notify_weak_listeners(store: set | None, *args: t.Any) -> None:
+    if not store:
+        return
+    for ref in tuple(store):
+        callback = ref()
+        if callback is not None:
+            callback(*args)
+
+def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
+    """Notify ``callback`` when a reference is replaced without a value change."""
+    private = owner._param__private
+    if private.ref_change_watchers is None:
+        private.ref_change_watchers = {}
+    _register_weak_listener(private.ref_change_watchers.setdefault(name, set()), callback)
+
+def _notify_ref_change(owner, name):
+    watchers = owner._param__private.ref_change_watchers
+    _notify_weak_listeners(watchers.get(name) if watchers else None)
+
+def _watch_async_ref_settle_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
+    """Notify ``callback`` when an async reference schedules or settles."""
+    private = owner._param__private
+    if private.async_ref_settle_watchers is None:
+        private.async_ref_settle_watchers = {}
+    _register_weak_listener(private.async_ref_settle_watchers.setdefault(name, set()), callback)
+
+def _notify_async_ref_settle_change(owner, name):
+    watchers = owner._param__private.async_ref_settle_watchers
+    _notify_weak_listeners(watchers.get(name) if watchers else None)
 
 def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
@@ -2205,7 +2240,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
         if obj is not None and self.allow_refs and obj._param__private.initialized:
             syncing = name in obj._param__private.syncing
-            ref, deps, val, is_async = obj.param._resolve_ref(self, val)
+            ref, deps, val, is_async, scheduled = obj.param._resolve_ref(self, val)
             refs = obj._param__private.refs
             if ref is not None:
                 obj.param._update_ref(name, ref)
@@ -2213,6 +2248,10 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
+                _notify_ref_change(obj, name)
+                _notify_async_ref_settle_change(obj, name)
+            if scheduled:
+                _notify_async_ref_settle_change(obj, name)
             if is_async or val is Undefined:
                 return
 
@@ -2859,7 +2898,7 @@ class Parameters:
         params_to_ref = private.params_to_ref or []
 
         if not params and not params_to_deepcopy and not params_to_ref:
-            return {}, {}
+            return {}, {}, set()
 
         for p in params_to_deepcopy:
             self_._instantiate_param(p)
@@ -2867,7 +2906,7 @@ class Parameters:
             self_._instantiate_param(p, deepcopy=False)
 
         ## keyword arg setting
-        deps, refs = {}, {}
+        deps, refs, scheduled = {}, {}, set()
         for name, val in params.items():
             desc = self_.cls.get_param_descriptor(name)[0]
             if not desc:
@@ -2888,7 +2927,7 @@ class Parameters:
                 if name not in self_.cls._param__private.explicit_no_refs:
                     resolved = val
                     try:
-                        ref, _, resolved, _ = self_._resolve_ref(pobj, val)
+                        ref, _, resolved, _, _ = self_._resolve_ref(pobj, val)
                     except Exception:
                         ref = None
                     if ref:
@@ -2907,13 +2946,15 @@ class Parameters:
                 continue
 
             # Resolve references
-            ref, ref_deps, resolved, is_async = self_._resolve_ref(pobj, val)
+            ref, ref_deps, resolved, is_async, scheduled_ref = self_._resolve_ref(pobj, val)
             if ref is not None:
                 refs[name] = ref
                 deps[name] = ref_deps
+                if scheduled_ref:
+                    scheduled.add(name)
             if not is_async and not (resolved is Undefined or resolved is Skip):
                 setattr(self, name, resolved)
-        return refs, deps
+        return refs, deps, scheduled
 
     def _setup_refs(self_, refs: Mapping[str, Iterable[t.Any]]):
         if self_.self is None:
@@ -2948,10 +2989,13 @@ class Parameters:
         deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
+        _notify_ref_change(self_.self, name)
+        _notify_async_ref_settle_change(self_.self, name)
 
     def _sync_refs(self_, *events):
         if self_.self is None:
             return
+        scheduled = []
         updates = {}
         for pname, ref in self_.self._param__private.refs.items():
             # Skip updating value if dependency has not changed
@@ -2973,6 +3017,7 @@ class Parameters:
                 async_executor(partial(
                     self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val), generation
                 ))
+                scheduled.append(pname)
                 continue
 
             updates[pname] = new_val
@@ -2980,13 +3025,15 @@ class Parameters:
         with edit_constant(self_.self):
             with _syncing(self_.self, updates):
                 self_.update(updates)
+        for pname in scheduled:
+            _notify_async_ref_settle_change(self_.self, pname)
 
     def _resolve_ref(self_, pobj: Parameter, value: t.Any):
         is_gen = inspect.isgeneratorfunction(value)
         is_async = iscoroutinefunction(value) or is_gen
         deps = resolve_ref(value, recursive=pobj.nested_refs)
         if not (deps or is_async or is_gen):
-            return None, None, value, False
+            return None, None, value, False, False
         ref = value
         try:
             value = resolve_value(value, recursive=pobj.nested_refs)
@@ -2998,7 +3045,7 @@ class Parameters:
                 self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value), generation
             ))
             value = None
-        return ref, deps, value, is_async
+        return ref, deps, value, is_async, bool(is_async and pobj.name)
 
     def _schedule_async_ref(self_, pname: str) -> int:
         """
@@ -3008,6 +3055,10 @@ class Parameters:
         The generation is bumped synchronously, before the task is handed to
         the executor, so that the reference reads as unsettled from the moment
         it is superseded rather than only once the task starts running.
+
+        Does not notify here: a raising listener must not be able to abort
+        the schedule before the task exists to ever settle it. The caller
+        notifies once the task has been handed to ``async_executor``.
         """
         if self_.self is None:
             return 0
@@ -3030,13 +3081,16 @@ class Parameters:
             return
         settled = self_.self._param__private.async_ref_settled
         settled[pname] = max(settled[pname], generation)
+        _notify_async_ref_settle_change(self_.self, pname)
 
     def _awaiting_ref(self_, pname: str) -> bool:
         """Whether an asynchronous reference has not yet produced a value."""
         if self_.self is None:
             return False
         private = self_.self._param__private
-        return private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
+        ref = private.refs.get(pname)
+        is_async = iscoroutinefunction(ref) or inspect.isgeneratorfunction(ref)
+        return is_async and private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
 
     async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any], generation: int = 0):
         if self_.self is None:
@@ -3066,12 +3120,12 @@ class Parameters:
                         pass
                 self_._settle_async_ref(pname, generation)
         finally:
-            self_._settle_async_ref(pname, generation)
-            # Ensure we clean up but only if the task matches the current task,
-            # i.e. only the resolution that still owns the reference clears it.
-            async_refs = self_.self._param__private.async_refs
-            if pname in async_refs and async_refs[pname] is current_task:
-                del async_refs[pname]
+            try:
+                self_._settle_async_ref(pname, generation)
+            finally:
+                async_refs = self_.self._param__private.async_refs
+                if pname in async_refs and async_refs[pname] is current_task:
+                    del async_refs[pname]
 
     @classmethod
     def _changed(cls, event):
@@ -5912,6 +5966,12 @@ class _InstancePrivate:
                 parameter_attribute (e.g. 'value'): list of `Watcher`s
     values: dict
         Dict of parameter name: value.
+    ref_change_watchers: dict[str, set[weakref.ReferenceType]] | None
+        Dict of parameter name: weak refs notified by ``_watch_ref_change``.
+        Lazy; ``None`` until something registers.
+    async_ref_settle_watchers: dict[str, set[weakref.ReferenceType]] | None
+        Dict of parameter name: weak refs notified by
+        ``_watch_async_ref_settle_change``. Lazy; ``None`` until something registers.
     """
 
     __slots__ = [
@@ -5924,6 +5984,8 @@ class _InstancePrivate:
         'async_ref_settled',
         'refs',
         'ref_watchers',
+        'ref_change_watchers',
+        'async_ref_settle_watchers',
         'syncing',
         'watchers',
         'values',
@@ -5939,6 +6001,8 @@ class _InstancePrivate:
     async_ref_settled: defaultdict[str, int]
     refs: dict[str, t.Any]
     ref_watchers: list[tuple[tuple[str, ...], Watcher]]
+    ref_change_watchers: dict[str, set[weakref.ReferenceType]] | None
+    async_ref_settle_watchers: dict[str, set[weakref.ReferenceType]] | None
     syncing: set[str]
     watchers: dict[str, dict[str, list[Watcher]]]
     values: dict[str, t.Any]
@@ -5966,6 +6030,8 @@ class _InstancePrivate:
                 "watchers": [] # Queue of batched watchers
             }
         self.ref_watchers = []
+        self.ref_change_watchers = None
+        self.async_ref_settle_watchers = None
         self.async_refs = {}
         self.async_ref_scheduled = defaultdict(int)
         self.async_ref_settled = defaultdict(int)
@@ -6199,7 +6265,7 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         # has overridden the default of the `name` Parameter.
         if self.param.name.default == self.__class__.__name__:
             self.param._generate_name()
-        refs, deps = self.param._setup_params(**params)
+        refs, deps, scheduled = self.param._setup_params(**params)
         object_count += 1
 
         self._param__private.initialized = True
@@ -6228,6 +6294,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
         self.param._setup_refs(deps)
         self.param._update_deps(init=True)
         self._param__private.refs = refs
+        for pname in scheduled:
+            _notify_async_ref_settle_change(self, pname)
 
     # 'Special' methods
 

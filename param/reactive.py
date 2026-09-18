@@ -185,6 +185,33 @@ class Trigger(Parameterized):
         self.internal = internal
         self.parameters = parameters
 
+class _EqualityGate:
+    """
+    Track the last value passed to :meth:`changed` and report whether a new
+    one is distinct from it, per ``is_equal``.
+
+    Shared by every place in this module that needs to skip acting on a
+    recomputed value that hasn't actually changed: :meth:`reactive_ops._watch`
+    (its ``onlychanged`` dispatch to a terminal callback), ``rx._callback``
+    (deduplicating IPython auto-display refreshes), and
+    :meth:`reactive_ops.distinct`. The first call to :meth:`changed` always
+    reports a change, since there is nothing yet to compare against.
+    """
+
+    _unset = object()
+
+    def __init__(self, is_equal=Comparator.is_equal):
+        self._is_equal = is_equal
+        self.value = self._unset
+
+    def changed(self, new) -> bool:
+        """Record ``new``; return False if it compares equal to the previous value."""
+        if self.value is not self._unset and self._is_equal(self.value, new):
+            return False
+        self.value = new
+        return True
+
+
 class Resolver(Parameterized):
     """Helper class to allow (recursively) resolving references."""
 
@@ -1421,6 +1448,67 @@ class reactive_ops:
             return resolve_value(x) if condition else resolve_value(y)
         return t.cast('t.Any', bind(ternary, self._reactive, trigger.param.value))
 
+    def distinct(self, fn=None) -> 'rx':
+        """
+        Return a new expression that skips a recompute that leaves the value unchanged.
+
+        Every time the current expression recomputes, its new value is compared
+        against the previous one; if they compare equal the new expression does
+        not update, so its own readers neither see a new value nor recompute.
+        Without ``.rx.distinct()`` an expression propagates on every upstream
+        invalidation regardless of whether the recomputed value actually
+        differs, which matters once a node's body is expensive.
+
+        This is unrelated to the ``onlychanged`` already applied by
+        :meth:`watch`: that only filters what a terminal callback is *told*,
+        it does not stop an intermediate node from recomputing. ``.rx.distinct()``
+        stops the propagation itself, so downstream nodes do not recompute either.
+
+        Like the rest of the pipeline, this stays lazy and does no work up
+        front. The very first recompute has nothing yet to compare against,
+        so it always goes through.
+
+        Parameters
+        ----------
+        fn : callable, optional
+            A function of two arguments, ``(old, new)``, returning ``True``
+            if they should be considered equal. Defaults to
+            :meth:`param.parameterized.Comparator.is_equal`. An exception
+            raised by ``fn`` propagates rather than being treated as "not
+            equal".
+
+        Returns
+        -------
+        rx
+            A new reactive expression that updates only when its value
+            actually changes.
+
+        .. versionadded:: 2.5.0
+
+        Examples
+        --------
+        Skip a downstream recompute when an intermediate value repeats:
+
+        >>> import param
+        >>> calls = []
+        >>> trigger = param.rx(0)
+        >>> parity = trigger.rx.pipe(lambda v: v % 2).rx.distinct()
+        >>> _ = parity.rx.pipe(lambda v: calls.append(v)).rx.value
+        >>> trigger.rx.value = 2  # same parity, distinct() skips the recompute
+        >>> trigger.rx.value = 3  # parity flips, so this one does propagate
+        >>> calls
+        [0, 1]
+        """
+        is_equal = Comparator.is_equal if fn is None else fn
+        gate = _EqualityGate(is_equal)
+
+        def _distinct(new):
+            if not gate.changed(new):
+                raise Skip
+            return new
+
+        return self.pipe(_distinct)
+
     # Operations to get the output and set the input of an expression
 
     def set(self, value):
@@ -1608,15 +1696,13 @@ class reactive_ops:
         return self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
     def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
-        last = _unset = object()
+        gate = _EqualityGate() if onlychanged else None
         def cb(value):
             from .parameterized import async_executor
-            nonlocal last
             if fn is None:
                 return
-            if onlychanged and last is not _unset and Comparator.is_equal(value, last):
+            if gate is not None and not gate.changed(value):
                 return
-            last = value
             if iscoroutinefunction(fn):
                 async_executor(partial(fn, value))
             else:
@@ -3084,18 +3170,16 @@ class rx:
     @property
     def _callback(self) -> Callable[..., t.Any]:
         params = [*self._params, self._ensure_override_channel().param.value]
-        last = _unset = object()
+        gate = _EqualityGate()
         def evaluate(*args, **kwargs):
-            nonlocal last
             out = self._current
             if self._skipped:
                 raise Skip
             if self._method:
                 out = getattr(out, self._method)
             out = self._transform_output(out)
-            if last is not _unset and Comparator.is_equal(out, last):
+            if not gate.changed(out):
                 raise Skip
-            last = out
             return out
         return bind(evaluate, *params)
 

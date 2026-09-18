@@ -2684,6 +2684,33 @@ class TestDisposeAndLifecycle:
         await asyncio.sleep(0.1)
         assert expr._current_ is param.Undefined
 
+    async def test_reactive_dispose_clears_updating_for_an_async_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.05)
+            return value
+
+        src = rx(1)
+        ref = src.rx.pipe(slow)
+        outlet = Outlet(x=ref)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        ref.rx.dispose()
+
+        assert updating.rx.value is False
+        assert expr.rx.awaiting is False
+
+        outlet.x = 10
+        assert expr.rx.value == 11
+        assert updating.rx.value is False
+
     def test_reactive_when_derived_node_is_not_tracked_as_reader_but_raises_on_stale_read(self):
         """``.rx.when()`` reads its source through a closure, invisible to `_readers`."""
         a = rx(1)

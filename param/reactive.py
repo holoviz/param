@@ -3033,6 +3033,8 @@ class rx:
                 "reader(s) first, or call .rx.unwatch() to remove the watch."
             )
         self._disposed = True
+        self._finished_generation = self._resolve_generation
+        self._notify_settle_change()
         task = self._current_task
         if task is not None and not task.done():
             task.cancel()

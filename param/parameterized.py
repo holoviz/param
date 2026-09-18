@@ -221,15 +221,10 @@ def transform_reference(arg):
     return arg
 
 def _register_weak_listener(store: set, callback: Callable[..., t.Any]) -> None:
-    """
-    Weakly add ``callback`` to ``store``, tolerating a bound method (which a
-    plain ``weakref.ref`` would not keep resolvable).
-    """
     ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
     store.add(ref_type(callback, store.discard))
 
 def _notify_weak_listeners(store: set | None, *args: t.Any) -> None:
-    """Call every live callback weakly registered in ``store`` with ``args``."""
     if not store:
         return
     for ref in tuple(store):
@@ -238,11 +233,7 @@ def _notify_weak_listeners(store: set | None, *args: t.Any) -> None:
             callback(*args)
 
 def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
-    """
-    Weakly notify ``callback`` when ``owner``'s reference for ``name`` is
-    replaced, even if the resolved value is unchanged - an async reference
-    resolves to ``Undefined`` at assignment, which no ordinary watcher catches.
-    """
+    """Notify ``callback`` when a reference is replaced without a value change."""
     private = owner._param__private
     if private.ref_change_watchers is None:
         private.ref_change_watchers = {}
@@ -253,11 +244,7 @@ def _notify_ref_change(owner, name):
     _notify_weak_listeners(watchers.get(name) if watchers else None)
 
 def _watch_async_ref_settle_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
-    """
-    Weakly notify ``callback`` when a bare async callable reference (e.g.
-    ``param.bind(coro, ...)``) for ``name`` schedules or settles, even to
-    an unchanged value, which fires no ordinary watcher.
-    """
+    """Notify ``callback`` when an async reference schedules or settles."""
     private = owner._param__private
     if private.async_ref_settle_watchers is None:
         private.async_ref_settle_watchers = {}
@@ -2261,8 +2248,6 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
-                # A plain value replacing a ref is still a reference change
-                # that rx._watch_graph_change() needs to hear about.
                 _notify_ref_change(obj, name)
             if is_async or val is Undefined:
                 return
@@ -3025,7 +3010,6 @@ class Parameters:
                 async_executor(partial(
                     self_._async_ref, pname, t.cast("t.Awaitable[t.Any]", new_val), generation
                 ))
-                # Notify after scheduling, not before - see _schedule_async_ref().
                 _notify_async_ref_settle_change(self_.self, pname)
                 continue
 
@@ -3051,7 +3035,6 @@ class Parameters:
             async_executor(partial(
                 self_._async_ref, pobj.name, t.cast("t.Awaitable[t.Any]", value), generation
             ))
-            # Notify after scheduling, not before - see _schedule_async_ref().
             _notify_async_ref_settle_change(self_.self, pobj.name)
             value = None
         return ref, deps, value, is_async
@@ -3127,13 +3110,9 @@ class Parameters:
                         pass
                 self_._settle_async_ref(pname, generation)
         finally:
-            # Guarded: a raising listener must not skip the cleanup below.
             try:
                 self_._settle_async_ref(pname, generation)
             finally:
-                # Ensure we clean up but only if the task matches the current
-                # task, i.e. only the resolution that still owns the
-                # reference clears it.
                 async_refs = self_.self._param__private.async_refs
                 if pname in async_refs and async_refs[pname] is current_task:
                     del async_refs[pname]

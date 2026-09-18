@@ -1940,10 +1940,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_for_a_ref_inherited_from_prev(self):
-        # `outlet.param.x` is a direct operation argument of `first`, not of
-        # `expr` itself; `expr` only reaches it by inheriting `first._params`
-        # through `_prev`, which `_ref_capable_params` deliberately excludes
-        # (that node's own responsibility) but `_internal_params` includes.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1974,10 +1970,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_for_a_ref_nested_in_a_bind_argument(self):
-        # `outlet.param.x` is not itself the operation argument, only a
-        # dependency of the `bind()` result that is, reached through
-        # `resolve_ref(arg, recursive=True)` in `_internal_params` but not
-        # through `_ref_capable_params`'s non-recursive `_iter_bare_params`.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2006,10 +1998,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_for_a_ref_reached_through_param_depends(self):
-        # `outlet.param.x` is reached only through `holder.get`'s
-        # `@param.depends('o.x')` dependency, resolved into `_internal_params`
-        # via `_fn_params`' `method_dependencies()`, not through anything
-        # `_ref_capable_params` inspects for a plain (non-owner) fn.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2046,10 +2034,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_for_a_ref_nested_in_an_operation_arg(self):
-        # `outlet.param.x` is a bare `Parameter` nested inside a `dict`/`list`
-        # operation kwarg, not a top-level argument - already covered by
-        # `_iter_bare_params()`'s container recursion, unlike the three cases
-        # above.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2078,9 +2062,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_awaiting_ref_unsticks_when_a_settle_listener_raises(self):
-        # A raising `.rx.watch()` callback must not be able to unwind the
-        # assignment between the scheduled-counter bump and the task handoff,
-        # or nothing is left to ever settle the reference.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2120,7 +2101,7 @@ class TestUpdatingStatus:
 
         src.rx.value = 2
         await async_wait_until(lambda: b.rx.awaiting)
-        del b.rx.overrides[0]  # Value stays 2, same as before the override.
+        del b.rx.overrides[0]
 
         await async_wait_until(lambda: updating.rx.value is False)
 
@@ -2140,11 +2121,11 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not b.rx.awaiting)
         del b.rx.overrides[0]
 
-        src.rx.value = 5  # Settling now, but outside the graph.
+        src.rx.value = 5
         await async_wait_until(lambda: override.rx.awaiting)
         assert updating.rx.value is False
 
-        b.rx.overrides[0] = override  # Re-enters mid-flight.
+        b.rx.overrides[0] = override
         assert updating.rx.value is True
 
     def test_reactive_updating_does_not_pin_a_cleared_override(self):
@@ -2304,7 +2285,7 @@ class TestDisposeAndLifecycle:
         gc.collect()
 
         assert a._readers == []
-        a.rx.dispose()  # Must not raise "still read by another node".
+        a.rx.dispose()
 
     def test_reactive_dispose_follows_operation_argument_route(self):
         a = rx(2)
@@ -2328,7 +2309,7 @@ class TestDisposeAndLifecycle:
             override.rx.dispose()
 
         del b.rx.overrides[0]
-        override.rx.dispose()  # No longer masking anything, so this now succeeds.
+        override.rx.dispose()
         assert override._disposed
 
     def test_reactive_override_drops_the_masked_raw_input_reader_link(self):
@@ -2339,7 +2320,7 @@ class TestDisposeAndLifecycle:
 
         b.rx.overrides[0] = override
         assert b not in set(placeholder.rx.downstream())
-        placeholder.rx.dispose()  # No longer masked as a reader, so this now succeeds.
+        placeholder.rx.dispose()
         assert placeholder._disposed
 
         b.rx.dispose()
@@ -2372,7 +2353,7 @@ class TestDisposeAndLifecycle:
 
         assert set(a.rx.downstream()) - {a} == {other}
         assert not (b._readers or ())
-        b.rx.dispose()  # No longer masked as a reader of `a`, so this succeeds.
+        b.rx.dispose()
         assert b._disposed
 
     def test_reactive_delitem_raises_before_mutating_if_masked_input_was_disposed(self):
@@ -2388,10 +2369,6 @@ class TestDisposeAndLifecycle:
         assert b.rx.value == 12
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
-        # `c = b.upper()` goes through two intermediate copy-clones sharing
-        # `b._operation` by identity (kept alive via `c._prev`/`._shared`),
-        # each with its own direct reader link on `placeholder`/`override`
-        # that also needs to move - not just `b`'s.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
@@ -2403,16 +2380,14 @@ class TestDisposeAndLifecycle:
         assert c.rx.value == 'XA'
 
         assert not (override._readers or ())
-        override.rx.dispose()  # No clone-held link left over from the mask.
+        override.rx.dispose()
         assert override._disposed
 
         assert b in set(placeholder.rx.downstream())
         with pytest.raises(RuntimeError, match='still read'):
-            placeholder.rx.dispose()  # `b` and the clone both read it again, once unmasked.
+            placeholder.rx.dispose()
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone_reversed(self):
-        # As above, but the override is set through the clone instead of
-        # `b`, so `b` is reachable only via `_upstream()` from there.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
@@ -2424,10 +2399,6 @@ class TestDisposeAndLifecycle:
         assert b not in set(placeholder.rx.downstream())
 
     def test_reactive_override_reader_links_follow_a_cousin_clone(self):
-        # `accessor1`/`accessor2` are independent clones of `b`, neither
-        # upstream nor downstream of each other, so finding one from the
-        # other needs walking every shared ancestor's downstream, not just
-        # `self`'s own `_upstream()`/`_downstream()`.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
@@ -2439,9 +2410,6 @@ class TestDisposeAndLifecycle:
         assert accessor2 not in set(placeholder.rx.downstream())
 
     def test_reactive_operation_siblings_is_not_quadratic_in_chain_length(self):
-        # One shared downstream walk seeded by every ancestor, not one
-        # per-ancestor walk: O(N^2) here would take over a second at this
-        # depth, not milliseconds.
         head = rx(0)
         for _ in range(700):
             head = head + 1
@@ -2453,8 +2421,6 @@ class TestDisposeAndLifecycle:
         assert time.perf_counter() - start < 1.5
 
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
-        # `src` is kept alive by `outlet`, not by the `rx` view built from
-        # it, so disposing the view must not cascade into `src`.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2466,8 +2432,6 @@ class TestDisposeAndLifecycle:
         assert outlet.x == 5
 
     def test_reactive_ref_reassignment_leaves_no_stale_reader_link(self):
-        # Refs are not reader-tracked (see `_direct_inputs()`), so
-        # reassigning must not leave `expr` holding a link on the new ref.
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2483,9 +2447,6 @@ class TestDisposeAndLifecycle:
         assert new.rx.value == 3
 
     def test_reactive_override_reader_link_is_per_occurrence(self):
-        # `a` is read both directly and, briefly, as an override of a
-        # different argument; removing the override must drop only that
-        # occurrence, not `a`'s reader list entirely.
         a = rx(1)
         b = rx(1).rx.pipe(lambda x, y, z: x + y + z, a, rx(0))
         b.rx.overrides[1] = a
@@ -4388,13 +4349,13 @@ class TestUpstreamDownstream:
         value.rx.overrides['fx'] = override
 
         upstream = set(value.rx.upstream())
-        assert override in upstream  # The override is what actually feeds `value` now.
-        assert fx not in upstream  # The masked input is not, mirroring `_live_params()`.
+        assert override in upstream
+        assert fx not in upstream
         assert value in set(override.rx.downstream())
 
         del value.rx.overrides['fx']
         upstream = set(value.rx.upstream())
-        assert override not in upstream  # Unmasking drops the override again.
+        assert override not in upstream
         assert fx in upstream
         assert value not in set(override.rx.downstream())
 

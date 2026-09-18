@@ -316,20 +316,13 @@ class InputOverrides(MutableMapping):
         return operation.get('args', ())[key]
 
     def _relink(self, value: t.Any, siblings: tuple, method: str) -> None:
-        """Call ``target.<method>(reader)`` on every ``rx`` in ``value``, for this node and each sibling."""
         readers = (self._node, *siblings)
         for target in _iter_rx(value):
             for reader in readers:
                 getattr(target, method)(reader)
 
     def _unwatch(self, key: t.Any, siblings: tuple = ()):
-        """
-        Drop the raw wired input's reader link too, the first time a key is
-        masked, or it could never be disposed. Must run before ``overrides``
-        is mutated, while ``self._overrides`` still reflects the value being
-        replaced or removed. ``siblings`` is precomputed by the caller,
-        which needs it again right after, rather than walked twice.
-        """
+        """Must run before ``overrides`` is mutated."""
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides') or {}
@@ -337,8 +330,6 @@ class InputOverrides(MutableMapping):
         self._relink(current, siblings, '_drop_reader')
         finalizers = node._finalizers
         for finalizer in (operation.get('override_watchers') or {}).pop(key, ()):
-            # Firing the finalizer now both unwatches the source and
-            # marks it dead, so it is safe to drop from `_finalizers`.
             finalizer()
             if finalizers is not None:
                 try:
@@ -376,8 +367,6 @@ class InputOverrides(MutableMapping):
         if not overrides or key not in overrides:
             raise KeyError(key)
         raw = self._resolve_raw(key)
-        # A masked input may already be disposed; unmasking it would
-        # silently wire this node to an `rx` that raises on every read.
         disposed = next((target for target in _iter_rx(raw) if target._disposed), None)
         if disposed is not None:
             raise RuntimeError(
@@ -1332,26 +1321,14 @@ class reactive_ops:
         False
         """
         reactive = self._reactive
-        # Keyed by `id()`, not the node: a `WeakSet` wraps each check in a
-        # fresh `weakref.ref`, whose `__eq__` unconditionally compares
-        # referents (no identity fast path), calling `rx.__eq__`. Values are
-        # weak so a node dropped from the graph isn't pinned here forever.
+        # `WeakSet` comparisons can invoke `rx.__eq__`.
         tracked: weakref.WeakValueDictionary[int, 'rx'] = weakref.WeakValueDictionary()
         current: set[rx] = set()
-        # Maintained incrementally rather than recomputed with `any(...)`
-        # on every notification: O(N) per notification is O(N^2) overall
-        # for N async nodes settling from one root change.
         settling_ids: set[int] = set()
 
         def mark_settling(node: 'rx') -> None:
-            # Fires on both settle-schedule and settle-completion, so
-            # add/discard rather than assume True: a settle that leaves
-            # this expression's own value unchanged (e.g. behind `* 0`)
-            # would otherwise never flip `wrapper` back. Shared across
-            # every node rather than a closure per node, so nothing here
-            # holds a reference back to one.
             if node not in current:
-                return  # Stale notification from a node no longer upstream.
+                return
             if node._settling:
                 settling_ids.add(id(node))
             else:
@@ -1364,34 +1341,23 @@ class reactive_ops:
                 return
             tracked[node_id] = node
             node._watch_settle_change(mark_settling)
-            # Re-derive if this node's own inputs change shape, so a node
-            # added through an override/ref rewire gets found too.
             node._watch_graph_change(rederive)
 
         def rederive() -> None:
             if isinstance(reactive, rx):
                 nonlocal current, settling_ids
-                # A full replacement, not an in-place mutation, so a
-                # concurrent `mark_settling()` never sees a node's
-                # membership toggled off before it toggles back on.
                 new_current = set(reactive._upstream())
                 for node in new_current:
                     subscribe(node)
                 current = new_current
-                # Rebuilt from scratch, not incrementally, since
-                # `subscribe()` skips a node it has already tracked without
-                # rechecking whether it re-entered already settling.
                 settling_ids = {id(node) for node in current if node._settling}
                 wrapper.param.update(object=bool(settling_ids))
 
         upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
         current.update(upstream)
         settling_ids.update(id(node) for node in upstream if node._settling)
-        # Report the correct state immediately if already mid-flight.
         initial = bool(settling_ids)
         wrapper = t.cast('Callable', Wrapper)(object=initial)
-        # Held weakly by `_watch_graph_change`/`_watch_settle_change`, so
-        # keep alive for as long as `wrapper` (and the returned expression) is.
         wrapper._rederive = rederive
         wrapper._mark_settling = mark_settling
 
@@ -2410,7 +2376,6 @@ class rx:
     # Weak refs to targets notified when this node schedules async work.
     _settle_watchers: set[weakref.ref] | None = None
 
-    # See `_watch_graph_change()`.
     _graph_watchers: set[weakref.ref] | None = None
 
     # This node's own invalidation watchers, run early by `_dispose()`.
@@ -2567,8 +2532,6 @@ class rx:
             self._prev = obj
         else:
             self._prev = t.cast('rx', prev)
-        # Reverse of `_direct_inputs()`, not `_upstream()` (see
-        # `_direct_inputs()` for why refs are excluded).
         for inp in self._direct_inputs():
             inp._register_reader(self)
 
@@ -2582,13 +2545,8 @@ class rx:
             self._trigger = None
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
-        # Precomputed so `_ref_inputs()`, called on every node on every
-        # `_upstream()` walk, has nothing to do for the common case of no
-        # `Parameter(allow_refs=True)` dependency.
         self._ref_capable_params = self._compute_ref_capable_params()
         self._internal_params = self._compute_params()
-        # Precomputed like `_ref_capable_params`, but from the broader
-        # `_internal_params` (see `_compute_settle_ref_params()`).
         self._settle_ref_params = self._compute_settle_ref_params()
         # Filter params that external objects depend on, ensuring
         # that Trigger parameters do not cause double execution
@@ -2714,18 +2672,10 @@ class rx:
 
     def _direct_inputs(self) -> Iterator[t.Any]:
         """
-        Yield the ``rx`` nodes this node reads directly from *and* is
-        registered as a reader of: its ``_prev`` predecessor, the
-        ``_shared`` input it was cloned from when a pipeline branches, and
-        any ``rx`` passed as an operation argument (a masked argument is
-        substituted with its override, mirroring ``_live_params()``).
+        Yield ``rx`` nodes this node reads directly from and reader-tracks.
 
-        Backs reader registration (``__init__``) and ``_dispose()``'s
-        cascade, so deliberately excludes ``_ref_inputs()``: a ref held by a
-        ``Parameter(allow_refs=True)`` is kept alive by its owning
-        ``Parameterized``, not by this node, and disposing a throwaway
-        ``outlet.param.x.rx()`` view must not take it down too.
-        ``_upstream()`` adds ``_ref_inputs()`` back in for its own traversal.
+        Excludes ``_ref_inputs()`` so disposing a view cannot dispose the
+        ref held by its owning ``Parameterized``.
         """
         for inp in (self._prev, self._shared):
             if isinstance(inp, rx):
@@ -2742,16 +2692,9 @@ class rx:
 
     def _ref_inputs(self) -> Iterator[t.Any]:
         """
-        Yield any ``rx`` backing a raw reference this node depends on through
-        a ``Parameter(allow_refs=True)``, e.g. ``outlet.param.x.rx()`` where
-        ``outlet.x`` was set to an ``rx`` rather than a plain value.
+        Yield ``rx`` nodes backing ``Parameter(allow_refs=True)`` references.
 
-        ``_awaiting_ref`` only recognizes a bare async callable as "still
-        resolving", not an already-constructed ``rx`` that is itself
-        awaiting; joining ``_upstream()`` here is what lets
-        ``.rx.awaiting``/``.rx.stale``/``.rx.updating()`` see through the
-        ref. Not part of ``_direct_inputs()`` (see there for why), so this
-        plays no part in reader/dispose bookkeeping.
+        Only ``_upstream()`` uses these; they are not reader-tracked.
         """
         for owner, name in self._ref_capable_params:
             ref = owner._param__private.refs.get(name)
@@ -2792,16 +2735,7 @@ class rx:
                     stack.append(reader)
 
     def _operation_siblings(self) -> Iterator[t.Any]:
-        """
-        Yield every other ``rx`` node sharing this node's exact ``_operation``
-        dict by identity: a method-chaining clone (``_clone(copy=True)``)
-        defaults to sharing ``self._operation`` rather than copying it, so
-        overriding an argument on one such node must update the reader link
-        on every sibling too, or its link goes stale once the override
-        changes. ``_clone()`` tracks this directly on the operation dict at
-        the one point such aliasing occurs, rather than rediscovering it
-        here with a graph walk.
-        """
+        """Yield ``rx`` nodes sharing this node's ``_operation`` by identity."""
         operation = self._operation
         if operation is None:
             return
@@ -2852,15 +2786,10 @@ class rx:
 
     def _compute_ref_capable_params(self) -> list[tuple[Parameterized, str]]:
         """
-        `(owner, name)` for every ``Parameter(allow_refs=True)`` this node
-        introduces itself, through `_fn_params` or a bare `Parameter`
-        passed directly as one of its own operation's arguments (not
-        inherited from `_prev`, that node's own responsibility). Uses
-        `_iter_bare_params()`, not `resolve_ref(arg, recursive=True)` like
-        `_compute_params()`: an argument can itself be an `rx`, and
-        resolving one through `resolve_ref` picks up its internal
-        ``Trigger``-based override channel too - not a genuine
-        ``allow_refs=True`` reference, so it has no business here.
+        Return this node's direct ``Parameter(allow_refs=True)`` dependencies.
+
+        Avoid ``resolve_ref`` for operation arguments: resolving an ``rx``
+        creates its override channel.
         """
         params = list(self._fn_params)
         operation = self._operation
@@ -2882,7 +2811,6 @@ class rx:
         if self._trigger:
             ps.append(self._trigger.param.value)
 
-        # Collect parameters on previous objects in chain
         prev = self._prev
         while prev is not None:
             for p in prev._params:
@@ -2893,7 +2821,6 @@ class rx:
         if self._operation is None:
             return ps
 
-        # Accumulate dependencies in args and/or kwargs
         for ref in resolve_ref(self._operation['fn']):
             if ref not in ps:
                 ps.append(ref)
@@ -2908,18 +2835,7 @@ class rx:
         return ps
 
     def _compute_settle_ref_params(self) -> list[tuple[Parameterized, str]]:
-        """
-        `(owner, name)` for every `allow_refs=True` `Parameter` in
-        `_internal_params`, deduplicated - the same set `_awaiting_ref`
-        inspects. Broader than `_ref_capable_params`, which only covers this
-        node's own direct fn params/operation args and feeds graph-shape
-        tracking instead: `_internal_params` also reaches a ref nested inside
-        a `bind()`/`@param.depends` argument, or inherited from `_prev`,
-        either of which `_awaiting_ref` can still flip on. The `allow_refs`
-        filter matters here - without it, every node would register a
-        listener on every upstream `Parameter`, including plain non-ref
-        ones, however many that is.
-        """
+        """Return ``allow_refs=True`` entries in ``_internal_params``."""
         seen = set()
         params = []
         for p in self._internal_params:
@@ -3051,21 +2967,9 @@ class rx:
 
     def _drop_reader(self, reader: Self) -> bool:
         """
-        Drop one occurrence of `reader` (pruning dead entries along the way)
-        and return whether any reader remains. One occurrence, not every
-        one: `reader` may be registered more than once (e.g. as both an
-        operation argument and an override of a different argument), and
-        each call here should undo exactly one `_register_reader()` call.
+        Drop one ``reader`` occurrence and return whether readers remain.
 
-        Rebuilds `self._readers` in place rather than with `list.remove()`
-        or a freshly assigned list. Not `list.remove()`: `weakref.ref`
-        comparison delegates to the referents when both are alive, which
-        for two `rx` nodes runs `rx.__eq__` and returns a truthy expression
-        rather than a bool, so it would drop whichever entry compares
-        "equal" first. Not a new list: each entry's GC callback is
-        `readers.remove` bound to *this* list object (see
-        `_register_reader`), so a remaining reader's later death would find
-        no such list to remove itself from, stranding a dead ref forever.
+        Mutate in place: weakref callbacks retain the original list.
         """
         readers = self._readers
         if readers is None:
@@ -3154,11 +3058,6 @@ class rx:
             node._dirty = True
             node._error_state = None
             node._live_params_cache = None
-        # Only `seeds` had their own `_direct_inputs()` change; a downstream
-        # reader learns of it transitively once it re-derives. Before the
-        # override channels trigger below, since an active `.rx.watch()`
-        # resolves eagerly and could schedule async work a freshly
-        # re-derived subscription needs to see coming.
         for node in seeds:
             node._notify_graph_change()
         for node in nodes:

@@ -256,6 +256,33 @@ def _notify_ref_change(owner, name):
         if callback is not None:
             callback()
 
+def _watch_async_ref_settle_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
+    """
+    Weakly register ``callback`` to run whenever a bare async callable
+    reference (e.g. ``param.bind(coro, ...)``) for parameter ``name``
+    schedules or settles - unlike ``_watch_ref_change``, which only fires
+    when the reference itself is replaced. Scheduling and settling only
+    bump private counters; if the resolved value equals the previous one,
+    no ordinary watcher fires, so this is the only way to hear about it.
+    """
+    private = owner._param__private
+    watchers = private.async_ref_settle_watchers
+    if watchers is None:
+        watchers = private.async_ref_settle_watchers = {}
+    listeners = watchers.setdefault(name, set())
+    ref_type = weakref.WeakMethod if inspect.ismethod(callback) else weakref.ref
+    listeners.add(ref_type(callback, listeners.discard))
+
+def _notify_async_ref_settle_change(owner, name):
+    watchers = owner._param__private.async_ref_settle_watchers
+    listeners = watchers.get(name) if watchers else None
+    if not listeners:
+        return
+    for ref in tuple(listeners):
+        callback = ref()
+        if callback is not None:
+            callback()
+
 def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
     Evaluate a function after resolving its dependencies.
@@ -3054,6 +3081,7 @@ class Parameters:
             return 0
         private = self_.self._param__private
         private.async_ref_scheduled[pname] += 1
+        _notify_async_ref_settle_change(self_.self, pname)
         return private.async_ref_scheduled[pname]
 
     def _settle_async_ref(self_, pname: str, generation: int):
@@ -3071,6 +3099,7 @@ class Parameters:
             return
         settled = self_.self._param__private.async_ref_settled
         settled[pname] = max(settled[pname], generation)
+        _notify_async_ref_settle_change(self_.self, pname)
 
     def _awaiting_ref(self_, pname: str) -> bool:
         """Whether an asynchronous reference has not yet produced a value."""
@@ -5956,6 +5985,9 @@ class _InstancePrivate:
     ref_change_watchers: dict[str, set[weakref.ReferenceType]] | None
         Dict of parameter name: weak refs notified by ``_watch_ref_change``.
         Lazy; ``None`` until something registers.
+    async_ref_settle_watchers: dict[str, set[weakref.ReferenceType]] | None
+        Dict of parameter name: weak refs notified by
+        ``_watch_async_ref_settle_change``. Lazy; ``None`` until something registers.
     """
 
     __slots__ = [
@@ -5969,6 +6001,7 @@ class _InstancePrivate:
         'refs',
         'ref_watchers',
         'ref_change_watchers',
+        'async_ref_settle_watchers',
         'syncing',
         'watchers',
         'values',
@@ -5985,6 +6018,7 @@ class _InstancePrivate:
     refs: dict[str, t.Any]
     ref_watchers: list[tuple[tuple[str, ...], Watcher]]
     ref_change_watchers: dict[str, set[weakref.ReferenceType]] | None
+    async_ref_settle_watchers: dict[str, set[weakref.ReferenceType]] | None
     syncing: set[str]
     watchers: dict[str, dict[str, list[Watcher]]]
     values: dict[str, t.Any]
@@ -6013,6 +6047,7 @@ class _InstancePrivate:
             }
         self.ref_watchers = []
         self.ref_change_watchers = None
+        self.async_ref_settle_watchers = None
         self.async_refs = {}
         self.async_ref_scheduled = defaultdict(int)
         self.async_ref_settled = defaultdict(int)

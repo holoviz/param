@@ -113,7 +113,7 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, _watch_ref_change
+    transform_reference, _watch_async_ref_settle_change, _watch_ref_change
 )
 from .parameters import Boolean, Event, String
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
@@ -1350,21 +1350,27 @@ class reactive_ops:
         # `_upstream()` as of the last `rederive()`, so `mark_settling()` can
         # check membership in O(1).
         current: set[rx] = set()
-
-        def recompute() -> None:
-            wrapper.param.update(object=any(node._settling for node in current))
+        # `id()`s of the `current` subset that is `_settling`. Maintained
+        # incrementally, not recomputed with `any(...)` on every
+        # notification: O(N) per notification is O(N^2) overall for N
+        # async nodes settling from one root change.
+        settling_ids: set[int] = set()
 
         def mark_settling(node: 'rx') -> None:
-            # Fires on both settle-schedule and settle-completion, so
-            # recheck the aggregate rather than forcing True: a settle that
-            # finishes without changing this expression's own value (e.g.
-            # behind a `* 0`) would otherwise never flip `wrapper` back.
-            # Ignore a stale notification from a node no longer in
-            # `current` (e.g. a cleared override). Shared across every node
-            # rather than a closure per node, so nothing here holds a
-            # reference back to one.
-            if node in current:
-                recompute()
+            # Fires on both settle-schedule and settle-completion, so add
+            # or discard rather than assume True: a settle that finishes
+            # without changing this expression's own value (e.g. behind a
+            # `* 0`) would otherwise never flip `wrapper` back. Shared
+            # across every node, so nothing here holds a reference back to
+            # one; ignores a stale notification from a node no longer in
+            # `current` (e.g. a cleared override).
+            if node not in current:
+                return
+            if node._settling:
+                settling_ids.add(id(node))
+            else:
+                settling_ids.discard(id(node))
+            wrapper.param.update(object=bool(settling_ids))
 
         def subscribe(node: 'rx') -> None:
             node_id = id(node)
@@ -1378,7 +1384,7 @@ class reactive_ops:
 
         def rederive() -> None:
             if isinstance(reactive, rx):
-                nonlocal current
+                nonlocal current, settling_ids
                 # Swap in a full replacement rather than mutating `current`
                 # in place, so a concurrent `mark_settling()` never sees a
                 # node's membership toggled off before it toggles back on.
@@ -1386,16 +1392,19 @@ class reactive_ops:
                 for node in new_current:
                     subscribe(node)
                 current = new_current
-                # A node already tracked (e.g. one briefly out of and back
-                # into an override) is skipped by `subscribe()` above
-                # without rechecking it, so recompute here too, catching one
-                # that re-entered already settling.
-                recompute()
+                # Rebuilt from scratch, not incrementally: a node already
+                # tracked (e.g. one briefly out of and back into an
+                # override) is skipped by `subscribe()` above without
+                # rechecking it, so this also catches one that re-entered
+                # already settling.
+                settling_ids = {id(node) for node in current if node._settling}
+                wrapper.param.update(object=bool(settling_ids))
 
         upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
         current.update(upstream)
+        settling_ids.update(id(node) for node in upstream if node._settling)
         # Report the correct state immediately if already mid-flight.
-        initial = any(node._settling for node in upstream)
+        initial = bool(settling_ids)
         wrapper = t.cast('Callable', Wrapper)(object=initial)
         # `_watch_graph_change`/`_watch_settle_change` hold their callbacks
         # weakly, so keep them alive for as long as `wrapper` (and thus the
@@ -3166,6 +3175,11 @@ class rx:
         watchers = self._settle_watchers
         if watchers is None:
             watchers = self._settle_watchers = []
+            # Also register per ref-capable fn param: a bare async callable
+            # ref (e.g. `param.bind(coro, ...)`) settling to an unchanged
+            # value notifies no one otherwise.
+            for owner, name in self._ref_capable_params:
+                _watch_async_ref_settle_change(owner, name, self._notify_settle_change)
         # Weak so a long-lived upstream node does not keep the (possibly much
         # shorter-lived) `.rx.updating()` wrapper alive; dropped automatically
         # once `callback` is collected, like `_readers`.

@@ -1899,6 +1899,38 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not expr.rx.awaiting)
         assert updating.rx.value is False
 
+    async def test_reactive_updating_tracks_a_bare_async_callable_ref(self):
+        # `param.bind(...)` is a bare async callable, not an `rx`, exercising
+        # `_awaiting_ref` directly rather than `_ref_inputs()`. Also settles
+        # to the same value each time, so this cannot rely on a
+        # value-changed watcher.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.02)
+            return 1
+
+        src = rx(1)
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        outlet.x = param.bind(const, src)
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+        # A dependency change re-runs the already-bound callable; nothing
+        # reassigns the ref itself, so this must not rely on `_watch_ref_change`.
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
     async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):
         async def slow(value):
             await asyncio.sleep(0.02)

@@ -1314,8 +1314,11 @@ class reactive_ops:
         False
         """
         reactive = self._reactive
-        # Keyed by `id()`, not the node: a `set`/`WeakSet` of `rx` nodes can
-        # hash-collide into calling `rx.__eq__`, which builds a comparison
+        # Keyed by `id()`, not the node: a `WeakSet` wraps each membership
+        # check in a fresh `weakref.ref`, and `weakref.ref.__eq__` compares
+        # referents whenever both are alive - even for two wrappers of the
+        # *same* node, since it has no identity fast path of its own - which
+        # for two `rx` nodes calls `rx.__eq__`, building a comparison
         # expression rather than a bool. Weak values so a node dropped from
         # the graph (e.g. a cleared override) isn't pinned here forever.
         tracked: dict[int, weakref.ref] = {}
@@ -1323,25 +1326,29 @@ class reactive_ops:
         # check membership in O(1).
         current: set[rx] = set()
 
+        def recompute() -> None:
+            wrapper.param.update(object=any(node._settling for node in current))
+
         def mark_settling(node: 'rx') -> None:
-            # `node` may have since dropped out of `_upstream()`; a stale
-            # notification must not stick `wrapper` at True forever. Shared
-            # across every node (told apart by the argument) rather than a
-            # closure per node, so nothing here holds a reference back to it.
+            # Fired on both settle-schedule and settle-completion (see
+            # `_notify_settle_change`'s callers), so recheck the aggregate
+            # rather than forcing True: a settle that finishes without
+            # changing this expression's own value (e.g. behind a `* 0`, or
+            # because the settling node was removed from an override
+            # mid-flight) would otherwise never flip `wrapper` back to
+            # False. `node` may also have since dropped out of `_upstream()`
+            # (e.g. a cleared override); ignore a stale notification rather
+            # than let it resurrect `wrapper`. Shared across every node
+            # (told apart by the argument) rather than a closure per node,
+            # so nothing here holds a reference back to it.
             if node in current:
-                wrapper.param.update(object=True)
+                recompute()
 
         def subscribe(node: 'rx') -> None:
             node_id = id(node)
             if node_id in tracked:
                 return
             tracked[node_id] = weakref.ref(node, lambda ref: tracked.pop(node_id, None))
-            if node._settling:
-                # May already be (or have finished) settling by the time it
-                # is discovered, e.g. via a rewire that also eagerly resolves.
-                wrapper.param.update(object=True)
-            # The settle-watcher only fires once a value is produced, so also
-            # flip on scheduling to cover the async wait itself.
             node._watch_settle_change(mark_settling)
             # Re-derive if this node's own inputs change shape, so a node
             # added through an override/ref rewire gets found too.
@@ -1357,6 +1364,11 @@ class reactive_ops:
                 for node in new_current:
                     subscribe(node)
                 current = new_current
+                # A node already tracked (e.g. one briefly out of and back
+                # into an override) is skipped by `subscribe()` above
+                # without rechecking it, so recompute here too, catching one
+                # that re-entered already settling.
+                recompute()
 
         upstream = list(reactive._upstream()) if isinstance(reactive, rx) else []
         current.update(upstream)
@@ -2717,15 +2729,21 @@ class rx:
         defaults to sharing ``self._operation`` rather than copying it.
         Overriding an argument on one such node must update the reader link
         on every sibling too, or its link goes stale once the override
-        changes. Always reachable via ``_downstream()``, since a clone
-        registers itself as a reader of the node it was cloned from.
+        changes. A clone registers itself as a reader of the node it was
+        cloned from, so the clone is reachable from that node via
+        ``_downstream()`` - but the override can just as well be set through
+        the clone instead, in which case the node it was cloned from is
+        reachable only via ``_upstream()``. Look both ways.
         """
         operation = self._operation
         if operation is None:
             return
-        for node in self._downstream():
-            if node is not self and node._operation is operation:
-                yield node
+        seen = {id(self)}
+        for walk in (self._downstream(), self._upstream()):
+            for node in walk:
+                if id(node) not in seen and node._operation is operation:
+                    seen.add(id(node))
+                    yield node
 
     def _check_disposed(self) -> None:
         if self._disposed:
@@ -2922,11 +2940,16 @@ class rx:
         operation argument and an override of a different argument), and
         each call here should undo exactly one `_register_reader()` call.
 
-        Rebuilds `self._readers` instead of calling `list.remove()` on a
-        live entry: `weakref.ref.__eq__` compares referents when both are
-        alive, which for two `rx` nodes runs `rx.__eq__` and returns a
-        truthy expression rather than a bool, so `list.remove()` would drop
-        whichever entry compares "equal" first rather than the right one.
+        Rebuilds the contents of `self._readers` in place instead of calling
+        `list.remove()` on a live entry: `weakref.ref.__eq__` compares
+        referents when both are alive, which for two `rx` nodes runs
+        `rx.__eq__` and returns a truthy expression rather than a bool, so
+        `list.remove()` would drop whichever entry compares "equal" first
+        rather than the right one. In place, not a fresh list assigned to
+        `self._readers`: each entry's GC callback is `readers.remove` bound
+        to *this* list object (see `_register_reader`), so replacing the
+        list would leave a remaining reader's future death unable to find
+        its own entry, stranding a dead ref here forever.
         """
         readers = self._readers
         if readers is None:
@@ -2941,7 +2964,7 @@ class rx:
                 dropped = True
             else:
                 kept.append(ref)
-        self._readers = kept
+        readers[:] = kept
         return bool(kept)
 
     def _dispose(self, cascade: bool = True, _cascaded: bool = False) -> None:
@@ -3199,6 +3222,11 @@ class rx:
         finally:
             if self._current_task is task:
                 self._current_task = None
+            # `_settling` may have just flipped False; `.rx.updating()` needs
+            # to hear that even when this node's own recompute produces the
+            # same value as before, since a value-changed watcher then never
+            # fires (see `_watch_settle_change`'s callers).
+            self._notify_settle_change()
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor

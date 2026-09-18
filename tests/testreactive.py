@@ -1939,6 +1939,144 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: not expr.rx.awaiting)
         assert updating.rx.value is False
 
+    async def test_reactive_updating_unsticks_for_a_ref_inherited_from_prev(self):
+        # `outlet.param.x` is a direct operation argument of `first`, not of
+        # `expr` itself; `expr` only reaches it by inheriting `first._params`
+        # through `_prev`, which `_ref_capable_params` deliberately excludes
+        # (that node's own responsibility) but `_internal_params` includes.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        b = rx(0)
+        outlet = Outlet(x=param.bind(const, src))
+        first = a.rx.pipe(lambda x, y: x + (y or 0), outlet.param.x)
+        expr = first.rx.pipe(add, b)
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        b.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_nested_in_a_bind_argument(self):
+        # `outlet.param.x` is not itself the operation argument, only a
+        # dependency of the `bind()` result that is, reached through
+        # `resolve_ref(arg, recursive=True)` in `_internal_params` but not
+        # through `_ref_capable_params`'s non-recursive `_iter_bare_params`.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = a.rx.pipe(add, bind(lambda v: v, outlet.param.x))
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_reached_through_param_depends(self):
+        # `outlet.param.x` is reached only through `holder.get`'s
+        # `@param.depends('o.x')` dependency, resolved into `_internal_params`
+        # via `_fn_params`' `method_dependencies()`, not through anything
+        # `_ref_capable_params` inspects for a plain (non-owner) fn.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        class Holder(param.Parameterized):
+            o = param.Parameter()
+
+            @param.depends('o.x')
+            def get(self):
+                return self.o.x
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        holder = Holder(o=outlet)
+        expr = a.rx.pipe(add, holder.get)
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_nested_in_an_operation_arg(self):
+        # `outlet.param.x` is a bare `Parameter` nested inside a `dict`/`list`
+        # operation kwarg, not a top-level argument - already covered by
+        # `_iter_bare_params()`'s container recursion, unlike the three cases
+        # above.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, d):
+            await asyncio.sleep(0.01)
+            return a + d["k"][0]
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = a.rx.pipe(add, d={"k": [outlet.param.x]})
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
     async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):
         async def slow(value):
             await asyncio.sleep(0.02)

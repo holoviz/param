@@ -2585,6 +2585,9 @@ class rx:
         # `Parameter(allow_refs=True)` dependency.
         self._ref_capable_params = self._compute_ref_capable_params()
         self._internal_params = self._compute_params()
+        # Precomputed like `_ref_capable_params`, but from the broader
+        # `_internal_params` (see `_compute_settle_ref_params()`).
+        self._settle_ref_params = self._compute_settle_ref_params()
         # Filter params that external objects depend on, ensuring
         # that Trigger parameters do not cause double execution
         self._params = [
@@ -2902,6 +2905,31 @@ class rx:
 
         return ps
 
+    def _compute_settle_ref_params(self) -> list[tuple[Parameterized, str]]:
+        """
+        `(owner, name)` for every `allow_refs=True` `Parameter` in
+        `_internal_params`, deduplicated - the same set `_awaiting_ref`
+        inspects. Broader than `_ref_capable_params`, which only covers this
+        node's own direct fn params/operation args and feeds graph-shape
+        tracking instead: `_internal_params` also reaches a ref nested inside
+        a `bind()`/`@param.depends` argument, or inherited from `_prev`,
+        either of which `_awaiting_ref` can still flip on. The `allow_refs`
+        filter matters here - without it, every node would register a
+        listener on every upstream `Parameter`, including plain non-ref
+        ones, however many that is.
+        """
+        seen = set()
+        params = []
+        for p in self._internal_params:
+            if not p.allow_refs or p.name is None or not isinstance(p.owner, Parameterized):
+                continue
+            key = (id(p.owner), p.name)
+            if key in seen:
+                continue
+            seen.add(key)
+            params.append((p.owner, p.name))
+        return params
+
     def _setup_invalidations(self, depth: int = 0):
         """
         Since the parameters of the pipeline can change at any time
@@ -3168,10 +3196,11 @@ class rx:
         watchers = self._settle_watchers
         if watchers is None:
             watchers = self._settle_watchers = set()
-            # Also register per ref-capable fn param: a bare async callable
-            # ref (e.g. `param.bind(coro, ...)`) settling to an unchanged
-            # value notifies no one otherwise.
-            for owner, name in self._ref_capable_params:
+            # Also register per settle-ref-capable param (see
+            # `_compute_settle_ref_params()`): a bare async callable ref
+            # (e.g. `param.bind(coro, ...)`) settling to an unchanged value
+            # notifies no one otherwise.
+            for owner, name in self._settle_ref_params:
                 _watch_async_ref_settle_change(owner, name, self._notify_settle_change)
         _register_weak_listener(watchers, callback)
 

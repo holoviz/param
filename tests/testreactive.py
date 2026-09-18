@@ -1878,11 +1878,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_when_a_ref_settles_without_changing_the_value(self):
-        """
-        A value-changed watcher never fires if the recompute produces the
-        same output (e.g. multiplied by 0), so `.rx.updating()` must not
-        rely on that to flip back to False once the ref actually settles.
-        """
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -1892,7 +1887,7 @@ class TestUpdatingStatus:
 
         src = rx(1)
         outlet = Outlet(x=src.rx.pipe(slow))
-        expr = outlet.param.x.rx() * 0
+        expr = outlet.param.x.rx() * 0  # No value-changed watcher fires on this.
         updating = expr.rx.updating()
         expr.rx.watch(lambda v: None)
         await async_wait_until(lambda: not expr.rx.awaiting)
@@ -1905,7 +1900,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):
-        """Same, for an override cleared while it is still settling."""
         async def slow(value):
             await asyncio.sleep(0.02)
             return 1
@@ -1925,11 +1919,6 @@ class TestUpdatingStatus:
         await async_wait_until(lambda: updating.rx.value is False)
 
     async def test_reactive_updating_true_for_a_node_re_entering_the_graph_already_settling(self):
-        """
-        `subscribe()` skips a node it has already tracked, so a node that
-        drops out of an override and later re-enters it while still
-        settling from an unrelated read must still be picked up.
-        """
         async def slow(value):
             await asyncio.sleep(0.1)
             return value
@@ -1953,7 +1942,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is True
 
     def test_reactive_updating_does_not_pin_a_cleared_override(self):
-        """Subscribing to a node must not itself keep it alive after it drops out."""
         b = rx(1) * rx(1)
         updating = b.rx.updating()
         b.rx.watch(lambda v: None)
@@ -1969,7 +1957,6 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
     def test_reactive_updating_does_not_pin_a_replaced_ref(self):
-        """Same, for a `Parameter(allow_refs=True)` ref replaced by a plain value."""
         class Outlet(param.Parameterized):
             x = param.Parameter(allow_refs=True)
 
@@ -2102,13 +2089,6 @@ class TestDisposeAndLifecycle:
         assert a._disposed
 
     def test_reactive_dispose_prunes_a_remaining_reader_dying_later(self):
-        """
-        `_drop_reader()` must mutate `a._readers` in place: a remaining
-        reader's own weakref was registered with a GC callback bound to
-        that exact list object, so replacing it with a new list would
-        strand a dead entry once that reader is later collected, leaving
-        `a.rx.dispose()` refusing forever.
-        """
         a = rx(1)
         b = a + 1
         c = a + 2
@@ -2224,12 +2204,8 @@ class TestDisposeAndLifecycle:
             placeholder.rx.dispose()  # `b` and the clone both read it again, once unmasked.
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone_reversed(self):
-        """
-        Same as the test above, but the override is set through the clone
-        instead of `b`: `b` is then reachable only via `_upstream()` from
-        the clone's side, not `_downstream()`, so `_operation_siblings()`
-        must look both ways, not just downstream.
-        """
+        # As above, but the override is set through the clone instead of
+        # `b`, so `b` is reachable only via `_upstream()` from there.
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)

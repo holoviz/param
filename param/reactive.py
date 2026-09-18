@@ -1314,13 +1314,11 @@ class reactive_ops:
         False
         """
         reactive = self._reactive
-        # Keyed by `id()`, not the node: a `WeakSet` wraps each membership
-        # check in a fresh `weakref.ref`, and `weakref.ref.__eq__` compares
-        # referents whenever both are alive - even for two wrappers of the
-        # *same* node, since it has no identity fast path of its own - which
-        # for two `rx` nodes calls `rx.__eq__`, building a comparison
-        # expression rather than a bool. Weak values so a node dropped from
-        # the graph (e.g. a cleared override) isn't pinned here forever.
+        # Keyed by `id()`: a `WeakSet` would wrap each check in a fresh
+        # `weakref.ref`, and its `__eq__` unconditionally compares referents
+        # (no identity fast path), calling `rx.__eq__` even for two wrappers
+        # of the same node. Weak values so a node dropped from the graph
+        # (e.g. a cleared override) isn't pinned here forever.
         tracked: dict[int, weakref.ref] = {}
         # `_upstream()` as of the last `rederive()`, so `mark_settling()` can
         # check membership in O(1).
@@ -1330,17 +1328,14 @@ class reactive_ops:
             wrapper.param.update(object=any(node._settling for node in current))
 
         def mark_settling(node: 'rx') -> None:
-            # Fired on both settle-schedule and settle-completion (see
-            # `_notify_settle_change`'s callers), so recheck the aggregate
-            # rather than forcing True: a settle that finishes without
-            # changing this expression's own value (e.g. behind a `* 0`, or
-            # because the settling node was removed from an override
-            # mid-flight) would otherwise never flip `wrapper` back to
-            # False. `node` may also have since dropped out of `_upstream()`
-            # (e.g. a cleared override); ignore a stale notification rather
-            # than let it resurrect `wrapper`. Shared across every node
-            # (told apart by the argument) rather than a closure per node,
-            # so nothing here holds a reference back to it.
+            # Fires on both settle-schedule and settle-completion, so
+            # recheck the aggregate rather than forcing True: a settle that
+            # finishes without changing this expression's own value (e.g.
+            # behind a `* 0`) would otherwise never flip `wrapper` back.
+            # Ignore a stale notification from a node no longer in
+            # `current` (e.g. a cleared override). Shared across every node
+            # rather than a closure per node, so nothing here holds a
+            # reference back to one.
             if node in current:
                 recompute()
 
@@ -2729,11 +2724,9 @@ class rx:
         defaults to sharing ``self._operation`` rather than copying it.
         Overriding an argument on one such node must update the reader link
         on every sibling too, or its link goes stale once the override
-        changes. A clone registers itself as a reader of the node it was
-        cloned from, so the clone is reachable from that node via
-        ``_downstream()`` - but the override can just as well be set through
-        the clone instead, in which case the node it was cloned from is
-        reachable only via ``_upstream()``. Look both ways.
+        changes. A clone reads from the node it was cloned from, so that
+        node is reachable only via ``_upstream()`` if the override is set
+        through the clone rather than the other way around. Look both ways.
         """
         operation = self._operation
         if operation is None:
@@ -2940,16 +2933,15 @@ class rx:
         operation argument and an override of a different argument), and
         each call here should undo exactly one `_register_reader()` call.
 
-        Rebuilds the contents of `self._readers` in place instead of calling
-        `list.remove()` on a live entry: `weakref.ref.__eq__` compares
-        referents when both are alive, which for two `rx` nodes runs
-        `rx.__eq__` and returns a truthy expression rather than a bool, so
-        `list.remove()` would drop whichever entry compares "equal" first
-        rather than the right one. In place, not a fresh list assigned to
-        `self._readers`: each entry's GC callback is `readers.remove` bound
-        to *this* list object (see `_register_reader`), so replacing the
-        list would leave a remaining reader's future death unable to find
-        its own entry, stranding a dead ref here forever.
+        Rebuilds `self._readers` in place rather than with `list.remove()`
+        or a freshly assigned list. Not `list.remove()`: `weakref.ref`
+        comparison delegates to the referents when both are alive, which
+        for two `rx` nodes runs `rx.__eq__` and returns a truthy expression
+        rather than a bool, so it would drop whichever entry compares
+        "equal" first. Not a new list: each entry's GC callback is
+        `readers.remove` bound to *this* list object (see
+        `_register_reader`), so a remaining reader's later death would find
+        no such list to remove itself from, stranding a dead ref forever.
         """
         readers = self._readers
         if readers is None:
@@ -3222,10 +3214,9 @@ class rx:
         finally:
             if self._current_task is task:
                 self._current_task = None
-            # `_settling` may have just flipped False; `.rx.updating()` needs
-            # to hear that even when this node's own recompute produces the
-            # same value as before, since a value-changed watcher then never
-            # fires (see `_watch_settle_change`'s callers).
+            # `_settling` may have just flipped False; a value-changed
+            # watcher won't fire if the recompute produced the same value,
+            # so `.rx.updating()` needs this to hear about it regardless.
             self._notify_settle_change()
 
     def _lazy_resolve(self, obj = None):

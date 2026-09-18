@@ -1335,7 +1335,7 @@ class reactive_ops:
             node_id = id(node)
             if node_id in tracked:
                 return
-            tracked[node_id] = weakref.ref(node, lambda _, node_id=node_id: tracked.pop(node_id, None))
+            tracked[node_id] = weakref.ref(node, lambda ref: tracked.pop(node_id, None))
             if node._settling:
                 # May already be (or have finished) settling by the time it
                 # is discovered, e.g. via a rewire that also eagerly resolves.
@@ -3048,7 +3048,7 @@ class rx:
             finalizers.append(finalizer)
         return finalizers
 
-    def _watch_settle_change(self, callback: Callable[['rx'], None]) -> None:
+    def _watch_settle_change(self, callback: Callable[[t.Any], None]) -> None:
         """
         Run ``callback(self)`` when this node schedules an asynchronous
         resolution.

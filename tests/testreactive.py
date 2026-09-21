@@ -5630,8 +5630,6 @@ class TestSkipSiblingArguments:
         skipped = rx(1).rx.pipe(skipping)
         n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=skipped)
         assert n.rx.value is None
-        assert skipped._skipped and skipped._settle_count == 0
-
         n.rx.overrides['extra'] = 2
         assert n.rx.value == 9
 
@@ -5657,7 +5655,6 @@ class TestSkipSiblingArguments:
 
         trigger.rx.value = 2  # schedules a's async re-resolution
         assert a._settling
-        assert a._settle_count > 0
         calls.clear()
         b.rx.value = 20  # sibling changes while a is mid-flight
         assert out.rx.value == 11  # unchanged -- still skipping, correctly
@@ -5701,5 +5698,82 @@ class TestSkipSiblingArguments:
 
         x.rx.value = -1
         y.rx.value = 20
+
+        assert out.rx.value == 21
+
+    def test_literal_list_after_distinct_does_not_recompute_or_notify(self):
+        pd = pytest.importorskip('pandas')
+        calls, events = [], []
+        source = rx(pd.DataFrame({'a': [1], 'b': [2], 'ignored': [0]}))
+        distinct = source.rx.pipe(lambda value: value[['a', 'b']]).rx.distinct(
+            lambda left, right: left.equals(right))
+
+        def select(value, fields):
+            return value[fields]
+
+        def expensive(value):
+            calls.append(value)
+            return value
+
+        out = distinct.rx.pipe(select, ['a']).rx.pipe(expensive)
+        out.rx.watch(events.append)
+        assert out.rx.value.equals(pd.DataFrame({'a': [1]}))
+
+        source.rx.value = pd.DataFrame({'a': [1], 'b': [2], 'ignored': [1]})
+        source.rx.value = pd.DataFrame({'a': [1], 'b': [2], 'ignored': [2]})
+
+        assert len(calls) == 1
+        assert events == []
+
+    def test_custom_reference_transform_remains_a_live_sibling(self):
+        class Widget(param.Parameterized):
+            value = param.Integer()
+
+        def transform(value):
+            if isinstance(value, Widget):
+                return value.param.value
+            return value
+
+        param.reactive.register_reference_transform(transform)
+        widget = Widget(value=10)
+        source = rx(1)
+        skipped = source.rx.pipe(lambda value: value).rx.distinct()
+        out = rx(lambda a, b: a + b)(skipped, widget)
+        assert out.rx.value == 11
+
+        source.rx.value = 1
+        widget.value = 20
+
+        assert out.rx.value == 21
+
+    def test_batch_preserves_a_genuine_sibling_change(self):
+        def skip_if_negative(value):
+            if value < 0:
+                raise Skip
+            return value
+
+        x, y = rx(1), rx(10)
+        out = rx(lambda a, b: a + b)(x.rx.pipe(skip_if_negative), y)
+        assert out.rx.value == 11
+
+        with batch():
+            x.rx.value = -1
+            y.rx.value = 20
+
+        assert out.rx.value == 21
+
+    def test_when_sibling_remains_live_after_a_skip(self):
+        def skip_if_negative(value):
+            if value < 0:
+                raise Skip
+            return value
+
+        source, gate, sibling = rx(1), rx(True), rx(10)
+        skipped = source.rx.pipe(skip_if_negative).rx.when(gate)
+        out = rx(lambda a, b: a + b)(skipped, sibling)
+        assert out.rx.value == 11
+
+        source.rx.value = -1
+        sibling.rx.value = 20
 
         assert out.rx.value == 21

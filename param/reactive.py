@@ -2332,13 +2332,21 @@ _PREV_GENERATION = object()
 
 def _untracked_reference(value) -> bool:
     """Whether settle counts cannot prove this reference unchanged."""
+    value = transform_reference(value)
     if isinstance(value, rx):
         return False
     if isinstance(value, (list, tuple, dict, slice)):
-        return True
+        return any(_iter_rx(value)) or bool(resolve_ref(value, recursive=True))
     if hasattr(value, '_dinfo') or iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
         return True
     return isinstance(value, Parameter) and value.name is not None
+
+
+def _settle_state(node):
+    """Use the shared source before its clone resolves independently."""
+    while node._shared is not None and node._method is node._shared._method is None:
+        node = node._shared
+    return node._settle_count, node._skipped
 
 
 class rx:
@@ -3297,8 +3305,8 @@ class rx:
                     self._current_ = Undefined
                     raise Skip
                 elif (
-                    self._prev is not None and self._prev._skipped
-                    and self._prev._settle_count == 0
+                    self._prev is not None and _settle_state(self._prev)[1]
+                    and _settle_state(self._prev)[0] == 0
                 ):
                     raise Skip
                 elif (
@@ -3331,11 +3339,9 @@ class rx:
                         self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
-                generations = (
-                    {_PREV_GENERATION: self._prev._settle_count}
-                    if self._prev is not None else {}
-                )
-                fresh = self._prev is not None and not self._prev._skipped
+                count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
+                generations = {_PREV_GENERATION: count} if self._prev is not None else {}
+                fresh = self._prev is not None and not skipped
                 if operation:
                     obj = self._eval_operation(obj, operation, generations, fresh)
                     if self._is_async:
@@ -3781,8 +3787,9 @@ class rx:
                 if overridden:
                     generations = None
                 elif isinstance(target, rx):
-                    generations[i] = target._settle_count
-                    fresh = fresh or not target._skipped
+                    count, skipped = _settle_state(target)
+                    generations[i] = count
+                    fresh = fresh or not skipped
                 elif _untracked_reference(target):
                     generations = None
             resolved_args.append(val)
@@ -3798,8 +3805,9 @@ class rx:
                 if overridden:
                     generations = None
                 elif isinstance(target, rx):
-                    generations[k] = target._settle_count
-                    fresh = fresh or not target._skipped
+                    count, skipped = _settle_state(target)
+                    generations[k] = count
+                    fresh = fresh or not skipped
                 elif _untracked_reference(target):
                     generations = None
             resolved_kwargs[k] = val

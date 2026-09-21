@@ -3034,7 +3034,6 @@ class rx:
             )
         self._disposed = True
         self._finished_generation = self._resolve_generation
-        self._notify_settle_change()
         task = self._current_task
         if task is not None and not task.done():
             task.cancel()
@@ -3045,6 +3044,7 @@ class rx:
             for node in self._direct_inputs():
                 if not node._drop_reader(self):
                     node._dispose(cascade=cascade, _cascaded=True)
+        self._notify_settle_change()
 
     def _ensure_override_channel(self) -> Trigger:
         """

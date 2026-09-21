@@ -1854,6 +1854,30 @@ class TestUpdatingStatus:
         await asyncio.sleep(0)
         assert updating.rx.value is False
 
+    async def test_reactive_sync_ref_replacement_survives_a_raising_updating_watcher(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        class Source(param.Parameterized):
+            value = param.Integer(default=4)
+
+        async def slow():
+            await asyncio.sleep(0.05)
+            return 0
+
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        outlet.x = slow
+        updating.rx.watch(lambda value: (_ for _ in ()).throw(ValueError) if not value else None)
+
+        with pytest.raises(ValueError):
+            outlet.x = Source().param.value
+
+        assert outlet.x == 4
+        assert outlet._param__private.refs['x'] is not None
+
     def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
         calls = []
         original = rx._notify_graph_change
@@ -2747,6 +2771,32 @@ class TestDisposeAndLifecycle:
         outlet.x = 10
         assert expr.rx.value == 11
         assert updating.rx.value is False
+
+    async def test_reactive_dispose_finishes_when_an_updating_watcher_raises(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.05)
+            return value
+
+        src = rx(1)
+        ref = src.rx.pipe(slow)
+        outlet = Outlet(x=ref)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        updating.rx.watch(lambda value: (_ for _ in ()).throw(ValueError) if not value else None)
+
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        with pytest.raises(ValueError):
+            ref.rx.dispose()
+
+        task = ref._current_task
+        assert task is None or task.cancelling()
+        assert src._disposed
 
     def test_reactive_when_derived_node_is_not_tracked_as_reader_but_raises_on_stale_read(self):
         """``.rx.when()`` reads its source through a closure, invisible to `_readers`."""

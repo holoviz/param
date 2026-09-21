@@ -2237,6 +2237,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 "A parameter value cannot be set for an unbound parameter."
             )
         name = self.name
+        ref_changed = settle_changed = False
 
         if obj is not None and self.allow_refs and obj._param__private.initialized:
             syncing = name in obj._param__private.syncing
@@ -2244,15 +2245,20 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             refs = obj._param__private.refs
             if ref is not None:
                 obj.param._update_ref(name, ref)
+                ref_changed = True
+                settle_changed = True
             elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
                 del refs[name]
                 if name in obj._param__private.async_refs:
                     obj._param__private.async_refs.pop(name).cancel()
-                _notify_ref_change(obj, name)
-                _notify_async_ref_settle_change(obj, name)
-            if scheduled:
-                _notify_async_ref_settle_change(obj, name)
+                ref_changed = True
+                settle_changed = True
+            settle_changed |= scheduled
             if is_async or val is Undefined:
+                if ref_changed:
+                    _notify_ref_change(obj, name)
+                if settle_changed:
+                    _notify_async_ref_settle_change(obj, name)
                 return
 
         self._validate(val)
@@ -2315,6 +2321,11 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         obj = self.owner if obj is None and self.owner is not None else obj
 
         if obj is None or not watchers:
+            if obj is not None:
+                if ref_changed:
+                    _notify_ref_change(obj, name)
+                if settle_changed:
+                    _notify_async_ref_settle_change(obj, name)
             return
 
         event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
@@ -2324,6 +2335,10 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             obj.param._call_watcher(watcher, event)
         if not _is_batched(obj):
             obj.param._batch_call_watchers()
+        if ref_changed:
+            _notify_ref_change(obj, name)
+        if settle_changed:
+            _notify_async_ref_settle_change(obj, name)
 
     def _validate_value(self, value, allow_None):
         """Validate the parameter value against constraints.
@@ -2989,8 +3004,6 @@ class Parameters:
         deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs
-        _notify_ref_change(self_.self, name)
-        _notify_async_ref_settle_change(self_.self, name)
 
     def _sync_refs(self_, *events):
         if self_.self is None:

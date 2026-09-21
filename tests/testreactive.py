@@ -1878,6 +1878,26 @@ class TestUpdatingStatus:
         assert outlet.x == 4
         assert outlet._param__private.refs['x'] is not None
 
+    async def test_reactive_invalid_value_clears_updating_after_an_async_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Integer(default=0, allow_refs=True)
+
+        async def slow():
+            await asyncio.Event().wait()
+
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda value: None)
+        outlet.x = slow
+
+        with pytest.raises(ValueError):
+            outlet.x = 'bad'
+
+        assert outlet.x == 1
+        assert expr.rx.awaiting is False
+        assert updating.rx.value is False
+
     def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
         calls = []
         original = rx._notify_graph_change

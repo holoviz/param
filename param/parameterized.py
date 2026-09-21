@@ -254,6 +254,12 @@ def _notify_async_ref_settle_change(owner, name):
     watchers = owner._param__private.async_ref_settle_watchers
     _notify_weak_listeners(watchers.get(name) if watchers else None)
 
+def _notify_ref_changes(owner, name, ref_changed, settle_changed):
+    if ref_changed:
+        _notify_ref_change(owner, name)
+    if settle_changed:
+        _notify_async_ref_settle_change(owner, name)
+
 def eval_function_with_deps(function: Callable[..., t.Any]) -> t.Any:
     """
     Evaluate a function after resolving its dependencies.
@@ -2255,90 +2261,82 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 settle_changed = True
             settle_changed |= scheduled
             if is_async or val is Undefined:
-                if ref_changed:
-                    _notify_ref_change(obj, name)
-                if settle_changed:
-                    _notify_async_ref_settle_change(obj, name)
+                _notify_ref_changes(obj, name, ref_changed, settle_changed)
                 return
 
-        self._validate(val)
+        try:
+            self._validate(val)
 
-        _old = NotImplemented
-        # obj can be None if __set__ is called for a Parameterized class
-        if self.constant or self.readonly:
-            if self.readonly:
-                raise TypeError("Read-only parameter '%s' cannot be modified" % name)
-            elif obj is None:
-                _old = self.default
-                self.default = val
-            elif not obj._param__private.initialized:
-                _old = obj._param__private.values.get(self.name, self.default)
-                obj._param__private.values[self.name] = val
+            _old = NotImplemented
+            # obj can be None if __set__ is called for a Parameterized class
+            if self.constant or self.readonly:
+                if self.readonly:
+                    raise TypeError("Read-only parameter '%s' cannot be modified" % name)
+                elif obj is None:
+                    _old = self.default
+                    self.default = val
+                elif not obj._param__private.initialized:
+                    _old = obj._param__private.values.get(self.name, self.default)
+                    obj._param__private.values[self.name] = val
+                else:
+                    _old = obj._param__private.values.get(self.name, self.default)
+                    if val is not _old:
+                        raise TypeError("Constant parameter '%s' cannot be modified" % name)
             else:
-                _old = obj._param__private.values.get(self.name, self.default)
-                if val is not _old:
-                    raise TypeError("Constant parameter '%s' cannot be modified" % name)
-        else:
+                if obj is None:
+                    _old = self.default
+                    self.default = val
+                else:
+                    # When setting a Parameter before calling super.
+                    if not isinstance(obj._param__private, _InstancePrivate):
+                        warnings.warn(
+                            f"Setting the Parameter {self.name!r} to {val!r} before "
+                            f"the Parameterized class {type(obj).__name__!r} is fully "
+                            "instantiated is deprecated and will raise an error in "
+                            "a future version. Ensure the value is set after calling "
+                            "`super().__init__(**params)` in the constructor.",
+                            category=_ParamPendingDeprecationWarning,
+                            stacklevel=_find_stack_level(),
+                        )
+                        obj.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
+                            explicit_no_refs=type(obj)._param__private.explicit_no_refs
+                        )
+                    _old = obj._param__private.values.get(name, self.default)
+                    obj._param__private.values[name] = val
+            self._post_setter(obj, val)
+
             if obj is None:
-                _old = self.default
-                self.default = val
-            else:
-                # When setting a Parameter before calling super.
-                if not isinstance(obj._param__private, _InstancePrivate):
-                    warnings.warn(
-                        f"Setting the Parameter {self.name!r} to {val!r} before "
-                        f"the Parameterized class {type(obj).__name__!r} is fully "
-                        "instantiated is deprecated and will raise an error in "
-                        "a future version. Ensure the value is set after calling "
-                        "`super().__init__(**params)` in the constructor.",
-                        category=_ParamPendingDeprecationWarning,
-                        stacklevel=_find_stack_level(),
-                    )
-                    obj.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
-                        explicit_no_refs=type(obj)._param__private.explicit_no_refs
-                    )
-                _old = obj._param__private.values.get(name, self.default)
-                obj._param__private.values[name] = val
-        self._post_setter(obj, val)
+                self._invalidate_init_cache()
 
-        if obj is None:
-            self._invalidate_init_cache()
-
-        if obj is not None:
-            if not hasattr(obj, '_param__private') or not getattr(obj._param__private, 'initialized', False):
-                return
-            obj.param._update_deps(name)
-
-        if obj is None:
-            watchers = self.watchers.get("value")
-        elif name in obj._param__private.watchers:
-            watchers = obj._param__private.watchers[name].get('value')
-            if watchers is None:
-                watchers = self.watchers.get("value")
-        else:
-            watchers = None
-
-        obj = self.owner if obj is None and self.owner is not None else obj
-
-        if obj is None or not watchers:
             if obj is not None:
-                if ref_changed:
-                    _notify_ref_change(obj, name)
-                if settle_changed:
-                    _notify_async_ref_settle_change(obj, name)
-            return
+                if not hasattr(obj, '_param__private') or not getattr(obj._param__private, 'initialized', False):
+                    return
+                obj.param._update_deps(name)
 
-        event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
+            if obj is None:
+                watchers = self.watchers.get("value")
+            elif name in obj._param__private.watchers:
+                watchers = obj._param__private.watchers[name].get('value')
+                if watchers is None:
+                    watchers = self.watchers.get("value")
+            else:
+                watchers = None
 
-        # Copy watchers here since they may be modified inplace during iteration
-        for watcher in sorted(watchers, key=lambda w: w.precedence):
-            obj.param._call_watcher(watcher, event)
-        if not _is_batched(obj):
-            obj.param._batch_call_watchers()
-        if ref_changed:
-            _notify_ref_change(obj, name)
-        if settle_changed:
-            _notify_async_ref_settle_change(obj, name)
+            obj = self.owner if obj is None and self.owner is not None else obj
+
+            if obj is None or not watchers:
+                return
+
+            event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
+
+            # Copy watchers here since they may be modified inplace during iteration
+            for watcher in sorted(watchers, key=lambda w: w.precedence):
+                obj.param._call_watcher(watcher, event)
+            if not _is_batched(obj):
+                obj.param._batch_call_watchers()
+        finally:
+            if obj is not None:
+                _notify_ref_changes(obj, name, ref_changed, settle_changed)
 
     def _validate_value(self, value, allow_None):
         """Validate the parameter value against constraints.
@@ -3035,11 +3033,13 @@ class Parameters:
 
             updates[pname] = new_val
 
-        with edit_constant(self_.self):
-            with _syncing(self_.self, updates):
-                self_.update(updates)
-        for pname in scheduled:
-            _notify_async_ref_settle_change(self_.self, pname)
+        try:
+            with edit_constant(self_.self):
+                with _syncing(self_.self, updates):
+                    self_.update(updates)
+        finally:
+            for pname in scheduled:
+                _notify_async_ref_settle_change(self_.self, pname)
 
     def _resolve_ref(self_, pobj: Parameter, value: t.Any):
         is_gen = inspect.isgeneratorfunction(value)

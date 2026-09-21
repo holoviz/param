@@ -2794,8 +2794,9 @@ class TestDisposeAndLifecycle:
         with pytest.raises(ValueError):
             ref.rx.dispose()
 
+        await asyncio.sleep(0)
         task = ref._current_task
-        assert task is None or task.cancelling()
+        assert task is None or task.cancelled()
         assert src._disposed
 
     def test_reactive_when_derived_node_is_not_tracked_as_reader_but_raises_on_stale_read(self):

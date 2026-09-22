@@ -174,6 +174,10 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         kwargs["class_"] = set
         return ClassSelector, kwargs
 
+    if isinstance(ann, type) and ann not in (Any, object):
+        kwargs["class_"] = ann
+        return ClassSelector, kwargs
+
     # Unrecognized annotations use an unvalidated Parameter.
     return Parameter, kwargs
 

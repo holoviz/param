@@ -63,6 +63,58 @@ def test_optional_enum_annotation_allows_none():
     assert P().status is None
 
 
+def test_class_annotation_infers_classselector():
+    class Address:
+        pass
+
+    class P(param.Model):
+        address: Address
+
+    assert isinstance(P.param.address, param.ClassSelector)
+    assert P.param.address.class_ is Address
+
+    p = P(address=Address())
+    with pytest.raises(ValueError):
+        p.address = "not an address"
+
+
+def test_nested_model_annotation_infers_classselector():
+    class Child(param.Model):
+        name: str = "child"
+
+    class Parent(param.Model):
+        child: Child
+
+    assert isinstance(Parent.param.child, param.ClassSelector)
+    assert Parent.param.child.class_ is Child
+
+    child = Child()
+    assert Parent(child=child).child is child
+    with pytest.raises(ValueError):
+        Parent(child="not a child")
+
+
+def test_optional_class_annotation_allows_none():
+    class Address:
+        pass
+
+    class P(param.Model):
+        address: Address | None = None
+
+    assert isinstance(P.param.address, param.ClassSelector)
+    assert P.param.address.allow_None is True
+    assert P().address is None
+
+
+def test_any_and_object_annotations_remain_unvalidated_parameters():
+    class P(param.Model):
+        any_value: t.Any = None
+        object_value: object = None
+
+    assert type(P.param.any_value) is param.Parameter
+    assert type(P.param.object_value) is param.Parameter
+
+
 def test_literal_field_specification_supports_default_and_optional():
     class P(param.Model):
         mode: t.Literal["light", "dark"] = param.Field(default="dark")

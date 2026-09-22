@@ -102,6 +102,28 @@ def test_field_parameter_override_can_replace_literal_selector_behavior():
     p.mode = "custom-theme"
 
 
+def test_field_parameter_instance_override_preserves_its_own_default():
+    # Reusing a fully-configured `Parameter` instance via `parameter=`
+    # should honor that instance's own default without requiring callers
+    # to redundantly repeat it via `Field(default=...)`.
+    shared = param.String(default="reused", regex=r"^r")
+
+    class P(param.ParamModel):
+        value: str = param.ParamField(parameter=shared)
+
+    assert P.param.value.default == "reused"
+    assert P().value == "reused"
+
+
+def test_field_parameter_instance_override_is_not_treated_as_required():
+    shared = param.String(default="reused")
+
+    class P(param.ParamModel):
+        value: str = param.ParamField(parameter=shared)
+
+    P()  # should not raise
+
+
 def test_annotation_only_field_is_required():
     class P(param.ParamModel):
         name: str

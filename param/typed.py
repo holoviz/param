@@ -193,19 +193,27 @@ def _build_parameter_from_field(
     if has_explicit_value:
         factory_kwargs["default"] = explicit_value
     elif "default" not in factory_kwargs and "default_factory" not in factory_kwargs:
-        from .parameters import Selector
+        if isinstance(factory, Parameter):
+            # A `Parameter` *instance* passed via `Field(parameter=...)`
+            # already carries its own default (explicit or inherited from
+            # its own class), just like a `Parameter` instance assigned
+            # directly in a class body. Leave it untouched rather than
+            # clobbering it with `Undefined` and marking the field required.
+            pass
+        else:
+            from .parameters import Selector
 
-        # No default was supplied anywhere (annotation, Field, or class body).
-        # `Selector` is the one built-in Parameter that computes its own
-        # sensible default (the first entry of `objects`) when none is given
-        # — e.g. for `Literal["read", "write"]` — so it's exempt from being
-        # treated as required. Everything else is required at __init__ time.
-        # `default` is left as `Undefined` so the underlying Parameter still
-        # falls back to its own slot default for introspection (e.g.
-        # `P.param.name.default`), but `ParamModel.__init__` enforces that a
-        # value must be passed explicitly for required fields.
-        factory_kwargs["default"] = Undefined
-        is_required = not (factory is Selector and factory_kwargs.get("objects"))
+            # No default was supplied anywhere (annotation, Field, or class body).
+            # `Selector` is the one built-in Parameter that computes its own
+            # sensible default (the first entry of `objects`) when none is given
+            # — e.g. for `Literal["read", "write"]` — so it's exempt from being
+            # treated as required. Everything else is required at __init__ time.
+            # `default` is left as `Undefined` so the underlying Parameter still
+            # falls back to its own slot default for introspection (e.g.
+            # `P.param.name.default`), but `ParamModel.__init__` enforces that a
+            # value must be passed explicitly for required fields.
+            factory_kwargs["default"] = Undefined
+            is_required = not (factory is Selector and factory_kwargs.get("objects"))
 
     if isinstance(factory, Parameter):
         pobj = copy.copy(factory)

@@ -21,7 +21,7 @@ from .parameterized import (
 FT = t.TypeVar("FT")
 
 
-class _ParamFieldSpec:
+class _FieldSpec:
 
     __slots__ = ("default", "default_factory", "parameter", "kwargs")
 
@@ -40,7 +40,7 @@ class _ParamFieldSpec:
 
 
 @t.overload
-def ParamField(
+def Field(
     *,
     default: FT,
     default_factory: Callable[..., Any] | Any = Undefined,
@@ -51,7 +51,7 @@ def ParamField(
 
 
 @t.overload
-def ParamField(
+def Field(
     *,
     default: Any = Undefined,
     default_factory: Callable[[], FT],
@@ -62,7 +62,7 @@ def ParamField(
 
 
 @t.overload
-def ParamField(
+def Field(
     *,
     default: Any = Undefined,
     default_factory: Callable[..., Any] | Any = Undefined,
@@ -72,17 +72,17 @@ def ParamField(
     ...
 
 
-def ParamField(
+def Field(
     *,
     default: Any = Undefined,
     default_factory: Callable[..., Any] | Any = Undefined,
     parameter: type[Parameter] | Callable[..., Parameter] | Parameter | None = None,
     **kwargs: Any,
 ) -> Any:
-    """ParamField specifier for ParamModel attributes."""
+    """Field specifier for Model attributes."""
     return t.cast(
         "Any",
-        _ParamFieldSpec(
+        _FieldSpec(
         default=default,
         default_factory=default_factory,
         parameter=parameter,
@@ -171,7 +171,7 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
 def _build_parameter_from_field(
     annotation: Any,
     *,
-    field_spec: _ParamFieldSpec | None,
+    field_spec: _FieldSpec | None,
     explicit_value: Any = Undefined,
     has_explicit_value: bool = False,
 ) -> tuple[Parameter, bool]:
@@ -218,7 +218,7 @@ def _build_parameter_from_field(
             # treated as required. Everything else is required at __init__ time.
             # `default` is left as `Undefined` so the underlying Parameter still
             # falls back to its own slot default for introspection (e.g.
-            # `P.param.name.default`), but `ParamModel.__init__` enforces that a
+            # `P.param.name.default`), but `Model.__init__` enforces that a
             # value must be passed explicitly for required fields.
             factory_kwargs["default"] = Undefined
             is_required = not (factory is Selector and factory_kwargs.get("objects"))
@@ -257,12 +257,12 @@ def _extract_namespace_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
     return dict(evaluated) if isinstance(evaluated, Mapping) else {}
 
 
-@dataclass_transform(kw_only_default=True, field_specifiers=(ParamField,))
-class ParamModelMetaclass(ParameterizedMetaclass):
+@dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
+class ModelMetaclass(ParameterizedMetaclass):
 
     def __new__(
         mcs, name: str, bases: tuple[type, ...], dict_: dict[str, Any]
-    ) -> ParamModelMetaclass:
+    ) -> ModelMetaclass:
         namespace = dict_
         annotations = _extract_namespace_annotations(namespace)
         module_name = namespace.get("__module__", "")
@@ -270,7 +270,7 @@ class ParamModelMetaclass(ParameterizedMetaclass):
 
         required: set[str] = set()
         for base in bases:
-            required |= getattr(base, "_param_model_required", frozenset())
+            required |= getattr(base, "_model_required", frozenset())
 
         for attr, annotation in annotations.items():
             if isinstance(annotation, str):
@@ -293,9 +293,9 @@ class ParamModelMetaclass(ParameterizedMetaclass):
                 required.discard(attr)
                 continue
 
-            field_spec = existing if isinstance(existing, _ParamFieldSpec) else None
+            field_spec = existing if isinstance(existing, _FieldSpec) else None
             has_explicit_value = (
-                attr in namespace and not isinstance(existing, _ParamFieldSpec)
+                attr in namespace and not isinstance(existing, _FieldSpec)
             )
             explicit_value = existing if has_explicit_value else Undefined
             namespace[attr], is_required = _build_parameter_from_field(
@@ -309,24 +309,24 @@ class ParamModelMetaclass(ParameterizedMetaclass):
             else:
                 required.discard(attr)
 
-        namespace["_param_model_required"] = frozenset(required)
+        namespace["_model_required"] = frozenset(required)
 
         return t.cast(
-            "ParamModelMetaclass", super().__new__(mcs, name, bases, namespace)
+            "ModelMetaclass", super().__new__(mcs, name, bases, namespace)
         )
 
 
-class ParamModel(Parameterized, metaclass=ParamModelMetaclass):
+class Model(Parameterized, metaclass=ModelMetaclass):
     """A Parameterized subclass that synthesizes Parameters from type annotations."""
 
-    _param_model_required: t.ClassVar[frozenset[str]] = frozenset()
+    _model_required: t.ClassVar[frozenset[str]] = frozenset()
 
     # No return annotation: ParameterizedMetaclass.__get_signature only expands
     # __init__ into per-parameter keywords for introspection/tab-completion
     # when it matches DEFAULT_SIGNATURE exactly, including the (empty) return
     # annotation.
     def __init__(self, **params):
-        missing = sorted(self._param_model_required - params.keys())
+        missing = sorted(self._model_required - params.keys())
         if missing:
             missing_str = ", ".join(repr(name) for name in missing)
             raise TypeError(

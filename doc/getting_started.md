@@ -69,21 +69,21 @@ The [User Guide](user_guide/index) explains all the other Param features for sim
 
 ## Declaring parameters from type annotations
 
-If you'd rather declare parameters with plain Python type annotations instead of spelling out each `Parameter` explicitly, `param.ParamModel` gives you a `dataclass`-like shorthand that synthesizes the underlying `Parameter` objects for you, while still giving you all the validation and configuration behavior described above:
+If you'd rather declare parameters with plain Python type annotations instead of spelling out each `Parameter` explicitly, `param.Model` gives you a `dataclass`-like shorthand that synthesizes the underlying `Parameter` objects for you, while still giving you all the validation and configuration behavior described above:
 
 ```{code-block} python
 import param
 
-class Sum(param.ParamModel):
+class Sum(param.Model):
     title: str = "sum"
-    a: int = param.ParamField(default=2, bounds=(0, 10), doc="First addend")
-    b: int = param.ParamField(default=3, bounds=(0, 10), doc="Second addend")
+    a: int = param.Field(default=2, bounds=(0, 10), doc="First addend")
+    b: int = param.Field(default=3, bounds=(0, 10), doc="Second addend")
 
     def __call__(self):
         return self.title + ": " + str(self.a + self.b)
 ```
 
-Leave off the `=` and the annotation becomes required: omitting that parameter when constructing the class raises a clear `TypeError` naming the missing field, rather than silently filling in an empty string or zero. See the [Typing](user_guide/Typing) user guide for the full set of supported annotations (`Literal`, `Optional`, containers, and more) and for how `ParamModel` interacts with static type checkers.
+Leave off the `=` and the annotation becomes required: omitting that parameter when constructing the class raises a clear `TypeError` naming the missing field, rather than silently filling in an empty string or zero. See the [Typing](user_guide/Typing) user guide for the full set of supported annotations (`Literal`, `Optional`, containers, and more) and for how `Model` interacts with static type checkers.
 
 ## Using Param for configuration
 

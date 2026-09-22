@@ -6,7 +6,7 @@ import pytest
 
 
 def test_literal_annotation_infers_selector():
-    class P(param.ParamModel):
+    class P(param.Model):
         mode: t.Literal["read", "write"]
 
     assert isinstance(P.param.mode, param.Selector)
@@ -22,7 +22,7 @@ def test_literal_annotation_infers_selector():
 
 
 def test_literal_annotation_supports_explicit_default_value():
-    class P(param.ParamModel):
+    class P(param.Model):
         mode: t.Literal["read", "write"] = "write"
 
     assert isinstance(P.param.mode, param.Selector)
@@ -32,9 +32,9 @@ def test_literal_annotation_supports_explicit_default_value():
 
 
 def test_literal_field_specification_supports_default_and_optional():
-    class P(param.ParamModel):
-        mode: t.Literal["light", "dark"] = param.ParamField(default="dark")
-        optional_mode: t.Literal["auto", "manual"] | None = param.ParamField(default=None)
+    class P(param.Model):
+        mode: t.Literal["light", "dark"] = param.Field(default="dark")
+        optional_mode: t.Literal["auto", "manual"] | None = param.Field(default=None)
 
     assert isinstance(P.param.mode, param.Selector)
     assert P.param.mode.objects == ["light", "dark"]
@@ -48,7 +48,7 @@ def test_literal_field_specification_supports_default_and_optional():
 
 
 def test_classvar_annotation_is_not_parameterized():
-    class P(param.ParamModel):
+    class P(param.Model):
         shared: t.ClassVar[int] = 7
         value: int = 1
 
@@ -59,7 +59,7 @@ def test_classvar_annotation_is_not_parameterized():
 
 
 def test_annotated_metadata_sets_doc_and_parameter_attributes():
-    class P(param.ParamModel):
+    class P(param.Model):
         title: t.Annotated[str, {"doc": "Title text", "constant": True}] = "hello"
 
     assert isinstance(P.param.title, param.String)
@@ -69,7 +69,7 @@ def test_annotated_metadata_sets_doc_and_parameter_attributes():
 
 
 def test_annotated_metadata_supports_inferred_parameter_kwargs():
-    class P(param.ParamModel):
+    class P(param.Model):
         value: t.Annotated[int, {"bounds": (0, 10)}] = 4
 
     assert isinstance(P.param.value, param.Integer)
@@ -81,10 +81,10 @@ def test_annotated_and_optional_unwrap_regardless_of_nesting_order():
     # `Annotated` wrapping `Optional` and `Optional` wrapping `Annotated`
     # are equally idiomatic and must infer the same Parameter, metadata,
     # and allow_None.
-    class AnnotatedThenOptional(param.ParamModel):
+    class AnnotatedThenOptional(param.Model):
         value: t.Annotated[t.Optional[int], {"bounds": (0, 10)}] = None
 
-    class OptionalThenAnnotated(param.ParamModel):
+    class OptionalThenAnnotated(param.Model):
         value: t.Optional[t.Annotated[int, {"bounds": (0, 10)}]] = None
 
     for cls in (AnnotatedThenOptional, OptionalThenAnnotated):
@@ -95,8 +95,8 @@ def test_annotated_and_optional_unwrap_regardless_of_nesting_order():
 
 
 def test_field_parameter_allows_overriding_inferred_parameter_class():
-    class P(param.ParamModel):
-        value: int = param.ParamField(default=1.5, parameter=param.Number, bounds=(0, None))
+    class P(param.Model):
+        value: int = param.Field(default=1.5, parameter=param.Number, bounds=(0, None))
 
     assert isinstance(P.param.value, param.Number)
 
@@ -108,8 +108,8 @@ def test_field_parameter_allows_overriding_inferred_parameter_class():
 
 
 def test_field_parameter_override_can_replace_literal_selector_behavior():
-    class P(param.ParamModel):
-        mode: t.Literal["light", "dark"] = param.ParamField(
+    class P(param.Model):
+        mode: t.Literal["light", "dark"] = param.Field(
             default="sepia", parameter=param.String
         )
 
@@ -125,8 +125,8 @@ def test_field_parameter_instance_override_preserves_its_own_default():
     # to redundantly repeat it via `Field(default=...)`.
     shared = param.String(default="reused", regex=r"^r")
 
-    class P(param.ParamModel):
-        value: str = param.ParamField(parameter=shared)
+    class P(param.Model):
+        value: str = param.Field(parameter=shared)
 
     assert P.param.value.default == "reused"
     assert P().value == "reused"
@@ -135,14 +135,14 @@ def test_field_parameter_instance_override_preserves_its_own_default():
 def test_field_parameter_instance_override_is_not_treated_as_required():
     shared = param.String(default="reused")
 
-    class P(param.ParamModel):
-        value: str = param.ParamField(parameter=shared)
+    class P(param.Model):
+        value: str = param.Field(parameter=shared)
 
     P()  # should not raise
 
 
 def test_annotation_only_field_is_required():
-    class P(param.ParamModel):
+    class P(param.Model):
         name: str
         count: int = 0
 
@@ -155,8 +155,8 @@ def test_annotation_only_field_is_required():
 
 
 def test_field_without_default_is_required():
-    class P(param.ParamModel):
-        value: int = param.ParamField(bounds=(0, None))
+    class P(param.Model):
+        value: int = param.Field(bounds=(0, None))
 
     with pytest.raises(TypeError, match="value"):
         P()
@@ -165,7 +165,7 @@ def test_field_without_default_is_required():
 
 
 def test_multiple_missing_required_fields_are_all_reported():
-    class P(param.ParamModel):
+    class P(param.Model):
         a: str
         b: int
         c: float = 1.0
@@ -177,7 +177,7 @@ def test_multiple_missing_required_fields_are_all_reported():
 
 
 def test_required_fields_are_inherited_by_subclasses():
-    class Base(param.ParamModel):
+    class Base(param.Model):
         name: str
 
     class Sub(Base):
@@ -195,7 +195,7 @@ def test_required_fields_are_inherited_by_subclasses():
 
 
 def test_subclass_can_satisfy_inherited_required_field_with_a_default():
-    class Base(param.ParamModel):
+    class Base(param.Model):
         name: str
 
     class Sub(Base):
@@ -207,7 +207,7 @@ def test_subclass_can_satisfy_inherited_required_field_with_a_default():
 def test_literal_annotation_remains_not_required():
     # Selector infers a usable default (the first `objects` entry) from the
     # annotation alone, so it should never be treated as a required field.
-    class P(param.ParamModel):
+    class P(param.Model):
         mode: t.Literal["read", "write"]
 
     P()  # should not raise
@@ -223,8 +223,8 @@ def test_literal_annotation_remains_not_required():
     ],
 )
 def test_bare_container_annotations_infer_typed_parameters(annotation, expected_type, extra_check):
-    class P(param.ParamModel):
-        value: annotation = param.ParamField(default_factory=annotation)
+    class P(param.Model):
+        value: annotation = param.Field(default_factory=annotation)
 
     assert isinstance(P.param.value, expected_type)
     if extra_check is not None:
@@ -232,8 +232,8 @@ def test_bare_container_annotations_infer_typed_parameters(annotation, expected_
 
 
 def test_parameter_override_preserves_optional_derived_allow_none():
-    class P(param.ParamModel):
-        value: int | None = param.ParamField(default=1, parameter=param.Number)
+    class P(param.Model):
+        value: int | None = param.Field(default=1, parameter=param.Number)
 
     assert isinstance(P.param.value, param.Number)
     assert P.param.value.allow_None is True
@@ -244,8 +244,8 @@ def test_parameter_override_preserves_optional_derived_allow_none():
 
 
 def test_parameter_override_explicit_allow_none_takes_precedence():
-    class P(param.ParamModel):
-        value: int | None = param.ParamField(
+    class P(param.Model):
+        value: int | None = param.Field(
             default=1, parameter=param.Number, allow_None=False
         )
 
@@ -253,13 +253,13 @@ def test_parameter_override_explicit_allow_none_takes_precedence():
 
 
 def test_broken_string_annotation_raises_instead_of_silently_dropping_validation():
-    # Exercises the plain-string eval() path in ParamModelMetaclass.__new__
+    # Exercises the plain-string eval() path in ModelMetaclass.__new__
     # directly (via an explicit string annotation), independent of Python
     # version or `from __future__ import annotations`. A typo'd/undefined
     # forward reference must raise rather than silently falling through to
     # an unvalidated bare `Parameter`.
     with pytest.raises(NameError):
-        class P(param.ParamModel):
+        class P(param.Model):
             value: "DoesNotExist"  # noqa: F821
 
 
@@ -269,5 +269,5 @@ def test_broken_string_annotation_raises_instead_of_silently_dropping_validation
 )
 def test_broken_forward_reference_raises_instead_of_silently_dropping_fields():
     with pytest.raises(NameError):
-        class P(param.ParamModel):
+        class P(param.Model):
             value: DoesNotExist  # noqa: F821

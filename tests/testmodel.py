@@ -244,6 +244,22 @@ def test_bare_container_annotations_infer_typed_parameters(annotation, expected_
         assert extra_check(P.param.value)
 
 
+def test_dict_annotation_with_key_value_types_infers_dict_without_type_checking():
+    # `dict[K, V]` maps to `Dict`, same as bare `dict`. `Dict` has no
+    # key/value type-checking support at all (unlike `List.item_type`), so
+    # the subscripted key/value types are accepted syntactically but not
+    # enforced at runtime -- this pins down that current, correct-per-the-
+    # mapping-table-but-easily-assumed-otherwise behavior.
+    class P(param.Model):
+        value: dict[str, int] = param.Field(default_factory=dict)
+
+    assert isinstance(P.param.value, param.Dict)
+
+    p = P()
+    p.value = {"a": 1}
+    p.value = {1: "not-a-str-key-or-int-value"}  # not validated, by design
+
+
 def test_list_union_element_type_infers_tuple_of_item_types():
     # `List.item_type` natively accepts a tuple of types, so a union
     # element type (`list[str | int]`) should map to `item_type=(str,

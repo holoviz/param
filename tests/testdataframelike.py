@@ -235,9 +235,43 @@ class TestDataFrameLikeAsNarwhals:
             df = param.DataFrameLike(
                 default=pd.DataFrame({'a': [1]}), as_narwhals=True)
 
-        assert isinstance(P.param.df.default, nw.DataFrame)
+        # Reading the default through the descriptor wraps it; the
+        # underlying stored default stays native (see test_stored_value_stays_native).
+        assert isinstance(P.df, nw.DataFrame)
         p = P(df=pd.DataFrame({'a': [1, 2]}))
         assert isinstance(p.df, nw.DataFrame)
+
+    def test_stored_value_stays_native(self):
+        # Wrapping happens on read, not on write, so that reference
+        # resolution in the base Parameter.__set__ is unaffected (see
+        # test_allow_refs_reassignment_after_construction).
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), as_narwhals=True)
+
+        src = pd.DataFrame({'a': [1, 2]})
+        p = P(df=src)
+        assert p._param__private.values['df'] is src
+
+    def test_allow_refs_reassignment_after_construction(self):
+        # Regression test: as_narwhals must not interfere with allow_refs,
+        # which resolves the incoming value inside Parameter.__set__ before
+        # it reaches DataFrameLike. Wrapping the raw (unresolved) reference
+        # would raise, since a reference is not itself dataframe-like.
+        class Source(param.Parameterized):
+            df = param.DataFrameLike(default=pd.DataFrame({'a': [1]}))
+
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}),
+                as_narwhals=True, allow_refs=True)
+
+        source = Source(df=pd.DataFrame({'a': [9, 9]}))
+        p = P()
+        p.df = source.param.df
+        import narwhals.stable.v2 as nw
+        assert isinstance(p.df, nw.DataFrame)
+        assert p.df.to_native().equals(source.df)
 
     def test_none_not_wrapped(self):
         class P(param.Parameterized):
@@ -282,6 +316,18 @@ class TestDataFrameLikeImplementation:
             P(df=pl.DataFrame({'a': [1]}))
 
     @skip_no_polars
+    def test_arbitrary_iterable_of_implementations(self):
+        # Not just list/tuple/set: implementation is typed as a Sequence,
+        # so any reusable iterable of names should work, e.g. a generator
+        # expression's tuple() or a dict's keys.
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}),
+                implementation={'pandas': 0, 'polars': 1}.keys())
+        P(df=pd.DataFrame({'a': [1]}))
+        P(df=pl.DataFrame({'a': [1]}))
+
+    @skip_no_polars
     def test_sequence_of_implementations(self):
         class P(param.Parameterized):
             df = param.DataFrameLike(
@@ -310,6 +356,12 @@ class TestDataFrameLikeImplementation:
             class P(param.Parameterized):
                 df = param.DataFrameLike(
                     default=pd.DataFrame({'a': [1]}), implementation=123)
+
+    def test_empty_implementation_raises(self):
+        with pytest.raises(ValueError):
+            class P(param.Parameterized):
+                df = param.DataFrameLike(
+                    default=pd.DataFrame({'a': [1]}), implementation=[])
 
     @skip_no_polars
     def test_default_must_match_implementation(self):
@@ -357,3 +409,12 @@ class TestDataFrameLikeSerialize:
         recs = param.DataFrameLike.serialize(pd.DataFrame({'a': [1, 2]}))
         back = param.DataFrameLike.deserialize(recs)
         assert back.to_dict('records') == recs
+
+    def test_serialize_as_narwhals_value(self):
+        # instance.df is already a Narwhals wrapper when as_narwhals=True;
+        # serialize must accept that as well as a native object.
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), as_narwhals=True)
+        p = P(df=pd.DataFrame({'a': [1, 2]}))
+        assert param.DataFrameLike.serialize(p.df) == [{'a': 1}, {'a': 2}]

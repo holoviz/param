@@ -3538,9 +3538,11 @@ class DataFrameLike(ClassSelector[t.Any]):
     Narwhals reports for the value (``nw.from_native(val).implementation``);
     unrecognised names raise ``ValueError`` at declaration time.
 
-    ``as_narwhals``: when ``True``, the value is stored as the Narwhals
-    ``DataFrame``/``LazyFrame`` wrapper (via ``narwhals.from_native``)
-    instead of the native object. Defaults to ``False``, matching the
+    ``as_narwhals``: when ``True``, reading the value (e.g. ``instance.param_name``)
+    returns the Narwhals ``DataFrame``/``LazyFrame`` wrapper (via
+    ``narwhals.from_native``) instead of the native object; the stored
+    value itself is left untouched, so watchers still see the native
+    object as ``event.new``. Defaults to ``False``, matching the
     pass-through behaviour of a plain ``DataFrameLike``.
 
     Serialization emits a list of records via Narwhals; ``deserialize``
@@ -3630,8 +3632,6 @@ class DataFrameLike(ClassSelector[t.Any]):
             **params,
         )
         self._validate(self.default)
-        if self.as_narwhals and self.default is not None:
-            object.__setattr__(self, 'default', self._as_narwhals(self.default))
 
     def _as_narwhals(self, val):
         narwhals = _get_narwhals()
@@ -3652,13 +3652,18 @@ class DataFrameLike(ClassSelector[t.Any]):
         narwhals = _get_narwhals()
         if isinstance(self.implementation, str):
             names = [self.implementation]
-        elif isinstance(self.implementation, (list, tuple, set)):
+        elif isinstance(self.implementation, Iterable):
             names = list(self.implementation)
         else:
             raise ValueError(
                 f"{_validate_error_prefix(self)}: implementation must be a "
                 f"string or a sequence of strings, not "
                 f"{type(self.implementation).__name__!r}."
+            )
+        if not names:
+            raise ValueError(
+                f"{_validate_error_prefix(self)}: implementation must not be "
+                f"empty; omit it (or pass None) to accept any backend."
             )
         implementations = []
         for name in names:
@@ -3675,11 +3680,16 @@ class DataFrameLike(ClassSelector[t.Any]):
             implementations.append(impl)
         return tuple(implementations)
 
-    @instance_descriptor
-    def __set__(self, obj, val):
+    def __get__(self, obj, objtype=None):
+        # Wrapping happens on read rather than on set so that reference
+        # resolution (allow_refs) in the base Parameter.__set__ always sees
+        # the raw incoming value; wrapping it first would break re-assigning
+        # a live reference after construction, since a `param.rx`/Parameter
+        # reference is not itself dataframe-like.
+        val = super().__get__(obj, objtype)
         if self.as_narwhals and val is not None:
             val = self._as_narwhals(val)
-        super().__set__(obj, val)
+        return val
 
     def _validate(self, val):
         super()._validate(val)

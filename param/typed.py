@@ -180,9 +180,9 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         kwargs["class_"] = set
         return ClassSelector, kwargs
 
-    if ann in (Any, object):
-        return Parameter, kwargs
-
+    # `Any`, `object`, and any other unrecognized annotation (arbitrary
+    # classes, `Enum` subclasses, nested `Parameterized`/`Model` types, ...)
+    # all fall back to a bare, unvalidated `Parameter`.
     return Parameter, kwargs
 
 

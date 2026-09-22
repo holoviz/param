@@ -77,6 +77,23 @@ def test_annotated_metadata_supports_inferred_parameter_kwargs():
     assert P().value == 4
 
 
+def test_annotated_and_optional_unwrap_regardless_of_nesting_order():
+    # `Annotated` wrapping `Optional` and `Optional` wrapping `Annotated`
+    # are equally idiomatic and must infer the same Parameter, metadata,
+    # and allow_None.
+    class AnnotatedThenOptional(param.ParamModel):
+        value: t.Annotated[t.Optional[int], {"bounds": (0, 10)}] = None
+
+    class OptionalThenAnnotated(param.ParamModel):
+        value: t.Optional[t.Annotated[int, {"bounds": (0, 10)}]] = None
+
+    for cls in (AnnotatedThenOptional, OptionalThenAnnotated):
+        assert isinstance(cls.param.value, param.Integer)
+        assert cls.param.value.allow_None is True
+        assert cls.param.value.bounds == (0, 10)
+        assert cls().value is None
+
+
 def test_field_parameter_allows_overriding_inferred_parameter_class():
     class P(param.ParamModel):
         value: int = param.ParamField(default=1.5, parameter=param.Number, bounds=(0, None))

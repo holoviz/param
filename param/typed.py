@@ -105,23 +105,31 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
 
     kwargs: dict[str, Any] = {}
     ann = annotation
+    # `Annotated` and `Optional`/`Union` can wrap each other in either order
+    # (`Annotated[Optional[T], {...}]` or `Optional[Annotated[T, {...}]]`),
+    # so unwrap both repeatedly rather than in a single fixed-order pass.
+    while True:
+        origin = t.get_origin(ann)
+        if origin is t.Annotated:
+            annotated_args = list(t.get_args(ann))
+            for meta in annotated_args[1:]:
+                if isinstance(meta, Mapping):
+                    kwargs.update(dict(meta))
+            ann = annotated_args[0] if annotated_args else ann
+            continue
+
+        if origin in (t.Union, types.UnionType):
+            union_args = list(t.get_args(ann))
+            non_none = [a for a in union_args if a is not type(None)]
+            if len(non_none) < len(union_args):
+                kwargs["allow_None"] = True
+            if len(non_none) == 1 and non_none[0] is not ann:
+                ann = non_none[0]
+                continue
+
+        break
+
     origin = t.get_origin(ann)
-    if origin is t.Annotated:
-        annotated_args = list(t.get_args(ann))
-        ann = annotated_args[0] if annotated_args else ann
-        for meta in annotated_args[1:]:
-            if isinstance(meta, Mapping):
-                kwargs.update(dict(meta))
-        origin = t.get_origin(ann)
-
-    if origin in (t.Union, types.UnionType):
-        union_args = list(t.get_args(ann))
-        non_none = [a for a in union_args if a is not type(None)]
-        if len(non_none) < len(union_args):
-            kwargs["allow_None"] = True
-        ann = non_none[0] if len(non_none) == 1 else ann
-        origin = t.get_origin(ann)
-
     if origin is t.Literal:
         kwargs["objects"] = list(t.get_args(ann))
         return Selector, kwargs

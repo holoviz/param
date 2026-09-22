@@ -1,3 +1,4 @@
+import enum
 import sys
 import typing as t
 
@@ -29,6 +30,37 @@ def test_literal_annotation_supports_explicit_default_value():
     assert P.param.mode.objects == ["read", "write"]
     assert P.param.mode.default == "write"
     assert P().mode == "write"
+
+
+def test_enum_annotation_infers_selector():
+    class Status(enum.Enum):
+        PENDING = "pending"
+        DONE = "done"
+
+    class P(param.Model):
+        status: Status
+
+    assert isinstance(P.param.status, param.Selector)
+    assert P.param.status.objects == [Status.PENDING, Status.DONE]
+    assert P().status is Status.PENDING
+
+    p = P()
+    p.status = Status.DONE
+    with pytest.raises(ValueError):
+        p.status = "done"
+
+
+def test_optional_enum_annotation_allows_none():
+    class Status(enum.Enum):
+        PENDING = "pending"
+        DONE = "done"
+
+    class P(param.Model):
+        status: Status | None = None
+
+    assert isinstance(P.param.status, param.Selector)
+    assert P.param.status.allow_None is True
+    assert P().status is None
 
 
 def test_literal_field_specification_supports_default_and_optional():

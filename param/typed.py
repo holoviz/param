@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import enum
 import importlib
 import sys
 import types
@@ -130,6 +131,10 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
     origin = t.get_origin(ann)
     if origin is t.Literal:
         kwargs["objects"] = list(t.get_args(ann))
+        return Selector, kwargs
+
+    if isinstance(ann, type) and issubclass(ann, enum.Enum):
+        kwargs["objects"] = list(ann)
         return Selector, kwargs
 
     if ann is bool:

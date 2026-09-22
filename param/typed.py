@@ -285,7 +285,10 @@ class ModelMetaclass(ParameterizedMetaclass):
             if attr.startswith("_"):
                 continue
             origin = t.get_origin(annotation)
-            if origin is t.ClassVar:
+            # `t.get_origin(t.ClassVar)` is `None` -- only the subscripted
+            # form `ClassVar[T]` has an origin -- so bare `ClassVar` (a
+            # valid PEP 526 annotation on its own) needs its own check.
+            if origin is t.ClassVar or annotation is t.ClassVar:
                 continue
 
             existing = namespace.get(attr, Undefined)

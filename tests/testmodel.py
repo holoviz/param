@@ -58,6 +58,19 @@ def test_classvar_annotation_is_not_parameterized():
     assert P().value == 1
 
 
+def test_bare_classvar_annotation_is_not_parameterized():
+    # `t.get_origin(t.ClassVar)` is None -- unlike the subscripted form
+    # `ClassVar[int]` -- so the bare form needs its own identity check.
+    class P(param.Model):
+        shared: t.ClassVar = 7
+        value: int = 1
+
+    assert "shared" not in P.param
+    assert "value" in P.param
+    assert P.shared == 7
+    assert P().value == 1
+
+
 def test_annotated_metadata_sets_doc_and_parameter_attributes():
     class P(param.Model):
         title: t.Annotated[str, {"doc": "Title text", "constant": True}] = "hello"

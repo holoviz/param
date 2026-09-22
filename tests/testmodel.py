@@ -244,6 +244,21 @@ def test_bare_container_annotations_infer_typed_parameters(annotation, expected_
         assert extra_check(P.param.value)
 
 
+def test_list_union_element_type_infers_tuple_of_item_types():
+    # `List.item_type` natively accepts a tuple of types, so a union
+    # element type (`list[str | int]`) should map to `item_type=(str,
+    # int)` rather than silently dropping element validation entirely.
+    class P(param.Model):
+        value: list[str | int] = param.Field(default_factory=list)
+
+    assert P.param.value.item_type == (str, int)
+
+    p = P()
+    p.value = ["a", 1]
+    with pytest.raises(TypeError):
+        p.value = [1.5]
+
+
 def test_ellipsis_tuple_annotation_is_still_effectively_fixed_length():
     # Known limitation, not fixable in this inference layer: `tuple[int,
     # ...]` deliberately omits `length` (to signal "variable-length") when

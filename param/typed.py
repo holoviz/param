@@ -145,8 +145,17 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
 
     if ann is list or origin in (list, t.List):
         list_args = t.get_args(ann)
-        if list_args and isinstance(list_args[0], type):
-            kwargs["item_type"] = list_args[0]
+        if list_args:
+            elem = list_args[0]
+            if isinstance(elem, type):
+                kwargs["item_type"] = elem
+            elif t.get_origin(elem) in (t.Union, types.UnionType):
+                # `List.item_type` accepts a tuple of types natively, so
+                # `list[str | int]` maps to `item_type=(str, int)` instead
+                # of silently dropping element-type validation entirely.
+                elem_types = tuple(a for a in t.get_args(elem) if isinstance(a, type))
+                if elem_types:
+                    kwargs["item_type"] = elem_types
         return List, kwargs
 
     if ann is tuple or origin in (tuple, t.Tuple):

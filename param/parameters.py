@@ -122,6 +122,8 @@ if t.TYPE_CHECKING:
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None
         ordered: bool | None
         eager_only: bool | None
+        as_narwhals: bool | None
+        implementation: str | t.Sequence[str] | None
 
     class _SeriesInitKwargs(_ParameterKwargs, total=False):
         rows: int | tuple[int | None, int | None] | None
@@ -3527,11 +3529,25 @@ class DataFrameLike(ClassSelector[t.Any]):
     lazy values; ``columns``/``ordered`` still are, since resolving a
     schema is metadata-only and does not execute the plan.
 
+    ``implementation``: restrict which backend(s) are accepted, as a single
+    name or a sequence, e.g. ``'pandas'`` or ``['pandas', 'polars']``. Valid
+    names are those Narwhals recognises via ``narwhals.Implementation``:
+    ``'pandas'``, ``'polars'``, ``'pyarrow'``, ``'modin'``, ``'cudf'``,
+    ``'dask'``, ``'duckdb'``, ``'ibis'``, ``'pyspark'``,
+    ``'pyspark[connect]'``, and ``'sqlframe'``. Checked against the name
+    Narwhals reports for the value (``nw.from_native(val).implementation``);
+    unrecognised names raise ``ValueError`` at declaration time.
+
+    ``as_narwhals``: when ``True``, the value is stored as the Narwhals
+    ``DataFrame``/``LazyFrame`` wrapper (via ``narwhals.from_native``)
+    instead of the native object. Defaults to ``False``, matching the
+    pass-through behaviour of a plain ``DataFrameLike``.
+
     Serialization emits a list of records via Narwhals; ``deserialize``
     reconstructs a ``pandas.DataFrame`` because JSON carries no backend.
     """
 
-    __slots__ = ['rows', 'columns', 'ordered', 'eager_only']
+    __slots__ = ['rows', 'columns', 'ordered', 'eager_only', 'implementation', 'as_narwhals']
 
     _slot_defaults = {
         **ClassSelector._slot_defaults,
@@ -3539,6 +3555,8 @@ class DataFrameLike(ClassSelector[t.Any]):
         'columns': None,
         'ordered': None,
         'eager_only': True,
+        'implementation': None,
+        'as_narwhals': False,
     }
 
     if t.TYPE_CHECKING:
@@ -3592,6 +3610,8 @@ class DataFrameLike(ClassSelector[t.Any]):
         columns: int | tuple[int | None, int | None] | list[str] | set[str] | None = t.cast("int | tuple[int | None, int | None] | list[str] | set[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         ordered: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         eager_only: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        implementation: str | t.Sequence[str] | None = t.cast("str | t.Sequence[str] | None", Undefined),  # pyrefly: ignore[bad-argument-type]
+        as_narwhals: bool | None = t.cast("bool | None", Undefined),  # pyrefly: ignore[bad-argument-type]
         allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
         **params: Unpack[_ParameterKwargs]
     ) -> None:
@@ -3600,6 +3620,8 @@ class DataFrameLike(ClassSelector[t.Any]):
         object.__setattr__(self, 'columns', columns)
         object.__setattr__(self, 'ordered', ordered)
         object.__setattr__(self, 'eager_only', eager_only)
+        object.__setattr__(self, 'implementation', implementation)
+        object.__setattr__(self, 'as_narwhals', as_narwhals)
         super().__init__(  # type: ignore[misc, call-overload]
             default=default,  # type: ignore[arg-type]
             class_=object,  # type: ignore[arg-type]
@@ -3608,6 +3630,8 @@ class DataFrameLike(ClassSelector[t.Any]):
             **params,
         )
         self._validate(self.default)
+        if self.as_narwhals and self.default is not None:
+            object.__setattr__(self, 'default', self._as_narwhals(self.default))
 
     def _as_narwhals(self, val):
         narwhals = _get_narwhals()
@@ -3623,6 +3647,40 @@ class DataFrameLike(ClassSelector[t.Any]):
                 f"not {type(val).__name__!r}."
             ) from e
 
+    def _accepted_implementations(self):
+        """Resolve ``implementation`` into a tuple of Narwhals ``Implementation`` members."""
+        narwhals = _get_narwhals()
+        if isinstance(self.implementation, str):
+            names = [self.implementation]
+        elif isinstance(self.implementation, (list, tuple, set)):
+            names = list(self.implementation)
+        else:
+            raise ValueError(
+                f"{_validate_error_prefix(self)}: implementation must be a "
+                f"string or a sequence of strings, not "
+                f"{type(self.implementation).__name__!r}."
+            )
+        implementations = []
+        for name in names:
+            impl = narwhals.Implementation.from_backend(name)  # pyrefly: ignore[bad-argument-type]
+            if impl is narwhals.Implementation.UNKNOWN:
+                valid = sorted(
+                    i.value for i in narwhals.Implementation
+                    if i is not narwhals.Implementation.UNKNOWN
+                )
+                raise ValueError(
+                    f"{_validate_error_prefix(self)}: implementation {name!r} is "
+                    f"not recognised by Narwhals; valid options include {valid}."
+                )
+            implementations.append(impl)
+        return tuple(implementations)
+
+    @instance_descriptor
+    def __set__(self, obj, val):
+        if self.as_narwhals and val is not None:
+            val = self._as_narwhals(val)
+        super().__set__(obj, val)
+
     def _validate(self, val):
         super()._validate(val)
 
@@ -3631,6 +3689,12 @@ class DataFrameLike(ClassSelector[t.Any]):
                 f'{_validate_error_prefix(self)}: columns cannot be ordered '
                 f'when specified as a set'
             )
+
+        accepted_implementations = None
+        if self.implementation is not None:
+            # Resolved eagerly so a misconfigured `implementation` raises
+            # even when no value has been set yet (e.g. at declaration).
+            accepted_implementations = self._accepted_implementations()
 
         if val is None:
             # class_=object means ClassSelector accepts None even when
@@ -3645,6 +3709,14 @@ class DataFrameLike(ClassSelector[t.Any]):
         nwframe = self._as_narwhals(val)
         narwhals = _get_narwhals()
         is_lazy = isinstance(nwframe, narwhals.LazyFrame)
+
+        if accepted_implementations is not None and nwframe.implementation not in accepted_implementations:
+            raise ValueError(
+                f"{_validate_error_prefix(self)} value must originate from "
+                f"one of the following implementations: "
+                f"{sorted(i.value for i in accepted_implementations)}, not "
+                f"{nwframe.implementation.value!r}."
+            )
 
         # Resolve schema once if the column check needs it.
         schema = nwframe.collect_schema() if self.columns is not None else None

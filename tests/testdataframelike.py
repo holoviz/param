@@ -219,6 +219,120 @@ class TestDataFrameLikeLazy:
 
 
 @skip_no_pandas
+class TestDataFrameLikeAsNarwhals:
+
+    def test_default_pass_through(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(default=pd.DataFrame({'a': [1]}))
+        assert P.param.df.as_narwhals is False
+        src = pd.DataFrame({'a': [1, 2]})
+        assert P(df=src).df is src
+
+    def test_wraps_default_and_values(self):
+        import narwhals.stable.v2 as nw
+
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), as_narwhals=True)
+
+        assert isinstance(P.param.df.default, nw.DataFrame)
+        p = P(df=pd.DataFrame({'a': [1, 2]}))
+        assert isinstance(p.df, nw.DataFrame)
+
+    def test_none_not_wrapped(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=None, allow_None=True, as_narwhals=True)
+        assert P(df=None).df is None
+
+    @skip_no_polars
+    def test_lazy_wrapped(self):
+        import narwhals.stable.v2 as nw
+
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}),
+                as_narwhals=True, eager_only=False)
+        p = P(df=pl.LazyFrame({'a': [1, 2]}))
+        assert isinstance(p.df, nw.LazyFrame)
+
+    def test_invalid_value_still_raises(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), as_narwhals=True)
+        with pytest.raises(ValueError):
+            P(df='not a frame')
+
+
+@skip_no_pandas
+class TestDataFrameLikeImplementation:
+
+    def test_single_implementation_ok(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), implementation='pandas')
+        P(df=pd.DataFrame({'a': [1, 2]}))
+
+    @skip_no_polars
+    def test_single_implementation_rejects_other_backend(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}), implementation='pandas')
+        with pytest.raises(ValueError):
+            P(df=pl.DataFrame({'a': [1]}))
+
+    @skip_no_polars
+    def test_sequence_of_implementations(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}),
+                implementation=['pandas', 'polars'])
+        P(df=pd.DataFrame({'a': [1]}))
+        P(df=pl.DataFrame({'a': [1]}))
+
+    @skip_no_pyarrow
+    def test_sequence_of_implementations_rejects_other_backend(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1]}),
+                implementation=['pandas', 'polars'])
+        with pytest.raises(ValueError):
+            P(df=pa.table({'a': [1]}))
+
+    def test_unrecognised_implementation_raises(self):
+        with pytest.raises(ValueError):
+            class P(param.Parameterized):
+                df = param.DataFrameLike(
+                    default=pd.DataFrame({'a': [1]}), implementation='bogus')
+
+    def test_invalid_implementation_type_raises(self):
+        with pytest.raises(ValueError):
+            class P(param.Parameterized):
+                df = param.DataFrameLike(
+                    default=pd.DataFrame({'a': [1]}), implementation=123)
+
+    @skip_no_polars
+    def test_default_must_match_implementation(self):
+        with pytest.raises(ValueError):
+            class P(param.Parameterized):
+                df = param.DataFrameLike(
+                    default=pd.DataFrame({'a': [1]}), implementation='polars')
+
+    @skip_no_polars
+    def test_combined_with_as_narwhals(self):
+        import narwhals.stable.v2 as nw
+
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pl.DataFrame({'a': [1]}),
+                implementation='polars', as_narwhals=True)
+        p = P(df=pl.DataFrame({'a': [1, 2]}))
+        assert isinstance(p.df, nw.DataFrame)
+        with pytest.raises(ValueError):
+            P(df=pd.DataFrame({'a': [1]}))
+
+
+@skip_no_pandas
 class TestDataFrameLikeSerialize:
 
     def test_serialize_none(self):

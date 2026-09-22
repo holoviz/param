@@ -1235,6 +1235,9 @@ class Date(Number[_T]):
         if self.allow_None and value is None:
             return
 
+        if callable(value) and not inspect.isgeneratorfunction(value):
+            return
+
         if not isinstance(value, _dt_types) and not (allow_None and value is None):
             raise ValueError(
                 f"{_validate_error_prefix(self)} only takes datetime and "
@@ -1331,6 +1334,9 @@ class CalendarDate(Number[_T]):
         bounds; if not, an exception is raised.
         """
         if self.allow_None and value is None:
+            return
+
+        if callable(value) and not inspect.isgeneratorfunction(value):
             return
 
         if (not isinstance(value, dt.date) or isinstance(value, dt.datetime)) and not (allow_None and value is None):
@@ -2656,7 +2662,10 @@ class Selector(SelectorBase, _SignatureSelector[_T]):
         object.__setattr__(self, 'check_on_set', check_on_set)
 
         instantiate = params.pop("instantiate", Undefined)
-        params["instantiate"] = False if instantiate is Undefined else instantiate  # pyrefly: ignore[bad-assignment]
+        if isinstance(instantiate, bool):
+            params["instantiate"] = instantiate
+        else:
+            params["instantiate"] = False
         super().__init__(default=default, **params)
         # Required as Parameter sets allow_None=True if default is None
         if allow_None is Undefined:

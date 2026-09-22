@@ -20,10 +20,6 @@ default = [
     "dev",
 ]
 
-[environments.test-310]
-features = ["py310", "required", "test-core", "test", "example", "test-example"]
-no-default-feature = true
-
 [environments.test-311]
 features = ["py311", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
@@ -74,9 +70,6 @@ pip = "*"
 
 [feature.required.tasks]
 install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
-
-[feature.py310.dependencies]
-python = "3.10.*"
 
 [feature.py311.dependencies]
 python = "3.11.*"
@@ -177,17 +170,17 @@ xlrd = "*"
 [feature.test-315.dependencies]
 cloudpickle = "*"
 ipython = "*"
-# jsonschema = "*"
+jsonschema = "*"
 nest-asyncio = "*"
-# numpy = "*"
+numpy = "*"
 odfpy = "*"
 # openpyxl = "*"
 # pandas = "*"
 # pyarrow = "*"
-# pytables = "*"
+pytables = "*"
 xlrd = "*"
 # ipykernel = "*"
-# gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
+gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'

@@ -106,6 +106,53 @@ def test_optional_class_annotation_allows_none():
     assert P().address is None
 
 
+def test_concrete_union_annotation_infers_classselector():
+    class P(param.Model):
+        value: int | str
+
+    assert isinstance(P.param.value, param.ClassSelector)
+    assert P.param.value.class_ == (int, str)
+
+    p = P(value=1)
+    p.value = "one"
+    with pytest.raises(ValueError):
+        p.value = 1.5
+
+
+def test_optional_concrete_union_annotation_allows_none():
+    class P(param.Model):
+        value: int | str | None = None
+
+    assert isinstance(P.param.value, param.ClassSelector)
+    assert P.param.value.class_ == (int, str)
+    assert P.param.value.allow_None is True
+    assert P().value is None
+
+
+def test_concrete_custom_class_union_annotation_infers_classselector():
+    class Cat:
+        pass
+
+    class Dog:
+        pass
+
+    class P(param.Model):
+        pet: Cat | Dog
+
+    assert P.param.pet.class_ == (Cat, Dog)
+    P(pet=Cat())
+    P(pet=Dog())
+    with pytest.raises(ValueError):
+        P(pet="not a pet")
+
+
+def test_union_with_typing_construct_remains_unvalidated_parameter():
+    class P(param.Model):
+        value: int | list[str] = 1
+
+    assert type(P.param.value) is param.Parameter
+
+
 def test_any_and_object_annotations_remain_unvalidated_parameters():
     class P(param.Model):
         any_value: t.Any = None

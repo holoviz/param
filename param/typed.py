@@ -125,6 +125,9 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
             if len(non_none) == 1 and non_none[0] is not ann:
                 ann = non_none[0]
                 continue
+            if all(isinstance(a, type) and a not in (Any, object) for a in non_none):
+                kwargs["class_"] = tuple(non_none)
+                return ClassSelector, kwargs
 
         break
 

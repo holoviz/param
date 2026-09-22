@@ -59,8 +59,7 @@ def test_classvar_annotation_is_not_parameterized():
 
 
 def test_bare_classvar_annotation_is_not_parameterized():
-    # `t.get_origin(t.ClassVar)` is None -- unlike the subscripted form
-    # `ClassVar[int]` -- so the bare form needs its own identity check.
+    # Bare ClassVar has no origin.
     class P(param.Model):
         shared: t.ClassVar = 7
         value: int = 1
@@ -91,9 +90,7 @@ def test_annotated_metadata_supports_inferred_parameter_kwargs():
 
 
 def test_annotated_and_optional_unwrap_regardless_of_nesting_order():
-    # `Annotated` wrapping `Optional` and `Optional` wrapping `Annotated`
-    # are equally idiomatic and must infer the same Parameter, metadata,
-    # and allow_None.
+    # Both nesting orders must preserve type, metadata, and allow_None.
     class AnnotatedThenOptional(param.Model):
         value: t.Annotated[t.Optional[int], {"bounds": (0, 10)}] = None
 
@@ -133,9 +130,7 @@ def test_field_parameter_override_can_replace_literal_selector_behavior():
 
 
 def test_field_parameter_instance_override_preserves_its_own_default():
-    # Reusing a fully-configured `Parameter` instance via `parameter=`
-    # should honor that instance's own default without requiring callers
-    # to redundantly repeat it via `Field(default=...)`.
+    # Reused Parameter instances retain their defaults.
     shared = param.String(default="reused", regex=r"^r")
 
     class P(param.Model):
@@ -245,11 +240,7 @@ def test_bare_container_annotations_infer_typed_parameters(annotation, expected_
 
 
 def test_dict_annotation_with_key_value_types_infers_dict_without_type_checking():
-    # `dict[K, V]` maps to `Dict`, same as bare `dict`. `Dict` has no
-    # key/value type-checking support at all (unlike `List.item_type`), so
-    # the subscripted key/value types are accepted syntactically but not
-    # enforced at runtime -- this pins down that current, correct-per-the-
-    # mapping-table-but-easily-assumed-otherwise behavior.
+    # Dict does not validate key or value types.
     class P(param.Model):
         value: dict[str, int] = param.Field(default_factory=dict)
 
@@ -257,13 +248,11 @@ def test_dict_annotation_with_key_value_types_infers_dict_without_type_checking(
 
     p = P()
     p.value = {"a": 1}
-    p.value = {1: "not-a-str-key-or-int-value"}  # not validated, by design
+    p.value = {1: "not-a-str-key-or-int-value"}
 
 
 def test_list_union_element_type_infers_tuple_of_item_types():
-    # `List.item_type` natively accepts a tuple of types, so a union
-    # element type (`list[str | int]`) should map to `item_type=(str,
-    # int)` rather than silently dropping element validation entirely.
+    # List accepts a tuple of types as item_type.
     class P(param.Model):
         value: list[str | int] = param.Field(default_factory=list)
 
@@ -276,16 +265,7 @@ def test_list_union_element_type_infers_tuple_of_item_types():
 
 
 def test_ellipsis_tuple_annotation_is_still_effectively_fixed_length():
-    # Known limitation, not fixable in this inference layer: `tuple[int,
-    # ...]` deliberately omits `length` (to signal "variable-length") when
-    # building the `Tuple` parameter, but `Tuple` itself always computes
-    # `.length` -- from `len(default)` when a default is given, or from its
-    # own placeholder class default `(0, 0)` (length 2) otherwise -- so a
-    # "variable-length" tuple annotation is never actually unconstrained
-    # via the current `Tuple` parameter. Fixing this would require a change
-    # to `Tuple` itself, not to annotation inference. This test pins down
-    # the actual (surprising) current behavior so a future change is
-    # deliberate rather than an unnoticed regression.
+    # Tuple derives a fixed length even for tuple[T, ...].
     class Required(param.Model):
         value: tuple[int, ...]
 
@@ -323,11 +303,7 @@ def test_parameter_override_explicit_allow_none_takes_precedence():
 
 
 def test_broken_string_annotation_raises_instead_of_silently_dropping_validation():
-    # Exercises the plain-string eval() path in ModelMetaclass.__new__
-    # directly (via an explicit string annotation), independent of Python
-    # version or `from __future__ import annotations`. A typo'd/undefined
-    # forward reference must raise rather than silently falling through to
-    # an unvalidated bare `Parameter`.
+    # String annotations must fail instead of dropping validation.
     with pytest.raises(NameError):
         class P(param.Model):
             value: "DoesNotExist"  # noqa: F821

@@ -105,9 +105,7 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
 
     kwargs: dict[str, Any] = {}
     ann = annotation
-    # `Annotated` and `Optional`/`Union` can wrap each other in either order
-    # (`Annotated[Optional[T], {...}]` or `Optional[Annotated[T, {...}]]`),
-    # so unwrap both repeatedly rather than in a single fixed-order pass.
+    # `Annotated` and `Optional` can occur in either order.
     while True:
         origin = t.get_origin(ann)
         if origin is t.Annotated:
@@ -150,9 +148,7 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
             if isinstance(elem, type):
                 kwargs["item_type"] = elem
             elif t.get_origin(elem) in (t.Union, types.UnionType):
-                # `List.item_type` accepts a tuple of types natively, so
-                # `list[str | int]` maps to `item_type=(str, int)` instead
-                # of silently dropping element-type validation entirely.
+                # List accepts a tuple of item types for union annotations.
                 elem_types = tuple(a for a in t.get_args(elem) if isinstance(a, type))
                 if elem_types:
                     kwargs["item_type"] = elem_types
@@ -162,15 +158,8 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         tuple_args = t.get_args(ann)
         if tuple_args and tuple_args[-1] is not Ellipsis:
             kwargs["length"] = len(tuple_args)
-        # For the variable-length `tuple[T, ...]` form we deliberately don't
-        # set `length` here, but this is only "variable" for a *required*
-        # field with no default: `Tuple` always derives `.length` from
-        # `len(default)` whenever a default is supplied, regardless of
-        # whether `length` was passed explicitly (`length=None` isn't a
-        # usable "no constraint" value -- it raises immediately). There is
-        # currently no way to get an actually unconstrained-length `Tuple`
-        # once a default is set; that would require a change to `Tuple`
-        # itself, not this inference layer.
+        # Tuple derives a length from its default; tuple[T, ...] is not
+        # unconstrained without changes to Tuple itself.
         return Tuple, kwargs
 
     if ann is dict or origin in (dict, t.Dict):
@@ -180,9 +169,7 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         kwargs["class_"] = set
         return ClassSelector, kwargs
 
-    # `Any`, `object`, and any other unrecognized annotation (arbitrary
-    # classes, `Enum` subclasses, nested `Parameterized`/`Model` types, ...)
-    # all fall back to a bare, unvalidated `Parameter`.
+    # Unrecognized annotations use an unvalidated Parameter.
     return Parameter, kwargs
 
 
@@ -220,11 +207,7 @@ def _build_parameter_from_field(
         factory_kwargs["default"] = explicit_value
     elif "default" not in factory_kwargs and "default_factory" not in factory_kwargs:
         if isinstance(factory, Parameter):
-            # A `Parameter` *instance* passed via `Field(parameter=...)`
-            # already carries its own default (explicit or inherited from
-            # its own class), just like a `Parameter` instance assigned
-            # directly in a class body. Leave it untouched rather than
-            # clobbering it with `Undefined` and marking the field required.
+            # Parameter instances retain their configured defaults.
             pass
         else:
             from .parameters import Selector
@@ -292,20 +275,12 @@ class ModelMetaclass(ParameterizedMetaclass):
 
         for attr, annotation in annotations.items():
             if isinstance(annotation, str):
-                # Let genuine evaluation errors (e.g. a typo'd or undefined
-                # forward reference) raise, matching the PEP 649 path in
-                # `_extract_namespace_annotations`, rather than silently
-                # falling through to an unvalidated bare `Parameter`. This
-                # matters most under `from __future__ import annotations`,
-                # since every annotation is a string on that path, not just
-                # genuine forward references.
+                # Invalid string annotations must not lose validation silently.
                 annotation = eval(annotation, module_globals, namespace)
             if attr.startswith("_"):
                 continue
             origin = t.get_origin(annotation)
-            # `t.get_origin(t.ClassVar)` is `None` -- only the subscripted
-            # form `ClassVar[T]` has an origin -- so bare `ClassVar` (a
-            # valid PEP 526 annotation on its own) needs its own check.
+            # Bare ClassVar has no origin.
             if origin is t.ClassVar or annotation is t.ClassVar:
                 continue
 

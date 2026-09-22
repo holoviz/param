@@ -3690,11 +3690,7 @@ class DataFrameLike(ClassSelector[t.Any]):
         return tuple(implementations)
 
     def __get__(self, obj, objtype=None):
-        # Wrapping happens on read rather than on set so that reference
-        # resolution (allow_refs) in the base Parameter.__set__ always sees
-        # the raw incoming value; wrapping it first would break re-assigning
-        # a live reference after construction, since a `param.rx`/Parameter
-        # reference is not itself dataframe-like.
+        # Resolve references before converting their dataframe value.
         val = super().__get__(obj, objtype)
         if self.as_narwhals and val is not None:
             val = self._as_narwhals(val)
@@ -3711,8 +3707,7 @@ class DataFrameLike(ClassSelector[t.Any]):
 
         accepted_implementations = None
         if self.implementation is not None:
-            # Resolved eagerly so a misconfigured `implementation` raises
-            # even when no value has been set yet (e.g. at declaration).
+            # Validate declarations even when their default is None.
             accepted_implementations = self._accepted_implementations()
 
         if val is None:
@@ -3737,7 +3732,6 @@ class DataFrameLike(ClassSelector[t.Any]):
                 f"{nwframe.implementation.value!r}."
             )
 
-        # Resolve schema once if the column check needs it.
         schema = nwframe.collect_schema() if self.columns is not None else None
 
         if self.columns is not None:
@@ -3765,18 +3759,13 @@ class DataFrameLike(ClassSelector[t.Any]):
                         f"{cols} must exactly match {self.columns}"
                     )
 
-        # Row count is only checked for eager frames: counting rows on a
-        # lazy frame requires running its query plan, which would defeat
-        # the purpose of eager_only=False (no implicit execution).
+        # Avoid executing lazy query plans just to count rows.
         if self.rows is not None and not is_lazy:
             _length_bounds_check(self, self.rows, nwframe.shape[0], 'row')
 
     @classmethod
     def serialize(cls, value):
-        # Backend-neutral list-of-records via Narwhals, so JSON output does
-        # not depend on the original library. A lazy frame must be collected
-        # here (unlike validation) because a computation graph cannot be
-        # serialized.
+        # Computation graphs must be collected before serializing records.
         if value is None:
             return None
         narwhals = _get_narwhals()
@@ -3787,9 +3776,7 @@ class DataFrameLike(ClassSelector[t.Any]):
 
     @classmethod
     def deserialize(cls, value):
-        # JSON carries no backend information, so deserialization lands on
-        # pandas (the universal default), exactly like DataFrame. Callers
-        # needing another backend can reconstruct from the records form.
+        # JSON does not preserve backend information.
         return DataFrame.deserialize(value)
 
 

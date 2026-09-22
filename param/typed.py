@@ -266,10 +266,14 @@ class ParamModelMetaclass(ParameterizedMetaclass):
 
         for attr, annotation in annotations.items():
             if isinstance(annotation, str):
-                try:
-                    annotation = eval(annotation, module_globals, namespace)
-                except Exception:
-                    pass
+                # Let genuine evaluation errors (e.g. a typo'd or undefined
+                # forward reference) raise, matching the PEP 649 path in
+                # `_extract_namespace_annotations`, rather than silently
+                # falling through to an unvalidated bare `Parameter`. This
+                # matters most under `from __future__ import annotations`,
+                # since every annotation is a string on that path, not just
+                # genuine forward references.
+                annotation = eval(annotation, module_globals, namespace)
             if attr.startswith("_"):
                 continue
             origin = t.get_origin(annotation)

@@ -235,6 +235,17 @@ def test_parameter_override_explicit_allow_none_takes_precedence():
     assert P.param.value.allow_None is False
 
 
+def test_broken_string_annotation_raises_instead_of_silently_dropping_validation():
+    # Exercises the plain-string eval() path in ParamModelMetaclass.__new__
+    # directly (via an explicit string annotation), independent of Python
+    # version or `from __future__ import annotations`. A typo'd/undefined
+    # forward reference must raise rather than silently falling through to
+    # an unvalidated bare `Parameter`.
+    with pytest.raises(NameError):
+        class P(param.ParamModel):
+            value: "DoesNotExist"  # noqa: F821
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="__annotate_func__ deferred evaluation is Python 3.14+ (PEP 649)",

@@ -241,7 +241,7 @@ def _extract_namespace_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
     return dict(evaluated) if isinstance(evaluated, Mapping) else {}
 
 
-@dataclass_transform(field_specifiers=(ParamField,))
+@dataclass_transform(kw_only_default=True, field_specifiers=(ParamField,))
 class ParamModelMetaclass(ParameterizedMetaclass):
 
     def __new__(

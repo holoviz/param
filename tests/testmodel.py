@@ -244,6 +244,32 @@ def test_bare_container_annotations_infer_typed_parameters(annotation, expected_
         assert extra_check(P.param.value)
 
 
+def test_ellipsis_tuple_annotation_is_still_effectively_fixed_length():
+    # Known limitation, not fixable in this inference layer: `tuple[int,
+    # ...]` deliberately omits `length` (to signal "variable-length") when
+    # building the `Tuple` parameter, but `Tuple` itself always computes
+    # `.length` -- from `len(default)` when a default is given, or from its
+    # own placeholder class default `(0, 0)` (length 2) otherwise -- so a
+    # "variable-length" tuple annotation is never actually unconstrained
+    # via the current `Tuple` parameter. Fixing this would require a change
+    # to `Tuple` itself, not to annotation inference. This test pins down
+    # the actual (surprising) current behavior so a future change is
+    # deliberate rather than an unnoticed regression.
+    class Required(param.Model):
+        value: tuple[int, ...]
+
+    assert Required.param.value.length == 2
+    with pytest.raises(ValueError):
+        Required(value=(1, 2, 3))
+
+    class WithDefault(param.Model):
+        value: tuple[int, ...] = (1, 2, 3)
+
+    assert WithDefault.param.value.length == 3
+    with pytest.raises(ValueError):
+        WithDefault().value = (1, 2, 3, 4)
+
+
 def test_parameter_override_preserves_optional_derived_allow_none():
     class P(param.Model):
         value: int | None = param.Field(default=1, parameter=param.Number)

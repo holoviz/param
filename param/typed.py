@@ -153,6 +153,15 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         tuple_args = t.get_args(ann)
         if tuple_args and tuple_args[-1] is not Ellipsis:
             kwargs["length"] = len(tuple_args)
+        # For the variable-length `tuple[T, ...]` form we deliberately don't
+        # set `length` here, but this is only "variable" for a *required*
+        # field with no default: `Tuple` always derives `.length` from
+        # `len(default)` whenever a default is supplied, regardless of
+        # whether `length` was passed explicitly (`length=None` isn't a
+        # usable "no constraint" value -- it raises immediately). There is
+        # currently no way to get an actually unconstrained-length `Tuple`
+        # once a default is set; that would require a change to `Tuple`
+        # itself, not this inference layer.
         return Tuple, kwargs
 
     if ann is dict or origin in (dict, t.Dict):

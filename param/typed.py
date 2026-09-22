@@ -156,7 +156,6 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
             if isinstance(elem, type):
                 kwargs["item_type"] = elem
             elif t.get_origin(elem) in (t.Union, types.UnionType):
-                # List accepts a tuple of item types for union annotations.
                 elem_types = tuple(a for a in t.get_args(elem) if isinstance(a, type))
                 if elem_types:
                     kwargs["item_type"] = elem_types
@@ -181,7 +180,6 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         kwargs["class_"] = ann
         return ClassSelector, kwargs
 
-    # Unrecognized annotations use an unvalidated Parameter.
     return Parameter, kwargs
 
 
@@ -195,11 +193,7 @@ def _build_parameter_from_field(
     factory_kwargs: dict[str, Any] = {}
     if field_spec is not None and field_spec.parameter is not None:
         factory: type[Parameter] | Callable[..., Parameter] | Parameter | None = field_spec.parameter
-        # Overriding the parameter class/instance bypasses the rest of the
-        # inferred kwargs (e.g. `objects`, `item_type`), which may not apply
-        # to the chosen parameter, but `allow_None` derived from `T | None` /
-        # `Optional[T]` is universally applicable and should still be honored
-        # unless the caller already specified it explicitly.
+        # Preserve optionality when an explicit parameter bypasses inference.
         _, inferred = _annotation_parameter_factory(annotation)
         if inferred.get("allow_None"):
             factory_kwargs["allow_None"] = True
@@ -219,20 +213,11 @@ def _build_parameter_from_field(
         factory_kwargs["default"] = explicit_value
     elif "default" not in factory_kwargs and "default_factory" not in factory_kwargs:
         if isinstance(factory, Parameter):
-            # Parameter instances retain their configured defaults.
             pass
         else:
             from .parameters import Selector
 
-            # No default was supplied anywhere (annotation, Field, or class body).
-            # `Selector` is the one built-in Parameter that computes its own
-            # sensible default (the first entry of `objects`) when none is given
-            # — e.g. for `Literal["read", "write"]` — so it's exempt from being
-            # treated as required. Everything else is required at __init__ time.
-            # `default` is left as `Undefined` so the underlying Parameter still
-            # falls back to its own slot default for introspection (e.g.
-            # `P.param.name.default`), but `Model.__init__` enforces that a
-            # value must be passed explicitly for required fields.
+            # Selectors derive a default from `objects`; other fields are required.
             factory_kwargs["default"] = Undefined
             is_required = not (factory is Selector and factory_kwargs.get("objects"))
 
@@ -287,12 +272,10 @@ class ModelMetaclass(ParameterizedMetaclass):
 
         for attr, annotation in annotations.items():
             if isinstance(annotation, str):
-                # Invalid string annotations must not lose validation silently.
                 annotation = eval(annotation, module_globals, namespace)
             if attr.startswith("_"):
                 continue
             origin = t.get_origin(annotation)
-            # Bare ClassVar has no origin.
             if origin is t.ClassVar or annotation is t.ClassVar:
                 continue
 

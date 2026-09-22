@@ -190,7 +190,6 @@ def test_classvar_annotation_is_not_parameterized():
 
 
 def test_bare_classvar_annotation_is_not_parameterized():
-    # Bare ClassVar has no origin.
     class P(param.Model):
         shared: t.ClassVar = 7
         value: int = 1
@@ -221,7 +220,6 @@ def test_annotated_metadata_supports_inferred_parameter_kwargs():
 
 
 def test_annotated_and_optional_unwrap_regardless_of_nesting_order():
-    # Both nesting orders must preserve type, metadata, and allow_None.
     class AnnotatedThenOptional(param.Model):
         value: t.Annotated[t.Optional[int], {"bounds": (0, 10)}] = None
 
@@ -261,7 +259,6 @@ def test_field_parameter_override_can_replace_literal_selector_behavior():
 
 
 def test_field_parameter_instance_override_preserves_its_own_default():
-    # Reused Parameter instances retain their defaults.
     shared = param.String(default="reused", regex=r"^r")
 
     class P(param.Model):
@@ -277,7 +274,7 @@ def test_field_parameter_instance_override_is_not_treated_as_required():
     class P(param.Model):
         value: str = param.Field(parameter=shared)
 
-    P()  # should not raise
+    P()
 
 
 def test_annotation_only_field_is_required():
@@ -344,12 +341,10 @@ def test_subclass_can_satisfy_inherited_required_field_with_a_default():
 
 
 def test_literal_annotation_remains_not_required():
-    # Selector infers a usable default (the first `objects` entry) from the
-    # annotation alone, so it should never be treated as a required field.
     class P(param.Model):
         mode: t.Literal["read", "write"]
 
-    P()  # should not raise
+    P()
 
 
 @pytest.mark.parametrize(
@@ -371,7 +366,6 @@ def test_bare_container_annotations_infer_typed_parameters(annotation, expected_
 
 
 def test_dict_annotation_with_key_value_types_infers_dict_without_type_checking():
-    # Dict does not validate key or value types.
     class P(param.Model):
         value: dict[str, int] = param.Field(default_factory=dict)
 
@@ -383,7 +377,6 @@ def test_dict_annotation_with_key_value_types_infers_dict_without_type_checking(
 
 
 def test_list_union_element_type_infers_tuple_of_item_types():
-    # List accepts a tuple of types as item_type.
     class P(param.Model):
         value: list[str | int] = param.Field(default_factory=list)
 
@@ -396,7 +389,6 @@ def test_list_union_element_type_infers_tuple_of_item_types():
 
 
 def test_ellipsis_tuple_annotation_is_still_effectively_fixed_length():
-    # Tuple derives a fixed length even for tuple[T, ...].
     class Required(param.Model):
         value: tuple[int, ...]
 
@@ -434,7 +426,6 @@ def test_parameter_override_explicit_allow_none_takes_precedence():
 
 
 def test_broken_string_annotation_raises_instead_of_silently_dropping_validation():
-    # String annotations must fail instead of dropping validation.
     with pytest.raises(NameError):
         class P(param.Model):
             value: "DoesNotExist"  # noqa: F821

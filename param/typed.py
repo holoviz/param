@@ -8,8 +8,7 @@ import types
 import typing as t
 
 from collections.abc import Callable, Mapping
-from typing import Any
-from typing_extensions import dataclass_transform
+from typing import Any, dataclass_transform
 
 from .parameterized import (
     Parameter,
@@ -18,6 +17,7 @@ from .parameterized import (
     String,
     Undefined,
 )
+from .parameters import Boolean, ClassSelector, Dict, Integer, List, Number, Selector, Tuple
 
 FT = t.TypeVar("FT")
 
@@ -93,17 +93,6 @@ def Field(
 
 
 def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dict[str, Any]]:
-    from .parameters import (
-        Boolean,
-        ClassSelector,
-        Dict,
-        Integer,
-        List,
-        Number,
-        Selector,
-        Tuple,
-    )
-
     kwargs: dict[str, Any] = {}
     ann = annotation
     # `Annotated` and `Optional` can occur in either order.
@@ -125,7 +114,10 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
             if len(non_none) == 1 and non_none[0] is not ann:
                 ann = non_none[0]
                 continue
-            if all(isinstance(a, type) and a not in (Any, object) for a in non_none):
+            if all(
+                isinstance(a, type) and t.get_origin(a) is None and a not in (Any, object)
+                for a in non_none
+            ):
                 kwargs["class_"] = tuple(non_none)
                 return ClassSelector, kwargs
 
@@ -163,10 +155,11 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
 
     if ann is tuple or origin in (tuple, t.Tuple):
         tuple_args = t.get_args(ann)
+        if tuple_args and tuple_args[-1] is Ellipsis:
+            kwargs["class_"] = tuple
+            return ClassSelector, kwargs
         if tuple_args and tuple_args[-1] is not Ellipsis:
             kwargs["length"] = len(tuple_args)
-        # Tuple derives a length from its default; tuple[T, ...] is not
-        # unconstrained without changes to Tuple itself.
         return Tuple, kwargs
 
     if ann is dict or origin in (dict, t.Dict):
@@ -212,20 +205,20 @@ def _build_parameter_from_field(
     if has_explicit_value:
         factory_kwargs["default"] = explicit_value
     elif "default" not in factory_kwargs and "default_factory" not in factory_kwargs:
-        if isinstance(factory, Parameter):
-            pass
-        else:
-            from .parameters import Selector
-
+        if not isinstance(factory, Parameter):
             # Selectors derive a default from `objects`; other fields are required.
             factory_kwargs["default"] = Undefined
             is_required = not (factory is Selector and factory_kwargs.get("objects"))
 
     if isinstance(factory, Parameter):
-        pobj = copy.copy(factory)
-        for key, value in factory_kwargs.items():
-            setattr(pobj, key, value)
-        return pobj, is_required
+        if not factory_kwargs:
+            return copy.copy(factory), is_required
+        initial = factory.__getstate__()
+        for key in ("name", "owner", "watchers"):
+            initial.pop(key, None)
+        initial["label"] = initial.pop("_label")
+        initial.update(factory_kwargs)
+        return type(factory)(**initial), is_required
     if factory is None:
         return Parameter(**factory_kwargs), is_required
     return factory(**factory_kwargs), is_required
@@ -271,10 +264,10 @@ class ModelMetaclass(ParameterizedMetaclass):
             required |= getattr(base, "_model_required", frozenset())
 
         for attr, annotation in annotations.items():
-            if isinstance(annotation, str):
-                annotation = eval(annotation, module_globals, namespace)
             if attr.startswith("_"):
                 continue
+            if isinstance(annotation, str):
+                annotation = eval(annotation, module_globals, namespace)
             origin = t.get_origin(annotation)
             if origin is t.ClassVar or annotation is t.ClassVar:
                 continue

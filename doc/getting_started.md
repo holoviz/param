@@ -2,7 +2,7 @@
 
 ## Installation
 
-Param has no required dependencies outside of Python's standard library, and so it is very easy to install.
+Param supports Python 3.11 and later and has no required dependencies outside of Python's standard library.
 
 Official releases of Param are available from conda ([![defaults version](https://img.shields.io/conda/v/anaconda/param.svg?label=defaults&style=flat&colorB=4488ff)](https://anaconda.org/main/param) [![conda-forge version](https://img.shields.io/conda/v/conda-forge/param.svg?label=conda-forge&colorB=4488ff)](https://anaconda.org/conda-forge/param)) and PyPI ([![PyPI version](https://img.shields.io/pypi/v/param.svg?colorB=cc77dd)](https://pypi.org/project/param/)), and can be installed via:
 
@@ -83,7 +83,7 @@ class Sum(param.Model):
         return self.title + ": " + str(self.a + self.b)
 ```
 
-Leave off the `=` and the annotation becomes required: omitting that parameter when constructing the class raises a clear `TypeError` naming the missing field, rather than silently filling in an empty string or zero. See the [Typing](user_guide/Typing) user guide for the full set of supported annotations (`Literal`, `Optional`, containers, and more) and for how `Model` interacts with static type checkers.
+Leave off the `=` and the annotation becomes required: omitting that parameter when constructing the class raises a clear `TypeError` naming the missing field, rather than silently filling in a default value. See the [Typing](user_guide/Typing) user guide for the full set of supported annotations (`Literal`, `Optional`, containers, and more) and for how `Model` interacts with static type checkers.
 
 ## Using Param for configuration
 

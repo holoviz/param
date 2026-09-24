@@ -20,10 +20,6 @@ default = [
     "dev",
 ]
 
-[environments.test-310]
-features = ["py310", "required", "test-core", "test", "example", "test-example"]
-no-default-feature = true
-
 [environments.test-311]
 features = ["py311", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
@@ -74,9 +70,6 @@ pip = "*"
 
 [feature.required.tasks]
 install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
-
-[feature.py310.dependencies]
-python = "3.10.*"
 
 [feature.py311.dependencies]
 python = "3.11.*"

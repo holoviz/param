@@ -268,6 +268,20 @@ def test_field_parameter_instance_override_preserves_its_own_default():
     assert P().value == "reused"
 
 
+def test_field_parameter_instance_is_not_bound_to_multiple_models():
+    """A reusable parameter instance must remain unbound after model creation."""
+    shared = param.String(default="reused")
+
+    class First(param.Model):
+        value: str = param.Field(parameter=shared)
+
+    class Second(param.Model):
+        value: str = param.Field(parameter=shared)
+
+    assert First().value == Second().value == "reused"
+    assert shared.owner is None
+
+
 def test_field_parameter_instance_override_is_not_treated_as_required():
     shared = param.String(default="reused")
 
@@ -275,6 +289,35 @@ def test_field_parameter_instance_override_is_not_treated_as_required():
         value: str = param.Field(parameter=shared)
 
     P()
+
+
+def test_field_parameter_instance_override_validates_default_and_preserves_original():
+    """Field overrides must run constructor validation without changing the supplied parameter."""
+    shared = param.String(default="reused", regex=r"^r")
+
+    with pytest.raises(ValueError, match="regex"):
+        class Invalid(param.Model):
+            value: str = param.Field(default="invalid", parameter=shared)
+
+    class Valid(param.Model):
+        value: str = param.Field(default="replaced", parameter=shared)
+
+    assert shared.default == "reused"
+    assert Valid.param.value.default == "replaced"
+    assert Valid().value == "replaced"
+
+
+def test_field_parameter_instance_override_runs_constructor_rules():
+    """Readonly overrides must preserve constructor-derived constant and instantiate settings."""
+    shared = param.String(default="initial")
+
+    class P(param.Model):
+        value: str = param.Field(parameter=shared, readonly=True)
+
+    assert P.param.value.readonly is True
+    assert P.param.value.constant is True
+    assert P.param.value.instantiate is False
+    assert shared.readonly is False
 
 
 def test_annotation_only_field_is_required():
@@ -388,20 +431,31 @@ def test_list_union_element_type_infers_tuple_of_item_types():
         p.value = [1.5]
 
 
-def test_ellipsis_tuple_annotation_is_still_effectively_fixed_length():
+def test_ellipsis_tuple_annotation_accepts_variable_lengths():
+    """A variadic tuple must not inherit Tuple's fixed-length default."""
     class Required(param.Model):
         value: tuple[int, ...]
 
-    assert Required.param.value.length == 2
+    assert isinstance(Required.param.value, param.ClassSelector)
+    assert Required.param.value.class_ is tuple
+    assert Required(value=()).value == ()
+    assert Required(value=(1, 2, 3)).value == (1, 2, 3)
     with pytest.raises(ValueError):
-        Required(value=(1, 2, 3))
+        Required(value=[1, 2])
 
     class WithDefault(param.Model):
         value: tuple[int, ...] = (1, 2, 3)
 
-    assert WithDefault.param.value.length == 3
-    with pytest.raises(ValueError):
-        WithDefault().value = (1, 2, 3, 4)
+    assert WithDefault().value == (1, 2, 3)
+    WithDefault().value = (1, 2, 3, 4)
+
+
+def test_private_string_annotation_is_not_evaluated():
+    """Private implementation attributes are not model fields or forward references."""
+    class P(param.Model):
+        _cache: "UndefinedPrivateType" = None  # noqa: F821
+
+    assert "_cache" not in P.param
 
 
 def test_parameter_override_preserves_optional_derived_allow_none():

@@ -10,7 +10,7 @@ import weakref
 import param
 import pytest
 
-from param.parameterized import Skip, batch
+from param.parameterized import Comparator, Skip, batch
 from param.reactive import Collected, bind, collect, current_node, rx
 from typing import Any, Callable
 
@@ -1223,6 +1223,75 @@ class TestAwaiting:
         await async_wait_until(lambda: expr.rx.value == 6)
         assert not expr.rx.awaiting
 
+    async def test_reactive_awaiting_visible_through_override(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        placeholder = rx(1)
+        override = rx(0).rx.pipe(async_func)
+        b = rx(10) * placeholder
+        assert b.rx.value == 10
+        assert not b.rx.awaiting
+
+        b.rx.overrides[0] = override
+        assert b.rx.value != 20  # Reading through the override schedules it.
+        assert b.rx.awaiting
+        await async_wait_until(lambda: not b.rx.awaiting)
+        assert b.rx.value == 20
+
+    async def test_reactive_awaiting_visible_through_override_set_before_first_read(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        placeholder = rx(1)
+        override = rx(0).rx.pipe(async_func)
+        b = rx(10) * placeholder
+        b.rx.overrides[0] = override
+
+        assert b.rx.value != 20  # The first-ever read schedules the override's op.
+        assert b.rx.awaiting
+        await async_wait_until(lambda: not b.rx.awaiting)
+        assert b.rx.value == 20
+
+    async def test_reactive_awaiting_visible_through_ref_holding_rx(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        b = rx(0).rx.pipe(async_func)
+        outlet = Outlet(x=b)
+        expr = outlet.param.x.rx()
+
+        assert b in set(expr.rx.upstream())
+        assert expr.rx.awaiting
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert expr.rx.value == 2
+
+    async def test_reactive_awaiting_visible_through_ref_holding_rx_set_after_construction(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        outlet = Outlet()
+        expr = outlet.param.x.rx()
+        assert not expr.rx.awaiting
+
+        b = rx(0).rx.pipe(async_func)
+        outlet.x = b
+
+        assert b in set(expr.rx.upstream())
+        assert expr.rx.awaiting
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert expr.rx.value == 2
+
 class TestStale:
     """``.rx.stale``."""
 
@@ -1489,6 +1558,46 @@ class TestStale:
         assert not fn.rx.stale
         assert fn.rx.value == 6
 
+    async def test_reactive_stale_visible_through_override(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        placeholder = rx(1)
+        b = rx(10) * placeholder
+        assert b.rx.value == 10
+        assert not b.rx.stale
+
+        override = rx(0).rx.pipe(async_func)
+        b.rx.overrides[0] = override
+        b.rx.value  # Clears `b`'s own dirty flag; `override` is still settling.
+        assert b.rx.stale
+
+        # `.rx.stale` only clears on the next read, so wait for the override
+        # to settle, then re-read `b`.
+        await async_wait_until(lambda: not override.rx.awaiting)
+        assert b.rx.value == 20
+        assert not b.rx.stale
+
+    async def test_reactive_stale_visible_through_ref_holding_rx(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        b = rx(0).rx.pipe(async_func)
+        outlet = Outlet(x=b)
+        expr = outlet.param.x.rx()
+
+        expr.rx.value  # Clears `expr`'s own dirty flag; `b` is still settling.
+        assert expr.rx.stale
+
+        await async_wait_until(lambda: not b.rx.awaiting)
+        assert expr.rx.value == 2
+        assert not expr.rx.stale
+
 class TestUpdatingStatus:
     """``.rx.updating()``."""
 
@@ -1617,6 +1726,556 @@ class TestUpdatingStatus:
 
         assert updating.rx.value is False
 
+    async def test_reactive_updating_tracks_override_set_before_construction(self):
+        async def double(value):
+            await asyncio.sleep(0.02)
+            return value * 2
+
+        placeholder = rx(1)
+        override = rx(10).rx.pipe(double)
+        b = rx(1) * placeholder
+        b.rx.overrides[0] = override
+
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        assert b.rx.value != 20
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: b.rx.value == 20)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_tracks_override_set_after_construction(self):
+        async def double(value):
+            await asyncio.sleep(0.02)
+            return value * 2
+
+        placeholder = rx(1)
+        b = rx(1) * placeholder
+        updating = b.rx.updating()  # Constructed BEFORE the override exists.
+        b.rx.watch(lambda v: None)
+
+        assert b.rx.value == 1
+        assert updating.rx.value is False
+
+        override = rx(10).rx.pipe(double)
+        b.rx.overrides[0] = override
+
+        assert b.rx.awaiting
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: b.rx.value == 20)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_tracks_ref_reassigned_after_construction(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def double(value):
+            await asyncio.sleep(0.02)
+            return value * 2
+
+        outlet = Outlet()
+        expr = outlet.param.x.rx()
+        updating = expr.rx.updating()  # Constructed BEFORE the ref exists.
+        expr.rx.watch(lambda v: None)
+
+        assert updating.rx.value is False
+
+        outlet.x = rx(10).rx.pipe(double)
+
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: expr.rx.value == 20)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_after_ref_replaced_by_plain_value(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return value
+
+        src = rx(1)
+        old_ref = src.rx.pipe(slow)
+        old_ref.rx.watch(lambda v: None)
+        outlet = Outlet(x=0)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        outlet.x = old_ref
+        await async_wait_until(lambda: expr.rx.value == 2)
+        assert updating.rx.value is False
+
+        outlet.x = 3  # A plain value, not another ref.
+        assert expr.rx.value == 4
+        assert not any(n is old_ref for n in expr.rx.upstream())
+
+        src.rx.value = 10  # `old_ref` settles again, but is no longer part of `expr`.
+        await async_wait_until(lambda: old_ref.rx.value == 10)
+        assert updating.rx.value is False
+
+    async def test_reactive_status_clears_when_async_ref_is_replaced_synchronously(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        class Source(param.Parameterized):
+            value = param.Integer(default=4)
+
+        async def slow():
+            await asyncio.Event().wait()
+
+        source = Source()
+        outlet = Outlet(x=slow)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        assert expr.rx.awaiting
+        assert updating.rx.value is True
+
+        outlet.x = 3
+        assert expr.rx.value == 4
+        assert not expr.rx.awaiting
+        assert not expr.rx.stale
+        await asyncio.sleep(0)
+        assert updating.rx.value is False
+
+        outlet.x = slow
+        assert expr.rx.awaiting
+        assert updating.rx.value is True
+
+        outlet.x = source.param.value
+        assert expr.rx.value == 5
+        assert not expr.rx.awaiting
+        assert not expr.rx.stale
+        await asyncio.sleep(0)
+        assert updating.rx.value is False
+
+    async def test_reactive_sync_ref_replacement_survives_a_raising_updating_watcher(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        class Source(param.Parameterized):
+            value = param.Integer(default=4)
+
+        async def slow():
+            await asyncio.sleep(0.05)
+            return 0
+
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        outlet.x = slow
+        updating.rx.watch(lambda value: (_ for _ in ()).throw(ValueError) if not value else None)
+
+        with pytest.raises(ValueError):
+            outlet.x = Source().param.value
+
+        assert outlet.x == 4
+        assert outlet._param__private.refs['x'] is not None
+
+    async def test_reactive_invalid_value_clears_updating_after_an_async_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Integer(default=0, allow_refs=True)
+
+        async def slow():
+            await asyncio.Event().wait()
+
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda value: None)
+        outlet.x = slow
+
+        with pytest.raises(ValueError):
+            outlet.x = 'bad'
+
+        assert outlet.x == 1
+        assert expr.rx.awaiting is False
+        assert updating.rx.value is False
+
+    def test_reactive_plain_value_tick_does_not_notify_graph_change(self, monkeypatch):
+        calls = []
+        original = rx._notify_graph_change
+        def spy(self):
+            calls.append(self)
+            return original(self)
+        monkeypatch.setattr(rx, '_notify_graph_change', spy)
+
+        a = rx(1)
+        b = a + 1
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        a.rx.value = 2
+
+        assert calls == []
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_ignores_settle_from_node_no_longer_upstream(self):
+        async def double(value):
+            await asyncio.sleep(0.02)
+            return value * 2
+
+        b = rx(1) * rx(1)
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        src = rx(10)
+        override = src.rx.pipe(double)
+        b.rx.overrides[0] = override
+        await async_wait_until(lambda: not b.rx.awaiting)
+        del b.rx.overrides[0]
+        await async_wait_until(lambda: updating.rx.value is False)
+
+        override.rx.watch(lambda v: None)
+        src.rx.value = 20
+        await async_wait_until(lambda: not override.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_when_a_ref_settles_without_changing_the_value(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return value
+
+        src = rx(1)
+        outlet = Outlet(x=src.rx.pipe(slow))
+        expr = outlet.param.x.rx() * 0  # No value-changed watcher fires on this.
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_tracks_a_bare_async_callable_ref(self):
+        # `param.bind(...)` exercises `_awaiting_ref` directly, not
+        # `_ref_inputs()`, and settles to the same value each time.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.02)
+            return 1
+
+        src = rx(1)
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        outlet.x = param.bind(const, src)
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+        # A dependency change re-runs the already-bound callable; nothing
+        # reassigns the ref itself, so this must not rely on `_watch_ref_change`.
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_tracks_a_bare_async_callable_ref_passed_as_operation_arg(self):
+        # `outlet.param.x` is passed directly as an operation argument, not
+        # wrapped in `.rx()`, so this exercises `_ref_capable_params`'
+        # operation-args branch, not `_fn_params`.
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = a.rx.pipe(add, outlet.param.x)
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_inherited_from_prev(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        b = rx(0)
+        outlet = Outlet(x=param.bind(const, src))
+        first = a.rx.pipe(lambda x, y: x + (y or 0), outlet.param.x)
+        expr = first.rx.pipe(add, b)
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        b.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_registers_one_listener_for_an_inherited_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.01)
+            return 1
+
+        src = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = rx(1).rx.pipe(lambda x, y: x + (y or 0), outlet.param.x)
+        for _ in range(50):
+            expr = expr + 1
+
+        updating = expr.rx.updating()
+        listeners = outlet._param__private.async_ref_settle_watchers['x']
+
+        assert len(listeners) == 1
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_nested_in_a_bind_argument(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = a.rx.pipe(add, bind(lambda v: v, outlet.param.x))
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_reached_through_param_depends(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        class Holder(param.Parameterized):
+            o = param.Parameter()
+
+            @param.depends('o.x')
+            def get(self):
+                return self.o.x
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, b):
+            await asyncio.sleep(0.01)
+            return a + b
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        holder = Holder(o=outlet)
+        expr = a.rx.pipe(add, holder.get)
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_for_a_ref_nested_in_an_operation_arg(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def const(value):
+            await asyncio.sleep(0.1)
+            return 1
+
+        async def add(a, d):
+            await asyncio.sleep(0.01)
+            return a + d["k"][0]
+
+        src = rx(1)
+        a = rx(1)
+        outlet = Outlet(x=param.bind(const, src))
+        expr = a.rx.pipe(add, d={"k": [outlet.param.x]})
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        a.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        assert updating.rx.value is True
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert updating.rx.value is False
+
+    async def test_reactive_awaiting_ref_unsticks_when_a_settle_listener_raises(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def double(value):
+            await asyncio.sleep(0.05)
+            return value * 2
+
+        def boom(scheduled):
+            if scheduled:
+                raise ValueError("watcher failed")
+
+        src = rx(1)
+        outlet = Outlet(x=1)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        watcher = updating.rx.watch(boom)
+
+        with pytest.raises(ValueError, match="watcher failed"):
+            outlet.x = bind(double, src)
+
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        assert outlet.x == 2
+        assert 'x' in outlet._param__private.refs
+        assert updating.rx.value is False
+
+        updating.rx.unwatch(watcher)
+        src.rx.value = 5
+        await async_wait_until(lambda: outlet.x == 10)
+        assert expr.rx.value == 11
+        assert updating.rx.value is False
+
+    async def test_reactive_updating_unsticks_when_an_override_is_removed_mid_flight(self):
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return 1
+
+        src = rx(1)
+        b = rx(2) * rx(1)
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        b.rx.overrides[0] = src.rx.pipe(slow)
+        await async_wait_until(lambda: not b.rx.awaiting)
+
+        src.rx.value = 2
+        await async_wait_until(lambda: b.rx.awaiting)
+        del b.rx.overrides[0]
+
+        await async_wait_until(lambda: updating.rx.value is False)
+
+    async def test_reactive_updating_true_for_a_node_re_entering_the_graph_already_settling(self):
+        async def slow(value):
+            await asyncio.sleep(0.1)
+            return value
+
+        src = rx(1)
+        override = src.rx.pipe(slow)
+        override.rx.watch(lambda v: None)
+        b = rx(0) + rx(0)
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        b.rx.overrides[0] = override
+        await async_wait_until(lambda: not b.rx.awaiting)
+        del b.rx.overrides[0]
+
+        src.rx.value = 5
+        await async_wait_until(lambda: override.rx.awaiting)
+        assert updating.rx.value is False
+
+        b.rx.overrides[0] = override
+        assert updating.rx.value is True
+
+    def test_reactive_updating_does_not_pin_a_cleared_override(self):
+        b = rx(1) * rx(1)
+        updating = b.rx.updating()
+        b.rx.watch(lambda v: None)
+
+        override = rx(99)
+        ref = weakref.ref(override)
+        b.rx.overrides[0] = override
+        del b.rx.overrides[0]
+        del override
+        gc.collect()
+
+        assert ref() is None
+        assert updating.rx.value is False
+
+    def test_reactive_updating_does_not_pin_a_replaced_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        outlet = Outlet()
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+
+        old_ref = rx(5)
+        ref = weakref.ref(old_ref)
+        outlet.x = old_ref
+        del old_ref
+        outlet.x = 3  # A plain value, not another ref.
+        gc.collect()
+
+        assert ref() is None
+        assert updating.rx.value is False
+
 class TestReaderBookkeeping:
     """Settle-watcher and upstream-walk bookkeeping."""
 
@@ -1635,7 +2294,7 @@ class TestReaderBookkeeping:
         gc.collect()
 
         assert ref() is None
-        assert a._settle_watchers == []
+        assert a._settle_watchers == set()
 
     def test_reactive_upstream_walk_terminates_on_reused_input(self):
         a = rx(1)
@@ -1730,6 +2389,18 @@ class TestDisposeAndLifecycle:
         c.rx.dispose()
         assert a._disposed
 
+    def test_reactive_dispose_prunes_a_remaining_reader_dying_later(self):
+        a = rx(1)
+        b = a + 1
+        c = a + 2
+        b.rx.dispose()
+
+        del c
+        gc.collect()
+
+        assert a._readers == []
+        a.rx.dispose()
+
     def test_reactive_dispose_follows_operation_argument_route(self):
         a = rx(2)
         b = rx(3).rx.pipe(lambda x, y: x + y, y=a)
@@ -1738,6 +2409,200 @@ class TestDisposeAndLifecycle:
 
         b.rx.dispose()
         assert a._disposed
+
+    def test_reactive_dispose_raises_on_override_value_still_masking_an_input(self):
+        placeholder = rx(1)
+        override = rx(2)
+        b = rx(10) * placeholder
+        assert b.rx.value == 10
+
+        b.rx.overrides[0] = override
+        assert b.rx.value == 20
+
+        with pytest.raises(RuntimeError, match='still read'):
+            override.rx.dispose()
+
+        del b.rx.overrides[0]
+        override.rx.dispose()
+        assert override._disposed
+
+    def test_reactive_override_drops_the_masked_raw_input_reader_link(self):
+        placeholder = rx(1)
+        override = rx(2)
+        b = rx(10) * placeholder
+        assert b in set(placeholder.rx.downstream())
+
+        b.rx.overrides[0] = override
+        assert b not in set(placeholder.rx.downstream())
+        placeholder.rx.dispose()
+        assert placeholder._disposed
+
+        b.rx.dispose()
+        override.rx.dispose()
+
+    def test_reactive_unmasking_restores_the_raw_input_reader_link(self):
+        placeholder = rx(1)
+        override = rx(2)
+        b = rx(10) * placeholder
+        b.rx.overrides[0] = override
+        del b.rx.overrides[0]
+
+        assert b in set(placeholder.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            placeholder.rx.dispose()
+
+        override.rx.dispose()
+        b.rx.dispose()
+        placeholder.rx.dispose()
+
+    def test_reactive_masking_a_shared_input_drops_the_right_readers_entry(self):
+        # `a` has two readers before the mask, so `rx.__eq__`-vs-identity
+        # confusion in a naive `list.remove()` would drop the wrong one.
+        a = rx(1)
+        other = rx(0).rx.pipe(lambda x, y: x + y, a)
+        b = rx(0).rx.pipe(lambda x, y: x + y, a)
+        assert {other, b} == set(a.rx.downstream()) - {a}
+
+        b.rx.overrides[0] = rx(10)
+
+        assert set(a.rx.downstream()) - {a} == {other}
+        assert not (b._readers or ())
+        b.rx.dispose()
+        assert b._disposed
+
+    def test_reactive_delitem_raises_before_mutating_if_masked_input_was_disposed(self):
+        placeholder = rx(1)
+        b = rx(10) + placeholder
+        b.rx.overrides[0] = rx(2)
+        placeholder.rx.dispose()
+
+        with pytest.raises(RuntimeError, match='Cannot remove this override'):
+            del b.rx.overrides[0]
+
+        assert 0 in b.rx.overrides
+        assert b.rx.value == 12
+
+    def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
+        placeholder = rx('a')
+        override = rx('z')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        b.rx.overrides[0] = override
+        c = b.upper()
+        assert c.rx.value == 'XZ'
+
+        del b.rx.overrides[0]
+        assert c.rx.value == 'XA'
+
+        assert not (override._readers or ())
+        override.rx.dispose()
+        assert override._disposed
+
+        assert b in set(placeholder.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            placeholder.rx.dispose()
+
+    def test_reactive_override_does_not_relink_disposed_method_chain_clones(self):
+        placeholder = rx('a')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        watcher = b.rx.watch(lambda v: None)
+        clone = b.upper()
+        clone.rx.value
+        clone.rx.dispose()
+
+        override = rx('z')
+        b.rx.overrides[0] = override
+        assert set(override.rx.downstream()) == {b}
+
+        b.rx.overrides[0] = 'plain'
+        assert not (override._readers or ())
+        override.rx.dispose()
+
+        del b.rx.overrides[0]
+        assert set(placeholder.rx.downstream()) == {b}
+
+        b.rx.unwatch(watcher)
+        b.rx.dispose()
+        assert placeholder._disposed
+
+    def test_reactive_override_reader_links_follow_a_method_chain_clone_reversed(self):
+        placeholder = rx('a')
+        override = rx('z')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        accessor = b.upper
+        accessor.rx.overrides[0] = override
+
+        assert b.rx.value == 'xz'
+        assert b in set(override.rx.downstream())
+        assert b not in set(placeholder.rx.downstream())
+
+    def test_reactive_override_reader_links_follow_a_cousin_clone(self):
+        placeholder = rx('a')
+        override = rx('z')
+        b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
+        accessor1 = b.upper
+        accessor2 = b.lower
+        accessor1.rx.overrides[0] = override
+
+        assert accessor2 in set(override.rx.downstream())
+        assert accessor2 not in set(placeholder.rx.downstream())
+
+    def test_reactive_operation_siblings_is_not_quadratic_in_chain_length(self):
+        head = rx(0)
+        for _ in range(700):
+            head = head + 1
+        b = head.rx.pipe(lambda x, y: x + y, rx(1))
+
+        start = time.perf_counter()
+        b.rx.overrides[0] = rx(2)
+        del b.rx.overrides[0]
+        assert time.perf_counter() - start < 1.5
+
+    def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        src = rx(1)
+        outlet = Outlet(x=src)
+        outlet.param.x.rx().rx.dispose()
+
+        src.rx.value = 5
+        assert outlet.x == 5
+
+    def test_reactive_ref_reassignment_leaves_no_stale_reader_link(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        outlet = Outlet(x=rx(1))
+        expr = outlet.param.x.rx()
+        new = rx(2)
+        outlet.x = new
+        assert expr.rx.value == 2
+        assert expr not in set(new.rx.downstream())
+
+        expr.rx.dispose()
+        new.rx.value = 3
+        assert new.rx.value == 3
+
+    def test_reactive_override_reader_link_is_per_occurrence(self):
+        a = rx(1)
+        b = rx(1).rx.pipe(lambda x, y, z: x + y + z, a, rx(0))
+        b.rx.overrides[1] = a
+        del b.rx.overrides[1]
+
+        assert b in set(a.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            a.rx.dispose()
+
+    def test_reactive_override_reader_link_survives_clearing_a_different_key(self):
+        a = rx(1)
+        b = rx(1).rx.pipe(lambda x, y, z: x + y + z, rx(0), rx(0))
+        b.rx.overrides[0] = a
+        b.rx.overrides[1] = a
+        del b.rx.overrides[0]
+
+        assert b in set(a.rx.downstream())
+        with pytest.raises(RuntimeError, match='still read'):
+            a.rx.dispose()
 
     def test_reactive_dispose_handles_input_reused_within_same_expression(self):
         """`a + a` gives `a` two readers; dispose must drop both to detach it."""
@@ -1899,6 +2764,60 @@ class TestDisposeAndLifecycle:
 
         await asyncio.sleep(0.1)
         assert expr._current_ is param.Undefined
+
+    async def test_reactive_dispose_clears_updating_for_an_async_ref(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.05)
+            return value
+
+        src = rx(1)
+        ref = src.rx.pipe(slow)
+        outlet = Outlet(x=ref)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        ref.rx.dispose()
+
+        assert updating.rx.value is False
+        assert expr.rx.awaiting is False
+
+        outlet.x = 10
+        assert expr.rx.value == 11
+        assert updating.rx.value is False
+
+    async def test_reactive_dispose_finishes_when_an_updating_watcher_raises(self):
+        class Outlet(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        async def slow(value):
+            await asyncio.sleep(0.05)
+            return value
+
+        src = rx(1)
+        ref = src.rx.pipe(slow)
+        outlet = Outlet(x=ref)
+        expr = outlet.param.x.rx() + 1
+        updating = expr.rx.updating()
+        expr.rx.watch(lambda v: None)
+        await async_wait_until(lambda: not expr.rx.awaiting)
+        updating.rx.watch(lambda value: (_ for _ in ()).throw(ValueError) if not value else None)
+
+        src.rx.value = 2
+        await async_wait_until(lambda: expr.rx.awaiting)
+        with pytest.raises(ValueError):
+            ref.rx.dispose()
+
+        await asyncio.sleep(0)
+        task = ref._current_task
+        assert task is None or task.cancelled()
+        assert src._disposed
 
     def test_reactive_when_derived_node_is_not_tracked_as_reader_but_raises_on_stale_read(self):
         """``.rx.when()`` reads its source through a closure, invisible to `_readers`."""
@@ -3614,15 +4533,21 @@ class TestUpstreamDownstream:
         assert cond not in set(w.rx.upstream())
         assert w not in set(cond.rx.downstream())
 
-    def test_reactive_upstream_and_downstream_exclude_override_value(self):
+    def test_reactive_upstream_and_downstream_include_override_value(self):
         fx = rx(2)
         override = rx(3)
         value = rx(100).rx.pipe(lambda price, fx: price * fx, fx=fx)
         value.rx.overrides['fx'] = override
 
         upstream = set(value.rx.upstream())
+        assert override in upstream
+        assert fx not in upstream
+        assert value in set(override.rx.downstream())
+
+        del value.rx.overrides['fx']
+        upstream = set(value.rx.upstream())
         assert override not in upstream
-        assert fx in upstream  # The masked input is still reported.
+        assert fx in upstream
         assert value not in set(override.rx.downstream())
 
 class TestHashing:
@@ -4519,3 +5444,336 @@ class TestCollect:
         assert combined.rx.awaiting
 
         await async_wait_until(lambda: combined.rx.value == (1, 2))
+
+
+class TestDistinct:
+    """``.rx.distinct()``."""
+
+    def test_reactive_distinct_suppresses_downstream_recompute_when_value_repeats(self):
+        trigger = rx(0)
+        parity_calls, doubled_calls = [], []
+
+        def parity(v):
+            parity_calls.append(v)
+            return v % 2
+
+        def doubled(v):
+            doubled_calls.append(v)
+            return v * 1000
+
+        parity_node = trigger.rx.pipe(parity).rx.distinct()
+        doubled_node = parity_node.rx.pipe(doubled)
+        results = []
+        doubled_node.rx.watch(results.append)
+
+        trigger.rx.value = 2  # same parity as 0 -- distinct() must swallow this
+        trigger.rx.value = 3  # parity flips -- must propagate
+
+        # `parity` has to run on every recompute to find out whether the
+        # output changed; `doubled`, downstream of `.rx.distinct()`, only
+        # runs for the genuinely distinct values.
+        assert parity_calls == [0, 2, 3]
+        assert doubled_calls == [1]
+        assert results == [1000]
+
+    def test_reactive_distinct_default_equality_matches_comparator_is_equal(self):
+        # `a`'s value genuinely changes each time (so this isn't just Param's
+        # own equal-value assignment no-op); only the *piped* list result
+        # repeats, structurally, via Comparator.is_equal's list comparison.
+        a = rx(0)
+        node = a.rx.pipe(lambda v: [v % 2]).rx.distinct()
+        results = []
+        node.rx.watch(results.append)
+
+        a.rx.value = 1  # first-ever recompute -- produces [1], nothing to compare against yet
+        assert results == [[1]]
+        a.rx.value = 3  # produces [1] again -- equal per Comparator.is_equal
+        assert results == [[1]]
+        a.rx.value = 4  # produces [0] -- distinct
+        assert results == [[1], [0]]
+
+    def test_reactive_distinct_custom_fn_overrides_default_equality(self):
+        a = rx(0)
+        node = a.rx.pipe(lambda v: v).rx.distinct(fn=lambda old, new: old % 3 == new % 3)
+        results = []
+        node.rx.watch(results.append)
+
+        a.rx.value = 1  # first-ever recompute -- nothing to compare against yet
+        assert results == [1]
+        a.rx.value = 4  # 4 % 3 == 1 % 3 -- considered equal by the custom fn
+        assert results == [1]
+        a.rx.value = 5  # 5 % 3 != 1 % 3
+        assert results == [1, 5]
+
+    def test_reactive_distinct_uses_comparator_equalities_registry(self):
+        class Frame:
+            def __init__(self, v):
+                self.v = v
+
+        Comparator.equalities[Frame] = lambda a, b: a.v == b.v
+        try:
+            trigger = rx(0)
+            node = trigger.rx.pipe(lambda v: Frame(v % 2)).rx.distinct()
+            results = []
+            node.rx.pipe(lambda f: f.v).rx.watch(results.append)
+
+            trigger.rx.value = 2  # Frame(0) == Frame(0) via the registered equality
+            trigger.rx.value = 5  # Frame(1) != Frame(0)
+
+            assert results == [1]
+        finally:
+            del Comparator.equalities[Frame]
+
+    def test_reactive_distinct_fn_exception_is_not_swallowed(self):
+        def bad_fn(old, new):
+            raise RuntimeError('boom')
+
+        a = rx(1)
+        node = a.rx.pipe(lambda v: v).rx.distinct(fn=bad_fn)
+        node.rx.watch(lambda v: None)
+
+        a.rx.value = 2  # first-ever recompute -- bad_fn isn't consulted yet
+        with pytest.raises(RuntimeError, match='boom'):
+            a.rx.value = 3  # second recompute -- now bad_fn actually runs
+
+    def test_reactive_distinct_value_reflects_latest_distinct_result(self):
+        a = rx(1)
+        node = a.rx.pipe(lambda v: v % 2).rx.distinct()
+        assert node.rx.value == 1
+        a.rx.value = 3
+        assert node.rx.value == 1
+        a.rx.value = 4
+        assert node.rx.value == 0
+
+
+class TestSkipSiblingArguments:
+    """A skipped reference must not discard a sibling argument's genuine
+    change. Predates ``.rx.distinct()`` (a plain ``Skip`` triggers it too),
+    which just makes staying skipped a common shape rather than a rare one.
+    """
+
+    def test_distinct_sibling_sharing_an_upstream_still_updates(self):
+        # `a` and `b` both derive from the same shared root; only `b`
+        # changes, `a` settles into "unchanged" via .rx.distinct() and
+        # stays there.
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        quotes = rx({'TGT': 42.1, 'ACME': 46.0})
+        def select(q, ticker):
+            return q[ticker]
+
+        a = quotes.rx.pipe(select, 'TGT').rx.pipe(lambda v: v).rx.distinct()
+        b = quotes.rx.pipe(select, 'ACME').rx.pipe(lambda v: v).rx.distinct()
+        out = rx(combine)(a=a, b=b)
+        assert out.rx.value == 88.1
+        assert calls == [(42.1, 46.0)]
+
+        quotes.rx.value = {'TGT': 42.1, 'ACME': 50.0}  # only ACME changes
+        assert out.rx.value == 92.1
+        assert calls == [(42.1, 46.0), (42.1, 50.0)]
+
+    def test_plain_skip_sibling_still_updates(self):
+        # The same failure mode with no .rx.distinct() involved at all:
+        # a kernel raising Skip directly, once its own upstream crosses a
+        # threshold, must not stop an unrelated sibling argument's later
+        # change from propagating.
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        def skip_if_negative(v):
+            if v < 0:
+                raise Skip
+            return v
+
+        x, y = rx(1), rx(10)
+        a = x.rx.pipe(skip_if_negative)
+        out = rx(combine)(a, y)
+        assert out.rx.value == 11
+
+        x.rx.value = -1  # a skips and stays skipped from here on
+        assert a.rx.value == 1
+        y.rx.value = 20  # sibling, unrelated to a, genuinely changes
+        assert out.rx.value == 21
+        assert calls == [(1, 10), (1, 20)]
+
+    def test_both_siblings_changing_together_still_resolves_correctly(self):
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        quotes = rx({'TGT': 42.1, 'ACME': 46.0})
+        def select(q, ticker):
+            return q[ticker]
+
+        a = quotes.rx.pipe(select, 'TGT').rx.pipe(lambda v: v).rx.distinct()
+        b = quotes.rx.pipe(select, 'ACME').rx.pipe(lambda v: v).rx.distinct()
+        out = rx(combine)(a=a, b=b)
+        assert out.rx.value == 88.1
+
+        quotes.rx.value = {'TGT': 40.0, 'ACME': 48.0}  # both change
+        assert out.rx.value == 88.0
+        assert calls == [(42.1, 46.0), (40.0, 48.0)]
+
+    def test_a_reference_that_has_never_settled_still_skips(self):
+        # The case the fix must NOT break: an argument whose every
+        # resolve, including its first, has raised Skip has no valid
+        # value to fall back to, and the operation must still decline.
+        def skipping(value):
+            raise Skip
+
+        skipped = rx(1).rx.pipe(skipping)
+        n = rx(7).rx.pipe(lambda value, extra: value + extra, extra=skipped)
+        assert n.rx.value is None
+        n.rx.overrides['extra'] = 2
+        assert n.rx.value == 9
+
+    async def test_a_settling_reference_still_skips_the_whole_operation(self):
+        # _settling takes priority over a settled skip: publishing a's stale
+        # value alongside b's fresh one while a is genuinely in flight is
+        # what #1173 introduced _settling to prevent.
+        async def slow(v):
+            await asyncio.sleep(0.05)
+            return v
+
+        trigger = rx(1)
+        a = trigger.rx.pipe(slow)
+        calls = []
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+        b = rx(10)
+        out = rx(combine)(a, b)
+        out.rx.watch(lambda v: None)
+        out.rx.value
+        await async_wait_until(lambda: out.rx.value == 11)
+
+        trigger.rx.value = 2  # schedules a's async re-resolution
+        assert a._settling
+        calls.clear()
+        b.rx.value = 20  # sibling changes while a is mid-flight
+        assert out.rx.value == 11  # unchanged -- still skipping, correctly
+        assert calls == []
+
+        await async_wait_until(lambda: calls == [(2, 20)])
+
+    def test_distinct_siblings_that_all_skip_do_not_recompute_or_notify(self):
+        calls, events = [], []
+        quotes = rx({'TGT': 42.1, 'ACME': 46.0, 'XYZ': 1.0})
+
+        def select(q, ticker):
+            return q[ticker]
+
+        def combine(a, b):
+            calls.append((a, b))
+            return a + b
+
+        a = quotes.rx.pipe(select, 'TGT').rx.distinct()
+        b = quotes.rx.pipe(select, 'ACME').rx.distinct()
+        out = rx(combine)(a=a, b=b)
+        out.rx.watch(events.append)
+        assert out.rx.value == 88.1
+
+        quotes.rx.value = {'TGT': 42.1, 'ACME': 46.0, 'XYZ': 2.0}
+        quotes.rx.value = {'TGT': 42.1, 'ACME': 46.0, 'XYZ': 3.0}
+
+        assert calls == [(42.1, 46.0)]
+        assert events == []
+
+    def test_skipped_left_operand_does_not_discard_right_operand_change(self):
+        def skip_if_negative(v):
+            if v < 0:
+                raise Skip
+            return v
+
+        x, y = rx(1), rx(10)
+        a = x.rx.pipe(skip_if_negative)
+        out = a + y
+        assert out.rx.value == 11
+
+        x.rx.value = -1
+        y.rx.value = 20
+
+        assert out.rx.value == 21
+
+    def test_literal_list_after_distinct_does_not_recompute_or_notify(self):
+        pd = pytest.importorskip('pandas')
+        calls, events = [], []
+        source = rx(pd.DataFrame({'a': [1], 'b': [2], 'ignored': [0]}))
+        distinct = source.rx.pipe(lambda value: value[['a', 'b']]).rx.distinct(
+            lambda left, right: left.equals(right))
+
+        def select(value, fields):
+            return value[fields]
+
+        def expensive(value):
+            calls.append(value)
+            return value
+
+        out = distinct.rx.pipe(select, ['a']).rx.pipe(expensive)
+        out.rx.watch(events.append)
+        assert out.rx.value.equals(pd.DataFrame({'a': [1]}))
+
+        source.rx.value = pd.DataFrame({'a': [1], 'b': [2], 'ignored': [1]})
+        source.rx.value = pd.DataFrame({'a': [1], 'b': [2], 'ignored': [2]})
+
+        assert len(calls) == 1
+        assert events == []
+
+    def test_custom_reference_transform_remains_a_live_sibling(self):
+        class Widget(param.Parameterized):
+            value = param.Integer()
+
+        def transform(value):
+            if isinstance(value, Widget):
+                return value.param.value
+            return value
+
+        param.reactive.register_reference_transform(transform)
+        widget = Widget(value=10)
+        source = rx(1)
+        skipped = source.rx.pipe(lambda value: value).rx.distinct()
+        out = rx(lambda a, b: a + b)(skipped, widget)
+        assert out.rx.value == 11
+
+        source.rx.value = 1
+        widget.value = 20
+
+        assert out.rx.value == 21
+
+    def test_batch_preserves_a_genuine_sibling_change(self):
+        def skip_if_negative(value):
+            if value < 0:
+                raise Skip
+            return value
+
+        x, y = rx(1), rx(10)
+        out = rx(lambda a, b: a + b)(x.rx.pipe(skip_if_negative), y)
+        assert out.rx.value == 11
+
+        with batch():
+            x.rx.value = -1
+            y.rx.value = 20
+
+        assert out.rx.value == 21
+
+    def test_when_sibling_remains_live_after_a_skip(self):
+        def skip_if_negative(value):
+            if value < 0:
+                raise Skip
+            return value
+
+        source, gate, sibling = rx(1), rx(True), rx(10)
+        skipped = source.rx.pipe(skip_if_negative).rx.when(gate)
+        out = rx(lambda a, b: a + b)(skipped, sibling)
+        assert out.rx.value == 11
+
+        source.rx.value = -1
+        sibling.rx.value = 20
+
+        assert out.rx.value == 21

@@ -168,17 +168,17 @@ xlrd = "*"
 [feature.test-315.dependencies]
 cloudpickle = "*"
 ipython = "*"
-# jsonschema = "*"
+jsonschema = "*"
 nest-asyncio = "*"
-# numpy = "*"
+numpy = "*"
 odfpy = "*"
 # openpyxl = "*"
 # pandas = "*"
 # pyarrow = "*"
-# pytables = "*"
+pytables = "*"
 xlrd = "*"
 # ipykernel = "*"
-# gmpy2 = "*"  # https://github.com/conda-forge/gmpy2-feedstock/issues/52
+gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'

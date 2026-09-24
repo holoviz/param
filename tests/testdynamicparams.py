@@ -250,6 +250,50 @@ class TestDynamicSharedNumbergen(TestDynamicParameters):
             self.assertNotEqual(call_1, t12.x)
 
 
+class TestDynamicCallableAcrossNumberSiblings(unittest.TestCase):
+    """
+    Number, Integer, Date and CalendarDate all subclass Dynamic, whose
+    contract is that any such parameter may be set to a callable that is
+    invoked to produce the value on get. Every sibling must accept a callable
+    uniformly; Date and CalendarDate used to reject it at validation time.
+    """
+
+    def setUp(self):
+        super().setUp()
+        param.Dynamic.time_dependent = False
+
+        import datetime as dt
+
+        self.cases = [
+            (param.Number, lambda: 5, 5),
+            (param.Integer, lambda: 5, 5),
+            (param.Date, lambda: dt.datetime(2021, 5, 5), dt.datetime(2021, 5, 5)),
+            (param.CalendarDate, lambda: dt.date(2021, 5, 5), dt.date(2021, 5, 5)),
+        ]
+
+    def test_set_callable_and_get_resolves(self):
+        for ptype, gen, expected in self.cases:
+            with self.subTest(ptype=ptype.__name__):
+
+                class P(param.Parameterized):
+                    v = ptype()
+
+                p = P()
+                # Setting a callable must not raise for any Dynamic sibling.
+                p.v = gen
+                # Getting resolves the dynamic value by calling the callable.
+                self.assertEqual(p.v, expected)
+
+    def test_callable_as_constructor_default(self):
+        for ptype, gen, expected in self.cases:
+            with self.subTest(ptype=ptype.__name__):
+
+                class P(param.Parameterized):
+                    v = ptype(default=gen)
+
+                self.assertEqual(P().v, expected)
+
+
 # Commented out block in the original doctest version.
 # Maybe these are features originally planned but never implemented
 

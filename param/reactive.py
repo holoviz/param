@@ -1530,7 +1530,7 @@ class reactive_ops:
             params = self._reactive._params
         else:
             params = resolve_ref(self._reactive)
-        trigger = Trigger(parameters=params)
+        trigger = Trigger(parameters=params + xrefs + yrefs)
         if xrefs:
             def trigger_x(*args):
                 if t.cast("bool", self.value):

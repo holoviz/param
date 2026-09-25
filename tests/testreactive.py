@@ -673,7 +673,7 @@ class TestWatch:
         source = rx(2, error_mode='propagate')
         result = source.rx.pipe(lambda value: 1 / value)
         items = []
-        result.rx.watch(items.append)
+        result.rx.watch(items.append, process_failures=True)
 
         source.rx.value = 0
         assert len(items) == 1
@@ -682,6 +682,18 @@ class TestWatch:
 
         source.rx.value = 4
         assert items[1] == 0.25
+
+    def test_reactive_watch_skips_failures_by_default(self):
+        """The default watch behavior omits failures but delivers recovery."""
+        source = rx(2, error_mode='propagate')
+        result = source.rx.pipe(lambda value: 1 / value)
+        items = []
+        result.rx.watch(items.append)
+
+        source.rx.value = 0
+        assert items == []
+        source.rx.value = 4
+        assert items == [0.25]
 
     def test_reactive_watch_onlychanged_skips_a_masked_ticks_repeat_value(self):
         a = rx(2)

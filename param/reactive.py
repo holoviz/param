@@ -1730,7 +1730,7 @@ class reactive_ops:
             )
         self._reactive._wrapper.object = resolve_value(new)
 
-    def watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
+    def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
         """
         Add a callback to observe changes in the reactive expression's output.
 
@@ -1746,6 +1746,9 @@ class reactive_ops:
             For function should accept a single argument, which is the new value
             of the reactive expression. If no function provided, the expression
             is simply evaluated eagerly.
+        process_failures : bool, optional
+            If True, pass propagated ReactiveError values to the callback.
+            Otherwise, skip the callback when the output is a ReactiveError.
 
         Returns
         -------
@@ -1791,9 +1794,12 @@ class reactive_ops:
                              "are reserved for internal Watchers.")
         elif isinstance(self._reactive, rx) and self._reactive._lazy:
             warnings.warn("Watching a lazy expressions converts it into an eager expression.")
-        return self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
+        return self._watch(
+            fn, onlychanged=onlychanged, queued=queued, precedence=precedence,
+            process_failures=process_failures
+        )
 
-    def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0):
+    def _watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
         gate = _EqualityGate() if onlychanged else None
         def cb(value):
             from .parameterized import async_executor
@@ -1805,7 +1811,7 @@ class reactive_ops:
                 async_executor(partial(fn, value))
             else:
                 fn(value)
-        bound = t.cast('t.Any', bind(cb, self._reactive, watch=True, process_failures=True))
+        bound = t.cast('t.Any', bind(cb, self._reactive, watch=True, process_failures=process_failures))
         watchers = list(bound._watchers)
         reactive = self._reactive
         if isinstance(reactive, rx):

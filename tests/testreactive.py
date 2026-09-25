@@ -647,6 +647,33 @@ class TestWatch:
         string.rx.value = 'new string'
         assert items == ['new string!']
 
+    def test_reactive_watch_delivers_failures_and_recovery(self):
+        """Watch callbacks receive a propagated error as an output value."""
+        source = rx(2, error_mode='propagate')
+        result = source.rx.pipe(lambda value: 1 / value)
+        items = []
+        result.rx.watch(items.append, process_failures=True)
+
+        source.rx.value = 0
+        assert len(items) == 1
+        assert isinstance(items[0], param.ReactiveError)
+        assert isinstance(items[0].exception, ZeroDivisionError)
+
+        source.rx.value = 4
+        assert items[1] == 0.25
+
+    def test_reactive_watch_skips_failures_by_default(self):
+        """The default watch behavior omits failures but delivers recovery."""
+        source = rx(2, error_mode='propagate')
+        result = source.rx.pipe(lambda value: 1 / value)
+        items = []
+        result.rx.watch(items.append)
+
+        source.rx.value = 0
+        assert items == []
+        source.rx.value = 4
+        assert items == [0.25]
+
     def test_reactive_watch_onlychanged_skips_a_masked_ticks_repeat_value(self):
         a = rx(2)
         b = rx(10) * a

@@ -3549,7 +3549,7 @@ class rx:
             return new
         return super().__getattribute__(name)
 
-    def __call__(self, *args, process_failures=False, **kwargs):
+    def __call__(self, *args, **kwargs):
         new = self._clone(copy=True)
         method = new._method or '__call__'
         if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__') and not self._lazy:
@@ -3564,8 +3564,7 @@ class rx:
             'fn': method,
             'args': args,
             'kwargs': kwargs,
-            'reverse': False,
-            'process_failures': process_failures,
+            'reverse': False
         }
         return new._clone(operation)
 

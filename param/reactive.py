@@ -1805,7 +1805,7 @@ class reactive_ops:
                 async_executor(partial(fn, value))
             else:
                 fn(value)
-        bound = t.cast('t.Any', bind(cb, self._reactive, watch=True))
+        bound = t.cast('t.Any', bind(cb, self._reactive, watch=True, process_failures=True))
         watchers = list(bound._watchers)
         reactive = self._reactive
         if isinstance(reactive, rx):
@@ -3543,7 +3543,7 @@ class rx:
             return new
         return super().__getattribute__(name)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, process_failures=False, **kwargs):
         new = self._clone(copy=True)
         method = new._method or '__call__'
         if method == '__call__' and self._depth == 0 and not hasattr(self._current, '__call__') and not self._lazy:
@@ -3558,7 +3558,8 @@ class rx:
             'fn': method,
             'args': args,
             'kwargs': kwargs,
-            'reverse': False
+            'reverse': False,
+            'process_failures': process_failures,
         }
         return new._clone(operation)
 

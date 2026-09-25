@@ -288,6 +288,27 @@ class TestErrorHandling:
         assert handled.rx.value == "bad 1"
         assert handled.rx.error is None
 
+    def test_reactive_call_process_failures(self):
+        """A reactive function call can consume a failed argument."""
+        source = rx(1, error_mode="propagate")
+        failed = source.rx.pipe(lambda value: 1 / (value - 1))
+        handled = rx(lambda value: str(value.exception) if isinstance(value, param.ReactiveError) else value)(
+            failed, process_failures=True
+        )
+
+        assert handled.rx.value == "division by zero"
+        source.rx.value = 2
+        assert handled.rx.value == 1.0
+
+    def test_reactive_call_short_circuits_failures_by_default(self):
+        """Without the flag a failed argument bypasses the called function."""
+        failed = rx(0, error_mode="propagate").rx.pipe(lambda value: 1 / value)
+        calls = []
+        handled = rx(lambda value: calls.append(value))(failed)
+
+        assert handled.rx.value is failed.rx.value
+        assert calls == []
+
     def test_reactive_error_label_is_none_by_default(self):
         def fail(value):
             raise ValueError(f"bad {value}")
@@ -646,6 +667,21 @@ class TestWatch:
         new_string.rx.watch(items.append)
         string.rx.value = 'new string'
         assert items == ['new string!']
+
+    def test_reactive_watch_delivers_failures_and_recovery(self):
+        """Watch callbacks receive a propagated error as an output value."""
+        source = rx(2, error_mode='propagate')
+        result = source.rx.pipe(lambda value: 1 / value)
+        items = []
+        result.rx.watch(items.append)
+
+        source.rx.value = 0
+        assert len(items) == 1
+        assert isinstance(items[0], param.ReactiveError)
+        assert isinstance(items[0].exception, ZeroDivisionError)
+
+        source.rx.value = 4
+        assert items[1] == 0.25
 
     def test_reactive_watch_onlychanged_skips_a_masked_ticks_repeat_value(self):
         a = rx(2)

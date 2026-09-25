@@ -616,6 +616,26 @@ class TestSpecialMethods:
         p.boolean = False
         assert results == ['string', 'foo', 2.1]
 
+    def test_reactive_where_composed_argument_watches_selected_branch(self):
+        """A composed selector must publish changes to its selected branch."""
+        condition, first, second = rx(True), rx(1), rx(2)
+        selected = condition.rx.where(first, second)
+        composed = rx(lambda value: value * 10)(selected)
+        fired = []
+        composed.rx.watch(fired.append)
+
+        assert composed.rx.value == 10
+        first.rx.value = 5
+        assert fired == [50]
+        assert composed.rx.value == 50
+
+        second.rx.value = 6
+        assert fired == [50]
+        condition.rx.value = False
+        assert fired == [50, 60]
+        second.rx.value = 7
+        assert fired == [50, 60, 70]
+
 class TestWatch:
     """``.rx.watch()`` and its ``onlychanged``/lazy behavior."""
 

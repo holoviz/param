@@ -114,6 +114,7 @@ addopts = "--color=yes"
 python_files = "test*.py"
 filterwarnings = [
   "error",
+  "ignore:Numpy built with MINGW-W64 on Windows 64 bits is experimental:Warning",
 ]
 xfail_strict = true
 asyncio_mode = "auto"

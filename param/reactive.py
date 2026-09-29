@@ -1390,7 +1390,9 @@ class reactive_ops:
         wrapper._rederive = rederive
         wrapper._mark_settling = mark_settling
 
-        self._watch(lambda e: wrapper.param.update(object=True), precedence=-999)
+        # Resolve the expression only after dependency invalidation/ref syncing
+        # (precedence -1), so status tracking does not evaluate stale inputs.
+        self._watch(lambda e: wrapper.param.update(object=True), precedence=0)
         self._watch(lambda e: wrapper.param.update(object=False), precedence=999)
 
         rederive()
@@ -1746,6 +1748,14 @@ class reactive_ops:
             For function should accept a single argument, which is the new value
             of the reactive expression. If no function provided, the expression
             is simply evaluated eagerly.
+        onlychanged : bool, optional
+            If True (the default), only call ``fn`` when the output changes.
+        queued : bool, optional
+            If True, process events triggered by ``fn`` after the current
+            callback completes instead of recursively. Defaults to False.
+        precedence : int, optional
+            Callback priority, with lower values running first. Defaults to 0.
+            Negative values are reserved for internal watchers.
         process_failures : bool, optional
             If True, pass propagated ReactiveError values to the callback.
             Otherwise, skip the callback when the output is a ReactiveError.
@@ -1813,6 +1823,14 @@ class reactive_ops:
                 fn(value)
         bound = t.cast('t.Any', bind(cb, self._reactive, watch=True, process_failures=process_failures))
         watchers = list(bound._watchers)
+        if queued or precedence:
+            for index, watcher in enumerate(watchers):
+                owner = watcher.inst if watcher.inst is not None else watcher.cls
+                watcher.remove()
+                watcher = watcher._replace(queued=queued, precedence=precedence)
+                owner.param._register_watcher('append', watcher, watcher.what)
+                watchers[index] = watcher
+            bound._watchers = watchers
         reactive = self._reactive
         if isinstance(reactive, rx):
             live = reactive._watchers

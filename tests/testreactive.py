@@ -639,6 +639,34 @@ class TestSpecialMethods:
 class TestWatch:
     """``.rx.watch()`` and its ``onlychanged``/lazy behavior."""
 
+    def test_reactive_watch_precedence(self):
+        source = rx(0)
+        calls = []
+        late = source.rx.watch(lambda value: calls.append(('late', value)), precedence=2)
+        source.rx.watch(lambda value: calls.append(('early', value)), precedence=1)
+
+        source.rx.value = 1
+        assert calls == [('early', 1), ('late', 1)]
+        source.rx.unwatch(late)
+        source.rx.value = 2
+        assert calls == [('early', 1), ('late', 1), ('early', 2)]
+
+    @pytest.mark.parametrize('queued', [False, True])
+    def test_reactive_watch_queued(self, queued):
+        source = rx(0)
+        calls = []
+
+        def update(value):
+            calls.append('start')
+            if value == 1:
+                source.rx.value = 2
+            calls.append('end')
+
+        source.rx.watch(update, queued=queued)
+        source.rx.value = 1
+        assert calls == (['start', 'end', 'start', 'end'] if queued else
+                         ['start', 'start', 'end', 'end'])
+
     def test_reactive_watch_on_set_input(self):
         string = rx('string')
         new_string = string + '!'

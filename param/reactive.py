@@ -3301,7 +3301,16 @@ class rx:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
                 operation = self._operation
-                if isinstance(obj, ReactiveError) and not (operation or {}).get('process_failures'):
+                adopts_shared = (
+                    self._shared is not None and
+                    self._method is None and
+                    self._shared._method is None
+                )
+                if (
+                    isinstance(obj, ReactiveError)
+                    and not (operation or {}).get('process_failures')
+                    and not adopts_shared
+                ):
                     self._current_ = obj
                     self._skipped = False
                     self._settle_count += 1
@@ -3315,11 +3324,7 @@ class rx:
                     and _settle_state(self._prev)[0] == 0
                 ):
                     raise Skip
-                elif (
-                    self._shared is not None and
-                    self._method is None and
-                    self._shared._method is None
-                ):
+                elif adopts_shared:
                     # If this rx is cloned from an shared input then we make use
                     # of the shared.rx.value to ensure branching pipelines do
                     # not have to recompute the inputs multiple times.

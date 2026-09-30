@@ -288,6 +288,37 @@ class TestErrorHandling:
         assert handled.rx.value == "bad 1"
         assert handled.rx.error is None
 
+    def test_reactive_error_process_failures_root_set_to_error(self):
+        root = rx(1)
+        reader = root.rx.pipe(lambda v: v, process_failures=True)
+        assert reader.rx.value == 1
+
+        error_x = param.ReactiveError(ValueError("x"))
+        root.rx.value = error_x
+        assert reader.rx.value is error_x
+
+        error_y = param.ReactiveError(ValueError("y"))
+        root.rx.value = error_y
+        assert reader.rx.value is error_y
+
+        root.rx.value = 2
+        assert reader.rx.value == 2
+
+    def test_reactive_error_process_failures_root_set_to_error_watch(self):
+        root = rx(1)
+        reader = root.rx.pipe(lambda v: v, process_failures=True)
+        items = []
+        reader.rx.watch(items.append, process_failures=True)
+
+        error = param.ReactiveError(ValueError("x"))
+        root.rx.value = error
+        assert items == [error]
+        assert reader.rx.value is error
+
+        root.rx.value = 2
+        assert items == [error, 2]
+        assert reader.rx.value == 2
+
     def test_reactive_error_label_is_none_by_default(self):
         def fail(value):
             raise ValueError(f"bad {value}")

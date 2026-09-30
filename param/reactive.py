@@ -3301,7 +3301,16 @@ class rx:
             try:
                 obj = self._obj if self._prev is None else self._prev._resolve()
                 operation = self._operation
-                if isinstance(obj, ReactiveError) and not (operation or {}).get('process_failures'):
+                if (
+                    isinstance(obj, ReactiveError)
+                    and not (operation or {}).get('process_failures')
+                    # Must adopt the shared settle count, or downstream skips the error
+                    and not (
+                        self._shared is not None and
+                        self._method is None and
+                        self._shared._method is None
+                    )
+                ):
                     self._current_ = obj
                     self._skipped = False
                     self._settle_count += 1

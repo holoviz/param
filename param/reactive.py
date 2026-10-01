@@ -868,6 +868,50 @@ class reactive_ops:
         return rxi._meta
 
     @property
+    def generation(self) -> int:
+        """
+        The settle generation of this node's current value.
+
+        Changes whenever the node settles to a new value, even without running
+        its operation, and not when the operation raises ``Skip``.
+
+        Inside the node's own operation it is the generation the value being
+        computed will settle to. Stamp it beside what the operation writes to
+        ``.rx.meta``; a stamp that no longer matches means the metadata does
+        not describe the current value. An operation that raises after writing
+        settles to a ``ReactiveError`` with a matching stamp, so also ignore
+        metadata when the value is a ``ReactiveError``.
+
+        >>> import param
+        >>> def produce(v):
+        ...     node = param.current_node()
+        ...     node.rx.meta['trace'] = {'v': v, 'generation': node.rx.generation}
+        ...     return v * 10
+        >>> expr = param.rx(1).rx.pipe(produce)
+        >>> expr.rx.value
+        10
+        >>> expr.rx.meta['trace']['generation'] == expr.rx.generation
+        True
+
+        A superseded asynchronous run may write a stamp that matches the
+        generation of the run replacing it.
+
+        Returns
+        -------
+        int
+            The node's settle generation.
+        """
+        rxi = self._reactive
+        if not isinstance(rxi, rx):
+            raise AttributeError(
+                "'.rx.generation' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(rxi).__name__!r} object."
+            )
+        if _current_node.get() is rxi:
+            return rxi._settle_count + 1
+        return rxi._settle_count
+
+    @property
     def overrides(self) -> InputOverrides:
         """
         A mutable mapping of overrides for the inputs of this node.

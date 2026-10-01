@@ -3363,9 +3363,8 @@ class rx:
                         self._lazy_resolve(obj)
                         if self._finished_generation == self._resolve_generation:
                             # Handle case where async call is resolved synchronously
-                            # e.g. when there is no running event loop
-                            self._skipped = False
-                            self._settle_count += 1
+                            # e.g. when there is no running event loop. _resolve_async
+                            # has already settled the node.
                             self._dirty = False
                             return self._current_
                         obj = Skip

@@ -3103,6 +3103,23 @@ class TestGeneratorsAndAsyncFunctions:
         await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
         await async_wait_until(lambda: rxgen.rx.value == 11)
 
+    def test_empty_generator_without_running_loop_skips_downstream(self):
+        source = rx(1)
+
+        def gen(v):
+            if v > 1:
+                return
+            yield v
+
+        derived = source.rx.pipe(gen) + 100
+        seen = []
+        derived.rx.watch(seen.append)
+        assert derived.rx.value == 101
+
+        source.rx.value = 2
+        assert derived.rx.value == 101
+        assert seen == []
+
 async def mul_slowly(value):
     await asyncio.sleep(0.02)
     return value*2

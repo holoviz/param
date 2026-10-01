@@ -1240,6 +1240,56 @@ class reactive_ops:
         next(upstream, None)  # Skip itself.
         yield from upstream
 
+    def inputs(self) -> dict[int | str, 'rx']:
+        """
+        Return the ``rx`` nodes passed as arguments to this node's operation.
+
+        Keys match ``.rx.overrides``: keyword arguments by name, positional
+        arguments by index (excluding the piped value). An input overridden by
+        an ``rx`` node reports that node; one overridden by a plain value is
+        left out. Not included: non-``rx`` arguments, ``rx`` nodes nested in a
+        container, the node this one was piped from, and the arguments of a
+        ``bind()`` function.
+
+        Inside an operation, ``param.current_node().rx.inputs()`` gives the
+        nodes that fed it, e.g. to read their ``.rx.meta`` (see
+        ``.rx.generation``).
+
+        Returns
+        -------
+        dict[int | str, rx]
+            A new dict on every call; empty for a node without an operation.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(2)
+        >>> b = param.rx(1).rx.pipe(lambda x, *, y: x + y, y=a)
+        >>> b.rx.inputs()['y'] is a
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            raise AttributeError(
+                "'.rx.inputs()' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(reactive).__name__!r} object."
+            )
+        operation = reactive._operation
+        if not operation:
+            return {}
+        overrides = operation.get('overrides') or {}
+        candidates = [
+            *enumerate(operation.get('args') or ()),
+            *(operation.get('kwargs') or {}).items(),
+        ]
+        inputs: dict[int | str, rx] = {}
+        for key, arg in candidates:
+            if key in overrides:
+                arg = overrides[key]
+            if isinstance(arg, rx):
+                inputs[key] = arg
+        return inputs
+
     def downstream(self) -> Iterator['rx']:
         """
         Iterate over the ``rx`` nodes that derive their value from this
@@ -2319,6 +2369,8 @@ def current_node() -> rx | None:
     ...     if node is not None:
     ...         node.rx.meta['trace'] = {'fx_used': fx}
     ...     return price * fx
+
+    ``node.rx.inputs()`` gives the nodes that fed the operation.
 
     Returns ``None`` outside of any operation body (including in plain user
     code, tests, or a REPL), so callers should guard rather than chain

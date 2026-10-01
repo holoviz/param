@@ -5139,6 +5139,117 @@ class TestCurrentNode:
         assert current_node() is None
 
 
+class TestInputs:
+    """``.rx.inputs()``."""
+
+    def test_inputs_keys_kwargs_by_name(self):
+        a, b = rx(1), rx(2)
+        expr = rx(0).rx.pipe(lambda v, *, a, b: v + a + b, a=a, b=b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {'a', 'b'}
+        assert inputs['a'] is a and inputs['b'] is b
+
+    def test_inputs_keys_positionals_by_index(self):
+        a, b = rx(1), rx(2)
+        expr = rx(0).rx.pipe(lambda v, x, y: v + x + y, a, b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 1}
+        assert inputs[0] is a and inputs[1] is b
+
+    def test_inputs_omits_non_rx_inputs(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, x, y, *, k, j: v, 5, a, k=a, j='plain')
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {1, 'k'}
+        assert inputs[1] is a and inputs['k'] is a
+
+    def test_inputs_omits_rx_nested_in_a_container(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, xs: v, [a])
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_omits_the_piped_from_node(self):
+        source = rx(1)
+        expr = source.rx.pipe(lambda v: v)
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_operator_node(self):
+        a, b = rx(1), rx(2)
+        expr = a + b
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0}
+        assert inputs[0] is b
+
+    def test_inputs_of_root_node_is_empty(self):
+        assert rx(1).rx.inputs() == {}
+
+    def test_inputs_of_bind_root_node_is_empty(self):
+        a = rx(1)
+        expr = rx(bind(lambda a: a, a=a))
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_method_with_rx_argument(self):
+        a, b = rx(1), rx([1, 2])
+        expr = a.rx.in_(b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0}
+        assert inputs[0] is b
+
+    def test_inputs_omits_input_overridden_by_none(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, *, a: a, a=a)
+        expr.rx.overrides['a'] = None
+        assert expr.rx.value is None
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_reports_rx_override(self):
+        a, replacement = rx(1), rx(10)
+        expr = rx(0).rx.pipe(lambda v, *, a: v + a, a=a)
+        expr.rx.overrides['a'] = replacement
+        assert expr.rx.value == 10
+        assert expr.rx.inputs()['a'] is replacement
+
+        del expr.rx.overrides['a']
+        assert expr.rx.inputs()['a'] is a
+
+    def test_inputs_omits_input_overridden_by_plain_value(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, x: v + x, a)
+        expr.rx.overrides[0] = 10
+        assert expr.rx.value == 10
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_collect(self):
+        a, b = rx(1), rx(2)
+        collected = collect(a, 3, y=b)
+        inputs = collected.rx.inputs()
+        assert set(inputs) == {0, 'y'}
+        assert inputs[0] is a and inputs['y'] is b
+
+    def test_inputs_from_inside_operation(self):
+        a = rx(1)
+        seen = []
+
+        def consume(_obj, *, a):
+            seen.append(current_node().rx.inputs())
+            return a
+
+        expr = rx(None).rx.pipe(consume, a=a)
+        assert expr.rx.value == 1
+        assert len(seen) == 1 and set(seen[0]) == {'a'} and seen[0]['a'] is a
+
+    def test_inputs_returns_a_fresh_dict(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, *, a: v, a=a)
+        expr.rx.inputs().clear()
+        assert expr.rx.inputs()['a'] is a
+
+    def test_inputs_not_available_on_parameter_rx(self):
+        p = Parameters()
+        with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+            p.param.integer.rx.inputs()
+
+
 
 @pytest.fixture
 def clean_accessors():

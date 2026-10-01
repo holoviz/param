@@ -41,15 +41,15 @@ instances are still hashable by identity, so a node can be used as a `dict` key 
 
 See the [Reactive Expressions user guide](../../user_guide/Reactive_Expressions.ipynb)
 for error handling (`error_mode`, `ReactiveError`, `.rx.error`, `.rx.label`,
-`process_failures`), `.rx.overrides` for masking an input, `.rx.meta` and
-`current_node` for per-node caching and provenance, `.rx.upstream`/
-`.rx.downstream` for walking the pipeline graph, and `.rx.watch`/
-`.rx.unwatch`/`.rx.dispose` for an expression's lifecycle.
+`process_failures`), `.rx.overrides` for masking an input, `.rx.meta`,
+`current_node`, `.rx.inputs` and `.rx.generation` for per-node caching and
+provenance, `.rx.upstream`/`.rx.downstream` for walking the pipeline graph,
+and `.rx.watch`/`.rx.unwatch`/`.rx.dispose` for an expression's lifecycle.
 
 *New in version 2.5.0: `label`, `ReactiveError.label`, `.rx.label`,
 `process_failures` on `bind`, `.rx.dispose()`, `.rx.unwatch()`,
 `.rx.watch()` returning its watcher(s), `.rx.upstream()`,
-`.rx.downstream()`, and `collect`.*
+`.rx.downstream()`, `.rx.inputs()`, `.rx.generation`, and `collect`.*
 
 ```{eval-rst}
 .. autosummary::
@@ -73,6 +73,7 @@ These methods and properties are available under the `.rx` namespace of reactive
   ~reactive_ops.buffer
   ~reactive_ops.downstream
   ~reactive_ops.in_
+  ~reactive_ops.inputs
   ~reactive_ops.is_
   ~reactive_ops.is_not
   ~reactive_ops.len
@@ -94,4 +95,5 @@ These methods and properties are available under the `.rx` namespace of reactive
    ~reactive_ops.overrides
    ~reactive_ops.label
    ~reactive_ops.meta
+   ~reactive_ops.generation
 ```

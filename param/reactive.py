@@ -870,16 +870,16 @@ class reactive_ops:
     @property
     def generation(self) -> int:
         """
-        The settle generation of this node's current value.
+        The generation of this node's current value.
 
-        Changes whenever the node settles to a new value, even without running
-        its operation, and not when the operation raises ``Skip``.
+        Changes whenever the node takes a new value, even without running its
+        operation, and not when the operation raises ``Skip``.
 
         Inside the node's own operation it is the generation the value being
-        computed will settle to. Stamp it beside what the operation writes to
+        computed will have. Stamp it beside what the operation writes to
         ``.rx.meta``; a stamp that no longer matches means the metadata does
         not describe the current value. An operation that raises after writing
-        settles to a ``ReactiveError`` with a matching stamp, so also ignore
+        produces a ``ReactiveError`` with a matching stamp, so also ignore
         metadata when the value is a ``ReactiveError``.
 
         >>> import param
@@ -899,7 +899,7 @@ class reactive_ops:
         Returns
         -------
         int
-            The node's settle generation.
+            The node's generation.
         """
         rxi = self._reactive
         if not isinstance(rxi, rx):

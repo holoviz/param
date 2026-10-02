@@ -868,6 +868,50 @@ class reactive_ops:
         return rxi._meta
 
     @property
+    def generation(self) -> int:
+        """
+        The generation of this node's current value.
+
+        Changes whenever the node takes a new value, even without running its
+        operation, and not when the operation raises ``Skip``.
+
+        Inside the node's own operation it is the generation the value being
+        computed will have. Stamp it beside what the operation writes to
+        ``.rx.meta``; a stamp that no longer matches means the metadata does
+        not describe the current value. An operation that raises after writing
+        produces a ``ReactiveError`` with a matching stamp, so also ignore
+        metadata when the value is a ``ReactiveError``.
+
+        >>> import param
+        >>> def produce(v):
+        ...     node = param.current_node()
+        ...     node.rx.meta['trace'] = {'v': v, 'generation': node.rx.generation}
+        ...     return v * 10
+        >>> expr = param.rx(1).rx.pipe(produce)
+        >>> expr.rx.value
+        10
+        >>> expr.rx.meta['trace']['generation'] == expr.rx.generation
+        True
+
+        A superseded asynchronous run may write a stamp that matches the
+        generation of the run replacing it.
+
+        Returns
+        -------
+        int
+            The node's generation.
+        """
+        rxi = self._reactive
+        if not isinstance(rxi, rx):
+            raise AttributeError(
+                "'.rx.generation' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(rxi).__name__!r} object."
+            )
+        if _current_node.get() is rxi:
+            return rxi._settle_count + 1
+        return rxi._settle_count
+
+    @property
     def overrides(self) -> InputOverrides:
         """
         A mutable mapping of overrides for the inputs of this node.
@@ -1239,6 +1283,56 @@ class reactive_ops:
         upstream = reactive._upstream()
         next(upstream, None)  # Skip itself.
         yield from upstream
+
+    def inputs(self) -> dict[int | str, 'rx']:
+        """
+        Return the ``rx`` nodes passed as arguments to this node's operation.
+
+        Keys match ``.rx.overrides``: keyword arguments by name, positional
+        arguments by index (excluding the piped value). An input overridden by
+        an ``rx`` node reports that node; one overridden by a plain value is
+        left out. Not included: non-``rx`` arguments, ``rx`` nodes nested in a
+        container, the node this one was piped from, and the arguments of a
+        ``bind()`` function.
+
+        Inside an operation, ``param.current_node().rx.inputs()`` gives the
+        nodes that fed it, e.g. to read their ``.rx.meta`` (see
+        ``.rx.generation``).
+
+        Returns
+        -------
+        dict[int | str, rx]
+            A new dict on every call; empty for a node without an operation.
+
+        Examples
+        --------
+        >>> import param
+        >>> a = param.rx(2)
+        >>> b = param.rx(1).rx.pipe(lambda x, *, y: x + y, y=a)
+        >>> b.rx.inputs()['y'] is a
+        True
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            raise AttributeError(
+                "'.rx.inputs()' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(reactive).__name__!r} object."
+            )
+        operation = reactive._operation
+        if not operation:
+            return {}
+        overrides = operation.get('overrides') or {}
+        candidates = [
+            *enumerate(operation.get('args') or ()),
+            *(operation.get('kwargs') or {}).items(),
+        ]
+        inputs: dict[int | str, rx] = {}
+        for key, arg in candidates:
+            if key in overrides:
+                arg = overrides[key]
+            if isinstance(arg, rx):
+                inputs[key] = arg
+        return inputs
 
     def downstream(self) -> Iterator['rx']:
         """
@@ -2320,6 +2414,8 @@ def current_node() -> rx | None:
     ...         node.rx.meta['trace'] = {'fx_used': fx}
     ...     return price * fx
 
+    ``node.rx.inputs()`` gives the nodes that fed the operation.
+
     Returns ``None`` outside of any operation body (including in plain user
     code, tests, or a REPL), so callers should guard rather than chain
     straight through to ``.rx.meta``.
@@ -3363,9 +3459,8 @@ class rx:
                         self._lazy_resolve(obj)
                         if self._finished_generation == self._resolve_generation:
                             # Handle case where async call is resolved synchronously
-                            # e.g. when there is no running event loop
-                            self._skipped = False
-                            self._settle_count += 1
+                            # e.g. when there is no running event loop. _resolve_async
+                            # has already settled the node.
                             self._dirty = False
                             return self._current_
                         obj = Skip

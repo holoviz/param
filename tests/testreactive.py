@@ -3103,6 +3103,23 @@ class TestGeneratorsAndAsyncFunctions:
         await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
         await async_wait_until(lambda: rxgen.rx.value == 11)
 
+    def test_empty_generator_without_running_loop_skips_downstream(self):
+        source = rx(1)
+
+        def gen(v):
+            if v > 1:
+                return
+            yield v
+
+        derived = source.rx.pipe(gen) + 100
+        seen = []
+        derived.rx.watch(seen.append)
+        assert derived.rx.value == 101
+
+        source.rx.value = 2
+        assert derived.rx.value == 101
+        assert seen == []
+
 async def mul_slowly(value):
     await asyncio.sleep(0.02)
     return value*2
@@ -5120,6 +5137,339 @@ class TestCurrentNode:
         await async_wait_until(lambda: isinstance(expr.rx.value, param.ReactiveError))
 
         assert current_node() is None
+
+
+class TestGeneration:
+    """``.rx.generation``."""
+
+    def test_generation_increments_on_each_recompute(self):
+        p = Parameters()
+        expr = rx(p.param.integer).rx.pipe(lambda v: v + 1)
+        assert expr.rx.value == 8
+        first = expr.rx.generation
+
+        p.integer = 10
+        assert expr.rx.value == 11
+        assert expr.rx.generation == first + 1
+
+    def test_generation_unchanged_by_a_reread(self):
+        expr = rx(1).rx.pipe(lambda v: v + 1)
+        assert expr.rx.value == 2
+        before = expr.rx.generation
+        assert expr.rx.value == 2
+        assert expr.rx.generation == before
+
+    def test_generation_inside_operation_matches_the_settled_generation(self):
+        p = Parameters()
+        stamped = []
+
+        def kernel(v):
+            stamped.append(current_node().rx.generation)
+            return v
+
+        expr = rx(p.param.integer).rx.pipe(kernel)
+        expr.rx.value
+        assert stamped[-1] == expr.rx.generation
+
+        p.integer = 3
+        expr.rx.value
+        assert len(stamped) == 2
+        assert stamped[-1] == expr.rx.generation
+
+    def test_generation_of_another_node_inside_operation_is_its_settled_generation(self):
+        inner = rx(5).rx.pipe(lambda v: v)
+        seen = []
+
+        def kernel(v, x):
+            seen.append(inner.rx.generation)
+            return v
+
+        expr = rx(1).rx.pipe(kernel, x=inner)
+        expr.rx.value
+        assert seen == [inner.rx.generation]
+
+    def test_generation_advances_when_node_settles_without_running(self):
+        root = rx(2.0, error_mode='propagate')
+        reciprocal = root.rx.pipe(lambda v: 1 / v)
+        runs = []
+
+        def produce(v):
+            runs.append(v)
+            current_node().rx.meta['gen'] = current_node().rx.generation
+            return v * 10
+
+        inner = reciprocal.rx.pipe(produce)
+        assert inner.rx.value == 5.0
+        assert inner.rx.meta['gen'] == inner.rx.generation
+
+        root.rx.value = 0.0
+        assert isinstance(inner.rx.value, param.ReactiveError)
+        assert runs == [0.5]
+        assert inner.rx.meta['gen'] != inner.rx.generation
+
+    def test_generation_advances_when_kwarg_input_failure_short_circuits(self):
+        root = rx(2.0, error_mode='propagate')
+        reciprocal = root.rx.pipe(lambda v: 1 / v)
+        runs = []
+
+        def produce(_obj, *, a):
+            runs.append(a)
+            current_node().rx.meta['gen'] = current_node().rx.generation
+            return a
+
+        node = rx(None, error_mode='propagate').rx.pipe(produce, a=reciprocal)
+        assert node.rx.value == 0.5
+        assert node.rx.meta['gen'] == node.rx.generation
+
+        root.rx.value = 0.0
+        assert isinstance(node.rx.value, param.ReactiveError)
+        assert runs == [0.5]
+        assert node.rx.meta['gen'] != node.rx.generation
+
+    def test_generation_not_available_on_parameter_rx(self):
+        p = Parameters()
+        with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+            p.param.integer.rx.generation
+
+    def test_generation_without_running_loop_async_operation(self):
+        p = Parameters()
+        stamped = []
+
+        async def kernel(v):
+            stamped.append(current_node().rx.generation)
+            return v * 2
+
+        expr = rx(p.param.integer).rx.pipe(kernel)
+        assert expr.rx.value == 14
+        assert stamped == [expr.rx.generation]
+
+        p.integer = 1
+        assert expr.rx.value == 2
+        assert len(stamped) == 2
+        assert stamped[-1] == expr.rx.generation
+        assert stamped[1] == stamped[0] + 1
+
+    def test_generation_without_running_loop_generator_operation(self):
+        stamped = []
+
+        def kernel(v):
+            stamped.append(current_node().rx.generation)
+            yield v
+            stamped.append(current_node().rx.generation)
+            yield v * 2
+
+        expr = rx(1).rx.pipe(kernel)
+        assert expr.rx.value == 2
+        assert stamped[-1] == expr.rx.generation
+        assert stamped[1] == stamped[0] + 1
+
+    def test_generation_detects_meta_written_before_skip(self):
+        p = Parameters()
+
+        def kernel(v):
+            node = current_node()
+            node.rx.meta['generation'] = node.rx.generation
+            if v > 10:
+                raise Skip
+            return v
+
+        expr = rx(p.param.integer).rx.pipe(kernel)
+        assert expr.rx.value == 7
+        assert expr.rx.meta['generation'] == expr.rx.generation
+
+        p.integer = 42
+        assert expr.rx.value == 7
+        assert expr.rx.meta['generation'] != expr.rx.generation
+
+    async def test_generation_inside_async_operation_matches_the_settled_generation(self):
+        stamped = []
+
+        async def kernel(v):
+            await asyncio.sleep(0.01)
+            stamped.append(current_node().rx.generation)
+            return v * 2
+
+        expr = rx(1).rx.pipe(kernel)
+        expr.rx.value
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+        assert stamped == [expr.rx.generation]
+
+    async def test_generation_inside_async_generator_matches_each_yield(self):
+        stamped = []
+
+        async def kernel(v):
+            stamped.append(current_node().rx.generation)
+            yield v
+            await asyncio.sleep(0.01)
+            stamped.append(current_node().rx.generation)
+            yield v * 2
+
+        expr = rx(1).rx.pipe(kernel)
+        expr.rx.value
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+        assert stamped[-1] == expr.rx.generation
+        assert stamped[0] + 1 == stamped[1]
+
+
+class TestInputs:
+    """``.rx.inputs()``."""
+
+    def test_inputs_keys_kwargs_by_name(self):
+        a, b = rx(1), rx(2)
+        expr = rx(0).rx.pipe(lambda v, *, a, b: v + a + b, a=a, b=b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {'a', 'b'}
+        assert inputs['a'] is a and inputs['b'] is b
+
+    def test_inputs_keys_positionals_by_index(self):
+        a, b = rx(1), rx(2)
+        expr = rx(0).rx.pipe(lambda v, x, y: v + x + y, a, b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 1}
+        assert inputs[0] is a and inputs[1] is b
+
+    def test_inputs_omits_non_rx_inputs(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, x, y, *, k, j: v, 5, a, k=a, j='plain')
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {1, 'k'}
+        assert inputs[1] is a and inputs['k'] is a
+
+    def test_inputs_omits_rx_nested_in_a_container(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, xs: v, [a])
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_omits_the_piped_from_node(self):
+        source = rx(1)
+        expr = source.rx.pipe(lambda v: v)
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_operator_node(self):
+        a, b = rx(1), rx(2)
+        expr = a + b
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0}
+        assert inputs[0] is b
+
+    def test_inputs_of_root_node_is_empty(self):
+        assert rx(1).rx.inputs() == {}
+
+    def test_inputs_of_bind_root_node_is_empty(self):
+        a = rx(1)
+        expr = rx(bind(lambda a: a, a=a))
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_method_with_rx_argument(self):
+        a, b = rx(1), rx([1, 2])
+        expr = a.rx.in_(b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0}
+        assert inputs[0] is b
+
+    def test_inputs_omits_input_overridden_by_none(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, *, a: a, a=a)
+        expr.rx.overrides['a'] = None
+        assert expr.rx.value is None
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_reports_rx_override(self):
+        a, replacement = rx(1), rx(10)
+        expr = rx(0).rx.pipe(lambda v, *, a: v + a, a=a)
+        expr.rx.overrides['a'] = replacement
+        assert expr.rx.value == 10
+        assert expr.rx.inputs()['a'] is replacement
+
+        del expr.rx.overrides['a']
+        assert expr.rx.inputs()['a'] is a
+
+    def test_inputs_omits_input_overridden_by_plain_value(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, x: v + x, a)
+        expr.rx.overrides[0] = 10
+        assert expr.rx.value == 10
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_collect(self):
+        a, b = rx(1), rx(2)
+        collected = collect(a, 3, y=b)
+        inputs = collected.rx.inputs()
+        assert set(inputs) == {0, 'y'}
+        assert inputs[0] is a and inputs['y'] is b
+
+    def test_inputs_from_inside_operation(self):
+        a = rx(1)
+        seen = []
+
+        def consume(_obj, *, a):
+            seen.append(current_node().rx.inputs())
+            return a
+
+        expr = rx(None).rx.pipe(consume, a=a)
+        assert expr.rx.value == 1
+        assert len(seen) == 1 and set(seen[0]) == {'a'} and seen[0]['a'] is a
+
+    def test_inputs_returns_a_fresh_dict(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, *, a: v, a=a)
+        expr.rx.inputs().clear()
+        assert expr.rx.inputs()['a'] is a
+
+    def test_inputs_not_available_on_parameter_rx(self):
+        p = Parameters()
+        with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+            p.param.integer.rx.inputs()
+
+    def test_inputs_with_generation_nests_only_fresh_upstream_meta(self):
+        root = rx(2.0, error_mode='propagate')
+        reciprocal = root.rx.pipe(lambda v: 1 / v)
+
+        def produce(v):
+            node = current_node()
+            node.rx.meta['provenance'] = {
+                '_function_': 'produce', '_inputs_': {'v': v},
+                'generation': node.rx.generation,
+            }
+            return v * 10
+
+        inner = reciprocal.rx.pipe(produce)
+
+        def consume(_obj, *, a):
+            received = {'a': a}
+            upstream = {}
+            for name, src in current_node().rx.inputs().items():
+                prov = src.rx.meta.get('provenance')
+                if (
+                    prov is not None
+                    and not isinstance(received[name], param.ReactiveError)
+                    and prov['generation'] == src.rx.generation
+                ):
+                    upstream[name] = prov
+            current_node().rx.meta['provenance'] = {
+                '_function_': 'consume', '_upstream_': upstream,
+            }
+            return ('consumed', a)
+
+        outer = rx(None, error_mode='propagate').rx.pipe(
+            consume, a=inner, process_failures=True)
+
+        assert outer.rx.value == ('consumed', 5.0)
+        assert outer.rx.meta['provenance']['_upstream_'] == {
+            'a': inner.rx.meta['provenance']}
+
+        root.rx.value = 0.0
+        assert isinstance(outer.rx.value[1], param.ReactiveError)
+        assert inner.rx.meta['provenance']['_inputs_'] == {'v': 0.5}  # stale
+        assert outer.rx.meta['provenance']['_upstream_'] == {}
+
+        root.rx.value = 4.0
+        assert outer.rx.value == ('consumed', 2.5)
+        assert outer.rx.meta['provenance']['_upstream_'] == {
+            'a': inner.rx.meta['provenance']}
+        assert inner.rx.meta['provenance']['_inputs_'] == {'v': 0.25}
 
 
 

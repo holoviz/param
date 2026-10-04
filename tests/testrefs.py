@@ -1,6 +1,8 @@
 import asyncio
+import gc
 import threading
 import time
+import weakref
 
 import param
 import pytest
@@ -211,6 +213,47 @@ def test_nested_nested_parameter_ref_not_overwritten():
     p2.string = 'buzz'
     assert p3.string == 'string'
     assert p3.string_list == ['buzz', 'other']
+
+
+def test_overwritten_reference_releases_target():
+    source = Parameters()
+    target = Parameters(string=source.param.string)
+    other = Parameters(string=source.param.string)
+    target_ref = weakref.ref(target)
+
+    target.string = 'detached'
+    del target
+    gc.collect()
+
+    assert target_ref() is None
+    source.string = 'updated'
+    assert other.string == 'updated'
+
+
+def test_overwritten_reference_releases_source():
+    source = Parameters()
+    target = Parameters(string=source.param.string)
+    source_ref = weakref.ref(source)
+
+    target.string = 'detached'
+    del source
+    gc.collect()
+
+    assert source_ref() is None
+    assert target.string == 'detached'
+
+
+def test_overwritten_reference_preserves_shared_nested_reference():
+    source = Parameters()
+    target = Parameters(
+        string=source.param.string, string_list=[source.param.string, 'other']
+    )
+
+    target.string = 'detached'
+    source.string = 'updated'
+
+    assert target.string == 'detached'
+    assert target.string_list == ['updated', 'other']
 
 def test_nested_dict_key_parameter_ref():
     p = Parameters()

@@ -102,7 +102,7 @@ import weakref
 from collections import namedtuple
 from collections.abc import (
     AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator,
-    MutableMapping, Sized
+    Mapping, MutableMapping, Sequence, Sized
 )
 from itertools import chain
 from functools import partial
@@ -265,12 +265,50 @@ class NestedResolver(Resolver):
     object: t.Any = Parameter(allow_refs=True, nested_refs=True)
 
 
+def _positional_layout(operation: dict) -> list[int | None]:
+    """
+    Return the ``args`` index behind each positional input key, ``None``
+    standing for the value the operation is applied to.
+
+    Keys follow the positions ``fn`` is called with, so that value is key 0,
+    or key 1 for a reflected operator (``1 + x`` calls ``add(1, x)``).
+    ``collect`` is applied to nothing, so its keys are plain ``args`` indices.
+    """
+    nargs = len(operation.get('args') or ())
+    if operation['fn'] is _collect_marker:
+        return list(range(nargs))
+    if operation.get('reverse'):
+        return [0, None, *range(1, nargs)]
+    return [None, *range(nargs)]
+
+
+def _source_key(operation: dict) -> int | None:
+    """Return the positional key of the value the operation is applied to."""
+    if operation['fn'] is _collect_marker:
+        return None
+    return 1 if operation.get('reverse') else 0
+
+
+def _arg_key(operation: dict, index: int) -> int:
+    """Return the positional key of ``operation['args'][index]``."""
+    if operation['fn'] is _collect_marker or (operation.get('reverse') and index == 0):
+        return index
+    return index + 1
+
+
+def _source_masked(operation: dict | None) -> bool:
+    if not operation or not operation.get('overrides'):
+        return False
+    return _source_key(operation) in operation['overrides']
+
+
 class InputOverrides(MutableMapping):
     """
     The mapping returned by :attr:`reactive_ops.overrides`.
 
-    Keys address the inputs a node was wired with, by keyword name or positional
-    index. Values are either plain values or references the node follows.
+    Keys address the inputs a node was wired with, by keyword name or by
+    position in the call its operation makes, the value it is applied to
+    included. Values are either plain values or references the node follows.
     Deleting a key unmasks the input again.
     """
 
@@ -284,20 +322,20 @@ class InputOverrides(MutableMapping):
 
     def _resolve_key(self, key: t.Any) -> t.Any:
         operation = t.cast('dict', self._node._operation)
-        args = operation.get('args') or ()
+        nargs = len(_positional_layout(operation))
         kwargs = operation.get('kwargs') or {}
         if isinstance(key, str):
             if key in kwargs:
                 return key
         elif isinstance(key, int) and not isinstance(key, bool):
-            if -len(args) <= key < len(args):
-                return key + len(args) if key < 0 else key
+            if -nargs <= key < nargs:
+                return key + nargs if key < 0 else key
         else:
             raise TypeError(
                 "Input overrides are addressed by keyword name or positional "
                 f"index, not by {type(key).__name__!r}."
             )
-        nargs, names = len(args), sorted(kwargs)
+        names = sorted(kwargs)
         inputs = []
         if nargs:
             inputs.append(f"positional indices 0-{nargs-1}")
@@ -313,7 +351,12 @@ class InputOverrides(MutableMapping):
         operation = t.cast('dict', self._node._operation)
         if isinstance(key, str):
             return operation.get('kwargs', {})[key]
-        return operation.get('args', ())[key]
+        index = _positional_layout(operation)[key]
+        if index is None:
+            # The edge a masked source drops is to `_prev` itself, even
+            # where that is a mirror of the node that computes the value.
+            return self._node._prev
+        return operation.get('args', ())[index]
 
     def _relink(self, value: t.Any, siblings: tuple, method: str) -> None:
         readers = (self._node, *siblings)
@@ -344,8 +387,8 @@ class InputOverrides(MutableMapping):
             raise KeyError(key)
         return overrides[key]
 
-    def __setitem__(self, key: t.Any, value: t.Any):
-        key = self._resolve_key(key)
+    def _set(self, key: t.Any, value: t.Any):
+        """Mask a resolved ``key`` without invalidating the node."""
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides')
@@ -359,13 +402,8 @@ class InputOverrides(MutableMapping):
         if refs:
             watchers = operation.setdefault('override_watchers', {})
             watchers[key] = node._watch_override(refs)
-        node._invalidate_overrides()
 
-    def __delitem__(self, key: t.Any):
-        key = self._resolve_key(key)
-        overrides = self._overrides
-        if not overrides or key not in overrides:
-            raise KeyError(key)
+    def _check_unmask(self, key: t.Any):
         raw = self._resolve_raw(key)
         disposed = next((target for target in _iter_rx(raw) if target._disposed), None)
         if disposed is not None:
@@ -374,12 +412,27 @@ class InputOverrides(MutableMapping):
                 "was disposed by .rx.dispose() while masked and can no longer be read. "
                 "Dispose the overriding node instead of removing the override."
             )
-        node = self._node
-        siblings = tuple(node._operation_siblings())
+
+    def _unset(self, key: t.Any):
+        """Unmask a resolved, overridden ``key`` without invalidating the node."""
+        raw = self._resolve_raw(key)
+        siblings = tuple(self._node._operation_siblings())
         self._unwatch(key, siblings)
-        del overrides[key]
+        del t.cast('dict', self._overrides)[key]
         self._relink(raw, siblings, '_register_reader')
-        node._invalidate_overrides()
+
+    def __setitem__(self, key: t.Any, value: t.Any):
+        self._set(self._resolve_key(key), value)
+        self._node._invalidate_overrides()
+
+    def __delitem__(self, key: t.Any):
+        key = self._resolve_key(key)
+        overrides = self._overrides
+        if not overrides or key not in overrides:
+            raise KeyError(key)
+        self._check_unmask(key)
+        self._unset(key)
+        self._node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
         return iter(self._overrides or {})
@@ -389,6 +442,110 @@ class InputOverrides(MutableMapping):
 
     def __repr__(self) -> str:
         return f"overrides({(self._overrides or {})!r})"
+
+    @property
+    def args(self) -> InputOverridesView:
+        """
+        The positional overrides, as a mapping from positional index.
+
+        Assigning a sequence (or a mapping from index) replaces every
+        positional override at once, e.g. ``overrides.args = (1, 2)`` masks
+        positions 0 and 1 and unmasks any other.
+        """
+        return InputOverridesView(self, positional=True)
+
+    @args.setter
+    def args(self, values: Sequence[t.Any] | Mapping[int, t.Any]):
+        if isinstance(values, Mapping):
+            items = dict(values)
+        elif isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+            items = dict(enumerate(values))
+        else:
+            raise TypeError(
+                "Positional overrides must be assigned a sequence or a mapping "
+                f"from positional index, not {type(values).__name__!r}."
+            )
+        self._replace(InputOverridesView(self, positional=True), items)
+
+    @property
+    def kwargs(self) -> InputOverridesView:
+        """
+        The keyword overrides, as a mapping from keyword name.
+
+        Assigning a mapping replaces every keyword override at once, e.g.
+        ``overrides.kwargs = {}`` unmasks all keyword inputs.
+        """
+        return InputOverridesView(self, positional=False)
+
+    @kwargs.setter
+    def kwargs(self, values: Mapping[str, t.Any]):
+        self._replace(InputOverridesView(self, positional=False), dict(values))
+
+    def _replace(self, view: InputOverridesView, items: dict[t.Any, t.Any]):
+        """Replace the overrides ``view`` covers, invalidating the node once."""
+        for key in items:
+            view._check_key(key)
+        items = {self._resolve_key(key): value for key, value in items.items()}
+        removed = [key for key in view if key not in items]
+        # Validate everything before mutating so a bad key or a disposed
+        # input cannot leave the overrides half replaced.
+        for key in removed:
+            self._check_unmask(key)
+        for key in removed:
+            self._unset(key)
+        for key, value in items.items():
+            self._set(key, value)
+        if removed or items:
+            self._node._invalidate_overrides()
+
+
+class InputOverridesView(MutableMapping):
+    """
+    The positional (:attr:`InputOverrides.args`) or keyword
+    (:attr:`InputOverrides.kwargs`) part of a node's overrides.
+
+    Reads and writes go through to the overrides of the node.
+    """
+
+    def __init__(self, overrides: InputOverrides, positional: bool):
+        self._parent = overrides
+        self._positional = positional
+
+    def _check_key(self, key: t.Any):
+        if self._positional:
+            if not isinstance(key, int) or isinstance(key, bool):
+                raise TypeError(
+                    "Positional overrides are addressed by positional index, "
+                    f"not by {type(key).__name__!r}."
+                )
+        elif not isinstance(key, str):
+            raise TypeError(
+                "Keyword overrides are addressed by keyword name, not by "
+                f"{type(key).__name__!r}."
+            )
+
+    def __getitem__(self, key: t.Any) -> t.Any:
+        self._check_key(key)
+        return self._parent[key]
+
+    def __setitem__(self, key: t.Any, value: t.Any):
+        self._check_key(key)
+        self._parent[key] = value
+
+    def __delitem__(self, key: t.Any):
+        self._check_key(key)
+        del self._parent[key]
+
+    def __iter__(self) -> Iterator[t.Any]:
+        positional = self._positional
+        return iter([key for key in self._parent if isinstance(key, int) is positional])
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self)
+
+    def __repr__(self) -> str:
+        name = 'args' if self._positional else 'kwargs'
+        return f"overrides.{name}({dict(self)!r})"
 
 
 class reactive_ops:
@@ -939,6 +1096,24 @@ class reactive_ops:
         >>> expr.rx.value
         30
 
+        Positional indices follow the call the operation makes, so they count
+        the value it is applied to: in ``a.rx.pipe(f, b)`` index 0 is ``a`` and
+        index 1 is ``b``, and in ``a * b`` index 0 is ``a``. A reflected operator
+        swaps them, ``1 + a`` calls ``add(1, a)``, so ``a`` is index 1.
+
+        >>> expr.rx.overrides[0] = 100
+        >>> expr.rx.value
+        300
+
+        ``.args`` and ``.kwargs`` give the positional and keyword overrides as
+        separate mappings, and assigning to either replaces all of its
+        overrides at once, invalidating the node a single time:
+
+        >>> expr.rx.overrides.args = (5,)
+        >>> expr.rx.overrides.kwargs = {}
+        >>> expr.rx.value
+        10
+
         The override stands in for the input and is resolved in its place, ahead
         of the guards the input would have faced, i.e. it even overrides input
         holding errors or undefined values. Any value masks the input, including
@@ -1244,7 +1419,7 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return False
         return any(
-            node._dirty or node._root._dirty_obj or node._settling
+            node._dirty or node._obj_dirty or node._settling
             for node in reactive._upstream()
         )
 
@@ -1253,10 +1428,11 @@ class reactive_ops:
         Iterate over the ``rx`` nodes this expression derives its value from,
         directly or transitively, excluding itself. Pipeline edges count:
         ``.rx.pipe``/operator chaining, a branch (``expr[0]``), an ``rx``
-        passed as an operation argument (or its ``.rx.overrides`` replacement,
-        once masked), and an ``rx`` reached through a
-        ``Parameter(allow_refs=True)``. A dependency reached only through
-        ``bind()``, ``.rx.when``, or ``.rx.where`` is not included.
+        passed as an operation argument, and an ``rx`` reached through a
+        ``Parameter(allow_refs=True)``. An input masked by ``.rx.overrides``,
+        including the one chained from, is replaced by its override. A
+        dependency reached only through ``bind()``, ``.rx.when``, or
+        ``.rx.where`` is not included.
 
         Traversal order is unspecified and may change between calls as the
         pipeline is extended. Do not use ``in`` on the iterator to test
@@ -1286,14 +1462,14 @@ class reactive_ops:
 
     def inputs(self) -> dict[int | str, 'rx']:
         """
-        Return the ``rx`` nodes passed as arguments to this node's operation.
+        Return the ``rx`` nodes this node's operation is applied to.
 
         Keys match ``.rx.overrides``: keyword arguments by name, positional
-        arguments by index (excluding the piped value). An input overridden by
-        an ``rx`` node reports that node; one overridden by a plain value is
-        left out. Not included: non-``rx`` arguments, ``rx`` nodes nested in a
-        container, the node this one was piped from, and the arguments of a
-        ``bind()`` function.
+        arguments by their position in the call, which includes the node this
+        one was piped from. An input overridden by an ``rx`` node reports that
+        node; one overridden by a plain value is left out. Not included:
+        non-``rx`` arguments, ``rx`` nodes nested in a container, and the
+        arguments of a ``bind()`` function.
 
         Inside an operation, ``param.current_node().rx.inputs()`` gives the
         nodes that fed it, e.g. to read their ``.rx.meta`` (see
@@ -1307,10 +1483,10 @@ class reactive_ops:
         Examples
         --------
         >>> import param
-        >>> a = param.rx(2)
-        >>> b = param.rx(1).rx.pipe(lambda x, *, y: x + y, y=a)
-        >>> b.rx.inputs()['y'] is a
-        True
+        >>> a, b = param.rx(1), param.rx(2)
+        >>> expr = a.rx.pipe(lambda x, *, y: x + y, y=b)
+        >>> expr.rx.inputs()[0] is a, expr.rx.inputs()['y'] is b
+        (True, True)
         """
         reactive = self._reactive
         if not isinstance(reactive, rx):
@@ -1322,8 +1498,14 @@ class reactive_ops:
         if not operation:
             return {}
         overrides = operation.get('overrides') or {}
+        args = operation.get('args') or ()
+        prev = reactive._prev
+        source = None if prev is None else _unmirror(prev)
         candidates = [
-            *enumerate(operation.get('args') or ()),
+            *(
+                (key, source if index is None else args[index])
+                for key, index in enumerate(_positional_layout(operation))
+            ),
             *(operation.get('kwargs') or {}).items(),
         ]
         inputs: dict[int | str, rx] = {}
@@ -2444,10 +2626,16 @@ def _untracked_reference(value) -> bool:
     return isinstance(value, Parameter) and value.name is not None
 
 
-def _settle_state(node):
-    """Use the shared source before its clone resolves independently."""
+def _unmirror(node):
+    """Return the node a copied clone mirrors, which computes its value."""
     while node._shared is not None and node._method is node._shared._method is None:
         node = node._shared
+    return node
+
+
+def _settle_state(node):
+    """Use the shared source before its clone resolves independently."""
+    node = _unmirror(node)
     return node._settle_count, node._skipped
 
 
@@ -2777,6 +2965,24 @@ class rx:
         else:
             self._shared_obj[0] = obj
 
+    def _cut_from_root(self) -> bool:
+        """Whether a masked source on this node's chain hides the root from it."""
+        node = self
+        while node is not None:
+            if _source_masked(node._operation):
+                return True
+            node = node._prev
+        return False
+
+    @property
+    def _obj_dirty(self) -> bool:
+        """
+        Whether the function feeding the pipeline changed in a way that
+        reaches this node. The flag stays set until a node the root is not
+        cut off from reads ``_obj``.
+        """
+        return self._root._dirty_obj and not self._cut_from_root()
+
     @property
     def _is_async(self) -> bool:
         if not self._operation:
@@ -2831,16 +3037,22 @@ class rx:
         Excludes ``_ref_inputs()`` so disposing a view cannot dispose the
         ref held by its owning ``Parameterized``.
         """
-        for inp in (self._prev, self._shared):
-            if isinstance(inp, rx):
-                yield inp
         operation = self._operation
+        if _source_masked(operation):
+            operation = t.cast('dict', operation)
+            yield from _iter_rx(operation['overrides'][_source_key(operation)])
+        elif isinstance(self._prev, rx):
+            yield self._prev
+        if isinstance(self._shared, rx):
+            yield self._shared
         if operation:
             overrides = operation.get('overrides') or {}
             args = operation.get('args') or ()
             kwargs = operation.get('kwargs') or {}
             if overrides:
-                args = [overrides.get(i, a) for i, a in enumerate(args)]
+                args = [
+                    overrides.get(_arg_key(operation, i), a) for i, a in enumerate(args)
+                ]
                 kwargs = {k: overrides.get(k, v) for k, v in kwargs.items()}
             yield from _iter_rx((operation['fn'], args, kwargs))
 
@@ -2910,7 +3122,7 @@ class rx:
         self._check_disposed()
         if self._error_state:
             raise self._error_state
-        elif not self._lazy and (self._dirty or self._root._dirty_obj):
+        elif not self._lazy and (self._dirty or self._obj_dirty):
             self._resolve()
         return self._current_
 
@@ -3072,20 +3284,25 @@ class rx:
         cache = self._live_params_cache
         if cache is not None:
             return cache
-        live = {(id(p.owner), p.name) for p in self._fn_params}
+        if self._fn_params and not self._cut_from_root():
+            live = {(id(p.owner), p.name) for p in self._fn_params}
+        else:
+            live = set()
         for trigger in (self._trigger, self._override_channel):
             if trigger is not None:
                 live.add((id(trigger), 'value'))
-        for node in (self._prev, self._shared):
+        operation = self._operation
+        prev = None if _source_masked(operation) else self._prev
+        for node in (prev, self._shared):
             if node is not None:
                 live |= node._live_params()
-        operation = self._operation
         if operation is not None:
             live |= {(id(p.owner), p.name) for p in resolve_ref(operation['fn'])}
             overrides = operation.get('overrides') or {}
             args = operation.get('args') or ()
             kwargs = operation.get('kwargs') or {}
-            for key, arg in chain(enumerate(args), kwargs.items()):
+            positional = ((_arg_key(operation, i), arg) for i, arg in enumerate(args))
+            for key, arg in chain(positional, kwargs.items()):
                 # A masked input is resolved from its override, which is watched
                 # separately, so nothing the input depends on is live.
                 if key not in overrides:
@@ -3356,7 +3573,7 @@ class rx:
             if stale():
                 return
             self._finished_generation = generation
-            if self._dirty or self._root._dirty_obj:
+            if self._dirty or self._obj_dirty:
                 # Ignoring as the inputs were invalidated while the async operation was running
                 return
             if self._error_mode == 'propagate':
@@ -3393,10 +3610,17 @@ class rx:
         self._check_disposed()
         if self._error_state:
             raise self._error_state
-        elif self._dirty or self._root._dirty_obj:
+        elif self._dirty or self._obj_dirty:
             try:
-                obj = self._obj if self._prev is None else self._prev._resolve()
                 operation = self._operation
+                masked = _source_masked(operation)
+                if masked:
+                    operation = t.cast('dict', operation)
+                    obj = self._resolve_input(operation['overrides'][_source_key(operation)])
+                elif self._prev is None:
+                    obj = self._obj
+                else:
+                    obj = self._prev._resolve()
                 if (
                     isinstance(obj, ReactiveError)
                     and not (operation or {}).get('process_failures')
@@ -3416,8 +3640,8 @@ class rx:
                     self._current_ = Undefined
                     raise Skip
                 elif (
-                    self._prev is not None and _settle_state(self._prev)[1]
-                    and _settle_state(self._prev)[0] == 0
+                    not masked and self._prev is not None
+                    and _settle_state(self._prev)[1] and _settle_state(self._prev)[0] == 0
                 ):
                     raise Skip
                 elif (
@@ -3450,9 +3674,14 @@ class rx:
                         self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
-                count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
-                generations = {_PREV_GENERATION: count} if self._prev is not None else {}
-                fresh = self._prev is not None and not skipped
+                generations: dict[t.Any, int] | None
+                if masked:
+                    # Like a masked argument, the override is not settle-tracked.
+                    generations, fresh = None, True
+                else:
+                    count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
+                    generations = {_PREV_GENERATION: count} if self._prev is not None else {}
+                    fresh = self._prev is not None and not skipped
                 if operation:
                     obj = self._eval_operation(obj, operation, generations, fresh)
                     if self._is_async:
@@ -3887,8 +4116,9 @@ class rx:
         process_failures = operation.get('process_failures')
         resolved_args = []
         for i, arg in enumerate(args):
-            overridden = i in overrides
-            target = overrides[i] if overridden else arg
+            key = _arg_key(operation, i)
+            overridden = key in overrides
+            target = overrides[key] if overridden else arg
             val = self._resolve_input(target)
             if isinstance(val, ReactiveError) and not process_failures:
                 self._input_generations = None

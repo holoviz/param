@@ -28,6 +28,10 @@ try:
 except ModuleNotFoundError:
     skip.append('DataFrame')
     skip.append('Series')
+try:
+    import narwhals # noqa
+except ModuleNotFoundError:
+    skip.append('DataFrameLike')
 
 
 class DefaultsMetaclassTest(type):

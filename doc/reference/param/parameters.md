@@ -65,6 +65,7 @@
   Array
   Series
   DataFrame
+  DataFrameLike
   Callable
   Action
   Composite

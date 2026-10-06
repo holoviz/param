@@ -3762,7 +3762,7 @@ class rx:
             if arg._settling:
                 raise Skip
             value = arg.rx.value
-            if value is Skip or value is Undefined:
+            if value is Skip or value is Undefined or arg._settling:
                 raise Skip
             if arg._skipped and arg._settle_count == 0:
                 raise Skip

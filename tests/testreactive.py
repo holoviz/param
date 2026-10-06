@@ -1074,6 +1074,36 @@ class TestAwaiting:
         await async_wait_until(lambda: expr.rx.value == 17)
         assert not expr.rx.awaiting
 
+    async def test_reactive_diamond_skips_async_input_recompute_started_by_read(self):
+        """
+        Reading a dirty async input schedules its recompute, so the operation
+        must not evaluate with the superseded value returned by that read.
+        """
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return ('B', value)
+
+        calls = []
+
+        def combine(value, b):
+            calls.append((value, b))
+            return (value, b)
+
+        src = rx(1)
+        b = src.rx.pipe(slow)
+        c = rx(combine)(src, b)
+        published = []
+        c.rx.watch(published.append)
+        await async_wait_until(lambda: c.rx.value == (1, ('B', 1)))
+        calls.clear()
+        published.clear()
+
+        src.rx.value = 2
+        await async_wait_until(lambda: c.rx.value == (2, ('B', 2)))
+        await asyncio.sleep(0.05)
+        assert calls == [(2, ('B', 2))]
+        assert published == [(2, ('B', 2))]
+
     async def test_reactive_awaiting_through_operation_argument(self):
         """An rx passed as an operation argument is upstream of the operation."""
         async def async_func(value):

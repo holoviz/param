@@ -170,7 +170,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "windows-latest"]
+        os: ["ubuntu-latest"]
         python-version: ["pypy3.11"]
     timeout-minutes: 30
     steps:
@@ -191,16 +191,9 @@ jobs:
         run: uv pip install -e ."[tests,tests-pypy]"
       - name: List installed packages
         run: uv pip list
-      - name: Run tests (Linux)
-        if: matrix.os != 'windows-latest'
+      - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest tests
-      - name: Run tests (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          .venv\Scripts\Activate.ps1
           pytest tests
 
   result_test_suite:

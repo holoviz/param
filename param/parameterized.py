@@ -5332,6 +5332,10 @@ class ParameterizedMetaclass(type):
                 parameter = copy.copy(parameter)
                 parameter.owner = t.cast("t.Any", mcs)
                 type.__setattr__(mcs, attribute_name, parameter)
+                # The cached class parameters of mcs and its subclasses may
+                # still point to the superclass Parameter that was just copied.
+                for cls in descendents(mcs):
+                    cls._param__private.params.clear()
             mcs.__dict__[attribute_name].__set__(None,value)
 
         else:

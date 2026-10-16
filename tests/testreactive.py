@@ -647,6 +647,28 @@ class TestSpecialMethods:
         p.boolean = False
         assert results == ['string', 'foo', 2.1]
 
+    def test_reactive_where_returns_rx(self):
+        assert isinstance(rx(True).rx.where('A', 'B'), rx)
+
+    def test_reactive_where_supports_operators(self):
+        condition = rx(True)
+        expr = 'Mode: ' + condition.rx.where('on', 'off') + '!'
+        assert expr.rx.value == 'Mode: on!'
+        condition.rx.value = False
+        assert expr.rx.value == 'Mode: off!'
+
+    def test_reactive_where_operator_tracks_selected_branch(self):
+        condition, x, y = rx(True), rx(1), rx(2)
+        expr = condition.rx.where(x, y) * 10
+        fired = []
+        expr.rx.watch(fired.append)
+        x.rx.value = 3
+        assert fired == [30]
+        y.rx.value = 4
+        assert fired == [30]
+        condition.rx.value = False
+        assert fired == [30, 40]
+
     def test_reactive_where_composed_argument_watches_selected_branch(self):
         """A composed selector must publish changes to its selected branch."""
         condition, first, second = rx(True), rx(1), rx(2)

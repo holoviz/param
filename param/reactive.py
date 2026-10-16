@@ -1820,7 +1820,7 @@ class reactive_ops:
 
         def ternary(condition, _):
             return resolve_value(x) if condition else resolve_value(y)
-        return t.cast('t.Any', bind(ternary, self._reactive, trigger.param.value))
+        return rx(bind(ternary, self._reactive, trigger.param.value))
 
     def distinct(self, fn=None) -> 'rx':
         """

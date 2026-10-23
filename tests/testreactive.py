@@ -3293,6 +3293,47 @@ class TestAsyncNotificationSemantics:
         assert items == [12]
         await async_wait_until(lambda: items == [12, 14])
 
+    async def test_reactive_async_downstream_watchers_hear_landing_started_upstream(self):
+        irx = rx(1)
+        async_rx = irx.rx.pipe(mul_slowly)
+        child = async_rx + 10
+        grandchild = child.rx.pipe(lambda v: v * 10)
+        distinct = async_rx.rx.distinct()
+        direct, children, grandchildren, distincts = [], [], [], []
+        async_rx.rx.watch(direct.append, onlychanged=False)
+        child.rx.watch(children.append, onlychanged=False)
+        grandchild.rx.watch(grandchildren.append, onlychanged=False)
+        distinct.rx.watch(distincts.append, onlychanged=False)
+
+        assert async_rx.rx.value is param.Undefined
+        await async_wait_until(lambda: grandchildren == [120])
+        assert direct == [2]
+        assert children == [12]
+        assert distincts == [2]
+
+        irx.rx.value = 2
+        await async_wait_until(lambda: grandchildren == [120, 140])
+        await asyncio.sleep(0.05)
+        assert direct == [2, 4]
+        assert children == [12, 14]
+        assert grandchildren == [120, 140]
+        assert distincts == [2, 4]
+
+    async def test_reactive_async_downstream_hears_failed_landing_started_upstream(self):
+        async def fail_slowly(value):
+            await asyncio.sleep(0.02)
+            raise ValueError("boom")
+
+        async_rx = rx(1, error_mode='propagate').rx.pipe(fail_slowly)
+        child = async_rx.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        items = []
+        child.rx.watch(items.append, process_failures=True)
+
+        assert async_rx.rx.value is param.Undefined
+        await async_wait_until(lambda: len(items) == 1)
+        assert items[0][0] == 'saw'
+        assert isinstance(items[0][1], param.ReactiveError)
+
     async def test_reactive_async_downstream_not_computed_while_awaiting(self):
         computed = []
         def add(value):

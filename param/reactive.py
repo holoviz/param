@@ -3796,7 +3796,7 @@ class rx:
             )
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
-        kwargs = dict(self._display_opts, **kwargs)
+        kwargs = t.cast('dict[str, t.Any]', dict(self._display_opts, **kwargs))
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
         if not reuse and error_mode == 'raise' and operation is not None:
             inputs = (*operation.get('args', ()), *(operation.get('kwargs') or {}).values())

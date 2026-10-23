@@ -319,6 +319,62 @@ class TestErrorHandling:
         assert items == [error, 2]
         assert reader.rx.value == 2
 
+    def test_reactive_error_mode_operator_order_agrees(self):
+        def pos(v):
+            if v < 0:
+                raise ValueError("negative")
+            return v
+
+        raising_root = rx(1)
+        a = raising_root.rx.pipe(pos)
+        b = rx(1, error_mode='propagate').rx.pipe(pos)
+        ab, ba = a + b, b + a
+        assert ab._error_mode == ba._error_mode == 'propagate'
+
+        raising_root.rx.value = -1
+        assert isinstance(ab.rx.value, param.ReactiveError)
+        assert isinstance(ba.rx.value, param.ReactiveError)
+
+    def test_reactive_error_mode_from_keyword_input(self):
+        source = rx(1, error_mode='propagate')
+        node = rx(None).rx.pipe(lambda _, src: src, src=source)
+        assert node._error_mode == 'propagate'
+
+    def test_reactive_error_mode_raise_inputs_stay_raise(self):
+        assert (rx(1) + rx(2))._error_mode == 'raise'
+
+    def test_reactive_error_mode_lifted_call_from_argument(self):
+        def pos(v):
+            if v < 0:
+                raise ValueError("negative")
+            return v
+
+        node = rx(pos)(rx(-1, error_mode='propagate'))
+        assert node._error_mode == 'propagate'
+        assert isinstance(node.rx.value, param.ReactiveError)
+
+    def test_reactive_error_lifted_call_process_failures(self):
+        failed = rx(1, error_mode='propagate')
+        error = param.ReactiveError(ValueError("x"))
+        failed.rx.value = error
+        node = rx(lambda v: ('saw', v), process_failures=True)(failed)
+        assert node.rx.value == ('saw', error)
+
+        failed.rx.value = 2
+        assert node.rx.value == ('saw', 2)
+
+    def test_reactive_error_lifted_call_process_failures_not_inherited(self):
+        failed = rx(1, error_mode='propagate')
+        error = param.ReactiveError(ValueError("x"))
+        failed.rx.value = error
+        fn = rx(lambda v: ('saw', v), process_failures=True)
+        assert fn.rx.pipe(lambda f: f)(failed).rx.value is error
+
+    def test_reactive_error_lifted_call_keyword_reaches_function(self):
+        def fn(v, process_failures=False):
+            return process_failures
+
+        assert rx(fn)(rx(1), process_failures=True).rx.value is True
     @pytest.mark.parametrize('shape', ['piped', 'keyword'])
     @pytest.mark.parametrize('watch_failures', [False, True])
     def test_reactive_error_process_failures_transform_watch(self, shape, watch_failures):

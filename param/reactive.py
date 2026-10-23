@@ -1235,13 +1235,18 @@ class reactive_ops:
             The function to apply to the current value.
         *args : iterable, optional
             Positional arguments to pass to the function.
+        process_failures : bool, optional
+            Whether ``func`` runs on inputs holding a :class:`ReactiveError`
+            instead of passing the failure through. Defaults to False.
         **kwargs : dict, optional
             Keyword arguments to pass to the function.
 
         Returns
         -------
         rx
-            A new reactive expression representing the result of applying ``func``.
+            A new reactive expression representing the result of applying
+            ``func``. It is in "propagate" mode if this expression, or any
+            ``rx`` argument, is.
 
         Examples
         --------
@@ -2656,7 +2661,16 @@ class rx:
         data structure.
     error_mode : {"raise", "propagate"}, default "raise"
         Whether exceptions raised while evaluating the expression should be
-        re-raised or represented as :class:`ReactiveError` values.
+        re-raised or represented as :class:`ReactiveError` values. A derived
+        expression is in "propagate" mode if the expression it is derived
+        from, or any ``rx`` argument of its operation, is.
+    process_failures : bool, default False
+        When ``obj`` is a function, whether calling the expression runs the
+        function on arguments holding a :class:`ReactiveError` instead of
+        passing the failure through, like ``.rx.pipe(..., process_failures=True)``.
+        Not inherited by derived expressions.
+
+        .. versionadded:: 2.5.0
     label : str, optional
         An optional human-readable label for this node. Read back via
         ``expr.rx.error.label`` on a `ReactiveError` this node (or a node
@@ -2830,7 +2844,7 @@ class rx:
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
         _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
-        label=None,
+        label=None, process_failures=False,
         **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
@@ -2862,6 +2876,7 @@ class rx:
         if error_mode not in ('raise', 'propagate'):
             raise ValueError("error_mode must be either 'raise' or 'propagate'")
         self._label = label
+        self._process_failures = process_failures
         self._current_ = _current
         self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         self._live_params_cache: set[tuple[int, str | None]] | None = None
@@ -3781,8 +3796,12 @@ class rx:
             )
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
-        kwargs = dict(self._display_opts, **kwargs)
+        kwargs = t.cast('dict[str, t.Any]', dict(self._display_opts, **kwargs))
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
+        if not reuse and error_mode == 'raise' and operation is not None:
+            inputs = (*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
+            if any(isinstance(arg, rx) and arg._error_mode == 'propagate' for arg in inputs):
+                error_mode = 'propagate'
         label = kwargs.pop('label', self._label)
         new = type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
@@ -3897,7 +3916,8 @@ class rx:
             'fn': method,
             'args': args,
             'kwargs': kwargs,
-            'reverse': False
+            'reverse': False,
+            'process_failures': self._process_failures,
         }
         return new._clone(operation)
 

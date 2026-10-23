@@ -4637,6 +4637,64 @@ class TestOverrides:
         with pytest.raises(KeyError):
             n.rx.overrides['factor']
 
+    def test_reactive_overrides_positional_input_by_name(self):
+        def price(cell, fx, qty=1):
+            return cell * fx * qty
+
+        n = rx(10).rx.pipe(price, rx(2), qty=rx(3))
+        assert list(n.rx.inputs()) == [0, 1, 'qty']
+        n.rx.overrides['cell'] = 1
+        n.rx.overrides['fx'] = 5
+        assert n.rx.value == 15
+        assert dict(n.rx.overrides) == {0: 1, 1: 5}
+        assert 'cell' in n.rx.overrides
+        assert n.rx.overrides['fx'] == 5
+
+        n.rx.overrides[0] = 2
+        assert n.rx.overrides['cell'] == 2
+        del n.rx.overrides['cell']
+        del n.rx.overrides[1]
+        assert n.rx.value == 60
+        assert dict(n.rx.overrides) == {}
+
+    def test_reactive_overrides_no_name_for_call_input(self):
+        n = rx(lambda cell, fx: cell * fx)(rx(10), rx(2))
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
+
+    def test_reactive_overrides_kwargs_view_rejects_positional_name(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides.kwargs['cell'] = 1
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides.kwargs = {'fx': 1}
+        assert dict(n.rx.overrides) == {}
+
+    def test_reactive_overrides_no_name_for_positional_only_or_var_positional(self):
+        def positional_only(cell, /, fx):
+            return cell * fx
+
+        def var_positional(cell, *rest):
+            return cell * sum(rest)
+
+        n = rx(10).rx.pipe(positional_only, rx(2))
+        n.rx.overrides['fx'] = 3
+        assert n.rx.value == 30
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['cell'] = 1
+
+        n = rx(10).rx.pipe(var_positional, rx(2))
+        n.rx.overrides['cell'] = 1
+        assert n.rx.value == 2
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['rest'] = 1
+
+    def test_reactive_overrides_no_name_for_operator_or_method(self):
+        with pytest.raises(KeyError, match="not an input of this node"):
+            (rx(1) + rx(2)).rx.overrides['a'] = 1
+        with pytest.raises(KeyError, match="not an input of this node"):
+            rx('abc').replace('a', 'b').rx.overrides['old'] = 'c'
+
     def test_reactive_overrides_rejects_unsupported_key(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
         with pytest.raises(TypeError, match="addressed by keyword name or positional index"):

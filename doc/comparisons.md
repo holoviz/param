@@ -31,7 +31,19 @@ In practice, most programmers simply skip validation or implement it only partia
 
 ## Runtime checking
 
-Python 3 type annotations allow users to specify types for attributes and function returns, but these types are not normally checked at runtime, and so they do not have the same role of validating user input or programmer error as the type declarations in Params, Traits, Traitlets, pydantic, and attr. They also are limited to the type, so they cannot enforce constraints on range ('state' must be in the list ['Alabama', 'Alaska',...]). Thus even if type hinting is used, programmers still need to write code to actually validate the inputs to functions and methods, which is the role of packages like Param and Traitlets. Note that Pydantic focuses on [generating valid outputs at runtime](https://github.com/samuelcolvin/pydantic/issues/578) rather than detecting invalid inputs, so it may or may not be suitable for the same types of applications as the other libraries discussed here.
+Python type annotations allow users to specify types for attributes and function returns.
+These types are optionally checked at runtime in contrast to Param.
+
+However, one point of difference is that Param has (built-in) 'value level' checking
+such as checking membership of a state in a list ['Alabama', 'Alaska', ...].
+With Python type annotations, there would be several ways:
+- statically-defined type-level logical specification: `Literal['Alabama'] | Literal['Alaska'] | ...`
+- run-time checking by adding a predicate to `Annotated[str, lambda s: s in states]`
+used by [Beartype](https://beartype.readthedocs.io/en/latest/)
+- creating a `State` type and defining the predicate `__instancecheck__`
+as used in [phantom-types](https://phantom-types.readthedocs.io/en/main/pages/implementation.html).
+
+Even with type-level definitions, Pydantic may [coerce types](https://docs.pydantic.dev/latest/concepts/conversion_table/) which caters more to data validation use cases.
 
 
 ## Generality and ease of integration with your project

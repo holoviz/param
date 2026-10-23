@@ -296,6 +296,24 @@ def _arg_key(operation: dict, index: int) -> int:
     return index + 1
 
 
+def _positional_names(operation: dict, nargs: int) -> dict[str, int]:
+    """Map the parameter names of positionally wired inputs to their keys."""
+    fn = operation['fn']
+    if not callable(fn) or fn is _collect_marker:
+        return {}
+    try:
+        params = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return {}
+    names = {}
+    for key, param in zip(range(nargs), params):
+        if param.kind is param.VAR_POSITIONAL:
+            break
+        if param.kind is param.POSITIONAL_OR_KEYWORD:
+            names[param.name] = key
+    return names
+
+
 def _source_masked(operation: dict | None) -> bool:
     if not operation or not operation.get('overrides'):
         return False
@@ -320,13 +338,15 @@ class InputOverrides(MutableMapping):
         operation = self._node._operation
         return None if operation is None else operation.get('overrides')
 
-    def _resolve_key(self, key: t.Any) -> t.Any:
+    def _resolve_key(self, key: t.Any, aliases: bool = True) -> t.Any:
         operation = t.cast('dict', self._node._operation)
         nargs = len(_positional_layout(operation))
         kwargs = operation.get('kwargs') or {}
         if isinstance(key, str):
             if key in kwargs:
                 return key
+            if aliases and (index := _positional_names(operation, nargs).get(key)) is not None:
+                return index
         elif isinstance(key, int) and not isinstance(key, bool):
             if -nargs <= key < nargs:
                 return key + nargs if key < 0 else key
@@ -523,6 +543,8 @@ class InputOverridesView(MutableMapping):
                 "Keyword overrides are addressed by keyword name, not by "
                 f"{type(key).__name__!r}."
             )
+        else:
+            self._parent._resolve_key(key, aliases=False)
 
     def __getitem__(self, key: t.Any) -> t.Any:
         self._check_key(key)
@@ -1104,6 +1126,10 @@ class reactive_ops:
         >>> expr.rx.overrides[0] = 100
         >>> expr.rx.value
         300
+
+        A positionally wired input may also be addressed by its parameter
+        name, if the function's signature allows passing it by keyword; the
+        override is still stored under its index.
 
         ``.args`` and ``.kwargs`` give the positional and keyword overrides as
         separate mappings, and assigning to either replaces all of its

@@ -312,6 +312,32 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
         value = getattr(value.owner, value.name)
     return value
 
+def _is_bare_async_ref(value: t.Any) -> bool:
+    """
+    Whether value is a coroutine or generator function that is resolved as a
+    reference without having been declared one with ``bind`` or ``depends``.
+    """
+    return not hasattr(value, '_dinfo') and (
+        iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
+    )
+
+def _warn_bare_async_ref(value: t.Any) -> None:
+    if inspect.isasyncgenfunction(value):
+        kind = 'async generator'
+    elif inspect.isgeneratorfunction(value):
+        kind = 'generator'
+    else:
+        kind = 'coroutine'
+    name = getattr(value, '__name__', repr(value))
+    warnings.warn(
+        f"Passing the {kind} function {name!r} as a reference is deprecated. "
+        "In a future version it will be treated like any other function, i.e. "
+        "kept as a value instead of being called and resolved. Wrap it with "
+        f"param.bind({name}) to keep resolving it.",
+        category=_ParamFutureWarning,
+        stacklevel=_find_stack_level(),
+    )
+
 def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
     """Resolve all parameters a dynamic reference depends on."""
     if recursive:
@@ -2937,7 +2963,7 @@ class Parameters:
                 # speculatively evaluate values to check whether they
                 # contain a reference and warn the user that the
                 # behavior may change in future.
-                if name not in self_.cls._param__private.explicit_no_refs:
+                if name not in self_.cls._param__private.explicit_no_refs and not _is_bare_async_ref(val):
                     resolved = val
                     try:
                         ref, _, resolved, _, _ = self_._resolve_ref(pobj, val)
@@ -3047,6 +3073,8 @@ class Parameters:
         deps = resolve_ref(value, recursive=pobj.nested_refs)
         if not (deps or is_async or is_gen):
             return None, None, value, False, False
+        if _is_bare_async_ref(value):
+            _warn_bare_async_ref(value)
         ref = value
         try:
             value = resolve_value(value, recursive=pobj.nested_refs)

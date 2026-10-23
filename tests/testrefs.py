@@ -5,6 +5,7 @@ import time
 import param
 import pytest
 
+from param._utils import ParamFutureWarning
 from param.parameterized import Skip, resolve_ref
 from param.reactive import bind, rx
 
@@ -260,10 +261,47 @@ async def test_async_function_ref():
         await asyncio.sleep(0.02)
         return 'string!'
 
-    p = Parameters(string=gen_strings)
+    p = Parameters(string=bind(gen_strings))
 
     await asyncio.sleep(0.1)
     assert p.string == 'string!'
+
+async def _coroutine_string():
+    return 'string!'
+
+async def _async_gen_string():
+    yield 'string!'
+
+def _gen_string():
+    yield 'string!'
+
+BARE_ASYNC_REFS = [_coroutine_string, _async_gen_string, _gen_string]
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_on_init(fn):
+    with pytest.warns(ParamFutureWarning, match=rf"param\.bind\({fn.__name__}\)"):
+        p = Parameters(string=fn)
+    await wait_for_value(p, 'string', 'string!')
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_on_set(fn):
+    p = Parameters()
+    with pytest.warns(ParamFutureWarning, match=rf"param\.bind\({fn.__name__}\)"):
+        p.string = fn
+    await wait_for_value(p, 'string', 'string!')
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_in_rx(fn):
+    with pytest.warns(ParamFutureWarning, match=rf"param\.bind\({fn.__name__}\)"):
+        expr = rx(fn)
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
+def test_bare_async_function_on_non_ref_parameter_is_kept(fn):
+    class NoRefs(param.Parameterized):
+        value = param.Parameter()
+
+    assert NoRefs(value=fn).value is fn
 
 async def test_async_bind_ref():
     p = Parameters()
@@ -285,7 +323,7 @@ async def test_async_generator_ref():
         await asyncio.sleep(0.02)
         yield 'string!'
 
-    p = Parameters(string=gen_strings)
+    p = Parameters(string=bind(gen_strings))
 
     await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
     await wait_for_value(p, 'string', 'string!', delay=0.1, timeout=0.1)
@@ -296,7 +334,7 @@ async def test_generator_ref():
         time.sleep(0.05)
         yield 'string!'
 
-    p = Parameters(string=gen_strings)
+    p = Parameters(string=bind(gen_strings))
 
     await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
     await wait_for_value(p, 'string', 'string!', delay=0.05, timeout=0.3)
@@ -317,10 +355,10 @@ async def test_async_generator_ref_cancelled():
             yield str(i)
             await asyncio.sleep(0.01)
 
-    p = Parameters(string=gen_strings1)
+    p = Parameters(string=bind(gen_strings1))
     task1 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
     assert p.string is not None
-    p.string = gen_strings2
+    p.string = bind(gen_strings2)
     task2 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
     assert len(tasks) == 2
     async_task1, async_task2 = tasks
@@ -395,10 +433,10 @@ async def test_generator_ref_cancelled():
             yield str(i)
             time.sleep(0.01)
 
-    p = Parameters(string=gen_strings1)
+    p = Parameters(string=bind(gen_strings1))
     task1 = await wait_for_async_ref(p, 'string', delay=0.03, timeout=0.1)
     assert p.string is not None
-    p.string = gen_strings2
+    p.string = bind(gen_strings2)
     task2 = await wait_for_async_ref(p, 'string', delay=0.06, timeout=0.2)
     assert task1 is not task2
     assert task1.done()

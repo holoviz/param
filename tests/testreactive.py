@@ -319,6 +319,38 @@ class TestErrorHandling:
         assert items == [error, 2]
         assert reader.rx.value == 2
 
+    @pytest.mark.parametrize('shape', ['piped', 'keyword'])
+    @pytest.mark.parametrize('watch_failures', [False, True])
+    def test_reactive_error_process_failures_transform_watch(self, shape, watch_failures):
+        root = rx(1)
+        if shape == 'piped':
+            reader = root.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        else:
+            reader = rx(None).rx.pipe(
+                lambda _, src: ('saw', src), src=root, process_failures=True
+            )
+        assert reader.rx.value == ('saw', 1)
+        items = []
+        reader.rx.watch(items.append, process_failures=watch_failures)
+
+        error_x = param.ReactiveError(ValueError("x"))
+        root.rx.value = error_x
+        error_y = param.ReactiveError(ValueError("y"))
+        root.rx.value = error_y
+        root.rx.value = 2
+        assert items == [('saw', error_x), ('saw', error_y), ('saw', 2)]
+
+    def test_reactive_error_process_failures_transform_ref(self):
+        class P(param.Parameterized):
+            value = param.Parameter(allow_refs=True)
+
+        root = rx(1)
+        reader = root.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        p = P(value=reader)
+        error = param.ReactiveError(ValueError("x"))
+        root.rx.value = error
+        assert p.value == ('saw', error)
+
     def test_reactive_error_label_is_none_by_default(self):
         def fail(value):
             raise ValueError(f"bad {value}")

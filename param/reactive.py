@@ -3762,7 +3762,7 @@ class rx:
             if not gate.changed(out):
                 raise Skip
             return out
-        return bind(evaluate, *params)
+        return bind(evaluate, *params, process_failures=True)
 
     def _clone(self, operation=None, copy=False, **kwargs) -> Self:
         # Aliases `self._operation` by identity rather than copying it,
@@ -4314,7 +4314,10 @@ def _rx_transform(obj):
     # Binding the override channel wakes a consumer created before an override
     # exists. Caching is sound because a node's parameters are fixed at
     # construction, and this runs on every resolve of the reference.
-    binding = bind(resolve, *obj._params, obj._ensure_override_channel().param.value)
+    binding = bind(
+        resolve, *obj._params, obj._ensure_override_channel().param.value,
+        process_failures=True
+    )
     obj._ref_binding = binding
     return binding
 

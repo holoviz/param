@@ -2254,9 +2254,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 ref_changed = True
                 settle_changed = True
             elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
-                del refs[name]
-                if name in obj._param__private.async_refs:
-                    obj._param__private.async_refs.pop(name).cancel()
+                obj.param._update_ref(name, None)
                 ref_changed = True
                 settle_changed = True
             settle_changed |= scheduled
@@ -2998,7 +2996,11 @@ class Parameters:
         for _, watcher in param_private.ref_watchers:
             watcher.remove()
         self_.self._param__private.ref_watchers = []
-        refs = dict(self_.self._param__private.refs, **{name: ref})
+        refs = dict(param_private.refs)
+        if ref is None:
+            refs.pop(name, None)
+        else:
+            refs[name] = ref
         deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
         self_._setup_refs(deps)
         self_.self._param__private.refs = refs

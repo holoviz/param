@@ -298,9 +298,11 @@ def _arg_key(operation: dict, index: int) -> int:
 
 def _positional_names(operation: dict, nargs: int) -> dict[str, int]:
     """Map the parameter names of positionally wired inputs to their keys."""
-    fn = operation['fn']
-    if not callable(fn) or fn is _collect_marker:
+    # Only a user-supplied pipe function's names are public; internal
+    # wrappers (operators, map, buffer, ...) stay index-only.
+    if not operation.get('named_inputs'):
         return {}
+    fn = operation['fn']
     try:
         params = inspect.signature(fn).parameters.values()
     except (TypeError, ValueError):
@@ -358,7 +360,11 @@ class InputOverrides(MutableMapping):
         names = sorted(kwargs)
         inputs = []
         if nargs:
-            inputs.append(f"positional indices 0-{nargs-1}")
+            aliases = _positional_names(operation, nargs) if aliases else {}
+            named = ", ".join(
+                f"{name!r} is {index}" for name, index in aliases.items() if name not in kwargs
+            )
+            inputs.append(f"positional indices 0-{nargs-1}" + (f" ({named})" if named else ""))
         if names:
             inputs.append("keywords " + ", ".join(repr(name) for name in names))
         raise KeyError(
@@ -1127,9 +1133,10 @@ class reactive_ops:
         >>> expr.rx.value
         300
 
-        A positionally wired input may also be addressed by its parameter
-        name, if the function's signature allows passing it by keyword; the
-        override is still stored under its index.
+        A positional input of a function applied with :meth:`pipe` may also
+        be addressed by its parameter name, if the function's signature allows
+        passing it by keyword; the override is still stored under its index.
+        A keyword input of the same name takes precedence.
 
         ``.args`` and ``.kwargs`` give the positional and keyword overrides as
         separate mappings, and assigning to either replaces all of its
@@ -1295,9 +1302,11 @@ class reactive_ops:
         >>> rx_result.rx.value
         30
         """
-        return self._as_rx()._apply_operator(
+        new = self._as_rx()._apply_operator(
             func, *args, process_failures=process_failures, **kwargs
         )
+        t.cast('dict', new._operation)['named_inputs'] = True
+        return new
 
     def resolve(self, nested=True, recursive=False) -> 'rx':
         """

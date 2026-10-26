@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import functools
 import gc
 import math
 import operator
@@ -4630,7 +4631,7 @@ class TestOverrides:
 
     def test_reactive_overrides_rejects_unknown_input(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, 5, factor=rx(2))
-        with pytest.raises(KeyError, match="positional indices 0-1 and keywords 'factor'"):
+        with pytest.raises(KeyError, match=r"positional indices 0-1 \('value' is 0\) and keywords 'factor'"):
             n.rx.overrides['unknown'] = 1
         with pytest.raises(KeyError, match="not an input of this node"):
             n.rx.overrides[2] = 1
@@ -4694,6 +4695,78 @@ class TestOverrides:
             (rx(1) + rx(2)).rx.overrides['a'] = 1
         with pytest.raises(KeyError, match="not an input of this node"):
             rx('abc').replace('a', 'b').rx.overrides['old'] = 'c'
+
+    def test_reactive_overrides_no_name_for_internal_wrapper(self):
+        r = round(rx(1.2345), 2)
+        with pytest.raises(KeyError, match="not an input of this node"):
+            r.rx.overrides['ndigits'] = 1
+
+        m = rx([1, 2]).rx.map(lambda x, off: x + off, rx(10))
+        for name in ('vs', 'off'):
+            with pytest.raises(KeyError, match="not an input of this node"):
+                m.rx.overrides[name] = 0
+
+        b = rx(1).rx.buffer(2)
+        with pytest.raises(KeyError, match="not an input of this node"):
+            b.rx.overrides['n'] = 3
+
+        for expr in (rx(1).rx.and_(rx(2)), rx(0).rx.or_(rx(2))):
+            for name in ('obj', 'other'):
+                with pytest.raises(KeyError, match="not an input of this node"):
+                    expr.rx.overrides[name] = 0
+
+    def test_reactive_overrides_key_error_lists_names(self):
+        def price(cell, fx, qty=1):
+            return cell * fx * qty
+
+        n = rx(10).rx.pipe(price, rx(2), qty=rx(3))
+        with pytest.raises(KeyError, match=r"0-1 \('cell' is 0, 'fx' is 1\) and keywords 'qty'"):
+            n.rx.overrides['nope'] = 1
+
+    def test_reactive_overrides_name_and_index_for_same_input(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        n.rx.overrides.update({'cell': 1, 0: 2})
+        assert dict(n.rx.overrides) == {0: 2}
+        assert n.rx.value == 4
+
+    def test_reactive_overrides_name_for_partial_and_bound_method(self):
+        def price(rate, cell, fx):
+            return rate * cell * fx
+
+        n = rx(10).rx.pipe(functools.partial(price, 2), rx(3))
+        n.rx.overrides['fx'] = 5
+        assert dict(n.rx.overrides) == {1: 5}
+        assert n.rx.value == 100
+
+        class Pricer:
+            def price(self, cell, fx):
+                return cell * fx
+
+        n = rx(10).rx.pipe(Pricer().price, rx(3))
+        n.rx.overrides['cell'] = 2
+        assert dict(n.rx.overrides) == {0: 2}
+        assert n.rx.value == 6
+
+    def test_reactive_overrides_name_with_kwargs_absorbed_keyword(self):
+        def price(cell, fx, **extra):
+            return cell * fx + sum(extra.values())
+
+        n = rx(10).rx.pipe(price, rx(2), bonus=rx(1))
+        n.rx.overrides['bonus'] = 5
+        n.rx.overrides['fx'] = 3
+        assert dict(n.rx.overrides) == {'bonus': 5, 1: 3}
+        assert n.rx.value == 35
+
+    def test_reactive_overrides_mapping_helpers_accept_name(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        assert n.rx.overrides.get('cell') is None
+        assert n.rx.overrides.setdefault('cell', 3) == 3
+        assert n.rx.overrides.setdefault('cell', 4) == 3
+        assert n.rx.overrides.get('cell') == 3
+        assert n.rx.value == 6
+        assert n.rx.overrides.pop('cell') == 3
+        assert dict(n.rx.overrides) == {}
+        assert n.rx.value == 20
 
     def test_reactive_overrides_rejects_unsupported_key(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))

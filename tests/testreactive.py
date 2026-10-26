@@ -3209,6 +3209,37 @@ class TestAsyncNotificationSemantics:
         assert grandchildren == [120, 140]
         assert distincts == [2, 4]
 
+    async def test_reactive_async_copy_waiting_on_first_landing_not_woken_again(self):
+        async_rx = rx(1).rx.pipe(mul_slowly)
+        child = async_rx + 10
+        items = []
+        child.rx.watch(items.append, onlychanged=False)
+        assert child.rx.value is param.Undefined
+
+        copy = child._prev
+        resolves = []
+        resolve = copy._lazy_resolve
+        copy._lazy_resolve = lambda *args: (resolves.append(args), resolve(*args))[1]
+
+        await async_wait_until(lambda: items == [12])
+        await asyncio.sleep(0.05)
+        assert resolves == []
+        assert items == [12]
+
+    async def test_reactive_async_disposed_child_copy_not_woken(self):
+        async_rx = rx(1).rx.pipe(mul_slowly)
+        async_rx.rx.watch(lambda v: None)
+        child = async_rx + 1
+        copy = child._prev
+        resolves = []
+        resolve = copy._lazy_resolve
+        copy._lazy_resolve = lambda *args: (resolves.append(args), resolve(*args))[1]
+        child.rx.dispose()
+
+        assert async_rx.rx.value is param.Undefined
+        await asyncio.sleep(0.05)
+        assert resolves == []
+
     async def test_reactive_async_downstream_hears_failed_landing_started_upstream(self):
         async def fail_slowly(value):
             await asyncio.sleep(0.02)

@@ -2870,7 +2870,6 @@ class rx:
         # cache the input value as long as the shared instance does not store
         # a diverging _method accessor.
         self._shared = _shared
-        self._copies: list[weakref.ref[rx]] | None = None
         self._adopted_settle_count = 0
         if isinstance(obj, rx) and not prev:
             self._prev = obj
@@ -2887,11 +2886,6 @@ class rx:
             self._dirty = True  # Otherwise current will be stuck as Undefined.
         else:
             self._trigger = None
-        if _shared is not None and self._trigger is not None:
-            copies = _shared._copies
-            if copies is None:
-                copies = _shared._copies = []
-            copies.append(weakref.ref(self, copies.remove))
         self._root = self._compute_root()
         self._fn_params = self._compute_fn_params()
         self._ref_capable_params = self._compute_ref_capable_params()
@@ -3610,7 +3604,7 @@ class rx:
         # while this node was busy, e.g. not when the computation was started
         # by reading this node directly. Deferred so a copy already resolving
         # through the regular path has caught up and is left alone.
-        if not self._copies:
+        if not self._readers:
             return
         import asyncio
         try:
@@ -3619,15 +3613,21 @@ class rx:
             return
         if loop is getattr(_thread_state, 'event_loop', None):
             # Driven synchronously by async_executor, so the landing is not
-            # later than the read that started it.
+            # later than the read that started it. Known limitation: without
+            # a running loop, a downstream watcher still misses a computation
+            # started by reading this node directly.
             return
         loop.call_soon(self._wake_stale_copies)
 
     def _wake_stale_copies(self):
-        for ref in list(self._copies or ()):
+        # Copies register as readers via _direct_inputs(). Every stale copy is
+        # woken, even one nothing downstream watches; a resolve is cheap and
+        # checking for watchers would mean walking the whole downstream graph.
+        for ref in tuple(self._readers or ()):
             copy = ref()
             if (
-                copy is not None and copy._current_task is None
+                copy is not None and copy._shared is self
+                and copy._trigger is not None and copy._current_task is None
                 and copy._adopted_settle_count != self._settle_count
             ):
                 copy._lazy_resolve()

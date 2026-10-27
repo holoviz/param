@@ -360,9 +360,9 @@ class InputOverrides(MutableMapping):
         names = sorted(kwargs)
         inputs = []
         if nargs:
-            aliases = _positional_names(operation, nargs) if aliases else {}
+            pos_aliases = _positional_names(operation, nargs) if aliases else {}
             named = ", ".join(
-                f"{name!r} is {index}" for name, index in aliases.items() if name not in kwargs
+                f"{name!r} is {index}" for name, index in pos_aliases.items() if name not in kwargs
             )
             inputs.append(f"positional indices 0-{nargs-1}" + (f" ({named})" if named else ""))
         if names:

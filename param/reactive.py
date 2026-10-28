@@ -2711,7 +2711,6 @@ class rx:
 
     _readers: list[weakref.ref] | None = None
 
-    # The shared node's settle count a copy last adopted.
     _adopted_settle_count: int = 0
 
     _ref_binding: Callable[..., t.Any] | None = None
@@ -3591,8 +3590,7 @@ class rx:
                 return
             # Mirror the synchronous path in _resolve.
             # For an async generator an raised exception ends the stream.
-            # Copies are not woken: the error is raised on read rather than
-            # delivered to downstream watchers, as on the normal path.
+            # Not delivered to downstream watchers, so no copies to wake.
             self._error_state = e
             trigger.param.trigger('value')
         finally:
@@ -3604,10 +3602,7 @@ class rx:
             self._notify_settle_change()
 
     def _wake_copies(self):
-        # A copy only follows this node's landing if something resolved it
-        # while this node was busy, e.g. not when the computation was started
-        # by reading this node directly. Deferred so a copy already resolving
-        # through the regular path has caught up and is left alone.
+        # Deferred so a copy resolving through the regular path catches up first.
         if not self._readers:
             return
         import asyncio
@@ -3616,18 +3611,14 @@ class rx:
         except RuntimeError:
             return
         if loop is getattr(_thread_state, 'event_loop', None):
-            # Driven synchronously by async_executor, so the landing is not
-            # later than the read that started it. Known limitation: without
-            # a running loop, a downstream watcher still misses a computation
-            # started by reading this node directly.
+            # The landing is synchronous with the read that started it.
             return
         from .parameterized import async_executor
         async_executor(self._wake_stale_copies)
 
     async def _wake_stale_copies(self):
-        # Copies register as readers via _direct_inputs(). Every stale copy is
-        # woken, even one nothing downstream watches; a resolve is cheap and
-        # checking for watchers would mean walking the whole downstream graph.
+        # Unwatched copies are woken too; finding watchers means walking the
+        # whole downstream graph.
         for ref in tuple(self._readers or ()):
             copy = ref()
             if (

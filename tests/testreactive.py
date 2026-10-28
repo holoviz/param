@@ -5,6 +5,7 @@ import gc
 import math
 import operator
 import re
+import sys
 import time
 import weakref
 
@@ -4670,6 +4671,32 @@ class TestOverrides:
         with pytest.raises(KeyError, match="'fx' names positional input 1"):
             n.rx.overrides.kwargs = {'fx': 1}
         assert dict(n.rx.overrides) == {}
+
+    @pytest.mark.skipif(sys.version_info < (3, 14), reason="Annotations are evaluated lazily from 3.14")
+    def test_reactive_overrides_unresolvable_annotation(self):
+        def scale(cell: Undefined, fx: int):  # noqa: F821
+            return cell * fx
+
+        n = rx(10).rx.pipe(scale, 2)
+        assert n.rx.value == 20
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
+        n.rx.overrides[1] = 3
+        assert n.rx.value == 30
+
+    def test_reactive_overrides_unreadable_signature(self):
+        class Scale:
+            @property
+            def __signature__(self):
+                raise RuntimeError
+
+            def __call__(self, cell, fx):
+                return cell * fx
+
+        n = rx(10).rx.pipe(Scale(), 2)
+        assert n.rx.value == 20
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
 
     def test_reactive_overrides_no_name_for_positional_only_or_var_positional(self):
         def positional_only(cell, /, fx):

@@ -58,6 +58,8 @@ Each `_operation` dictionary includes:
 - `kwargs`: Keyword arguments for the function or method.
 - `reverse`: A flag indicating whether the input object and first argument should
   be swapped during execution.
+- `named_inputs`: Set by `.rx.pipe`, allowing `.rx.overrides` to address positional
+  inputs by parameter name; the names are cached in `positional_names`.
 
 Chain Tracking and Dependencies
 -------------------------------
@@ -296,18 +298,24 @@ def _arg_key(operation: dict, index: int) -> int:
     return index + 1
 
 
-def _positional_names(fn: t.Any, nargs: int) -> dict[str, int]:
-    """Map the parameter names of positionally wired inputs to their keys."""
-    try:
-        params = inspect.signature(fn).parameters.values()
-    except (TypeError, ValueError):
-        return {}
+def _positional_names(operation: dict) -> dict[str, int]:
+    """Map the parameter names of a pipe function's positional inputs to their keys."""
+    names = operation.get('positional_names')
+    if names is not None:
+        return names
     names = {}
-    for key, param in zip(range(nargs), params):
-        if param.kind is param.VAR_POSITIONAL:
-            break
-        if param.kind is param.POSITIONAL_OR_KEYWORD:
-            names[param.name] = key
+    if operation.get('named_inputs'):
+        try:
+            params = inspect.signature(operation['fn']).parameters.values()
+        except Exception:
+            # Names are optional; an unresolvable annotation must not break overrides.
+            params = ()
+        for key, param in zip(range(len(_positional_layout(operation))), params):
+            if param.kind is param.VAR_POSITIONAL:
+                break
+            if param.kind is param.POSITIONAL_OR_KEYWORD:
+                names[param.name] = key
+    operation['positional_names'] = names
     return names
 
 
@@ -344,7 +352,7 @@ class InputOverrides(MutableMapping):
         if isinstance(key, str):
             if key in kwargs:
                 return key
-            if aliases and (index := operation.get('positional_names', {}).get(key)) is not None:
+            if aliases and (index := _positional_names(operation).get(key)) is not None:
                 return index
         elif isinstance(key, int) and not isinstance(key, bool):
             if -nargs <= key < nargs:
@@ -357,7 +365,7 @@ class InputOverrides(MutableMapping):
         names = sorted(kwargs)
         inputs = []
         if nargs:
-            pos_aliases = operation.get('positional_names', {}) if aliases else {}
+            pos_aliases = _positional_names(operation) if aliases else {}
             named = ", ".join(
                 f"{name!r} is {index}" for name, index in pos_aliases.items() if name not in kwargs
             )
@@ -548,7 +556,7 @@ class InputOverridesView(MutableMapping):
             )
         else:
             operation = t.cast('dict', self._parent._node._operation)
-            index = operation.get('positional_names', {}).get(key)
+            index = _positional_names(operation).get(key)
             if index is not None and key not in (operation.get('kwargs') or {}):
                 raise KeyError(
                     f"{key!r} names positional input {index}; use "
@@ -1310,8 +1318,7 @@ class reactive_ops:
             func, *args, process_failures=process_failures, **kwargs
         )
         # Only names of user-supplied functions are public override keys.
-        operation = t.cast('dict', new._operation)
-        operation['positional_names'] = _positional_names(func, len(_positional_layout(operation)))
+        t.cast('dict', new._operation)['named_inputs'] = True
         return new
 
     def resolve(self, nested=True, recursive=False) -> 'rx':

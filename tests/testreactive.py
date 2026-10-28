@@ -4665,9 +4665,9 @@ class TestOverrides:
 
     def test_reactive_overrides_kwargs_view_rejects_positional_name(self):
         n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
-        with pytest.raises(KeyError, match="not an input of this node"):
+        with pytest.raises(KeyError, match=r"'cell' names positional input 0; use overrides\['cell'\] or overrides.args\[0\]"):
             n.rx.overrides.kwargs['cell'] = 1
-        with pytest.raises(KeyError, match="not an input of this node"):
+        with pytest.raises(KeyError, match="'fx' names positional input 1"):
             n.rx.overrides.kwargs = {'fx': 1}
         assert dict(n.rx.overrides) == {}
 
@@ -4705,6 +4705,10 @@ class TestOverrides:
         for name in ('vs', 'off'):
             with pytest.raises(KeyError, match="not an input of this node"):
                 m.rx.overrides[name] = 0
+
+        d = rx(1).rx.distinct()
+        with pytest.raises(KeyError, match="not an input of this node"):
+            d.rx.overrides['new'] = 5
 
         b = rx(1).rx.buffer(2)
         with pytest.raises(KeyError, match="not an input of this node"):

@@ -3617,9 +3617,10 @@ class rx:
             # a running loop, a downstream watcher still misses a computation
             # started by reading this node directly.
             return
-        loop.call_soon(self._wake_stale_copies)
+        from .parameterized import async_executor
+        async_executor(self._wake_stale_copies)
 
-    def _wake_stale_copies(self):
+    async def _wake_stale_copies(self):
         # Copies register as readers via _direct_inputs(). Every stale copy is
         # woken, even one nothing downstream watches; a resolve is cheap and
         # checking for watchers would mean walking the whole downstream graph.

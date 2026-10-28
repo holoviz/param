@@ -2711,6 +2711,9 @@ class rx:
 
     _readers: list[weakref.ref] | None = None
 
+    # The shared node's settle count a copy last adopted.
+    _adopted_settle_count: int = 0
+
     _ref_binding: Callable[..., t.Any] | None = None
 
     # Weak refs to targets notified when this node schedules async work.
@@ -2870,7 +2873,6 @@ class rx:
         # cache the input value as long as the shared instance does not store
         # a diverging _method accessor.
         self._shared = _shared
-        self._adopted_settle_count = 0
         if isinstance(obj, rx) and not prev:
             self._prev = obj
         else:
@@ -3589,6 +3591,8 @@ class rx:
                 return
             # Mirror the synchronous path in _resolve.
             # For an async generator an raised exception ends the stream.
+            # Copies are not woken: the error is raised on read rather than
+            # delivered to downstream watchers, as on the normal path.
             self._error_state = e
             trigger.param.trigger('value')
         finally:

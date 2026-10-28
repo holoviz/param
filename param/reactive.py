@@ -117,7 +117,7 @@ from .parameterized import (
     _watch_async_ref_settle_change, _watch_ref_change
 )
 from .parameters import Boolean, Event, String
-from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
+from ._utils import _thread_state, _to_async_gen, iscoroutinefunction, full_groupby
 
 if t.TYPE_CHECKING:
     import builtins
@@ -2725,6 +2725,8 @@ class rx:
 
     _readers: list[weakref.ref] | None = None
 
+    _adopted_settle_count: int = 0
+
     _ref_binding: Callable[..., t.Any] | None = None
 
     # Weak refs to targets notified when this node schedules async work.
@@ -3541,6 +3543,7 @@ class rx:
                 self._current_ = shared.rx.value
                 self._skipped = False
                 self._settle_count += 1
+                self._adopted_settle_count = shared._settle_count
                 self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
@@ -3564,6 +3567,7 @@ class rx:
                     self._settle_count += 1
                     self._finished_generation = generation
                     trigger.param.trigger('value')
+                    self._wake_copies()
                 if not broke and not stale() and self._finished_generation != generation:
                     # The generator did not yield anything, so we skip and keep
                     # the previous output
@@ -3582,6 +3586,7 @@ class rx:
                 self._settle_count += 1
                 self._finished_generation = generation
                 trigger.param.trigger('value')
+                self._wake_copies()
         except asyncio.CancelledError:
             return
         except Exception as e:
@@ -3596,9 +3601,11 @@ class rx:
                 self._skipped = False
                 self._settle_count += 1
                 trigger.param.trigger('value')
+                self._wake_copies()
                 return
             # Mirror the synchronous path in _resolve.
             # For an async generator an raised exception ends the stream.
+            # Not delivered to downstream watchers, so no copies to wake.
             self._error_state = e
             trigger.param.trigger('value')
         finally:
@@ -3608,6 +3615,33 @@ class rx:
             # watcher won't fire if the recompute produced the same value,
             # so `.rx.updating()` needs this to hear about it regardless.
             self._notify_settle_change()
+
+    def _wake_copies(self):
+        # Deferred so a copy resolving through the regular path catches up first.
+        if not self._readers:
+            return
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        if loop is getattr(_thread_state, 'event_loop', None):
+            # The landing is synchronous with the read that started it.
+            return
+        from .parameterized import async_executor
+        async_executor(self._wake_stale_copies)
+
+    async def _wake_stale_copies(self):
+        # Unwatched copies are woken too; finding watchers means walking the
+        # whole downstream graph.
+        for ref in tuple(self._readers or ()):
+            copy = ref()
+            if (
+                copy is not None and copy._shared is self
+                and copy._trigger is not None and copy._current_task is None
+                and copy._adopted_settle_count != self._settle_count
+            ):
+                copy._lazy_resolve()
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
@@ -3680,7 +3714,7 @@ class rx:
                     # skip state rather than be marked skipped by the handler.
                     self._current_ = value
                     self._skipped = shared._skipped
-                    self._settle_count = shared._settle_count
+                    self._settle_count = self._adopted_settle_count = shared._settle_count
                     if self._is_async:
                         # The value was adopted without scheduling a task, so
                         # claim a generation for it. This supersedes a task an

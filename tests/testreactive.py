@@ -6627,6 +6627,45 @@ class TestSkipSiblingArguments:
 
         assert out.rx.value == 21
 
+    def test_batch_references_follow_every_written_cell(self):
+        class Follower(param.Parameterized):
+            out_a = param.Parameter(allow_refs=True)
+            out_b = param.Parameter(allow_refs=True)
+
+        a, b = rx(None), rx(None)
+        follower = Follower(out_a=a, out_b=b)
+
+        with batch():
+            a.rx.value = 1
+            b.rx.value = 2
+        assert (follower.out_a, follower.out_b) == (1, 2)
+
+        with batch():
+            a.rx.value = 3
+            b.rx.value = 4
+        assert (follower.out_a, follower.out_b) == (3, 4)
+
+    def test_batch_read_answers_the_latest_write(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        assert doubled.rx.value == 2
+
+        with batch():
+            source.rx.value = 5
+            assert (source.rx.value, doubled.rx.value) == (5, 10)
+
+    def test_batch_still_defers_watchers(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        calls = []
+        doubled.rx.watch(calls.append)
+
+        with batch():
+            source.rx.value = 5
+            assert doubled.rx.value == 10
+            assert calls == []
+        assert calls == [10]
+
     def test_when_sibling_remains_live_after_a_skip(self):
         def skip_if_negative(value):
             if value < 0:

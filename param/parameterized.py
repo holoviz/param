@@ -3718,7 +3718,7 @@ class Parameters:
         elif watcher.onlychanged and (not self_._changed(event)):
             return
 
-        if _is_batched(self_.self_or_cls):
+        if not getattr(watcher.fn, '_unbatched', False) and _is_batched(self_.self_or_cls):
             self_._events.append(event)
             if not any(watcher is w for w in self_._state_watchers):
                 self_._state_watchers.append(watcher)

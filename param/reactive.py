@@ -2444,13 +2444,17 @@ class _WeakInvalidator:
     ``rx._watch_invalidation``).
     """
 
-    __slots__ = ('_ref', '_watcher', '__weakref__')
+    __slots__ = ('_ref', '_watcher', '_unbatched', '__weakref__')
 
     _watcher: Watcher | None
 
-    def __init__(self, method):
+    def __init__(self, method, unbatched: bool = False):
         self._ref = weakref.WeakMethod(method)
         self._watcher = None
+        # Marking a node dirty is bookkeeping rather than a notification, so it
+        # must not wait for a batch: a read inside it, or a reference resolved
+        # while flushing it, would otherwise answer the value from before the write.
+        self._unbatched = unbatched
 
     def __call__(self, *events):
         method = self._ref()
@@ -3254,11 +3258,15 @@ class rx:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
                 fps = [p.name for p in params if p in self._root._fn_params]
                 if fps:
-                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps)
+                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps, unbatched=True)
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
-            self._watch_invalidation(params[0].owner, self._invalidate_current, [p.name for p in params])
+            self._watch_invalidation(
+                params[0].owner, self._invalidate_current, [p.name for p in params], unbatched=True
+            )
 
-    def _watch_invalidation(self, owner, method, names) -> tuple[_WeakInvalidator, weakref.finalize]:
+    def _watch_invalidation(
+        self, owner, method, names, unbatched: bool = False
+    ) -> tuple[_WeakInvalidator, weakref.finalize]:
         """
         Register a *weak* invalidation watcher on a source parameter.
 
@@ -3271,7 +3279,7 @@ class rx:
         disposal (e.g. ``.rx.overrides``) can fire and drop it right away
         instead of letting it pile up in ``_finalizers`` until then.
         """
-        invalidator = _WeakInvalidator(method)
+        invalidator = _WeakInvalidator(method, unbatched)
         invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
         finalizer = weakref.finalize(
             self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)

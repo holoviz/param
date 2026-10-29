@@ -58,6 +58,8 @@ Each `_operation` dictionary includes:
 - `kwargs`: Keyword arguments for the function or method.
 - `reverse`: A flag indicating whether the input object and first argument should
   be swapped during execution.
+- `named_inputs`: Set by `.rx.pipe`, allowing `.rx.overrides` to address positional
+  inputs by parameter name; the names are cached in `positional_names`.
 
 Chain Tracking and Dependencies
 -------------------------------
@@ -95,6 +97,7 @@ import inspect
 import logging
 import math
 import operator
+import sys
 import typing as t
 import warnings
 import weakref
@@ -296,6 +299,33 @@ def _arg_key(operation: dict, index: int) -> int:
     return index + 1
 
 
+def _positional_names(operation: dict) -> dict[str, int]:
+    """Map the parameter names of a pipe function's positional inputs to their keys."""
+    names = operation.get('positional_names')
+    if names is not None:
+        return names
+    names = {}
+    if operation.get('named_inputs'):
+        # Names don't need annotations, which may not resolve on 3.14+ (TYPE_CHECKING imports).
+        sig_kwargs: dict[str, t.Any] = {}
+        if sys.version_info >= (3, 14):
+            import annotationlib
+            sig_kwargs['annotation_format'] = annotationlib.Format.FORWARDREF
+        params: t.Iterable[inspect.Parameter]
+        try:
+            params = inspect.signature(operation['fn'], **sig_kwargs).parameters.values()
+        except Exception:
+            # Names are optional, so any other signature failure leaves the inputs index-only.
+            params = ()
+        for key, param in zip(range(len(_positional_layout(operation))), params):
+            if param.kind is param.VAR_POSITIONAL:
+                break
+            if param.kind is param.POSITIONAL_OR_KEYWORD:
+                names[param.name] = key
+    operation['positional_names'] = names
+    return names
+
+
 def _source_masked(operation: dict | None) -> bool:
     if not operation or not operation.get('overrides'):
         return False
@@ -308,8 +338,10 @@ class InputOverrides(MutableMapping):
 
     Keys address the inputs a node was wired with, by keyword name or by
     position in the call its operation makes, the value it is applied to
-    included. Values are either plain values or references the node follows.
-    Deleting a key unmasks the input again.
+    included. A positional input of a function applied with ``.rx.pipe`` may
+    also be addressed by its parameter name, but iteration yields only
+    keyword names and indices. Values are either plain values or references
+    the node follows. Deleting a key unmasks the input again.
     """
 
     def __init__(self, node: rx):
@@ -320,13 +352,15 @@ class InputOverrides(MutableMapping):
         operation = self._node._operation
         return None if operation is None else operation.get('overrides')
 
-    def _resolve_key(self, key: t.Any) -> t.Any:
+    def _resolve_key(self, key: t.Any, aliases: bool = True) -> t.Any:
         operation = t.cast('dict', self._node._operation)
         nargs = len(_positional_layout(operation))
         kwargs = operation.get('kwargs') or {}
         if isinstance(key, str):
             if key in kwargs:
                 return key
+            if aliases and (index := _positional_names(operation).get(key)) is not None:
+                return index
         elif isinstance(key, int) and not isinstance(key, bool):
             if -nargs <= key < nargs:
                 return key + nargs if key < 0 else key
@@ -338,7 +372,11 @@ class InputOverrides(MutableMapping):
         names = sorted(kwargs)
         inputs = []
         if nargs:
-            inputs.append(f"positional indices 0-{nargs-1}")
+            pos_aliases = _positional_names(operation) if aliases else {}
+            named = ", ".join(
+                f"{name!r} is {index}" for name, index in pos_aliases.items() if name not in kwargs
+            )
+            inputs.append(f"positional indices 0-{nargs-1}" + (f" ({named})" if named else ""))
         if names:
             inputs.append("keywords " + ", ".join(repr(name) for name in names))
         raise KeyError(
@@ -523,6 +561,15 @@ class InputOverridesView(MutableMapping):
                 "Keyword overrides are addressed by keyword name, not by "
                 f"{type(key).__name__!r}."
             )
+        else:
+            operation = t.cast('dict', self._parent._node._operation)
+            index = _positional_names(operation).get(key)
+            if index is not None and key not in (operation.get('kwargs') or {}):
+                raise KeyError(
+                    f"{key!r} names positional input {index}; use "
+                    f"overrides[{key!r}] or overrides.args[{index}]."
+                )
+            self._parent._resolve_key(key, aliases=False)
 
     def __getitem__(self, key: t.Any) -> t.Any:
         self._check_key(key)
@@ -1105,6 +1152,11 @@ class reactive_ops:
         >>> expr.rx.value
         300
 
+        A positional input of a function applied with :meth:`pipe` may also
+        be addressed by its parameter name, if the function's signature allows
+        passing it by keyword; the override is still stored under its index.
+        A keyword input of the same name takes precedence.
+
         ``.args`` and ``.kwargs`` give the positional and keyword overrides as
         separate mappings, and assigning to either replaces all of its
         overrides at once, invalidating the node a single time:
@@ -1274,9 +1326,12 @@ class reactive_ops:
         >>> rx_result.rx.value
         30
         """
-        return self._as_rx()._apply_operator(
+        new = self._as_rx()._apply_operator(
             func, *args, process_failures=process_failures, **kwargs
         )
+        # Only names of user-supplied functions are public override keys.
+        t.cast('dict', new._operation)['named_inputs'] = True
+        return new
 
     def resolve(self, nested=True, recursive=False) -> 'rx':
         """
@@ -1886,7 +1941,7 @@ class reactive_ops:
                 raise Skip
             return new
 
-        return self.pipe(_distinct)
+        return self._as_rx()._apply_operator(_distinct)
 
     # Operations to get the output and set the input of an expression
 

@@ -4679,10 +4679,9 @@ class TestOverrides:
 
         n = rx(10).rx.pipe(scale, 2)
         assert n.rx.value == 20
-        with pytest.raises(KeyError, match="not an input of this node"):
-            n.rx.overrides['fx'] = 3
-        n.rx.overrides[1] = 3
+        n.rx.overrides['fx'] = 3
         assert n.rx.value == 30
+        assert n.rx.overrides['fx'] == 3
 
     def test_reactive_overrides_unreadable_signature(self):
         class Scale:

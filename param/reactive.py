@@ -97,6 +97,7 @@ import inspect
 import logging
 import math
 import operator
+import sys
 import typing as t
 import warnings
 import weakref
@@ -305,10 +306,15 @@ def _positional_names(operation: dict) -> dict[str, int]:
         return names
     names = {}
     if operation.get('named_inputs'):
+        # Names don't need annotations, which may not resolve on 3.14+ (TYPE_CHECKING imports).
+        sig_kwargs = {}
+        if sys.version_info >= (3, 14):
+            import annotationlib
+            sig_kwargs['annotation_format'] = annotationlib.Format.FORWARDREF
         try:
-            params = inspect.signature(operation['fn']).parameters.values()
+            params = inspect.signature(operation['fn'], **sig_kwargs).parameters.values()
         except Exception:
-            # Names are optional; an unresolvable annotation must not break overrides.
+            # Names are optional, so any other signature failure leaves the inputs index-only.
             params = ()
         for key, param in zip(range(len(_positional_layout(operation))), params):
             if param.kind is param.VAR_POSITIONAL:

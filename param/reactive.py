@@ -307,10 +307,11 @@ def _positional_names(operation: dict) -> dict[str, int]:
     names = {}
     if operation.get('named_inputs'):
         # Names don't need annotations, which may not resolve on 3.14+ (TYPE_CHECKING imports).
-        sig_kwargs = {}
+        sig_kwargs: dict[str, t.Any] = {}
         if sys.version_info >= (3, 14):
             import annotationlib
             sig_kwargs['annotation_format'] = annotationlib.Format.FORWARDREF
+        params: t.Iterable[inspect.Parameter]
         try:
             params = inspect.signature(operation['fn'], **sig_kwargs).parameters.values()
         except Exception:

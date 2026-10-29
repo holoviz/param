@@ -2,6 +2,8 @@ import asyncio
 import threading
 import time
 
+from functools import partial
+
 import param
 import pytest
 
@@ -275,33 +277,56 @@ async def _async_gen_string():
 def _gen_string():
     yield 'string!'
 
-BARE_ASYNC_REFS = [_coroutine_string, _async_gen_string, _gen_string]
+async def _coroutine_concat(a, b):
+    return a + b
 
-@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
-async def test_bare_async_ref_warns_on_init(fn):
-    with pytest.warns(ParamFutureWarning, match=rf"param\.bind\({fn.__name__}\)"):
+BARE_ASYNC_REFS = [
+    pytest.param(_coroutine_string, r"param\.bind\(_coroutine_string\)", id='coroutine'),
+    pytest.param(_async_gen_string, r"param\.bind\(_async_gen_string\)", id='async_gen'),
+    pytest.param(_gen_string, r"param\.bind\(_gen_string\)", id='gen'),
+    pytest.param(
+        partial(_coroutine_concat, 'string', '!'),
+        r"param\.bind\(_coroutine_concat, \.\.\.\)", id='partial'
+    ),
+]
+
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_on_init(fn, match):
+    with pytest.warns(ParamFutureWarning, match=match):
         p = Parameters(string=fn)
     await wait_for_value(p, 'string', 'string!')
 
-@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
-async def test_bare_async_ref_warns_on_set(fn):
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_on_set(fn, match):
     p = Parameters()
-    with pytest.warns(ParamFutureWarning, match=rf"param\.bind\({fn.__name__}\)"):
+    with pytest.warns(ParamFutureWarning, match=match):
         p.string = fn
     await wait_for_value(p, 'string', 'string!')
 
-@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
-async def test_bare_async_ref_warns_in_rx(fn):
-    with pytest.warns(ParamFutureWarning, match=rf"param\.bind\({fn.__name__}\)"):
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_in_rx(fn, match):
+    with pytest.warns(ParamFutureWarning, match=match):
         expr = rx(fn)
     await wait_for_value(expr.rx, 'value', 'string!')
 
-@pytest.mark.parametrize('fn', BARE_ASYNC_REFS)
-def test_bare_async_function_on_non_ref_parameter_is_kept(fn):
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bare_async_function_on_non_ref_parameter_is_kept(fn, match):
     class NoRefs(param.Parameterized):
         value = param.Parameter()
 
-    assert NoRefs(value=fn).value is fn
+    p = NoRefs(value=fn)
+    await asyncio.sleep(0.1)
+    assert p.value is fn
+
+@pytest.mark.parametrize('resolve', [
+    pytest.param(lambda fn: rx(1).rx.pipe(lambda a, b: b, fn).rx.value, id='pipe_arg'),
+    pytest.param(lambda fn: (rx([1]) + [fn]).rx.value, id='operand'),
+    pytest.param(lambda fn: rx(True).rx.where(fn, 0).rx.value, id='where'),
+    pytest.param(lambda fn: setattr(rx(1).rx, 'value', fn), id='set_value'),
+])
+def test_bare_async_ref_warns_in_rx_operations(resolve):
+    with pytest.warns(ParamFutureWarning, match=r"param\.bind\(_gen_string\)"):
+        resolve(_gen_string)
 
 async def test_async_bind_ref():
     p = Parameters()

@@ -3451,7 +3451,7 @@ class rx:
             self._override_channel = Trigger(internal=True)
         return self._override_channel
 
-    def _override_dependents(self) -> tuple[list[rx], list[rx]]:
+    def _override_dependents(self) -> tuple[list[t.Any], list[t.Any]]:
         """
         Return the nodes an override change on this node affects.
 

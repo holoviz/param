@@ -113,8 +113,9 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, _notify_weak_listeners, _register_weak_listener,
-    _watch_async_ref_settle_change, _watch_ref_change
+    transform_reference, _is_bare_async_ref, _notify_weak_listeners,
+    _register_weak_listener, _warn_bare_async_ref, _watch_async_ref_settle_change,
+    _watch_ref_change
 )
 from .parameters import Boolean, Event, String
 from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
@@ -1805,6 +1806,7 @@ class reactive_ops:
         >>> rx_result.rx.value
         '5 or below'
         """
+        _warn_bare_async_inputs(x, y)
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
         if isinstance(self._reactive, rx):
@@ -2009,6 +2011,7 @@ class reactive_ops:
                 "expression wrapping a Parameter or another dynamic "
                 "reference cannot be updated."
             )
+        _warn_bare_async_inputs(new)
         self._reactive._wrapper.object = resolve_value(new)
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
@@ -2563,6 +2566,7 @@ def collect(*args, error_mode='raise', **kwargs) -> 'rx':
     >>> collected.args.rx.pipe(sum).rx.value
     3
     """
+    _warn_bare_async_inputs(*args, *kwargs.values())
     operation = {
         'fn': _collect_marker,
         'args': args,
@@ -2817,6 +2821,8 @@ class rx:
             wrapper = kwargs.pop('_wrapper', None)
         elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
             # Resolves generator and coroutine functions lazily
+            if _is_bare_async_ref(obj):
+                _warn_bare_async_ref(obj)
             wrapper = t.cast('Callable', GenWrapper)(object=obj)
             fn = bind(lambda obj: obj, wrapper.param.object)
             obj = Undefined
@@ -3798,6 +3804,8 @@ class rx:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = t.cast('dict[str, t.Any]', dict(self._display_opts, **kwargs))
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
+        if not reuse and operation is not None:
+            _warn_bare_async_inputs(*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
         if not reuse and error_mode == 'raise' and operation is not None:
             inputs = (*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
             if any(isinstance(arg, rx) and arg._error_mode == 'propagate' for arg in inputs):
@@ -4269,6 +4277,24 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
     elif isinstance(value, slice):
         for v in (value.start, value.stop, value.step):
             yield from _iter_rx(v)
+
+
+def _warn_bare_async_inputs(*values: t.Any) -> None:
+    """
+    Warn about bare coroutine and generator functions an rx operation would
+    resolve, descending into the containers ``resolve_value`` descends into.
+    """
+    for value in values:
+        if isinstance(value, rx):
+            continue
+        elif isinstance(value, (list, tuple, set)):
+            _warn_bare_async_inputs(*value)
+        elif isinstance(value, dict):
+            _warn_bare_async_inputs(*value.keys(), *value.values())
+        elif isinstance(value, slice):
+            _warn_bare_async_inputs(value.start, value.stop, value.step)
+        elif _is_bare_async_ref(value := transform_reference(value)):
+            _warn_bare_async_ref(value)
 
 
 def _iter_bare_params(value: t.Any) -> Iterator[Parameter]:

@@ -304,10 +304,7 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
         )
     value = transform_reference(value)
     is_gen = inspect.isgeneratorfunction(value)
-    has_deps = hasattr(value, '_dinfo')
-    if has_deps or iscoroutinefunction(value) or is_gen:
-        if not has_deps:
-            _warn_bare_async_ref(value)
+    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or is_gen:
         value = eval_function_with_deps(value)
         if is_gen:
             value = _to_async_gen(value)
@@ -317,8 +314,8 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
 
 def _is_bare_async_ref(value: t.Any) -> bool:
     """
-    Whether value is a coroutine or generator function that is resolved as a
-    reference without having been declared with ``bind`` or ``depends``.
+    Whether value is a coroutine or generator function that has not been
+    declared a reference with ``bind`` or ``depends``.
     """
     return not hasattr(value, '_dinfo') and (
         iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
@@ -337,10 +334,10 @@ def _warn_bare_async_ref(value: t.Any) -> None:
     name = getattr(func, '__name__', repr(func))
     bound = f"param.bind({name}, ...)" if func is not value else f"param.bind({name})"
     warnings.warn(
-        f"Passing the {kind} function {name!r} as a reference is deprecated. "
-        "In a future version it will be treated like any other function, i.e. "
-        "kept as a value instead of being called and resolved. Wrap it with "
-        f"{bound} to keep resolving it.",
+        f"Passing the {kind} function {name!r} to a reactive expression is "
+        "deprecated. In a future version rx will treat it like any other "
+        "function, i.e. keep it as a value instead of calling and resolving "
+        f"it. Wrap it with {bound} to keep resolving it.",
         category=_ParamFutureWarning,
         stacklevel=_find_stack_level(),
     )

@@ -1,6 +1,7 @@
 import asyncio
 import threading
 import time
+import warnings
 
 from functools import partial
 
@@ -263,7 +264,7 @@ async def test_async_function_ref():
         await asyncio.sleep(0.02)
         return 'string!'
 
-    p = Parameters(string=bind(gen_strings))
+    p = Parameters(string=gen_strings)
 
     await asyncio.sleep(0.1)
     assert p.string == 'string!'
@@ -291,15 +292,17 @@ BARE_ASYNC_REFS = [
 ]
 
 @pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
-async def test_bare_async_ref_warns_on_init(fn, match):
-    with pytest.warns(ParamFutureWarning, match=match):
+async def test_bare_async_ref_resolves_on_init_without_warning(fn, match):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
         p = Parameters(string=fn)
     await wait_for_value(p, 'string', 'string!')
 
 @pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
-async def test_bare_async_ref_warns_on_set(fn, match):
+async def test_bare_async_ref_resolves_on_set_without_warning(fn, match):
     p = Parameters()
-    with pytest.warns(ParamFutureWarning, match=match):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
         p.string = fn
     await wait_for_value(p, 'string', 'string!')
 
@@ -307,6 +310,13 @@ async def test_bare_async_ref_warns_on_set(fn, match):
 async def test_bare_async_ref_warns_in_rx(fn, match):
     with pytest.warns(ParamFutureWarning, match=match):
         expr = rx(fn)
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bound_async_ref_in_rx_does_not_warn(fn, match):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = rx(bind(fn))
     await wait_for_value(expr.rx, 'value', 'string!')
 
 @pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
@@ -319,14 +329,24 @@ async def test_bare_async_function_on_non_ref_parameter_is_kept(fn, match):
     assert p.value is fn
 
 @pytest.mark.parametrize('resolve', [
-    pytest.param(lambda fn: rx(1).rx.pipe(lambda a, b: b, fn).rx.value, id='pipe_arg'),
-    pytest.param(lambda fn: (rx([1]) + [fn]).rx.value, id='operand'),
-    pytest.param(lambda fn: rx(True).rx.where(fn, 0).rx.value, id='where'),
+    pytest.param(lambda fn: rx(1).rx.pipe(lambda a, b: b, fn), id='pipe_arg'),
+    pytest.param(lambda fn: rx([1]) + [fn], id='operand'),
+    pytest.param(lambda fn: rx(True).rx.where(fn, 0), id='where'),
     pytest.param(lambda fn: setattr(rx(1).rx, 'value', fn), id='set_value'),
+    pytest.param(lambda fn: param.reactive.collect(fn), id='collect'),
 ])
 def test_bare_async_ref_warns_in_rx_operations(resolve):
     with pytest.warns(ParamFutureWarning, match=r"param\.bind\(_gen_string\)"):
         resolve(_gen_string)
+
+def test_rx_operation_warns_once():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always', ParamFutureWarning)
+        source = rx(1)
+        expr = source.rx.pipe(lambda a, b: a, _gen_string)
+        source.rx.value = 2
+        assert expr.rx.value == 2
+    assert sum(issubclass(w.category, ParamFutureWarning) for w in caught) == 1
 
 async def test_async_bind_ref():
     p = Parameters()
@@ -348,7 +368,7 @@ async def test_async_generator_ref():
         await asyncio.sleep(0.02)
         yield 'string!'
 
-    p = Parameters(string=bind(gen_strings))
+    p = Parameters(string=gen_strings)
 
     await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
     await wait_for_value(p, 'string', 'string!', delay=0.1, timeout=0.1)
@@ -359,7 +379,7 @@ async def test_generator_ref():
         time.sleep(0.05)
         yield 'string!'
 
-    p = Parameters(string=bind(gen_strings))
+    p = Parameters(string=gen_strings)
 
     await wait_for_value(p, 'string', 'string?', delay=0.01, timeout=0.1)
     await wait_for_value(p, 'string', 'string!', delay=0.05, timeout=0.3)
@@ -380,10 +400,10 @@ async def test_async_generator_ref_cancelled():
             yield str(i)
             await asyncio.sleep(0.01)
 
-    p = Parameters(string=bind(gen_strings1))
+    p = Parameters(string=gen_strings1)
     task1 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
     assert p.string is not None
-    p.string = bind(gen_strings2)
+    p.string = gen_strings2
     task2 = await wait_for_async_ref(p, 'string', delay=0.01, timeout=0.1)
     assert len(tasks) == 2
     async_task1, async_task2 = tasks
@@ -458,10 +478,10 @@ async def test_generator_ref_cancelled():
             yield str(i)
             time.sleep(0.01)
 
-    p = Parameters(string=bind(gen_strings1))
+    p = Parameters(string=gen_strings1)
     task1 = await wait_for_async_ref(p, 'string', delay=0.03, timeout=0.1)
     assert p.string is not None
-    p.string = bind(gen_strings2)
+    p.string = gen_strings2
     task2 = await wait_for_async_ref(p, 'string', delay=0.06, timeout=0.2)
     assert task1 is not task2
     assert task1.done()

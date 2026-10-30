@@ -1328,7 +1328,7 @@ class TestAwaiting:
         assert expr.rx.value == 1
         assert not expr.rx.awaiting
 
-        p.value = bind(async_func)
+        p.value = async_func
         assert expr.rx.awaiting
         await async_wait_until(lambda: expr.rx.value == 8)
         assert not expr.rx.awaiting
@@ -1652,7 +1652,7 @@ class TestStale:
         assert expr.rx.value == 1
         assert not expr.rx.stale
 
-        p.value = bind(async_func)
+        p.value = async_func
         assert expr.rx.stale
         await async_wait_until(lambda: expr.rx.value == 8)
         assert not expr.rx.stale
@@ -2046,7 +2046,7 @@ class TestUpdatingStatus:
             await asyncio.Event().wait()
 
         source = Source()
-        outlet = Outlet(x=bind(slow))
+        outlet = Outlet(x=slow)
         expr = outlet.param.x.rx() + 1
         updating = expr.rx.updating()
         expr.rx.watch(lambda v: None)
@@ -2061,7 +2061,7 @@ class TestUpdatingStatus:
         await asyncio.sleep(0)
         assert updating.rx.value is False
 
-        outlet.x = bind(slow)
+        outlet.x = slow
         assert expr.rx.awaiting
         assert updating.rx.value is True
 
@@ -2087,7 +2087,7 @@ class TestUpdatingStatus:
         expr = outlet.param.x.rx() + 1
         updating = expr.rx.updating()
         expr.rx.watch(lambda v: None)
-        outlet.x = bind(slow)
+        outlet.x = slow
         updating.rx.watch(lambda value: (_ for _ in ()).throw(ValueError) if not value else None)
 
         with pytest.raises(ValueError):
@@ -2107,7 +2107,7 @@ class TestUpdatingStatus:
         expr = outlet.param.x.rx() + 1
         updating = expr.rx.updating()
         expr.rx.watch(lambda value: None)
-        outlet.x = bind(slow)
+        outlet.x = slow
 
         with pytest.raises(ValueError):
             outlet.x = 'bad'

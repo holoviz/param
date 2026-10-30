@@ -2953,7 +2953,7 @@ class rx:
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
-        if operation and _is_async_fn(operation['fn']):
+        if operation and _is_async_operation(operation):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
             self._dirty = True  # Otherwise current will be stuck as Undefined.
@@ -3061,8 +3061,7 @@ class rx:
     def _is_async(self) -> bool:
         if not self._operation:
             return False
-        fn = self._operation["fn"]
-        return _is_async_fn(fn)
+        return _is_async_operation(self._operation)
 
     @property
     def _awaiting(self) -> bool:
@@ -4025,6 +4024,11 @@ class rx:
         if method in rx._method_handlers:
             handler = rx._method_handlers[method]
             method = handler(self)
+            callee = None
+        elif new._method:
+            callee = getattr(new._current_, new._method, None)
+        else:
+            callee = new._current_
         new._method = None
         kwargs = dict(kwargs)
         operation = {
@@ -4034,6 +4038,10 @@ class rx:
             'reverse': False,
             'process_failures': self._process_failures,
         }
+        if _is_async_fn(callee):
+            # The callee is only known when the call is created, so its
+            # result is awaited only if it was async at that point.
+            operation['async'] = True
         return new._clone(operation)
 
     #----------------------------------------------------------------
@@ -4394,6 +4402,14 @@ if sys.version_info >= (3, 14):
     _signature = partial(inspect.signature, annotation_format=annotationlib.Format.FORWARDREF)
 else:
     _signature = inspect.signature
+
+
+def _is_async_operation(operation: dict[str, t.Any]) -> bool:
+    """
+    Whether an operation produces an awaitable or (async) generator, either
+    because its fn is async or because it calls an async function.
+    """
+    return operation.get('async', False) or _is_async_fn(operation['fn'])
 
 
 def _held_as_value(fn: t.Any) -> bool:

@@ -1117,6 +1117,77 @@ class TestAwaiting:
         await async_wait_until(lambda: expr.rx.value == 2)
         assert not expr.rx.awaiting
 
+    async def test_reactive_call_async_function(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        number = rx(0)
+        expr = rx(async_func)(number)
+
+        assert expr.rx.value is param.Undefined
+        assert expr.rx.awaiting
+        await async_wait_until(lambda: expr.rx.value == 2)
+        assert not expr.rx.awaiting
+
+        number.rx.value = 3
+        assert expr.rx.value == 2
+        assert expr.rx.awaiting
+        await async_wait_until(lambda: expr.rx.value == 5)
+
+    async def test_reactive_call_async_function_downstream(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        expr = rx(async_func)(1) * 10
+
+        assert expr.rx.value is param.Undefined
+        await async_wait_until(lambda: expr.rx.value == 30)
+
+    async def test_reactive_call_async_gen_function(self):
+        async def async_gen(value):
+            yield value
+            await asyncio.sleep(0.02)
+            yield value + 1
+
+        expr = rx(async_gen)(1)
+        expr.rx.value
+
+        await async_wait_until(lambda: expr.rx.value == 2)
+        assert not expr.rx.awaiting
+
+    async def test_reactive_call_gen_function(self):
+        def gen(value):
+            yield value
+            yield value + 1
+
+        expr = rx(gen)(1)
+        expr.rx.value
+
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+    async def test_reactive_call_async_method(self):
+        class Fetcher:
+            async def fetch(self, value):
+                await asyncio.sleep(0.02)
+                return f'fetched {value}'
+
+        number = rx(1)
+        expr = rx(Fetcher()).fetch(number)
+
+        assert expr.rx.value is param.Undefined
+        await async_wait_until(lambda: expr.rx.value == 'fetched 1')
+
+        number.rx.value = 2
+        await async_wait_until(lambda: expr.rx.value == 'fetched 2')
+
+    def test_reactive_call_sync_function_resolves_synchronously(self):
+        expr = rx(lambda value: value + 2)(rx(0))
+
+        assert expr.rx.value == 2
+        assert not expr.rx.awaiting
+
     async def test_reactive_awaiting_not_scheduled_until_requested(self):
         """
         Reading awaiting must not itself schedule a resolution, so an expression

@@ -95,6 +95,7 @@ import inspect
 import logging
 import math
 import operator
+import sys
 import typing as t
 import warnings
 import weakref
@@ -113,7 +114,7 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, _is_bare_async_ref, _notify_weak_listeners,
+    transform_reference, _is_async_fn, _is_bare_async_ref, _notify_weak_listeners,
     _register_weak_listener, _warn_bare_async_ref, _watch_async_ref_settle_change,
     _watch_ref_change
 )
@@ -173,6 +174,22 @@ class GenWrapper(Parameterized):
     """Helper class to allow streaming from generator functions."""
 
     object: t.Any = Parameter(allow_refs=True)
+
+
+class _HeldValue:
+    """
+    Box for a function assigned to a ``GenWrapper`` root that rx keeps as a
+    value, so that the reference machinery does not call it.
+    """
+
+    __slots__ = ('value',)
+
+    def __init__(self, value: t.Any):
+        self.value = value
+
+
+def _unbox_held(obj: t.Any) -> t.Any:
+    return obj.value if isinstance(obj, _HeldValue) else obj
 
 
 class Trigger(Parameterized):
@@ -390,6 +407,7 @@ class InputOverrides(MutableMapping):
 
     def _set(self, key: t.Any, value: t.Any):
         """Mask a resolved ``key`` without invalidating the node."""
+        _warn_bare_async_inputs(value)
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides')
@@ -1346,7 +1364,8 @@ class reactive_ops:
 
         Both routes an asynchronous callable can take are tracked: one applied
         as an operation, e.g. passed to ``.rx.pipe``, and one passed to ``rx``
-        as the object itself, which is held on a parameter and resolved by the
+        as the object itself after declaring it a reference with
+        ``param.bind``, which is held on a parameter and resolved by the
         reference machinery. A generator settles on each value it yields, so it
         reports ``True`` only until its next value arrives rather than until it
         is exhausted. Accessed on a parameter rather than an expression this is
@@ -2012,7 +2031,11 @@ class reactive_ops:
                 "reference cannot be updated."
             )
         _warn_bare_async_inputs(new)
-        self._reactive._wrapper.object = _resolve_operand(new)
+        wrapper = self._reactive._wrapper
+        value = _resolve_operand(new)
+        if isinstance(wrapper, GenWrapper) and _held_as_value(transform_reference(value)):
+            value = _HeldValue(value)
+        wrapper.object = value
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
         """
@@ -2632,7 +2655,7 @@ def _untracked_reference(value) -> bool:
         return any(_iter_rx(value)) or bool(resolve_ref(value, recursive=True))
     if hasattr(value, '_dinfo'):
         return True
-    if iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
+    if _is_async_fn(value):
         return not _held_as_value(value)
     return isinstance(value, Parameter) and value.name is not None
 
@@ -2821,12 +2844,12 @@ class rx:
             # rx._clone codepath
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif (inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj)) and not _held_as_value(obj):
+        elif _is_async_fn(obj) and not _held_as_value(obj):
             # Resolves generator and coroutine functions lazily
             if _is_bare_async_ref(obj):
                 _warn_bare_async_ref(obj)
             wrapper = t.cast('Callable', GenWrapper)(object=obj)
-            fn = bind(lambda obj: obj, wrapper.param.object)
+            fn = bind(_unbox_held, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             # Bound functions and methods are resolved on access
@@ -2902,7 +2925,7 @@ class rx:
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
-        if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
+        if operation and _is_async_fn(operation['fn']):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
             self._dirty = True  # Otherwise current will be stuck as Undefined.
@@ -3011,11 +3034,7 @@ class rx:
         if not self._operation:
             return False
         fn = self._operation["fn"]
-        return (
-            inspect.iscoroutinefunction(fn) or
-            inspect.isasyncgenfunction(fn) or
-            inspect.isgeneratorfunction(fn)
-        )
+        return _is_async_fn(fn)
 
     @property
     def _awaiting(self) -> bool:
@@ -3035,10 +3054,11 @@ class rx:
         Whether an asynchronous reference feeding this node has not yet
         produced a value for the current inputs.
 
-        A coroutine or generator function passed to ``rx`` as the object rather
-        than as an operation is held on a parameter and resolved by the
-        reference machinery, so its settlement is tracked there instead of by
-        this node's own generations.
+        A coroutine or generator function declared a reference with
+        ``param.bind`` and passed to ``rx`` as the object rather than as an
+        operation is held on a parameter and resolved by the reference
+        machinery, so its settlement is tracked there instead of by this
+        node's own generations.
         """
         for p in self._internal_params:
             owner, name = p.owner, p.name
@@ -4281,15 +4301,25 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
             yield from _iter_rx(v)
 
 
+if sys.version_info >= (3, 14):
+    import annotationlib
+
+    # Annotations are irrelevant here and evaluating them can raise, e.g. on
+    # names only imported under TYPE_CHECKING.
+    _signature = partial(inspect.signature, annotation_format=annotationlib.Format.FORWARDREF)
+else:
+    _signature = inspect.signature
+
+
 def _held_as_value(fn: t.Any) -> bool:
     """
     Whether rx keeps a bare coroutine or generator function as a value,
     because it cannot be called without arguments to resolve it.
     """
-    if hasattr(fn, '_dinfo') or not (iscoroutinefunction(fn) or inspect.isgeneratorfunction(fn)):
+    if hasattr(fn, '_dinfo') or not _is_async_fn(fn):
         return False
     try:
-        sig = inspect.signature(fn)
+        sig = _signature(fn)
     except (TypeError, ValueError):
         return False
     return any(
@@ -4321,19 +4351,19 @@ def _resolve_operand(value: t.Any) -> t.Any:
 def _warn_bare_async_inputs(*values: t.Any) -> None:
     """
     Warn about bare coroutine and generator functions an rx operation would
-    resolve, descending into the containers ``resolve_value`` descends into.
+    call, descending into the containers ``resolve_value`` descends into.
     """
     for value in values:
         if isinstance(value, rx):
             continue
-        elif isinstance(value, (list, tuple, set)):
+        elif isinstance(value, (list, tuple)):
             _warn_bare_async_inputs(*value)
         elif isinstance(value, dict):
             _warn_bare_async_inputs(*value.keys(), *value.values())
         elif isinstance(value, slice):
             _warn_bare_async_inputs(value.start, value.stop, value.step)
         elif _is_bare_async_ref(value := transform_reference(value)) and not _held_as_value(value):
-            _warn_bare_async_ref(value)
+            _warn_bare_async_ref(value, operand=True)
 
 
 def _iter_bare_params(value: t.Any) -> Iterator[Parameter]:

@@ -117,7 +117,7 @@ from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
     transform_reference, _notify_weak_listeners, _register_weak_listener,
-    _watch_async_ref_settle_change, _watch_ref_change
+    _watch_async_ref_settle_change, _watch_ref_change, _WeakInvalidator
 )
 from .parameters import Boolean, Event, String
 from ._utils import _thread_state, _to_async_gen, iscoroutinefunction, full_groupby
@@ -2485,34 +2485,6 @@ def bind(
         setattr(wrapped, name, t.cast('Callable', accessor)(wrapped))
     return wrapped
 
-class _WeakInvalidator:
-    """
-    A weakly-bound invalidation callback for an ``rx`` pipeline node.
-
-    ``rx`` nodes register invalidation callbacks on their *source* parameters.
-    If those callbacks were strong bound-method references the source (which is
-    typically long-lived) would keep every derived node — and anything it
-    captured, such as large arrays — alive indefinitely. Wrapping the bound
-    method in a :class:`weakref.WeakMethod` lets the derived node be garbage
-    collected as soon as nothing else references it; once collected the call
-    becomes a no-op and the now-dead watcher is removed by a finalizer (see
-    ``rx._watch_invalidation``).
-    """
-
-    __slots__ = ('_ref', '_watcher', '__weakref__')
-
-    _watcher: Watcher | None
-
-    def __init__(self, method):
-        self._ref = weakref.WeakMethod(method)
-        self._watcher = None
-
-    def __call__(self, *events):
-        method = self._ref()
-        if method is not None:
-            return method(*events)
-
-
 def _remove_watcher(
     owner_ref: weakref.ref[Parameterized | type[Parameterized]],
     invalidator_ref: weakref.ref[_WeakInvalidator],
@@ -3309,11 +3281,15 @@ class rx:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
                 fps = [p.name for p in params if p in self._root._fn_params]
                 if fps:
-                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps)
+                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps, unbatched=True)
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
-            self._watch_invalidation(params[0].owner, self._invalidate_current, [p.name for p in params])
+            self._watch_invalidation(
+                params[0].owner, self._invalidate_current, [p.name for p in params], unbatched=True
+            )
 
-    def _watch_invalidation(self, owner, method, names) -> tuple[_WeakInvalidator, weakref.finalize]:
+    def _watch_invalidation(
+        self, owner, method, names, unbatched: bool = False
+    ) -> tuple[_WeakInvalidator, weakref.finalize]:
         """
         Register a *weak* invalidation watcher on a source parameter.
 
@@ -3326,7 +3302,7 @@ class rx:
         disposal (e.g. ``.rx.overrides``) can fire and drop it right away
         instead of letting it pile up in ``_finalizers`` until then.
         """
-        invalidator = _WeakInvalidator(method)
+        invalidator = _WeakInvalidator(method, unbatched)
         invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
         finalizer = weakref.finalize(
             self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
@@ -3475,15 +3451,13 @@ class rx:
             self._override_channel = Trigger(internal=True)
         return self._override_channel
 
-    def _invalidate_overrides(self, *events):
+    def _override_dependents(self) -> tuple[list[t.Any], list[t.Any]]:
         """
-        Invalidate this node and its readers after one of its overrides changed.
+        Return the nodes an override change on this node affects.
 
-        An override is not a parameter, so ``_setup_invalidations`` does not cover
-        it: dirty this node and everything reading its result, drop their cached
-        ``_live_params()`` (masking a different set of inputs now), then notify
-        the consumers watching their override channels. Nodes reading the same
-        *inputs* without reading this node's result are deliberately left alone.
+        The seeds are this node and its shared node, if any; the second list
+        adds everything reading their result. Nodes reading the same *inputs*
+        without reading this node's result are deliberately left out.
         """
         nodes = []
         seen = set()
@@ -3499,10 +3473,24 @@ class rx:
                 reader = ref()
                 if reader is not None:
                     queue.append(reader)
-        for node in nodes:
+        return seeds, nodes
+
+    def _dirty_overrides(self, *events):
+        """
+        Dirty this node and its readers after one of its overrides changed.
+
+        An override is not a parameter, so ``_setup_invalidations`` does not
+        cover it. Their cached ``_live_params()`` is dropped too, since they
+        now mask a different set of inputs.
+        """
+        for node in self._override_dependents()[1]:
             node._dirty = True
             node._error_state = None
             node._live_params_cache = None
+
+    def _notify_overrides(self, *events):
+        """Notify the consumers watching the override channels of this node and its readers."""
+        seeds, nodes = self._override_dependents()
         for node in seeds:
             node._notify_graph_change()
         for node in nodes:
@@ -3510,12 +3498,21 @@ class rx:
             if channel is not None:
                 channel.param.trigger('value')
 
+    def _invalidate_overrides(self, *events):
+        """Invalidate this node and its readers, then notify their consumers."""
+        self._dirty_overrides()
+        self._notify_overrides()
+
     def _watch_override(self, refs) -> list[weakref.finalize]:
         """
         Watch the references an override is set to.
 
         They cannot join the node's parameters, which are fixed when it is
-        constructed, so they are routed to ``_invalidate_overrides`` instead.
+        constructed, so they are watched separately. Dirtying happens at write
+        time, but notifying the consumers is an ordinary watcher, so it is
+        deferred by any batch on the reference's owner: otherwise
+        ``.param.update()`` would let a consumer on another object see the new
+        override value combined with the old value of an input not yet flushed.
         The finalizers are returned so unmasking or replacing the override can
         fire and drop them right away, instead of leaving them to accumulate in
         ``_finalizers`` until this node is disposed of.
@@ -3525,10 +3522,10 @@ class rx:
             owner = params[0].owner
             if owner is None:
                 continue
-            _, finalizer = self._watch_invalidation(
-                owner, self._invalidate_overrides, [p.name for p in params]
-            )
-            finalizers.append(finalizer)
+            names = [p.name for p in params]
+            for method, unbatched in ((self._dirty_overrides, True), (self._notify_overrides, False)):
+                _, finalizer = self._watch_invalidation(owner, method, names, unbatched=unbatched)
+                finalizers.append(finalizer)
         return finalizers
 
     def _watch_settle_change(self, callback: Callable[[t.Any], None]) -> None:

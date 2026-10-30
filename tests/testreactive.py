@@ -6803,3 +6803,176 @@ class TestSkipSiblingArguments:
         sibling.rx.value = 20
 
         assert out.rx.value == 21
+
+
+class TestBatch:
+
+    def test_batch_references_follow_every_written_cell(self):
+        class Follower(param.Parameterized):
+            out_a = param.Parameter(allow_refs=True)
+            out_b = param.Parameter(allow_refs=True)
+
+        a, b = rx(None), rx(None)
+        follower = Follower(out_a=a, out_b=b)
+
+        with batch():
+            a.rx.value = 1
+            b.rx.value = 2
+        assert (follower.out_a, follower.out_b) == (1, 2)
+
+        with batch():
+            a.rx.value = 3
+            b.rx.value = 4
+        assert (follower.out_a, follower.out_b) == (3, 4)
+
+    def test_batch_read_answers_the_latest_write(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        assert doubled.rx.value == 2
+
+        with batch():
+            source.rx.value = 5
+            assert (source.rx.value, doubled.rx.value) == (5, 10)
+
+    def test_batch_still_defers_watchers(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        calls = []
+        doubled.rx.watch(calls.append)
+
+        with batch():
+            source.rx.value = 5
+            assert doubled.rx.value == 10
+            assert calls == []
+        assert calls == [10]
+
+    def test_batch_read_answers_the_latest_write_to_an_operand(self):
+        x, y = rx(1), rx(10)
+        total = x + y
+        assert total.rx.value == 11
+
+        with batch():
+            y.rx.value = 20
+            assert total.rx.value == 21
+
+    def test_batch_read_answers_the_latest_write_to_a_parameter(self):
+        class P(param.Parameterized):
+            v = param.Number(default=1)
+
+        p = P()
+        expr = rx(1) * p.param.v
+        assert expr.rx.value == 1
+
+        with batch():
+            p.v = 3
+            assert expr.rx.value == 3
+
+    def test_batch_read_answers_the_latest_write_to_an_override(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        assert expr.rx.value == 10
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+        assert expr.rx.value == 20
+
+    def test_batch_still_defers_override_watchers(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        calls = []
+        expr.rx.watch(calls.append)
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+            assert calls == []
+        assert calls == [20]
+
+    def test_discard_events_still_invalidates(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        doubled = p.param.x.rx() * 2
+        calls = []
+        doubled.rx.watch(calls.append)
+        assert doubled.rx.value == 2
+
+        with param.discard_events(p):
+            p.x = 7
+        assert doubled.rx.value == 14
+        assert calls == []
+
+    @staticmethod
+    def _write_xy(spelling, src, x, y):
+        if spelling == 'update':
+            src.param.update(x=x, y=y)
+            return
+        ctx = batch() if spelling == 'batch' else param.parameterized.batch_call_watchers(src)
+        with ctx:
+            src.x = x
+            src.y = y
+
+    @staticmethod
+    def _override_follower():
+        class Src(param.Parameterized):
+            x = param.Number(default=1)
+            y = param.Number(default=10)
+
+        class Follower(param.Parameterized):
+            out = param.Parameter(allow_refs=True)
+
+        src = Src()
+        expr = rx(0) + src.param.y
+        expr.rx.overrides[0] = src.param.x
+        follower = Follower(out=expr)
+        seen = []
+        follower.param.watch(lambda e: seen.append(e.new), 'out')
+        return src, expr, seen
+
+    @pytest.mark.parametrize('spelling', ['update', 'batch_call_watchers', 'batch'])
+    def test_batched_write_notifies_parameter_reference_once(self, spelling):
+        class Src(param.Parameterized):
+            x = param.Number(default=1)
+            y = param.Number(default=10)
+
+        class Follower(param.Parameterized):
+            out = param.Parameter(allow_refs=True)
+
+        src = Src()
+        follower = Follower(out=src.param.x.rx() + src.param.y)
+        seen = []
+        follower.param.watch(lambda e: seen.append(e.new), 'out')
+
+        self._write_xy(spelling, src, 2, 20)
+        assert seen == [22]
+
+    @pytest.mark.parametrize('spelling', ['update', 'batch_call_watchers', 'batch'])
+    def test_batched_write_notifies_override_reference_once(self, spelling):
+        src, expr, seen = self._override_follower()
+
+        self._write_xy(spelling, src, 2, 20)
+        assert seen == [22]
+        assert expr.rx.value == 22
+
+    @pytest.mark.parametrize('spelling', ['batch_call_watchers', 'batch'])
+    def test_batched_read_answers_the_latest_write_to_an_override(self, spelling):
+        src, expr, seen = self._override_follower()
+        ctx = batch() if spelling == 'batch' else param.parameterized.batch_call_watchers(src)
+
+        with ctx:
+            src.x = 2
+            assert expr.rx.value == 12
+            assert seen == []
+        assert seen == [12]
+
+    def test_discard_events_still_invalidates_an_override_without_notifying(self):
+        src, expr, seen = self._override_follower()
+
+        with param.discard_events(src):
+            src.x = 5
+        assert expr.rx.value == 15
+        assert seen == []

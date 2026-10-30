@@ -1,10 +1,15 @@
 import asyncio
+import sys
 import threading
 import time
+import warnings
+
+from functools import partial
 
 import param
 import pytest
 
+from param._utils import ParamFutureWarning
 from param.parameterized import Skip, resolve_ref
 from param.reactive import bind, rx
 
@@ -264,6 +269,174 @@ async def test_async_function_ref():
 
     await asyncio.sleep(0.1)
     assert p.string == 'string!'
+
+async def _coroutine_string():
+    return 'string!'
+
+async def _async_gen_string():
+    yield 'string!'
+
+def _gen_string():
+    yield 'string!'
+
+async def _coroutine_concat(a, b):
+    return a + b
+
+BARE_ASYNC_REFS = [
+    pytest.param(_coroutine_string, r"param\.bind\(_coroutine_string\)", id='coroutine'),
+    pytest.param(_async_gen_string, r"param\.bind\(_async_gen_string\)", id='async_gen'),
+    pytest.param(_gen_string, r"param\.bind\(_gen_string\)", id='gen'),
+    pytest.param(
+        partial(_coroutine_concat, 'string', '!'),
+        r"param\.bind\(_coroutine_concat, \.\.\.\)", id='partial'
+    ),
+]
+
+BARE_ASYNC_FUNCTIONS = [pytest.param(p.values[0], id=p.id) for p in BARE_ASYNC_REFS]
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_FUNCTIONS)
+async def test_bare_async_ref_resolves_on_init_without_warning(fn):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        p = Parameters(string=fn)
+    await wait_for_value(p, 'string', 'string!')
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_FUNCTIONS)
+async def test_bare_async_ref_resolves_on_set_without_warning(fn):
+    p = Parameters()
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        p.string = fn
+    await wait_for_value(p, 'string', 'string!')
+
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bare_async_ref_warns_in_rx(fn, match):
+    with pytest.warns(ParamFutureWarning, match=match):
+        expr = rx(fn)
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+@pytest.mark.parametrize('fn, match', BARE_ASYNC_REFS)
+async def test_bound_async_ref_in_rx_does_not_warn(fn, match):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = rx(bind(fn))
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+@pytest.mark.parametrize('fn', BARE_ASYNC_FUNCTIONS)
+async def test_bare_async_function_on_non_ref_parameter_is_kept(fn):
+    class NoRefs(param.Parameterized):
+        value = param.Parameter()
+
+    p = NoRefs(value=fn)
+    await asyncio.sleep(0.1)
+    assert p.value is fn
+
+@pytest.mark.parametrize('resolve', [
+    pytest.param(lambda fn: rx(1).rx.pipe(lambda a, b: b, fn), id='pipe_arg'),
+    pytest.param(lambda fn: rx([1]) + [fn], id='operand'),
+    pytest.param(lambda fn: rx(True).rx.where(fn, 0), id='where'),
+    pytest.param(lambda fn: setattr(rx(1).rx, 'value', fn), id='set_value'),
+    pytest.param(lambda fn: param.reactive.collect(fn), id='collect'),
+    pytest.param(
+        lambda fn: rx(1).rx.pipe(lambda a, b: b, rx(2)).rx.overrides.args.__setitem__(1, fn),
+        id='override'
+    ),
+])
+def test_bare_async_ref_warns_in_rx_operations(resolve):
+    with pytest.warns(ParamFutureWarning, match="function itself will be passed on") as record:
+        resolve(_gen_string)
+    assert not any('param.bind' in str(w.message) for w in record)
+
+def test_bare_async_function_in_set_does_not_warn():
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = rx(1).rx.pipe(lambda a, b: b, {_gen_string})
+    assert expr.rx.value == {_gen_string}
+
+@pytest.mark.skipif(sys.version_info < (3, 14), reason='Annotations are evaluated lazily from Python 3.14')
+async def test_rx_async_function_with_unresolvable_annotation():
+    async def fetch() -> Unresolvable:  # noqa: F821
+        return 'string!'
+
+    with pytest.warns(ParamFutureWarning, match=r"param\.bind\(fetch\)"):
+        expr = rx(fetch)
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+def test_rx_operation_warns_once():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always', ParamFutureWarning)
+        source = rx(1)
+        expr = source.rx.pipe(lambda a, b: a, _gen_string)
+        source.rx.value = 2
+        assert expr.rx.value == 2
+    assert sum(issubclass(w.category, ParamFutureWarning) for w in caught) == 1
+
+async def _coroutine_echo(value):
+    return value
+
+async def _async_gen_echo(value):
+    yield value
+
+def _gen_echo(value):
+    yield value
+
+ARG_ASYNC_FUNCTIONS = [
+    pytest.param(_coroutine_echo, id='coroutine'),
+    pytest.param(_async_gen_echo, id='async_gen'),
+    pytest.param(_gen_echo, id='gen'),
+    pytest.param(partial(_coroutine_concat, 'string'), id='partial'),
+]
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+async def test_rx_keeps_async_function_requiring_args_as_value(fn):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = rx(fn)
+        await asyncio.sleep(0.05)
+        assert expr.rx.value is fn
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+@pytest.mark.parametrize('build, expected', [
+    pytest.param(lambda fn: rx(1).rx.pipe(lambda a, b: b, fn), lambda fn: fn, id='pipe_arg'),
+    pytest.param(lambda fn: rx([1]) + [fn], lambda fn: [1, fn], id='operand'),
+    pytest.param(lambda fn: rx(True).rx.where(fn, 0), lambda fn: fn, id='where'),
+])
+async def test_rx_operation_keeps_async_function_requiring_args_as_value(fn, build, expected):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = build(fn)
+        await asyncio.sleep(0.05)
+        assert expr.rx.value == expected(fn)
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+async def test_rx_value_set_keeps_async_function_requiring_args(fn):
+    expr = rx(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr.rx.value = fn
+    assert expr.rx.value is fn
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+async def test_rx_value_set_on_async_root_keeps_async_function_requiring_args(fn):
+    expr = rx(bind(_gen_string))
+    await wait_for_value(expr.rx, 'value', 'string!')
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr.rx.value = fn
+    await asyncio.sleep(0.05)
+    assert expr.rx.value is fn
+
+async def test_rx_resolves_async_function_with_only_default_args():
+    async def fetch(value='string!'):
+        return value
+
+    with pytest.warns(ParamFutureWarning, match=r"param\.bind\(fetch\)"):
+        expr = rx(fetch)
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+def test_parameter_still_calls_async_function_requiring_args():
+    with pytest.raises(TypeError, match="missing 1 required positional argument"):
+        Parameters(string=_gen_echo)
 
 async def test_async_bind_ref():
     p = Parameters()

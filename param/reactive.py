@@ -116,8 +116,9 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, _notify_weak_listeners, _register_weak_listener,
-    _watch_async_ref_settle_change, _watch_ref_change, _WeakInvalidator
+    transform_reference, _is_async_fn, _is_bare_async_ref, _notify_weak_listeners,
+    _register_weak_listener, _warn_bare_async_ref, _watch_async_ref_settle_change,
+    _watch_ref_change, _WeakInvalidator
 )
 from .parameters import Boolean, Event, String
 from ._utils import _thread_state, _to_async_gen, iscoroutinefunction, full_groupby
@@ -175,6 +176,22 @@ class GenWrapper(Parameterized):
     """Helper class to allow streaming from generator functions."""
 
     object: t.Any = Parameter(allow_refs=True)
+
+
+class _HeldValue:
+    """
+    Box for a function assigned to a ``GenWrapper`` root that rx keeps as a
+    value, so that the reference machinery does not call it.
+    """
+
+    __slots__ = ('value',)
+
+    def __init__(self, value: t.Any):
+        self.value = value
+
+
+def _unbox_held(obj: t.Any) -> t.Any:
+    return obj.value if isinstance(obj, _HeldValue) else obj
 
 
 class Trigger(Parameterized):
@@ -427,6 +444,7 @@ class InputOverrides(MutableMapping):
 
     def _set(self, key: t.Any, value: t.Any):
         """Mask a resolved ``key`` without invalidating the node."""
+        _warn_bare_async_inputs(value)
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides')
@@ -1400,7 +1418,8 @@ class reactive_ops:
 
         Both routes an asynchronous callable can take are tracked: one applied
         as an operation, e.g. passed to ``.rx.pipe``, and one passed to ``rx``
-        as the object itself, which is held on a parameter and resolved by the
+        as the object itself after declaring it a reference with
+        ``param.bind``, which is held on a parameter and resolved by the
         reference machinery. A generator settles on each value it yields, so it
         reports ``True`` only until its next value arrives rather than until it
         is exhausted. Accessed on a parameter rather than an expression this is
@@ -1860,6 +1879,7 @@ class reactive_ops:
         >>> rx_result.rx.value
         '5 or below'
         """
+        _warn_bare_async_inputs(x, y)
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
         if isinstance(self._reactive, rx):
@@ -1879,7 +1899,7 @@ class reactive_ops:
             bind(trigger_y, *yrefs, watch=True)
 
         def ternary(condition, _):
-            return resolve_value(x) if condition else resolve_value(y)
+            return _resolve_operand(x) if condition else _resolve_operand(y)
         return rx(bind(ternary, self._reactive, trigger.param.value))
 
     def distinct(self, fn=None) -> 'rx':
@@ -2064,7 +2084,12 @@ class reactive_ops:
                 "expression wrapping a Parameter or another dynamic "
                 "reference cannot be updated."
             )
-        self._reactive._wrapper.object = resolve_value(new)
+        _warn_bare_async_inputs(new)
+        wrapper = self._reactive._wrapper
+        value = _resolve_operand(new)
+        if isinstance(wrapper, GenWrapper) and _held_as_value(transform_reference(value)):
+            value = _HeldValue(value)
+        wrapper.object = value
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
         """
@@ -2590,6 +2615,7 @@ def collect(*args, error_mode='raise', **kwargs) -> 'rx':
     >>> collected.args.rx.pipe(sum).rx.value
     3
     """
+    _warn_bare_async_inputs(*args, *kwargs.values())
     operation = {
         'fn': _collect_marker,
         'args': args,
@@ -2653,8 +2679,10 @@ def _untracked_reference(value) -> bool:
         return False
     if isinstance(value, (list, tuple, dict, slice)):
         return any(_iter_rx(value)) or bool(resolve_ref(value, recursive=True))
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
+    if hasattr(value, '_dinfo'):
         return True
+    if _is_async_fn(value):
+        return not _held_as_value(value)
     return isinstance(value, Parameter) and value.name is not None
 
 
@@ -2844,10 +2872,12 @@ class rx:
             # rx._clone codepath
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
+        elif _is_async_fn(obj) and not _held_as_value(obj):
             # Resolves generator and coroutine functions lazily
+            if _is_bare_async_ref(obj):
+                _warn_bare_async_ref(obj)
             wrapper = t.cast('Callable', GenWrapper)(object=obj)
-            fn = bind(lambda obj: obj, wrapper.param.object)
+            fn = bind(_unbox_held, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             # Bound functions and methods are resolved on access
@@ -2923,7 +2953,7 @@ class rx:
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
-        if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
+        if operation and _is_async_operation(operation):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
             self._dirty = True  # Otherwise current will be stuck as Undefined.
@@ -3031,12 +3061,7 @@ class rx:
     def _is_async(self) -> bool:
         if not self._operation:
             return False
-        fn = self._operation["fn"]
-        return (
-            inspect.iscoroutinefunction(fn) or
-            inspect.isasyncgenfunction(fn) or
-            inspect.isgeneratorfunction(fn)
-        )
+        return _is_async_operation(self._operation)
 
     @property
     def _awaiting(self) -> bool:
@@ -3056,10 +3081,11 @@ class rx:
         Whether an asynchronous reference feeding this node has not yet
         produced a value for the current inputs.
 
-        A coroutine or generator function passed to ``rx`` as the object rather
-        than as an operation is held on a parameter and resolved by the
-        reference machinery, so its settlement is tracked there instead of by
-        this node's own generations.
+        A coroutine or generator function declared a reference with
+        ``param.bind`` and passed to ``rx`` as the object rather than as an
+        operation is held on a parameter and resolved by the reference
+        machinery, so its settlement is tracked there instead of by this
+        node's own generations.
         """
         for p in self._internal_params:
             owner, name = p.owner, p.name
@@ -3884,6 +3910,8 @@ class rx:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
         kwargs = t.cast('dict[str, t.Any]', dict(self._display_opts, **kwargs))
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
+        if not reuse and operation is not None:
+            _warn_bare_async_inputs(*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
         if not reuse and error_mode == 'raise' and operation is not None:
             inputs = (*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
             if any(isinstance(arg, rx) and arg._error_mode == 'propagate' for arg in inputs):
@@ -3996,6 +4024,11 @@ class rx:
         if method in rx._method_handlers:
             handler = rx._method_handlers[method]
             method = handler(self)
+            callee = None
+        elif new._method:
+            callee = getattr(new._current_, new._method, None)
+        else:
+            callee = new._current_
         new._method = None
         kwargs = dict(kwargs)
         operation = {
@@ -4005,6 +4038,8 @@ class rx:
             'reverse': False,
             'process_failures': self._process_failures,
         }
+        if _is_async_fn(callee):
+            operation['async'] = True
         return new._clone(operation)
 
     #----------------------------------------------------------------
@@ -4199,7 +4234,7 @@ class rx:
             return value
         if any(ref._settling for ref in _iter_rx(arg)):
             raise Skip
-        val = resolve_value(arg)
+        val = _resolve_operand(arg)
         if val is Skip or val is Undefined:
             raise Skip
         return val
@@ -4355,6 +4390,79 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
     elif isinstance(value, slice):
         for v in (value.start, value.stop, value.step):
             yield from _iter_rx(v)
+
+
+if sys.version_info >= (3, 14):
+    import annotationlib
+
+    # Annotations are irrelevant here and evaluating them can raise, e.g. on
+    # names only imported under TYPE_CHECKING.
+    _signature = partial(inspect.signature, annotation_format=annotationlib.Format.FORWARDREF)
+else:
+    _signature = inspect.signature
+
+
+def _is_async_operation(operation: dict[str, t.Any]) -> bool:
+    """
+    Whether an operation produces an awaitable or (async) generator, either
+    because its fn is async or because it calls an async function.
+    """
+    return operation.get('async', False) or _is_async_fn(operation['fn'])
+
+
+def _held_as_value(fn: t.Any) -> bool:
+    """
+    Whether rx keeps a bare coroutine or generator function as a value,
+    because it cannot be called without arguments to resolve it.
+    """
+    if hasattr(fn, '_dinfo') or not _is_async_fn(fn):
+        return False
+    try:
+        sig = _signature(fn)
+    except (TypeError, ValueError):
+        return False
+    return any(
+        p.default is p.empty and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
+        for p in sig.parameters.values()
+    )
+
+
+def _resolve_operand(value: t.Any) -> t.Any:
+    """
+    ``resolve_value`` for rx inputs, keeping functions that require
+    arguments as values instead of calling them.
+    """
+    if isinstance(value, (list, tuple)):
+        return type(value)(_resolve_operand(v) for v in value)
+    elif isinstance(value, dict):
+        return type(value)((_resolve_operand(k), _resolve_operand(v)) for k, v in value.items())
+    elif isinstance(value, slice):
+        return slice(
+            _resolve_operand(value.start),
+            _resolve_operand(value.stop),
+            _resolve_operand(value.step)
+        )
+    if _held_as_value(transform_reference(value)):
+        return value
+    return resolve_value(value, recursive=False)
+
+
+def _warn_bare_async_inputs(*values: t.Any) -> None:
+    """
+    Warn about bare coroutine and generator functions an rx operation would
+    call, descending into the containers ``resolve_value`` descends into.
+    """
+    for value in values:
+        if isinstance(value, rx):
+            continue
+        elif isinstance(value, (list, tuple)):
+            _warn_bare_async_inputs(*value)
+        elif isinstance(value, dict):
+            _warn_bare_async_inputs(*value.keys(), *value.values())
+        elif isinstance(value, slice):
+            _warn_bare_async_inputs(value.start, value.stop, value.step)
+        elif _is_bare_async_ref(value := transform_reference(value)) and not _held_as_value(value):
+            _warn_bare_async_ref(value, operand=True)
 
 
 def _iter_bare_params(value: t.Any) -> Iterator[Parameter]:

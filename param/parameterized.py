@@ -335,14 +335,59 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    is_gen = inspect.isgeneratorfunction(value)
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or is_gen:
+    if hasattr(value, '_dinfo') or _is_async_fn(value):
+        is_gen = inspect.isgeneratorfunction(value)
         value = eval_function_with_deps(value)
         if is_gen:
             value = _to_async_gen(value)
     elif isinstance(value, Parameter) and value.name is not None:
         value = getattr(value.owner, value.name)
     return value
+
+def _is_async_fn(value: t.Any) -> bool:
+    """Whether value is a coroutine or generator function."""
+    return iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
+
+def _is_bare_async_ref(value: t.Any) -> bool:
+    """
+    Whether value is a coroutine or generator function that has not been
+    declared a reference with ``bind`` or ``depends``.
+    """
+    return not hasattr(value, '_dinfo') and _is_async_fn(value)
+
+def _warn_bare_async_ref(value: t.Any, operand: bool = False) -> None:
+    """
+    Warn that rx will stop calling the bare coroutine or generator function
+    ``value``. ``operand`` marks an input to an rx operation, which is called
+    but whose result is never awaited or iterated.
+    """
+    if inspect.isasyncgenfunction(value):
+        kind = 'async generator'
+    elif inspect.isgeneratorfunction(value):
+        kind = 'generator'
+    else:
+        kind = 'coroutine'
+    func = value
+    while isinstance(func, partial):
+        func = func.func
+    name = getattr(func, '__name__', repr(func))
+    if operand:
+        result = 'coroutine' if kind == 'coroutine' else 'async generator'
+        message = (
+            f"Passing the {kind} function {name!r} as an input to a reactive "
+            f"operation is deprecated. It is currently called and the resulting "
+            f"{result} is passed on without being awaited or iterated; in a "
+            "future version the function itself will be passed on."
+        )
+    else:
+        bound = f"param.bind({name}, ...)" if func is not value else f"param.bind({name})"
+        message = (
+            f"Passing the {kind} function {name!r} to a reactive expression is "
+            "deprecated. In a future version rx will treat it like any other "
+            "function, i.e. keep it as a value instead of calling and resolving "
+            f"it. Wrap it with {bound} to keep resolving it."
+        )
+    warnings.warn(message, category=_ParamFutureWarning, stacklevel=_find_stack_level())
 
 def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
     """Resolve all parameters a dynamic reference depends on."""
@@ -2975,7 +3020,7 @@ class Parameters:
                 # speculatively evaluate values to check whether they
                 # contain a reference and warn the user that the
                 # behavior may change in future.
-                if name not in self_.cls._param__private.explicit_no_refs:
+                if name not in self_.cls._param__private.explicit_no_refs and not _is_bare_async_ref(val):
                     resolved = val
                     try:
                         ref, _, resolved, _, _ = self_._resolve_ref(pobj, val)
@@ -3050,8 +3095,7 @@ class Parameters:
             # Skip updating value if dependency has not changed
             recursive = self_[pname].nested_refs
             deps = resolve_ref(ref, recursive)
-            is_gen = inspect.isgeneratorfunction(ref)
-            is_async = iscoroutinefunction(ref) or is_gen
+            is_async = _is_async_fn(ref)
             if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
                 continue
 
@@ -3080,10 +3124,9 @@ class Parameters:
                 _notify_async_ref_settle_change(self_.self, pname)
 
     def _resolve_ref(self_, pobj: Parameter, value: t.Any):
-        is_gen = inspect.isgeneratorfunction(value)
-        is_async = iscoroutinefunction(value) or is_gen
+        is_async = _is_async_fn(value)
         deps = resolve_ref(value, recursive=pobj.nested_refs)
-        if not (deps or is_async or is_gen):
+        if not (deps or is_async):
             return None, None, value, False, False
         ref = value
         try:
@@ -3140,8 +3183,7 @@ class Parameters:
             return False
         private = self_.self._param__private
         ref = private.refs.get(pname)
-        is_async = iscoroutinefunction(ref) or inspect.isgeneratorfunction(ref)
-        return is_async and private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
+        return _is_async_fn(ref) and private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
 
     async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any], generation: int = 0):
         if self_.self is None:

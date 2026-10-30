@@ -100,6 +100,7 @@ from .parameters import (
     Event,
 )
 from .reactive import ReactiveError, bind, collect, current_node, rx
+from .typed import Field, Model
 from ._utils import (
     descendents,
     concrete_descendents,
@@ -173,6 +174,7 @@ __all__ = (
     'ERROR',
     'ReactiveError',
     'Event',
+    'Field',
     'FileSelector',
     'Filename',
     'Foldername',
@@ -184,6 +186,7 @@ __all__ = (
     'ListProxy',
     'ListSelector',
     'Magnitude',
+    'Model',
     'MultiFileSelector',
     'Number',
     'NumericTuple',

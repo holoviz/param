@@ -4039,8 +4039,6 @@ class rx:
             'process_failures': self._process_failures,
         }
         if _is_async_fn(callee):
-            # The callee is only known when the call is created, so its
-            # result is awaited only if it was async at that point.
             operation['async'] = True
         return new._clone(operation)
 

@@ -488,7 +488,9 @@ def batch_call_watchers(parameterized):
 
     This context manager queues any events triggered by setting a parameter value
     on the supplied :class:`Parameterized` object, saving them up to dispatch
-    them all at once when the context manager exits.
+    them all at once when the context manager exits. Only notifications are
+    deferred: an ``rx`` expression read inside the block already reflects the
+    writes made so far.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
@@ -781,7 +783,9 @@ def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None
     on the supplied :class:`Parameterized` object during its scope are discarded.
     This allows for silent changes to dependent parameters, making it useful
     for initialization or setup phases where changes should not propagate
-    to watchers or dependencies.
+    to watchers or dependencies. Only notifications are discarded: an ``rx``
+    expression depending on a changed parameter still reflects the new value
+    the next time it is read.
 
     Be cautious when using this context manager, as it bypasses the normal
     dependency mechanism. Manual changes made within this context may

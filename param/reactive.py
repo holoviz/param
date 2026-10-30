@@ -3451,15 +3451,13 @@ class rx:
             self._override_channel = Trigger(internal=True)
         return self._override_channel
 
-    def _invalidate_overrides(self, *events):
+    def _override_dependents(self) -> tuple[list[rx], list[rx]]:
         """
-        Invalidate this node and its readers after one of its overrides changed.
+        Return the nodes an override change on this node affects.
 
-        An override is not a parameter, so ``_setup_invalidations`` does not cover
-        it: dirty this node and everything reading its result, drop their cached
-        ``_live_params()`` (masking a different set of inputs now), then notify
-        the consumers watching their override channels. Nodes reading the same
-        *inputs* without reading this node's result are deliberately left alone.
+        The seeds are this node and its shared node, if any; the second list
+        adds everything reading their result. Nodes reading the same *inputs*
+        without reading this node's result are deliberately left out.
         """
         nodes = []
         seen = set()
@@ -3475,10 +3473,24 @@ class rx:
                 reader = ref()
                 if reader is not None:
                     queue.append(reader)
-        for node in nodes:
+        return seeds, nodes
+
+    def _dirty_overrides(self, *events):
+        """
+        Dirty this node and its readers after one of its overrides changed.
+
+        An override is not a parameter, so ``_setup_invalidations`` does not
+        cover it. Their cached ``_live_params()`` is dropped too, since they
+        now mask a different set of inputs.
+        """
+        for node in self._override_dependents()[1]:
             node._dirty = True
             node._error_state = None
             node._live_params_cache = None
+
+    def _notify_overrides(self, *events):
+        """Notify the consumers watching the override channels of this node and its readers."""
+        seeds, nodes = self._override_dependents()
         for node in seeds:
             node._notify_graph_change()
         for node in nodes:
@@ -3486,12 +3498,21 @@ class rx:
             if channel is not None:
                 channel.param.trigger('value')
 
+    def _invalidate_overrides(self, *events):
+        """Invalidate this node and its readers, then notify their consumers."""
+        self._dirty_overrides()
+        self._notify_overrides()
+
     def _watch_override(self, refs) -> list[weakref.finalize]:
         """
         Watch the references an override is set to.
 
         They cannot join the node's parameters, which are fixed when it is
-        constructed, so they are routed to ``_invalidate_overrides`` instead.
+        constructed, so they are watched separately. Dirtying happens at write
+        time, but notifying the consumers is an ordinary watcher, so it is
+        deferred by any batch on the reference's owner: otherwise
+        ``.param.update()`` would let a consumer on another object see the new
+        override value combined with the old value of an input not yet flushed.
         The finalizers are returned so unmasking or replacing the override can
         fire and drop them right away, instead of leaving them to accumulate in
         ``_finalizers`` until this node is disposed of.
@@ -3501,10 +3522,10 @@ class rx:
             owner = params[0].owner
             if owner is None:
                 continue
-            _, finalizer = self._watch_invalidation(
-                owner, self._invalidate_overrides, [p.name for p in params], unbatched=True
-            )
-            finalizers.append(finalizer)
+            names = [p.name for p in params]
+            for method, unbatched in ((self._dirty_overrides, True), (self._notify_overrides, False)):
+                _, finalizer = self._watch_invalidation(owner, method, names, unbatched=unbatched)
+                finalizers.append(finalizer)
         return finalizers
 
     def _watch_settle_change(self, callback: Callable[[t.Any], None]) -> None:

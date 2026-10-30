@@ -114,7 +114,7 @@ from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
     transform_reference, _notify_weak_listeners, _register_weak_listener,
-    _watch_async_ref_settle_change, _watch_ref_change
+    _watch_async_ref_settle_change, _watch_ref_change, _WeakInvalidator
 )
 from .parameters import Boolean, Event, String
 from ._utils import _thread_state, _to_async_gen, iscoroutinefunction, full_groupby
@@ -2430,38 +2430,6 @@ def bind(
         setattr(wrapped, name, t.cast('Callable', accessor)(wrapped))
     return wrapped
 
-class _WeakInvalidator:
-    """
-    A weakly-bound invalidation callback for an ``rx`` pipeline node.
-
-    ``rx`` nodes register invalidation callbacks on their *source* parameters.
-    If those callbacks were strong bound-method references the source (which is
-    typically long-lived) would keep every derived node — and anything it
-    captured, such as large arrays — alive indefinitely. Wrapping the bound
-    method in a :class:`weakref.WeakMethod` lets the derived node be garbage
-    collected as soon as nothing else references it; once collected the call
-    becomes a no-op and the now-dead watcher is removed by a finalizer (see
-    ``rx._watch_invalidation``).
-    """
-
-    __slots__ = ('_ref', '_watcher', '_unbatched', '__weakref__')
-
-    _watcher: Watcher | None
-
-    def __init__(self, method, unbatched: bool = False):
-        self._ref = weakref.WeakMethod(method)
-        self._watcher = None
-        # Marking a node dirty is bookkeeping rather than a notification, so it
-        # must not wait for a batch: a read inside it, or a reference resolved
-        # while flushing it, would otherwise answer the value from before the write.
-        self._unbatched = unbatched
-
-    def __call__(self, *events):
-        method = self._ref()
-        if method is not None:
-            return method(*events)
-
-
 def _remove_watcher(
     owner_ref: weakref.ref[Parameterized | type[Parameterized]],
     invalidator_ref: weakref.ref[_WeakInvalidator],
@@ -3479,7 +3447,7 @@ class rx:
             if owner is None:
                 continue
             _, finalizer = self._watch_invalidation(
-                owner, self._invalidate_overrides, [p.name for p in params]
+                owner, self._invalidate_overrides, [p.name for p in params], unbatched=True
             )
             finalizers.append(finalizer)
         return finalizers

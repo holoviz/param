@@ -232,6 +232,38 @@ def _notify_weak_listeners(store: set | None, *args: t.Any) -> None:
         if callback is not None:
             callback(*args)
 
+class _WeakInvalidator:
+    """
+    A weakly-bound invalidation callback for an ``rx`` pipeline node.
+
+    ``rx`` nodes register invalidation callbacks on their *source* parameters.
+    If those callbacks were strong bound-method references the source (which is
+    typically long-lived) would keep every derived node — and anything it
+    captured, such as large arrays — alive indefinitely. Wrapping the bound
+    method in a :class:`weakref.WeakMethod` lets the derived node be garbage
+    collected as soon as nothing else references it; once collected the call
+    becomes a no-op and the now-dead watcher is removed by a finalizer (see
+    ``rx._watch_invalidation``). Defined here rather than in ``reactive`` so
+    ``_call_watcher`` can recognize an unbatched invalidator without an import.
+    """
+
+    __slots__ = ('_ref', '_watcher', '_unbatched', '__weakref__')
+
+    _watcher: Watcher | None
+
+    def __init__(self, method, unbatched: bool = False):
+        self._ref = weakref.WeakMethod(method)
+        self._watcher = None
+        # Marking a node dirty is bookkeeping, not a notification; deferring it
+        # would let a read inside a batch, or a reference resolved while
+        # flushing one, see the value from before the write.
+        self._unbatched = unbatched
+
+    def __call__(self, *events):
+        method = self._ref()
+        if method is not None:
+            return method(*events)
+
 def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """Notify ``callback`` when a reference is replaced without a value change."""
     private = owner._param__private
@@ -612,7 +644,9 @@ def batch() -> Generator[None, None, None]:
     ``onlychanged``, say) is left uncoalesced rather than guessing which
     should win. Nesting is safe: only the outermost block flushes, and
     it composes with ``batch_call_watchers``/``.param.update()``/
-    ``discard_events`` used inside it. If more than one watcher raises
+    ``discard_events`` used inside it. Only notifications are deferred:
+    an ``rx`` expression read inside the block already reflects the
+    writes made so far. If more than one watcher raises
     while flushing, the rest still run and the first exception is
     re-raised once the block has finished; if the block itself already
     raised, a later error while flushing is a warning instead.
@@ -3718,7 +3752,8 @@ class Parameters:
         elif watcher.onlychanged and (not self_._changed(event)):
             return
 
-        if not getattr(watcher.fn, '_unbatched', False) and _is_batched(self_.self_or_cls):
+        fn = watcher.fn
+        if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_.self_or_cls):
             self_._events.append(event)
             if not any(watcher is w for w in self_._state_watchers):
                 self_._state_watchers.append(watcher)

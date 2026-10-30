@@ -6627,6 +6627,25 @@ class TestSkipSiblingArguments:
 
         assert out.rx.value == 21
 
+    def test_when_sibling_remains_live_after_a_skip(self):
+        def skip_if_negative(value):
+            if value < 0:
+                raise Skip
+            return value
+
+        source, gate, sibling = rx(1), rx(True), rx(10)
+        skipped = source.rx.pipe(skip_if_negative).rx.when(gate)
+        out = rx(lambda a, b: a + b)(skipped, sibling)
+        assert out.rx.value == 11
+
+        source.rx.value = -1
+        sibling.rx.value = 20
+
+        assert out.rx.value == 21
+
+
+class TestBatch:
+
     def test_batch_references_follow_every_written_cell(self):
         class Follower(param.Parameterized):
             out_a = param.Parameter(allow_refs=True)
@@ -6666,18 +6685,62 @@ class TestSkipSiblingArguments:
             assert calls == []
         assert calls == [10]
 
-    def test_when_sibling_remains_live_after_a_skip(self):
-        def skip_if_negative(value):
-            if value < 0:
-                raise Skip
-            return value
+    def test_batch_read_answers_the_latest_write_to_an_operand(self):
+        x, y = rx(1), rx(10)
+        total = x + y
+        assert total.rx.value == 11
 
-        source, gate, sibling = rx(1), rx(True), rx(10)
-        skipped = source.rx.pipe(skip_if_negative).rx.when(gate)
-        out = rx(lambda a, b: a + b)(skipped, sibling)
-        assert out.rx.value == 11
+        with batch():
+            y.rx.value = 20
+            assert total.rx.value == 21
 
-        source.rx.value = -1
-        sibling.rx.value = 20
+    def test_batch_read_answers_the_latest_write_to_a_parameter(self):
+        class P(param.Parameterized):
+            v = param.Number(default=1)
 
-        assert out.rx.value == 21
+        p = P()
+        expr = rx(1) * p.param.v
+        assert expr.rx.value == 1
+
+        with batch():
+            p.v = 3
+            assert expr.rx.value == 3
+
+    def test_batch_read_answers_the_latest_write_to_an_override(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        assert expr.rx.value == 10
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+        assert expr.rx.value == 20
+
+    def test_batch_still_defers_override_watchers(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        calls = []
+        expr.rx.watch(calls.append)
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+            assert calls == []
+        assert calls == [20]
+
+    def test_discard_events_still_invalidates(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        doubled = p.param.x.rx() * 2
+        calls = []
+        doubled.rx.watch(calls.append)
+        assert doubled.rx.value == 2
+
+        with param.discard_events(p):
+            p.x = 7
+        assert doubled.rx.value == 14
+        assert calls == []

@@ -348,6 +348,63 @@ def test_rx_operation_warns_once():
         assert expr.rx.value == 2
     assert sum(issubclass(w.category, ParamFutureWarning) for w in caught) == 1
 
+async def _coroutine_echo(value):
+    return value
+
+async def _async_gen_echo(value):
+    yield value
+
+def _gen_echo(value):
+    yield value
+
+ARG_ASYNC_FUNCTIONS = [
+    pytest.param(_coroutine_echo, id='coroutine'),
+    pytest.param(_async_gen_echo, id='async_gen'),
+    pytest.param(_gen_echo, id='gen'),
+    pytest.param(partial(_coroutine_concat, 'string'), id='partial'),
+]
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+async def test_rx_keeps_async_function_requiring_args_as_value(fn):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = rx(fn)
+        await asyncio.sleep(0.05)
+        assert expr.rx.value is fn
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+@pytest.mark.parametrize('build, expected', [
+    pytest.param(lambda fn: rx(1).rx.pipe(lambda a, b: b, fn), lambda fn: fn, id='pipe_arg'),
+    pytest.param(lambda fn: rx([1]) + [fn], lambda fn: [1, fn], id='operand'),
+    pytest.param(lambda fn: rx(True).rx.where(fn, 0), lambda fn: fn, id='where'),
+])
+async def test_rx_operation_keeps_async_function_requiring_args_as_value(fn, build, expected):
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr = build(fn)
+        await asyncio.sleep(0.05)
+        assert expr.rx.value == expected(fn)
+
+@pytest.mark.parametrize('fn', ARG_ASYNC_FUNCTIONS)
+async def test_rx_value_set_keeps_async_function_requiring_args(fn):
+    expr = rx(1)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', ParamFutureWarning)
+        expr.rx.value = fn
+    assert expr.rx.value is fn
+
+async def test_rx_resolves_async_function_with_only_default_args():
+    async def fetch(value='string!'):
+        return value
+
+    with pytest.warns(ParamFutureWarning, match=r"param\.bind\(fetch\)"):
+        expr = rx(fetch)
+    await wait_for_value(expr.rx, 'value', 'string!')
+
+def test_parameter_still_calls_async_function_requiring_args():
+    with pytest.raises(TypeError, match="missing 1 required positional argument"):
+        Parameters(string=_gen_echo)
+
 async def test_async_bind_ref():
     p = Parameters()
 

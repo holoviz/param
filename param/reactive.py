@@ -1826,7 +1826,7 @@ class reactive_ops:
             bind(trigger_y, *yrefs, watch=True)
 
         def ternary(condition, _):
-            return resolve_value(x) if condition else resolve_value(y)
+            return _resolve_operand(x) if condition else _resolve_operand(y)
         return rx(bind(ternary, self._reactive, trigger.param.value))
 
     def distinct(self, fn=None) -> 'rx':
@@ -2012,7 +2012,7 @@ class reactive_ops:
                 "reference cannot be updated."
             )
         _warn_bare_async_inputs(new)
-        self._reactive._wrapper.object = resolve_value(new)
+        self._reactive._wrapper.object = _resolve_operand(new)
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
         """
@@ -2630,8 +2630,10 @@ def _untracked_reference(value) -> bool:
         return False
     if isinstance(value, (list, tuple, dict, slice)):
         return any(_iter_rx(value)) or bool(resolve_ref(value, recursive=True))
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
+    if hasattr(value, '_dinfo'):
         return True
+    if iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
+        return not _held_as_value(value)
     return isinstance(value, Parameter) and value.name is not None
 
 
@@ -2819,7 +2821,7 @@ class rx:
             # rx._clone codepath
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
+        elif (inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj)) and not _held_as_value(obj):
             # Resolves generator and coroutine functions lazily
             if _is_bare_async_ref(obj):
                 _warn_bare_async_ref(obj)
@@ -4121,7 +4123,7 @@ class rx:
             return value
         if any(ref._settling for ref in _iter_rx(arg)):
             raise Skip
-        val = resolve_value(arg)
+        val = _resolve_operand(arg)
         if val is Skip or val is Undefined:
             raise Skip
         return val
@@ -4279,6 +4281,43 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
             yield from _iter_rx(v)
 
 
+def _held_as_value(fn: t.Any) -> bool:
+    """
+    Whether rx keeps a bare coroutine or generator function as a value,
+    because it cannot be called without arguments to resolve it.
+    """
+    if hasattr(fn, '_dinfo') or not (iscoroutinefunction(fn) or inspect.isgeneratorfunction(fn)):
+        return False
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return False
+    return any(
+        p.default is p.empty and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
+        for p in sig.parameters.values()
+    )
+
+
+def _resolve_operand(value: t.Any) -> t.Any:
+    """
+    ``resolve_value`` for rx inputs, keeping functions that require
+    arguments as values instead of calling them.
+    """
+    if isinstance(value, (list, tuple)):
+        return type(value)(_resolve_operand(v) for v in value)
+    elif isinstance(value, dict):
+        return type(value)((_resolve_operand(k), _resolve_operand(v)) for k, v in value.items())
+    elif isinstance(value, slice):
+        return slice(
+            _resolve_operand(value.start),
+            _resolve_operand(value.stop),
+            _resolve_operand(value.step)
+        )
+    if _held_as_value(transform_reference(value)):
+        return value
+    return resolve_value(value, recursive=False)
+
+
 def _warn_bare_async_inputs(*values: t.Any) -> None:
     """
     Warn about bare coroutine and generator functions an rx operation would
@@ -4293,7 +4332,7 @@ def _warn_bare_async_inputs(*values: t.Any) -> None:
             _warn_bare_async_inputs(*value.keys(), *value.values())
         elif isinstance(value, slice):
             _warn_bare_async_inputs(value.start, value.stop, value.step)
-        elif _is_bare_async_ref(value := transform_reference(value)):
+        elif _is_bare_async_ref(value := transform_reference(value)) and not _held_as_value(value):
             _warn_bare_async_ref(value)
 
 

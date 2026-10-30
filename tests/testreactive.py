@@ -1,9 +1,11 @@
 import asyncio
 import contextlib
+import functools
 import gc
 import math
 import operator
 import re
+import sys
 import time
 import weakref
 
@@ -3293,6 +3295,78 @@ class TestAsyncNotificationSemantics:
         assert items == [12]
         await async_wait_until(lambda: items == [12, 14])
 
+    async def test_reactive_async_downstream_watchers_hear_landing_started_upstream(self):
+        irx = rx(1)
+        async_rx = irx.rx.pipe(mul_slowly)
+        child = async_rx + 10
+        grandchild = child.rx.pipe(lambda v: v * 10)
+        distinct = async_rx.rx.distinct()
+        direct, children, grandchildren, distincts = [], [], [], []
+        async_rx.rx.watch(direct.append, onlychanged=False)
+        child.rx.watch(children.append, onlychanged=False)
+        grandchild.rx.watch(grandchildren.append, onlychanged=False)
+        distinct.rx.watch(distincts.append, onlychanged=False)
+
+        assert async_rx.rx.value is param.Undefined
+        await async_wait_until(lambda: grandchildren == [120])
+        assert direct == [2]
+        assert children == [12]
+        assert distincts == [2]
+
+        irx.rx.value = 2
+        await async_wait_until(lambda: grandchildren == [120, 140])
+        await asyncio.sleep(0.05)
+        assert direct == [2, 4]
+        assert children == [12, 14]
+        assert grandchildren == [120, 140]
+        assert distincts == [2, 4]
+
+    async def test_reactive_async_copy_waiting_on_first_landing_not_woken_again(self):
+        async_rx = rx(1).rx.pipe(mul_slowly)
+        child = async_rx + 10
+        items = []
+        child.rx.watch(items.append, onlychanged=False)
+        assert child.rx.value is param.Undefined
+
+        copy = child._prev
+        resolves = []
+        resolve = copy._lazy_resolve
+        copy._lazy_resolve = lambda *args: (resolves.append(args), resolve(*args))[1]
+
+        await async_wait_until(lambda: items == [12])
+        await asyncio.sleep(0.05)
+        assert resolves == []
+        assert items == [12]
+
+    async def test_reactive_async_disposed_child_copy_not_woken(self):
+        async_rx = rx(1).rx.pipe(mul_slowly)
+        async_rx.rx.watch(lambda v: None)
+        child = async_rx + 1
+        copy = child._prev
+        resolves = []
+        resolve = copy._lazy_resolve
+        copy._lazy_resolve = lambda *args: (resolves.append(args), resolve(*args))[1]
+        child.rx.dispose()
+
+        assert async_rx.rx.value is param.Undefined
+        await asyncio.sleep(0.05)
+        assert resolves == []
+
+    async def test_reactive_async_downstream_hears_failed_landing_started_upstream(self):
+        async def fail_slowly(value):
+            await asyncio.sleep(0.02)
+            raise ValueError("boom")
+
+        async_rx = rx(1, error_mode='propagate').rx.pipe(fail_slowly)
+        child = async_rx.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        items = []
+        child.rx.watch(items.append, process_failures=True)
+
+        assert async_rx.rx.value is param.Undefined
+        await async_wait_until(lambda: len(items) == 1)
+        assert items[0][0] == 'saw'
+        assert isinstance(items[0][1], param.ReactiveError)
+
     async def test_reactive_async_downstream_not_computed_while_awaiting(self):
         computed = []
         def add(value):
@@ -4740,12 +4814,171 @@ class TestOverrides:
 
     def test_reactive_overrides_rejects_unknown_input(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, 5, factor=rx(2))
-        with pytest.raises(KeyError, match="positional indices 0-1 and keywords 'factor'"):
+        with pytest.raises(KeyError, match=r"positional indices 0-1 \('value' is 0\) and keywords 'factor'"):
             n.rx.overrides['unknown'] = 1
         with pytest.raises(KeyError, match="not an input of this node"):
             n.rx.overrides[2] = 1
         with pytest.raises(KeyError):
             n.rx.overrides['factor']
+
+    def test_reactive_overrides_positional_input_by_name(self):
+        def price(cell, fx, qty=1):
+            return cell * fx * qty
+
+        n = rx(10).rx.pipe(price, rx(2), qty=rx(3))
+        assert list(n.rx.inputs()) == [0, 1, 'qty']
+        n.rx.overrides['cell'] = 1
+        n.rx.overrides['fx'] = 5
+        assert n.rx.value == 15
+        assert dict(n.rx.overrides) == {0: 1, 1: 5}
+        assert 'cell' in n.rx.overrides
+        assert n.rx.overrides['fx'] == 5
+
+        n.rx.overrides[0] = 2
+        assert n.rx.overrides['cell'] == 2
+        del n.rx.overrides['cell']
+        del n.rx.overrides[1]
+        assert n.rx.value == 60
+        assert dict(n.rx.overrides) == {}
+
+    def test_reactive_overrides_no_name_for_call_input(self):
+        n = rx(lambda cell, fx: cell * fx)(rx(10), rx(2))
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
+
+    def test_reactive_overrides_kwargs_view_rejects_positional_name(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        with pytest.raises(KeyError, match=r"'cell' names positional input 0; use overrides\['cell'\] or overrides.args\[0\]"):
+            n.rx.overrides.kwargs['cell'] = 1
+        with pytest.raises(KeyError, match="'fx' names positional input 1"):
+            n.rx.overrides.kwargs = {'fx': 1}
+        assert dict(n.rx.overrides) == {}
+
+    @pytest.mark.skipif(sys.version_info < (3, 14), reason="Annotations are evaluated lazily from 3.14")
+    def test_reactive_overrides_unresolvable_annotation(self):
+        def scale(cell: Undefined, fx: int):  # noqa: F821
+            return cell * fx
+
+        n = rx(10).rx.pipe(scale, 2)
+        assert n.rx.value == 20
+        n.rx.overrides['fx'] = 3
+        assert n.rx.value == 30
+        assert n.rx.overrides['fx'] == 3
+
+    def test_reactive_overrides_unreadable_signature(self):
+        class Scale:
+            @property
+            def __signature__(self):
+                raise RuntimeError
+
+            def __call__(self, cell, fx):
+                return cell * fx
+
+        n = rx(10).rx.pipe(Scale(), 2)
+        assert n.rx.value == 20
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
+
+    def test_reactive_overrides_no_name_for_positional_only_or_var_positional(self):
+        def positional_only(cell, /, fx):
+            return cell * fx
+
+        def var_positional(cell, *rest):
+            return cell * sum(rest)
+
+        n = rx(10).rx.pipe(positional_only, rx(2))
+        n.rx.overrides['fx'] = 3
+        assert n.rx.value == 30
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['cell'] = 1
+
+        n = rx(10).rx.pipe(var_positional, rx(2))
+        n.rx.overrides['cell'] = 1
+        assert n.rx.value == 2
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['rest'] = 1
+
+    def test_reactive_overrides_no_name_for_operator_or_method(self):
+        with pytest.raises(KeyError, match="not an input of this node"):
+            (rx(1) + rx(2)).rx.overrides['a'] = 1
+        with pytest.raises(KeyError, match="not an input of this node"):
+            rx('abc').replace('a', 'b').rx.overrides['old'] = 'c'
+
+    def test_reactive_overrides_no_name_for_internal_wrapper(self):
+        r = round(rx(1.2345), 2)
+        with pytest.raises(KeyError, match="not an input of this node"):
+            r.rx.overrides['ndigits'] = 1
+
+        m = rx([1, 2]).rx.map(lambda x, off: x + off, rx(10))
+        for name in ('vs', 'off'):
+            with pytest.raises(KeyError, match="not an input of this node"):
+                m.rx.overrides[name] = 0
+
+        d = rx(1).rx.distinct()
+        with pytest.raises(KeyError, match="not an input of this node"):
+            d.rx.overrides['new'] = 5
+
+        b = rx(1).rx.buffer(2)
+        with pytest.raises(KeyError, match="not an input of this node"):
+            b.rx.overrides['n'] = 3
+
+        for expr in (rx(1).rx.and_(rx(2)), rx(0).rx.or_(rx(2))):
+            for name in ('obj', 'other'):
+                with pytest.raises(KeyError, match="not an input of this node"):
+                    expr.rx.overrides[name] = 0
+
+    def test_reactive_overrides_key_error_lists_names(self):
+        def price(cell, fx, qty=1):
+            return cell * fx * qty
+
+        n = rx(10).rx.pipe(price, rx(2), qty=rx(3))
+        with pytest.raises(KeyError, match=r"0-1 \('cell' is 0, 'fx' is 1\) and keywords 'qty'"):
+            n.rx.overrides['nope'] = 1
+
+    def test_reactive_overrides_name_and_index_for_same_input(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        n.rx.overrides.update({'cell': 1, 0: 2})
+        assert dict(n.rx.overrides) == {0: 2}
+        assert n.rx.value == 4
+
+    def test_reactive_overrides_name_for_partial_and_bound_method(self):
+        def price(rate, cell, fx):
+            return rate * cell * fx
+
+        n = rx(10).rx.pipe(functools.partial(price, 2), rx(3))
+        n.rx.overrides['fx'] = 5
+        assert dict(n.rx.overrides) == {1: 5}
+        assert n.rx.value == 100
+
+        class Pricer:
+            def price(self, cell, fx):
+                return cell * fx
+
+        n = rx(10).rx.pipe(Pricer().price, rx(3))
+        n.rx.overrides['cell'] = 2
+        assert dict(n.rx.overrides) == {0: 2}
+        assert n.rx.value == 6
+
+    def test_reactive_overrides_name_with_kwargs_absorbed_keyword(self):
+        def price(cell, fx, **extra):
+            return cell * fx + sum(extra.values())
+
+        n = rx(10).rx.pipe(price, rx(2), bonus=rx(1))
+        n.rx.overrides['bonus'] = 5
+        n.rx.overrides['fx'] = 3
+        assert dict(n.rx.overrides) == {'bonus': 5, 1: 3}
+        assert n.rx.value == 35
+
+    def test_reactive_overrides_mapping_helpers_accept_name(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        assert n.rx.overrides.get('cell') is None
+        assert n.rx.overrides.setdefault('cell', 3) == 3
+        assert n.rx.overrides.setdefault('cell', 4) == 3
+        assert n.rx.overrides.get('cell') == 3
+        assert n.rx.value == 6
+        assert n.rx.overrides.pop('cell') == 3
+        assert dict(n.rx.overrides) == {}
+        assert n.rx.value == 20
 
     def test_reactive_overrides_rejects_unsupported_key(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
@@ -6570,3 +6803,176 @@ class TestSkipSiblingArguments:
         sibling.rx.value = 20
 
         assert out.rx.value == 21
+
+
+class TestBatch:
+
+    def test_batch_references_follow_every_written_cell(self):
+        class Follower(param.Parameterized):
+            out_a = param.Parameter(allow_refs=True)
+            out_b = param.Parameter(allow_refs=True)
+
+        a, b = rx(None), rx(None)
+        follower = Follower(out_a=a, out_b=b)
+
+        with batch():
+            a.rx.value = 1
+            b.rx.value = 2
+        assert (follower.out_a, follower.out_b) == (1, 2)
+
+        with batch():
+            a.rx.value = 3
+            b.rx.value = 4
+        assert (follower.out_a, follower.out_b) == (3, 4)
+
+    def test_batch_read_answers_the_latest_write(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        assert doubled.rx.value == 2
+
+        with batch():
+            source.rx.value = 5
+            assert (source.rx.value, doubled.rx.value) == (5, 10)
+
+    def test_batch_still_defers_watchers(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        calls = []
+        doubled.rx.watch(calls.append)
+
+        with batch():
+            source.rx.value = 5
+            assert doubled.rx.value == 10
+            assert calls == []
+        assert calls == [10]
+
+    def test_batch_read_answers_the_latest_write_to_an_operand(self):
+        x, y = rx(1), rx(10)
+        total = x + y
+        assert total.rx.value == 11
+
+        with batch():
+            y.rx.value = 20
+            assert total.rx.value == 21
+
+    def test_batch_read_answers_the_latest_write_to_a_parameter(self):
+        class P(param.Parameterized):
+            v = param.Number(default=1)
+
+        p = P()
+        expr = rx(1) * p.param.v
+        assert expr.rx.value == 1
+
+        with batch():
+            p.v = 3
+            assert expr.rx.value == 3
+
+    def test_batch_read_answers_the_latest_write_to_an_override(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        assert expr.rx.value == 10
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+        assert expr.rx.value == 20
+
+    def test_batch_still_defers_override_watchers(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        calls = []
+        expr.rx.watch(calls.append)
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+            assert calls == []
+        assert calls == [20]
+
+    def test_discard_events_still_invalidates(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        doubled = p.param.x.rx() * 2
+        calls = []
+        doubled.rx.watch(calls.append)
+        assert doubled.rx.value == 2
+
+        with param.discard_events(p):
+            p.x = 7
+        assert doubled.rx.value == 14
+        assert calls == []
+
+    @staticmethod
+    def _write_xy(spelling, src, x, y):
+        if spelling == 'update':
+            src.param.update(x=x, y=y)
+            return
+        ctx = batch() if spelling == 'batch' else param.parameterized.batch_call_watchers(src)
+        with ctx:
+            src.x = x
+            src.y = y
+
+    @staticmethod
+    def _override_follower():
+        class Src(param.Parameterized):
+            x = param.Number(default=1)
+            y = param.Number(default=10)
+
+        class Follower(param.Parameterized):
+            out = param.Parameter(allow_refs=True)
+
+        src = Src()
+        expr = rx(0) + src.param.y
+        expr.rx.overrides[0] = src.param.x
+        follower = Follower(out=expr)
+        seen = []
+        follower.param.watch(lambda e: seen.append(e.new), 'out')
+        return src, expr, seen
+
+    @pytest.mark.parametrize('spelling', ['update', 'batch_call_watchers', 'batch'])
+    def test_batched_write_notifies_parameter_reference_once(self, spelling):
+        class Src(param.Parameterized):
+            x = param.Number(default=1)
+            y = param.Number(default=10)
+
+        class Follower(param.Parameterized):
+            out = param.Parameter(allow_refs=True)
+
+        src = Src()
+        follower = Follower(out=src.param.x.rx() + src.param.y)
+        seen = []
+        follower.param.watch(lambda e: seen.append(e.new), 'out')
+
+        self._write_xy(spelling, src, 2, 20)
+        assert seen == [22]
+
+    @pytest.mark.parametrize('spelling', ['update', 'batch_call_watchers', 'batch'])
+    def test_batched_write_notifies_override_reference_once(self, spelling):
+        src, expr, seen = self._override_follower()
+
+        self._write_xy(spelling, src, 2, 20)
+        assert seen == [22]
+        assert expr.rx.value == 22
+
+    @pytest.mark.parametrize('spelling', ['batch_call_watchers', 'batch'])
+    def test_batched_read_answers_the_latest_write_to_an_override(self, spelling):
+        src, expr, seen = self._override_follower()
+        ctx = batch() if spelling == 'batch' else param.parameterized.batch_call_watchers(src)
+
+        with ctx:
+            src.x = 2
+            assert expr.rx.value == 12
+            assert seen == []
+        assert seen == [12]
+
+    def test_discard_events_still_invalidates_an_override_without_notifying(self):
+        src, expr, seen = self._override_follower()
+
+        with param.discard_events(src):
+            src.x = 5
+        assert expr.rx.value == 15
+        assert seen == []

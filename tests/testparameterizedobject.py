@@ -1246,15 +1246,20 @@ def test_inheritance_class_default_set_after_param_lookup():
     class C(B):
         pass
 
+    class D(B):
+        p = param.Dict(default={'own': 1})
+
     # Looking up the parameters caches them on the classes.
     B.param['p']
     C.param['p']
+    D.param['p']
     C()
 
     B.p = {'x': 1}
 
     assert B().p == {'x': 1}
     assert C().p == {'x': 1}
+    assert D().p == {'own': 1}
     assert A().p == {}
 
 def test_inheritance_diamond_not_supported():

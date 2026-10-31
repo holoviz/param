@@ -5410,9 +5410,20 @@ class ParameterizedMetaclass(type):
 
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
+                inherited = parameter
                 parameter = copy.copy(parameter)
                 parameter.owner = t.cast("t.Any", mcs)
                 type.__setattr__(mcs, attribute_name, parameter)
+                # The cached class parameters of mcs and its subclasses may
+                # still point to the inherited Parameter that was just copied,
+                # so swap in the copy and let the derived lists be rebuilt.
+                for cls in descendents(t.cast("type[t.Any]", mcs)):
+                    private = cls._param__private
+                    if private.params.get(attribute_name) is inherited:
+                        private.params[attribute_name] = parameter
+                        private.params_to_deepcopy = None
+                        private.params_to_ref = None
+                        private.params_with_default_factory = None
             mcs.__dict__[attribute_name].__set__(None,value)
 
         else:

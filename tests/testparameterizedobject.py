@@ -1235,6 +1235,33 @@ def test_inheritance_default_is_None_in_sub():
     assert b.p == (0, 1)
 
 
+def test_inheritance_class_default_set_after_param_lookup():
+    # https://github.com/holoviz/param/issues/1218
+    class A(param.Parameterized):
+        p = param.Dict(default={})
+
+    class B(A):
+        pass
+
+    class C(B):
+        pass
+
+    class D(B):
+        p = param.Dict(default={'own': 1})
+
+    # Looking up the parameters caches them on the classes.
+    B.param['p']
+    C.param['p']
+    D.param['p']
+    C()
+
+    B.p = {'x': 1}
+
+    assert B().p == {'x': 1}
+    assert C().p == {'x': 1}
+    assert D().p == {'own': 1}
+    assert A().p == {}
+
 def test_inheritance_diamond_not_supported():
     """
     Test that Parameters don't respect diamond inheritance.

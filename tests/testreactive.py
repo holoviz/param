@@ -1,9 +1,11 @@
 import asyncio
 import contextlib
+import functools
 import gc
 import math
 import operator
 import re
+import sys
 import time
 import weakref
 
@@ -318,6 +320,94 @@ class TestErrorHandling:
         root.rx.value = 2
         assert items == [error, 2]
         assert reader.rx.value == 2
+
+    def test_reactive_error_mode_operator_order_agrees(self):
+        def pos(v):
+            if v < 0:
+                raise ValueError("negative")
+            return v
+
+        raising_root = rx(1)
+        a = raising_root.rx.pipe(pos)
+        b = rx(1, error_mode='propagate').rx.pipe(pos)
+        ab, ba = a + b, b + a
+        assert ab._error_mode == ba._error_mode == 'propagate'
+
+        raising_root.rx.value = -1
+        assert isinstance(ab.rx.value, param.ReactiveError)
+        assert isinstance(ba.rx.value, param.ReactiveError)
+
+    def test_reactive_error_mode_from_keyword_input(self):
+        source = rx(1, error_mode='propagate')
+        node = rx(None).rx.pipe(lambda _, src: src, src=source)
+        assert node._error_mode == 'propagate'
+
+    def test_reactive_error_mode_raise_inputs_stay_raise(self):
+        assert (rx(1) + rx(2))._error_mode == 'raise'
+
+    def test_reactive_error_mode_lifted_call_from_argument(self):
+        def pos(v):
+            if v < 0:
+                raise ValueError("negative")
+            return v
+
+        node = rx(pos)(rx(-1, error_mode='propagate'))
+        assert node._error_mode == 'propagate'
+        assert isinstance(node.rx.value, param.ReactiveError)
+
+    def test_reactive_error_lifted_call_process_failures(self):
+        failed = rx(1, error_mode='propagate')
+        error = param.ReactiveError(ValueError("x"))
+        failed.rx.value = error
+        node = rx(lambda v: ('saw', v), process_failures=True)(failed)
+        assert node.rx.value == ('saw', error)
+
+        failed.rx.value = 2
+        assert node.rx.value == ('saw', 2)
+
+    def test_reactive_error_lifted_call_process_failures_not_inherited(self):
+        failed = rx(1, error_mode='propagate')
+        error = param.ReactiveError(ValueError("x"))
+        failed.rx.value = error
+        fn = rx(lambda v: ('saw', v), process_failures=True)
+        assert fn.rx.pipe(lambda f: f)(failed).rx.value is error
+
+    def test_reactive_error_lifted_call_keyword_reaches_function(self):
+        def fn(v, process_failures=False):
+            return process_failures
+
+        assert rx(fn)(rx(1), process_failures=True).rx.value is True
+    @pytest.mark.parametrize('shape', ['piped', 'keyword'])
+    @pytest.mark.parametrize('watch_failures', [False, True])
+    def test_reactive_error_process_failures_transform_watch(self, shape, watch_failures):
+        root = rx(1)
+        if shape == 'piped':
+            reader = root.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        else:
+            reader = rx(None).rx.pipe(
+                lambda _, src: ('saw', src), src=root, process_failures=True
+            )
+        assert reader.rx.value == ('saw', 1)
+        items = []
+        reader.rx.watch(items.append, process_failures=watch_failures)
+
+        error_x = param.ReactiveError(ValueError("x"))
+        root.rx.value = error_x
+        error_y = param.ReactiveError(ValueError("y"))
+        root.rx.value = error_y
+        root.rx.value = 2
+        assert items == [('saw', error_x), ('saw', error_y), ('saw', 2)]
+
+    def test_reactive_error_process_failures_transform_ref(self):
+        class P(param.Parameterized):
+            value = param.Parameter(allow_refs=True)
+
+        root = rx(1)
+        reader = root.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        p = P(value=reader)
+        error = param.ReactiveError(ValueError("x"))
+        root.rx.value = error
+        assert p.value == ('saw', error)
 
     def test_reactive_error_label_is_none_by_default(self):
         def fail(value):
@@ -647,6 +737,28 @@ class TestSpecialMethods:
         p.boolean = False
         assert results == ['string', 'foo', 2.1]
 
+    def test_reactive_where_returns_rx(self):
+        assert isinstance(rx(True).rx.where('A', 'B'), rx)
+
+    def test_reactive_where_supports_operators(self):
+        condition = rx(True)
+        expr = 'Mode: ' + condition.rx.where('on', 'off') + '!'
+        assert expr.rx.value == 'Mode: on!'
+        condition.rx.value = False
+        assert expr.rx.value == 'Mode: off!'
+
+    def test_reactive_where_operator_tracks_selected_branch(self):
+        condition, x, y = rx(True), rx(1), rx(2)
+        expr = condition.rx.where(x, y) * 10
+        fired = []
+        expr.rx.watch(fired.append)
+        x.rx.value = 3
+        assert fired == [30]
+        y.rx.value = 4
+        assert fired == [30]
+        condition.rx.value = False
+        assert fired == [30, 40]
+
     def test_reactive_where_composed_argument_watches_selected_branch(self):
         """A composed selector must publish changes to its selected branch."""
         condition, first, second = rx(True), rx(1), rx(2)
@@ -711,7 +823,7 @@ class TestWatch:
         items = []
         b.rx.watch(items.append)
 
-        b.rx.overrides[0] = 1
+        b.rx.overrides[1] = 1
         a.rx.value = 5
         a.rx.value = 9
 
@@ -735,7 +847,7 @@ class TestWatch:
         items = []
         b.rx.watch(items.append, onlychanged=False)
 
-        b.rx.overrides[0] = 1
+        b.rx.overrides[1] = 1
         a.rx.value = 5
         a.rx.value = 9
 
@@ -1005,6 +1117,77 @@ class TestAwaiting:
         await async_wait_until(lambda: expr.rx.value == 2)
         assert not expr.rx.awaiting
 
+    async def test_reactive_call_async_function(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        number = rx(0)
+        expr = rx(async_func)(number)
+
+        assert expr.rx.value is param.Undefined
+        assert expr.rx.awaiting
+        await async_wait_until(lambda: expr.rx.value == 2)
+        assert not expr.rx.awaiting
+
+        number.rx.value = 3
+        assert expr.rx.value == 2
+        assert expr.rx.awaiting
+        await async_wait_until(lambda: expr.rx.value == 5)
+
+    async def test_reactive_call_async_function_downstream(self):
+        async def async_func(value):
+            await asyncio.sleep(0.02)
+            return value + 2
+
+        expr = rx(async_func)(1) * 10
+
+        assert expr.rx.value is param.Undefined
+        await async_wait_until(lambda: expr.rx.value == 30)
+
+    async def test_reactive_call_async_gen_function(self):
+        async def async_gen(value):
+            yield value
+            await asyncio.sleep(0.02)
+            yield value + 1
+
+        expr = rx(async_gen)(1)
+        expr.rx.value
+
+        await async_wait_until(lambda: expr.rx.value == 2)
+        assert not expr.rx.awaiting
+
+    async def test_reactive_call_gen_function(self):
+        def gen(value):
+            yield value
+            yield value + 1
+
+        expr = rx(gen)(1)
+        expr.rx.value
+
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+    async def test_reactive_call_async_method(self):
+        class Fetcher:
+            async def fetch(self, value):
+                await asyncio.sleep(0.02)
+                return f'fetched {value}'
+
+        number = rx(1)
+        expr = rx(Fetcher()).fetch(number)
+
+        assert expr.rx.value is param.Undefined
+        await async_wait_until(lambda: expr.rx.value == 'fetched 1')
+
+        number.rx.value = 2
+        await async_wait_until(lambda: expr.rx.value == 'fetched 2')
+
+    def test_reactive_call_sync_function_resolves_synchronously(self):
+        expr = rx(lambda value: value + 2)(rx(0))
+
+        assert expr.rx.value == 2
+        assert not expr.rx.awaiting
+
     async def test_reactive_awaiting_not_scheduled_until_requested(self):
         """
         Reading awaiting must not itself schedule a resolution, so an expression
@@ -1037,7 +1220,7 @@ class TestAwaiting:
             await asyncio.sleep(0.02)
             return {'value': 42}
 
-        expr = rx(async_func)['value']
+        expr = rx(bind(async_func))['value']
 
         assert expr.rx.value is param.Undefined
         assert expr.rx.awaiting
@@ -1049,7 +1232,7 @@ class TestAwaiting:
             await asyncio.sleep(0.02)
             return {'value': 42}
 
-        source = rx(async_func)
+        source = rx(bind(async_func))
         expr = source[rx('value')]
 
         assert expr.rx.value is param.Undefined
@@ -1073,6 +1256,36 @@ class TestAwaiting:
         assert expr.rx.awaiting
         await async_wait_until(lambda: expr.rx.value == 17)
         assert not expr.rx.awaiting
+
+    async def test_reactive_diamond_skips_async_input_recompute_started_by_read(self):
+        """
+        Reading a dirty async input schedules its recompute, so the operation
+        must not evaluate with the superseded value returned by that read.
+        """
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return ('B', value)
+
+        calls = []
+
+        def combine(value, b):
+            calls.append((value, b))
+            return (value, b)
+
+        src = rx(1)
+        b = src.rx.pipe(slow)
+        c = rx(combine)(src, b)
+        published = []
+        c.rx.watch(published.append)
+        await async_wait_until(lambda: c.rx.value == (1, ('B', 1)))
+        calls.clear()
+        published.clear()
+
+        src.rx.value = 2
+        await async_wait_until(lambda: c.rx.value == (2, ('B', 2)))
+        await asyncio.sleep(0.05)
+        assert calls == [(2, ('B', 2))]
+        assert published == [(2, ('B', 2))]
 
     async def test_reactive_awaiting_through_operation_argument(self):
         """An rx passed as an operation argument is upstream of the operation."""
@@ -1134,7 +1347,7 @@ class TestAwaiting:
             await asyncio.sleep(0.02)
             return 2
 
-        expr = rx(async_func) + 2
+        expr = rx(bind(async_func)) + 2
 
         assert expr.rx.value is param.Undefined
         assert expr.rx.awaiting
@@ -1163,7 +1376,7 @@ class TestAwaiting:
             time.sleep(0.1)
             yield 2
 
-        expr = rx(gen) + 100
+        expr = rx(bind(gen)) + 100
 
         assert expr.rx.value is param.Undefined
         assert expr.rx.awaiting
@@ -1213,7 +1426,7 @@ class TestAwaiting:
             return
             yield  # pragma: no cover
 
-        expr = rx(gen) + 100
+        expr = rx(bind(gen)) + 100
 
         assert expr.rx.value is param.Undefined
         assert expr.rx.awaiting
@@ -1312,7 +1525,7 @@ class TestAwaiting:
         assert b.rx.value == 10
         assert not b.rx.awaiting
 
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         assert b.rx.value != 20  # Reading through the override schedules it.
         assert b.rx.awaiting
         await async_wait_until(lambda: not b.rx.awaiting)
@@ -1326,7 +1539,7 @@ class TestAwaiting:
         placeholder = rx(1)
         override = rx(0).rx.pipe(async_func)
         b = rx(10) * placeholder
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
 
         assert b.rx.value != 20  # The first-ever read schedules the override's op.
         assert b.rx.awaiting
@@ -1647,7 +1860,7 @@ class TestStale:
         assert not b.rx.stale
 
         override = rx(0).rx.pipe(async_func)
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         b.rx.value  # Clears `b`'s own dirty flag; `override` is still settling.
         assert b.rx.stale
 
@@ -1812,7 +2025,7 @@ class TestUpdatingStatus:
         placeholder = rx(1)
         override = rx(10).rx.pipe(double)
         b = rx(1) * placeholder
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
 
         updating = b.rx.updating()
         b.rx.watch(lambda v: None)
@@ -1837,7 +2050,7 @@ class TestUpdatingStatus:
         assert updating.rx.value is False
 
         override = rx(10).rx.pipe(double)
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
 
         assert b.rx.awaiting
         assert updating.rx.value is True
@@ -2005,9 +2218,9 @@ class TestUpdatingStatus:
 
         src = rx(10)
         override = src.rx.pipe(double)
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         await async_wait_until(lambda: not b.rx.awaiting)
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
         await async_wait_until(lambda: updating.rx.value is False)
 
         override.rx.watch(lambda v: None)
@@ -2288,12 +2501,12 @@ class TestUpdatingStatus:
         updating = b.rx.updating()
         b.rx.watch(lambda v: None)
 
-        b.rx.overrides[0] = src.rx.pipe(slow)
+        b.rx.overrides[1] = src.rx.pipe(slow)
         await async_wait_until(lambda: not b.rx.awaiting)
 
         src.rx.value = 2
         await async_wait_until(lambda: b.rx.awaiting)
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
 
         await async_wait_until(lambda: updating.rx.value is False)
 
@@ -2309,15 +2522,15 @@ class TestUpdatingStatus:
         updating = b.rx.updating()
         b.rx.watch(lambda v: None)
 
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         await async_wait_until(lambda: not b.rx.awaiting)
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
 
         src.rx.value = 5
         await async_wait_until(lambda: override.rx.awaiting)
         assert updating.rx.value is False
 
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         assert updating.rx.value is True
 
     def test_reactive_updating_does_not_pin_a_cleared_override(self):
@@ -2327,8 +2540,8 @@ class TestUpdatingStatus:
 
         override = rx(99)
         ref = weakref.ref(override)
-        b.rx.overrides[0] = override
-        del b.rx.overrides[0]
+        b.rx.overrides[1] = override
+        del b.rx.overrides[1]
         del override
         gc.collect()
 
@@ -2494,13 +2707,13 @@ class TestDisposeAndLifecycle:
         b = rx(10) * placeholder
         assert b.rx.value == 10
 
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         assert b.rx.value == 20
 
         with pytest.raises(RuntimeError, match='still read'):
             override.rx.dispose()
 
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
         override.rx.dispose()
         assert override._disposed
 
@@ -2510,7 +2723,7 @@ class TestDisposeAndLifecycle:
         b = rx(10) * placeholder
         assert b in set(placeholder.rx.downstream())
 
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         assert b not in set(placeholder.rx.downstream())
         placeholder.rx.dispose()
         assert placeholder._disposed
@@ -2522,8 +2735,8 @@ class TestDisposeAndLifecycle:
         placeholder = rx(1)
         override = rx(2)
         b = rx(10) * placeholder
-        b.rx.overrides[0] = override
-        del b.rx.overrides[0]
+        b.rx.overrides[1] = override
+        del b.rx.overrides[1]
 
         assert b in set(placeholder.rx.downstream())
         with pytest.raises(RuntimeError, match='still read'):
@@ -2541,7 +2754,7 @@ class TestDisposeAndLifecycle:
         b = rx(0).rx.pipe(lambda x, y: x + y, a)
         assert {other, b} == set(a.rx.downstream()) - {a}
 
-        b.rx.overrides[0] = rx(10)
+        b.rx.overrides[1] = rx(10)
 
         assert set(a.rx.downstream()) - {a} == {other}
         assert not (b._readers or ())
@@ -2551,24 +2764,24 @@ class TestDisposeAndLifecycle:
     def test_reactive_delitem_raises_before_mutating_if_masked_input_was_disposed(self):
         placeholder = rx(1)
         b = rx(10) + placeholder
-        b.rx.overrides[0] = rx(2)
+        b.rx.overrides[1] = rx(2)
         placeholder.rx.dispose()
 
         with pytest.raises(RuntimeError, match='Cannot remove this override'):
-            del b.rx.overrides[0]
+            del b.rx.overrides[1]
 
-        assert 0 in b.rx.overrides
+        assert 1 in b.rx.overrides
         assert b.rx.value == 12
 
     def test_reactive_override_reader_links_follow_a_method_chain_clone(self):
         placeholder = rx('a')
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         c = b.upper()
         assert c.rx.value == 'XZ'
 
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
         assert c.rx.value == 'XA'
 
         assert not (override._readers or ())
@@ -2588,14 +2801,14 @@ class TestDisposeAndLifecycle:
         clone.rx.dispose()
 
         override = rx('z')
-        b.rx.overrides[0] = override
+        b.rx.overrides[1] = override
         assert set(override.rx.downstream()) == {b}
 
-        b.rx.overrides[0] = 'plain'
+        b.rx.overrides[1] = 'plain'
         assert not (override._readers or ())
         override.rx.dispose()
 
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
         assert set(placeholder.rx.downstream()) == {b}
 
         b.rx.unwatch(watcher)
@@ -2607,7 +2820,7 @@ class TestDisposeAndLifecycle:
         override = rx('z')
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
         accessor = b.upper
-        accessor.rx.overrides[0] = override
+        accessor.rx.overrides[1] = override
 
         assert b.rx.value == 'xz'
         assert b in set(override.rx.downstream())
@@ -2619,7 +2832,7 @@ class TestDisposeAndLifecycle:
         b = rx('x').rx.pipe(lambda x, y: x + y, placeholder)
         accessor1 = b.upper
         accessor2 = b.lower
-        accessor1.rx.overrides[0] = override
+        accessor1.rx.overrides[1] = override
 
         assert accessor2 in set(override.rx.downstream())
         assert accessor2 not in set(placeholder.rx.downstream())
@@ -2631,8 +2844,8 @@ class TestDisposeAndLifecycle:
         b = head.rx.pipe(lambda x, y: x + y, rx(1))
 
         start = time.perf_counter()
-        b.rx.overrides[0] = rx(2)
-        del b.rx.overrides[0]
+        b.rx.overrides[1] = rx(2)
+        del b.rx.overrides[1]
         assert time.perf_counter() - start < 1.5
 
     def test_reactive_dispose_does_not_cascade_into_ref_still_held_by_owner(self):
@@ -2664,8 +2877,8 @@ class TestDisposeAndLifecycle:
     def test_reactive_override_reader_link_is_per_occurrence(self):
         a = rx(1)
         b = rx(1).rx.pipe(lambda x, y, z: x + y + z, a, rx(0))
-        b.rx.overrides[1] = a
-        del b.rx.overrides[1]
+        b.rx.overrides[2] = a
+        del b.rx.overrides[2]
 
         assert b in set(a.rx.downstream())
         with pytest.raises(RuntimeError, match='still read'):
@@ -2674,9 +2887,9 @@ class TestDisposeAndLifecycle:
     def test_reactive_override_reader_link_survives_clearing_a_different_key(self):
         a = rx(1)
         b = rx(1).rx.pipe(lambda x, y, z: x + y + z, rx(0), rx(0))
-        b.rx.overrides[0] = a
         b.rx.overrides[1] = a
-        del b.rx.overrides[0]
+        b.rx.overrides[2] = a
+        del b.rx.overrides[1]
 
         assert b in set(a.rx.downstream())
         with pytest.raises(RuntimeError, match='still read'):
@@ -2920,7 +3133,7 @@ class TestGeneratorsAndAsyncFunctions:
             await asyncio.sleep(0.02)
             return 2
 
-        async_rx = rx(async_func, lazy=lazy) + 2
+        async_rx = rx(bind(async_func), lazy=lazy) + 2
         assert async_rx.rx.value is param.Undefined
         await async_wait_until(lambda: async_rx.rx.value == 4)
 
@@ -2940,7 +3153,7 @@ class TestGeneratorsAndAsyncFunctions:
             time.sleep(0.05)
             yield 2
 
-        rxgen = rx(gen)
+        rxgen = rx(bind(gen))
         assert rxgen.rx.value is param.Undefined
         await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
         await async_wait_until(lambda: rxgen.rx.value == 2)
@@ -2955,7 +3168,7 @@ class TestGeneratorsAndAsyncFunctions:
             time.sleep(0.05)
             yield 2
 
-        rxgen = rx(gen)
+        rxgen = rx(bind(gen))
         assert rxgen.rx.value is param.Undefined
         await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
         await asyncio.sleep(0.1)
@@ -3035,7 +3248,7 @@ class TestGeneratorsAndAsyncFunctions:
             await asyncio.sleep(0.05)
             yield 2
 
-        rxgen = rx(gen)
+        rxgen = rx(bind(gen))
         assert rxgen.rx.value is param.Undefined
         await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
         await async_wait_until(lambda: rxgen.rx.value == 2)
@@ -3050,7 +3263,7 @@ class TestGeneratorsAndAsyncFunctions:
             await asyncio.sleep(0.05)
             yield 2
 
-        rxgen = rx(gen)
+        rxgen = rx(bind(gen))
         assert rxgen.rx.value is param.Undefined
         await async_wait_until(lambda: rxgen.rx.value == 1, interval=10)
         await asyncio.sleep(0.1)
@@ -3103,6 +3316,23 @@ class TestGeneratorsAndAsyncFunctions:
         await async_wait_until(lambda: rxgen.rx.value == 10, interval=10)
         await async_wait_until(lambda: rxgen.rx.value == 11)
 
+    def test_empty_generator_without_running_loop_skips_downstream(self):
+        source = rx(1)
+
+        def gen(v):
+            if v > 1:
+                return
+            yield v
+
+        derived = source.rx.pipe(gen) + 100
+        seen = []
+        derived.rx.watch(seen.append)
+        assert derived.rx.value == 101
+
+        source.rx.value = 2
+        assert derived.rx.value == 101
+        assert seen == []
+
 async def mul_slowly(value):
     await asyncio.sleep(0.02)
     return value*2
@@ -3135,6 +3365,78 @@ class TestAsyncNotificationSemantics:
         irx.rx.value = 2
         assert items == [12]
         await async_wait_until(lambda: items == [12, 14])
+
+    async def test_reactive_async_downstream_watchers_hear_landing_started_upstream(self):
+        irx = rx(1)
+        async_rx = irx.rx.pipe(mul_slowly)
+        child = async_rx + 10
+        grandchild = child.rx.pipe(lambda v: v * 10)
+        distinct = async_rx.rx.distinct()
+        direct, children, grandchildren, distincts = [], [], [], []
+        async_rx.rx.watch(direct.append, onlychanged=False)
+        child.rx.watch(children.append, onlychanged=False)
+        grandchild.rx.watch(grandchildren.append, onlychanged=False)
+        distinct.rx.watch(distincts.append, onlychanged=False)
+
+        assert async_rx.rx.value is param.Undefined
+        await async_wait_until(lambda: grandchildren == [120])
+        assert direct == [2]
+        assert children == [12]
+        assert distincts == [2]
+
+        irx.rx.value = 2
+        await async_wait_until(lambda: grandchildren == [120, 140])
+        await asyncio.sleep(0.05)
+        assert direct == [2, 4]
+        assert children == [12, 14]
+        assert grandchildren == [120, 140]
+        assert distincts == [2, 4]
+
+    async def test_reactive_async_copy_waiting_on_first_landing_not_woken_again(self):
+        async_rx = rx(1).rx.pipe(mul_slowly)
+        child = async_rx + 10
+        items = []
+        child.rx.watch(items.append, onlychanged=False)
+        assert child.rx.value is param.Undefined
+
+        copy = child._prev
+        resolves = []
+        resolve = copy._lazy_resolve
+        copy._lazy_resolve = lambda *args: (resolves.append(args), resolve(*args))[1]
+
+        await async_wait_until(lambda: items == [12])
+        await asyncio.sleep(0.05)
+        assert resolves == []
+        assert items == [12]
+
+    async def test_reactive_async_disposed_child_copy_not_woken(self):
+        async_rx = rx(1).rx.pipe(mul_slowly)
+        async_rx.rx.watch(lambda v: None)
+        child = async_rx + 1
+        copy = child._prev
+        resolves = []
+        resolve = copy._lazy_resolve
+        copy._lazy_resolve = lambda *args: (resolves.append(args), resolve(*args))[1]
+        child.rx.dispose()
+
+        assert async_rx.rx.value is param.Undefined
+        await asyncio.sleep(0.05)
+        assert resolves == []
+
+    async def test_reactive_async_downstream_hears_failed_landing_started_upstream(self):
+        async def fail_slowly(value):
+            await asyncio.sleep(0.02)
+            raise ValueError("boom")
+
+        async_rx = rx(1, error_mode='propagate').rx.pipe(fail_slowly)
+        child = async_rx.rx.pipe(lambda v: ('saw', v), process_failures=True)
+        items = []
+        child.rx.watch(items.append, process_failures=True)
+
+        assert async_rx.rx.value is param.Undefined
+        await async_wait_until(lambda: len(items) == 1)
+        assert items[0][0] == 'saw'
+        assert isinstance(items[0][1], param.ReactiveError)
 
     async def test_reactive_async_downstream_not_computed_while_awaiting(self):
         computed = []
@@ -3980,7 +4282,7 @@ class TestCallback:
         cb = b._callback
         assert cb() == 20
 
-        b.rx.overrides[0] = 1
+        b.rx.overrides[1] = 1
         assert cb() == 10
 
         a.rx.value = 5
@@ -3990,7 +4292,7 @@ class TestCallback:
         with pytest.raises(Skip):
             cb()
 
-        del b.rx.overrides[0]
+        del b.rx.overrides[1]
         assert cb() == 90
 
     async def test_reactive_callback_skips_while_still_resolving(self):
@@ -4046,7 +4348,7 @@ class TestOverrides:
         n = rx(1) + rx(2)
         assert n.rx.value == 3
 
-        n.rx.overrides[0] = 10
+        n.rx.overrides[1] = 10
 
         assert n.rx.value == 11
 
@@ -4054,6 +4356,184 @@ class TestOverrides:
         n = rx(1).rx.pipe(lambda value, a, b: (value, a, b), 2, 3)
         n.rx.overrides[-1] = 30
         assert n.rx.value == (1, 2, 30)
+
+    def test_reactive_override_masks_the_piped_value(self):
+        calls = []
+        a = rx(1)
+        n = a.rx.pipe(lambda v: calls.append(v) or v * 2)
+        assert n.rx.value == 2
+
+        n.rx.overrides[0] = 10
+        assert n.rx.value == 20
+        a.rx.value = 5
+        assert n.rx.value == 20
+        assert calls == [1, 10]
+
+        del n.rx.overrides[0]
+        assert n.rx.value == 10
+
+    def test_reactive_override_of_the_piped_value_masks_ticks_downstream(self):
+        calls = []
+        a = rx(1)
+        n = a.rx.pipe(lambda v: v * 2)
+        downstream = n.rx.pipe(lambda v: calls.append(v) or v + 1)
+        n.rx.overrides[0] = 10
+        assert downstream.rx.value == 21
+
+        a.rx.value = 5
+        a.rx.value = 6
+        assert downstream.rx.value == 21
+        assert calls == [20]
+
+    def test_reactive_override_masks_the_piped_value_of_a_reflected_operator(self):
+        a = rx(1)
+        n = 10 - a
+        n.rx.overrides[1] = 3
+        assert n.rx.value == 7
+        n.rx.overrides[0] = 20
+        assert n.rx.value == 17
+
+    def test_reactive_override_of_the_piped_value_follows_a_reference(self):
+        a, replacement = rx(1), rx(100)
+        n = a.rx.pipe(lambda v: v + 1)
+        items = []
+        n.rx.watch(items.append)
+
+        n.rx.overrides[0] = replacement
+        replacement.rx.value = 200
+        a.rx.value = 2
+
+        assert n.rx.value == 201
+        assert items == [101, 201]
+
+    def test_reactive_override_of_the_piped_value_masks_an_upstream_error(self):
+        root = rx(0.0, error_mode='propagate')
+        n = root.rx.pipe(lambda v: 1 / v).rx.pipe(lambda v: v * 2)
+        assert isinstance(n.rx.value, param.ReactiveError)
+
+        n.rx.overrides[0] = 4
+        assert n.rx.value == 8
+
+    def test_reactive_override_of_the_piped_value_relinks_readers(self):
+        a = rx(1)
+        n = a.rx.pipe(lambda v: v)
+        assert n in set(a.rx.downstream())
+        assert a in set(n.rx.upstream())
+
+        n.rx.overrides[0] = 5
+        assert n not in set(a.rx.downstream())
+        assert a not in set(n.rx.upstream())
+
+        del n.rx.overrides[0]
+        assert n in set(a.rx.downstream())
+
+    def test_reactive_override_of_the_piped_value_reaches_a_branch(self):
+        a = rx(1)
+        n = a.rx.pipe(lambda v: [v, v * 2])
+        first = n[1]
+        n.rx.overrides[0] = 5
+        assert first.rx.value == 10
+
+    def test_reactive_override_of_the_piped_value_settles_once_on_a_function_root(self):
+        p = Parameters()
+        calls = []
+        n = rx(bind(lambda v: v, p.param.integer)).rx.pipe(
+            lambda v: calls.append(v) or v
+        )
+        downstream = n + 1
+        n.rx.overrides[0] = 1
+        assert downstream.rx.value == 2
+        generation = n.rx.generation
+
+        p.integer = 3
+        assert downstream.rx.value == 2
+        assert n.rx.value == 1
+        assert n.rx.generation == generation
+        assert not n.rx.stale and not downstream.rx.stale
+        assert calls == [7, 1]
+
+    def test_reactive_override_of_the_piped_value_rejects_a_missing_position(self):
+        n = rx(1).rx.pipe(lambda v: v)
+        with pytest.raises(KeyError, match="positional indices 0-0"):
+            n.rx.overrides[1] = 1
+
+    def test_reactive_override_args_view(self):
+        n = rx(1).rx.pipe(lambda v, a, *, k: (v, a, k), 2, k=3)
+        args = n.rx.overrides.args
+        assert dict(args) == {} and len(args) == 0
+
+        args[1] = 20
+        n.rx.overrides['k'] = 30
+        assert dict(args) == {1: 20}
+        assert list(args) == [1]
+        assert args[1] == 20
+        assert repr(args) == 'overrides.args({1: 20})'
+        assert n.rx.value == (1, 20, 30)
+
+        del args[1]
+        assert n.rx.value == (1, 2, 30)
+        with pytest.raises(TypeError, match='positional index'):
+            args['k'] = 1
+
+    def test_reactive_override_kwargs_view(self):
+        n = rx(1).rx.pipe(lambda v, a, *, k: (v, a, k), 2, k=3)
+        kwargs = n.rx.overrides.kwargs
+        kwargs['k'] = 30
+        n.rx.overrides[0] = 10
+        assert dict(kwargs) == {'k': 30}
+        assert repr(kwargs) == "overrides.kwargs({'k': 30})"
+        assert n.rx.value == (10, 2, 30)
+
+        kwargs.pop('k')
+        assert n.rx.value == (10, 2, 3)
+        with pytest.raises(TypeError, match='keyword name'):
+            kwargs[0] = 1
+
+    def test_reactive_override_assigning_args_replaces_positional_overrides(self):
+        n = rx(1).rx.pipe(lambda v, a, b, *, k: (v, a, b, k), 2, 3, k=4)
+        n.rx.overrides[2] = 30
+        n.rx.overrides['k'] = 40
+
+        n.rx.overrides.args = (10, 20)
+        assert dict(n.rx.overrides) == {0: 10, 1: 20, 'k': 40}
+        assert n.rx.value == (10, 20, 3, 40)
+
+        n.rx.overrides.args = {-1: 300}
+        assert dict(n.rx.overrides) == {2: 300, 'k': 40}
+        assert n.rx.value == (1, 2, 300, 40)
+
+    def test_reactive_override_assigning_kwargs_replaces_keyword_overrides(self):
+        n = rx(1).rx.pipe(lambda v, *, j, k: (v, j, k), j=2, k=3)
+        n.rx.overrides[0] = 10
+        n.rx.overrides['j'] = 20
+
+        n.rx.overrides.kwargs = {'k': 30}
+        assert dict(n.rx.overrides) == {0: 10, 'k': 30}
+        assert n.rx.value == (10, 2, 30)
+
+        n.rx.overrides.kwargs = {}
+        assert dict(n.rx.overrides) == {0: 10}
+        assert n.rx.value == (10, 2, 3)
+
+    def test_reactive_override_assigning_args_invalidates_once(self):
+        n = rx(1).rx.pipe(lambda v, a, b: v + a + b, 2, 3)
+        items = []
+        n.rx.watch(items.append, onlychanged=False)
+
+        n.rx.overrides.args = (10, 20, 30)
+        assert items == [60]
+
+    def test_reactive_override_assigning_args_validates_before_mutating(self):
+        n = rx(1).rx.pipe(lambda v, a: v + a, 2)
+        n.rx.overrides[1] = 20
+        with pytest.raises(KeyError, match='not an input'):
+            n.rx.overrides.args = (10, 20, 30)
+        with pytest.raises(TypeError, match='sequence or a mapping'):
+            n.rx.overrides.args = 'ab'
+        with pytest.raises(TypeError, match='keyword name'):
+            n.rx.overrides.kwargs = {0: 1}
+        assert dict(n.rx.overrides) == {1: 20}
+        assert n.rx.value == 21
 
     def test_reactive_override_masks_upstream_tick_until_unmasked(self):
         factor = rx(2)
@@ -4163,7 +4643,7 @@ class TestOverrides:
         )
         assert downstream.rx.value == 200
 
-        n.rx.overrides[0] = 1
+        n.rx.overrides[1] = 1
         assert downstream.rx.value == 100
         assert downstream_calls == [20, 10]
 
@@ -4405,12 +4885,171 @@ class TestOverrides:
 
     def test_reactive_overrides_rejects_unknown_input(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, 5, factor=rx(2))
-        with pytest.raises(KeyError, match="positional indices 0-0 and keywords 'factor'"):
+        with pytest.raises(KeyError, match=r"positional indices 0-1 \('value' is 0\) and keywords 'factor'"):
             n.rx.overrides['unknown'] = 1
         with pytest.raises(KeyError, match="not an input of this node"):
-            n.rx.overrides[1] = 1
+            n.rx.overrides[2] = 1
         with pytest.raises(KeyError):
             n.rx.overrides['factor']
+
+    def test_reactive_overrides_positional_input_by_name(self):
+        def price(cell, fx, qty=1):
+            return cell * fx * qty
+
+        n = rx(10).rx.pipe(price, rx(2), qty=rx(3))
+        assert list(n.rx.inputs()) == [0, 1, 'qty']
+        n.rx.overrides['cell'] = 1
+        n.rx.overrides['fx'] = 5
+        assert n.rx.value == 15
+        assert dict(n.rx.overrides) == {0: 1, 1: 5}
+        assert 'cell' in n.rx.overrides
+        assert n.rx.overrides['fx'] == 5
+
+        n.rx.overrides[0] = 2
+        assert n.rx.overrides['cell'] == 2
+        del n.rx.overrides['cell']
+        del n.rx.overrides[1]
+        assert n.rx.value == 60
+        assert dict(n.rx.overrides) == {}
+
+    def test_reactive_overrides_no_name_for_call_input(self):
+        n = rx(lambda cell, fx: cell * fx)(rx(10), rx(2))
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
+
+    def test_reactive_overrides_kwargs_view_rejects_positional_name(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        with pytest.raises(KeyError, match=r"'cell' names positional input 0; use overrides\['cell'\] or overrides.args\[0\]"):
+            n.rx.overrides.kwargs['cell'] = 1
+        with pytest.raises(KeyError, match="'fx' names positional input 1"):
+            n.rx.overrides.kwargs = {'fx': 1}
+        assert dict(n.rx.overrides) == {}
+
+    @pytest.mark.skipif(sys.version_info < (3, 14), reason="Annotations are evaluated lazily from 3.14")
+    def test_reactive_overrides_unresolvable_annotation(self):
+        def scale(cell: Undefined, fx: int):  # noqa: F821
+            return cell * fx
+
+        n = rx(10).rx.pipe(scale, 2)
+        assert n.rx.value == 20
+        n.rx.overrides['fx'] = 3
+        assert n.rx.value == 30
+        assert n.rx.overrides['fx'] == 3
+
+    def test_reactive_overrides_unreadable_signature(self):
+        class Scale:
+            @property
+            def __signature__(self):
+                raise RuntimeError
+
+            def __call__(self, cell, fx):
+                return cell * fx
+
+        n = rx(10).rx.pipe(Scale(), 2)
+        assert n.rx.value == 20
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['fx'] = 3
+
+    def test_reactive_overrides_no_name_for_positional_only_or_var_positional(self):
+        def positional_only(cell, /, fx):
+            return cell * fx
+
+        def var_positional(cell, *rest):
+            return cell * sum(rest)
+
+        n = rx(10).rx.pipe(positional_only, rx(2))
+        n.rx.overrides['fx'] = 3
+        assert n.rx.value == 30
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['cell'] = 1
+
+        n = rx(10).rx.pipe(var_positional, rx(2))
+        n.rx.overrides['cell'] = 1
+        assert n.rx.value == 2
+        with pytest.raises(KeyError, match="not an input of this node"):
+            n.rx.overrides['rest'] = 1
+
+    def test_reactive_overrides_no_name_for_operator_or_method(self):
+        with pytest.raises(KeyError, match="not an input of this node"):
+            (rx(1) + rx(2)).rx.overrides['a'] = 1
+        with pytest.raises(KeyError, match="not an input of this node"):
+            rx('abc').replace('a', 'b').rx.overrides['old'] = 'c'
+
+    def test_reactive_overrides_no_name_for_internal_wrapper(self):
+        r = round(rx(1.2345), 2)
+        with pytest.raises(KeyError, match="not an input of this node"):
+            r.rx.overrides['ndigits'] = 1
+
+        m = rx([1, 2]).rx.map(lambda x, off: x + off, rx(10))
+        for name in ('vs', 'off'):
+            with pytest.raises(KeyError, match="not an input of this node"):
+                m.rx.overrides[name] = 0
+
+        d = rx(1).rx.distinct()
+        with pytest.raises(KeyError, match="not an input of this node"):
+            d.rx.overrides['new'] = 5
+
+        b = rx(1).rx.buffer(2)
+        with pytest.raises(KeyError, match="not an input of this node"):
+            b.rx.overrides['n'] = 3
+
+        for expr in (rx(1).rx.and_(rx(2)), rx(0).rx.or_(rx(2))):
+            for name in ('obj', 'other'):
+                with pytest.raises(KeyError, match="not an input of this node"):
+                    expr.rx.overrides[name] = 0
+
+    def test_reactive_overrides_key_error_lists_names(self):
+        def price(cell, fx, qty=1):
+            return cell * fx * qty
+
+        n = rx(10).rx.pipe(price, rx(2), qty=rx(3))
+        with pytest.raises(KeyError, match=r"0-1 \('cell' is 0, 'fx' is 1\) and keywords 'qty'"):
+            n.rx.overrides['nope'] = 1
+
+    def test_reactive_overrides_name_and_index_for_same_input(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        n.rx.overrides.update({'cell': 1, 0: 2})
+        assert dict(n.rx.overrides) == {0: 2}
+        assert n.rx.value == 4
+
+    def test_reactive_overrides_name_for_partial_and_bound_method(self):
+        def price(rate, cell, fx):
+            return rate * cell * fx
+
+        n = rx(10).rx.pipe(functools.partial(price, 2), rx(3))
+        n.rx.overrides['fx'] = 5
+        assert dict(n.rx.overrides) == {1: 5}
+        assert n.rx.value == 100
+
+        class Pricer:
+            def price(self, cell, fx):
+                return cell * fx
+
+        n = rx(10).rx.pipe(Pricer().price, rx(3))
+        n.rx.overrides['cell'] = 2
+        assert dict(n.rx.overrides) == {0: 2}
+        assert n.rx.value == 6
+
+    def test_reactive_overrides_name_with_kwargs_absorbed_keyword(self):
+        def price(cell, fx, **extra):
+            return cell * fx + sum(extra.values())
+
+        n = rx(10).rx.pipe(price, rx(2), bonus=rx(1))
+        n.rx.overrides['bonus'] = 5
+        n.rx.overrides['fx'] = 3
+        assert dict(n.rx.overrides) == {'bonus': 5, 1: 3}
+        assert n.rx.value == 35
+
+    def test_reactive_overrides_mapping_helpers_accept_name(self):
+        n = rx(10).rx.pipe(lambda cell, fx: cell * fx, rx(2))
+        assert n.rx.overrides.get('cell') is None
+        assert n.rx.overrides.setdefault('cell', 3) == 3
+        assert n.rx.overrides.setdefault('cell', 4) == 3
+        assert n.rx.overrides.get('cell') == 3
+        assert n.rx.value == 6
+        assert n.rx.overrides.pop('cell') == 3
+        assert dict(n.rx.overrides) == {}
+        assert n.rx.value == 20
 
     def test_reactive_overrides_rejects_unsupported_key(self):
         n = rx(10).rx.pipe(lambda value, factor: value * factor, factor=rx(2))
@@ -4423,12 +5062,12 @@ class TestOverrides:
         assert repr(overrides) == 'overrides({})'
         assert overrides.get('factor') is None
 
-        overrides.update({'factor': 3, 0: 4})
+        overrides.update({'factor': 3, 1: 4})
 
-        assert dict(overrides) == {'factor': 3, 0: 4}
-        assert list(overrides) == ['factor', 0]
+        assert dict(overrides) == {'factor': 3, 1: 4}
+        assert list(overrides) == ['factor', 1]
         assert len(overrides) == 2
-        assert repr(overrides) == "overrides({'factor': 3, 0: 4})"
+        assert repr(overrides) == "overrides({'factor': 3, 1: 4})"
 
         overrides.clear()
 
@@ -5120,6 +5759,386 @@ class TestCurrentNode:
         await async_wait_until(lambda: isinstance(expr.rx.value, param.ReactiveError))
 
         assert current_node() is None
+
+
+class TestGeneration:
+    """``.rx.generation``."""
+
+    def test_generation_increments_on_each_recompute(self):
+        p = Parameters()
+        expr = rx(p.param.integer).rx.pipe(lambda v: v + 1)
+        assert expr.rx.value == 8
+        first = expr.rx.generation
+
+        p.integer = 10
+        assert expr.rx.value == 11
+        assert expr.rx.generation == first + 1
+
+    def test_generation_unchanged_by_a_reread(self):
+        expr = rx(1).rx.pipe(lambda v: v + 1)
+        assert expr.rx.value == 2
+        before = expr.rx.generation
+        assert expr.rx.value == 2
+        assert expr.rx.generation == before
+
+    def test_generation_inside_operation_matches_the_settled_generation(self):
+        p = Parameters()
+        stamped = []
+
+        def kernel(v):
+            stamped.append(current_node().rx.generation)
+            return v
+
+        expr = rx(p.param.integer).rx.pipe(kernel)
+        expr.rx.value
+        assert stamped[-1] == expr.rx.generation
+
+        p.integer = 3
+        expr.rx.value
+        assert len(stamped) == 2
+        assert stamped[-1] == expr.rx.generation
+
+    def test_generation_of_another_node_inside_operation_is_its_settled_generation(self):
+        inner = rx(5).rx.pipe(lambda v: v)
+        seen = []
+
+        def kernel(v, x):
+            seen.append(inner.rx.generation)
+            return v
+
+        expr = rx(1).rx.pipe(kernel, x=inner)
+        expr.rx.value
+        assert seen == [inner.rx.generation]
+
+    def test_generation_advances_when_node_settles_without_running(self):
+        root = rx(2.0, error_mode='propagate')
+        reciprocal = root.rx.pipe(lambda v: 1 / v)
+        runs = []
+
+        def produce(v):
+            runs.append(v)
+            current_node().rx.meta['gen'] = current_node().rx.generation
+            return v * 10
+
+        inner = reciprocal.rx.pipe(produce)
+        assert inner.rx.value == 5.0
+        assert inner.rx.meta['gen'] == inner.rx.generation
+
+        root.rx.value = 0.0
+        assert isinstance(inner.rx.value, param.ReactiveError)
+        assert runs == [0.5]
+        assert inner.rx.meta['gen'] != inner.rx.generation
+
+    def test_generation_advances_when_kwarg_input_failure_short_circuits(self):
+        root = rx(2.0, error_mode='propagate')
+        reciprocal = root.rx.pipe(lambda v: 1 / v)
+        runs = []
+
+        def produce(_obj, *, a):
+            runs.append(a)
+            current_node().rx.meta['gen'] = current_node().rx.generation
+            return a
+
+        node = rx(None, error_mode='propagate').rx.pipe(produce, a=reciprocal)
+        assert node.rx.value == 0.5
+        assert node.rx.meta['gen'] == node.rx.generation
+
+        root.rx.value = 0.0
+        assert isinstance(node.rx.value, param.ReactiveError)
+        assert runs == [0.5]
+        assert node.rx.meta['gen'] != node.rx.generation
+
+    def test_generation_not_available_on_parameter_rx(self):
+        p = Parameters()
+        with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+            p.param.integer.rx.generation
+
+    def test_generation_without_running_loop_async_operation(self):
+        p = Parameters()
+        stamped = []
+
+        async def kernel(v):
+            stamped.append(current_node().rx.generation)
+            return v * 2
+
+        expr = rx(p.param.integer).rx.pipe(kernel)
+        assert expr.rx.value == 14
+        assert stamped == [expr.rx.generation]
+
+        p.integer = 1
+        assert expr.rx.value == 2
+        assert len(stamped) == 2
+        assert stamped[-1] == expr.rx.generation
+        assert stamped[1] == stamped[0] + 1
+
+    def test_generation_without_running_loop_generator_operation(self):
+        stamped = []
+
+        def kernel(v):
+            stamped.append(current_node().rx.generation)
+            yield v
+            stamped.append(current_node().rx.generation)
+            yield v * 2
+
+        expr = rx(1).rx.pipe(kernel)
+        assert expr.rx.value == 2
+        assert stamped[-1] == expr.rx.generation
+        assert stamped[1] == stamped[0] + 1
+
+    def test_generation_detects_meta_written_before_skip(self):
+        p = Parameters()
+
+        def kernel(v):
+            node = current_node()
+            node.rx.meta['generation'] = node.rx.generation
+            if v > 10:
+                raise Skip
+            return v
+
+        expr = rx(p.param.integer).rx.pipe(kernel)
+        assert expr.rx.value == 7
+        assert expr.rx.meta['generation'] == expr.rx.generation
+
+        p.integer = 42
+        assert expr.rx.value == 7
+        assert expr.rx.meta['generation'] != expr.rx.generation
+
+    async def test_generation_inside_async_operation_matches_the_settled_generation(self):
+        stamped = []
+
+        async def kernel(v):
+            await asyncio.sleep(0.01)
+            stamped.append(current_node().rx.generation)
+            return v * 2
+
+        expr = rx(1).rx.pipe(kernel)
+        expr.rx.value
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+        assert stamped == [expr.rx.generation]
+
+    async def test_generation_inside_async_generator_matches_each_yield(self):
+        stamped = []
+
+        async def kernel(v):
+            stamped.append(current_node().rx.generation)
+            yield v
+            await asyncio.sleep(0.01)
+            stamped.append(current_node().rx.generation)
+            yield v * 2
+
+        expr = rx(1).rx.pipe(kernel)
+        expr.rx.value
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+        assert stamped[-1] == expr.rx.generation
+        assert stamped[0] + 1 == stamped[1]
+
+
+class TestInputs:
+    """``.rx.inputs()``."""
+
+    def test_inputs_keys_kwargs_by_name(self):
+        a, b = rx(1), rx(2)
+        expr = rx(0).rx.pipe(lambda v, *, a, b: v + a + b, a=a, b=b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 'a', 'b'}
+        assert inputs['a'] is a and inputs['b'] is b
+
+    def test_inputs_keys_positionals_by_call_position(self):
+        source, a, b = rx(0), rx(1), rx(2)
+        expr = source.rx.pipe(lambda v, x, y: v + x + y, a, b)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 1, 2}
+        assert inputs[0] is source and inputs[1] is a and inputs[2] is b
+
+    def test_inputs_omits_non_rx_inputs(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, x, y, *, k, j: v, 5, a, k=a, j='plain')
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 2, 'k'}
+        assert inputs[2] is a and inputs['k'] is a
+
+    def test_inputs_omits_rx_nested_in_a_container(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, xs: v, [a])
+        assert set(expr.rx.inputs()) == {0}
+
+    def test_inputs_reports_the_piped_from_node(self):
+        source = rx(1)
+        inner = source.rx.pipe(lambda v: v)
+        expr = inner.rx.pipe(lambda v: v)
+        assert set(expr.rx.inputs()) == {0}
+        assert expr.rx.inputs()[0] is inner
+        assert inner.rx.inputs()[0] is source
+
+    def test_inputs_reports_the_chained_operator_node(self):
+        a = rx(1)
+        first = a + 1
+        second = first * 2
+        assert second.rx.inputs()[0] is first
+
+    def test_inputs_of_operator_node(self):
+        a, b = rx(1), rx(2)
+        expr = a + b
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 1}
+        assert inputs[0] is a and inputs[1] is b
+
+    def test_inputs_of_reflected_operator_node(self):
+        a = rx(1)
+        expr = 10 - a
+        assert set(expr.rx.inputs()) == {1}
+        assert expr.rx.inputs()[1] is a
+
+    def test_inputs_of_root_node_is_empty(self):
+        assert rx(1).rx.inputs() == {}
+
+    def test_inputs_of_bind_root_node_is_empty(self):
+        a = rx(1)
+        expr = rx(bind(lambda a: a, a=a))
+        assert expr.rx.inputs() == {}
+
+    def test_inputs_of_method_with_rx_argument(self):
+        a, b = rx(1), rx([1, 2])
+        expr = a.rx.in_(b)  # contains(b, a)
+        inputs = expr.rx.inputs()
+        assert set(inputs) == {0, 1}
+        assert inputs[0] is b and inputs[1] is a
+
+    def test_inputs_omits_input_overridden_by_none(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, *, a: a, a=a)
+        expr.rx.overrides['a'] = None
+        assert expr.rx.value is None
+        assert 'a' not in expr.rx.inputs()
+
+    def test_inputs_reports_rx_override(self):
+        a, replacement = rx(1), rx(10)
+        expr = rx(0).rx.pipe(lambda v, *, a: v + a, a=a)
+        expr.rx.overrides['a'] = replacement
+        assert expr.rx.value == 10
+        assert expr.rx.inputs()['a'] is replacement
+
+        del expr.rx.overrides['a']
+        assert expr.rx.inputs()['a'] is a
+
+    def test_inputs_reports_rx_override_of_the_source(self):
+        source, replacement = rx(1), rx(10)
+        expr = source.rx.pipe(lambda v: v)
+        expr.rx.overrides[0] = replacement
+        assert expr.rx.inputs()[0] is replacement
+
+        expr.rx.overrides[0] = 5
+        assert expr.rx.inputs() == {}
+
+        del expr.rx.overrides[0]
+        assert expr.rx.inputs()[0] is source
+
+    def test_inputs_omits_input_overridden_by_plain_value(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, x: v + x, a)
+        expr.rx.overrides[1] = 10
+        assert expr.rx.value == 10
+        assert 1 not in expr.rx.inputs()
+
+    def test_inputs_of_collect(self):
+        a, b = rx(1), rx(2)
+        collected = collect(a, 3, y=b)
+        inputs = collected.rx.inputs()
+        assert set(inputs) == {0, 'y'}
+        assert inputs[0] is a and inputs['y'] is b
+
+    def test_inputs_from_inside_operation(self):
+        source, a = rx(None), rx(1)
+        seen = []
+
+        def consume(_obj, *, a):
+            seen.append(current_node().rx.inputs())
+            return a
+
+        expr = source.rx.pipe(consume, a=a)
+        assert expr.rx.value == 1
+        assert len(seen) == 1 and set(seen[0]) == {0, 'a'}
+        assert seen[0][0] is source and seen[0]['a'] is a
+
+    def test_inputs_returns_a_fresh_dict(self):
+        a = rx(1)
+        expr = rx(0).rx.pipe(lambda v, *, a: v, a=a)
+        expr.rx.inputs().clear()
+        assert expr.rx.inputs()['a'] is a
+
+    def test_inputs_not_available_on_parameter_rx(self):
+        p = Parameters()
+        with pytest.raises(AttributeError, match="only available on `rx` nodes"):
+            p.param.integer.rx.inputs()
+
+    def test_inputs_with_generation_nests_only_fresh_upstream_meta(self):
+        root = rx(2.0, error_mode='propagate')
+        reciprocal = root.rx.pipe(lambda v: 1 / v)
+
+        def produce(v):
+            node = current_node()
+            node.rx.meta['provenance'] = {
+                '_function_': 'produce', '_inputs_': {'v': v},
+                'generation': node.rx.generation,
+            }
+            return v * 10
+
+        inner = reciprocal.rx.pipe(produce)
+
+        def consume(_obj, *, a):
+            received = {0: _obj, 'a': a}
+            upstream = {}
+            for name, src in current_node().rx.inputs().items():
+                prov = src.rx.meta.get('provenance')
+                if (
+                    prov is not None
+                    and not isinstance(received[name], param.ReactiveError)
+                    and prov['generation'] == src.rx.generation
+                ):
+                    upstream[name] = prov
+            current_node().rx.meta['provenance'] = {
+                '_function_': 'consume', '_upstream_': upstream,
+            }
+            return ('consumed', a)
+
+        outer = rx(None, error_mode='propagate').rx.pipe(
+            consume, a=inner, process_failures=True)
+
+        assert outer.rx.value == ('consumed', 5.0)
+        assert outer.rx.meta['provenance']['_upstream_'] == {
+            'a': inner.rx.meta['provenance']}
+
+        root.rx.value = 0.0
+        assert isinstance(outer.rx.value[1], param.ReactiveError)
+        assert inner.rx.meta['provenance']['_inputs_'] == {'v': 0.5}  # stale
+        assert outer.rx.meta['provenance']['_upstream_'] == {}
+
+        root.rx.value = 4.0
+        assert outer.rx.value == ('consumed', 2.5)
+        assert outer.rx.meta['provenance']['_upstream_'] == {
+            'a': inner.rx.meta['provenance']}
+        assert inner.rx.meta['provenance']['_inputs_'] == {'v': 0.25}
+
+    def test_inputs_reaches_the_meta_of_a_chained_producer(self):
+        def produce(v):
+            node = current_node()
+            node.rx.meta['trace'] = {'v': v, 'generation': node.rx.generation}
+            return v * 10
+
+        def consume(v):
+            src = current_node().rx.inputs()[0]
+            trace = src.rx.meta.get('trace')
+            if trace is not None and trace['generation'] == src.rx.generation:
+                current_node().rx.meta['upstream'] = trace
+            return v
+
+        source = rx(1)
+        inner = source.rx.pipe(produce)
+        outer = inner.rx.pipe(consume)
+        assert outer.rx.value == 10
+        assert outer.rx.meta['upstream'] == {'v': 1, 'generation': inner.rx.generation}
 
 
 
@@ -5855,3 +6874,176 @@ class TestSkipSiblingArguments:
         sibling.rx.value = 20
 
         assert out.rx.value == 21
+
+
+class TestBatch:
+
+    def test_batch_references_follow_every_written_cell(self):
+        class Follower(param.Parameterized):
+            out_a = param.Parameter(allow_refs=True)
+            out_b = param.Parameter(allow_refs=True)
+
+        a, b = rx(None), rx(None)
+        follower = Follower(out_a=a, out_b=b)
+
+        with batch():
+            a.rx.value = 1
+            b.rx.value = 2
+        assert (follower.out_a, follower.out_b) == (1, 2)
+
+        with batch():
+            a.rx.value = 3
+            b.rx.value = 4
+        assert (follower.out_a, follower.out_b) == (3, 4)
+
+    def test_batch_read_answers_the_latest_write(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        assert doubled.rx.value == 2
+
+        with batch():
+            source.rx.value = 5
+            assert (source.rx.value, doubled.rx.value) == (5, 10)
+
+    def test_batch_still_defers_watchers(self):
+        source = rx(1)
+        doubled = source.rx.pipe(lambda v: v * 2)
+        calls = []
+        doubled.rx.watch(calls.append)
+
+        with batch():
+            source.rx.value = 5
+            assert doubled.rx.value == 10
+            assert calls == []
+        assert calls == [10]
+
+    def test_batch_read_answers_the_latest_write_to_an_operand(self):
+        x, y = rx(1), rx(10)
+        total = x + y
+        assert total.rx.value == 11
+
+        with batch():
+            y.rx.value = 20
+            assert total.rx.value == 21
+
+    def test_batch_read_answers_the_latest_write_to_a_parameter(self):
+        class P(param.Parameterized):
+            v = param.Number(default=1)
+
+        p = P()
+        expr = rx(1) * p.param.v
+        assert expr.rx.value == 1
+
+        with batch():
+            p.v = 3
+            assert expr.rx.value == 3
+
+    def test_batch_read_answers_the_latest_write_to_an_override(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        assert expr.rx.value == 10
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+        assert expr.rx.value == 20
+
+    def test_batch_still_defers_override_watchers(self):
+        override = rx(1)
+        expr = rx(10) * rx(0)
+        expr.rx.overrides[1] = override
+        calls = []
+        expr.rx.watch(calls.append)
+
+        with batch():
+            override.rx.value = 2
+            assert expr.rx.value == 20
+            assert calls == []
+        assert calls == [20]
+
+    def test_discard_events_still_invalidates(self):
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        doubled = p.param.x.rx() * 2
+        calls = []
+        doubled.rx.watch(calls.append)
+        assert doubled.rx.value == 2
+
+        with param.discard_events(p):
+            p.x = 7
+        assert doubled.rx.value == 14
+        assert calls == []
+
+    @staticmethod
+    def _write_xy(spelling, src, x, y):
+        if spelling == 'update':
+            src.param.update(x=x, y=y)
+            return
+        ctx = batch() if spelling == 'batch' else param.parameterized.batch_call_watchers(src)
+        with ctx:
+            src.x = x
+            src.y = y
+
+    @staticmethod
+    def _override_follower():
+        class Src(param.Parameterized):
+            x = param.Number(default=1)
+            y = param.Number(default=10)
+
+        class Follower(param.Parameterized):
+            out = param.Parameter(allow_refs=True)
+
+        src = Src()
+        expr = rx(0) + src.param.y
+        expr.rx.overrides[0] = src.param.x
+        follower = Follower(out=expr)
+        seen = []
+        follower.param.watch(lambda e: seen.append(e.new), 'out')
+        return src, expr, seen
+
+    @pytest.mark.parametrize('spelling', ['update', 'batch_call_watchers', 'batch'])
+    def test_batched_write_notifies_parameter_reference_once(self, spelling):
+        class Src(param.Parameterized):
+            x = param.Number(default=1)
+            y = param.Number(default=10)
+
+        class Follower(param.Parameterized):
+            out = param.Parameter(allow_refs=True)
+
+        src = Src()
+        follower = Follower(out=src.param.x.rx() + src.param.y)
+        seen = []
+        follower.param.watch(lambda e: seen.append(e.new), 'out')
+
+        self._write_xy(spelling, src, 2, 20)
+        assert seen == [22]
+
+    @pytest.mark.parametrize('spelling', ['update', 'batch_call_watchers', 'batch'])
+    def test_batched_write_notifies_override_reference_once(self, spelling):
+        src, expr, seen = self._override_follower()
+
+        self._write_xy(spelling, src, 2, 20)
+        assert seen == [22]
+        assert expr.rx.value == 22
+
+    @pytest.mark.parametrize('spelling', ['batch_call_watchers', 'batch'])
+    def test_batched_read_answers_the_latest_write_to_an_override(self, spelling):
+        src, expr, seen = self._override_follower()
+        ctx = batch() if spelling == 'batch' else param.parameterized.batch_call_watchers(src)
+
+        with ctx:
+            src.x = 2
+            assert expr.rx.value == 12
+            assert seen == []
+        assert seen == [12]
+
+    def test_discard_events_still_invalidates_an_override_without_notifying(self):
+        src, expr, seen = self._override_follower()
+
+        with param.discard_events(src):
+            src.x = 5
+        assert expr.rx.value == 15
+        assert seen == []

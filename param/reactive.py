@@ -58,6 +58,8 @@ Each `_operation` dictionary includes:
 - `kwargs`: Keyword arguments for the function or method.
 - `reverse`: A flag indicating whether the input object and first argument should
   be swapped during execution.
+- `named_inputs`: Set by `.rx.pipe`, allowing `.rx.overrides` to address positional
+  inputs by parameter name; the names are cached in `positional_names`.
 
 Chain Tracking and Dependencies
 -------------------------------
@@ -95,6 +97,7 @@ import inspect
 import logging
 import math
 import operator
+import sys
 import typing as t
 import warnings
 import weakref
@@ -102,7 +105,7 @@ import weakref
 from collections import namedtuple
 from collections.abc import (
     AsyncGenerator, Callable, Coroutine, Generator, Iterable, Iterator,
-    MutableMapping, Sized
+    Mapping, MutableMapping, Sequence, Sized
 )
 from itertools import chain
 from functools import partial
@@ -113,11 +116,12 @@ from .display import _display_accessors, _reactive_display_objs
 from .parameterized import (
     Comparator, Parameter, Parameterized, Skip, Undefined, eval_function_with_deps,
     get_method_owner, register_reference_transform, resolve_ref, resolve_value,
-    transform_reference, _notify_weak_listeners, _register_weak_listener,
-    _watch_async_ref_settle_change, _watch_ref_change
+    transform_reference, _is_async_fn, _is_bare_async_ref, _notify_weak_listeners,
+    _register_weak_listener, _warn_bare_async_ref, _watch_async_ref_settle_change,
+    _watch_ref_change, _WeakInvalidator
 )
 from .parameters import Boolean, Event, String
-from ._utils import _to_async_gen, iscoroutinefunction, full_groupby
+from ._utils import _thread_state, _to_async_gen, iscoroutinefunction, full_groupby
 
 if t.TYPE_CHECKING:
     import builtins
@@ -172,6 +176,22 @@ class GenWrapper(Parameterized):
     """Helper class to allow streaming from generator functions."""
 
     object: t.Any = Parameter(allow_refs=True)
+
+
+class _HeldValue:
+    """
+    Box for a function assigned to a ``GenWrapper`` root that rx keeps as a
+    value, so that the reference machinery does not call it.
+    """
+
+    __slots__ = ('value',)
+
+    def __init__(self, value: t.Any):
+        self.value = value
+
+
+def _unbox_held(obj: t.Any) -> t.Any:
+    return obj.value if isinstance(obj, _HeldValue) else obj
 
 
 class Trigger(Parameterized):
@@ -265,13 +285,80 @@ class NestedResolver(Resolver):
     object: t.Any = Parameter(allow_refs=True, nested_refs=True)
 
 
+def _positional_layout(operation: dict) -> list[int | None]:
+    """
+    Return the ``args`` index behind each positional input key, ``None``
+    standing for the value the operation is applied to.
+
+    Keys follow the positions ``fn`` is called with, so that value is key 0,
+    or key 1 for a reflected operator (``1 + x`` calls ``add(1, x)``).
+    ``collect`` is applied to nothing, so its keys are plain ``args`` indices.
+    """
+    nargs = len(operation.get('args') or ())
+    if operation['fn'] is _collect_marker:
+        return list(range(nargs))
+    if operation.get('reverse'):
+        return [0, None, *range(1, nargs)]
+    return [None, *range(nargs)]
+
+
+def _source_key(operation: dict) -> int | None:
+    """Return the positional key of the value the operation is applied to."""
+    if operation['fn'] is _collect_marker:
+        return None
+    return 1 if operation.get('reverse') else 0
+
+
+def _arg_key(operation: dict, index: int) -> int:
+    """Return the positional key of ``operation['args'][index]``."""
+    if operation['fn'] is _collect_marker or (operation.get('reverse') and index == 0):
+        return index
+    return index + 1
+
+
+def _positional_names(operation: dict) -> dict[str, int]:
+    """Map the parameter names of a pipe function's positional inputs to their keys."""
+    names = operation.get('positional_names')
+    if names is not None:
+        return names
+    names = {}
+    if operation.get('named_inputs'):
+        # Names don't need annotations, which may not resolve on 3.14+ (TYPE_CHECKING imports).
+        sig_kwargs: dict[str, t.Any] = {}
+        if sys.version_info >= (3, 14):
+            import annotationlib
+            sig_kwargs['annotation_format'] = annotationlib.Format.FORWARDREF
+        params: t.Iterable[inspect.Parameter]
+        try:
+            params = inspect.signature(operation['fn'], **sig_kwargs).parameters.values()
+        except Exception:
+            # Names are optional, so any other signature failure leaves the inputs index-only.
+            params = ()
+        for key, param in zip(range(len(_positional_layout(operation))), params):
+            if param.kind is param.VAR_POSITIONAL:
+                break
+            if param.kind is param.POSITIONAL_OR_KEYWORD:
+                names[param.name] = key
+    operation['positional_names'] = names
+    return names
+
+
+def _source_masked(operation: dict | None) -> bool:
+    if not operation or not operation.get('overrides'):
+        return False
+    return _source_key(operation) in operation['overrides']
+
+
 class InputOverrides(MutableMapping):
     """
     The mapping returned by :attr:`reactive_ops.overrides`.
 
-    Keys address the inputs a node was wired with, by keyword name or positional
-    index. Values are either plain values or references the node follows.
-    Deleting a key unmasks the input again.
+    Keys address the inputs a node was wired with, by keyword name or by
+    position in the call its operation makes, the value it is applied to
+    included. A positional input of a function applied with ``.rx.pipe`` may
+    also be addressed by its parameter name, but iteration yields only
+    keyword names and indices. Values are either plain values or references
+    the node follows. Deleting a key unmasks the input again.
     """
 
     def __init__(self, node: rx):
@@ -282,25 +369,31 @@ class InputOverrides(MutableMapping):
         operation = self._node._operation
         return None if operation is None else operation.get('overrides')
 
-    def _resolve_key(self, key: t.Any) -> t.Any:
+    def _resolve_key(self, key: t.Any, aliases: bool = True) -> t.Any:
         operation = t.cast('dict', self._node._operation)
-        args = operation.get('args') or ()
+        nargs = len(_positional_layout(operation))
         kwargs = operation.get('kwargs') or {}
         if isinstance(key, str):
             if key in kwargs:
                 return key
+            if aliases and (index := _positional_names(operation).get(key)) is not None:
+                return index
         elif isinstance(key, int) and not isinstance(key, bool):
-            if -len(args) <= key < len(args):
-                return key + len(args) if key < 0 else key
+            if -nargs <= key < nargs:
+                return key + nargs if key < 0 else key
         else:
             raise TypeError(
                 "Input overrides are addressed by keyword name or positional "
                 f"index, not by {type(key).__name__!r}."
             )
-        nargs, names = len(args), sorted(kwargs)
+        names = sorted(kwargs)
         inputs = []
         if nargs:
-            inputs.append(f"positional indices 0-{nargs-1}")
+            pos_aliases = _positional_names(operation) if aliases else {}
+            named = ", ".join(
+                f"{name!r} is {index}" for name, index in pos_aliases.items() if name not in kwargs
+            )
+            inputs.append(f"positional indices 0-{nargs-1}" + (f" ({named})" if named else ""))
         if names:
             inputs.append("keywords " + ", ".join(repr(name) for name in names))
         raise KeyError(
@@ -313,7 +406,12 @@ class InputOverrides(MutableMapping):
         operation = t.cast('dict', self._node._operation)
         if isinstance(key, str):
             return operation.get('kwargs', {})[key]
-        return operation.get('args', ())[key]
+        index = _positional_layout(operation)[key]
+        if index is None:
+            # The edge a masked source drops is to `_prev` itself, even
+            # where that is a mirror of the node that computes the value.
+            return self._node._prev
+        return operation.get('args', ())[index]
 
     def _relink(self, value: t.Any, siblings: tuple, method: str) -> None:
         readers = (self._node, *siblings)
@@ -344,8 +442,9 @@ class InputOverrides(MutableMapping):
             raise KeyError(key)
         return overrides[key]
 
-    def __setitem__(self, key: t.Any, value: t.Any):
-        key = self._resolve_key(key)
+    def _set(self, key: t.Any, value: t.Any):
+        """Mask a resolved ``key`` without invalidating the node."""
+        _warn_bare_async_inputs(value)
         node = self._node
         operation = t.cast('dict', node._operation)
         overrides = operation.get('overrides')
@@ -359,13 +458,8 @@ class InputOverrides(MutableMapping):
         if refs:
             watchers = operation.setdefault('override_watchers', {})
             watchers[key] = node._watch_override(refs)
-        node._invalidate_overrides()
 
-    def __delitem__(self, key: t.Any):
-        key = self._resolve_key(key)
-        overrides = self._overrides
-        if not overrides or key not in overrides:
-            raise KeyError(key)
+    def _check_unmask(self, key: t.Any):
         raw = self._resolve_raw(key)
         disposed = next((target for target in _iter_rx(raw) if target._disposed), None)
         if disposed is not None:
@@ -374,12 +468,27 @@ class InputOverrides(MutableMapping):
                 "was disposed by .rx.dispose() while masked and can no longer be read. "
                 "Dispose the overriding node instead of removing the override."
             )
-        node = self._node
-        siblings = tuple(node._operation_siblings())
+
+    def _unset(self, key: t.Any):
+        """Unmask a resolved, overridden ``key`` without invalidating the node."""
+        raw = self._resolve_raw(key)
+        siblings = tuple(self._node._operation_siblings())
         self._unwatch(key, siblings)
-        del overrides[key]
+        del t.cast('dict', self._overrides)[key]
         self._relink(raw, siblings, '_register_reader')
-        node._invalidate_overrides()
+
+    def __setitem__(self, key: t.Any, value: t.Any):
+        self._set(self._resolve_key(key), value)
+        self._node._invalidate_overrides()
+
+    def __delitem__(self, key: t.Any):
+        key = self._resolve_key(key)
+        overrides = self._overrides
+        if not overrides or key not in overrides:
+            raise KeyError(key)
+        self._check_unmask(key)
+        self._unset(key)
+        self._node._invalidate_overrides()
 
     def __iter__(self) -> Iterator[t.Any]:
         return iter(self._overrides or {})
@@ -389,6 +498,119 @@ class InputOverrides(MutableMapping):
 
     def __repr__(self) -> str:
         return f"overrides({(self._overrides or {})!r})"
+
+    @property
+    def args(self) -> InputOverridesView:
+        """
+        The positional overrides, as a mapping from positional index.
+
+        Assigning a sequence (or a mapping from index) replaces every
+        positional override at once, e.g. ``overrides.args = (1, 2)`` masks
+        positions 0 and 1 and unmasks any other.
+        """
+        return InputOverridesView(self, positional=True)
+
+    @args.setter
+    def args(self, values: Sequence[t.Any] | Mapping[int, t.Any]):
+        if isinstance(values, Mapping):
+            items = dict(values)
+        elif isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+            items = dict(enumerate(values))
+        else:
+            raise TypeError(
+                "Positional overrides must be assigned a sequence or a mapping "
+                f"from positional index, not {type(values).__name__!r}."
+            )
+        self._replace(InputOverridesView(self, positional=True), items)
+
+    @property
+    def kwargs(self) -> InputOverridesView:
+        """
+        The keyword overrides, as a mapping from keyword name.
+
+        Assigning a mapping replaces every keyword override at once, e.g.
+        ``overrides.kwargs = {}`` unmasks all keyword inputs.
+        """
+        return InputOverridesView(self, positional=False)
+
+    @kwargs.setter
+    def kwargs(self, values: Mapping[str, t.Any]):
+        self._replace(InputOverridesView(self, positional=False), dict(values))
+
+    def _replace(self, view: InputOverridesView, items: dict[t.Any, t.Any]):
+        """Replace the overrides ``view`` covers, invalidating the node once."""
+        for key in items:
+            view._check_key(key)
+        items = {self._resolve_key(key): value for key, value in items.items()}
+        removed = [key for key in view if key not in items]
+        # Validate everything before mutating so a bad key or a disposed
+        # input cannot leave the overrides half replaced.
+        for key in removed:
+            self._check_unmask(key)
+        for key in removed:
+            self._unset(key)
+        for key, value in items.items():
+            self._set(key, value)
+        if removed or items:
+            self._node._invalidate_overrides()
+
+
+class InputOverridesView(MutableMapping):
+    """
+    The positional (:attr:`InputOverrides.args`) or keyword
+    (:attr:`InputOverrides.kwargs`) part of a node's overrides.
+
+    Reads and writes go through to the overrides of the node.
+    """
+
+    def __init__(self, overrides: InputOverrides, positional: bool):
+        self._parent = overrides
+        self._positional = positional
+
+    def _check_key(self, key: t.Any):
+        if self._positional:
+            if not isinstance(key, int) or isinstance(key, bool):
+                raise TypeError(
+                    "Positional overrides are addressed by positional index, "
+                    f"not by {type(key).__name__!r}."
+                )
+        elif not isinstance(key, str):
+            raise TypeError(
+                "Keyword overrides are addressed by keyword name, not by "
+                f"{type(key).__name__!r}."
+            )
+        else:
+            operation = t.cast('dict', self._parent._node._operation)
+            index = _positional_names(operation).get(key)
+            if index is not None and key not in (operation.get('kwargs') or {}):
+                raise KeyError(
+                    f"{key!r} names positional input {index}; use "
+                    f"overrides[{key!r}] or overrides.args[{index}]."
+                )
+            self._parent._resolve_key(key, aliases=False)
+
+    def __getitem__(self, key: t.Any) -> t.Any:
+        self._check_key(key)
+        return self._parent[key]
+
+    def __setitem__(self, key: t.Any, value: t.Any):
+        self._check_key(key)
+        self._parent[key] = value
+
+    def __delitem__(self, key: t.Any):
+        self._check_key(key)
+        del self._parent[key]
+
+    def __iter__(self) -> Iterator[t.Any]:
+        positional = self._positional
+        return iter([key for key in self._parent if isinstance(key, int) is positional])
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self)
+
+    def __repr__(self) -> str:
+        name = 'args' if self._positional else 'kwargs'
+        return f"overrides.{name}({dict(self)!r})"
 
 
 class reactive_ops:
@@ -868,6 +1090,50 @@ class reactive_ops:
         return rxi._meta
 
     @property
+    def generation(self) -> int:
+        """
+        The generation of this node's current value.
+
+        Changes whenever the node takes a new value, even without running its
+        operation, and not when the operation raises ``Skip``.
+
+        Inside the node's own operation it is the generation the value being
+        computed will have. Stamp it beside what the operation writes to
+        ``.rx.meta``; a stamp that no longer matches means the metadata does
+        not describe the current value. An operation that raises after writing
+        produces a ``ReactiveError`` with a matching stamp, so also ignore
+        metadata when the value is a ``ReactiveError``.
+
+        >>> import param
+        >>> def produce(v):
+        ...     node = param.current_node()
+        ...     node.rx.meta['trace'] = {'v': v, 'generation': node.rx.generation}
+        ...     return v * 10
+        >>> expr = param.rx(1).rx.pipe(produce)
+        >>> expr.rx.value
+        10
+        >>> expr.rx.meta['trace']['generation'] == expr.rx.generation
+        True
+
+        A superseded asynchronous run may write a stamp that matches the
+        generation of the run replacing it.
+
+        Returns
+        -------
+        int
+            The node's generation.
+        """
+        rxi = self._reactive
+        if not isinstance(rxi, rx):
+            raise AttributeError(
+                "'.rx.generation' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(rxi).__name__!r} object."
+            )
+        if _current_node.get() is rxi:
+            return rxi._settle_count + 1
+        return rxi._settle_count
+
+    @property
     def overrides(self) -> InputOverrides:
         """
         A mutable mapping of overrides for the inputs of this node.
@@ -894,6 +1160,29 @@ class reactive_ops:
         >>> expr.rx.overrides['fx'] = param.rx(3)
         >>> expr.rx.value
         30
+
+        Positional indices follow the call the operation makes, so they count
+        the value it is applied to: in ``a.rx.pipe(f, b)`` index 0 is ``a`` and
+        index 1 is ``b``, and in ``a * b`` index 0 is ``a``. A reflected operator
+        swaps them, ``1 + a`` calls ``add(1, a)``, so ``a`` is index 1.
+
+        >>> expr.rx.overrides[0] = 100
+        >>> expr.rx.value
+        300
+
+        A positional input of a function applied with :meth:`pipe` may also
+        be addressed by its parameter name, if the function's signature allows
+        passing it by keyword; the override is still stored under its index.
+        A keyword input of the same name takes precedence.
+
+        ``.args`` and ``.kwargs`` give the positional and keyword overrides as
+        separate mappings, and assigning to either replaces all of its
+        overrides at once, invalidating the node a single time:
+
+        >>> expr.rx.overrides.args = (5,)
+        >>> expr.rx.overrides.kwargs = {}
+        >>> expr.rx.value
+        10
 
         The override stands in for the input and is resolved in its place, ahead
         of the guards the input would have faced, i.e. it even overrides input
@@ -1016,13 +1305,18 @@ class reactive_ops:
             The function to apply to the current value.
         *args : iterable, optional
             Positional arguments to pass to the function.
+        process_failures : bool, optional
+            Whether ``func`` runs on inputs holding a :class:`ReactiveError`
+            instead of passing the failure through. Defaults to False.
         **kwargs : dict, optional
             Keyword arguments to pass to the function.
 
         Returns
         -------
         rx
-            A new reactive expression representing the result of applying ``func``.
+            A new reactive expression representing the result of applying
+            ``func``. It is in "propagate" mode if this expression, or any
+            ``rx`` argument, is.
 
         Examples
         --------
@@ -1050,9 +1344,12 @@ class reactive_ops:
         >>> rx_result.rx.value
         30
         """
-        return self._as_rx()._apply_operator(
+        new = self._as_rx()._apply_operator(
             func, *args, process_failures=process_failures, **kwargs
         )
+        # Only names of user-supplied functions are public override keys.
+        t.cast('dict', new._operation)['named_inputs'] = True
+        return new
 
     def resolve(self, nested=True, recursive=False) -> 'rx':
         """
@@ -1121,7 +1418,8 @@ class reactive_ops:
 
         Both routes an asynchronous callable can take are tracked: one applied
         as an operation, e.g. passed to ``.rx.pipe``, and one passed to ``rx``
-        as the object itself, which is held on a parameter and resolved by the
+        as the object itself after declaring it a reference with
+        ``param.bind``, which is held on a parameter and resolved by the
         reference machinery. A generator settles on each value it yields, so it
         reports ``True`` only until its next value arrives rather than until it
         is exhausted. Accessed on a parameter rather than an expression this is
@@ -1200,7 +1498,7 @@ class reactive_ops:
         if not isinstance(reactive, rx):
             return False
         return any(
-            node._dirty or node._root._dirty_obj or node._settling
+            node._dirty or node._obj_dirty or node._settling
             for node in reactive._upstream()
         )
 
@@ -1209,10 +1507,11 @@ class reactive_ops:
         Iterate over the ``rx`` nodes this expression derives its value from,
         directly or transitively, excluding itself. Pipeline edges count:
         ``.rx.pipe``/operator chaining, a branch (``expr[0]``), an ``rx``
-        passed as an operation argument (or its ``.rx.overrides`` replacement,
-        once masked), and an ``rx`` reached through a
-        ``Parameter(allow_refs=True)``. A dependency reached only through
-        ``bind()``, ``.rx.when``, or ``.rx.where`` is not included.
+        passed as an operation argument, and an ``rx`` reached through a
+        ``Parameter(allow_refs=True)``. An input masked by ``.rx.overrides``,
+        including the one chained from, is replaced by its override. A
+        dependency reached only through ``bind()``, ``.rx.when``, or
+        ``.rx.where`` is not included.
 
         Traversal order is unspecified and may change between calls as the
         pipeline is extended. Do not use ``in`` on the iterator to test
@@ -1239,6 +1538,62 @@ class reactive_ops:
         upstream = reactive._upstream()
         next(upstream, None)  # Skip itself.
         yield from upstream
+
+    def inputs(self) -> dict[int | str, 'rx']:
+        """
+        Return the ``rx`` nodes this node's operation is applied to.
+
+        Keys match ``.rx.overrides``: keyword arguments by name, positional
+        arguments by their position in the call, which includes the node this
+        one was piped from. An input overridden by an ``rx`` node reports that
+        node; one overridden by a plain value is left out. Not included:
+        non-``rx`` arguments, ``rx`` nodes nested in a container, and the
+        arguments of a ``bind()`` function.
+
+        Inside an operation, ``param.current_node().rx.inputs()`` gives the
+        nodes that fed it, e.g. to read their ``.rx.meta`` (see
+        ``.rx.generation``).
+
+        Returns
+        -------
+        dict[int | str, rx]
+            A new dict on every call; empty for a node without an operation.
+
+        Examples
+        --------
+        >>> import param
+        >>> a, b = param.rx(1), param.rx(2)
+        >>> expr = a.rx.pipe(lambda x, *, y: x + y, y=b)
+        >>> expr.rx.inputs()[0] is a, expr.rx.inputs()['y'] is b
+        (True, True)
+        """
+        reactive = self._reactive
+        if not isinstance(reactive, rx):
+            raise AttributeError(
+                "'.rx.inputs()' is only available on `rx` nodes, not on "
+                f"the `.rx` namespace of a {type(reactive).__name__!r} object."
+            )
+        operation = reactive._operation
+        if not operation:
+            return {}
+        overrides = operation.get('overrides') or {}
+        args = operation.get('args') or ()
+        prev = reactive._prev
+        source = None if prev is None else _unmirror(prev)
+        candidates = [
+            *(
+                (key, source if index is None else args[index])
+                for key, index in enumerate(_positional_layout(operation))
+            ),
+            *(operation.get('kwargs') or {}).items(),
+        ]
+        inputs: dict[int | str, rx] = {}
+        for key, arg in candidates:
+            if key in overrides:
+                arg = overrides[key]
+            if isinstance(arg, rx):
+                inputs[key] = arg
+        return inputs
 
     def downstream(self) -> Iterator['rx']:
         """
@@ -1524,6 +1879,7 @@ class reactive_ops:
         >>> rx_result.rx.value
         '5 or below'
         """
+        _warn_bare_async_inputs(x, y)
         xrefs = resolve_ref(x)
         yrefs = resolve_ref(y)
         if isinstance(self._reactive, rx):
@@ -1543,8 +1899,8 @@ class reactive_ops:
             bind(trigger_y, *yrefs, watch=True)
 
         def ternary(condition, _):
-            return resolve_value(x) if condition else resolve_value(y)
-        return t.cast('t.Any', bind(ternary, self._reactive, trigger.param.value))
+            return _resolve_operand(x) if condition else _resolve_operand(y)
+        return rx(bind(ternary, self._reactive, trigger.param.value))
 
     def distinct(self, fn=None) -> 'rx':
         """
@@ -1605,7 +1961,7 @@ class reactive_ops:
                 raise Skip
             return new
 
-        return self.pipe(_distinct)
+        return self._as_rx()._apply_operator(_distinct)
 
     # Operations to get the output and set the input of an expression
 
@@ -1728,7 +2084,12 @@ class reactive_ops:
                 "expression wrapping a Parameter or another dynamic "
                 "reference cannot be updated."
             )
-        self._reactive._wrapper.object = resolve_value(new)
+        _warn_bare_async_inputs(new)
+        wrapper = self._reactive._wrapper
+        value = _resolve_operand(new)
+        if isinstance(wrapper, GenWrapper) and _held_as_value(transform_reference(value)):
+            value = _HeldValue(value)
+        wrapper.object = value
 
     def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, process_failures=False):
         """
@@ -2149,34 +2510,6 @@ def bind(
         setattr(wrapped, name, t.cast('Callable', accessor)(wrapped))
     return wrapped
 
-class _WeakInvalidator:
-    """
-    A weakly-bound invalidation callback for an ``rx`` pipeline node.
-
-    ``rx`` nodes register invalidation callbacks on their *source* parameters.
-    If those callbacks were strong bound-method references the source (which is
-    typically long-lived) would keep every derived node — and anything it
-    captured, such as large arrays — alive indefinitely. Wrapping the bound
-    method in a :class:`weakref.WeakMethod` lets the derived node be garbage
-    collected as soon as nothing else references it; once collected the call
-    becomes a no-op and the now-dead watcher is removed by a finalizer (see
-    ``rx._watch_invalidation``).
-    """
-
-    __slots__ = ('_ref', '_watcher', '__weakref__')
-
-    _watcher: Watcher | None
-
-    def __init__(self, method):
-        self._ref = weakref.WeakMethod(method)
-        self._watcher = None
-
-    def __call__(self, *events):
-        method = self._ref()
-        if method is not None:
-            return method(*events)
-
-
 def _remove_watcher(
     owner_ref: weakref.ref[Parameterized | type[Parameterized]],
     invalidator_ref: weakref.ref[_WeakInvalidator],
@@ -2282,6 +2615,7 @@ def collect(*args, error_mode='raise', **kwargs) -> 'rx':
     >>> collected.args.rx.pipe(sum).rx.value
     3
     """
+    _warn_bare_async_inputs(*args, *kwargs.values())
     operation = {
         'fn': _collect_marker,
         'args': args,
@@ -2320,6 +2654,8 @@ def current_node() -> rx | None:
     ...         node.rx.meta['trace'] = {'fx_used': fx}
     ...     return price * fx
 
+    ``node.rx.inputs()`` gives the nodes that fed the operation.
+
     Returns ``None`` outside of any operation body (including in plain user
     code, tests, or a REPL), so callers should guard rather than chain
     straight through to ``.rx.meta``.
@@ -2343,15 +2679,23 @@ def _untracked_reference(value) -> bool:
         return False
     if isinstance(value, (list, tuple, dict, slice)):
         return any(_iter_rx(value)) or bool(resolve_ref(value, recursive=True))
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or inspect.isgeneratorfunction(value):
+    if hasattr(value, '_dinfo'):
         return True
+    if _is_async_fn(value):
+        return not _held_as_value(value)
     return isinstance(value, Parameter) and value.name is not None
+
+
+def _unmirror(node):
+    """Return the node a copied clone mirrors, which computes its value."""
+    while node._shared is not None and node._method is node._shared._method is None:
+        node = node._shared
+    return node
 
 
 def _settle_state(node):
     """Use the shared source before its clone resolves independently."""
-    while node._shared is not None and node._method is node._shared._method is None:
-        node = node._shared
+    node = _unmirror(node)
     return node._settle_count, node._skipped
 
 
@@ -2372,7 +2716,16 @@ class rx:
         data structure.
     error_mode : {"raise", "propagate"}, default "raise"
         Whether exceptions raised while evaluating the expression should be
-        re-raised or represented as :class:`ReactiveError` values.
+        re-raised or represented as :class:`ReactiveError` values. A derived
+        expression is in "propagate" mode if the expression it is derived
+        from, or any ``rx`` argument of its operation, is.
+    process_failures : bool, default False
+        When ``obj`` is a function, whether calling the expression runs the
+        function on arguments holding a :class:`ReactiveError` instead of
+        passing the failure through, like ``.rx.pipe(..., process_failures=True)``.
+        Not inherited by derived expressions.
+
+        .. versionadded:: 2.5.0
     label : str, optional
         An optional human-readable label for this node. Read back via
         ``expr.rx.error.label`` on a `ReactiveError` this node (or a node
@@ -2426,6 +2779,8 @@ class rx:
     _override_channel: Trigger | None = None
 
     _readers: list[weakref.ref] | None = None
+
+    _adopted_settle_count: int = 0
 
     _ref_binding: Callable[..., t.Any] | None = None
 
@@ -2517,10 +2872,12 @@ class rx:
             # rx._clone codepath
             fn = kwargs.pop('fn')
             wrapper = kwargs.pop('_wrapper', None)
-        elif inspect.isgeneratorfunction(obj) or iscoroutinefunction(obj):
+        elif _is_async_fn(obj) and not _held_as_value(obj):
             # Resolves generator and coroutine functions lazily
+            if _is_bare_async_ref(obj):
+                _warn_bare_async_ref(obj)
             wrapper = t.cast('Callable', GenWrapper)(object=obj)
-            fn = bind(lambda obj: obj, wrapper.param.object)
+            fn = bind(_unbox_held, wrapper.param.object)
             obj = Undefined
         elif isinstance(obj, (FunctionType, MethodType)) and hasattr(obj, '_dinfo'):
             # Bound functions and methods are resolved on access
@@ -2546,7 +2903,7 @@ class rx:
     def __init__(
         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
         _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
-        label=None,
+        label=None, process_failures=False,
         **kwargs
     ):
         # _init is used to prevent to __getattribute__ to execute its
@@ -2578,6 +2935,7 @@ class rx:
         if error_mode not in ('raise', 'propagate'):
             raise ValueError("error_mode must be either 'raise' or 'propagate'")
         self._label = label
+        self._process_failures = process_failures
         self._current_ = _current
         self._meta: dict[t.Any, t.Any] | None = None  # Do not allocate unless needed
         self._live_params_cache: set[tuple[int, str | None]] | None = None
@@ -2595,7 +2953,7 @@ class rx:
 
         # Define special trigger parameter if operation has to be lazily evaluated
         self._trigger: Trigger | None
-        if operation and (iscoroutinefunction(operation['fn']) or inspect.isgeneratorfunction(operation['fn'])):
+        if operation and _is_async_operation(operation):
             self._trigger = Trigger(internal=True)
             self._current_ = Undefined
             self._dirty = True  # Otherwise current will be stuck as Undefined.
@@ -2681,16 +3039,29 @@ class rx:
         else:
             self._shared_obj[0] = obj
 
+    def _cut_from_root(self) -> bool:
+        """Whether a masked source on this node's chain hides the root from it."""
+        node = self
+        while node is not None:
+            if _source_masked(node._operation):
+                return True
+            node = node._prev
+        return False
+
+    @property
+    def _obj_dirty(self) -> bool:
+        """
+        Whether the function feeding the pipeline changed in a way that
+        reaches this node. The flag stays set until a node the root is not
+        cut off from reads ``_obj``.
+        """
+        return self._root._dirty_obj and not self._cut_from_root()
+
     @property
     def _is_async(self) -> bool:
         if not self._operation:
             return False
-        fn = self._operation["fn"]
-        return (
-            inspect.iscoroutinefunction(fn) or
-            inspect.isasyncgenfunction(fn) or
-            inspect.isgeneratorfunction(fn)
-        )
+        return _is_async_operation(self._operation)
 
     @property
     def _awaiting(self) -> bool:
@@ -2710,10 +3081,11 @@ class rx:
         Whether an asynchronous reference feeding this node has not yet
         produced a value for the current inputs.
 
-        A coroutine or generator function passed to ``rx`` as the object rather
-        than as an operation is held on a parameter and resolved by the
-        reference machinery, so its settlement is tracked there instead of by
-        this node's own generations.
+        A coroutine or generator function declared a reference with
+        ``param.bind`` and passed to ``rx`` as the object rather than as an
+        operation is held on a parameter and resolved by the reference
+        machinery, so its settlement is tracked there instead of by this
+        node's own generations.
         """
         for p in self._internal_params:
             owner, name = p.owner, p.name
@@ -2735,16 +3107,22 @@ class rx:
         Excludes ``_ref_inputs()`` so disposing a view cannot dispose the
         ref held by its owning ``Parameterized``.
         """
-        for inp in (self._prev, self._shared):
-            if isinstance(inp, rx):
-                yield inp
         operation = self._operation
+        if _source_masked(operation):
+            operation = t.cast('dict', operation)
+            yield from _iter_rx(operation['overrides'][_source_key(operation)])
+        elif isinstance(self._prev, rx):
+            yield self._prev
+        if isinstance(self._shared, rx):
+            yield self._shared
         if operation:
             overrides = operation.get('overrides') or {}
             args = operation.get('args') or ()
             kwargs = operation.get('kwargs') or {}
             if overrides:
-                args = [overrides.get(i, a) for i, a in enumerate(args)]
+                args = [
+                    overrides.get(_arg_key(operation, i), a) for i, a in enumerate(args)
+                ]
                 kwargs = {k: overrides.get(k, v) for k, v in kwargs.items()}
             yield from _iter_rx((operation['fn'], args, kwargs))
 
@@ -2814,7 +3192,7 @@ class rx:
         self._check_disposed()
         if self._error_state:
             raise self._error_state
-        elif not self._lazy and (self._dirty or self._root._dirty_obj):
+        elif not self._lazy and (self._dirty or self._obj_dirty):
             self._resolve()
         return self._current_
 
@@ -2929,11 +3307,15 @@ class rx:
             for _, params in full_groupby(self._fn_params, lambda x: id(x.owner)):
                 fps = [p.name for p in params if p in self._root._fn_params]
                 if fps:
-                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps)
+                    self._watch_invalidation(params[0].owner, self._invalidate_obj, fps, unbatched=True)
         for _, params in full_groupby(self._internal_params, lambda x: id(x.owner)):
-            self._watch_invalidation(params[0].owner, self._invalidate_current, [p.name for p in params])
+            self._watch_invalidation(
+                params[0].owner, self._invalidate_current, [p.name for p in params], unbatched=True
+            )
 
-    def _watch_invalidation(self, owner, method, names) -> tuple[_WeakInvalidator, weakref.finalize]:
+    def _watch_invalidation(
+        self, owner, method, names, unbatched: bool = False
+    ) -> tuple[_WeakInvalidator, weakref.finalize]:
         """
         Register a *weak* invalidation watcher on a source parameter.
 
@@ -2946,7 +3328,7 @@ class rx:
         disposal (e.g. ``.rx.overrides``) can fire and drop it right away
         instead of letting it pile up in ``_finalizers`` until then.
         """
-        invalidator = _WeakInvalidator(method)
+        invalidator = _WeakInvalidator(method, unbatched)
         invalidator._watcher = owner.param._watch(invalidator, names, precedence=-1)
         finalizer = weakref.finalize(
             self, _remove_watcher, weakref.ref(owner), weakref.ref(invalidator)
@@ -2976,20 +3358,25 @@ class rx:
         cache = self._live_params_cache
         if cache is not None:
             return cache
-        live = {(id(p.owner), p.name) for p in self._fn_params}
+        if self._fn_params and not self._cut_from_root():
+            live = {(id(p.owner), p.name) for p in self._fn_params}
+        else:
+            live = set()
         for trigger in (self._trigger, self._override_channel):
             if trigger is not None:
                 live.add((id(trigger), 'value'))
-        for node in (self._prev, self._shared):
+        operation = self._operation
+        prev = None if _source_masked(operation) else self._prev
+        for node in (prev, self._shared):
             if node is not None:
                 live |= node._live_params()
-        operation = self._operation
         if operation is not None:
             live |= {(id(p.owner), p.name) for p in resolve_ref(operation['fn'])}
             overrides = operation.get('overrides') or {}
             args = operation.get('args') or ()
             kwargs = operation.get('kwargs') or {}
-            for key, arg in chain(enumerate(args), kwargs.items()):
+            positional = ((_arg_key(operation, i), arg) for i, arg in enumerate(args))
+            for key, arg in chain(positional, kwargs.items()):
                 # A masked input is resolved from its override, which is watched
                 # separately, so nothing the input depends on is live.
                 if key not in overrides:
@@ -3090,15 +3477,13 @@ class rx:
             self._override_channel = Trigger(internal=True)
         return self._override_channel
 
-    def _invalidate_overrides(self, *events):
+    def _override_dependents(self) -> tuple[list[t.Any], list[t.Any]]:
         """
-        Invalidate this node and its readers after one of its overrides changed.
+        Return the nodes an override change on this node affects.
 
-        An override is not a parameter, so ``_setup_invalidations`` does not cover
-        it: dirty this node and everything reading its result, drop their cached
-        ``_live_params()`` (masking a different set of inputs now), then notify
-        the consumers watching their override channels. Nodes reading the same
-        *inputs* without reading this node's result are deliberately left alone.
+        The seeds are this node and its shared node, if any; the second list
+        adds everything reading their result. Nodes reading the same *inputs*
+        without reading this node's result are deliberately left out.
         """
         nodes = []
         seen = set()
@@ -3114,10 +3499,24 @@ class rx:
                 reader = ref()
                 if reader is not None:
                     queue.append(reader)
-        for node in nodes:
+        return seeds, nodes
+
+    def _dirty_overrides(self, *events):
+        """
+        Dirty this node and its readers after one of its overrides changed.
+
+        An override is not a parameter, so ``_setup_invalidations`` does not
+        cover it. Their cached ``_live_params()`` is dropped too, since they
+        now mask a different set of inputs.
+        """
+        for node in self._override_dependents()[1]:
             node._dirty = True
             node._error_state = None
             node._live_params_cache = None
+
+    def _notify_overrides(self, *events):
+        """Notify the consumers watching the override channels of this node and its readers."""
+        seeds, nodes = self._override_dependents()
         for node in seeds:
             node._notify_graph_change()
         for node in nodes:
@@ -3125,12 +3524,21 @@ class rx:
             if channel is not None:
                 channel.param.trigger('value')
 
+    def _invalidate_overrides(self, *events):
+        """Invalidate this node and its readers, then notify their consumers."""
+        self._dirty_overrides()
+        self._notify_overrides()
+
     def _watch_override(self, refs) -> list[weakref.finalize]:
         """
         Watch the references an override is set to.
 
         They cannot join the node's parameters, which are fixed when it is
-        constructed, so they are routed to ``_invalidate_overrides`` instead.
+        constructed, so they are watched separately. Dirtying happens at write
+        time, but notifying the consumers is an ordinary watcher, so it is
+        deferred by any batch on the reference's owner: otherwise
+        ``.param.update()`` would let a consumer on another object see the new
+        override value combined with the old value of an input not yet flushed.
         The finalizers are returned so unmasking or replacing the override can
         fire and drop them right away, instead of leaving them to accumulate in
         ``_finalizers`` until this node is disposed of.
@@ -3140,10 +3548,10 @@ class rx:
             owner = params[0].owner
             if owner is None:
                 continue
-            _, finalizer = self._watch_invalidation(
-                owner, self._invalidate_overrides, [p.name for p in params]
-            )
-            finalizers.append(finalizer)
+            names = [p.name for p in params]
+            for method, unbatched in ((self._dirty_overrides, True), (self._notify_overrides, False)):
+                _, finalizer = self._watch_invalidation(owner, method, names, unbatched=unbatched)
+                finalizers.append(finalizer)
         return finalizers
 
     def _watch_settle_change(self, callback: Callable[[t.Any], None]) -> None:
@@ -3213,6 +3621,7 @@ class rx:
                 self._current_ = shared.rx.value
                 self._skipped = False
                 self._settle_count += 1
+                self._adopted_settle_count = shared._settle_count
                 self._finished_generation = generation
                 trigger.param.trigger('value')
             elif inspect.isasyncgen(obj):
@@ -3236,6 +3645,7 @@ class rx:
                     self._settle_count += 1
                     self._finished_generation = generation
                     trigger.param.trigger('value')
+                    self._wake_copies()
                 if not broke and not stale() and self._finished_generation != generation:
                     # The generator did not yield anything, so we skip and keep
                     # the previous output
@@ -3254,13 +3664,14 @@ class rx:
                 self._settle_count += 1
                 self._finished_generation = generation
                 trigger.param.trigger('value')
+                self._wake_copies()
         except asyncio.CancelledError:
             return
         except Exception as e:
             if stale():
                 return
             self._finished_generation = generation
-            if self._dirty or self._root._dirty_obj:
+            if self._dirty or self._obj_dirty:
                 # Ignoring as the inputs were invalidated while the async operation was running
                 return
             if self._error_mode == 'propagate':
@@ -3268,9 +3679,11 @@ class rx:
                 self._skipped = False
                 self._settle_count += 1
                 trigger.param.trigger('value')
+                self._wake_copies()
                 return
             # Mirror the synchronous path in _resolve.
             # For an async generator an raised exception ends the stream.
+            # Not delivered to downstream watchers, so no copies to wake.
             self._error_state = e
             trigger.param.trigger('value')
         finally:
@@ -3280,6 +3693,33 @@ class rx:
             # watcher won't fire if the recompute produced the same value,
             # so `.rx.updating()` needs this to hear about it regardless.
             self._notify_settle_change()
+
+    def _wake_copies(self):
+        # Deferred so a copy resolving through the regular path catches up first.
+        if not self._readers:
+            return
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        if loop is getattr(_thread_state, 'event_loop', None):
+            # The landing is synchronous with the read that started it.
+            return
+        from .parameterized import async_executor
+        async_executor(self._wake_stale_copies)
+
+    async def _wake_stale_copies(self):
+        # Unwatched copies are woken too; finding watchers means walking the
+        # whole downstream graph.
+        for ref in tuple(self._readers or ()):
+            copy = ref()
+            if (
+                copy is not None and copy._shared is self
+                and copy._trigger is not None and copy._current_task is None
+                and copy._adopted_settle_count != self._settle_count
+            ):
+                copy._lazy_resolve()
 
     def _lazy_resolve(self, obj = None):
         from .parameterized import async_executor
@@ -3297,10 +3737,17 @@ class rx:
         self._check_disposed()
         if self._error_state:
             raise self._error_state
-        elif self._dirty or self._root._dirty_obj:
+        elif self._dirty or self._obj_dirty:
             try:
-                obj = self._obj if self._prev is None else self._prev._resolve()
                 operation = self._operation
+                masked = _source_masked(operation)
+                if masked:
+                    operation = t.cast('dict', operation)
+                    obj = self._resolve_input(operation['overrides'][_source_key(operation)])
+                elif self._prev is None:
+                    obj = self._obj
+                else:
+                    obj = self._prev._resolve()
                 if (
                     isinstance(obj, ReactiveError)
                     and not (operation or {}).get('process_failures')
@@ -3320,8 +3767,8 @@ class rx:
                     self._current_ = Undefined
                     raise Skip
                 elif (
-                    self._prev is not None and _settle_state(self._prev)[1]
-                    and _settle_state(self._prev)[0] == 0
+                    not masked and self._prev is not None
+                    and _settle_state(self._prev)[1] and _settle_state(self._prev)[0] == 0
                 ):
                     raise Skip
                 elif (
@@ -3345,7 +3792,7 @@ class rx:
                     # skip state rather than be marked skipped by the handler.
                     self._current_ = value
                     self._skipped = shared._skipped
-                    self._settle_count = shared._settle_count
+                    self._settle_count = self._adopted_settle_count = shared._settle_count
                     if self._is_async:
                         # The value was adopted without scheduling a task, so
                         # claim a generation for it. This supersedes a task an
@@ -3354,18 +3801,22 @@ class rx:
                         self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
-                count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
-                generations = {_PREV_GENERATION: count} if self._prev is not None else {}
-                fresh = self._prev is not None and not skipped
+                generations: dict[t.Any, int] | None
+                if masked:
+                    # Like a masked argument, the override is not settle-tracked.
+                    generations, fresh = None, True
+                else:
+                    count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
+                    generations = {_PREV_GENERATION: count} if self._prev is not None else {}
+                    fresh = self._prev is not None and not skipped
                 if operation:
                     obj = self._eval_operation(obj, operation, generations, fresh)
                     if self._is_async:
                         self._lazy_resolve(obj)
                         if self._finished_generation == self._resolve_generation:
                             # Handle case where async call is resolved synchronously
-                            # e.g. when there is no running event loop
-                            self._skipped = False
-                            self._settle_count += 1
+                            # e.g. when there is no running event loop. _resolve_async
+                            # has already settled the node.
                             self._dirty = False
                             return self._current_
                         obj = Skip
@@ -3438,7 +3889,7 @@ class rx:
             if not gate.changed(out):
                 raise Skip
             return out
-        return bind(evaluate, *params)
+        return bind(evaluate, *params, process_failures=True)
 
     def _clone(self, operation=None, copy=False, **kwargs) -> Self:
         # Aliases `self._operation` by identity rather than copying it,
@@ -3457,8 +3908,14 @@ class rx:
             )
         else:
             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
-        kwargs = dict(self._display_opts, **kwargs)
+        kwargs = t.cast('dict[str, t.Any]', dict(self._display_opts, **kwargs))
         error_mode = t.cast('str', kwargs.pop('error_mode', self._error_mode))
+        if not reuse and operation is not None:
+            _warn_bare_async_inputs(*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
+        if not reuse and error_mode == 'raise' and operation is not None:
+            inputs = (*operation.get('args', ()), *(operation.get('kwargs') or {}).values())
+            if any(isinstance(arg, rx) and arg._error_mode == 'propagate' for arg in inputs):
+                error_mode = 'propagate'
         label = kwargs.pop('label', self._label)
         new = type(self)(
             self._obj, operation=operation, depth=depth, fn=self._fn, lazy=self._lazy,
@@ -3567,14 +4024,22 @@ class rx:
         if method in rx._method_handlers:
             handler = rx._method_handlers[method]
             method = handler(self)
+            callee = None
+        elif new._method:
+            callee = getattr(new._current_, new._method, None)
+        else:
+            callee = new._current_
         new._method = None
         kwargs = dict(kwargs)
         operation = {
             'fn': method,
             'args': args,
             'kwargs': kwargs,
-            'reverse': False
+            'reverse': False,
+            'process_failures': self._process_failures,
         }
+        if _is_async_fn(callee):
+            operation['async'] = True
         return new._clone(operation)
 
     #----------------------------------------------------------------
@@ -3762,14 +4227,14 @@ class rx:
             if arg._settling:
                 raise Skip
             value = arg.rx.value
-            if value is Skip or value is Undefined:
+            if value is Skip or value is Undefined or arg._settling:
                 raise Skip
             if arg._skipped and arg._settle_count == 0:
                 raise Skip
             return value
         if any(ref._settling for ref in _iter_rx(arg)):
             raise Skip
-        val = resolve_value(arg)
+        val = _resolve_operand(arg)
         if val is Skip or val is Undefined:
             raise Skip
         return val
@@ -3792,8 +4257,9 @@ class rx:
         process_failures = operation.get('process_failures')
         resolved_args = []
         for i, arg in enumerate(args):
-            overridden = i in overrides
-            target = overrides[i] if overridden else arg
+            key = _arg_key(operation, i)
+            overridden = key in overrides
+            target = overrides[key] if overridden else arg
             val = self._resolve_input(target)
             if isinstance(val, ReactiveError) and not process_failures:
                 self._input_generations = None
@@ -3926,6 +4392,79 @@ def _iter_rx(value: t.Any) -> Iterator[rx]:
             yield from _iter_rx(v)
 
 
+if sys.version_info >= (3, 14):
+    import annotationlib
+
+    # Annotations are irrelevant here and evaluating them can raise, e.g. on
+    # names only imported under TYPE_CHECKING.
+    _signature = partial(inspect.signature, annotation_format=annotationlib.Format.FORWARDREF)
+else:
+    _signature = inspect.signature
+
+
+def _is_async_operation(operation: dict[str, t.Any]) -> bool:
+    """
+    Whether an operation produces an awaitable or (async) generator, either
+    because its fn is async or because it calls an async function.
+    """
+    return operation.get('async', False) or _is_async_fn(operation['fn'])
+
+
+def _held_as_value(fn: t.Any) -> bool:
+    """
+    Whether rx keeps a bare coroutine or generator function as a value,
+    because it cannot be called without arguments to resolve it.
+    """
+    if hasattr(fn, '_dinfo') or not _is_async_fn(fn):
+        return False
+    try:
+        sig = _signature(fn)
+    except (TypeError, ValueError):
+        return False
+    return any(
+        p.default is p.empty and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
+        for p in sig.parameters.values()
+    )
+
+
+def _resolve_operand(value: t.Any) -> t.Any:
+    """
+    ``resolve_value`` for rx inputs, keeping functions that require
+    arguments as values instead of calling them.
+    """
+    if isinstance(value, (list, tuple)):
+        return type(value)(_resolve_operand(v) for v in value)
+    elif isinstance(value, dict):
+        return type(value)((_resolve_operand(k), _resolve_operand(v)) for k, v in value.items())
+    elif isinstance(value, slice):
+        return slice(
+            _resolve_operand(value.start),
+            _resolve_operand(value.stop),
+            _resolve_operand(value.step)
+        )
+    if _held_as_value(transform_reference(value)):
+        return value
+    return resolve_value(value, recursive=False)
+
+
+def _warn_bare_async_inputs(*values: t.Any) -> None:
+    """
+    Warn about bare coroutine and generator functions an rx operation would
+    call, descending into the containers ``resolve_value`` descends into.
+    """
+    for value in values:
+        if isinstance(value, rx):
+            continue
+        elif isinstance(value, (list, tuple)):
+            _warn_bare_async_inputs(*value)
+        elif isinstance(value, dict):
+            _warn_bare_async_inputs(*value.keys(), *value.values())
+        elif isinstance(value, slice):
+            _warn_bare_async_inputs(value.start, value.stop, value.step)
+        elif _is_bare_async_ref(value := transform_reference(value)) and not _held_as_value(value):
+            _warn_bare_async_ref(value, operand=True)
+
+
 def _iter_bare_params(value: t.Any) -> Iterator[Parameter]:
     """
     Yield ``Parameter`` objects nested anywhere inside an operation
@@ -3989,7 +4528,10 @@ def _rx_transform(obj):
     # Binding the override channel wakes a consumer created before an override
     # exists. Caching is sound because a node's parameters are fixed at
     # construction, and this runs on every resolve of the reference.
-    binding = bind(resolve, *obj._params, obj._ensure_override_channel().param.value)
+    binding = bind(
+        resolve, *obj._params, obj._ensure_override_channel().param.value,
+        process_failures=True
+    )
     obj._ref_binding = binding
     return binding
 

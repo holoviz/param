@@ -93,6 +93,15 @@ def test_optional_date_annotation_allows_none():
     assert P().day is None
 
 
+def test_list_of_any_annotation_does_not_validate_items():
+    class P(param.Model):
+        items: list[t.Any] = []
+        objs: list[object] = []
+
+    assert P.param.items.item_type is None
+    assert P(items=[1, "a"], objs=[None]).items == [1, "a"]
+
+
 def test_class_annotation_infers_classselector():
     class Address:
         pass

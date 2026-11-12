@@ -238,6 +238,8 @@ pandas = "*"
 pydantic = "*"
 pyrefly = "*"
 pyright = "*"
+# pyright fails to run on the old Node versions the solver may otherwise pick.
+nodejs = ">=20"
 IPython = "*"
 typing_extensions = "*"
 tornado = "*"

@@ -351,7 +351,7 @@ class _SchemaConverter:
 
         if type_ == "string":
             fmt = prop.get("format")
-            if fmt in _DATE_FORMATS:
+            if isinstance(fmt, str) and fmt in _DATE_FORMATS:
                 kind = _DATE_FORMATS[fmt]
                 low = prop.get("formatMinimum", prop.get("formatExclusiveMinimum"))
                 high = prop.get("formatMaximum", prop.get("formatExclusiveMaximum"))
@@ -384,7 +384,7 @@ class _SchemaConverter:
         if type_ == "object" or "properties" in prop:
             if "properties" in prop:
                 # A recursive reference to a model still being converted stays unvalidated.
-                nested = self.model(prop, _class_name(prop.get("title") or prop.get("$name") or pname))
+                nested = self.model(prop, _class_name(str(prop.get("title") or prop.get("$name") or pname)))
                 return Any if nested is None else nested
             return dict
 

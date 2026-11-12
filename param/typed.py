@@ -206,9 +206,8 @@ def _build_parameter_from_field(
         factory_kwargs["default"] = explicit_value
     elif "default" not in factory_kwargs and "default_factory" not in factory_kwargs:
         if not isinstance(factory, Parameter):
-            # Selectors derive a default from `objects`; other fields are required.
             factory_kwargs["default"] = Undefined
-            is_required = not (factory is Selector and factory_kwargs.get("objects"))
+            is_required = True
 
     if isinstance(factory, Parameter):
         if not factory_kwargs:

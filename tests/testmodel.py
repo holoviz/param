@@ -12,9 +12,8 @@ def test_literal_annotation_infers_selector():
 
     assert isinstance(P.param.mode, param.Selector)
     assert P.param.mode.objects == ["read", "write"]
-    assert P.param.mode.default == "read"
 
-    p = P()
+    p = P(mode="read")
     assert p.mode == "read"
     p.mode = "write"
 
@@ -42,9 +41,8 @@ def test_enum_annotation_infers_selector():
 
     assert isinstance(P.param.status, param.Selector)
     assert P.param.status.objects == [Status.PENDING, Status.DONE]
-    assert P().status is Status.PENDING
 
-    p = P()
+    p = P(status=Status.PENDING)
     p.status = Status.DONE
     with pytest.raises(ValueError):
         p.status = "done"
@@ -383,11 +381,24 @@ def test_subclass_can_satisfy_inherited_required_field_with_a_default():
     assert Sub().name == "default-name"
 
 
-def test_literal_annotation_remains_not_required():
+def test_literal_annotation_without_default_is_required():
     class P(param.Model):
         mode: t.Literal["read", "write"]
 
-    P()
+    with pytest.raises(TypeError, match="'mode'"):
+        P()
+
+
+def test_enum_annotation_without_default_is_required():
+    class Status(enum.Enum):
+        PENDING = "pending"
+        DONE = "done"
+
+    class P(param.Model):
+        status: Status
+
+    with pytest.raises(TypeError, match="'status'"):
+        P()
 
 
 @pytest.mark.parametrize(
@@ -456,6 +467,16 @@ def test_private_string_annotation_is_not_evaluated():
         _cache: "UndefinedPrivateType" = None  # noqa: F821
 
     assert "_cache" not in P.param
+
+
+def test_private_annotation_stays_a_plain_class_attribute():
+    class P(param.Model):
+        _cache: int = 3
+
+    assert "_cache" not in P.param
+    assert P._cache == 3
+    assert "_cache" not in P._model_required
+    P()
 
 
 def test_parameter_override_preserves_optional_derived_allow_none():

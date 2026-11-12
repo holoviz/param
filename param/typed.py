@@ -162,7 +162,8 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         list_args = t.get_args(ann)
         if list_args:
             elem = list_args[0]
-            if isinstance(elem, type):
+            # `Any` is a class on Python 3.11+ but cannot be used with isinstance.
+            if isinstance(elem, type) and elem not in (Any, object):
                 kwargs["item_type"] = elem
             elif t.get_origin(elem) in (t.Union, types.UnionType):
                 elem_types = tuple(a for a in t.get_args(elem) if isinstance(a, type))

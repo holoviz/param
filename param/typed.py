@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import datetime as dt
 import enum
 import importlib
 import sys
@@ -17,7 +18,18 @@ from .parameterized import (
     String,
     Undefined,
 )
-from .parameters import Boolean, ClassSelector, Dict, Integer, List, Number, Selector, Tuple
+from .parameters import (
+    Boolean,
+    CalendarDate,
+    ClassSelector,
+    Date,
+    Dict,
+    Integer,
+    List,
+    Number,
+    Selector,
+    Tuple,
+)
 
 FT = t.TypeVar("FT")
 
@@ -140,6 +152,11 @@ def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dic
         return Number, kwargs
     if ann is str:
         return String, kwargs
+    # datetime subclasses date, so it has to be checked first.
+    if ann is dt.datetime:
+        return Date, kwargs
+    if ann is dt.date:
+        return CalendarDate, kwargs
 
     if ann is list or origin in (list, t.List):
         list_args = t.get_args(ann)

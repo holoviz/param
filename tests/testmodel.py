@@ -1,3 +1,4 @@
+import datetime as dt
 import enum
 import sys
 import typing as t
@@ -59,6 +60,37 @@ def test_optional_enum_annotation_allows_none():
     assert isinstance(P.param.status, param.Selector)
     assert P.param.status.allow_None is True
     assert P().status is None
+
+
+def test_datetime_annotation_infers_date():
+    class P(param.Model):
+        when: dt.datetime = dt.datetime(2024, 1, 1, 12)
+
+    assert isinstance(P.param.when, param.Date)
+    p = P()
+    p.when = dt.datetime(2025, 6, 1)
+    with pytest.raises(ValueError):
+        p.when = "2025-06-01"
+
+
+def test_date_annotation_infers_calendar_date():
+    class P(param.Model):
+        day: dt.date = dt.date(2024, 1, 1)
+
+    assert isinstance(P.param.day, param.CalendarDate)
+    p = P()
+    p.day = dt.date(2025, 6, 1)
+    with pytest.raises(ValueError):
+        p.day = dt.datetime(2025, 6, 1)
+
+
+def test_optional_date_annotation_allows_none():
+    class P(param.Model):
+        day: dt.date | None = None
+
+    assert isinstance(P.param.day, param.CalendarDate)
+    assert P.param.day.allow_None is True
+    assert P().day is None
 
 
 def test_class_annotation_infers_classselector():

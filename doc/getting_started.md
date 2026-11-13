@@ -2,7 +2,7 @@
 
 ## Installation
 
-Param has no required dependencies outside of Python's standard library, and so it is very easy to install.
+Param supports Python 3.11 and later and has no required dependencies outside of Python's standard library.
 
 Official releases of Param are available from conda ([![defaults version](https://img.shields.io/conda/v/anaconda/param.svg?label=defaults&style=flat&colorB=4488ff)](https://anaconda.org/main/param) [![conda-forge version](https://img.shields.io/conda/v/conda-forge/param.svg?label=conda-forge&colorB=4488ff)](https://anaconda.org/conda-forge/param)) and PyPI ([![PyPI version](https://img.shields.io/pypi/v/param.svg?colorB=cc77dd)](https://pypi.org/project/param/)), and can be installed via:
 
@@ -66,6 +66,24 @@ Of course, you could always add more code to an ordinary Python class to check f
 The types in Param may remind you of the static types found in some languages, but here the validation is done at runtime and is checking not just types but also numeric ranges or for specific allowed values. Param thus helps you not just with programming correctness, as for static types, but also for validating user inputs. Validating user inputs is generally a large fraction of a program's code, because such inputs are a huge source of vulnerabilities and potential error conditions, and Param lets you avoid ever having to write nearly any of that code.
 
 The [User Guide](user_guide/index) explains all the other Param features for simplifying your codebase, improving input validation, allowing flexible configuration, and supporting serialization.
+
+## Declaring parameters from type annotations
+
+If you'd rather declare parameters with plain Python type annotations instead of spelling out each `Parameter` explicitly, `param.Model` gives you a `dataclass`-like shorthand that synthesizes the underlying `Parameter` objects for you, while still giving you all the validation and configuration behavior described above:
+
+```{code-block} python
+import param
+
+class Sum(param.Model):
+    title: str = "sum"
+    a: int = param.Field(default=2, bounds=(0, 10), doc="First addend")
+    b: int = param.Field(default=3, bounds=(0, 10), doc="Second addend")
+
+    def __call__(self):
+        return self.title + ": " + str(self.a + self.b)
+```
+
+Leave off the `=` and the annotation becomes required: omitting that parameter when constructing the class raises a clear `TypeError` naming the missing field, rather than silently filling in a default value. See the [Typing](user_guide/Typing) user guide for the full set of supported annotations (`Literal`, `Optional`, containers, and more) and for how `Model` interacts with static type checkers.
 
 ## Using Param for configuration
 

@@ -7047,3 +7047,113 @@ class TestBatch:
             src.x = 5
         assert expr.rx.value == 15
         assert seen == []
+
+
+class _AnnotatedRx(rx):
+
+    @property
+    def annotation(self):
+        return 'annotation'
+
+    def describe(self):
+        return 'described'
+
+
+class TestSubclassAttributes:
+    """Names defined on an ``rx`` subclass are read without resolving the node."""
+
+    def _dirty_node(self):
+        calls = []
+
+        def fn(x):
+            calls.append(x)
+            return x
+
+        src = _AnnotatedRx(1)
+        node = src.rx.pipe(fn)
+        src.rx.value = 2
+        assert node._dirty
+        return node, calls
+
+    def test_property_read_does_not_resolve_dirty_node(self):
+        node, calls = self._dirty_node()
+
+        assert node.annotation == 'annotation'
+        assert calls == []
+        assert node._dirty
+
+    def test_method_read_does_not_resolve_dirty_node(self):
+        node, calls = self._dirty_node()
+
+        assert node.describe() == 'described'
+        assert calls == []
+
+    def test_hasattr_does_not_resolve_dirty_node(self):
+        node, calls = self._dirty_node()
+
+        assert hasattr(node, 'annotation')
+        assert hasattr(node, 'describe')
+        assert calls == []
+
+    def test_classmethod_read_does_not_resolve_dirty_node(self):
+        node, calls = self._dirty_node()
+
+        assert node.register_accessor == _AnnotatedRx.register_accessor
+        assert calls == []
+
+    def test_value_attribute_still_resolves_dirty_node(self):
+        node, calls = self._dirty_node()
+
+        assert node.real.rx.value == 2
+        assert calls == [2]
+
+    def test_lazy_node_returns_property_value_not_clone(self):
+        node = _AnnotatedRx(1, lazy=True)
+
+        annotation = node.annotation
+        described = node.describe()
+        assert not isinstance(annotation, rx)
+        assert not isinstance(described, rx)
+        assert annotation == 'annotation'
+        assert described == 'described'
+
+    def test_lazy_node_still_defers_value_attribute(self):
+        node = _AnnotatedRx('abc', lazy=True)
+
+        upper = node.upper()
+        assert isinstance(upper, _AnnotatedRx)
+        assert upper.rx.value == 'ABC'
+
+    def test_value_method_still_proxies(self):
+        node = rx('abc')
+
+        assert node.upper().rx.value == 'ABC'
+
+    def test_value_attribute_of_object_still_proxies(self):
+        class Obj:
+            attr = 'value'
+
+        node = rx(Obj())
+
+        assert node.attr.rx.value == 'value'
+
+    def test_disposed_node_raises_on_property_read(self):
+        node, _ = self._dirty_node()
+        node.rx.dispose()
+
+        with pytest.raises(RuntimeError, match='disposed'):
+            node.annotation
+
+    def test_accessor_predicate_sees_resolved_value_on_dirty_node(self, clean_accessors):
+        seen = []
+
+        def predicate(value):
+            seen.append(value)
+            return True
+
+        rx.register_accessor('my_accessor', lambda node: 'accessor-value', predicate=predicate)
+        node, calls = self._dirty_node()
+
+        assert node.my_accessor == 'accessor-value'
+        assert seen == [2]
+        assert calls == [2]

@@ -3969,6 +3969,10 @@ class rx:
             return super().__getattribute__(name)
         if self_dict.get('_disposed'):
             super().__getattribute__('_check_disposed')()
+        # Class-defined names (e.g. a subclass's properties) never proxy to
+        # the value, so serve them without resolving or deferring.
+        if name not in rx._accessors and any(name in klass.__dict__ for klass in type(self).__mro__):
+            return super().__getattribute__(name)
 
         current = self_dict['_current_']
         dirty = self_dict['_dirty']

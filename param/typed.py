@@ -391,6 +391,51 @@ class Model(Parameterized, metaclass=ModelMetaclass):
         super().__init__(**params)
 
     @classmethod
+    def construct(cls, **params) -> t.Self:
+        """
+        Create an instance without requiring values for required fields.
+
+        Required fields that are not supplied hold their Parameter's
+        default until they are set, and ``missing_required`` lists the
+        ones that are still unset. Like pydantic's ``model_construct``,
+        this bypasses ``__init__``; it is meant for values that are filled
+        in incrementally, e.g. by a form.
+
+        Parameters
+        ----------
+        **params
+            Parameter values to set on the new instance.
+
+        Returns
+        -------
+        Model
+            The new instance.
+        """
+        inst = cls.__new__(cls)
+        Parameterized.__init__(inst, **params)
+        unset = set(cls._model_required - params.keys())
+        inst._model_unset = unset
+        if unset:
+            def mark_set(*events):
+                unset.difference_update(event.name for event in events)
+            inst.param.watch(mark_set, sorted(unset), onlychanged=False)
+        return inst
+
+    def missing_required(self) -> list[str]:
+        """
+        Return the required fields that have not been given a value.
+
+        Only instances created with ``construct`` can have unset required
+        fields; for any other instance the result is empty.
+
+        Returns
+        -------
+        list[str]
+            Names of the unset required fields, sorted.
+        """
+        return sorted(getattr(self, "_model_unset", ()))
+
+    @classmethod
     def from_pydantic(cls, model: Any, *, name: str | None = None) -> Any:
         """
         Create a Model subclass mirroring a pydantic model.

@@ -3105,7 +3105,7 @@ class Parameters:
             recursive = self_[pname].nested_refs
             deps = resolve_ref(ref, recursive)
             is_async = _is_async_fn(ref)
-            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
+            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events):
                 continue
 
             try:

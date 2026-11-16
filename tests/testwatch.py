@@ -1,10 +1,14 @@
 """Unit test for watch mechanism."""
 import asyncio
 import copy
+import gc
 import pickle
 import re
+import sys
 import threading
 import unittest
+import warnings
+import weakref
 
 import param
 import pytest
@@ -1701,6 +1705,45 @@ class TestBatch:
                 with batch():
                     p.x = 2
                     raise ValueError('body boom')
+
+    @pytest.mark.skipif(sys.implementation.name == 'pypy', reason='Relies on reference counting')
+    @pytest.mark.parametrize('where', ['watcher', 'block', 'both'])
+    def test_batch_error_freed_without_gc(self, where):
+        # An exception raised out of batch(), from a watcher while flushing
+        # or from the block itself, must not be kept alive by a reference
+        # cycle through the frames it was raised from.
+        class Payload:
+            pass
+
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        held = [Payload()]
+        ref = weakref.ref(held[0])
+
+        def bad(*events):
+            raise RuntimeError(held[0])
+
+        if where != 'block':
+            p.param.watch(bad, 'x')
+
+        gc.collect()
+        gc.disable()
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', RuntimeWarning)
+                try:
+                    with batch():
+                        p.x = 2
+                        if where != 'watcher':
+                            raise ValueError(held[0])
+                except (ValueError, RuntimeError):
+                    pass
+            held.clear()
+            assert ref() is None
+        finally:
+            gc.enable()
 
 
 @pytest.fixture

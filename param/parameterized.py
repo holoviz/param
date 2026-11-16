@@ -28,7 +28,7 @@ from contextlib import contextmanager, ExitStack
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
-from functools import partial, wraps, reduce
+from functools import cached_property, partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
@@ -1424,6 +1424,8 @@ _add_doc(Event,
 
 _Watcher = namedtuple("_Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence")
 
+_watcher_precedence = attrgetter('precedence')
+
 class Watcher(_Watcher):
     """
     Object declaring a callback function to invoke when an Event is
@@ -1509,6 +1511,10 @@ class Watcher(_Watcher):
         >>> watcher.remove()
         """
         (self.cls if self.inst is None else self.inst).param.unwatch(self)
+
+    @cached_property
+    def _is_coroutine(self) -> bool:
+        return iscoroutinefunction(self.fn)
 
 
 class ParameterMetaclass(type):
@@ -2412,11 +2418,13 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             if obj is None:
                 self._invalidate_init_cache()
                 watchers = self.watchers.get("value")
+                obj_param = None
             else:
                 instance_private = getattr(obj, '_param__private', None)
                 if instance_private is None or not getattr(instance_private, 'initialized', False):
                     return
-                obj.param._update_deps(name)
+                obj_param = obj.param
+                obj_param._update_deps(name)
 
                 instance_watchers = instance_private.watchers
                 if name in instance_watchers:
@@ -2426,17 +2434,22 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 else:
                     watchers = None
 
-            obj = self.owner if obj is None and self.owner is not None else obj
-
-            if obj is None or not watchers:
+            if not watchers:
                 return
+            owner = self.owner
+            if obj is None:
+                if owner is None:
+                    return
+                obj = owner
 
-            event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
+            event = Event('value', name, obj, owner, _old, val, None)
 
             # Copy watchers here since they may be modified inplace during iteration
-            obj.param._dispatch_event(sorted(watchers, key=lambda w: w.precedence), event)
+            if obj_param is None:
+                obj_param = obj.param
+            obj_param._dispatch_event(sorted(watchers, key=_watcher_precedence), event)
             if not _is_batched(obj):
-                obj.param._batch_call_watchers()
+                obj_param._batch_call_watchers()
         finally:
             if obj is not None:
                 _notify_ref_changes(obj, name, ref_changed, settle_changed)
@@ -3800,7 +3813,7 @@ class Parameters:
             event_type = 'triggered'
         else:
             event_type = 'changed' if watcher.onlychanged else 'set'
-        return event._replace(type=event_type)
+        return type(event)._make((*event[:6], event_type))
 
     def _execute_watcher(self, watcher: Watcher, events: Iterable[Event]):
         if watcher.mode == 'args':
@@ -3808,7 +3821,7 @@ class Parameters:
         else:
             args, kwargs = (), {event.name: event.new for event in events}
 
-        if iscoroutinefunction(watcher.fn):
+        if watcher._is_coroutine if isinstance(watcher, Watcher) else iscoroutinefunction(watcher.fn):
             if async_executor is None:
                 raise RuntimeError("Could not execute %s coroutine function. "
                                    "Please register a asynchronous executor on "
@@ -3846,14 +3859,23 @@ class Parameters:
     def _call_watcher(self_, watcher: Watcher, event: Event):
         """Invoke the given watcher appropriately given an Event object."""
         fn = watcher.fn
-        if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_.self_or_cls):
-            self_._events.append(event)
-            if not any(watcher is w for w in self_._state_watchers):
-                self_._state_watchers.append(watcher)
+        self_or_cls = self_.self_or_cls
+        state = self_or_cls._param__private.parameters_state
+        if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_or_cls):
+            state['events'].append(event)
+            state_watchers = state['watchers']
+            if not any(watcher is w for w in state_watchers):
+                state_watchers.append(watcher)
         else:
-            event = self_._update_event_type(watcher, event, self_._TRIGGER)
-            with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
+            event = self_._update_event_type(watcher, event, state['TRIGGER'])
+            # Inlined _batch_call_watchers(..., run=False), which only
+            # saves and restores the flag.
+            batch_watch = state['BATCH_WATCH']
+            state['BATCH_WATCH'] = watcher.queued or batch_watch
+            try:
                 self_._execute_watcher(watcher, (event,))
+            finally:
+                self_or_cls._param__private.parameters_state['BATCH_WATCH'] = batch_watch
 
     def _batch_call_watchers(self_):
         """
@@ -3867,13 +3889,19 @@ class Parameters:
             self_._events = []
             self_._state_watchers = []
 
-            for watcher in sorted(watchers, key=lambda w: w.precedence):
+            self_or_cls = self_.self_or_cls
+            for watcher in sorted(watchers, key=_watcher_precedence):
+                state = self_or_cls._param__private.parameters_state
                 events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],
-                                                   self_._TRIGGER)
+                                                   state['TRIGGER'])
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
-                with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
+                batch_watch = state['BATCH_WATCH']
+                state['BATCH_WATCH'] = watcher.queued or batch_watch
+                try:
                     self_._execute_watcher(watcher, events)
+                finally:
+                    self_or_cls._param__private.parameters_state['BATCH_WATCH'] = batch_watch
 
     def set_dynamic_time_fn(self_, time_fn: Callable, sublistattr: str | None = None) -> None:
         """

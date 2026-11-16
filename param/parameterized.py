@@ -28,7 +28,7 @@ from contextlib import contextmanager, ExitStack
 from inspect import getfullargspec
 
 from collections import defaultdict, namedtuple, OrderedDict
-from functools import partial, wraps, reduce
+from functools import cached_property, partial, wraps, reduce
 from itertools import chain
 from operator import itemgetter, attrgetter
 from types import FunctionType, MethodType
@@ -346,6 +346,10 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
 
 def _is_async_fn(value: t.Any) -> bool:
     """Whether value is a coroutine or generator function."""
+    # The inspect checks are comparatively slow and every function, method
+    # or partial they could match is callable.
+    if not callable(value):
+        return False
     return iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
 
 def _is_bare_async_ref(value: t.Any) -> bool:
@@ -1424,6 +1428,8 @@ _add_doc(Event,
 
 _Watcher = namedtuple("_Watcher", "inst cls fn mode onlychanged parameter_names what queued precedence")
 
+_watcher_precedence = attrgetter('precedence')
+
 class Watcher(_Watcher):
     """
     Object declaring a callback function to invoke when an Event is
@@ -1509,6 +1515,10 @@ class Watcher(_Watcher):
         >>> watcher.remove()
         """
         (self.cls if self.inst is None else self.inst).param.unwatch(self)
+
+    @cached_property
+    def _is_coroutine(self) -> bool:
+        return iscoroutinefunction(self.fn)
 
 
 class ParameterMetaclass(type):
@@ -2291,19 +2301,20 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         instance's value, if one has been set - otherwise produce the
         class's value (default).
         """
-        if self.name is None:
+        # Slot reads go through Parameter.__getattribute__, so `name` is
+        # bound to a local rather than read twice.
+        name = self.name
+        if name is None:
             raise ValueError("Parameter name is not set")
 
         if obj is None: # e.g. when __get__ called for a Parameterized class
-            result = self.default
-        else:
-            # Attribute error when .values does not exist (_ClassPrivate)
-            # and KeyError when there's no cached value for this parameter.
-            try:
-                result = obj._param__private.values[self.name]
-            except (AttributeError, KeyError):
-                result = self.default
-        return result
+            return self.default
+        # Attribute error when .values does not exist (_ClassPrivate)
+        # and KeyError when there's no cached value for this parameter.
+        try:
+            return obj._param__private.values[name]
+        except (AttributeError, KeyError):
+            return self.default
 
     @instance_descriptor
     def __set__(self, obj: Parameterized | None, val: _T):
@@ -2332,11 +2343,13 @@ class Parameter(_ParameterBase, t.Generic[_T]):
         object stored in a constant or read-only Parameter (e.g. one
         item in a list).
         """
-        if self.name is None:
+        # Slot reads go through Parameter.__getattribute__, so `name` is bound
+        # to a local and reused below rather than re-read from the slot.
+        name = self.name
+        if name is None:
             raise RuntimeError(
                 "A parameter value cannot be set for an unbound parameter."
             )
-        name = self.name
         ref_changed = settle_changed = False
 
         if obj is not None and self.allow_refs and obj._param__private.initialized:
@@ -2361,17 +2374,18 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
             _old = NotImplemented
             # obj can be None if __set__ is called for a Parameterized class
-            if self.constant or self.readonly:
-                if self.readonly:
+            readonly = self.readonly
+            if self.constant or readonly:
+                if readonly:
                     raise TypeError("Read-only parameter '%s' cannot be modified" % name)
                 elif obj is None:
                     _old = self.default
                     self.default = val
                 elif not obj._param__private.initialized:
-                    _old = obj._param__private.values.get(self.name, self.default)
-                    obj._param__private.values[self.name] = val
+                    _old = obj._param__private.values.get(name, self.default)
+                    obj._param__private.values[name] = val
                 else:
-                    _old = obj._param__private.values.get(self.name, self.default)
+                    _old = obj._param__private.values.get(name, self.default)
                     if val is not _old:
                         raise TypeError("Constant parameter '%s' cannot be modified" % name)
             else:
@@ -2379,10 +2393,11 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                     _old = self.default
                     self.default = val
                 else:
+                    private = obj._param__private
                     # When setting a Parameter before calling super.
-                    if not isinstance(obj._param__private, _InstancePrivate):
+                    if not isinstance(private, _InstancePrivate):
                         warnings.warn(
-                            f"Setting the Parameter {self.name!r} to {val!r} before "
+                            f"Setting the Parameter {name!r} to {val!r} before "
                             f"the Parameterized class {type(obj).__name__!r} is fully "
                             "instantiated is deprecated and will raise an error in "
                             "a future version. Ensure the value is set after calling "
@@ -2390,41 +2405,55 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                             category=_ParamPendingDeprecationWarning,
                             stacklevel=_find_stack_level(),
                         )
-                        obj.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
+                        private = _InstancePrivate(
                             explicit_no_refs=type(obj)._param__private.explicit_no_refs
                         )
-                    _old = obj._param__private.values.get(name, self.default)
-                    obj._param__private.values[name] = val
+                        obj.__dict__['_param__private'] = private  # pyright: ignore[reportIndexIssue]
+                    values = private.values
+                    # Only fall back to reading the `default` slot when there is no
+                    # value stored yet, since that read is not free.
+                    try:
+                        _old = values[name]
+                    except KeyError:
+                        _old = self.default
+                    values[name] = val
             self._post_setter(obj, val)
 
             if obj is None:
                 self._invalidate_init_cache()
-
-            if obj is not None:
-                if not hasattr(obj, '_param__private') or not getattr(obj._param__private, 'initialized', False):
-                    return
-                obj.param._update_deps(name)
-
-            if obj is None:
                 watchers = self.watchers.get("value")
-            elif name in obj._param__private.watchers:
-                watchers = obj._param__private.watchers[name].get('value')
-                if watchers is None:
-                    watchers = self.watchers.get("value")
+                obj_param = None
             else:
-                watchers = None
+                instance_private = getattr(obj, '_param__private', None)
+                if instance_private is None or not getattr(instance_private, 'initialized', False):
+                    return
+                obj_param = obj.param
+                obj_param._update_deps(name)
 
-            obj = self.owner if obj is None and self.owner is not None else obj
+                instance_watchers = instance_private.watchers
+                if name in instance_watchers:
+                    watchers = instance_watchers[name].get('value')
+                    if watchers is None:
+                        watchers = self.watchers.get("value")
+                else:
+                    watchers = None
 
-            if obj is None or not watchers:
+            if not watchers:
                 return
+            owner = self.owner
+            if obj is None:
+                if owner is None:
+                    return
+                obj = owner
 
-            event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
+            event = Event('value', name, obj, owner, _old, val, None)
 
             # Copy watchers here since they may be modified inplace during iteration
-            obj.param._dispatch_event(sorted(watchers, key=lambda w: w.precedence), event)
+            if obj_param is None:
+                obj_param = obj.param
+            obj_param._dispatch_event(sorted(watchers, key=_watcher_precedence), event)
             if not _is_batched(obj):
-                obj.param._batch_call_watchers()
+                obj_param._batch_call_watchers()
         finally:
             if obj is not None:
                 _notify_ref_changes(obj, name, ref_changed, settle_changed)
@@ -2689,6 +2718,11 @@ def as_uninitialized(fn):
     return override_initialization
 
 
+_BUILTIN_VALUE_TYPES = frozenset({
+    int, float, complex, bool, str, bytes, type(None), list, tuple, set, dict,
+})
+
+
 class Comparator:
     """
     Comparator defines methods for determining whether two objects
@@ -2720,10 +2754,19 @@ class Comparator:
 
     @classmethod
     def is_equal(cls, obj1, obj2):
-        equals = cls.equalities.copy()
-        for gen, op in cls.gen_equalities.items():
-            for v in gen():
-                equals[v] = op
+        gen_equalities = cls.gen_equalities
+        if (
+            type(obj1) in _BUILTIN_VALUE_TYPES and type(obj2) in _BUILTIN_VALUE_TYPES
+            and len(gen_equalities) == 1 and _dt_types in gen_equalities
+        ):
+            # The default generated equalities only cover date and time
+            # types, which can match neither object, so skip expanding them.
+            equals = cls.equalities
+        else:
+            equals = cls.equalities.copy()
+            for gen, op in gen_equalities.items():
+                for v in gen():
+                    equals[v] = op
 
         for eq_type, eq in equals.items():
             if isinstance(eq_type, type) or (isinstance(eq_type, tuple) and all(isinstance(t, type) for t in eq_type)):
@@ -3012,15 +3055,16 @@ class Parameters:
         ## keyword arg setting
         deps, refs, scheduled = {}, {}, set()
         for name, val in params.items():
-            desc = self_.cls.get_param_descriptor(name)[0]
-            if not desc:
-                raise TypeError(
-                    f"{self.__class__.__name__}.__init__() got an unexpected "
-                    f"keyword argument {name!r}"
-                )
-
             pobj = objects.get(name)
             if pobj is None:
+                # Only walk the class hierarchy when the cached class
+                # parameters do not already contain the name.
+                desc = self_.cls.get_param_descriptor(name)[0]
+                if not desc:
+                    raise TypeError(
+                        f"{self.__class__.__name__}.__init__() got an unexpected "
+                        f"keyword argument {name!r}"
+                    )
                 setattr(self, name, val)
                 continue
             elif not pobj.allow_refs:
@@ -3296,6 +3340,8 @@ class Parameters:
         class_param = self_.cls.param
         init_methods = []
         for method, queued, on_init, constant, dynamic in class_param._depends['watch']:
+            if not (init or dynamic):
+                continue
             # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
             dynamic = [d for d in dynamic if attribute is None or d.spec.split(".")[0] == attribute]
@@ -3579,8 +3625,13 @@ class Parameters:
         for tp in trigger_params:
             self_[tp]._mode = 'set'
 
-        values = self_.values()
-        restore = {k: values[k] for k, v in base.items() if k in values}
+        # Only the values being replaced are needed, so avoid computing
+        # values() for every parameter.
+        param_objs = self_.objects('existing')
+        restore = {
+            k: self_.get_value_generator(k, param_objs)
+            for k in base if k in param_objs
+        }
 
         for (k, v) in base.items():
             if k not in self_:
@@ -3788,7 +3839,7 @@ class Parameters:
             event_type = 'triggered'
         else:
             event_type = 'changed' if watcher.onlychanged else 'set'
-        return event._replace(type=event_type)
+        return type(event)._make((*event[:6], event_type))
 
     def _execute_watcher(self, watcher: Watcher, events: Iterable[Event]):
         if watcher.mode == 'args':
@@ -3796,7 +3847,7 @@ class Parameters:
         else:
             args, kwargs = (), {event.name: event.new for event in events}
 
-        if iscoroutinefunction(watcher.fn):
+        if watcher._is_coroutine if isinstance(watcher, Watcher) else iscoroutinefunction(watcher.fn):
             if async_executor is None:
                 raise RuntimeError("Could not execute %s coroutine function. "
                                    "Please register a asynchronous executor on "
@@ -3834,14 +3885,23 @@ class Parameters:
     def _call_watcher(self_, watcher: Watcher, event: Event):
         """Invoke the given watcher appropriately given an Event object."""
         fn = watcher.fn
-        if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_.self_or_cls):
-            self_._events.append(event)
-            if not any(watcher is w for w in self_._state_watchers):
-                self_._state_watchers.append(watcher)
+        self_or_cls = self_.self_or_cls
+        state = self_or_cls._param__private.parameters_state
+        if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_or_cls):
+            state['events'].append(event)
+            state_watchers = state['watchers']
+            if not any(watcher is w for w in state_watchers):
+                state_watchers.append(watcher)
         else:
-            event = self_._update_event_type(watcher, event, self_._TRIGGER)
-            with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
+            event = self_._update_event_type(watcher, event, state['TRIGGER'])
+            # Inlined _batch_call_watchers(..., run=False), which only
+            # saves and restores the flag.
+            batch_watch = state['BATCH_WATCH']
+            state['BATCH_WATCH'] = watcher.queued or batch_watch
+            try:
                 self_._execute_watcher(watcher, (event,))
+            finally:
+                self_or_cls._param__private.parameters_state['BATCH_WATCH'] = batch_watch
 
     def _batch_call_watchers(self_):
         """
@@ -3855,13 +3915,19 @@ class Parameters:
             self_._events = []
             self_._state_watchers = []
 
-            for watcher in sorted(watchers, key=lambda w: w.precedence):
+            self_or_cls = self_.self_or_cls
+            for watcher in sorted(watchers, key=_watcher_precedence):
+                state = self_or_cls._param__private.parameters_state
                 events = [self_._update_event_type(watcher, event_dict[(name, watcher.what)],
-                                                   self_._TRIGGER)
+                                                   state['TRIGGER'])
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
-                with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
+                batch_watch = state['BATCH_WATCH']
+                state['BATCH_WATCH'] = watcher.queued or batch_watch
+                try:
                     self_._execute_watcher(watcher, events)
+                finally:
+                    self_or_cls._param__private.parameters_state['BATCH_WATCH'] = batch_watch
 
     def set_dynamic_time_fn(self_, time_fn: Callable, sublistattr: str | None = None) -> None:
         """
@@ -6407,11 +6473,12 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             self.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
+        param_ns = self.param
         # Skip generating a custom instance name when a class in the hierarchy
         # has overridden the default of the `name` Parameter.
-        if self.param.name.default == self.__class__.__name__:
-            self.param._generate_name()
-        refs, deps, scheduled = self.param._setup_params(**params)
+        if param_ns.name.default == self.__class__.__name__:
+            param_ns._generate_name()
+        refs, deps, scheduled = param_ns._setup_params(**params)
         object_count += 1
 
         self._param__private.initialized = True
@@ -6437,8 +6504,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                 with discard_events(self):
                     setattr(self, pname, default_val)
 
-        self.param._setup_refs(deps)
-        self.param._update_deps(init=True)
+        param_ns._setup_refs(deps)
+        param_ns._update_deps(init=True)
         self._param__private.refs = refs
         for pname in scheduled:
             _notify_async_ref_settle_change(self, pname)

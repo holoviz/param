@@ -72,6 +72,8 @@ tests-full = [
     "param[tests-deser]",
     "numpy",
     "pandas",
+    "narwhals",
+    "polars",
     "ipython",
     "jsonschema",
     "gmpy2",

@@ -1,29 +1,28 @@
 from __future__ import annotations
 
-import collections
-import contextvars
 import datetime as dt
 import functools
 import inspect
 import numbers
 import os
 import re
-import sys
 import traceback
+import typing as t
 import warnings
 from collections import OrderedDict, abc, defaultdict
 from contextlib import contextmanager
-from numbers import Real
 from textwrap import dedent
-from threading import get_ident
-from typing import TYPE_CHECKING, Callable, TypeVar
+from threading import get_ident, local
 
-if TYPE_CHECKING:
-    from typing_extensions import Concatenate, ParamSpec
+if t.TYPE_CHECKING:
+    import asyncio
 
-    P = ParamSpec("P")
-    R = TypeVar("R")
-    CallableT = TypeVar("CallableT", bound=Callable)
+    from param.parameterized import Parameter
+
+    _P = t.ParamSpec("_P")
+    _R = t.TypeVar("_R")
+    _T = t.TypeVar("_T")
+    _CallableT = t.TypeVar("_CallableT", bound=abc.Callable)
 
 DEFAULT_SIGNATURE = inspect.Signature([
     inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
@@ -62,11 +61,47 @@ class ParamFutureWarning(ParamWarning, FutureWarning):
 
 
 class Skip(Exception):
-    """Exception that allows skipping an update when resolving a reference."""
+    """Exception that allows skipping an update when resolving a reference.
+
+    References
+    ----------
+    https://param.holoviz.org/user_guide/References.html#skipping-reference-updates
+
+    Examples
+    --------
+    >>> import param
+    >>> class W(param.Parameterized):
+    ...    a = param.Number()
+    ...    b = param.Number(allow_refs=True)
+    ...    run = param.Event()
+    >>> w = W(a=0, b=2)
+
+    Let's define a function:
+
+    >>> def add(a, b, run):
+    ...    if not run:
+    ...        raise param.Skip
+    ...    return a + b
+
+    Let's use the function as a reference:
+
+    >>> v = W(b=param.bind(add, w.param.a, w.param.b, w.param.run))
+
+    We can see that b has not yet been resolved:
+
+    >>> v.b
+    0.0
+
+    Let's trigger `w.param.run` and check `v.b` has been resolved:
+
+    >>> w.param.trigger('run')
+    >>> v.b
+    2
+    """
 
 
-def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
-    def decorator(func):
+def _deprecated(extra_msg: str = "", warning_cat: type[Warning] = ParamDeprecationWarning):
+    def decorator(func: abc.Callable[..., t.Any]) -> abc.Callable[..., t.Any]:
         """Mark a function or method as deprecated.
 
         This internal decorator issues a warning when the decorated function
@@ -85,68 +120,16 @@ def _deprecated(extra_msg="", warning_cat=ParamDeprecationWarning):
         """
         @functools.wraps(func)
         def inner(*args, **kwargs):
-            msg = f"{func.__name__!r} has been deprecated and will be removed in a future version."
+            func_name = getattr(func, "__name__", repr(func))
+            msg = f"{func_name!r} has been deprecated and will be removed in a future version."
             if extra_msg:
                 em = dedent(extra_msg)
                 em = em.strip().replace('\n', ' ')
                 msg = msg + ' ' + em
-            warnings.warn(msg, category=warning_cat, stacklevel=2)
+            warnings.warn(msg, category=warning_cat, stacklevel=_find_stack_level())
             return func(*args, **kwargs)
         return inner
     return decorator
-
-
-def _deprecate_positional_args(func):
-    """Issue warnings for methods using deprecated positional arguments.
-
-    This internal decorator warns when arguments after the `*` separator
-    are passed as positional arguments, in accordance with PEP 3102.
-    It adapts the behavior from scikit-learn.
-
-    Parameters
-    ----------
-    func: FunctionType | MethodType
-        The function to wrap with positional argument deprecation warnings.
-
-    Returns
-    -------
-    callable:
-        The wrapped function that issues warnings for deprecated
-        positional arguments.
-    """
-    signature = inspect.signature(func)
-
-    pos_or_kw_args = []
-    kwonly_args = []
-    for name, param in signature.parameters.items():
-        if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
-            pos_or_kw_args.append(name)
-        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
-            kwonly_args.append(name)
-
-    @functools.wraps(func)
-    def inner(*args, **kwargs):
-        name = func.__qualname__.split('.')[0]
-        n_extra_args = len(args) - len(pos_or_kw_args)
-        if n_extra_args > 0:
-            extra_args = ", ".join(kwonly_args[:n_extra_args])
-
-            warnings.warn(
-                f"Passing '{extra_args}' as positional argument(s) to 'param.{name}' "
-                "has been deprecated since Param 2.0.0 and will raise an error in a future version, "
-                "please pass them as keyword arguments.",
-                ParamFutureWarning,
-                stacklevel=2,
-            )
-
-            zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
-            kwargs.update({name: arg for name, arg in zip_args})
-
-            return func(*args[:-n_extra_args], **kwargs)
-
-        return func(*args, **kwargs)
-
-    return inner
 
 
 # Copy of Python 3.2 reprlib's recursive_repr but allowing extra arguments
@@ -171,8 +154,9 @@ def _recursive_repr(fillvalue='...'):
     return decorating_function
 
 
-def _is_auto_name(class_name, instance_name):
-    return re.match('^'+class_name+'[0-9]{5}$', instance_name)
+def _is_auto_name(class_name: str, instance_name: str) -> bool:
+    pattern = rf'^{re.escape(class_name)}[0-9]{{5}}$'
+    return bool(re.match(pattern, instance_name))
 
 
 def _find_pname(pclass):
@@ -182,12 +166,14 @@ def _find_pname(pclass):
     """
     stack = traceback.extract_stack()
     for frame in stack:
-        match = re.match(r"^(\S+)\s*=\s*(param|pm)\." + pclass + r"\(", frame.line)
+        if frame.line is None:
+            continue
+        match = re.match(rf"^(\S+)\s*=\s*(param|pm)\.{pclass}\(", frame.line)
         if match:
             return match.group(1)
 
 
-def _validate_error_prefix(parameter, attribute=None):
+def _validate_error_prefix(parameter: Parameter, attribute: str | None = None) -> str:
     """
     Generate an error prefix suitable for Parameters when they raise a validation
     error.
@@ -200,7 +186,7 @@ def _validate_error_prefix(parameter, attribute=None):
 
     pclass = type(parameter).__name__
     if parameter.owner is not None:
-        if type(parameter.owner) is ParameterizedMetaclass:
+        if issubclass(type(parameter.owner), ParameterizedMetaclass):
             powner = parameter.owner.__name__
         else:
             powner = type(parameter.owner).__name__
@@ -251,14 +237,6 @@ def iscoroutinefunction(function):
         inspect.iscoroutinefunction(function)
     )
 
-async def _to_thread(func, /, *args, **kwargs):
-    """Polyfill for asyncio.to_thread in Python < 3.9."""
-    import asyncio
-    loop = asyncio.get_running_loop()
-    ctx = contextvars.copy_context()
-    func_call = functools.partial(ctx.run, func, *args, **kwargs)
-    return await loop.run_in_executor(None, func_call)
-
 async def _to_async_gen(sync_gen):
     import asyncio
 
@@ -273,10 +251,7 @@ async def _to_async_gen(sync_gen):
             return done
 
     while True:
-        if sys.version_info >= (3, 9):
-            value = await asyncio.to_thread(safe_next)
-        else:
-            value = await _to_thread(safe_next)
+        value = await asyncio.to_thread(safe_next)
         if value is done:
             break
         yield value
@@ -309,11 +284,11 @@ def flatten(line):
 
 
 def accept_arguments(
-    f: Callable[Concatenate[CallableT, P], R]
-) -> Callable[P, Callable[[CallableT], R]]:
+    f: abc.Callable[t.Concatenate[_CallableT, _P], _R]
+) -> abc.Callable[..., abc.Callable[[_CallableT], _R]]:
     """Decorate a decorator to accept arguments."""
     @functools.wraps(f)
-    def _f(*args: P.args, **kwargs: P.kwargs) -> Callable[[CallableT], R]:
+    def _f(*args: _P.args, **kwargs: _P.kwargs) -> abc.Callable[[_CallableT], _R]:
         return lambda actual_f: f(actual_f, *args, **kwargs)
     return _f
 
@@ -329,44 +304,6 @@ def _produce_value(value_obj):
         return value_obj
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def produce_value(value_obj):
-    """Produce an actual value from a stored object.
-
-    If the object is callable, call it; otherwise, return the object.
-
-    .. deprecated:: 2.0.0
-    """
-    return _produce_value(value_obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def as_unicode(obj):
-    """
-    Safely casts any object to unicode including regular string
-    (i.e. bytes) types in python 2.
-
-    .. deprecated:: 2.0.0
-    """
-    return str(obj)
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def is_ordered_dict(d):
-    """
-    Predicate checking for ordered dictionaries. OrderedDict is always
-    ordered, and vanilla Python dictionaries are ordered for Python 3.6+.
-
-    .. deprecated:: 2.0.0
-    """
-    py3_ordered_dicts = (sys.version_info.major == 3) and (sys.version_info.minor >= 6)
-    vanilla_odicts = (sys.version_info.major > 3) or py3_ordered_dicts
-    return isinstance(d, (OrderedDict)) or (vanilla_odicts and isinstance(d, dict))
-
-
 def _hashable(x):
     """
     Return a hashable version of the given object x, with lists and
@@ -376,28 +313,12 @@ def _hashable(x):
     part of the object has changed.  Does not (currently) recursively
     replace mutable subobjects.
     """
-    if isinstance(x, collections.abc.MutableSequence):
+    if isinstance(x, abc.MutableSequence):
         return tuple(x)
-    elif isinstance(x, collections.abc.MutableMapping):
-        return tuple([(k,v) for k,v in x.items()])
+    elif isinstance(x, abc.MutableMapping):
+        return tuple([(k, v) for k, v in x.items()])
     else:
         return x
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def hashable(x):
-    """
-    Return a hashable version of the given object x, with lists and
-    dictionaries converted to tuples.  Allows mutable objects to be
-    used as a lookup key in cases where the object has not actually
-    been mutated. Lookup will fail (appropriately) in cases where some
-    part of the object has changed.  Does not (currently) recursively
-    replace mutable subobjects.
-
-    .. deprecated:: 2.0.0
-    """
-    return _hashable(x)
 
 
 def _named_objs(objlist, namesdict=None):
@@ -433,55 +354,54 @@ def _named_objs(objlist, namesdict=None):
     return objs
 
 
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def named_objs(objlist, namesdict=None):
-    """
-    Given a list of objects, returns a dictionary mapping from
-    string name for the object to the object itself. Accepts
-    an optional name,obj dictionary, which will override any other
-    name if that item is present in the dictionary.
-
-    .. deprecated:: 2.0.0
-    """
-    return _named_objs(objlist, namesdict=namesdict)
-
-
 def _get_min_max_value(min, max, value=None, step=None):
     """Return min, max, value given input values with possible None."""
-    # Either min and max need to be given, or value needs to be given
+    fmin = float(min) if min is not None else None
+    fmax = float(max) if max is not None else None
+
     if value is None:
-        if min is None or max is None:
-            raise ValueError(
-                f'unable to infer range, value from: ({min}, {max}, {value})'
-            )
-        diff = max - min
-        value = min + (diff / 2)
-        # Ensure that value has the same type as diff
-        if not isinstance(value, type(diff)):
-            value = min + (diff // 2)
-    else:  # value is not None
-        if not isinstance(value, Real):
-            raise TypeError('expected a real number, got: %r' % value)
-        # Infer min/max from value
-        if value == 0:
-            # This gives (0, 1) of the correct type
-            vrange = (value, value + 1)
-        elif value > 0:
-            vrange = (-value, 3*value)
-        else:
-            vrange = (3*value, -value)
-        if min is None:
-            min = vrange[0]
-        if max is None:
-            max = vrange[1]
+        if fmin is None or fmax is None:
+            raise ValueError(f"unable to infer range, value from: ({min}, {max}, {value})")
+        fvalue = (fmin + fmax) / 2.0
+    else:
+        fvalue = float(value)
+        if fmin is None or fmax is None:
+            if fvalue == 0.0:
+                low, high = 0.0, 1.0
+            elif fvalue > 0.0:
+                low, high = -fvalue, 3.0 * fvalue
+            else:
+                low, high = 3.0 * fvalue, -fvalue
+            if fmin is None:
+                fmin = low
+            if fmax is None:
+                fmax = high
+
+    # Safety: ensure bounds exist
+    if fmin is None or fmax is None:
+        raise RuntimeError("internal error: bounds not resolved")
+
+    # Normalize so fmin <= fmax
+    if fmin > fmax:
+        fmin, fmax = fmax, fmin
+
+    # Snap to step if requested
     if step is not None:
-        # ensure value is on a step
-        tick = int((value - min) / step)
-        value = min + tick * step
-    if not min <= value <= max:
-        raise ValueError(f'value must be between min and max (min={min}, value={value}, max={max})')
-    return min, max, value
+        fstep = abs(float(step))
+        if fstep == 0.0:
+            raise ValueError("step must be non-zero")
+        ticks = round((fvalue - fmin) / fstep)  # nearest tick; use math.floor for always-down
+        fvalue = fmin + ticks * fstep
+        # Clamp after snapping
+        if fvalue < fmin:
+            fvalue = fmin
+        if fvalue > fmax:
+            fvalue = fmax
+
+    if not (fmin <= fvalue <= fmax):
+        raise ValueError(f"value must be between min and max (min={fmin}, value={fvalue}, max={fmax})")
+
+    return fmin, fmax, fvalue
 
 
 def _deserialize_from_path(ext_to_routine, path, type_name):
@@ -523,32 +443,35 @@ def _is_number(obj):
 def _is_abstract(class_: type) -> bool:
     if inspect.isabstract(class_):
         return True
-    try:
-        return class_.abstract
-    except AttributeError:
-        return False
+    return bool(getattr(class_, "abstract", False))
 
 
-def descendents(class_: type, concrete: bool = False) -> list[type]:
+def descendents(class_: type[_T], concrete: bool = False) -> list[type[_T]]:
     """
-    Return a list of all descendant classes of a given class.
+    Return a list of all descendent classes of a given class.
 
     This function performs a breadth-first traversal of the class hierarchy,
-    collecting all subclasses of `class_`. The result includes `class_` itself
-    and all of its subclasses. If `concrete=True`, abstract base classes
-    are excluded from the result.
+    collecting all subclasses of ``class_``. The result includes ``class_`` itself
+    and all of its subclasses. If ``concrete=True``, abstract base classes
+    are excluded from the result, including :class:`Parameterized` abstract
+    classes declared with ``__abstract = True``.
 
     Parameters
     ----------
     class_ : type
         The base class whose descendants should be found.
     concrete : bool, optional
-        If `True`, exclude abstract classes from the result. Default is `False`.
+        If ``True``, exclude abstract classes from the result. Default is ``False``.
+
+        .. versionadded:: 2.3.0
+
+        Added to encourage users to use :func:`descendents` in favor of
+        :func:`concrete_descendents` that clobbers classes sharing the same name.
 
     Returns
     -------
-    list of type
-        A list of descendant classes, ordered from the most base to the most derived.
+    list[type]
+        A list of descendent classes, ordered from the most base to the most derived.
 
     Examples
     --------
@@ -562,7 +485,7 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
     if not isinstance(class_, type):
         raise TypeError(f"descendents expected a class object, not {type(class_).__name__}")
     q = [class_]
-    out = []
+    out: list[type[_T]] = []
     while len(q):
         x = q.pop(0)
         out.insert(0, x)
@@ -579,40 +502,52 @@ def descendents(class_: type, concrete: bool = False) -> list[type]:
 
 
 # Could be a method of ClassSelector.
-def concrete_descendents(parentclass):
+def concrete_descendents(parentclass: type[_T]) -> dict[str, type[_T]]:
     """
     Return a dictionary containing all subclasses of the specified
-    parentclass, including the parentclass.  Only classes that are
-    defined in scripts that have been run or modules that have been
-    imported are included, so the caller will usually first do ``from
-    package import *``.
+    parentclass, including the parentclass (prefer :func:`descendents`).
+
+    Only classes that are defined in scripts that have been run or modules
+    that have been imported are included, so the caller will usually first
+    do ``from package import *``.
 
     Only non-abstract classes will be included.
+
+    .. warning::
+       ``concrete_descendents`` overrides descendents that share the same
+       class name. To avoid this, use :func:`descendents` with ``concrete=True``.
     """
-    return {c.__name__:c for c in descendents(parentclass)
-            if not _is_abstract(c)}
+    # Warns
+    # -----
+    # ParamWarning
+    #     ``concrete_descendents`` overrides descendents that share the same
+    #     class name. To avoid this, use :func:`descendents` with ``concrete=True``.
+
+    desc = descendents(parentclass, concrete=True)
+    concrete_desc = {c.__name__: c for c in desc}
+    # Descendents with the same name are clobbered.
+    # if len(desc) != len(concrete_desc):
+    #     class_count = Counter([kls.__name__ for kls in desc])
+    #     clobbered = [kls for kls, count in class_count.items() if count > 1]
+    #     warnings.warn(
+    #         '`concrete_descendents` overrides descendents that share the same '
+    #         'class name. Other descendents with the same name as the following '
+    #         f'classes exist but were not returned: {clobbered!r}\n'
+    #         'Use `descendents(parentclass, concrete=True)` instead.',
+    #         ParamWarning,
+    #     )
+    return concrete_desc
+
 
 def _abbreviate_paths(pathspec,named_paths):
     """
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
     Helps keep menu items short yet unambiguous.
     """
-    from os.path import commonprefix, dirname, sep
+    from os.path import commonpath, dirname, sep
 
-    prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
-    return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
-
-
-# PARAM3_DEPRECATION
-@_deprecated(warning_cat=ParamFutureWarning)
-def abbreviate_paths(pathspec,named_paths):
-    """
-    Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
-    Helps keep menu items short yet unambiguous.
-
-    .. deprecated:: 2.0.0
-    """
-    return _abbreviate_paths(pathspec, named_paths)
+    prefix = commonpath([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
+    return OrderedDict([(name[len(prefix)+1:],path) for name,path in named_paths.items()])
 
 
 def _to_datetime(x):
@@ -660,45 +595,103 @@ def exceptions_summarized():
     except Exception:
         import sys
         etype, value, tb = sys.exc_info()
-        print(f"{etype.__name__}: {value}", file=sys.stderr)
+        if etype is not None:
+            print(f"{etype.__name__}: {value}", file=sys.stderr)
 
 
 def _in_ipython():
     try:
-        get_ipython
+        get_ipython()  # type: ignore[name-defined,ty:unresolved-reference]  # pyright: ignore[reportUndefinedVariable]
         return True
     except NameError:
         return False
 
-_running_tasks = set()
+_running_tasks: set[asyncio.Task] = set()
+
+_thread_state = local()
+
+def _fallback_event_loop() -> asyncio.AbstractEventLoop:
+    """
+    Return the event loop to drive coroutines on when nothing else is running.
+
+    The loop is cached per thread and reused, since creating one per call leaks
+    the file descriptors each loop holds. It is kept thread-local because
+    ``run_until_complete`` may not be driven from two threads at once.
+    """
+    import asyncio
+    event_loop = getattr(_thread_state, 'event_loop', None)
+    if event_loop is None or event_loop.is_closed():
+        event_loop = asyncio.new_event_loop()
+        _thread_state.event_loop = event_loop
+    return event_loop
+
+def _drain_fallback_loop(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Finish off anything left running on the fallback loop.
+
+    A coroutine driven by :func:`async_executor` may schedule further work
+    before it completes, which ``run_until_complete`` leaves pending. Since the
+    loop is reused, such a leftover would otherwise resume in the middle of an
+    unrelated drive, so it is cancelled and given the chance to clean up here.
+    """
+    import asyncio
+    pending = [task for task in asyncio.all_tasks(event_loop) if not task.done()]
+    if not pending:
+        return
+    for task in pending:
+        task.cancel()
+    event_loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
 
 def async_executor(func):
+    """
+    Schedule the awaitable returned by ``func`` on the running event loop.
+
+    Without a running loop the awaitable is instead driven to completion on a
+    loop of param's own, i.e. the call blocks the caller until the coroutine
+    has finished. Applications that can offer a loop (such as Panel) are
+    expected to override ``param.parameterized.async_executor``.
+    """
     import asyncio
     try:
         event_loop = asyncio.get_running_loop()
     except RuntimeError:
-        event_loop = asyncio.new_event_loop()
-    if event_loop.is_running():
+        event_loop = None
+    if event_loop is not None:
         task = asyncio.ensure_future(func())
         _running_tasks.add(task)
         task.add_done_callback(_running_tasks.discard)
-    else:
+        return
+    event_loop = _fallback_event_loop()
+    try:
         event_loop.run_until_complete(func())
+    except asyncio.CancelledError:
+        # A coroutine superseded while it was being driven synchronously must
+        # not surface the cancellation in the caller, which is generally an
+        # unrelated attribute access or parameter update.
+        pass
+    finally:
+        _drain_fallback_loop(event_loop)
+
+@t.runtime_checkable
+class _HasTypes(t.Protocol):
+    @classmethod
+    def types(cls) -> abc.Iterable[type]: ...
 
 class _GeneratorIsMeta(type):
-    def __instancecheck__(cls, inst):
+    def __instancecheck__(cls: type[_HasTypes], inst):
         return isinstance(inst, tuple(cls.types()))
 
-    def __subclasscheck__(cls, sub):
+    def __subclasscheck__(cls: type[_HasTypes], sub: type) -> bool:
         return issubclass(sub, tuple(cls.types()))
 
-    def __iter__(cls):
+    def __iter__(cls: type[_HasTypes]) -> abc.Iterator[type]:
         yield from cls.types()
 
 class _GeneratorIs(metaclass=_GeneratorIsMeta):
     @classmethod
-    def __iter__(cls):
+    def __iter__(cls: type[_HasTypes]) -> abc.Iterator[type]:
         yield from cls.types()
+
 
 def gen_types(gen_func):
     """Decorate a generator function to support type checking.
@@ -725,3 +718,37 @@ def gen_types(gen_func):
         msg = "gen_types decorator can only be applied to generator"
         raise TypeError(msg)
     return type(gen_func.__name__, (_GeneratorIs,), {"types": staticmethod(gen_func)})
+
+
+def _find_stack_level() -> int:
+    """
+    Find the first place in the stack that is not inside numbergen and param.
+
+    Inspired by: pandas.util._exceptions.find_stack_level.
+    """
+    import numbergen
+    import param
+
+    numbergen_file = getattr(numbergen, "__file__", None)
+    param_file = getattr(param, "__file__", None)
+    if numbergen_file is None or param_file is None:
+        return 2
+    ng_dir = os.path.dirname(numbergen_file)
+    param_dir = os.path.dirname(param_file)
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    try:
+        n = 0
+        while frame:
+            filename = inspect.getfile(frame)
+            if filename.startswith((ng_dir, param_dir)):
+                frame = frame.f_back
+                n += 1
+            else:
+                break
+    finally:
+        # See note in
+        # https://docs.python.org/3/library/inspect.html#inspect.Traceback
+        del frame
+    return n

@@ -1,16 +1,24 @@
+import asyncio
 import datetime as dt
 import os
 
+from collections import OrderedDict
 from collections.abc import Iterable
 from functools import partial
+from tempfile import TemporaryDirectory
 
 import param
 import pytest
 
 from param import guess_param_types, resolve_path
-from param.parameterized import bothmethod, Parameterized
+from param.parameterized import bothmethod, Parameterized, ParameterizedABC
 from param._utils import (
+    # ParamWarning,
+    _abbreviate_paths,
+    _is_abstract,
     _is_mutable_container,
+    async_executor,
+    concrete_descendents,
     descendents,
     iscoroutinefunction,
     gen_types,
@@ -55,6 +63,9 @@ if pd:
         'DataFrame': (pd.DataFrame(data=dict(a=[1])), param.DataFrame),
         'Series': (pd.Series([1, 2]), param.Series),
     })
+
+class CustomMetaclass(param.parameterized.ParameterizedMetaclass): pass
+
 
 @pytest.mark.parametrize('val,p', guess_param_types_data.values(), ids=guess_param_types_data.keys())
 def test_guess_param_types(val, p):
@@ -388,6 +399,37 @@ def test_error_prefix_set_instance():
         p.x = 'wrong'
 
 
+def test_error_prefix_custom_metaclass_before_class_creation():
+    with pytest.raises(ValueError, match="Number parameter 'x' only"):
+        class P(param.Parameterized, metaclass=CustomMetaclass):
+            x = param.Number('wrong')
+
+
+def test_error_prefix_custom_metaclass_set_class():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P.x = 'wrong'
+
+
+def test_error_prefix_custom_metaclass_instantiate():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        P(x='wrong')
+
+
+def test_error_prefix_custom_metaclass_set_instance():
+    class P(param.Parameterized, metaclass=CustomMetaclass):
+        x = param.Number()
+
+    p = P()
+
+    with pytest.raises(ValueError, match="Number parameter 'P.x' only"):
+        p.x = 'wrong'
+
+
 @pytest.mark.parametrize(
         ('obj,ismutable'),
         [
@@ -446,17 +488,20 @@ def test_gen_types():
     assert isinstance(_int_types, Iterable)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_object():
     # Used to raise an unhandled error, see https://github.com/holoviz/param/issues/1013.
     assert descendents(object)
 
 
+@pytest.mark.filterwarnings("ignore:'_UnionGenericAlias' is deprecated and slated for removal in Python 3.17")
 def test_descendents_bad_type():
     with pytest.raises(
         TypeError,
         match="descendents expected a class object, not int"
     ):
         descendents(1)
+
 
 class A(Parameterized):
     __abstract = True
@@ -472,3 +517,111 @@ def test_descendents():
 
 def test_descendents_concrete():
     assert descendents(A, concrete=True) == [B, C, X, Y]
+
+
+def test_is_abstract_false():
+    class A: pass
+    class B(Parameterized): pass
+    assert not _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_attribute():
+    class A(Parameterized):
+        __abstract = True
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_is_abstract_abc():
+    class A(ParameterizedABC): pass
+    class B(A): pass
+
+    assert _is_abstract(A)
+    assert not _is_abstract(B)
+
+
+def test_concrete_descendents():
+    assert concrete_descendents(A) == {
+        'B': B,
+        'C': C,
+        'X': X,
+        'Y': Y,
+    }
+
+
+def test_abbreviate_paths():
+    ranges = OrderedDict()
+    expected = OrderedDict()
+    with TemporaryDirectory() as tempdir:
+        path = f"{tempdir}/*"
+        for filename in ("a.txt", "f.txt"):
+            fullpath = f"{tempdir}/{filename}"
+            ranges[fullpath] = fullpath
+            expected[filename] = fullpath
+    assert _abbreviate_paths(path, ranges) == expected
+
+
+# def test_concrete_descendents_same_name_warns():
+#     class X: pass
+#     class Y(X): pass
+#     y = Y  # noqa
+#     class Y(X): pass
+#     with pytest.warns(
+#         ParamWarning,
+#         match=r".*\['Y'\]"
+#     ):
+#         cd = concrete_descendents(X)
+#     # y not returned
+#     assert cd == {'X': X, 'Y': Y}
+
+
+def test_async_executor_reuses_fallback_loop():
+    loops = []
+
+    async def record():
+        loops.append(asyncio.get_running_loop())
+
+    async_executor(record)
+    async_executor(record)
+
+    assert len(loops) == 2
+    assert loops[0] is loops[1]
+    assert not loops[0].is_closed()
+
+
+def test_async_executor_ignores_cancellation():
+    async def cancel_self():
+        asyncio.current_task().cancel()
+        await asyncio.sleep(0)
+
+    # A cancellation must not surface in the caller, which is generally an
+    # unrelated attribute access or parameter update.
+    async_executor(cancel_self)
+
+
+def test_async_executor_does_not_resume_leftover_tasks():
+    progress = []
+
+    async def leftover():
+        progress.append('started')
+        await asyncio.sleep(10)
+        progress.append('finished')
+
+    async def schedule():
+        # There is a running loop at this point, so this is scheduled rather
+        # than driven to completion.
+        async_executor(leftover)
+        await asyncio.sleep(0)
+
+    async def noop():
+        await asyncio.sleep(0)
+
+    async_executor(schedule)
+    assert progress == ['started']
+
+    # The abandoned task must not resume in the middle of a later drive.
+    async_executor(noop)
+    assert progress == ['started']

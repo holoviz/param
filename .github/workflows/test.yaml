@@ -7,8 +7,23 @@ on:
     branches:
       - "*"
   workflow_dispatch:
+    inputs:
+      target:
+        description: "How much of the test suite to run"
+        type: choice
+        default: default
+        options:
+          - default
+          - full
+          - downstream
+      cache:
+        description: "Use cache"
+        type: boolean
+        default: true
   schedule:
     - cron: "0 13 * * SUN"
+
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -28,7 +43,7 @@ jobs:
     name: Run pre-commit
     runs-on: "ubuntu-latest"
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pre-commit@v0
+      - uses: holoviz-dev/holoviz_tasks/pre-commit@feab0228afeb2e7dd99782598a16c8bca4911c5a # v1.0.3
 
   setup:
     name: Setup workflow
@@ -37,12 +52,14 @@ jobs:
       matrix: ${{ env.MATRIX }}
     steps:
       - name: Set matrix option
+        env:
+          GITHUB_EVENT_INPUTS_TARGET: ${{ github.event.inputs.target }}
         run: |
-          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
-            OPTION=${{ github.event.inputs.target }}
-          elif [[ '${{ github.event_name }}' == 'schedule' ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == 'workflow_dispatch' ]]; then
+            OPTION=${GITHUB_EVENT_INPUTS_TARGET}
+          elif [[ "${GITHUB_EVENT_NAME}" == 'schedule' ]]; then
             OPTION="full"
-          elif [[ '${{ github.event_name }}' == 'push' && '${{ github.ref_type }}' == 'tag' ]]; then
+          elif [[ "${GITHUB_EVENT_NAME}" == 'push' && "${GITHUB_REF_TYPE}" == 'tag' ]]; then
             OPTION="full"
           else
             OPTION="default"
@@ -53,7 +70,7 @@ jobs:
         run: |
           MATRIX=$(jq -nsc '{
               "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
-              "environment": ["test-39", "test-312", "test-313"]
+              "environment": ["test-311", "test-314"]
           }')
           echo "MATRIX=$MATRIX" >> $GITHUB_ENV
       - name: Set test matrix with 'full' option
@@ -61,7 +78,7 @@ jobs:
         run: |
           MATRIX=$(jq -nsc '{
               "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
-              "environment": ["test-39", "test-310", "test-311", "test-312", "test-313"]
+              "environment": ["test-311", "test-312", "test-313", "test-314"]
           }')
           echo "MATRIX=$MATRIX" >> $GITHUB_ENV
       - name: Set test matrix with 'downstream' option
@@ -77,7 +94,7 @@ jobs:
     name: Pixi lock
     runs-on: ubuntu-latest
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_lock@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-lock@feab0228afeb2e7dd99782598a16c8bca4911c5a # v1.0.3
         with:
           cache: ${{ github.event.inputs.cache == 'true' || github.event.inputs.cache == '' }}
 
@@ -89,17 +106,19 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     timeout-minutes: 30
+    env:
+      ENV: ${{ matrix.environment }}
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-install@feab0228afeb2e7dd99782598a16c8bca4911c5a # v1.0.3
         with:
           environments: ${{ matrix.environment }}
       - name: Test Unit
         run: |
-          pixi run -e ${{ matrix.environment }} test-unit $COV
+          pixi run -e "${ENV}" test-unit $COV
       - name: Test Examples
         run: |
-          pixi run -e ${{ matrix.environment }} test-example
-      - uses: codecov/codecov-action@v4
+          pixi run -e "${ENV}" test-example
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -111,15 +130,38 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        environment: ["test-core"]
+        environment: ["test-core", "test-314t", "test-315"]
     timeout-minutes: 30
+    env:
+      ENV: ${{ matrix.environment }}
     steps:
-      - uses: holoviz-dev/holoviz_tasks/pixi_install@v0
+      - uses: holoviz-dev/holoviz_tasks/pixi-install@feab0228afeb2e7dd99782598a16c8bca4911c5a # v1.0.3
         with:
           environments: ${{ matrix.environment }}
       - name: Test Unit
         run: |
-          pixi run -e ${{ matrix.environment }} test-unit
+          pixi run -e "${ENV}" test-unit
+
+  type_suite:
+    name: type:ubuntu-latest
+    needs: [pre_commit, pixi_lock]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: holoviz-dev/holoviz_tasks/pixi-install@feab0228afeb2e7dd99782598a16c8bca4911c5a # v1.0.3
+        with:
+          environments: type
+      - parallel:
+        - name: TY
+          run: pixi run -e type type-ty
+        - name: mypy
+          run: pixi run -e type type-mypy
+        - name: Pyrefly
+          run: pixi run -e type type-pyrefly
+        - name: Pyright
+          run: pixi run -e type type-pyright
+        - name: Asserts
+          run: pixi run -e type type-asserts
 
   pypy_test_suite:
     name: core:${{ matrix.python-version }}:${{ matrix.os }}
@@ -128,41 +170,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "windows-latest"]
-        python-version: ["pypy3.10"]
+        os: ["ubuntu-latest"]
+        python-version: ["pypy3.11"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: "100"
+          persist-credentials: false
       - name: Fetch
         run: git fetch --prune --tags -f
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
       - name: Install project dependencies
         run: uv pip install -e ."[tests,tests-pypy]"
       - name: List installed packages
         run: uv pip list
-      - name: Run tests (Linux)
-        if: matrix.os != 'windows-latest'
+      - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest tests
-      - name: Run tests (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          .venv\Scripts\Activate.ps1
           pytest tests
 
   result_test_suite:
     name: result:test
-    needs: [unit_test_suite, core_test_suite, pypy_test_suite]
+    needs: [unit_test_suite, core_test_suite, pypy_test_suite, type_suite]
     if: always()
     runs-on: ubuntu-latest
     steps:

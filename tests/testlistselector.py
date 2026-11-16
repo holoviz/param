@@ -1,5 +1,6 @@
 import re
 import unittest
+import warnings
 
 import param
 import pytest
@@ -197,20 +198,28 @@ class TestListSelectorParameters(unittest.TestCase):
             Q.r = 6
 
     def test_compute_default(self):
-        class Q(param.Parameterized):
-            r = param.ListSelector(default=None, compute_default_fn=lambda: [1,2,3])
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default_fn', category=param._utils.ParamDeprecationWarning)
+            class Q(param.Parameterized):
+                r = param.ListSelector(default=None, compute_default_fn=lambda: [1,2,3])
 
         self.assertEqual(Q.r, None)
-        Q.param['r'].compute_default()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default', category=param._utils.ParamDeprecationWarning)
+            Q.param['r'].compute_default()
         self.assertEqual(Q.r, [1,2,3])
         self.assertEqual(Q.param['r'].objects, [1,2,3])
 
     def test_bad_compute_default(self):
-        class Q(param.Parameterized):
-            r = param.ListSelector(default=None,compute_default_fn=lambda:1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default_fn', category=param._utils.ParamDeprecationWarning)
+            class Q(param.Parameterized):
+                r = param.ListSelector(default=None,compute_default_fn=lambda:1)
 
-        with self.assertRaises(TypeError):
-            Q.param['r'].compute_default()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='compute_default', category=param._utils.ParamDeprecationWarning)
+            with self.assertRaises(TypeError):
+                Q.param['r'].compute_default()
 
     def test_initialization_bad_iterable(self):
         with self.assertRaises(ValueError):

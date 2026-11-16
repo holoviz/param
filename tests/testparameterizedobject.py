@@ -1,7 +1,12 @@
 """Unit test for Parameterized."""
+import abc
 import inspect
 import re
+import sys
+import threading
 import unittest
+import warnings
+import weakref
 
 import param
 import numbergen
@@ -16,8 +21,12 @@ import random
 
 from param import parameterized, Parameter
 from param.parameterized import (
+    ParameterizedABC,
     ParamOverrides,
+    ParameterizedMetaclass,
     Undefined,
+    _ClassPrivate,
+    _InstancePrivate,
     default_label_formatter,
     edit_constant,
     no_instance_params,
@@ -124,7 +133,7 @@ class TestParameterized(unittest.TestCase):
         with pytest.raises(AttributeError):
             testpo.param.const.name = 'notconst'
 
-    def test_name_overriden(self):
+    def test_name_overridden(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -134,7 +143,7 @@ class TestParameterized(unittest.TestCase):
 
         assert p.name == 'other'
 
-    def test_name_overriden_without_default(self):
+    def test_name_overridden_without_default(self):
         class A(param.Parameterized):
             pass
         class B(param.Parameterized):
@@ -148,7 +157,7 @@ class TestParameterized(unittest.TestCase):
         assert C.name == 'C'
         assert C.param.name.doc == 'some help'
 
-    def test_name_overriden_constructor(self):
+    def test_name_overridden_constructor(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -156,7 +165,7 @@ class TestParameterized(unittest.TestCase):
 
         assert p.name == 'another'
 
-    def test_name_overriden_subclasses(self):
+    def test_name_overridden_subclasses(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -187,7 +196,7 @@ class TestParameterized(unittest.TestCase):
         assert r2.name == 'last'
 
 
-    def test_name_overriden_subclasses_name_set(self):
+    def test_name_overridden_subclasses_name_set(self):
         class P(param.Parameterized):
             name = param.String(default='other')
 
@@ -206,7 +215,7 @@ class TestParameterized(unittest.TestCase):
 
         assert q.name == 'yetanother'
 
-    def test_name_overriden_error_not_String(self):
+    def test_name_overridden_error_not_String(self):
 
         msg = "Parameterized class 'P' cannot override the 'name' Parameter " \
               "with type <class 'str'>. Overriding 'name' is only allowed with " \
@@ -239,7 +248,7 @@ class TestParameterized(unittest.TestCase):
         assert C.name == 'C'
         assert D.name == 'D'
 
-    def test_name_overriden_complex_hierarchy(self):
+    def test_name_overridden_complex_hierarchy(self):
         class Mixin1: pass
         class Mixin2: pass
         class Mixin3(param.Parameterized): pass
@@ -258,7 +267,7 @@ class TestParameterized(unittest.TestCase):
         assert C.name == 'another'
         assert D.name == 'another'
 
-    def test_name_overriden_multiple(self):
+    def test_name_overridden_multiple(self):
         class A(param.Parameterized):
             name = param.String(default='AA')
         class B(param.Parameterized):
@@ -325,6 +334,48 @@ class TestParameterized(unittest.TestCase):
         assert TestPO.param['const'].constant
         assert TestPO.param['const'].default not in (670, 891)
 
+    def test_edit_constant_does_not_mutate_cls_value_if_not_constant(self):
+        # Regression https://github.com/holoviz/param/issues/1100
+        class P(param.Parameterized):
+            a = param.Number()
+
+
+        p = P()
+
+        # Manually set p.param.a.constant to True
+        p.param.a.constant = True
+
+        assert p.param.a.constant is True
+        assert P.param.a.constant is False
+
+        with param.parameterized.edit_constant(p):
+            pass
+
+        assert p.param.a.constant is True
+        assert P.param.a.constant is False
+
+    def test_private_namespace_descriptor_class_access_returns_class_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        assert isinstance(P._param__private, _ClassPrivate)
+
+    def test_private_namespace_descriptor_uninitialized_instance_returns_class_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        # Bypass __init__ to verify descriptor behavior before instance setup.
+        p = P.__new__(P)
+        assert isinstance(p._param__private, _ClassPrivate)
+
+    def test_private_namespace_descriptor_initialized_instance_returns_instance_private(self):
+        class P(param.Parameterized):
+            a = param.Number()
+
+        p = P()
+        assert isinstance(p._param__private, _InstancePrivate)
+        assert p._param__private is p.__dict__['_param__private']
+
     def test_readonly_parameter(self):
         """Test that you can't set a read-only parameter on construction or as an attribute."""
         testpo = TestPO()
@@ -377,11 +428,28 @@ class TestParameterized(unittest.TestCase):
         assert t.param['instPO'].instantiate is True
         assert isinstance(t.instPO,AnotherTestPO)
 
-    def test_abstract_class(self):
+    def test_abstract_class_attribute(self):
         """Check that a class declared abstract actually shows up as abstract."""
         self.assertEqual(TestAbstractPO.abstract, True)
         self.assertEqual(_AnotherAbstractPO.abstract, True)
         self.assertEqual(TestPO.abstract, False)
+        # Test subclasses are not abstract
+        class A(param.Parameterized):
+            __abstract = True
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
+
+    def test_abstract_class_abc(self):
+        """Check that an ABC class actually shows up as abstract."""
+        class A(ParameterizedABC): pass
+        class B(A): pass
+        class C(A): pass
+        self.assertEqual(A.abstract, True)
+        self.assertEqual(B.abstract, False)
+        self.assertEqual(C.abstract, False)
 
     def test_override_class_param_validation(self):
         test = TestPOValidation()
@@ -412,7 +480,9 @@ class TestParameterized(unittest.TestCase):
                 nonlocal count
                 count += 1
 
-        p = P()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            p = P()
 
         assert p.x == 1
         assert count == 0
@@ -429,7 +499,9 @@ class TestParameterized(unittest.TestCase):
                     self.sub = P(depth+1)
                 super().__init__()
 
-        p = P()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            p = P()
 
         assert p.value == 'B'
         assert p.sub.value == 'B'
@@ -454,7 +526,9 @@ class TestParameterized(unittest.TestCase):
 
         # When b is instantiated the `batched` Parameter of B is set before
         # Parameterized.__init__ is called.
-        b = B()
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Setting the Parameter', category=param._utils.ParamPendingDeprecationWarning)
+            b = B()
         assert b.batched is True
 
     def test_instantiation_param_objects_before_super_subclass(self):
@@ -548,10 +622,18 @@ class TestParameterized(unittest.TestCase):
     def test_values_name_ignored_for_instances_and_onlychanged(self):
         default_inst = param.Parameterized()
         assert 'Parameterized' in default_inst.name
-        # name ignored when automatically computed (behavior inherited from all_equal)
+        # name ignored when automatically computed (behavior inherited from is_equal)
         assert 'name' not in default_inst.param.values(onlychanged=True)
         # name not ignored when set
         assert param.Parameterized(name='foo').param.values(onlychanged=True)['name'] == 'foo'
+
+    def test_values_dyn(self):
+        # See https://github.com/holoviz/param/issues/1057
+        t = TestPO()
+        orig_default = t.param.dyn.default
+        t.param.dyn.default = 3290432424
+        values = t.param.values()
+        assert values['dyn'] == orig_default
 
     def test_param_iterator(self):
         self.assertEqual(set(TestPO.param), {'name', 'inst', 'notinst', 'const', 'dyn',
@@ -670,6 +752,14 @@ class TestParameterized(unittest.TestCase):
         assert t.param.inspect_value('dyn')!=orig
         t.param._state_pop()
         assert t.param.inspect_value('dyn')==orig
+
+    def test_get_value_generator_dyn(self):
+        # See https://github.com/holoviz/param/issues/1057
+        t = TestPO()
+        orig_default = t.param.dyn.default
+        t.param.dyn.default = 9594323423
+        vg = t.param.get_value_generator('dyn')
+        assert vg == orig_default
 
     def test_label(self):
         t = TestPO()
@@ -1145,6 +1235,33 @@ def test_inheritance_default_is_None_in_sub():
     assert b.p == (0, 1)
 
 
+def test_inheritance_class_default_set_after_param_lookup():
+    # https://github.com/holoviz/param/issues/1218
+    class A(param.Parameterized):
+        p = param.Dict(default={})
+
+    class B(A):
+        pass
+
+    class C(B):
+        pass
+
+    class D(B):
+        p = param.Dict(default={'own': 1})
+
+    # Looking up the parameters caches them on the classes.
+    B.param['p']
+    C.param['p']
+    D.param['p']
+    C()
+
+    B.p = {'x': 1}
+
+    assert B().p == {'x': 1}
+    assert C().p == {'x': 1}
+    assert D().p == {'own': 1}
+    assert A().p == {}
+
 def test_inheritance_diamond_not_supported():
     """
     Test that Parameters don't respect diamond inheritance.
@@ -1320,7 +1437,7 @@ def test_inheritance_constant_behavior():
     assert b.param.p.constant is True
 
 
-def test_inheritance_set_Parameter_instantiate_constant_before_instantation():
+def test_inheritance_set_Parameter_instantiate_constant_before_instantiation():
     # https://github.com/holoviz/param/issues/760
     class A(param.Parameterized):
         p0 = param.Parameter()
@@ -1827,3 +1944,194 @@ def test_inheritance_with_changing_class_():
     ):
         class C(B):
             p = param.ClassSelector(class_=str)
+
+
+class MyABC(ParameterizedABC):
+
+    x = param.Number()
+
+    @abc.abstractmethod
+    def method(self): pass
+
+    @property
+    @abc.abstractmethod
+    def property(self): pass
+    # Other methods like abc.abstractproperty are deprecated and can be
+    # replaced by combining @abc.abstracmethod with other decorators, like
+    # @property, @classmethod, etc. No need to test them all.
+
+
+def test_abc_insintance_metaclass():
+    assert isinstance(MyABC, ParameterizedMetaclass)
+
+
+def test_abc_param_abstract():
+    assert MyABC.abstract
+
+
+def test_abc_error_when_interface_not_implemented():
+    class Bad(MyABC):
+        def wrong_method(self): pass
+
+    with pytest.raises(TypeError, match="Can't instantiate abstract class Bad"):
+        Bad()
+
+def test_abc_basic_checks():
+    # Some very basic tests to check the concrete class works as expected.
+    class GoodConcrete(MyABC):
+        l = param.List()
+
+        def method(self):
+            return 'foo'
+
+        @property
+        def property(self):
+            return 'bar'
+
+        @param.depends('x', watch=True, on_init=True)
+        def on_x(self):
+            self.l.append(self.x)
+
+    assert issubclass(GoodConcrete, param.Parameterized)
+    assert not GoodConcrete.abstract
+
+    assert GoodConcrete.name == 'GoodConcrete'
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Number parameter 'MyABC.x' only takes numeric values, not <class 'str'>."),
+    ):
+        GoodConcrete(x='bad')
+
+    gc = GoodConcrete(x=10)
+    assert isinstance(gc, param.Parameterized)
+    assert gc.method() == 'foo'
+    assert gc.property == 'bar'
+    assert gc.name.startswith('GoodConcrete0')
+    assert gc.l == [10]
+    gc.x += 1
+    assert gc.l == [10, 11]
+
+
+@pytest.mark.skipif(sys.implementation.name == "pypy", reason='Works differently on PyPy')
+def test_no_param_namespace_cycle():
+    # Accessing .param on an instance must not create a reference cycle.
+    # A cycle (obj -> obj.__dict__['_param__parameters'] -> Parameters.self -> obj)
+    # would prevent CPython's reference-counting from immediately freeing the
+    # object, breaking weakref-based cleanup used by libraries like HoloViews.
+    class P(param.Parameterized):
+        x = param.Number(1)
+
+    freed = []
+    obj = P()
+    ref = weakref.ref(obj, lambda _: freed.append(True))  # noqa: F841
+
+    _ = obj.param.values()  # access .param to trigger any caching
+
+    del obj
+    assert freed, "Parameterized instance not freed immediately — likely a reference cycle via .param"
+
+
+def test_no_op_slot_set_does_not_invalidate_init_cache():
+    class P(param.Parameterized):
+        x = param.Number(1)
+
+    P.param.objects('existing')
+    private = P._param__private
+    assert private.params_to_deepcopy is not None
+
+    P.param.x.constant = P.param.x.constant
+    P.param.x.instantiate = P.param.x.instantiate
+    assert private.params_to_deepcopy is not None
+
+    P.param.x.constant = not P.param.x.constant
+    assert private.params_to_deepcopy is None
+
+
+def test_cls_parameters_rebuild_survives_concurrent_invalidation():
+    # Setting constant/instantiate/default_factory on a Parameter invalidates
+    # the init caches. If that happens while _cls_parameters is rebuilding
+    # them, the rebuild must not fail (it used to append to None).
+    class Invalidating(param.Parameter):
+
+        def __getattribute__(self, key):
+            if key == 'instantiate':
+                try:
+                    owner = object.__getattribute__(self, 'owner')
+                except AttributeError:
+                    owner = None
+                if owner is not None:
+                    private = owner._param__private
+                    private.params_to_deepcopy = None
+                    private.params_to_ref = None
+                    private.params_with_default_factory = None
+            return super().__getattribute__(key)
+
+    class P(param.Parameterized):
+        a = Invalidating()
+        b = param.String(constant=True)
+
+    assert set(P.param.objects('existing')) == {'name', 'a', 'b'}
+
+    # Only invalidate the init caches, so that the rebuild happens in the
+    # branch that reuses the already cached parameters
+    private = P._param__private
+    assert private.params
+    private.params_to_deepcopy = None
+    private.params_to_ref = None
+    private.params_with_default_factory = None
+
+    assert set(P.param.objects('existing')) == {'name', 'a', 'b'}
+
+
+def test_cls_parameters_rebuild_is_thread_safe():
+    class P(param.Parameterized):
+        pass
+
+    for i in range(100):
+        P.param.add_parameter(f'p{i}', param.Integer(default=i, constant=bool(i % 2)))
+
+    p = P()
+    errors = []
+    stop = threading.Event()
+
+    def toggle_readonly():
+        # Mimics panel.util.parameters.edit_readonly
+        try:
+            for _ in range(500):
+                if stop.is_set():
+                    return
+                params = list(p.param.objects('existing').values())
+                constants = [po.constant for po in params]
+                for po in params:
+                    po.constant = False
+                for po, constant in zip(params, constants):
+                    po.constant = constant
+        except Exception as e:
+            errors.append(e)
+            stop.set()
+
+    threads = [threading.Thread(target=toggle_readonly) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert not errors, errors[0]
+
+
+def test_param_namespace_getattr_does_not_mask_descriptor_errors():
+    class P(param.Parameterized):
+        x = param.Number(1)
+
+    original = parameterized.Parameters._cls_parameters
+
+    def broken(self_):
+        raise AttributeError('the real error')
+
+    try:
+        parameterized.Parameters._cls_parameters = property(broken)
+        with pytest.raises(AttributeError, match='the real error'):
+            P().param.objects('existing')
+    finally:
+        parameterized.Parameters._cls_parameters = original

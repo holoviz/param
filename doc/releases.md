@@ -1,5 +1,281 @@
 # Releases
 
+## Version 2.4.2
+
+Date: 2026-09-03
+
+This patch release fixes a cluster of bugs in async `rx` pipelines (stale value propagation, cancellation leaks, branching, invalidation finalizers, and an unhandled exception in async operations), plus a memory leak on short-lived reactive pipelines, a thread-safety issue in the `Parameter` init cache, and a `List` item_type validation bug rejecting subclasses with a custom metaclass.
+
+Many thanks to @philippjfr, @hoxbro, @maximlt, @s-t-e-v-e-n-k and @Coderambling for their contributions to this release.
+
+### 🐛 Bug Fixes
+
+- Fix memory leak on short-lived reactive pipelines ([#1156](https://github.com/holoviz/param/pull/1156))
+- Fix `List` item_type validation rejecting subclasses with a custom metaclass ([#1166](https://github.com/holoviz/param/pull/1166))
+- Switch to `os.path.commonpath` to fix `FileSelector` path abbreviation splitting on partial path components ([#1165](https://github.com/holoviz/param/pull/1165))
+- Fix thread-unsafe init cache rebuild and unmask errors ([#1171](https://github.com/holoviz/param/pull/1171))
+- Stop `rx` from propagating a stale value while an async node is awaiting ([#1173](https://github.com/holoviz/param/pull/1173))
+- Fix `rx` invalidation finalizer keeping its own node alive ([#1174](https://github.com/holoviz/param/pull/1174))
+- Fix superseded async references escaping cancellation ([#1175](https://github.com/holoviz/param/pull/1175))
+- Fix branching off an async `rx` node ([#1178](https://github.com/holoviz/param/pull/1178))
+- Fix an unhandled exception in an async `rx` operation ([#1179](https://github.com/holoviz/param/pull/1179))
+- Fix `async_executor` leaking an event loop per call and leaking cancellations ([#1180](https://github.com/holoviz/param/pull/1180))
+
+### 📚 Documentation
+
+- A few minor text optimizations in Typing.ipynb ([#1161](https://github.com/holoviz/param/pull/1161))
+
+### 🧪 Tests & CI
+
+- Bump pyrefly compat to 1.1.0 ([#1157](https://github.com/holoviz/param/pull/1157))
+- Run type CI in parallel ([#1158](https://github.com/holoviz/param/pull/1158))
+- Fix feather serialization tests ([#1168](https://github.com/holoviz/param/pull/1168))
+- Ignore python 3.10 for feather test ([#1169](https://github.com/holoviz/param/pull/1169))
+- Update CI action versions ([#1170](https://github.com/holoviz/param/pull/1170))
+- Ignore gmpy2 on Windows for now ([#1172](https://github.com/holoviz/param/pull/1172))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.4.1...v2.4.2)
+
+## Version 2.4.1
+
+Date: 2026-06-09
+
+This patch release adds a mypy plugin to handle the descriptor `__set__` type narrowing issue, reorders `param.List` overloads to allow default type inference, and fixes the conda build.
+
+Many thanks to @philippjfr and @hoxbro for their contributions to this release.
+
+### 🚀 Features
+
+- Add mypy plugin to handle descriptor `__set__` issue ([#1148](https://github.com/holoviz/param/pull/1148))
+
+### 🐛 Bug Fixes
+
+- Reorder `param.List` overloads to allow default type inference ([#1149](https://github.com/holoviz/param/pull/1149))
+
+### 🏗️ Build
+
+- Fix conda build ([b7bcd74](https://github.com/holoviz/param/commit/b7bcd74))
+
+### 📚 Documentation
+
+- Add instructions about basedpyright to Typing docs ([#1151](https://github.com/holoviz/param/pull/1151))
+
+### 🧹 Maintenance
+
+- Fix spelling mistakes and add typos to pre-commit ([#1152](https://github.com/holoviz/param/pull/1152))
+- Bump TY version ([#1150](https://github.com/holoviz/param/pull/1150))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.4.0...v2.4.1)
+
+## Version 2.4.0
+
+Date: 2026-05-21
+
+Param 2.4.0 brings first-class static typing support to the entire Param ecosystem — all major parameter types now carry precise type information that flows through to your IDE and type checker, with types inferred directly from your existing parameter declarations. The release also adds a `lazy` mode to reactive expressions (`rx`) and includes performance optimizations that speed up parameter initialization in large class hierarchies.
+
+Many thanks to @philippjfr, @hoxbro and @camriddell for their contributions to this release.
+
+### 🚀 Features
+
+- Implement descriptor factory typing system by implementing `Parameter` generics (`Parameter[_T]`) and add typed overloads for all major Parameter subclasses and add typing for public APIs ([#1066](https://github.com/holoviz/param/pull/1066), [#1112](https://github.com/holoviz/param/pull/1112), [#1130](https://github.com/holoviz/param/pull/1130), [#1131](https://github.com/holoviz/param/pull/1131), [#1132](https://github.com/holoviz/param/pull/1132), [#1134](https://github.com/holoviz/param/pull/1134), [#1136](https://github.com/holoviz/param/pull/1136), [#1137](https://github.com/holoviz/param/pull/1137), [#1141](https://github.com/holoviz/param/pull/1141))
+- Add `py.typed` PEP 561 marker so type checkers automatically recognize Param's inline annotations without requiring separate stubs ([#1066](https://github.com/holoviz/param/pull/1066))
+- Add `rx(..., lazy=)` argument ([#1106](https://github.com/holoviz/param/pull/1106))
+
+### ⚡ Performance
+
+- Add caches to speed up `Parameter` initialization ([#1124](https://github.com/holoviz/param/pull/1124))
+- Optimize `Parameter` instantiation ([#1122](https://github.com/holoviz/param/pull/1122))
+- Implement custom `__copy__` for `Parameter` to speed up instance `Parameter` creation ([#1128](https://github.com/holoviz/param/pull/1128))
+
+### 🐛 Bug Fixes
+
+- Use `re.search` for `param.String` regex check ([#1142](https://github.com/holoviz/param/pull/1142))
+
+### 📚 Documentation
+
+- Add Typing user guide ([#1139](https://github.com/holoviz/param/pull/1139))
+
+### 🧪 Tests & CI
+
+- Add `tests/assert_types.py` with `assert_type()` assertions verified in CI ([#1066](https://github.com/holoviz/param/pull/1066))
+- Add CI jobs for `mypy`, `pyright`, `pyrefly`, and `ty` ([#1066](https://github.com/holoviz/param/pull/1066), [#1140](https://github.com/holoviz/param/pull/1140))
+- Add `zizmor` for GitHub Actions security scanning ([#1143](https://github.com/holoviz/param/pull/1143))
+
+
+## Version 2.3.3
+
+Date: 2026-03-31
+
+This patch release fixes an issue where `rx` pipelines with shared provenance would not use a shared cache, resulting in unnecessary re-evaluation of shared inputs.
+
+Fixes:
+
+- Ensure shared `rx` inputs are reused ([#1117](https://github.com/holoviz/param/pull/1117))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.3.2...v2.3.3)
+
+## Version 2.3.2
+
+Date: 2026-02-06
+
+This patch release fixes a regression introduced in `Parameterized` by adding a docstring to its `__init__` method, shadowing user-defined class docstrings displayed in IDEs like VSCode.
+
+Fixes:
+
+- Remove Parameterized `__init__` docstring as it shadows class user docstrings ([#1104](https://github.com/holoviz/param/pull/1104))
+
+Compatibility / Tests:
+
+- Pandas 3 test suite compatibility ([#1107](https://github.com/holoviz/param/pull/1107))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.3.1...v2.3.2)
+
+## Version 2.3.1
+
+Date: 2025-11-25
+
+This patch release fixes a regression introduced in the `param.parameterized.edit_constant` context manager.
+
+Fixes:
+
+- Fix `edit_constant` to prevent class value mutation when not constant
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.3.0...v2.3.1)
+
+## Version 2.3.0
+
+Date: 2025-11-13
+
+This minor release brings a number of new features, enhancements, bug fixes, and documentation improvements. Notably, it introduces the new Parameter attributes `default_factory` and `metadata`, and the `ParameterizedABC` class to declare Parameterized abstract base classes. All the docstrings have been improved thanks to a massive effort from @MarcSkovMadsen. Several deprecated APIs have now been removed, and the minimum supported Python version has been bumped to 3.10. Many thanks to our new contributors @Azaya89, @Coderambling, and @ypsah, as well as to @MarcSkovMadsen, @hoxbro, @maximlt, @philippjfr, and all others for their continued maintenance and development efforts.
+
+Features:
+
+- Add a `default_factory` attribute to the base Parameter ([#1092](https://github.com/holoviz/param/pull/1092))
+- Add a `metadata` attribute to the base Parameter ([#1094](https://github.com/holoviz/param/pull/1094))
+- Allow declaring Parameterized abstract base classes by inheriting from `ParameterizedABC` => This approach should be favored over `__abstract = True` ([#1031](https://github.com/holoviz/param/pull/1031))
+- Add `.rx.set()` method ([#957](https://github.com/holoviz/param/pull/957))
+
+Enhancements:
+
+- Add missing docstrings and enhance existing ones ([#992](https://github.com/holoviz/param/pull/992), [#994](https://github.com/holoviz/param/pull/994), [#997](https://github.com/holoviz/param/pull/997), [#998](https://github.com/holoviz/param/pull/998))
+- Better error when calling `len()` on a reactive expression ([#1033](https://github.com/holoviz/param/pull/1033))
+- Raise `AttributeError` when attempting to set the `value` attribute of a reactive expression ([#1022](https://github.com/holoviz/param/pull/1022))
+- Add an `is_instance` attribute to the `List` Parameter ([#1023](https://github.com/holoviz/param/pull/1023))
+- Allow `depends(..., on_init=True)` to be applied to async method ([#1067](https://github.com/holoviz/param/pull/1067))
+- Add `concrete` keyword to the `descendents` function => Prefer `concrete(<cls>, descendents=True)` over `concrete_descendents(<cls>)` ([#1027](https://github.com/holoviz/param/pull/1027))
+
+Performance Enhancements:
+
+- Improve import time by lazy importing "slow" modules ([#1037](https://github.com/holoviz/param/pull/1037))
+- Only update Parameter signatures when needed ([#1038](https://github.com/holoviz/param/pull/1038))
+
+Bug Fixes:
+
+- Fix calling `descendents` on an `object()` instance ([#1024](https://github.com/holoviz/param/pull/1024))
+- Ensure `edit_constant` resets class and instance level parameters ([#1015](https://github.com/holoviz/param/pull/1015))
+- Ensure `constant` attribute is inherited ([#1017](https://github.com/holoviz/param/pull/1017))
+- Ensure type checkers skip `ParameterizedFunction.__init__` ([#1039](https://github.com/holoviz/param/pull/1039))
+- Fix `.values()/get_value_generator()` dealing with Dynamic params and an updated default value ([#1058](https://github.com/holoviz/param/pull/1058))
+- Do not remove `nested_refs` when updating another ref ([#1061](https://github.com/holoviz/param/pull/1061))
+- Fix error message of `ReactiveESMMetaClass` ([#1064](https://github.com/holoviz/param/pull/1064))
+- Fix `reactive_ops.__call__` ([#1069](https://github.com/holoviz/param/pull/1069))
+- `unwatch` no longer logs a warning and idempotent behavior clarified ([#1018](https://github.com/holoviz/param/pull/1018))
+- Remove bad abstract declaration on `SelectorBase` ([#1086](https://github.com/holoviz/param/pull/1086))
+- Do not override refs when parameter is triggered ([#1089](https://github.com/holoviz/param/pull/1089))
+
+Documentation:
+
+- Add a new page that lists deprecated and removed APIs ([#1016](https://github.com/holoviz/param/pull/1016))
+- Add a version switcher ([#1079](https://github.com/holoviz/param/pull/1079))
+- Small refactor and fixes to the API reference ([#1082](https://github.com/holoviz/param/pull/1082))
+- README and landing page updates ([#1095](https://github.com/holoviz/param/pull/1095))
+- Various minor fixes and improvements ([#1006](https://github.com/holoviz/param/pull/1006), [#1034](https://github.com/holoviz/param/pull/1034), [#1036](https://github.com/holoviz/param/pull/1036), [#1049](https://github.com/holoviz/param/pull/1049), [#1052](https://github.com/holoviz/param/pull/1052), [#1054](https://github.com/holoviz/param/pull/1054))
+
+Breaking changes:
+
+- Direct removal of the undocumented and broken `print_all_param_defaults` function ([#1029](https://github.com/holoviz/param/pull/1029))
+- API removals that emitted a deprecation warning since 2.0.0, all included in the table below ([#1085](https://github.com/holoviz/param/pull/1085))
+
+| Warning | Description |
+|-|-|
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | Parameter slots / `List._class`: use instead `item_type` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | Parameter slots / `Number.set_hook`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.produce_value`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.as_unicode`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.is_ordered_dict`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.hashable`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.named_objs`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.normalize_path`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.__init__` module / `param.abbreviate_paths`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.all_equal`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.add_metaclass`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.batch_watch`: use instead `batch_call_watchers` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.recursive_repr`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0` | `param.parameterized` module / `param.parameterized.overridable_property`: no replacement |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.set_default`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param._add_parameter`: use instead `.param.add_parameter` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.params`: use instead `.param.values()` or `.param['param']` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.set_param`: use instead `.param.update` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.get_param_values`: use instead `.param.values().items()` (or `.param.values()` for the common case of `dict(....param.get_param_values())`) |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.params_depended_on`: use instead `.param.method_dependencies` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.defaults`: use instead `{k:v.default for k,v in p.param.objects().items()}` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.print_param_defaults`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.print_param_values`: use instead `for k,v in p.param.objects().items(): print(f"{p.__class__.name}.{k}={repr(v.default)}")` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.message`: use instead `.param.log(param.MESSAGE, ...)` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.verbose`: use instead `.param.log(param.VERBOSE, ...)` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.0.0`, soft-deprecated since `1.12.0` | Parameterized `.param` namespace / `.param.debug`: use instead `.param.log(param.DEBUG, ...)` |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.1.0`, `ParamPendingDeprecationWarning` since `2.0.0` | Instantiating most parameters with positional arguments beyond `default` is deprecated |
+| `ParamFutureWarning` since `2.2.0`, `ParamDeprecationWarning` since `2.1.0`, `ParamPendingDeprecationWarning` since `2.0.0` | For `Selector` parameters that accept `objects` as first positional argument, and `ClassSelector` parameters that accept `class_` as first positional argument, passing any argument by position is deprecated. |
+
+Deprecations:
+
+- Deprecate setting a parameter value before full instance initialization ([#1025](https://github.com/holoviz/param/pull/1025))
+- Deprecate the keyword `what` of `.param.watch_values()` ([#1073](https://github.com/holoviz/param/pull/1073))
+- Deprecate the generic Parameter attribute `pickle_default_value` ([#1019](https://github.com/holoviz/param/pull/1019))
+- Deprecate the module `version.py` ([#1002](https://github.com/holoviz/param/pull/1002))
+- Deprecate Selector's `compute_default_fn` slot and `compute_default()` method ([#1012](https://github.com/holoviz/param/pull/1012))
+
+Compatibility:
+
+- Drop gmpy support in favor of gmpy2 ([#1026](https://github.com/holoviz/param/pull/1026))
+- Ensure support for Python 3.14 ([#1077](https://github.com/holoviz/param/pull/1077))
+- Bump the minimum Python version to 3.10 ([#1084](https://github.com/holoviz/param/pull/1084))
+- Ensure support for PyPy 3.11 and stop testing PyPy 3.10 ([#1080](https://github.com/holoviz/param/pull/1080))
+
+Internal:
+
+- Introduce `_find_stack_level()` utility to emit warnings with the right stack level ([#1083](https://github.com/holoviz/param/pull/1083))
+
+Infrastructure / Tests:
+
+- Add sysmon for coverage ([#1009](https://github.com/holoviz/param/pull/1009))
+- Small updates to the build infrastructure ([#1008](https://github.com/holoviz/param/pull/1008))
+- Modify workflow to exclude forks ([#1020](https://github.com/holoviz/param/pull/1020))
+- Update pre-commit ([#1078](https://github.com/holoviz/param/pull/1078))
+- Make the generator tests more robust ([#1080](https://github.com/holoviz/param/pull/1080), [#1088](https://github.com/holoviz/param/pull/1088))
+
+Governance:
+
+- Add [@maximlt](https://github.com/maximlt) ([#1075](https://github.com/holoviz/param/pull/1075))
+
+Contributor Experience:
+
+- Enhance developer experience with the `setup-dev` command ([#1081](https://github.com/holoviz/param/pull/1081))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.2.1...v2.3.0)
+
+## Version 2.2.1
+
+Date: 2025-06-11
+
+This patch release contains a bug fix for nested references. Thanks to @philippjfr for their contribution.
+
+Bug Fixes:
+
+- Do not remove nested_refs when updating another ref ([#1061](https://github.com/holoviz/param/pull/1061))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.2.0...v2.2.1)
+
 ## Version 2.2.0
 
 Date: 2024-12-16
@@ -69,7 +345,7 @@ This minor release focuses on improving reactive expressions and support for asy
 
 Enhancements:
 
-- Improvements for synchronous and asychronous generators ([#908](https://github.com/holoviz/param/pull/908))
+- Improvements for synchronous and asynchronous generators ([#908](https://github.com/holoviz/param/pull/908))
 - Additions to the .rx namespace including `and_`, `bool`, `map`, `not_`, `or_` and `updating` ([#906](https://github.com/holoviz/param/pull/906))
 - Add support for adding asynchronous watcher to `rx` ([#917](https://github.com/holoviz/param/pull/917))
 - Make it possible to resolve reactive expressions recursively with `.rx.resolve` ([#918](https://github.com/holoviz/param/pull/918))
@@ -154,7 +430,7 @@ We would like to thank @minimav for their first contribution, and @droumis, @Hox
 - Parameter slot values that are set to mutable containers (e.g. `Selector(objects=a_list)`) will now be shallow-copied on instantiation, so that the container is no longer confusingly shared between the class and its subclasses and instances ([#826](https://github.com/holoviz/param/pull/826))
 - To further clean up the Parameterized namespace (first started in version 1.7.0), the remaining private attributes haven been collected under two private namespaces `_param__private` and `_param__parameters` ([#766](https://github.com/holoviz/param/pull/766), [#790](https://github.com/holoviz/param/pull/790))
 - You can now use `.param.update` as a context manager for applying temporary updates ([#779](https://github.com/holoviz/param/pull/779))
-- The `name` Parameter has always had special behavior dating to its use in labeling objects in a GUI context, but this behavior is now able to be overriden at the class and instance level ([#740](https://github.com/holoviz/param/pull/740))
+- The `name` Parameter has always had special behavior dating to its use in labeling objects in a GUI context, but this behavior is now able to be overridden at the class and instance level ([#740](https://github.com/holoviz/param/pull/740))
 - Improved Parameter signatures for static and dynamic code analysis ([#742](https://github.com/holoviz/param/pull/742))
 - Removed inferred Parameterized docstring signature and add basic `__signature__` support ([#802](https://github.com/holoviz/param/pull/802))
 - For speed, only generate the Parameter docstring in an IPython context ([#774](https://github.com/holoviz/param/pull/774))
@@ -243,12 +519,11 @@ We continue to clean up Param's API ([#734](https://github.com/holoviz/param/pul
     - `ClassSelector(class_=(str, int))`: OK
     - It's possible that in the future the signature of these two parameters will be aligned with the other parameters to accept `default` as first and only positional argument, but for now please use an explicit keyword so that your code will be compatible with all versions.
 - Parameter slots:
-  - `List._class`: use instead `item_type`.
+  - `List.class_`: use instead `item_type`.
   - `Number.set_hook`: no replacement
 - `param.__init__` module:
   - `param.produce_value`: no replacement
   - `param.as_unicode`: no replacement
-  - `param.is_ordered_dict`: no replacement
   - `param.is_ordered_dict`: no replacement
   - `param.hashable`: no replacement
   - `param.named_objs`: no replacement
@@ -435,7 +710,7 @@ Compatibility (see [#543](https://github.com/holoviz/param/pull/543) for the com
     * `.param.log()`: Subsumes .debug/verbose/message; all are logging calls. ([#556](https://github.com/holoviz/param/pull/556))
     * `.param.update()`: Dictionary-style updates to parameter values, as a drop-in replacement for `set_param` except for its optional legacy positional-arg syntax ([#558](https://github.com/holoviz/param/pull/558))
     * `.values()`: Dictionary of name:value pairs for parameter values, replacing `get_param_values` but now a dict since python3 preserves order ([#558](https://github.com/holoviz/param/pull/558))
-    * `.param.log()`: General-purpose interface to the logging module functionailty; replaces .debug, .verbose, .message ([#556](https://github.com/holoviz/param/pull/556))
+    * `.param.log()`: General-purpose interface to the logging module functionality; replaces .debug, .verbose, .message ([#556](https://github.com/holoviz/param/pull/556))
 
 ## Version 1.11.1
 

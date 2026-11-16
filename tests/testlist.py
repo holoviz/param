@@ -1,3 +1,4 @@
+import abc
 import re
 import unittest
 
@@ -16,6 +17,7 @@ class Obj: pass
 class SubObj1(Obj): pass
 class SubObj2(Obj): pass
 class DiffObj: pass
+class SubObjMeta(Obj, metaclass=abc.ABCMeta): pass
 
 class TestListParameters(unittest.TestCase):
 
@@ -34,7 +36,6 @@ class TestListParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default == []
         assert p.allow_None is False
-        assert p.class_ is None
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True
@@ -109,6 +110,12 @@ class TestListParameters(unittest.TestCase):
             match=re.escape("List parameter 'P.o' items must be subclasses of <class 'tests.testlist.Obj'>, not")
         ):
             p.o = [DiffObj]
+
+    def test_set_object_subclass_custom_metaclass(self):
+        # A subclass defined with a custom metaclass should be accepted.
+        p = self.P()
+        p.o = [SubObjMeta]
+        assert p.o == [SubObjMeta]
 
     def test_set_object_wrong_type(self):
         p = self.P()
@@ -250,7 +257,6 @@ class TestHookListParameters(unittest.TestCase):
     def _check_defaults(self, p):
         assert p.default == []
         assert p.allow_None is False
-        assert p.class_ is None
         assert p.item_type is None
         assert p.bounds == (0, None)
         assert p.instantiate is True

@@ -5,7 +5,7 @@ import pytest
 
 import param
 
-from param import concrete_descendents, Parameter
+from param.parameterized import descendents, Parameter
 
 # import all parameter types
 from param import * # noqa
@@ -90,7 +90,8 @@ class DefaultsMetaclassTest(type):
 
             return test
 
-        for p_name, p_type in concrete_descendents(Parameter).items():
+        for p_type in descendents(Parameter):
+            p_name = p_type.__name__
             dict_["test_default_of_unbound_%s"%p_name] = add_test_unbound(p_type) if p_name not in skip else test_skip
             dict_["test_default_of_class_%s"%p_name] = add_test_class(p_type) if p_name not in skip else test_skip
             dict_["test_default_of_inst_%s"%p_name] = add_test_inst(p_type) if p_name not in skip else test_skip

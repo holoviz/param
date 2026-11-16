@@ -10,8 +10,8 @@ Param is well-suited for use in scientific computing, data analysis tools,
 graphical user interfaces (GUIs), and any Python application where well-defined,
 validated parameters are needed.
 
-Documentation
--------------
+References
+----------
 For detailed documentation, see https://param.holoviz.org/.
 
 Examples
@@ -46,10 +46,10 @@ from . import version
 from .depends import depends
 from .parameterized import (
     Parameterized, Parameter, Skip, String, ParameterizedFunction,
-    ParamOverrides, Undefined, get_logger
+    ParamOverrides, Undefined, get_logger, ParameterizedABC,
 )
-from .parameterized import (batch_watch, output, script_repr,
-                            discard_events, edit_constant)
+from .parameterized import (output, script_repr,
+                            discard_events, edit_constant, batch)
 from .parameterized import shared_parameters
 from .parameterized import logging_level
 from .parameterized import DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
@@ -60,7 +60,6 @@ from .parameters import (
     guess_bounds,
     get_soft_bounds,
     resolve_path,
-    normalize_path,
     Time,
     Infinity,
     Dynamic,
@@ -100,16 +99,11 @@ from .parameters import (
     CalendarDateRange,
     Event,
 )
-from .reactive import bind, rx
+from .reactive import ReactiveError, bind, collect, current_node, rx
+from .typed import Field, Model
 from ._utils import (
-    produce_value,
-    as_unicode,
-    is_ordered_dict,
-    hashable,
-    named_objs,
     descendents,
     concrete_descendents,
-    abbreviate_paths,
     exceptions_summarized,
     _is_number,
 )
@@ -119,10 +113,11 @@ from ._utils import (
 try:
     # For performance reasons on imports, avoid importing setuptools_scm
     # if not in a .git folder
+    __version__ : str
     if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
         # If setuptools_scm is installed (e.g. in a development environment with
         # an editable install), then use it to determine the version dynamically.
-        from setuptools_scm import get_version
+        from setuptools_scm import get_version  # type: ignore[unresolved-import,import-untyped,reportMissingImports]
 
         # This will fail with LookupError if the package is not installed in
         # editable mode or if Git is not installed.
@@ -134,7 +129,7 @@ except (ImportError, LookupError, FileNotFoundError):
     try:
         # __version__ was added in _version in setuptools-scm 7.0.0, we rely on
         # the hopefully stable version variable.
-        from ._version import version as __version__
+        from ._version import version as __version__  # type: ignore[unresolved-import,no-redef]  # pyright: ignore[reportMissingImports]
     except (ModuleNotFoundError, ImportError):
         # Either _version doesn't exist (ModuleNotFoundError) or version isn't
         # in _version (ImportError). ModuleNotFoundError is a subclass of
@@ -144,7 +139,7 @@ except (ImportError, LookupError, FileNotFoundError):
         from importlib.metadata import version as mversion, PackageNotFoundError
 
         try:
-            __version__ = mversion("param")
+            __version__ = str(mversion("param"))
         except PackageNotFoundError:
             # The user is probably trying to run this without having installed
             # the package.
@@ -152,8 +147,7 @@ except (ImportError, LookupError, FileNotFoundError):
 
 #: Top-level object to allow messaging not tied to a particular
 #: Parameterized object, as in 'param.main.warning("Invalid option")'.
-main=Parameterized(name="main")
-
+main = Parameterized(name="main")
 
 # A global random seed (integer or rational) available for controlling
 # the behaviour of Parameterized objects with random state.
@@ -178,7 +172,9 @@ __all__ = (
     'Dict',
     'Dynamic',
     'ERROR',
+    'ReactiveError',
     'Event',
+    'Field',
     'FileSelector',
     'Filename',
     'Foldername',
@@ -190,6 +186,7 @@ __all__ = (
     'ListProxy',
     'ListSelector',
     'Magnitude',
+    'Model',
     'MultiFileSelector',
     'Number',
     'NumericTuple',
@@ -197,6 +194,7 @@ __all__ = (
     'ParamOverrides',
     'Parameter',
     'Parameterized',
+    'ParameterizedABC',
     'ParameterizedFunction',
     'Path',
     'Range',
@@ -213,11 +211,11 @@ __all__ = (
     'XYCoordinates',
     '__version__',
     '_is_number',
-    'abbreviate_paths',
-    'as_unicode',
-    'batch_watch',
+    'batch',
     'bind',
+    'collect',
     'concrete_descendents',
+    'current_node',
     'depends',
     'descendents',
     'discard_events',
@@ -227,21 +225,15 @@ __all__ = (
     'get_soft_bounds',
     'guess_bounds',
     'guess_param_types',
-    'hashable',
-    'is_ordered_dict',
     'logging_level',
     'main',
-    'named_objs',
-    'normalize_path',
     'output',
     'param_union',
     'parameterized_class',
-    'produce_value',
     'random_seed',
     'resolve_path',
     'rx',
     'script_repr',
-    'serializer',
     'shared_parameters',
     'version',
 )

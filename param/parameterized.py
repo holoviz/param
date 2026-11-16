@@ -2217,8 +2217,9 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 "An event cannot be triggered for an unbound parameter."
             )
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
+        changed = None
         for watcher in self.watchers[attribute]:
-            self.owner.param._call_watcher(watcher, event)
+            changed = self.owner.param._call_watcher(watcher, event, changed)
         if not _is_batched(self.owner):
             self.owner.param._batch_call_watchers()
 
@@ -2413,8 +2414,9 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
 
             # Copy watchers here since they may be modified inplace during iteration
+            changed = None
             for watcher in sorted(watchers, key=lambda w: w.precedence):
-                obj.param._call_watcher(watcher, event)
+                changed = obj.param._call_watcher(watcher, event, changed)
             if not _is_batched(obj):
                 obj.param._batch_call_watchers()
         finally:
@@ -3791,12 +3793,22 @@ class Parameters:
             except Skip:
                 pass
 
-    def _call_watcher(self_, watcher: Watcher, event: Event):
-        """Invoke the given watcher appropriately given an Event object."""
+    def _call_watcher(self_, watcher: Watcher, event: Event, changed: bool | None = None) -> bool | None:
+        """
+        Invoke the given watcher appropriately given an Event object.
+
+        ``changed`` is the result of a previous ``_changed(event)`` check
+        for the same event, if any. The (possibly freshly computed) result
+        is returned so that callers dispatching one event to several
+        watchers only compare old and new values once.
+        """
         if self_._TRIGGER:
             pass
-        elif watcher.onlychanged and (not self_._changed(event)):
-            return
+        elif watcher.onlychanged:
+            if changed is None:
+                changed = self_._changed(event)
+            if not changed:
+                return changed
 
         fn = watcher.fn
         if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_.self_or_cls):
@@ -3807,6 +3819,7 @@ class Parameters:
             event = self_._update_event_type(watcher, event, self_._TRIGGER)
             with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
                 self_._execute_watcher(watcher, (event,))
+        return changed
 
     def _batch_call_watchers(self_):
         """

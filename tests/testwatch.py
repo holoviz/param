@@ -1701,3 +1701,50 @@ class TestBatch:
                 with batch():
                     p.x = 2
                     raise ValueError('body boom')
+
+
+@pytest.fixture
+def count_changed():
+    # Restore the classmethod descriptor itself; monkeypatch would put
+    # back the bound method returned by getattr.
+    descriptor = param.parameterized.Parameters.__dict__['_changed']
+    calls = []
+
+    def counting(cls, event):
+        calls.append(event)
+        return descriptor.__func__(cls, event)
+
+    param.parameterized.Parameters._changed = classmethod(counting)
+    try:
+        yield calls
+    finally:
+        param.parameterized.Parameters._changed = descriptor
+
+
+@pytest.mark.parametrize('what', ['value', 'precedence'])
+def test_changed_comparison_runs_once_per_event(count_changed, what):
+    class P(param.Parameterized):
+        x = param.List(default=[])
+
+    def set_x(value):
+        if what == 'value':
+            target.x = value
+        else:
+            target.param.x.precedence = value
+
+    target = P() if what == 'value' else P
+    acc = Accumulator()
+    for _ in range(5):
+        target.param.watch(acc, 'x', what=what)
+    target.param.watch(acc, 'x', what=what, onlychanged=False)
+
+    set_x([{'a': 1}] if what == 'value' else 3)
+    assert len(count_changed) == 1
+    assert acc.call_count() == 6
+
+    count_changed.clear()
+    acc.args.clear()
+    acc.kwargs.clear()
+    set_x([{'a': 1}] if what == 'value' else 3)
+    assert len(count_changed) == 1
+    assert acc.call_count() == 1

@@ -3340,6 +3340,8 @@ class Parameters:
         class_param = self_.cls.param
         init_methods = []
         for method, queued, on_init, constant, dynamic in class_param._depends['watch']:
+            if not (init or dynamic):
+                continue
             # On initialization set up constant watchers; otherwise
             # clean up previous dynamic watchers for the updated attribute
             dynamic = [d for d in dynamic if attribute is None or d.spec.split(".")[0] == attribute]

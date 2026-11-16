@@ -1,5 +1,80 @@
 # Releases
 
+## Version 2.5.0
+
+Date: 2026-11-XX
+
+Param 2.5.0 introduces `param.Model`, a `Parameterized` subclass that builds its parameters from plain type annotations, and a new `DataFrameLike` parameter that accepts pandas, Polars, PyArrow and any other dataframe supported by Narwhals. Reactive expressions (`rx`) get a large set of new capabilities for building and inspecting complex, asynchronous pipelines, including opt-in error propagation, input overrides, node-local metadata, graph traversal, explicit disposal and partial results across several async inputs, alongside many async bug fixes. `param.batch()` defers watcher notification across every object touched inside it. The release also speeds up the `Parameter` get/set hot paths, making `Number` reads about 2.4x faster and sets that trigger watchers about 2.2x faster. Python 3.10 is no longer supported.
+
+Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, as well as to @Coderambling, @hoxbro and @philippjfr for their contributions to this release.
+
+### 🚀 Features
+
+- Add `param.Model`, a `Parameterized` subclass that synthesizes Parameters from type annotations, with `param.Field` for explicit parameter configuration ([#1133](https://github.com/holoviz/param/pull/1133))
+- Add `DataFrameLike` parameter for cross-backend dataframe inputs via Narwhals ([#1144](https://github.com/holoviz/param/pull/1144))
+- Add `param.batch()` to globally defer watcher notification ([#1204](https://github.com/holoviz/param/pull/1204), [#1229](https://github.com/holoviz/param/pull/1229), [#1237](https://github.com/holoviz/param/pull/1237))
+- Add `Watcher.remove()` to remove a watcher without going through `.param.unwatch` ([#1205](https://github.com/holoviz/param/pull/1205))
+- Add opt-in error propagation to `rx` with `error_mode="propagate"` and `process_failures=True` ([#1185](https://github.com/holoviz/param/pull/1185), [#1193](https://github.com/holoviz/param/pull/1193), [#1212](https://github.com/holoviz/param/pull/1212), [#1213](https://github.com/holoviz/param/pull/1213), [#1223](https://github.com/holoviz/param/pull/1223), [#1224](https://github.com/holoviz/param/pull/1224))
+- Add `.rx.awaiting` and `.rx.stale` to report whether an expression is still resolving or out of date ([#1176](https://github.com/holoviz/param/pull/1176), [#1183](https://github.com/holoviz/param/pull/1183), [#1186](https://github.com/holoviz/param/pull/1186), [#1191](https://github.com/holoviz/param/pull/1191))
+- Add `.rx.overrides` to temporarily replace the inputs of an `rx` node ([#1190](https://github.com/holoviz/param/pull/1190), [#1208](https://github.com/holoviz/param/pull/1208), [#1222](https://github.com/holoviz/param/pull/1222))
+- Add node-local `.rx.meta`, `param.current_node()`, `.rx.inputs()` and `.rx.generation` so operations can attach and read per-node state ([#1181](https://github.com/holoviz/param/pull/1181), [#1198](https://github.com/holoviz/param/pull/1198), [#1215](https://github.com/holoviz/param/pull/1215))
+- Add `param.collect()` to combine partial results across several async inputs ([#1199](https://github.com/holoviz/param/pull/1199), [#1206](https://github.com/holoviz/param/pull/1206))
+- Add `.rx.upstream()` and `.rx.dependents()` to walk the `rx` graph and make `rx` nodes hashable ([#1200](https://github.com/holoviz/param/pull/1200))
+- Add `.rx.dispose()` and `.rx.unwatch()`, make `.rx.watch()` return its watchers and fix a `.rx.resolve()` leak ([#1197](https://github.com/holoviz/param/pull/1197))
+- Add `.rx.distinct()` to skip propagation when a recompute leaves the value unchanged ([#1209](https://github.com/holoviz/param/pull/1209))
+- Guard registered `rx` accessor names from reassignment and add a `memoize` opt-out ([#1194](https://github.com/holoviz/param/pull/1194))
+
+### ⚡ Performance
+
+- Speed up the `Parameter` get/set hot paths, making `Number` reads about 2.4x faster and sets that trigger watchers about 2.2x faster ([#1167](https://github.com/holoviz/param/pull/1167))
+- Speed up `rx` attribute access and async checks ([#1238](https://github.com/holoviz/param/pull/1238))
+- Compare old and new values once per event instead of once per watcher ([#1234](https://github.com/holoviz/param/pull/1234))
+- Lazily evaluate registered `rx` accessors instead of resolving every node at construction ([#1182](https://github.com/holoviz/param/pull/1182))
+- Serve class-defined `rx` attributes without resolving the node ([#1230](https://github.com/holoviz/param/pull/1230))
+- Only re-run async refs when one of their dependencies changes ([#1233](https://github.com/holoviz/param/pull/1233))
+
+### 🐛 Bug Fixes
+
+- Allow callable (dynamic) values for `Date` and `CalendarDate` ([#1163](https://github.com/holoviz/param/pull/1163))
+- Fix duplicated parameter names in `watch` ([#1202](https://github.com/holoviz/param/pull/1202))
+- Use a class-level default set after the parameters were looked up ([#1219](https://github.com/holoviz/param/pull/1219))
+- Remove ref watchers when a ref parameter is overwritten with a plain value ([#1232](https://github.com/holoviz/param/pull/1232))
+- Ensure an `rx` node does not publish its previous value on a second read ([#1188](https://github.com/holoviz/param/pull/1188))
+- Ensure async `rx` nodes do not resolve when branched ([#1189](https://github.com/holoviz/param/pull/1189))
+- Ensure a sync child of an async `rx` node does not resolve it at construction ([#1196](https://github.com/holoviz/param/pull/1196))
+- Settle an `rx` generator operation whose stream ends without yielding ([#1192](https://github.com/holoviz/param/pull/1192))
+- Make `.rx.updating()` span an asynchronous wait ([#1195](https://github.com/holoviz/param/pull/1195))
+- Stop a skipped reference from discarding a sibling argument's genuine change ([#1210](https://github.com/holoviz/param/pull/1210))
+- Notify composed `rx.where` watchers on selected branch changes ([#1211](https://github.com/holoviz/param/pull/1211))
+- Skip an async `rx` input whose recompute is started by reading it ([#1217](https://github.com/holoviz/param/pull/1217))
+- Make `rx.where` return a reactive expression ([#1220](https://github.com/holoviz/param/pull/1220))
+- Notify watchers downstream of an async `rx` node of a landing started upstream ([#1226](https://github.com/holoviz/param/pull/1226))
+
+### ⚠️ Deprecations
+
+- Deprecate passing bare zero-argument coroutine and generator functions to `param.rx`; wrap them with `param.bind` instead ([#1227](https://github.com/holoviz/param/pull/1227))
+
+### 🔧 Compatibility
+
+- Drop support for Python 3.10 ([#1207](https://github.com/holoviz/param/pull/1207))
+
+### 📚 Documentation
+
+- Document `rx.watch` `onlychanged` and how it relates to `distinct` ([#1225](https://github.com/holoviz/param/pull/1225))
+- Mention `script_repr_suppress_defaults` in the `script_repr` docstring ([#1162](https://github.com/holoviz/param/pull/1162))
+- Set `script_repr_suppress_defaults` to `False` in the serialization example ([#1159](https://github.com/holoviz/param/pull/1159))
+
+### 🧪 Tests & CI
+
+- Pin `nodejs>=20` in the type environment ([#1221](https://github.com/holoviz/param/pull/1221))
+
+### 🧹 Maintenance
+
+- Review, fixes and cleanup for the new `rx` features ([#1203](https://github.com/holoviz/param/pull/1203))
+- Fix line endings ([#1187](https://github.com/holoviz/param/pull/1187))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.4.2...v2.5.0)
+
 ## Version 2.4.2
 
 Date: 2026-09-03

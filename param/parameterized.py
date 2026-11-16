@@ -2217,8 +2217,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 "An event cannot be triggered for an unbound parameter."
             )
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
-        for watcher in self.watchers[attribute]:
-            self.owner.param._call_watcher(watcher, event)
+        self.owner.param._dispatch_event(self.watchers[attribute], event)
         if not _is_batched(self.owner):
             self.owner.param._batch_call_watchers()
 
@@ -2411,8 +2410,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
 
             # Copy watchers here since they may be modified inplace during iteration
-            for watcher in sorted(watchers, key=lambda w: w.precedence):
-                obj.param._call_watcher(watcher, event)
+            obj.param._dispatch_event(sorted(watchers, key=lambda w: w.precedence), event)
             if not _is_batched(obj):
                 obj.param._batch_call_watchers()
         finally:
@@ -3800,13 +3798,29 @@ class Parameters:
             except Skip:
                 pass
 
+    def _dispatch_event(self_, watchers: Iterable[Watcher], event: Event):
+        """
+        Call each of ``watchers``, in order, for a single ``event``.
+
+        Whether the value changed is computed at most once per event, the
+        first time an ``onlychanged`` watcher needs it, and reused for the
+        remaining watchers, so a deep comparison of a large value is not
+        repeated per watcher. If an earlier watcher mutates ``event.old``
+        or ``event.new`` in place, later watchers reuse that result rather
+        than comparing again. Unchanged events skip ``onlychanged``
+        watchers unless the event is being triggered.
+        """
+        changed = None
+        for watcher in watchers:
+            if watcher.onlychanged and not self_._TRIGGER:
+                if changed is None:
+                    changed = self_._changed(event)
+                if not changed:
+                    continue
+            self_._call_watcher(watcher, event)
+
     def _call_watcher(self_, watcher: Watcher, event: Event):
         """Invoke the given watcher appropriately given an Event object."""
-        if self_._TRIGGER:
-            pass
-        elif watcher.onlychanged and (not self_._changed(event)):
-            return
-
         fn = watcher.fn
         if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_.self_or_cls):
             self_._events.append(event)

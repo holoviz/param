@@ -6467,11 +6467,12 @@ class Parameterized(metaclass=ParameterizedMetaclass):
             self.__dict__['_param__private'] = _InstancePrivate(  # pyright: ignore[reportIndexIssue]
                 explicit_no_refs=type(self)._param__private.explicit_no_refs
             )
+        param_ns = self.param
         # Skip generating a custom instance name when a class in the hierarchy
         # has overridden the default of the `name` Parameter.
-        if self.param.name.default == self.__class__.__name__:
-            self.param._generate_name()
-        refs, deps, scheduled = self.param._setup_params(**params)
+        if param_ns.name.default == self.__class__.__name__:
+            param_ns._generate_name()
+        refs, deps, scheduled = param_ns._setup_params(**params)
         object_count += 1
 
         self._param__private.initialized = True
@@ -6497,8 +6498,8 @@ class Parameterized(metaclass=ParameterizedMetaclass):
                 with discard_events(self):
                     setattr(self, pname, default_val)
 
-        self.param._setup_refs(deps)
-        self.param._update_deps(init=True)
+        param_ns._setup_refs(deps)
+        param_ns._update_deps(init=True)
         self._param__private.refs = refs
         for pname in scheduled:
             _notify_async_ref_settle_change(self, pname)

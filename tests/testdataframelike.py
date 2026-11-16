@@ -1,4 +1,6 @@
 """Test the DataFrameLike Parameter (cross-backend via Narwhals)."""
+import sys
+
 import pytest
 
 import param
@@ -25,6 +27,12 @@ except ModuleNotFoundError:
 skip_no_pandas = pytest.mark.skipif(pd is None, reason="pandas not available")
 skip_no_polars = pytest.mark.skipif(pl is None, reason="polars not available")
 skip_no_pyarrow = pytest.mark.skipif(pa is None, reason="pyarrow not available")
+
+
+def test_missing_narwhals_raises_importerror(monkeypatch):
+    monkeypatch.setitem(sys.modules, 'narwhals.stable.v2', None)
+    with pytest.raises(ImportError, match="requires the optional 'narwhals' package"):
+        param.DataFrameLike()
 
 
 def test_defaults_class():
@@ -152,8 +160,16 @@ class TestDataFrameLikeColumns:
         class P(param.Parameterized):
             df = param.DataFrameLike(
                 default=pd.DataFrame({'a': [1]}), columns={'a'})
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"does not contain required columns \['a'\]"):
             P(df=pd.DataFrame({'x': [1]}))
+
+    def test_columns_exact_count(self):
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pd.DataFrame({'a': [1], 'b': [2]}), columns=2)
+        P(df=pd.DataFrame({'x': [1], 'y': [2]}))
+        with pytest.raises(ValueError, match="column length 3 does not match declared bounds of 2"):
+            P(df=pd.DataFrame({c: [1] for c in 'abc'}))
 
     def test_list_exact_ordered(self):
         class P(param.Parameterized):
@@ -203,6 +219,19 @@ class TestDataFrameLikeLazy:
         P(df=pl.LazyFrame({'a': [1], 'b': [2]}))
         with pytest.raises(ValueError):
             P(df=pl.LazyFrame({'x': [1]}))
+
+    def test_lazy_schema_not_resolved_without_columns(self, monkeypatch):
+        import narwhals.stable.v2 as nw
+
+        def fail(self):
+            raise AssertionError('collect_schema should not be called')
+
+        monkeypatch.setattr(nw.LazyFrame, 'collect_schema', fail)
+
+        class P(param.Parameterized):
+            df = param.DataFrameLike(
+                default=pl.DataFrame({'a': [1]}), eager_only=False)
+        P(df=pl.LazyFrame({'a': [1, 2]}))
 
     def test_lazy_rows_not_enforced(self):
         # Counting rows would execute the lazy query plan.

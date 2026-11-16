@@ -3732,11 +3732,8 @@ class DataFrameLike(ClassSelector[t.Any]):
                 f"{nwframe.implementation.value!r}."
             )
 
-        schema = nwframe.collect_schema() if self.columns is not None else None
-
         if self.columns is not None:
-            assert schema is not None
-            cols = list(schema.names())
+            cols = list(nwframe.collect_schema().names())
             if (isinstance(self.columns, tuple) and len(self.columns)==2
                   and all(isinstance(v, (type(None), numbers.Number)) for v in self.columns)): # Numeric bounds tuple
                 _length_bounds_check(self, self.columns, len(cols), 'columns')

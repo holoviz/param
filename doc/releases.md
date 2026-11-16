@@ -1,5 +1,41 @@
 # Releases
 
+## Version 2.4.2
+
+Date: 2026-09-03
+
+This patch release fixes a cluster of bugs in async `rx` pipelines (stale value propagation, cancellation leaks, branching, invalidation finalizers, and an unhandled exception in async operations), plus a memory leak on short-lived reactive pipelines, a thread-safety issue in the `Parameter` init cache, and a `List` item_type validation bug rejecting subclasses with a custom metaclass.
+
+Many thanks to @philippjfr, @hoxbro, @maximlt, @s-t-e-v-e-n-k and @Coderambling for their contributions to this release.
+
+### 🐛 Bug Fixes
+
+- Fix memory leak on short-lived reactive pipelines ([#1156](https://github.com/holoviz/param/pull/1156))
+- Fix `List` item_type validation rejecting subclasses with a custom metaclass ([#1166](https://github.com/holoviz/param/pull/1166))
+- Switch to `os.path.commonpath` to fix `FileSelector` path abbreviation splitting on partial path components ([#1165](https://github.com/holoviz/param/pull/1165))
+- Fix thread-unsafe init cache rebuild and unmask errors ([#1171](https://github.com/holoviz/param/pull/1171))
+- Stop `rx` from propagating a stale value while an async node is awaiting ([#1173](https://github.com/holoviz/param/pull/1173))
+- Fix `rx` invalidation finalizer keeping its own node alive ([#1174](https://github.com/holoviz/param/pull/1174))
+- Fix superseded async references escaping cancellation ([#1175](https://github.com/holoviz/param/pull/1175))
+- Fix branching off an async `rx` node ([#1178](https://github.com/holoviz/param/pull/1178))
+- Fix an unhandled exception in an async `rx` operation ([#1179](https://github.com/holoviz/param/pull/1179))
+- Fix `async_executor` leaking an event loop per call and leaking cancellations ([#1180](https://github.com/holoviz/param/pull/1180))
+
+### 📚 Documentation
+
+- A few minor text optimizations in Typing.ipynb ([#1161](https://github.com/holoviz/param/pull/1161))
+
+### 🧪 Tests & CI
+
+- Bump pyrefly compat to 1.1.0 ([#1157](https://github.com/holoviz/param/pull/1157))
+- Run type CI in parallel ([#1158](https://github.com/holoviz/param/pull/1158))
+- Fix feather serialization tests ([#1168](https://github.com/holoviz/param/pull/1168))
+- Ignore python 3.10 for feather test ([#1169](https://github.com/holoviz/param/pull/1169))
+- Update CI action versions ([#1170](https://github.com/holoviz/param/pull/1170))
+- Ignore gmpy2 on Windows for now ([#1172](https://github.com/holoviz/param/pull/1172))
+
+[*Full Changelog*](https://github.com/holoviz/param/compare/v2.4.1...v2.4.2)
+
 ## Version 2.4.1
 
 Date: 2026-06-09

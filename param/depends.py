@@ -7,7 +7,7 @@ from collections import defaultdict
 from functools import wraps
 
 from .parameterized import (
-    Event, Parameter, Parameterized, ParameterizedMetaclass, transform_reference,
+    Event, Parameter, Parameterized, ParameterizedMetaclass, Watcher, transform_reference,
 )
 from ._utils import iscoroutinefunction
 
@@ -31,10 +31,12 @@ class DependencyInfo(t.TypedDict):
 
 class _DepsFn(t.Protocol[_FullP, _R]):
     _dinfo: DependencyInfo
+    _watchers: list[Watcher]
     def __call__(self, *args: _FullP.args, **kwargs: _FullP.kwargs) -> _R: ...
 
 class DependsFunc(t.Protocol[_P, _R]):
     _dinfo: DependencyInfo
+    _watchers: list[Watcher]
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R: ...
 
 
@@ -162,6 +164,8 @@ def _depends_impl(
 
     typed_depends = t.cast("_DepsFn[_FullP, _R]", _depends)
     typed_depends._dinfo = _dinfo
+    # Preserve watchers from a decorator this one stacks on top of.
+    typed_depends._watchers = list(getattr(func, '_watchers', ()))
 
     if string_specs or not watch:
          # string_specs case handled elsewhere (later), in Parameterized.__init__
@@ -233,6 +237,8 @@ def _depends_impl(
     for group in grouped.values():
         if group[0].owner is None:
             continue
-        group[0].owner.param.watch(cb, [dep.name for dep in group])
+        typed_depends._watchers.append(
+            group[0].owner.param.watch(cb, [dep.name for dep in group])
+        )
 
     return typed_depends

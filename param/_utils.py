@@ -12,7 +12,7 @@ import warnings
 from collections import OrderedDict, abc, defaultdict
 from contextlib import contextmanager
 from textwrap import dedent
-from threading import get_ident
+from threading import get_ident, local
 
 if t.TYPE_CHECKING:
     import asyncio
@@ -544,10 +544,10 @@ def _abbreviate_paths(pathspec,named_paths):
     Given a dict of (pathname,path) pairs, removes any prefix shared by all pathnames.
     Helps keep menu items short yet unambiguous.
     """
-    from os.path import commonprefix, dirname, sep
+    from os.path import commonpath, dirname, sep
 
-    prefix = commonprefix([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
-    return OrderedDict([(name[len(prefix):],path) for name,path in named_paths.items()])
+    prefix = commonpath([dirname(name)+sep for name in named_paths.keys()]+[pathspec])
+    return OrderedDict([(name[len(prefix)+1:],path) for name,path in named_paths.items()])
 
 
 def _to_datetime(x):
@@ -608,18 +608,69 @@ def _in_ipython():
 
 _running_tasks: set[asyncio.Task] = set()
 
+_thread_state = local()
+
+def _fallback_event_loop() -> asyncio.AbstractEventLoop:
+    """
+    Return the event loop to drive coroutines on when nothing else is running.
+
+    The loop is cached per thread and reused, since creating one per call leaks
+    the file descriptors each loop holds. It is kept thread-local because
+    ``run_until_complete`` may not be driven from two threads at once.
+    """
+    import asyncio
+    event_loop = getattr(_thread_state, 'event_loop', None)
+    if event_loop is None or event_loop.is_closed():
+        event_loop = asyncio.new_event_loop()
+        _thread_state.event_loop = event_loop
+    return event_loop
+
+def _drain_fallback_loop(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Finish off anything left running on the fallback loop.
+
+    A coroutine driven by :func:`async_executor` may schedule further work
+    before it completes, which ``run_until_complete`` leaves pending. Since the
+    loop is reused, such a leftover would otherwise resume in the middle of an
+    unrelated drive, so it is cancelled and given the chance to clean up here.
+    """
+    import asyncio
+    pending = [task for task in asyncio.all_tasks(event_loop) if not task.done()]
+    if not pending:
+        return
+    for task in pending:
+        task.cancel()
+    event_loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
 def async_executor(func):
+    """
+    Schedule the awaitable returned by ``func`` on the running event loop.
+
+    Without a running loop the awaitable is instead driven to completion on a
+    loop of param's own, i.e. the call blocks the caller until the coroutine
+    has finished. Applications that can offer a loop (such as Panel) are
+    expected to override ``param.parameterized.async_executor``.
+    """
     import asyncio
     try:
         event_loop = asyncio.get_running_loop()
     except RuntimeError:
-        event_loop = asyncio.new_event_loop()
-    if event_loop.is_running():
+        event_loop = None
+    if event_loop is not None:
         task = asyncio.ensure_future(func())
         _running_tasks.add(task)
         task.add_done_callback(_running_tasks.discard)
-    else:
+        return
+    event_loop = _fallback_event_loop()
+    try:
         event_loop.run_until_complete(func())
+    except asyncio.CancelledError:
+        # A coroutine superseded while it was being driven synchronously must
+        # not surface the cancellation in the caller, which is generally an
+        # unrelated attribute access or parameter update.
+        pass
+    finally:
+        _drain_fallback_loop(event_loop)
 
 @t.runtime_checkable
 class _HasTypes(t.Protocol):

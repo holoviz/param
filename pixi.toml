@@ -20,10 +20,6 @@ default = [
     "dev",
 ]
 
-[environments.test-310]
-features = ["py310", "required", "test-core", "test", "example", "test-example"]
-no-default-feature = true
-
 [environments.test-311]
 features = ["py311", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
@@ -42,6 +38,10 @@ no-default-feature = true
 
 [environments.test-314t]
 features = ["py314t", "required", "test-core", "test-314t"]
+no-default-feature = true
+
+[environments.test-315]
+features = ["py315", "required", "test-core", "test-315"]
 no-default-feature = true
 
 [environments.test-core]
@@ -71,9 +71,6 @@ pip = "*"
 [feature.required.tasks]
 install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
 
-[feature.py310.dependencies]
-python = "3.10.*"
-
 [feature.py311.dependencies]
 python = "3.11.*"
 
@@ -85,18 +82,31 @@ COVERAGE_CORE = "sysmon"
 
 [feature.py313.dependencies]
 python = "3.13.*"
+python-gil = "*"
 
 [feature.py313.activation.env]
 COVERAGE_CORE = "sysmon"
 
 [feature.py314.dependencies]
 python = "3.14.*"
+python-gil = "*"
 
 [feature.py314.activation.env]
 COVERAGE_CORE = "sysmon"
 
 [feature.py314t.dependencies]
 python-freethreading = "3.14.*"
+
+[feature.py315]
+channels = ["conda-forge/label/python_rc"]
+
+[feature.py315.dependencies]
+python = "3.15.*"
+_python_rc = "*"
+python-gil = "*"
+
+[feature.py315.activation.env]
+COVERAGE_CORE = "sysmon"
 
 [feature.example.dependencies]
 aiohttp = "*"
@@ -138,8 +148,8 @@ pandas = "*"
 pyarrow = "*"
 pytables = "*"
 xlrd = "*"
+ipykernel = "*"
 gmpy2 = "*"
-ipykernel = "!=7.0.0"  # temp pin: https://github.com/ipython/ipykernel/issues/1445
 
 [feature.test-314t.dependencies]
 cloudpickle = "*"
@@ -154,6 +164,21 @@ odfpy = "*"
 # pytables = "*"
 xlrd = "*"
 # gmpy2 = "*"
+
+[feature.test-315.dependencies]
+cloudpickle = "*"
+ipython = "*"
+jsonschema = "*"
+nest-asyncio = "*"
+numpy = "*"
+odfpy = "*"
+# openpyxl = "*"
+# pandas = "*"
+# pyarrow = "*"
+pytables = "*"
+xlrd = "*"
+# ipykernel = "*"
+gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'
@@ -211,6 +236,7 @@ numpy = "*"
 pandas = "*"
 pyrefly = "*"
 pyright = "*"
+nodejs = ">=20"
 IPython = "*"
 typing_extensions = "*"
 tornado = "*"

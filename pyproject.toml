@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Declarative parameters for robust Python classes and a rich API for reactive programming"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "HoloViz", email = "developers@holoviz.org" },
 ]
@@ -23,11 +23,11 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
     "Typing :: Typed"
@@ -114,6 +114,7 @@ addopts = "--color=yes"
 python_files = "test*.py"
 filterwarnings = [
   "error",
+  "ignore:Numpy built with MINGW-W64 on Windows 64 bits is experimental:Warning",
 ]
 xfail_strict = true
 asyncio_mode = "auto"

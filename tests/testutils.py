@@ -1,8 +1,11 @@
+import asyncio
 import datetime as dt
 import os
 
+from collections import OrderedDict
 from collections.abc import Iterable
 from functools import partial
+from tempfile import TemporaryDirectory
 
 import param
 import pytest
@@ -11,8 +14,10 @@ from param import guess_param_types, resolve_path
 from param.parameterized import bothmethod, Parameterized, ParameterizedABC
 from param._utils import (
     # ParamWarning,
+    _abbreviate_paths,
     _is_abstract,
     _is_mutable_container,
+    async_executor,
     concrete_descendents,
     descendents,
     iscoroutinefunction,
@@ -547,6 +552,18 @@ def test_concrete_descendents():
     }
 
 
+def test_abbreviate_paths():
+    ranges = OrderedDict()
+    expected = OrderedDict()
+    with TemporaryDirectory() as tempdir:
+        path = f"{tempdir}/*"
+        for filename in ("a.txt", "f.txt"):
+            fullpath = f"{tempdir}/{filename}"
+            ranges[fullpath] = fullpath
+            expected[filename] = fullpath
+    assert _abbreviate_paths(path, ranges) == expected
+
+
 # def test_concrete_descendents_same_name_warns():
 #     class X: pass
 #     class Y(X): pass
@@ -559,3 +576,52 @@ def test_concrete_descendents():
 #         cd = concrete_descendents(X)
 #     # y not returned
 #     assert cd == {'X': X, 'Y': Y}
+
+
+def test_async_executor_reuses_fallback_loop():
+    loops = []
+
+    async def record():
+        loops.append(asyncio.get_running_loop())
+
+    async_executor(record)
+    async_executor(record)
+
+    assert len(loops) == 2
+    assert loops[0] is loops[1]
+    assert not loops[0].is_closed()
+
+
+def test_async_executor_ignores_cancellation():
+    async def cancel_self():
+        asyncio.current_task().cancel()
+        await asyncio.sleep(0)
+
+    # A cancellation must not surface in the caller, which is generally an
+    # unrelated attribute access or parameter update.
+    async_executor(cancel_self)
+
+
+def test_async_executor_does_not_resume_leftover_tasks():
+    progress = []
+
+    async def leftover():
+        progress.append('started')
+        await asyncio.sleep(10)
+        progress.append('finished')
+
+    async def schedule():
+        # There is a running loop at this point, so this is scheduled rather
+        # than driven to completion.
+        async_executor(leftover)
+        await asyncio.sleep(0)
+
+    async def noop():
+        await asyncio.sleep(0)
+
+    async_executor(schedule)
+    assert progress == ['started']
+
+    # The abandoned task must not resume in the middle of a later drive.
+    async_executor(noop)
+    assert progress == ['started']

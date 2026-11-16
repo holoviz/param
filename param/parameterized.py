@@ -2714,6 +2714,11 @@ def as_uninitialized(fn):
     return override_initialization
 
 
+_BUILTIN_VALUE_TYPES = frozenset({
+    int, float, complex, bool, str, bytes, type(None), list, tuple, set, dict,
+})
+
+
 class Comparator:
     """
     Comparator defines methods for determining whether two objects
@@ -2745,10 +2750,19 @@ class Comparator:
 
     @classmethod
     def is_equal(cls, obj1, obj2):
-        equals = cls.equalities.copy()
-        for gen, op in cls.gen_equalities.items():
-            for v in gen():
-                equals[v] = op
+        gen_equalities = cls.gen_equalities
+        if (
+            type(obj1) in _BUILTIN_VALUE_TYPES and type(obj2) in _BUILTIN_VALUE_TYPES
+            and len(gen_equalities) == 1 and _dt_types in gen_equalities
+        ):
+            # The default generated equalities only cover date and time
+            # types, which can match neither object, so skip expanding them.
+            equals = cls.equalities
+        else:
+            equals = cls.equalities.copy()
+            for gen, op in gen_equalities.items():
+                for v in gen():
+                    equals[v] = op
 
         for eq_type, eq in equals.items():
             if isinstance(eq_type, type) or (isinstance(eq_type, tuple) and all(isinstance(t, type) for t in eq_type)):

@@ -76,6 +76,7 @@ hdf5_skip = skipIf(hdf5 is None, "pytables is not available")
 
 class P(param.Parameterized):
     array = None if np is None else param.Array(default=ndarray)
+    array_like = None if np is None else param.ArrayLike(default=ndarray)
     data_frame = None if pd is None else param.DataFrame(default=df)
 
 
@@ -128,6 +129,18 @@ class TestFileDeserialization(unittest.TestCase):
         path = '{}/val.txt.gz'.format(self.temp_dir)
         np.savetxt(path, P.array)
         self._test_deserialize_array(P, path, 'array')
+
+    @np_skip
+    def test_array_like_npy(self):
+        path = '{}/val.npy'.format(self.temp_dir)
+        np.save(path, P.array_like)
+        self._test_deserialize_array(P, path, 'array_like')
+
+    @np_skip
+    def test_array_like_txt(self):
+        path = '{}/val.txt'.format(self.temp_dir)
+        np.savetxt(path, P.array_like)
+        self._test_deserialize_array(P, path, 'array_like')
 
     @pd_skip
     def test_data_frame_pkl(self):

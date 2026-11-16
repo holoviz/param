@@ -83,6 +83,7 @@ from .parameters import (
     HookList,
     Dict,
     Array,
+    ArrayLike,
     DataFrame,
     Series,
     Path,
@@ -156,6 +157,7 @@ random_seed = 42
 __all__ = (
     'Action',
     'Array',
+    'ArrayLike',
     'Boolean',
     'Bytes',
     'CRITICAL',

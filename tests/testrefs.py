@@ -1,8 +1,10 @@
 import asyncio
+import gc
 import sys
 import threading
 import time
 import warnings
+import weakref
 
 from functools import partial
 
@@ -159,9 +161,6 @@ def test_parameter_ref_update_falsy_source():
     lambda p: p.param.string.rx(),
 ], ids=['param', 'bind', 'bind_rx', 'rx'])
 def test_parameter_ref_overwrite_with_value_removes_watchers(make_ref):
-    import gc
-    import weakref
-
     p = Parameters()
     targets = []
     for _ in range(5):
@@ -184,6 +183,22 @@ def test_parameter_ref_overwrite_with_value_keeps_other_refs():
     assert p2.string == 'plain'
     assert p2.string_list == ['linked']
     assert len(p._param__private.watchers['string']['value']) == 1
+    ref_watchers = p2._param__private.ref_watchers
+    assert len(ref_watchers) == 1
+    assert ref_watchers[0][0] == ('string_list',)
+
+def test_constructor_ref_overwrite_with_value():
+    p = Parameters(string='linked')
+    p2 = Parameters(string=p.param.string)
+    assert p2.string == 'linked'
+    assert len(p2._param__private.ref_watchers) == 1
+
+    p2.string = 'plain'
+    assert p2._param__private.refs == {}
+    assert p2._param__private.ref_watchers == []
+    assert p._param__private.watchers['string']['value'] == []
+    p.string = 'changed'
+    assert p2.string == 'plain'
 
 def test_parameter_ref_update_context():
     p = Parameters(string='linked')

@@ -1791,3 +1791,187 @@ def test_changed_comparison_runs_once_per_event(count_changed, what):
     set_x([{'a': 1}] if what == 'value' else 3)
     assert len(count_changed) == 1
     assert acc.call_count() == 1
+
+
+class TestWatcherErrors:
+
+    def _setup(self, **watch_kwargs):
+        class P(param.Parameterized):
+            x = param.Number(default=0)
+            y = param.Number(default=0)
+
+        p = P()
+        calls = []
+
+        def first(*events):
+            calls.append('first')
+            raise ValueError('first')
+
+        def second(*events):
+            calls.append('second')
+            raise RuntimeError('second')
+
+        def third(*events):
+            calls.append('third')
+
+        p.param.watch(first, ['x', 'y'], precedence=0, **watch_kwargs)
+        p.param.watch(second, ['x', 'y'], precedence=1, **watch_kwargs)
+        p.param.watch(third, ['x', 'y'], precedence=2, **watch_kwargs)
+        return p, calls
+
+    @staticmethod
+    def _assert_group(excinfo):
+        group = excinfo.value
+        assert [type(e) for e in group.exceptions] == [ValueError, RuntimeError]
+        assert [str(e) for e in group.exceptions] == ['first', 'second']
+
+    def test_set_runs_all_watchers_and_raises_group(self):
+        p, calls = self._setup()
+        with pytest.raises(ExceptionGroup, match="2 watchers raised while handling the change of parameter 'x'") as excinfo:
+            p.x = 1
+        self._assert_group(excinfo)
+        assert calls == ['first', 'second', 'third']
+        assert p.x == 1
+
+    def test_set_single_error_raised_unchanged(self):
+        p, calls = self._setup()
+        p.param.watchers['x']['value'].pop(1)
+        with pytest.raises(ValueError, match='first'):
+            p.x = 1
+        assert calls == ['first', 'third']
+
+    def test_set_errors_handled_with_except_star(self):
+        p, calls = self._setup()
+        caught = []
+        try:
+            p.x = 1
+        except* ValueError as eg:
+            caught.append(('value', [str(e) for e in eg.exceptions]))
+        except* RuntimeError as eg:
+            caught.append(('runtime', [str(e) for e in eg.exceptions]))
+        assert caught == [('value', ['first']), ('runtime', ['second'])]
+
+    def test_update_runs_all_watchers_and_raises_group(self):
+        p, calls = self._setup()
+        with pytest.raises(ExceptionGroup) as excinfo:
+            p.param.update(x=1, y=1)
+        self._assert_group(excinfo)
+        assert calls == ['first', 'second', 'third']
+
+    def test_batch_call_watchers_runs_all_watchers_and_raises_group(self):
+        p, calls = self._setup()
+        with pytest.raises(ExceptionGroup) as excinfo:
+            with batch_call_watchers(p):
+                p.x = 1
+        self._assert_group(excinfo)
+        assert calls == ['first', 'second', 'third']
+
+    def test_queued_set_runs_all_watchers(self):
+        p, calls = self._setup(queued=True)
+        with pytest.raises(ExceptionGroup) as excinfo:
+            p.x = 1
+        self._assert_group(excinfo)
+        assert calls == ['first', 'second', 'third']
+
+    def test_param_batch_runs_all_watchers_and_raises_group(self):
+        p, calls = self._setup()
+        with pytest.raises(ExceptionGroup, match='flushing param.batch') as excinfo:
+            with batch():
+                p.x = 1
+        self._assert_group(excinfo)
+        assert calls == ['first', 'second', 'third']
+
+    def test_param_batch_single_error_raised_unchanged(self):
+        p, calls = self._setup()
+        p.param.watchers['x']['value'].pop(1)
+        with pytest.raises(ValueError, match='first'):
+            with batch():
+                p.x = 1
+        assert calls == ['first', 'third']
+
+    def test_attribute_watchers_run_after_error(self):
+        class P(param.Parameterized):
+            x = param.Number(default=0)
+
+        calls = []
+
+        def bad(event):
+            calls.append('bad')
+            raise ValueError('bad')
+
+        P.param.watch(bad, 'x', what='precedence', precedence=0)
+        P.param.watch(lambda e: calls.append('good'), 'x', what='precedence', precedence=1)
+        with pytest.raises(ValueError, match='bad'):
+            P.param.x.precedence = 2
+        assert calls == ['bad', 'good']
+
+    def test_ref_sibling_updated_after_error(self):
+        class Source(param.Parameterized):
+            value = param.Number(default=0)
+
+        class Good(param.Parameterized):
+            inp = param.Number(default=0, allow_refs=True)
+
+        class Bad(Good):
+            @param.depends('inp', watch=True)
+            def _react(self):
+                if self.inp == 1:
+                    raise ValueError('boom')
+
+        src = Source()
+        bad = Bad(inp=src.param.value)
+        good = Good(inp=src.param.value)
+        with pytest.raises(ValueError, match='boom'):
+            src.value = 1
+        assert bad.inp == 1
+        assert good.inp == 1
+
+    @pytest.mark.skipif(sys.implementation.name == 'pypy', reason='Relies on reference counting')
+    @pytest.mark.parametrize('n_errors', [1, 2])
+    @pytest.mark.parametrize('how', ['set', 'update', 'batch_call_watchers', 'batch'])
+    def test_failed_event_value_freed_without_gc(self, how, n_errors):
+        import gc
+        import weakref
+
+        class Value:
+            pass
+
+        class P(param.Parameterized):
+            x = param.Parameter()
+
+        p = P()
+
+        def first(*events):
+            if isinstance(p.x, Value):
+                raise ValueError('first')
+
+        def second(*events):
+            if isinstance(p.x, Value):
+                raise RuntimeError('second')
+
+        p.param.watch(first, 'x')
+        if n_errors == 2:
+            p.param.watch(second, 'x')
+        value = Value()
+        ref = weakref.ref(value)
+        gc.collect()
+        gc.disable()
+        try:
+            try:
+                if how == 'set':
+                    p.x = value
+                elif how == 'update':
+                    p.param.update(x=value)
+                elif how == 'batch_call_watchers':
+                    with batch_call_watchers(p):
+                        p.x = value
+                else:
+                    with batch():
+                        p.x = value
+            except* (ValueError, RuntimeError):
+                pass
+            del value
+            p.x = None
+            assert ref() is None
+        finally:
+            gc.enable()

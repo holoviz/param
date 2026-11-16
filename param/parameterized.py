@@ -616,6 +616,33 @@ class _WatcherGroup:
         self.names: set[t.Any] = set()
 
 
+def _owner_label(obj: t.Any) -> str:
+    return getattr(obj, 'name', None) or type(obj).__name__
+
+
+def _raise_watcher_errors(errors: list[Exception], context: str) -> t.NoReturn:
+    """Raise the exception(s) collected while calling several watchers.
+
+    A single exception is re-raised unchanged, so code catching a specific
+    exception type around an assignment keeps working. Several are raised
+    together as an ``ExceptionGroup`` whose ``exceptions`` are in the order
+    the watchers were called; ``context`` describes what was dispatched.
+
+    The list is emptied before raising: the raised exception's traceback
+    holds the caller's frame, so a caller-local list still referencing it
+    would form a reference cycle keeping the frame (and the event values
+    it holds) alive until the cyclic garbage collector runs.
+    """
+    excs = tuple(errors)
+    errors.clear()
+    try:
+        if len(excs) == 1:
+            raise excs[0]
+        raise ExceptionGroup(f"{len(excs)} watchers raised while {context}", excs)
+    finally:
+        del excs
+
+
 def _flush_batch(objects):
     """Execute every watcher queued on ``objects``, coalescing the same
     callback registered on more than one of them into a single call.
@@ -666,14 +693,7 @@ def _flush_batch(objects):
         except Exception as e:
             errors.append(e)
     if errors:
-        # Clear the list on the way out: the raised exception's traceback
-        # holds this frame, so a list still referencing it would form a
-        # cycle keeping the frame and the event values alive until the
-        # cyclic garbage collector runs.
-        try:
-            raise errors[0]
-        finally:
-            errors.clear()
+        _raise_watcher_errors(errors, 'flushing param.batch()')
 
 
 @contextmanager
@@ -726,7 +746,7 @@ def batch() -> Generator[None, None, None]:
     current: _Batch = outer if outer is not None else _Batch()
     token = _param_batch.set(current)
     error = None
-    flush_error = None
+    flush_errors: list[Exception] = []
     try:
         yield
     except BaseException as exc:
@@ -744,25 +764,24 @@ def batch() -> Generator[None, None, None]:
                 try:
                     _flush_batch(touched)
                 except Exception as exc:
-                    if flush_error is None:
-                        flush_error = exc
+                    flush_errors.append(exc)
             current.closed = True
         _param_batch.reset(token)
         try:
-            if outermost and flush_error is not None:
+            if outermost and flush_errors:
                 if error is None:
-                    raise flush_error
+                    _raise_watcher_errors(flush_errors, 'flushing param.batch()')
                 # The block already raised; a second error here would only
                 # replace it, so report it instead of raising over the top.
                 warnings.warn(
                     f"batch() failed to notify some watchers while unwinding "
-                    f"from {error!r}: {flush_error!r}",
+                    f"from {error!r}: {', '.join(map(repr, flush_errors))}",
                     RuntimeWarning, stacklevel=2,
                 )
         finally:
-            # The propagating exception's traceback holds this frame;
-            # drop the references to it (see _flush_batch).
-            error = flush_error = None
+            # Break the frame <-> traceback cycles (see _raise_watcher_errors).
+            flush_errors.clear()
+            error = None
 
 
 @contextmanager
@@ -2229,9 +2248,14 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 "An event cannot be triggered for an unbound parameter."
             )
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
-        self.owner.param._dispatch_event(self.watchers[attribute], event)
+        errors = self.owner.param._dispatch_event(self.watchers[attribute], event)
         if not _is_batched(self.owner):
-            self.owner.param._batch_call_watchers()
+            try:
+                self.owner.param._batch_call_watchers()
+            except Exception as e:
+                errors.append(e)
+        if errors:
+            _raise_watcher_errors(errors, f"handling the {attribute!r} change of parameter {self.name!r} on {_owner_label(self.owner)}")
 
     def _invalidate_init_cache(self):
         try:
@@ -2421,10 +2445,16 @@ class Parameter(_ParameterBase, t.Generic[_T]):
 
             event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
 
-            # Copy watchers here since they may be modified inplace during iteration
-            obj.param._dispatch_event(sorted(watchers, key=lambda w: w.precedence), event)
+            # Copy watchers here since they may be modified inplace during iteration.
+            # One watcher raising does not stop the others (see _dispatch_event).
+            errors = obj.param._dispatch_event(sorted(watchers, key=lambda w: w.precedence), event)
             if not _is_batched(obj):
-                obj.param._batch_call_watchers()
+                try:
+                    obj.param._batch_call_watchers()
+                except Exception as e:
+                    errors.append(e)
+            if errors:
+                _raise_watcher_errors(errors, f"handling the change of parameter {name!r} on {_owner_label(obj)}")
         finally:
             if obj is not None:
                 _notify_ref_changes(obj, name, ref_changed, settle_changed)
@@ -3810,7 +3840,7 @@ class Parameters:
             except Skip:
                 pass
 
-    def _dispatch_event(self_, watchers: Iterable[Watcher], event: Event):
+    def _dispatch_event(self_, watchers: Iterable[Watcher], event: Event) -> list[Exception]:
         """
         Call each of ``watchers``, in order, for a single ``event``.
 
@@ -3823,13 +3853,18 @@ class Parameters:
         watchers unless the event is being triggered.
         """
         changed = None
+        errors: list[Exception] = []
         for watcher in watchers:
             if watcher.onlychanged and not self_._TRIGGER:
                 if changed is None:
                     changed = self_._changed(event)
                 if not changed:
                     continue
-            self_._call_watcher(watcher, event)
+            try:
+                self_._call_watcher(watcher, event)
+            except Exception as e:
+                errors.append(e)
+        return errors
 
     def _call_watcher(self_, watcher: Watcher, event: Event):
         """Invoke the given watcher appropriately given an Event object."""
@@ -3848,6 +3883,7 @@ class Parameters:
         Batch call a set of watchers based on the parameter value
         settings in kwargs using the queued Event and watcher objects.
         """
+        errors = []
         while self_._events:
             event_dict = OrderedDict([((event.name, event.what), event)
                                       for event in self_._events])
@@ -3860,8 +3896,13 @@ class Parameters:
                                                    self_._TRIGGER)
                           for name in watcher.parameter_names
                           if (name, watcher.what) in event_dict]
-                with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
-                    self_._execute_watcher(watcher, events)
+                try:
+                    with _batch_call_watchers(self_.self_or_cls, enable=watcher.queued, run=False):
+                        self_._execute_watcher(watcher, events)
+                except Exception as e:
+                    errors.append(e)
+        if errors:
+            _raise_watcher_errors(errors, f"dispatching batched events on {_owner_label(self_.self_or_cls)}")
 
     def set_dynamic_time_fn(self_, time_fn: Callable, sublistattr: str | None = None) -> None:
         """

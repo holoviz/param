@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Declarative parameters for robust Python classes and a rich API for reactive programming"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "HoloViz", email = "developers@holoviz.org" },
 ]
@@ -23,15 +23,15 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
+    "Typing :: Typed"
 ]
-dependencies = []
 
 [project.optional-dependencies]
 examples = [
@@ -114,13 +114,14 @@ addopts = "--color=yes"
 python_files = "test*.py"
 filterwarnings = [
   "error",
+  "ignore:Numpy built with MINGW-W64 on Windows 64 bits is experimental:Warning",
 ]
 xfail_strict = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 
 [tool.coverage.report]
-omit = ["param/version.py", "tests/testimports.py"]
+omit = ["param/version.py", "param/mypy_plugin.py", "tests/testimports.py"]
 
 [tool.ruff]
 fix = true
@@ -128,7 +129,7 @@ include = ["*.py"]
 exclude = ["version.py"]
 
 [tool.ruff.lint]
-select = ["D", "W", "E", "F"]
+select = ["D", "W", "E", "F", "TC"]
 ignore = [
     "D100", # Missing docstring in public module"
     "D101", # Missing docstring in public class"
@@ -149,3 +150,73 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = [
+    "IPython",
+    "IPython.core",
+    "IPython.core.magic",
+    "IPython.display",
+    "setuptools_scm",
+    "tornado"
+]
+
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
+
+[tool.ty.src]
+include = ["param"]
+exclude = ["param/version.py"]
+
+[tool.pyrefly]
+project-includes = ["param/"]
+project-excludes = [
+    "param/version.py",
+    "**/version.py",
+    "**/tests",
+    "**/test_*",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/.git",
+]
+infer-with-first-use = false
+
+[tool.mypy]
+files = ["param"]
+plugins = ["param.mypy_plugin"]
+disable_error_code = ["import-untyped", "import-not-found"]
+
+[tool.pyright]
+include = ["param"]
+reportSelfClsParameterName = "none"
+ignore = [
+    "param/version.py",
+    "**/version.py",
+    "**/tests",
+    "**/test_*",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/.git",
+]
+
+[tool.typos.default]
+extend-ignore-re = [
+    ".*(?:#|--|//|/*).*(?:typos):\\s?ignore[^\\n]*\\n",
+    ".*(?:typos):\\s?ignore-next-line[^\\n]*\\n[^\\n]*",
+]
+
+[tool.typos.default.extend-words]
+arange = "arange"
+ba = "ba"
+iy = "iy"
+lod = "lod"
+nd = "nd"
+numbre = "numbre" # used as a spelling mistake in upgrade_guide.md
+pn = "pn"
+ser = "ser"
+spreaded = "spreaded"
+writeable = "writeable"

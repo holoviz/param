@@ -13,6 +13,18 @@
 
   Parameterized
   ParameterizedABC
+  Model
+```
+
+## Annotation-based fields
+
+Use {py:class}`Model` to declare parameters with type annotations and {py:func}`Field` to specify defaults and other parameter options. See the [typing guide](../../user_guide/Typing) for examples.
+
+```{eval-rst}
+.. autosummary::
+  :toctree: generated/
+
+  Field
 ```
 
 ## `.param` namespace

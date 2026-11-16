@@ -5722,6 +5722,12 @@ def script_repr(
     - The ``imports`` list may not include all modules required for parameter
       values, focusing primarily on the modules needed for the Parameterized
       object itself.
+    - By default, only parameter values that differ from their defaults are
+      included. To include every parameter value, set
+      ``param.parameterized.script_repr_suppress_defaults = False`` before
+      calling ``script_repr``. See
+      https://param.holoviz.org/user_guide/Serialization_and_Persistence.html#script-repr-limitations-and-workarounds
+      for more details.
 
     References
     ----------

@@ -3407,9 +3407,6 @@ class ArrayLike(Parameter[_T]):
             f"not {value!r}."
         )
 
-    def _validate(self, val: t.Any) -> None:
-        self._validate_value(val, self.allow_None)
-
     @classmethod
     def serialize(cls, value: t.Any) -> list | None:
         if value is None:

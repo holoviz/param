@@ -3622,8 +3622,13 @@ class Parameters:
         for tp in trigger_params:
             self_[tp]._mode = 'set'
 
-        values = self_.values()
-        restore = {k: values[k] for k, v in base.items() if k in values}
+        # Only the values being replaced are needed, so avoid computing
+        # values() for every parameter.
+        param_objs = self_.objects('existing')
+        restore = {
+            k: self_.get_value_generator(k, param_objs)
+            for k in base if k in param_objs
+        }
 
         for (k, v) in base.items():
             if k not in self_:

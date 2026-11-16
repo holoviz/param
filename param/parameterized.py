@@ -346,6 +346,10 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
 
 def _is_async_fn(value: t.Any) -> bool:
     """Whether value is a coroutine or generator function."""
+    # The inspect checks are comparatively slow and every function, method
+    # or partial they could match is callable.
+    if not callable(value):
+        return False
     return iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
 
 def _is_bare_async_ref(value: t.Any) -> bool:

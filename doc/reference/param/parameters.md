@@ -63,6 +63,7 @@
   ClassSelector
   Dict
   Array
+  ArrayLike
   Series
   DataFrame
   Callable

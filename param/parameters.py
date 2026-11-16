@@ -3251,13 +3251,7 @@ class Dict(ClassSelector[_T]):
 
 
 class Array(ClassSelector["AT"]):
-    """Parameter whose value is a numpy array.
-
-    Accepts numpy ``ndarray`` objects as well as array-like objects that
-    implement the ``__array__`` or ``__array_interface__`` protocols
-    (e.g. pandas ``ExtensionArray`` subclasses such as
-    ``ArrowStringArray``).
-    """
+    """Parameter whose value is a numpy array."""
 
     if t.TYPE_CHECKING:
 
@@ -3308,30 +3302,118 @@ class Array(ClassSelector["AT"]):
             **params,  # type: ignore[arg-type]
         )
 
-    @staticmethod
-    def _is_array_like(val):
-        """Return True if *val* supports the numpy array protocol."""
-        try:
-            return (
-                callable(getattr(val, '__array__', None))
-                or getattr(val, '__array_interface__', None) is not None
-            )
-        except Exception:
-            return False
-
-    def _validate_class_(self, val, class_, is_instance):
-        # Accept array-like objects (e.g. pandas ExtensionArray,
-        # ArrowStringArray) that support the numpy array protocol.
-        if is_instance and not isinstance(val, class_) and self._is_array_like(val):
-            return
-        super()._validate_class_(val, class_, is_instance)
-
     @classmethod
     def serialize(cls, value: np.ndarray | None) -> list | None:
         if value is None:
             return None
-        if hasattr(value, 'tolist'):
-            return value.tolist()
+        return value.tolist()
+
+    @classmethod
+    def deserialize(cls, value):
+        if value == 'null' or value is None:
+            return None
+        import numpy
+        if isinstance(value, str):
+            return _deserialize_from_path(
+                {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
+                value, 'Array'
+            )
+        else:
+            return numpy.asarray(value)
+
+
+class ArrayLike(Parameter[_T]):
+    """
+    Parameter whose value is an object implementing the NumPy array protocol.
+
+    Unlike :class:`Array`, which only accepts ``numpy.ndarray`` instances,
+    ``ArrayLike`` accepts any object that NumPy can convert to an array
+    without copying it element by element, i.e. any object defining
+    ``__array__``, ``__array_interface__`` or ``__array_struct__``. This
+    includes NumPy arrays and, for example, pandas ``ExtensionArray``
+    objects such as ``Categorical`` or ``ArrowStringArray``. Plain Python
+    sequences such as lists and tuples are rejected.
+
+    Serialization converts the value to a NumPy array, so a deserialized
+    value is always a ``numpy.ndarray`` regardless of the original type.
+    """
+
+    _slot_defaults = dict(Parameter._slot_defaults, default=None, instantiate=True)
+
+    if t.TYPE_CHECKING:
+
+        @t.overload
+        def __init__(
+            self: ArrayLike[t.Any],
+            default: t.Any = None,
+            *,
+            allow_None: t.Literal[False] = False,
+            doc: str | None = None,
+            label: str | None = None,
+            precedence: float | None = None,
+            instantiate: bool = True,
+            constant: bool = False,
+            readonly: bool = False,
+            pickle_default_value: bool = True,
+            per_instance: bool = True,
+            allow_refs: bool = False,
+            nested_refs: bool = False,
+            default_factory: t.Callable[[], t.Any] | None = None,
+            metadata: dict[str, t.Any] | None = None,
+        ) -> None:
+            ...
+
+        @t.overload
+        def __init__(
+            self: ArrayLike[t.Any],
+            default: t.Any = None,
+            *,
+            allow_None: t.Literal[True] = True,
+            **params: Unpack[_ParameterKwargs]
+        ) -> None:
+            ...
+
+    def __init__(
+        self,
+        default: t.Any = Undefined,
+        *,
+        allow_None: bool = t.cast("bool", Undefined),  # pyrefly: ignore[bad-argument-type]
+        **params: Unpack[_ParameterKwargs]
+    ) -> None:
+        super().__init__(default=default, allow_None=allow_None, **params)  # type: ignore[arg-type, call-overload]
+        self._validate(self.default)
+
+    @staticmethod
+    def _is_array_like(value: t.Any) -> bool:
+        if isinstance(value, type):
+            return False
+        # Arbitrary properties or __getattr__ implementations may raise
+        # anything, which should be reported as a validation failure.
+        try:
+            return (
+                callable(getattr(value, '__array__', None))
+                or getattr(value, '__array_interface__', None) is not None
+                or getattr(value, '__array_struct__', None) is not None
+            )
+        except Exception:
+            return False
+
+    def _validate_value(self, value: t.Any, allow_None: bool) -> None:
+        if (allow_None and value is None) or self._is_array_like(value):
+            return
+        raise ValueError(
+            f"{_validate_error_prefix(self)} value must implement the array "
+            f"protocol (__array__, __array_interface__ or __array_struct__), "
+            f"not {value!r}."
+        )
+
+    def _validate(self, val: t.Any) -> None:
+        self._validate_value(val, self.allow_None)
+
+    @classmethod
+    def serialize(cls, value: t.Any) -> list | None:
+        if value is None:
+            return None
         import numpy
         return numpy.asarray(value).tolist()
 
@@ -3343,7 +3425,7 @@ class Array(ClassSelector["AT"]):
         if isinstance(value, str):
             return _deserialize_from_path(
                 {'.npy': numpy.load, '.txt': lambda x: numpy.loadtxt(str(x))},
-                value, 'Array'
+                value, 'ArrayLike'
             )
         else:
             return numpy.asarray(value)

@@ -315,6 +315,18 @@ atypes = ArrayTypes()
 assert_type(atypes.array, np.ndarray)
 assert_type(atypes.optional_array, np.ndarray | None)
 
+#############
+# ArrayLike #
+#############
+
+class ArrayLikeTypes(param.Parameterized):
+    array_like = param.ArrayLike(default=np.array([1]), allow_None=False)
+    optional_array_like = param.ArrayLike()
+
+altypes = ArrayLikeTypes()
+assert_type(altypes.array_like, t.Any)
+assert_type(altypes.optional_array_like, t.Any)
+
 ##################
 # Callable Types #
 ##################

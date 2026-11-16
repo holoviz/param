@@ -202,6 +202,14 @@ class JSONSerialization(Serialization):
         return {'type': 'array'}
 
     @classmethod
+    def arraylike_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
+        if safe is True:
+            msg = ('ArrayLike is not guaranteed to be safe for '
+                   'serialization as the dtype is unknown')
+            raise UnsafeserializableException(msg)
+        return {'type': 'array'}
+
+    @classmethod
     def classselector_schema(cls, p: Parameter, safe: bool = False) -> dict[str, t.Any]:
         return cls.class__schema(p.class_, safe=safe)
 

@@ -1,10 +1,14 @@
 """Unit test for watch mechanism."""
 import asyncio
 import copy
+import gc
 import pickle
 import re
+import sys
 import threading
 import unittest
+import warnings
+import weakref
 
 import param
 import pytest
@@ -1701,3 +1705,89 @@ class TestBatch:
                 with batch():
                     p.x = 2
                     raise ValueError('body boom')
+
+    @pytest.mark.skipif(sys.implementation.name == 'pypy', reason='Relies on reference counting')
+    @pytest.mark.parametrize('where', ['watcher', 'block', 'both'])
+    def test_batch_error_freed_without_gc(self, where):
+        # An exception raised out of batch(), from a watcher while flushing
+        # or from the block itself, must not be kept alive by a reference
+        # cycle through the frames it was raised from.
+        class Payload:
+            pass
+
+        class P(param.Parameterized):
+            x = param.Number(default=1)
+
+        p = P()
+        held = [Payload()]
+        ref = weakref.ref(held[0])
+
+        def bad(*events):
+            raise RuntimeError(held[0])
+
+        if where != 'block':
+            p.param.watch(bad, 'x')
+
+        gc.collect()
+        gc.disable()
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', RuntimeWarning)
+                try:
+                    with batch():
+                        p.x = 2
+                        if where != 'watcher':
+                            raise ValueError(held[0])
+                except (ValueError, RuntimeError):
+                    pass
+            held.clear()
+            assert ref() is None
+        finally:
+            gc.enable()
+
+
+@pytest.fixture
+def count_changed():
+    # Restore the classmethod descriptor itself; monkeypatch would put
+    # back the bound method returned by getattr.
+    descriptor = param.parameterized.Parameters.__dict__['_changed']
+    calls = []
+
+    def counting(cls, event):
+        calls.append(event)
+        return descriptor.__func__(cls, event)
+
+    param.parameterized.Parameters._changed = classmethod(counting)
+    try:
+        yield calls
+    finally:
+        param.parameterized.Parameters._changed = descriptor
+
+
+@pytest.mark.parametrize('what', ['value', 'precedence'])
+def test_changed_comparison_runs_once_per_event(count_changed, what):
+    class P(param.Parameterized):
+        x = param.List(default=[])
+
+    def set_x(value):
+        if what == 'value':
+            target.x = value
+        else:
+            target.param.x.precedence = value
+
+    target = P() if what == 'value' else P
+    acc = Accumulator()
+    for _ in range(5):
+        target.param.watch(acc, 'x', what=what)
+    target.param.watch(acc, 'x', what=what, onlychanged=False)
+
+    set_x([{'a': 1}] if what == 'value' else 3)
+    assert len(count_changed) == 1
+    assert acc.call_count() == 6
+
+    count_changed.clear()
+    acc.args.clear()
+    acc.kwargs.clear()
+    set_x([{'a': 1}] if what == 'value' else 3)
+    assert len(count_changed) == 1
+    assert acc.call_count() == 1

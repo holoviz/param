@@ -232,6 +232,38 @@ def _notify_weak_listeners(store: set | None, *args: t.Any) -> None:
         if callback is not None:
             callback(*args)
 
+class _WeakInvalidator:
+    """
+    A weakly-bound invalidation callback for an ``rx`` pipeline node.
+
+    ``rx`` nodes register invalidation callbacks on their *source* parameters.
+    If those callbacks were strong bound-method references the source (which is
+    typically long-lived) would keep every derived node — and anything it
+    captured, such as large arrays — alive indefinitely. Wrapping the bound
+    method in a :class:`weakref.WeakMethod` lets the derived node be garbage
+    collected as soon as nothing else references it; once collected the call
+    becomes a no-op and the now-dead watcher is removed by a finalizer (see
+    ``rx._watch_invalidation``). Defined here rather than in ``reactive`` so
+    ``_call_watcher`` can recognize an unbatched invalidator without an import.
+    """
+
+    __slots__ = ('_ref', '_watcher', '_unbatched', '__weakref__')
+
+    _watcher: Watcher | None
+
+    def __init__(self, method, unbatched: bool = False):
+        self._ref = weakref.WeakMethod(method)
+        self._watcher = None
+        # Marking a node dirty is bookkeeping, not a notification; deferring it
+        # would let a read inside a batch, or a reference resolved while
+        # flushing one, see the value from before the write.
+        self._unbatched = unbatched
+
+    def __call__(self, *events):
+        method = self._ref()
+        if method is not None:
+            return method(*events)
+
 def _watch_ref_change(owner: 'Parameterized', name: str, callback: Callable[[], t.Any]) -> None:
     """Notify ``callback`` when a reference is replaced without a value change."""
     private = owner._param__private
@@ -303,14 +335,59 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
             resolve_value(value.step)
         )
     value = transform_reference(value)
-    is_gen = inspect.isgeneratorfunction(value)
-    if hasattr(value, '_dinfo') or iscoroutinefunction(value) or is_gen:
+    if hasattr(value, '_dinfo') or _is_async_fn(value):
+        is_gen = inspect.isgeneratorfunction(value)
         value = eval_function_with_deps(value)
         if is_gen:
             value = _to_async_gen(value)
     elif isinstance(value, Parameter) and value.name is not None:
         value = getattr(value.owner, value.name)
     return value
+
+def _is_async_fn(value: t.Any) -> bool:
+    """Whether value is a coroutine or generator function."""
+    return iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
+
+def _is_bare_async_ref(value: t.Any) -> bool:
+    """
+    Whether value is a coroutine or generator function that has not been
+    declared a reference with ``bind`` or ``depends``.
+    """
+    return not hasattr(value, '_dinfo') and _is_async_fn(value)
+
+def _warn_bare_async_ref(value: t.Any, operand: bool = False) -> None:
+    """
+    Warn that rx will stop calling the bare coroutine or generator function
+    ``value``. ``operand`` marks an input to an rx operation, which is called
+    but whose result is never awaited or iterated.
+    """
+    if inspect.isasyncgenfunction(value):
+        kind = 'async generator'
+    elif inspect.isgeneratorfunction(value):
+        kind = 'generator'
+    else:
+        kind = 'coroutine'
+    func = value
+    while isinstance(func, partial):
+        func = func.func
+    name = getattr(func, '__name__', repr(func))
+    if operand:
+        result = 'coroutine' if kind == 'coroutine' else 'async generator'
+        message = (
+            f"Passing the {kind} function {name!r} as an input to a reactive "
+            f"operation is deprecated. It is currently called and the resulting "
+            f"{result} is passed on without being awaited or iterated; in a "
+            "future version the function itself will be passed on."
+        )
+    else:
+        bound = f"param.bind({name}, ...)" if func is not value else f"param.bind({name})"
+        message = (
+            f"Passing the {kind} function {name!r} to a reactive expression is "
+            "deprecated. In a future version rx will treat it like any other "
+            "function, i.e. keep it as a value instead of calling and resolving "
+            f"it. Wrap it with {bound} to keep resolving it."
+        )
+    warnings.warn(message, category=_ParamFutureWarning, stacklevel=_find_stack_level())
 
 def resolve_ref(reference: t.Any, recursive: bool = False) -> list[Parameter]:
     """Resolve all parameters a dynamic reference depends on."""
@@ -456,7 +533,9 @@ def batch_call_watchers(parameterized):
 
     This context manager queues any events triggered by setting a parameter value
     on the supplied :class:`Parameterized` object, saving them up to dispatch
-    them all at once when the context manager exits.
+    them all at once when the context manager exits. Only notifications are
+    deferred: an ``rx`` expression read inside the block already reflects the
+    writes made so far.
     """
     BATCH_WATCH = parameterized.param._BATCH_WATCH
     parameterized.param._BATCH_WATCH = True
@@ -587,7 +666,14 @@ def _flush_batch(objects):
         except Exception as e:
             errors.append(e)
     if errors:
-        raise errors[0]
+        # Clear the list on the way out: the raised exception's traceback
+        # holds this frame, so a list still referencing it would form a
+        # cycle keeping the frame and the event values alive until the
+        # cyclic garbage collector runs.
+        try:
+            raise errors[0]
+        finally:
+            errors.clear()
 
 
 @contextmanager
@@ -612,7 +698,9 @@ def batch() -> Generator[None, None, None]:
     ``onlychanged``, say) is left uncoalesced rather than guessing which
     should win. Nesting is safe: only the outermost block flushes, and
     it composes with ``batch_call_watchers``/``.param.update()``/
-    ``discard_events`` used inside it. If more than one watcher raises
+    ``discard_events`` used inside it. Only notifications are deferred:
+    an ``rx`` expression read inside the block already reflects the
+    writes made so far. If more than one watcher raises
     while flushing, the rest still run and the first exception is
     re-raised once the block has finished; if the block itself already
     raised, a later error while flushing is a warning instead.
@@ -660,16 +748,21 @@ def batch() -> Generator[None, None, None]:
                         flush_error = exc
             current.closed = True
         _param_batch.reset(token)
-        if outermost and flush_error is not None:
-            if error is None:
-                raise flush_error
-            # The block already raised; a second error here would only
-            # replace it, so report it instead of raising over the top.
-            warnings.warn(
-                f"batch() failed to notify some watchers while unwinding "
-                f"from {error!r}: {flush_error!r}",
-                RuntimeWarning, stacklevel=2,
-            )
+        try:
+            if outermost and flush_error is not None:
+                if error is None:
+                    raise flush_error
+                # The block already raised; a second error here would only
+                # replace it, so report it instead of raising over the top.
+                warnings.warn(
+                    f"batch() failed to notify some watchers while unwinding "
+                    f"from {error!r}: {flush_error!r}",
+                    RuntimeWarning, stacklevel=2,
+                )
+        finally:
+            # The propagating exception's traceback holds this frame;
+            # drop the references to it (see _flush_batch).
+            error = flush_error = None
 
 
 @contextmanager
@@ -747,7 +840,9 @@ def discard_events(parameterized: 'Parameterized') -> Generator[None, None, None
     on the supplied :class:`Parameterized` object during its scope are discarded.
     This allows for silent changes to dependent parameters, making it useful
     for initialization or setup phases where changes should not propagate
-    to watchers or dependencies.
+    to watchers or dependencies. Only notifications are discarded: an ``rx``
+    expression depending on a changed parameter still reflects the new value
+    the next time it is read.
 
     Be cautious when using this context manager, as it bypasses the normal
     dependency mechanism. Manual changes made within this context may
@@ -2134,8 +2229,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 "An event cannot be triggered for an unbound parameter."
             )
         event = Event(what=attribute, name=self.name, obj=None, cls=self.owner, old=old, new=new, type=None)
-        for watcher in self.watchers[attribute]:
-            self.owner.param._call_watcher(watcher, event)
+        self.owner.param._dispatch_event(self.watchers[attribute], event)
         if not _is_batched(self.owner):
             self.owner.param._batch_call_watchers()
 
@@ -2254,9 +2348,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 ref_changed = True
                 settle_changed = True
             elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
-                del refs[name]
-                if name in obj._param__private.async_refs:
-                    obj._param__private.async_refs.pop(name).cancel()
+                obj.param._remove_ref(name)
                 ref_changed = True
                 settle_changed = True
             settle_changed |= scheduled
@@ -2330,8 +2422,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
             event = Event(what='value', name=name, obj=obj, cls=self.owner, old=_old, new=val, type=None)
 
             # Copy watchers here since they may be modified inplace during iteration
-            for watcher in sorted(watchers, key=lambda w: w.precedence):
-                obj.param._call_watcher(watcher, event)
+            obj.param._dispatch_event(sorted(watchers, key=lambda w: w.precedence), event)
             if not _is_batched(obj):
                 obj.param._batch_call_watchers()
         finally:
@@ -2937,7 +3028,7 @@ class Parameters:
                 # speculatively evaluate values to check whether they
                 # contain a reference and warn the user that the
                 # behavior may change in future.
-                if name not in self_.cls._param__private.explicit_no_refs:
+                if name not in self_.cls._param__private.explicit_no_refs and not _is_bare_async_ref(val):
                     resolved = val
                     try:
                         ref, _, resolved, _, _ = self_._resolve_ref(pobj, val)
@@ -2992,16 +3083,27 @@ class Parameters:
     def _update_ref(self_, name: str, ref: t.Any):
         if self_.self is None:
             return
-        param_private = self_.self._param__private
+        refs = dict(self_.self._param__private.refs, **{name: ref})
+        self_._rewatch_refs(name, refs)
+
+    def _remove_ref(self_, name: str):
+        if self_.self is None:
+            return
+        refs = dict(self_.self._param__private.refs)
+        refs.pop(name, None)
+        self_._rewatch_refs(name, refs)
+
+    def _rewatch_refs(self_, name: str, refs: dict[str, t.Any]):
+        # must be called from `_update_ref` or `_remove_ref`
+        param_private = t.cast("Parameterized", self_.self)._param__private
         if name in param_private.async_refs:
             param_private.async_refs.pop(name).cancel()
         for _, watcher in param_private.ref_watchers:
             watcher.remove()
-        self_.self._param__private.ref_watchers = []
-        refs = dict(self_.self._param__private.refs, **{name: ref})
-        deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
+        param_private.ref_watchers = []
+        deps = {pname: resolve_ref(ref, self_[pname].nested_refs) for pname, ref in refs.items()}
         self_._setup_refs(deps)
-        self_.self._param__private.refs = refs
+        param_private.refs = refs
 
     def _sync_refs(self_, *events):
         if self_.self is None:
@@ -3012,9 +3114,8 @@ class Parameters:
             # Skip updating value if dependency has not changed
             recursive = self_[pname].nested_refs
             deps = resolve_ref(ref, recursive)
-            is_gen = inspect.isgeneratorfunction(ref)
-            is_async = iscoroutinefunction(ref) or is_gen
-            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events) and not is_async:
+            is_async = _is_async_fn(ref)
+            if not any((dep.owner is e.obj and dep.name == e.name) for dep in deps for e in events):
                 continue
 
             try:
@@ -3042,10 +3143,9 @@ class Parameters:
                 _notify_async_ref_settle_change(self_.self, pname)
 
     def _resolve_ref(self_, pobj: Parameter, value: t.Any):
-        is_gen = inspect.isgeneratorfunction(value)
-        is_async = iscoroutinefunction(value) or is_gen
+        is_async = _is_async_fn(value)
         deps = resolve_ref(value, recursive=pobj.nested_refs)
-        if not (deps or is_async or is_gen):
+        if not (deps or is_async):
             return None, None, value, False, False
         ref = value
         try:
@@ -3102,8 +3202,7 @@ class Parameters:
             return False
         private = self_.self._param__private
         ref = private.refs.get(pname)
-        is_async = iscoroutinefunction(ref) or inspect.isgeneratorfunction(ref)
-        return is_async and private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
+        return _is_async_fn(ref) and private.async_ref_scheduled[pname] != private.async_ref_settled[pname]
 
     async def _async_ref(self_, pname: str, awaitable: t.Awaitable[t.Any], generation: int = 0):
         if self_.self is None:
@@ -3711,14 +3810,31 @@ class Parameters:
             except Skip:
                 pass
 
+    def _dispatch_event(self_, watchers: Iterable[Watcher], event: Event):
+        """
+        Call each of ``watchers``, in order, for a single ``event``.
+
+        Whether the value changed is computed at most once per event, the
+        first time an ``onlychanged`` watcher needs it, and reused for the
+        remaining watchers, so a deep comparison of a large value is not
+        repeated per watcher. If an earlier watcher mutates ``event.old``
+        or ``event.new`` in place, later watchers reuse that result rather
+        than comparing again. Unchanged events skip ``onlychanged``
+        watchers unless the event is being triggered.
+        """
+        changed = None
+        for watcher in watchers:
+            if watcher.onlychanged and not self_._TRIGGER:
+                if changed is None:
+                    changed = self_._changed(event)
+                if not changed:
+                    continue
+            self_._call_watcher(watcher, event)
+
     def _call_watcher(self_, watcher: Watcher, event: Event):
         """Invoke the given watcher appropriately given an Event object."""
-        if self_._TRIGGER:
-            pass
-        elif watcher.onlychanged and (not self_._changed(event)):
-            return
-
-        if _is_batched(self_.self_or_cls):
+        fn = watcher.fn
+        if not (isinstance(fn, _WeakInvalidator) and fn._unbatched) and _is_batched(self_.self_or_cls):
             self_._events.append(event)
             if not any(watcher is w for w in self_._state_watchers):
                 self_._state_watchers.append(watcher)
@@ -5329,9 +5445,20 @@ class ParameterizedMetaclass(type):
 
         if parameter and not isinstance(value,Parameter):
             if owning_class != mcs:
+                inherited = parameter
                 parameter = copy.copy(parameter)
                 parameter.owner = t.cast("t.Any", mcs)
                 type.__setattr__(mcs, attribute_name, parameter)
+                # The cached class parameters of mcs and its subclasses may
+                # still point to the inherited Parameter that was just copied,
+                # so swap in the copy and let the derived lists be rebuilt.
+                for cls in descendents(t.cast("type[t.Any]", mcs)):
+                    private = cls._param__private
+                    if private.params.get(attribute_name) is inherited:
+                        private.params[attribute_name] = parameter
+                        private.params_to_deepcopy = None
+                        private.params_to_ref = None
+                        private.params_with_default_factory = None
             mcs.__dict__[attribute_name].__set__(None,value)
 
         else:

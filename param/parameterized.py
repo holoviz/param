@@ -3800,7 +3800,10 @@ class Parameters:
         ``changed`` is the result of a previous ``_changed(event)`` check
         for the same event, if any. The (possibly freshly computed) result
         is returned so that callers dispatching one event to several
-        watchers only compare old and new values once.
+        watchers only compare old and new values once. The comparison is
+        reused for every watcher of the event: if an earlier watcher
+        mutates ``event.old`` or ``event.new`` in place, later watchers
+        still see the result computed before that mutation.
         """
         if self_._TRIGGER:
             pass

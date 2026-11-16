@@ -6,7 +6,7 @@ from textwrap import dedent
 def test_no_blocklist_imports():
     # setuptools_scm is imported when importing param. It itself imports
     # the logging module.
-    blocklist = {"numpy", "IPython", "pandas", "asyncio", "html"}
+    blocklist = {"numpy", "IPython", "pandas", "narwhals", "polars", "asyncio", "html"}
 
     check = f"""\
     import sys

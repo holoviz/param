@@ -104,7 +104,61 @@ def Field(
     )
 
 
+_CONSTRAINT_MODULES = ("annotated_types", "pydantic")
+
+
+def _collect_constraints(annotation: Any) -> dict[str, Any]:
+    """Gather annotated-types style constraints (e.g. ``Ge``, ``MaxLen``) from ``Annotated`` metadata."""
+    constraints: dict[str, Any] = {}
+    ann = annotation
+    while True:
+        origin = t.get_origin(ann)
+        if origin is t.Annotated:
+            for meta in t.get_args(ann)[1:]:
+                if type(meta).__module__.split(".")[0] not in _CONSTRAINT_MODULES:
+                    continue
+                for attr in ("gt", "ge", "lt", "le", "multiple_of", "min_length", "max_length", "pattern"):
+                    value = getattr(meta, attr, None)
+                    if value is not None:
+                        constraints[attr] = value
+            ann = t.get_args(ann)[0]
+        elif origin in (t.Union, types.UnionType):
+            non_none = [a for a in t.get_args(ann) if a is not type(None)]
+            if len(non_none) != 1:
+                break
+            ann = non_none[0]
+        else:
+            break
+    return constraints
+
+
+def _apply_constraints(
+    ptype: type[Parameter], kwargs: dict[str, Any], constraints: dict[str, Any]
+) -> None:
+    if issubclass(ptype, (Number, Date, CalendarDate)) and "bounds" not in kwargs:
+        low = constraints.get("ge", constraints.get("gt"))
+        high = constraints.get("le", constraints.get("lt"))
+        if low is not None or high is not None:
+            kwargs["bounds"] = (low, high)
+            kwargs["inclusive_bounds"] = ("gt" not in constraints, "lt" not in constraints)
+    if issubclass(ptype, Number) and "multiple_of" in constraints:
+        kwargs.setdefault("step", constraints["multiple_of"])
+    if issubclass(ptype, List) and "bounds" not in kwargs:
+        if "min_length" in constraints or "max_length" in constraints:
+            kwargs["bounds"] = (constraints.get("min_length", 0), constraints.get("max_length"))
+    if issubclass(ptype, String) and "pattern" in constraints:
+        kwargs.setdefault("regex", constraints["pattern"])
+
+
 def _annotation_parameter_factory(annotation: Any) -> tuple[type[Parameter], dict[str, Any]]:
+    ptype, kwargs = _infer_parameter(annotation)
+    constraints = _collect_constraints(annotation)
+    if constraints and isinstance(ptype, type):
+        _apply_constraints(ptype, kwargs, constraints)
+    return ptype, kwargs
+
+
+def _infer_parameter(annotation: Any) -> tuple[type[Parameter], dict[str, Any]]:
     kwargs: dict[str, Any] = {}
     ann = annotation
     # `Annotated` and `Optional` can occur in either order.
@@ -335,3 +389,106 @@ class Model(Parameterized, metaclass=ModelMetaclass):
                 f"argument(s): {missing_str}"
             )
         super().__init__(**params)
+
+    @classmethod
+    def construct(cls, **params) -> t.Self:
+        """
+        Create an instance without requiring values for required fields.
+
+        Required fields that are not supplied hold their Parameter's
+        default until they are set, and ``missing_required`` lists the
+        ones that are still unset. Like pydantic's ``model_construct``,
+        this bypasses ``__init__``; it is meant for values that are filled
+        in incrementally, e.g. by a form.
+
+        Parameters
+        ----------
+        **params
+            Parameter values to set on the new instance.
+
+        Returns
+        -------
+        Model
+            The new instance.
+        """
+        inst = cls.__new__(cls)
+        Parameterized.__init__(inst, **params)
+        unset = set(cls._model_required - params.keys())
+        inst._model_unset = unset
+        if unset:
+            def mark_set(*events):
+                unset.difference_update(event.name for event in events)
+            inst.param.watch(mark_set, sorted(unset), onlychanged=False)
+        return inst
+
+    def missing_required(self) -> list[str]:
+        """
+        Return the required fields that have not been given a value.
+
+        Only instances created with ``construct`` can have unset required
+        fields; for any other instance the result is empty.
+
+        Returns
+        -------
+        list[str]
+            Names of the unset required fields, sorted.
+        """
+        return sorted(getattr(self, "_model_unset", ()))
+
+    @classmethod
+    def from_pydantic(cls, model: Any, *, name: str | None = None) -> Any:
+        """
+        Create a Model subclass mirroring a pydantic model.
+
+        Field annotations, defaults, default factories, descriptions,
+        titles and constraints (e.g. ``ge``, ``max_length``) are carried
+        over, and nested pydantic models become nested Model classes.
+
+        Parameters
+        ----------
+        model : type[pydantic.BaseModel] | pydantic.BaseModel
+            The pydantic model class to convert. If an instance is given,
+            an instance of the converted class holding its values is
+            returned instead.
+        name : str, optional
+            Name of the generated class; defaults to the model's name.
+
+        Returns
+        -------
+        type[Model] | Model
+            The generated subclass of ``cls``, or an instance of it.
+        """
+        from ._model_sources import model_from_pydantic
+        return model_from_pydantic(cls, model, name)
+
+    @classmethod
+    def from_json_schema(
+        cls, schema: Mapping[str, Any], *, name: str | None = None
+    ) -> type[Model]:
+        """
+        Create a Model subclass from a JSON schema of type ``object``.
+
+        Local ``$ref``/``$defs`` and ``allOf`` are resolved, nullable
+        ``anyOf``/``oneOf`` unions set ``allow_None``, ``enum`` and
+        ``const`` options become selectors, string formats ``date`` and
+        ``date-time`` become date parameters and numeric bounds,
+        ``pattern`` and ``multipleOf`` are applied. Nested objects become
+        nested Model classes. Properties listed in ``required`` without a
+        default are required, others default to ``None``. The original
+        property schema is kept in each Parameter's
+        ``metadata["json_schema"]``.
+
+        Parameters
+        ----------
+        schema : Mapping[str, Any]
+            A JSON schema describing an object.
+        name : str, optional
+            Name of the generated class; defaults to the schema title.
+
+        Returns
+        -------
+        type[Model]
+            The generated subclass of ``cls``.
+        """
+        from ._model_sources import model_from_json_schema
+        return model_from_json_schema(cls, schema, name)

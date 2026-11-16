@@ -430,6 +430,56 @@ def test_literal_annotation_without_default_is_required():
         P()
 
 
+def test_construct_skips_required_check():
+    class P(param.Model):
+        label: str
+        count: int
+        flag: bool = True
+
+    p = P.construct(count=2)
+    assert p.label == ""
+    assert p.count == 2
+    assert p.missing_required() == ["label"]
+
+
+def test_construct_tracks_required_fields_as_they_are_set():
+    class P(param.Model):
+        a: str
+        b: int
+
+    p = P.construct()
+    assert p.missing_required() == ["a", "b"]
+    p.a = ""
+    assert p.missing_required() == ["b"]
+    p.param.update(b=1)
+    assert p.missing_required() == []
+
+
+def test_construct_instances_are_independent():
+    class P(param.Model):
+        a: str
+
+    p1, p2 = P.construct(), P.construct()
+    p1.a = "x"
+    assert p1.missing_required() == []
+    assert p2.missing_required() == ["a"]
+
+
+def test_missing_required_is_empty_for_regular_instances():
+    class P(param.Model):
+        a: str
+
+    assert P(a="x").missing_required() == []
+
+
+def test_construct_validates_supplied_values():
+    class P(param.Model):
+        a: int
+
+    with pytest.raises(ValueError):
+        P.construct(a="x")
+
+
 def test_enum_annotation_without_default_is_required():
     class Status(enum.Enum):
         PENDING = "pending"

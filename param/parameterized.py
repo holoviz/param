@@ -2337,9 +2337,7 @@ class Parameter(_ParameterBase, t.Generic[_T]):
                 ref_changed = True
                 settle_changed = True
             elif name in refs and not syncing and not obj._param__private.parameters_state['TRIGGER']:
-                del refs[name]
-                if name in obj._param__private.async_refs:
-                    obj._param__private.async_refs.pop(name).cancel()
+                obj.param._remove_ref(name)
                 ref_changed = True
                 settle_changed = True
             settle_changed |= scheduled
@@ -3075,16 +3073,27 @@ class Parameters:
     def _update_ref(self_, name: str, ref: t.Any):
         if self_.self is None:
             return
-        param_private = self_.self._param__private
+        refs = dict(self_.self._param__private.refs, **{name: ref})
+        self_._rewatch_refs(name, refs)
+
+    def _remove_ref(self_, name: str):
+        if self_.self is None:
+            return
+        refs = dict(self_.self._param__private.refs)
+        refs.pop(name, None)
+        self_._rewatch_refs(name, refs)
+
+    def _rewatch_refs(self_, name: str, refs: dict[str, t.Any]):
+        # must be called from `_update_ref` or `_remove_ref`
+        param_private = t.cast("Parameterized", self_.self)._param__private
         if name in param_private.async_refs:
             param_private.async_refs.pop(name).cancel()
         for _, watcher in param_private.ref_watchers:
             watcher.remove()
-        self_.self._param__private.ref_watchers = []
-        refs = dict(self_.self._param__private.refs, **{name: ref})
-        deps = {name: resolve_ref(ref, self_[name].nested_refs) for name, ref in refs.items()}
+        param_private.ref_watchers = []
+        deps = {pname: resolve_ref(ref, self_[pname].nested_refs) for pname, ref in refs.items()}
         self_._setup_refs(deps)
-        self_.self._param__private.refs = refs
+        param_private.refs = refs
 
     def _sync_refs(self_, *events):
         if self_.self is None:

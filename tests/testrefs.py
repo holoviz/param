@@ -1,8 +1,10 @@
 import asyncio
+import gc
 import sys
 import threading
 import time
 import warnings
+import weakref
 
 from functools import partial
 
@@ -151,6 +153,52 @@ def test_parameter_ref_update_falsy_source():
     # The watcher registered on src1 while it was the ref source must
     # be gone now that p2 points at p3 instead.
     assert src1._param__private.watchers['string']['value'] == []
+
+@pytest.mark.parametrize('make_ref', [
+    lambda p: p.param.string,
+    lambda p: bind(lambda x: x, p.param.string),
+    lambda p: bind(lambda x: x, p.param.string.rx()),
+    lambda p: p.param.string.rx(),
+], ids=['param', 'bind', 'bind_rx', 'rx'])
+def test_parameter_ref_overwrite_with_value_removes_watchers(make_ref):
+    p = Parameters()
+    targets = []
+    for _ in range(5):
+        p2 = Parameters(string=make_ref(p))
+        p2.string = 'plain'
+        targets.append(weakref.ref(p2))
+    del p2
+    gc.collect()
+
+    assert p._param__private.watchers.get('string', {}).get('value', []) == []
+    assert all(t() is None for t in targets)
+
+def test_parameter_ref_overwrite_with_value_keeps_other_refs():
+    p = Parameters()
+    p2 = Parameters(string=p.param.string, string_list=[p.param.string])
+
+    p2.string = 'plain'
+    assert p2._param__private.refs.keys() == {'string_list'}
+    p.string = 'linked'
+    assert p2.string == 'plain'
+    assert p2.string_list == ['linked']
+    assert len(p._param__private.watchers['string']['value']) == 1
+    ref_watchers = p2._param__private.ref_watchers
+    assert len(ref_watchers) == 1
+    assert ref_watchers[0][0] == ('string_list',)
+
+def test_constructor_ref_overwrite_with_value():
+    p = Parameters(string='linked')
+    p2 = Parameters(string=p.param.string)
+    assert p2.string == 'linked'
+    assert len(p2._param__private.ref_watchers) == 1
+
+    p2.string = 'plain'
+    assert p2._param__private.refs == {}
+    assert p2._param__private.ref_watchers == []
+    assert p._param__private.watchers['string']['value'] == []
+    p.string = 'changed'
+    assert p2.string == 'plain'
 
 def test_parameter_ref_update_context():
     p = Parameters(string='linked')

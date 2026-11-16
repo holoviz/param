@@ -528,6 +528,53 @@ async def test_async_ref_cancelled_on_dependency_change():
     await asyncio.sleep(0.05)
     assert 'string' not in p._param__private.async_refs
 
+@pytest.mark.parametrize('bare', [False, True], ids=['bound', 'bare'])
+async def test_async_ref_not_rerun_on_unrelated_ref_change(bare):
+    runs = []
+
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+        y = param.String(default='a')
+
+    source = Source()
+
+    async def slow(i=0):
+        runs.append(i)
+        await asyncio.sleep(0.01)
+        return str(i)
+
+    ref = slow if bare else bind(slow, source.param.x)
+    p = Parameters(string=ref, string_list=[source.param.y])
+    await wait_for_value(p, 'string', '0')
+    assert runs == [0]
+
+    source.y = 'b'
+    assert p.string_list == ['b']
+    await asyncio.sleep(0.05)
+    assert runs == [0]
+
+    if not bare:
+        source.x = 1
+        await wait_for_value(p, 'string', '1')
+        assert runs == [0, 1]
+
+async def test_generator_ref_not_rerun_on_unrelated_ref_change():
+    runs = []
+
+    class Source(param.Parameterized):
+        y = param.String(default='a')
+
+    def gen():
+        runs.append(None)
+        yield 'string'
+
+    source = Source()
+    p = Parameters(string=gen, string_list=[source.param.y])
+    await wait_for_value(p, 'string', 'string')
+    source.y = 'b'
+    await asyncio.sleep(0.05)
+    assert len(runs) == 1
+
 async def test_async_generator_ref_cancelled_on_dependency_change():
     emitted = []
 

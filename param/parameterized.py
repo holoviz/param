@@ -666,7 +666,14 @@ def _flush_batch(objects):
         except Exception as e:
             errors.append(e)
     if errors:
-        raise errors[0]
+        # Clear the list on the way out: the raised exception's traceback
+        # holds this frame, so a list still referencing it would form a
+        # cycle keeping the frame and the event values alive until the
+        # cyclic garbage collector runs.
+        try:
+            raise errors[0]
+        finally:
+            errors.clear()
 
 
 @contextmanager
@@ -741,16 +748,21 @@ def batch() -> Generator[None, None, None]:
                         flush_error = exc
             current.closed = True
         _param_batch.reset(token)
-        if outermost and flush_error is not None:
-            if error is None:
-                raise flush_error
-            # The block already raised; a second error here would only
-            # replace it, so report it instead of raising over the top.
-            warnings.warn(
-                f"batch() failed to notify some watchers while unwinding "
-                f"from {error!r}: {flush_error!r}",
-                RuntimeWarning, stacklevel=2,
-            )
+        try:
+            if outermost and flush_error is not None:
+                if error is None:
+                    raise flush_error
+                # The block already raised; a second error here would only
+                # replace it, so report it instead of raising over the top.
+                warnings.warn(
+                    f"batch() failed to notify some watchers while unwinding "
+                    f"from {error!r}: {flush_error!r}",
+                    RuntimeWarning, stacklevel=2,
+                )
+        finally:
+            # The propagating exception's traceback holds this frame;
+            # drop the references to it (see _flush_batch).
+            error = flush_error = None
 
 
 @contextmanager

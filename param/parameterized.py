@@ -3055,15 +3055,16 @@ class Parameters:
         ## keyword arg setting
         deps, refs, scheduled = {}, {}, set()
         for name, val in params.items():
-            desc = self_.cls.get_param_descriptor(name)[0]
-            if not desc:
-                raise TypeError(
-                    f"{self.__class__.__name__}.__init__() got an unexpected "
-                    f"keyword argument {name!r}"
-                )
-
             pobj = objects.get(name)
             if pobj is None:
+                # Only walk the class hierarchy when the cached class
+                # parameters do not already contain the name.
+                desc = self_.cls.get_param_descriptor(name)[0]
+                if not desc:
+                    raise TypeError(
+                        f"{self.__class__.__name__}.__init__() got an unexpected "
+                        f"keyword argument {name!r}"
+                    )
                 setattr(self, name, val)
                 continue
             elif not pobj.allow_refs:

@@ -3084,6 +3084,8 @@ class Parameters:
         self_._rewatch_refs(name, refs)
 
     def _rewatch_refs(self_, name: str, refs: dict[str, t.Any]):
+        if self_.self is None:
+            return
         param_private = self_.self._param__private
         if name in param_private.async_refs:
             param_private.async_refs.pop(name).cancel()

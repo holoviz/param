@@ -344,11 +344,19 @@ def resolve_value(value: t.Any, recursive: bool = True) -> t.Any:
         value = getattr(value.owner, value.name)
     return value
 
+# PyPy aliases some of these to the Python function and method types.
+_BUILTIN_CALLABLE_TYPES = frozenset({
+    types.BuiltinFunctionType, types.MethodWrapperType,
+    types.WrapperDescriptorType, types.MethodDescriptorType,
+}) - {types.FunctionType, types.MethodType}
+
 def _is_async_fn(value: t.Any) -> bool:
     """Whether value is a coroutine or generator function."""
     # The inspect checks are comparatively slow and every function, method
-    # or partial they could match is callable.
-    if not callable(value):
+    # or partial they could match is callable. Builtins (e.g. the operator
+    # functions rx applies) have neither code flags nor a __dict__ to carry
+    # a coroutine marker.
+    if not callable(value) or type(value) in _BUILTIN_CALLABLE_TYPES:
         return False
     return iscoroutinefunction(value) or inspect.isgeneratorfunction(value)
 

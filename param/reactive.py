@@ -3964,8 +3964,12 @@ class rx:
         return self._clone(operation)
 
     def __getattribute__(self, name):
+        # Private names and the namespace never proxy; checking them before
+        # reading __dict__ keeps rx's own internal attribute reads cheap.
+        if name.startswith('_') or name == 'rx':
+            return super().__getattribute__(name)
         self_dict = super().__getattribute__('__dict__')
-        if not self_dict.get('_init') or name == 'rx' or name.startswith('_'):
+        if not self_dict.get('_init'):
             return super().__getattribute__(name)
         if self_dict.get('_disposed'):
             super().__getattribute__('_check_disposed')()

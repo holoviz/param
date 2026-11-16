@@ -31,19 +31,15 @@ In practice, most programmers simply skip validation or implement it only partia
 
 ## Runtime checking
 
-Python type annotations allow users to specify types for attributes and function returns.
-These types are optionally checked at runtime in contrast to Param.
+Python type annotations let you declare the types of attributes, function arguments, and return values, but Python itself does not enforce them at runtime. Static type checkers such as mypy and pyright verify them before the code runs, and `dataclasses` only uses them to generate code, so a dataclass field annotated as `int` will happily accept a string. Enforcing annotations at runtime requires an additional library such as [Beartype](https://beartype.readthedocs.io) or [Typeguard](https://typeguard.readthedocs.io), which check argument and return values when a decorated function is called. Param, by contrast, always validates at runtime, both when an object is instantiated and on every later assignment to a parameter, and with [`param.Model`](user_guide/Typing) those parameters can themselves be declared using type annotations.
 
-However, one point of difference is that Param has (built-in) 'value level' checking
-such as checking membership of a state in a list ['Alabama', 'Alaska', ...].
-With Python type annotations, there would be several ways:
-- statically-defined type-level logical specification: `Literal['Alabama'] | Literal['Alaska'] | ...`
-- run-time checking by adding a predicate to `Annotated[str, lambda s: s in states]`
-used by [Beartype](https://beartype.readthedocs.io/en/latest/)
-- creating a `State` type and defining the predicate `__instancecheck__`
-as used in [phantom-types](https://phantom-types.readthedocs.io/en/main/pages/implementation.html).
+Another difference is that Param has built-in value-level checking, not just type checking, such as requiring that a `state` parameter be one of `['Alabama', 'Alaska', ...]` or that a number fall within given bounds. With type annotations there are several ways to express such a constraint:
 
-Even with type-level definitions, Pydantic may [coerce types](https://docs.pydantic.dev/latest/concepts/conversion_table/) which caters more to data validation use cases.
+- List the allowed values with `Literal['Alabama', 'Alaska', ...]`, which static type checkers verify and runtime checkers such as Beartype and Typeguard also enforce.
+- Attach a predicate with `Annotated`, as in Beartype's `Annotated[str, Is[lambda s: s in states]]`. Only Beartype enforces this predicate; static type checkers treat the annotation as a plain `str`.
+- Define a dedicated `State` type whose `__instancecheck__` evaluates the predicate, as done by [phantom-types](https://phantom-types.readthedocs.io/en/main/pages/implementation.html).
+
+Pydantic also supports value constraints, e.g. via `Field(ge=1, le=10)` or `Annotated` validators, but even for a plain type annotation it behaves differently from Param: in its default "lax" mode it [coerces compatible inputs](https://docs.pydantic.dev/latest/concepts/conversion_table/) to the declared type (for example the string `"1"` to the integer `1`) instead of rejecting them, which suits data parsing use cases. Pydantic's strict mode disables this coercion.
 
 
 ## Generality and ease of integration with your project

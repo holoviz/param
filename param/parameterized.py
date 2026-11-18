@@ -3277,9 +3277,7 @@ class Parameters:
                         self_.update({pname: new_obj})
                     self_._settle_async_ref(pname, generation)
             else:
-                # Await outside _syncing: it saves and restores the object's
-                # syncing set, so a superseded run cancelled at its await would
-                # restore a set without pname and this update would drop the ref.
+                # Await outside _syncing so a cancelled run cannot restore a stale syncing set.
                 try:
                     value = await awaitable
                 except Skip:

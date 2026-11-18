@@ -1815,15 +1815,21 @@ class reactive_ops:
         2
         """
         deps = [p for d in dependencies for p in resolve_ref(d)]
-        is_event = all(isinstance(dep, Event) for dep in deps)
-        def eval(*_, evaluated=[]):
-            if is_event and initial is not Undefined and not evaluated:
-                # Abuse mutable default value to keep track of evaluation state
-                evaluated.append(True)
+        use_initial = all(isinstance(dep, Event) for dep in deps) and initial is not Undefined
+
+        def evaluate(*_):
+            nonlocal use_initial
+            if use_initial:
+                use_initial = False
                 return initial
-            else:
-                return self.value
-        return t.cast('t.Any', bind(eval, *deps)).rx()
+            return self.value
+
+        gated = t.cast('t.Any', bind(evaluate, *deps)).rx()
+        if use_initial:
+            # Cache the placeholder now so the first event invalidates it even
+            # when nobody has read the gated expression yet.
+            gated._resolve()
+        return gated
 
     def where(self, x, y) -> 'rx':
         """

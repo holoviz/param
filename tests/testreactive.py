@@ -982,6 +982,25 @@ class TestCloneAndWhen:
         p.param.trigger('event')
         assert integer.rx.value == 4
 
+    @pytest.mark.parametrize('lazy', [False, True])
+    def test_reactive_when_event_before_first_read(self, lazy):
+        state = Parameters(integer=3)
+        calls = []
+
+        def compute(value):
+            calls.append(value)
+            return value * 2
+
+        source = rx(state.param.integer, lazy=lazy).rx.pipe(compute)
+        expr = source.rx.when(state.param.event, initial=None)
+        assert calls == []
+
+        state.integer = 4
+        state.param.trigger('event')
+
+        assert expr.rx.value == 8
+        assert calls == [4]
+
 class TestResolveMethod:
     """``.rx.resolve()``, including nested and recursive resolution."""
 

@@ -576,6 +576,65 @@ async def test_async_ref_cancelled_on_dependency_change():
     await asyncio.sleep(0.05)
     assert 'string' not in p._param__private.async_refs
 
+async def test_async_ref_follows_dependency_after_superseded_run():
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def slow(i):
+        await asyncio.sleep(0.02)
+        return str(i)
+
+    source = Source()
+    p = Parameters(string=bind(slow, source.param.x))
+    source.x = 1
+    await wait_for_value(p, 'string', '1')
+    assert 'string' in p._param__private.refs
+    assert p._param__private.syncing == set()
+
+    source.x = 2
+    await wait_for_value(p, 'string', '2')
+
+async def test_async_ref_keeps_following_after_cancelled_run():
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def slow(i):
+        await asyncio.sleep(0.1 if i == 1 else 0.01)
+        return str(i)
+
+    source = Source()
+    p = Parameters(string=bind(slow, source.param.x))
+    await wait_for_value(p, 'string', '0')
+    values = []
+    p.param.watch(lambda event: values.append(event.new), 'string')
+    source.x = 1
+    await asyncio.sleep(0.01)
+    source.x = 2
+    await wait_for_value(p, 'string', '2')
+    await asyncio.sleep(0.15)
+    assert values == ['2']
+
+    source.x = 3
+    await wait_for_value(p, 'string', '3')
+
+async def test_set_during_async_ref_run_unbinds_ref():
+    class Source(param.Parameterized):
+        x = param.Number(default=0)
+
+    async def slow(i):
+        await asyncio.sleep(0.05)
+        return str(i)
+
+    source = Source()
+    p = Parameters(string=bind(slow, source.param.x))
+    await wait_for_value(p, 'string', '0')
+    source.x = 1
+    await asyncio.sleep(0.01)
+    p.string = 'user'
+    await asyncio.sleep(0.1)
+    assert p.string == 'user'
+    assert 'string' not in p._param__private.refs
+
 @pytest.mark.parametrize('bare', [False, True], ids=['bound', 'bare'])
 async def test_async_ref_not_rerun_on_unrelated_ref_change(bare):
     runs = []

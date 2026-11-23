@@ -22,6 +22,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Add `.rx.upstream()` and `.rx.dependents()` to walk the `rx` graph and make `rx` nodes hashable ([#1200](https://github.com/holoviz/param/pull/1200))
 - Add `.rx.dispose()` and `.rx.unwatch()`, make `.rx.watch()` return its watchers and fix a `.rx.resolve()` leak ([#1197](https://github.com/holoviz/param/pull/1197))
 - Add `.rx.distinct()` to skip propagation when a recompute leaves the value unchanged ([#1209](https://github.com/holoviz/param/pull/1209))
+- Add `param.reactive.lazy_default` to make `rx` expressions lazy unless `lazy=False` is passed ([#1244](https://github.com/holoviz/param/pull/1244))
 - Guard registered `rx` accessor names from reassignment and add a `memoize` opt-out ([#1194](https://github.com/holoviz/param/pull/1194))
 
 ### ⚡ Performance

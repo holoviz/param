@@ -4050,9 +4050,105 @@ class TestMiscellaneous:
 
     def test_reactive_lazy_get_value_attributeerror(self):
         x = rx(1, lazy=True)
+        with pytest.raises(AttributeError, match="'rx' object has no attribute 'value'"):
+            x.value
+
+    def test_reactive_lazy_derived_get_value_attributeerror_on_read(self):
+        x = rx(1, lazy=True) + 1
         xv = x.value
         with pytest.raises(AttributeError, match="'int' object has no attribute 'value'"):
             xv.rx.value
+
+class TestLazy:
+    """Behaviour specific to ``lazy=True`` expressions."""
+
+    async def test_reactive_lazy_call_async_function(self):
+        async def async_func(value):
+            await asyncio.sleep(0.01)
+            return value + 2
+
+        expr = rx(async_func, lazy=True)(1) * 10
+        assert expr.rx.value is param.Undefined
+        await async_wait_until(lambda: expr.rx.value == 30)
+
+    @pytest.mark.parametrize('kind', ['sync', 'async'])
+    async def test_reactive_lazy_call_generator_function(self, kind):
+        if kind == 'sync':
+            def gen(value):
+                yield value
+                yield value + 1
+        else:
+            async def gen(value):
+                yield value
+                await asyncio.sleep(0.01)
+                yield value + 1
+
+        expr = rx(gen, lazy=True)(1)
+        expr.rx.value
+        await async_wait_until(lambda: expr.rx.value == 2)
+
+    @pytest.mark.parametrize('method', ['instance', 'static', 'class'])
+    async def test_reactive_lazy_call_async_method(self, method):
+        class Obj:
+            async def instance(self, v):
+                return v * 3
+
+            @staticmethod
+            async def static(v):
+                return v * 3
+
+            @classmethod
+            async def klass(cls, v):
+                return v * 3
+
+        name = 'klass' if method == 'class' else method
+        expr = getattr(rx(Obj(), lazy=True), name)(2)
+        expr.rx.value
+        await async_wait_until(lambda: expr.rx.value == 6)
+
+    def test_reactive_lazy_missing_attribute_on_known_value(self):
+        expr = rx('abc', lazy=True)
+        assert hasattr(expr, 'upper')
+        assert not hasattr(expr, 'not_an_attribute')
+
+    def test_reactive_lazy_attribute_via_getattr_hook_is_deferred(self):
+        class Dynamic:
+            def __getattr__(self, name):
+                return name
+
+        assert rx(Dynamic(), lazy=True).anything.rx.value == 'anything'
+
+    @pytest.mark.parametrize('ufunc', NUMPY_UFUNCS)
+    def test_reactive_lazy_numpy_reduction(self, ufunc):
+        np = pytest.importorskip("numpy")
+        ufunc = getattr(np, ufunc)
+        assert ufunc(rx([1, 2, 3], lazy=True)).rx.value == ufunc([1, 2, 3])
+
+    def test_reactive_lazy_callback_resolves(self):
+        src = rx(1, lazy=True)
+        expr = src * 10
+        cb = expr._callback
+        assert cb() == 10
+        src.rx.value = 3
+        assert cb() == 30
+
+    def test_reactive_lazy_accessor_without_predicate(self, clean_accessors):
+        calls = []
+        rx.register_accessor('my_accessor', lambda node: 'accessor-value')
+        expr = rx(1, lazy=True).rx.pipe(lambda v: calls.append(v) or v)
+        assert expr.my_accessor == 'accessor-value'
+        assert calls == []
+        assert 'my_accessor' in dir(expr)
+
+    def test_reactive_lazy_accessor_predicate(self, clean_accessors):
+        rx.register_accessor(
+            'my_accessor', lambda node: 'accessor-value', predicate=lambda v: isinstance(v, int)
+        )
+        assert rx(1, lazy=True).my_accessor == 'accessor-value'
+        assert (rx(1, lazy=True) + 1).my_accessor == 'accessor-value'
+        with pytest.raises(AttributeError):
+            rx('a', lazy=True).my_accessor
+
 
 class TestGarbageCollection:
     """Triggering once and garbage collection of derived nodes."""

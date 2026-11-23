@@ -99,7 +99,6 @@ import math
 import operator
 import sys
 import typing as t
-import warnings
 import weakref
 
 from collections import namedtuple
@@ -135,6 +134,9 @@ if t.TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+#: Default for ``rx(..., lazy=)`` when it is not passed explicitly.
+lazy_default = False
 
 
 class ReactiveError:
@@ -2153,8 +2155,6 @@ class reactive_ops:
             raise ValueError("User-defined watch callbacks must declare "
                              "a positive precedence. Negative precedences "
                              "are reserved for internal Watchers.")
-        elif isinstance(self._reactive, rx) and self._reactive._lazy:
-            warnings.warn("Watching a lazy expressions converts it into an eager expression.")
         return self._watch(
             fn, onlychanged=onlychanged, queued=queued, precedence=precedence,
             process_failures=process_failures
@@ -2714,6 +2714,12 @@ class rx:
     obj : any
         The object to wrap, such as a number, string, list, or any supported
         data structure.
+    lazy : bool, optional
+        Whether the expression defers evaluation until its value is read or
+        watched. A non-lazy expression evaluates a derived node when a further
+        operation is chained onto it, so mistakes surface while the pipeline
+        is being built. Derived expressions inherit the setting. Defaults to
+        ``param.reactive.lazy_default``, which is ``False``.
     error_mode : {"raise", "propagate"}, default "raise"
         Whether exceptions raised while evaluating the expression should be
         re-raised or represented as :class:`ReactiveError` values. A derived
@@ -2901,7 +2907,7 @@ class rx:
         return inst
 
     def __init__(
-        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=False,
+        self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None, lazy=None,
         _shared_obj=None, _current=None, _wrapper=None, _shared=None, error_mode='raise',
         label=None, process_failures=False,
         **kwargs
@@ -2918,7 +2924,7 @@ class rx:
             if dopt in kwargs
         })
         self._display_opts = display_opts
-        self._lazy = lazy
+        self._lazy = lazy_default if lazy is None else lazy
         self._method = method
         self._operation = operation
         self._depth = depth

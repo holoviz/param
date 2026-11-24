@@ -2716,9 +2716,9 @@ def _upstream_awaiting(node):
         upstream = stack.pop()
         if (id_node := id(upstream)) in seen:
             continue
-        seen.add(id_node)
         if upstream._awaiting:
             return True
+        seen.add(id_node)
         operation = upstream._operation
         if operation is not None and operation['fn'] is _collect_marker:
             continue

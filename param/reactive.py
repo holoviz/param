@@ -107,7 +107,7 @@ from collections.abc import (
     Mapping, MutableMapping, Sequence, Sized
 )
 from itertools import chain
-from functools import partial
+from functools import partial, partialmethod
 from types import FunctionType, MethodType, MappingProxyType
 
 from .depends import depends
@@ -3072,6 +3072,34 @@ class rx:
             node = node._prev
         return False
 
+    def _peek(self) -> t.Any:
+        """
+        Return the value of a lazy node if it is known without evaluating
+        anything, else ``Undefined``. Methods are looked up statically, so calling a
+        lazy expression can tell whether it calls an async function.
+        """
+        if not (self._dirty or self._obj_dirty):
+            return self._current_
+        operation = self._operation
+        if operation is None and self._prev is None and isinstance(self._wrapper, Wrapper):
+            return self._wrapper.object
+        if operation is not None and operation['fn'] is _lazy_getattr and self._prev is not None:
+            owner = self._prev._peek()
+            if owner is not Undefined:
+                try:
+                    value = inspect.getattr_static(owner, operation['args'][0])
+                except AttributeError:
+                    return Undefined
+                # A static lookup returns the descriptor itself rather than
+                # what attribute access produces, so unwrap the ones that
+                # wrap a function.
+                if isinstance(value, (staticmethod, classmethod)):
+                    return value.__func__
+                if isinstance(value, partialmethod):
+                    return value.func
+                return value
+        return Undefined
+
     @property
     def _obj_dirty(self) -> bool:
         """
@@ -3909,6 +3937,9 @@ class rx:
         params = [*self._params, self._ensure_override_channel().param.value]
         gate = _EqualityGate()
         def evaluate(*args, **kwargs):
+            if self._lazy:
+                # A callback reads the value, so a lazy node resolves here
+                self._resolve()
             out = self._current
             if self._skipped:
                 raise Skip
@@ -3960,16 +3991,17 @@ class rx:
         return new
 
     def __dir__(self):
-        resolved = self._current
+        resolved = self._peek() if self._lazy else self._current
+        known = resolved is not Undefined
         current = resolved
         if self._method:
             current = getattr(current, self._method)
-        extras = {attr for attr in dir(current) if not attr.startswith('_')}
+        extras = {attr for attr in dir(current) if not attr.startswith('_')} if known else set()
         # Explicitly list registered but uninstantiated accessors
         accessor_names = {
             name for name, (_, predicate, memoize) in rx._accessors.items()
             if (name not in self.__dict__ or not memoize)
-            and (predicate is None or predicate(resolved))
+            and (predicate is None or (known and predicate(resolved)))
         }
         try:
             return sorted(set(super().__dir__()) | extras | accessor_names)
@@ -4010,13 +4042,21 @@ class rx:
         current = self_dict['_current_']
         dirty = self_dict['_dirty']
         if self_dict['_lazy']:
-            # there is no current, delay the getattr to later
-            operation = {
-                'fn': lambda obj, name: getattr(obj, name),
-                'args': (name,),
-                'kwargs': {},
-            }
-            return self._clone(operation)
+            owner = self._peek()
+            if name in rx._accessors:
+                # An accessor belongs to rx, not the value, so it is never
+                # deferred; only a predicate needs the value.
+                if owner is Undefined and rx._accessors[name][1] is not None:
+                    self._resolve()
+                    owner = self_dict['_current_']
+                current, dirty = owner, False
+            elif owner is not Undefined and not _may_have_attr(owner, name):
+                # Like the eager path, so hasattr() and protocol probes
+                # (e.g. numpy reductions trying `.min`) see it is missing.
+                return super().__getattribute__(name)
+            else:
+                operation = {'fn': _lazy_getattr, 'args': (name,), 'kwargs': {}}
+                return self._clone(operation)
 
         if dirty:
             self._resolve()
@@ -4064,6 +4104,8 @@ class rx:
             callee = None
         elif new._method:
             callee = getattr(new._current_, new._method, None)
+        elif self._lazy:
+            callee = self._peek()
         else:
             callee = new._current_
         new._method = None
@@ -4437,6 +4479,21 @@ if sys.version_info >= (3, 14):
     _signature = partial(inspect.signature, annotation_format=annotationlib.Format.FORWARDREF)
 else:
     _signature = inspect.signature
+
+
+def _lazy_getattr(obj, name):
+    # A dedicated function rather than getattr, so _peek can recognise
+    # attribute lookups by identity.
+    return getattr(obj, name)
+
+
+def _may_have_attr(obj, attr):
+    """Whether ``obj`` may have ``attr``, without running any of its code."""
+    try:
+        inspect.getattr_static(obj, attr)
+    except AttributeError:
+        return hasattr(type(obj), '__getattr__')
+    return True
 
 
 def _is_async_operation(operation: dict[str, t.Any]) -> bool:

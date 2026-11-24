@@ -4087,9 +4087,15 @@ class TestLazy:
         expr.rx.value
         await async_wait_until(lambda: expr.rx.value == 2)
 
-    @pytest.mark.parametrize('method', ['instance', 'static', 'class'])
+    @pytest.mark.parametrize('method', ['instance', 'static', 'class', 'partialmethod', 'partial'])
     async def test_reactive_lazy_call_async_method(self, method):
+        async def triple(v):
+            return v * 3
+
         class Obj:
+            def __init__(self):
+                self.partial = functools.partial(triple)
+
             async def instance(self, v):
                 return v * 3
 
@@ -4101,8 +4107,14 @@ class TestLazy:
             async def klass(cls, v):
                 return v * 3
 
+            async def _scaled(self, v, factor):
+                return v * factor
+
+            partialmethod = functools.partialmethod(_scaled, factor=3)
+
         name = 'klass' if method == 'class' else method
         expr = getattr(rx(Obj(), lazy=True), name)(2)
+        assert expr._is_async
         expr.rx.value
         await async_wait_until(lambda: expr.rx.value == 6)
 

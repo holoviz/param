@@ -108,7 +108,7 @@ from collections.abc import (
     Mapping, MutableMapping, Sequence, Sized
 )
 from itertools import chain
-from functools import partial
+from functools import partial, partialmethod
 from types import FunctionType, MethodType, MappingProxyType
 
 from .depends import depends
@@ -3063,9 +3063,17 @@ class rx:
             owner = self._prev._peek()
             if owner is not Undefined:
                 try:
-                    return inspect.getattr_static(owner, operation['args'][0])
+                    value = inspect.getattr_static(owner, operation['args'][0])
                 except AttributeError:
-                    pass
+                    return Undefined
+                # A static lookup returns the descriptor itself rather than
+                # what attribute access produces, so unwrap the ones that
+                # wrap a function.
+                if isinstance(value, (staticmethod, classmethod)):
+                    return value.__func__
+                if isinstance(value, partialmethod):
+                    return value.func
+                return value
         return Undefined
 
     @property
@@ -4018,11 +4026,7 @@ class rx:
                 # (e.g. numpy reductions trying `.min`) see it is missing.
                 return super().__getattribute__(name)
             else:
-                operation = {
-                    'fn': _lazy_getattr,
-                    'args': (name,),
-                    'kwargs': {},
-                }
+                operation = {'fn': _lazy_getattr, 'args': (name,), 'kwargs': {}}
                 return self._clone(operation)
 
         if dirty:
@@ -4073,8 +4077,6 @@ class rx:
             callee = getattr(new._current_, new._method, None)
         elif self._lazy:
             callee = self._peek()
-            # A static lookup returns staticmethod/classmethod objects
-            callee = getattr(callee, '__func__', callee)
         else:
             callee = new._current_
         new._method = None
@@ -4451,13 +4453,15 @@ else:
 
 
 def _lazy_getattr(obj, name):
+    # A dedicated function rather than getattr, so _peek can recognise
+    # attribute lookups by identity.
     return getattr(obj, name)
 
 
-def _may_have_attr(obj, name):
-    """Whether ``obj`` may have ``name``, without running any of its code."""
+def _may_have_attr(obj, attr):
+    """Whether ``obj`` may have ``attr``, without running any of its code."""
     try:
-        inspect.getattr_static(obj, name)
+        inspect.getattr_static(obj, attr)
     except AttributeError:
         return hasattr(type(obj), '__getattr__')
     return True

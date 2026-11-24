@@ -1001,6 +1001,30 @@ class TestCloneAndWhen:
         assert expr.rx.value == 8
         assert calls == [4]
 
+    def test_reactive_when_event_before_watch_notifies_value(self):
+        state = Parameters(integer=3)
+        expr = rx(state.param.integer).rx.pipe(lambda v: v * 2).rx.when(state.param.event, initial=None)
+        values = []
+        expr.rx.watch(values.append)
+
+        state.integer = 4
+        state.param.trigger('event')
+
+        assert values == [8]
+
+    def test_reactive_when_any_event_dependency_before_first_read(self):
+        class Events(param.Parameterized):
+            integer = param.Integer(default=3)
+            submit = param.Event()
+            reset = param.Event()
+
+        state = Events()
+        expr = rx(state.param.integer).rx.when(state.param.submit, state.param.reset, initial=None)
+
+        state.param.trigger('reset')
+
+        assert expr.rx.value == 3
+
 class TestResolveMethod:
     """``.rx.resolve()``, including nested and recursive resolution."""
 

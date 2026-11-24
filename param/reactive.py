@@ -2699,6 +2699,18 @@ def _unmirror(node):
     return node
 
 
+def _upstream_awaiting(node):
+    """
+    Whether ``node`` or anything it derives from awaits an async operation.
+
+    A sync node downstream of an in-flight async node still reports its
+    last value, so readers must look past it to avoid computing with it.
+    Async refs are not considered: they write their value before they
+    settle, so the update that delivers the value would be skipped.
+    """
+    return any(n._awaiting for n in _unmirror(node)._upstream())
+
+
 def _settle_state(node):
     """Use the shared source before its clone resolves independently."""
     node = _unmirror(node)
@@ -3811,10 +3823,15 @@ class rx:
                 if masked:
                     # Like a masked argument, the override is not settle-tracked.
                     generations, fresh = None, True
+                elif self._prev is None:
+                    generations, fresh = {}, False
+                elif _upstream_awaiting(self._prev):
+                    # Like an argument, a previous node still awaiting an
+                    # async result holds a stale value; wait for it to land.
+                    raise Skip
                 else:
-                    count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
-                    generations = {_PREV_GENERATION: count} if self._prev is not None else {}
-                    fresh = self._prev is not None and not skipped
+                    count, skipped = _settle_state(self._prev)
+                    generations, fresh = {_PREV_GENERATION: count}, not skipped
                 if operation:
                     obj = self._eval_operation(obj, operation, generations, fresh)
                     if self._is_async:
@@ -4238,15 +4255,15 @@ class rx:
         references inside a container argument are not covered yet.
         """
         if isinstance(arg, rx):
-            if arg._settling:
+            if arg._settling or _upstream_awaiting(arg):
                 raise Skip
             value = arg.rx.value
-            if value is Skip or value is Undefined or arg._settling:
+            if value is Skip or value is Undefined or arg._settling or _upstream_awaiting(arg):
                 raise Skip
             if arg._skipped and arg._settle_count == 0:
                 raise Skip
             return value
-        if any(ref._settling for ref in _iter_rx(arg)):
+        if any(ref._settling or _upstream_awaiting(ref) for ref in _iter_rx(arg)):
             raise Skip
         val = _resolve_operand(arg)
         if val is Skip or val is Undefined:

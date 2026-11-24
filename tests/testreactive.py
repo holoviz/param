@@ -1330,6 +1330,43 @@ class TestAwaiting:
         assert calls == [(2, ('B', 2))]
         assert published == [(2, ('B', 2))]
 
+    @pytest.mark.parametrize('shape', ['prev', 'prev-via-sync', 'arg-via-sync'])
+    async def test_reactive_diamond_skips_in_flight_async_upstream(self, shape):
+        """
+        An operation must not evaluate with the stale value of an in-flight
+        async node, whether it is the previous node, or upstream of a sync
+        previous node or argument.
+        """
+        async def slow(value):
+            await asyncio.sleep(0.02)
+            return ('B', value)
+
+        calls = []
+
+        def combine(b, value):
+            calls.append((value, b))
+            return (value, b)
+
+        src = rx(1)
+        b = src.rx.pipe(slow)
+        if shape == 'prev':
+            c = b.rx.pipe(combine, src)
+        elif shape == 'prev-via-sync':
+            c = b.rx.pipe(lambda v: v).rx.pipe(combine, src)
+        else:
+            c = rx(combine)(b.rx.pipe(lambda v: v), src)
+        published = []
+        c.rx.watch(published.append)
+        await async_wait_until(lambda: c.rx.value == (1, ('B', 1)))
+        calls.clear()
+        published.clear()
+
+        src.rx.value = 2
+        await async_wait_until(lambda: c.rx.value == (2, ('B', 2)))
+        await asyncio.sleep(0.05)
+        assert calls == [(2, ('B', 2))]
+        assert published == [(2, ('B', 2))]
+
     async def test_reactive_awaiting_through_operation_argument(self):
         """An rx passed as an operation argument is upstream of the operation."""
         async def async_func(value):

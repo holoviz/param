@@ -2707,8 +2707,24 @@ def _upstream_awaiting(node):
     last value, so readers must look past it to avoid computing with it.
     Async refs are not considered: they write their value before they
     settle, so the update that delivers the value would be skipped.
+    The walk stops at ``collect`` nodes, which report partial results
+    while their inputs are still pending.
     """
-    return any(n._awaiting for n in _unmirror(node)._upstream())
+    seen: set[int] = set()
+    stack = [_unmirror(node)]
+    while stack:
+        upstream = stack.pop()
+        if (id_node := id(upstream)) in seen:
+            continue
+        seen.add(id_node)
+        if upstream._awaiting:
+            return True
+        operation = upstream._operation
+        if operation is not None and operation['fn'] is _collect_marker:
+            continue
+        stack.extend(upstream._direct_inputs())
+        stack.extend(upstream._ref_inputs())
+    return False
 
 
 def _settle_state(node):

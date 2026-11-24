@@ -2729,8 +2729,12 @@ def _upstream_awaiting(node):
 
 def _settle_state(node):
     """Use the shared source before its clone resolves independently."""
-    node = _unmirror(node)
-    return node._settle_count, node._skipped
+    source = _unmirror(node)
+    if source is not node and not (node._dirty or node._obj_dirty):
+        # A clean clone holds the value it adopted; the source may already
+        # have settled again before the clone is told it is stale.
+        return node._adopted_settle_count, node._skipped
+    return source._settle_count, source._skipped
 
 
 class rx:
@@ -4004,6 +4008,9 @@ class rx:
             if not siblings:
                 siblings.append(weakref.ref(self, siblings.remove))
             siblings.append(weakref.ref(new, siblings.remove))
+        if copy:
+            # The copy holds the value the source had settled to just now.
+            new._adopted_settle_count = self._settle_count
         return new
 
     def __dir__(self):

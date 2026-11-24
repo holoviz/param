@@ -6629,6 +6629,28 @@ class TestCollect:
         )
         assert not collected.rx.awaiting
 
+    async def test_reactive_collect_partial_results_reach_downstream_nodes_and_refs(self):
+        async def delayed(v, delay):
+            await asyncio.sleep(delay)
+            return v
+
+        class Members(param.Parameterized):
+            values = param.List(default=[], allow_refs=True)
+
+        a = rx(1).rx.pipe(delayed, delay=0.05)
+        b = rx(2).rx.pipe(delayed, delay=0.25)
+        listed = collect(a, b).args.rx.pipe(list)
+        members = Members(values=listed)
+
+        node_values, param_values = [], []
+        listed.rx.watch(node_values.append)
+        members.param.watch(lambda e: param_values.append(e.new), 'values')
+        listed.rx.value
+
+        expected = [[1, param.Undefined], [1, 2]]
+        await async_wait_until(lambda: node_values == expected[:1] and param_values == expected[:1], interval=10)
+        await async_wait_until(lambda: node_values == expected and param_values == expected, interval=10)
+
     def test_reactive_collect_returns_a_namedtuple_of_args_and_kwargs(self):
         a, b = rx(1), rx(2)
         collected = collect(a, b, c=rx(3))

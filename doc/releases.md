@@ -68,6 +68,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Document `rx.watch` `onlychanged` and how it relates to `distinct` ([#1225](https://github.com/holoviz/param/pull/1225))
 - Mention `script_repr_suppress_defaults` in the `script_repr` docstring ([#1162](https://github.com/holoviz/param/pull/1162))
 - Set `script_repr_suppress_defaults` to `False` in the serialization example ([#1159](https://github.com/holoviz/param/pull/1159))
+- Document what a parameter with an asynchronous reference holds while it is pending, how to check whether it is current and how to get partial results with `collect` ([#1249](https://github.com/holoviz/param/pull/1249))
 - Document that a parameter named like a `.param` method, e.g. `objects`, has to be looked up as `obj.param['objects']` ([#1242](https://github.com/holoviz/param/pull/1242))
 
 ### 🧪 Tests & CI

@@ -7072,6 +7072,20 @@ class TestSkipSiblingArguments:
 
         assert out.rx.value == 21
 
+    def test_bound_ref_sibling_does_not_leave_pipe_stale(self):
+        class P(param.Parameterized):
+            x = param.Parameter(allow_refs=True)
+
+        src = rx(1)
+        p = P(x=param.bind(lambda v: ('B', v), src))
+        out = src.rx.pipe(lambda sv, xv: (sv, xv), p.param.x.rx())
+        out.rx.watch(lambda v: None)
+        assert out.rx.value == (1, ('B', 1))
+
+        src.rx.value = 2
+
+        assert out.rx.value == (2, ('B', 2))
+
     def test_literal_list_after_distinct_does_not_recompute_or_notify(self):
         pd = pytest.importorskip('pandas')
         calls, events = [], []

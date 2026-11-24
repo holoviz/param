@@ -45,7 +45,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Ensure a sync child of an async `rx` node does not resolve it at construction ([#1196](https://github.com/holoviz/param/pull/1196))
 - Settle an `rx` generator operation whose stream ends without yielding ([#1192](https://github.com/holoviz/param/pull/1192))
 - Make `.rx.updating()` span an asynchronous wait ([#1195](https://github.com/holoviz/param/pull/1195))
-- Stop a skipped reference from discarding a sibling argument's genuine change ([#1210](https://github.com/holoviz/param/pull/1210))
+- Stop a skipped reference from discarding a sibling argument's genuine change ([#1210](https://github.com/holoviz/param/pull/1210), [#1251](https://github.com/holoviz/param/pull/1251))
 - Notify composed `rx.where` watchers on selected branch changes ([#1211](https://github.com/holoviz/param/pull/1211))
 - Skip an async `rx` input whose recompute is started by reading it ([#1217](https://github.com/holoviz/param/pull/1217))
 - Make `rx.where` return a reactive expression ([#1220](https://github.com/holoviz/param/pull/1220))

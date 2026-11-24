@@ -135,7 +135,7 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-#: Default for ``rx(..., lazy=)`` when it is not passed explicitly.
+#: Global default for ``rx(..., lazy=)`` when it is not passed explicitly.
 lazy_default = False
 
 

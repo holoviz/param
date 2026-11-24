@@ -157,6 +157,51 @@ class TestIndexingAndUfuncs:
         array = np.ndarray([1, 2, 3])
         assert ufunc(rx(array)).rx.value == ufunc(array)
 
+class TestLazyDefault:
+
+    @pytest.fixture
+    def lazy_default(self, monkeypatch):
+        monkeypatch.setattr(param.reactive, 'lazy_default', True)
+
+    def test_reactive_lazy_default_off(self):
+        calls = []
+        b = rx(1).rx.pipe(lambda v: calls.append(v) or v)
+        b + 1
+        assert calls == [1]
+
+    def test_reactive_lazy_default_defers_chained_evaluation(self, lazy_default):
+        calls = []
+        b = rx(1).rx.pipe(lambda v: calls.append(v) or v * 10)
+        c = b + 1
+        assert calls == []
+        assert c.rx.value == 11
+        assert calls == [1]
+
+    def test_reactive_lazy_default_explicit_lazy_wins(self, lazy_default):
+        calls = []
+        b = rx(1, lazy=False).rx.pipe(lambda v: calls.append(v) or v)
+        b + 1
+        assert calls == [1]
+
+    def test_reactive_lazy_default_applies_to_param_and_bind_rx(self, lazy_default):
+        class P(param.Parameterized):
+            x = param.Integer(default=1)
+
+        p = P()
+        for root in (p.param.x.rx(), param.bind(lambda v: v, p.param.x).rx()):
+            calls = []
+            c = root.rx.pipe(lambda v: calls.append(v) or v) + 1
+            assert calls == []
+            assert c.rx.value == 2
+
+    def test_reactive_lazy_default_read_at_construction(self, lazy_default):
+        a = rx(1)
+        param.reactive.lazy_default = False
+        calls = []
+        a.rx.pipe(lambda v: calls.append(v) or v) + 1
+        assert calls == []
+
+
 class TestValueAssignment:
     """Setting and mutating the value of a root expression."""
 

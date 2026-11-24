@@ -49,6 +49,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Skip an async `rx` input whose recompute is started by reading it ([#1217](https://github.com/holoviz/param/pull/1217))
 - Make `rx.where` return a reactive expression ([#1220](https://github.com/holoviz/param/pull/1220))
 - Notify watchers downstream of an async `rx` node of a landing started upstream ([#1226](https://github.com/holoviz/param/pull/1226))
+- Return the value of a `when` expression with an `initial` placeholder after an Event fired, also when nothing read it before the event ([#1240](https://github.com/holoviz/param/pull/1240))
 
 ### ⚠️ Deprecations
 

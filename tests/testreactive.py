@@ -6775,6 +6775,25 @@ class TestCollect:
 
         await async_wait_until(lambda: combined.rx.value == (1, 2))
 
+    @pytest.mark.parametrize('kind', ['pipe', 'bind'])
+    async def test_reactive_collect_partial_results_from_async_inputs(self, kind):
+        async def delayed(v, delay):
+            await asyncio.sleep(delay)
+            return v
+
+        def make(v, delay):
+            if kind == 'pipe':
+                return rx(v).rx.pipe(delayed, delay=delay)
+            return param.bind(delayed, rx(v), delay).rx()
+
+        collected = collect(make(1, 0.05), make(2, 0.25))
+        values = []
+        collected.rx.watch(lambda v: values.append(v.args))
+        collected.rx.value
+
+        await async_wait_until(lambda: values == [(1, param.Undefined)], interval=10)
+        await async_wait_until(lambda: values == [(1, param.Undefined), (1, 2)], interval=10)
+
 
 class TestDistinct:
     """``.rx.distinct()``."""

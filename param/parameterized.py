@@ -3271,21 +3271,26 @@ class Parameters:
                 running_task.cancel()
             self_.self._param__private.async_refs[pname] = current_task
         try:
+            # Settle in the same batch as the value is written, so readers
+            # are notified once the reference counts as settled rather than
+            # skipping the update that delivers its value.
             if isinstance(awaitable, types.AsyncGeneratorType):
                 async for new_obj in awaitable:
-                    with _syncing(self_.self, (pname,)):
-                        self_.update({pname: new_obj})
-                    self_._settle_async_ref(pname, generation)
+                    with batch():
+                        with _syncing(self_.self, (pname,)):
+                            self_.update({pname: new_obj})
+                        self_._settle_async_ref(pname, generation)
             else:
                 # Await outside _syncing so a cancelled run cannot restore a stale syncing set.
                 try:
                     value = await awaitable
                 except Skip:
-                    pass
+                    self_._settle_async_ref(pname, generation)
                 else:
-                    with _syncing(self_.self, (pname,)):
-                        self_.update({pname: value})
-                self_._settle_async_ref(pname, generation)
+                    with batch():
+                        with _syncing(self_.self, (pname,)):
+                            self_.update({pname: value})
+                        self_._settle_async_ref(pname, generation)
         finally:
             try:
                 self_._settle_async_ref(pname, generation)

@@ -18,7 +18,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Add `.rx.awaiting` and `.rx.stale` to report whether an expression is still resolving or out of date ([#1176](https://github.com/holoviz/param/pull/1176), [#1183](https://github.com/holoviz/param/pull/1183), [#1186](https://github.com/holoviz/param/pull/1186), [#1191](https://github.com/holoviz/param/pull/1191))
 - Add `.rx.overrides` to temporarily replace the inputs of an `rx` node ([#1190](https://github.com/holoviz/param/pull/1190), [#1208](https://github.com/holoviz/param/pull/1208), [#1222](https://github.com/holoviz/param/pull/1222))
 - Add node-local `.rx.meta`, `param.current_node()`, `.rx.inputs()` and `.rx.generation` so operations can attach and read per-node state ([#1181](https://github.com/holoviz/param/pull/1181), [#1198](https://github.com/holoviz/param/pull/1198), [#1215](https://github.com/holoviz/param/pull/1215))
-- Add `param.collect()` to combine partial results across several async inputs ([#1199](https://github.com/holoviz/param/pull/1199), [#1206](https://github.com/holoviz/param/pull/1206))
+- Add `param.collect()` to combine partial results across several async inputs ([#1199](https://github.com/holoviz/param/pull/1199), [#1206](https://github.com/holoviz/param/pull/1206), [#1248](https://github.com/holoviz/param/pull/1248))
 - Add `.rx.upstream()` and `.rx.dependents()` to walk the `rx` graph and make `rx` nodes hashable ([#1200](https://github.com/holoviz/param/pull/1200))
 - Add `.rx.dispose()` and `.rx.unwatch()`, make `.rx.watch()` return its watchers and fix a `.rx.resolve()` leak ([#1197](https://github.com/holoviz/param/pull/1197))
 - Add `.rx.distinct()` to skip propagation when a recompute leaves the value unchanged ([#1209](https://github.com/holoviz/param/pull/1209))
@@ -51,6 +51,9 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Make `rx.where` return a reactive expression ([#1220](https://github.com/holoviz/param/pull/1220))
 - Notify watchers downstream of an async `rx` node of a landing started upstream ([#1226](https://github.com/holoviz/param/pull/1226))
 - Return the value of a `when` expression with an `initial` placeholder after an Event fired, also when nothing read it before the event ([#1240](https://github.com/holoviz/param/pull/1240))
+- Keep an async reference following its dependencies after one of its runs is superseded while still awaiting ([#1241](https://github.com/holoviz/param/pull/1241))
+- Skip an operation whose previous node, or a node it derives from, is still awaiting an async result instead of computing with the stale value ([#1243](https://github.com/holoviz/param/pull/1243), [#1247](https://github.com/holoviz/param/pull/1247))
+- Make lazy `rx` expressions call async and generator functions, answer `hasattr` and other attribute probes, and resolve inside callbacks ([#1245](https://github.com/holoviz/param/pull/1245))
 
 ### ⚠️ Deprecations
 
@@ -65,6 +68,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Document `rx.watch` `onlychanged` and how it relates to `distinct` ([#1225](https://github.com/holoviz/param/pull/1225))
 - Mention `script_repr_suppress_defaults` in the `script_repr` docstring ([#1162](https://github.com/holoviz/param/pull/1162))
 - Set `script_repr_suppress_defaults` to `False` in the serialization example ([#1159](https://github.com/holoviz/param/pull/1159))
+- Document that a parameter named like a `.param` method, e.g. `objects`, has to be looked up as `obj.param['objects']` ([#1242](https://github.com/holoviz/param/pull/1242))
 
 ### 🧪 Tests & CI
 
@@ -74,6 +78,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 
 - Review, fixes and cleanup for the new `rx` features ([#1203](https://github.com/holoviz/param/pull/1203))
 - Fix line endings ([#1187](https://github.com/holoviz/param/pull/1187))
+- Fix the type check of the `eager_only` argument passed to Narwhals ([#1246](https://github.com/holoviz/param/pull/1246))
 
 [*Full Changelog*](https://github.com/holoviz/param/compare/v2.4.2...v2.5.0)
 

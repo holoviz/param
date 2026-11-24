@@ -3657,9 +3657,7 @@ class DataFrameLike(ClassSelector[t.Any]):
     def _as_narwhals(self, val):
         narwhals = _get_narwhals()
         try:
-            if self.eager_only:
-                return narwhals.from_native(val, eager_only=True, pass_through=False)
-            return narwhals.from_native(val, eager_only=False, pass_through=False)
+            return narwhals.from_native(val, eager_only=t.cast("bool", self.eager_only), pass_through=False)
         except TypeError as e:
             kind = 'an eager dataframe-like' if self.eager_only else 'a dataframe-like'
             raise ValueError(

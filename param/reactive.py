@@ -3813,18 +3813,19 @@ class rx:
                         self._finished_generation = self._resolve_generation
                     self._dirty = False
                     return self._current_
-                if not masked and self._prev is not None and _upstream_awaiting(self._prev):
-                    # Like an argument, a previous node still awaiting an
-                    # async result holds a stale value; wait for it to land.
-                    raise Skip
                 generations: dict[t.Any, int] | None
                 if masked:
                     # Like a masked argument, the override is not settle-tracked.
                     generations, fresh = None, True
+                elif self._prev is None:
+                    generations, fresh = {}, False
+                elif _upstream_awaiting(self._prev):
+                    # Like an argument, a previous node still awaiting an
+                    # async result holds a stale value; wait for it to land.
+                    raise Skip
                 else:
-                    count, skipped = _settle_state(self._prev) if self._prev is not None else (0, False)
-                    generations = {_PREV_GENERATION: count} if self._prev is not None else {}
-                    fresh = self._prev is not None and not skipped
+                    count, skipped = _settle_state(self._prev)
+                    generations, fresh = {_PREV_GENERATION: count}, not skipped
                 if operation:
                     obj = self._eval_operation(obj, operation, generations, fresh)
                     if self._is_async:

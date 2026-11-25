@@ -24,6 +24,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 - Add `.rx.distinct()` to skip propagation when a recompute leaves the value unchanged ([#1209](https://github.com/holoviz/param/pull/1209))
 - Add `param.reactive.lazy_default` to make `rx` expressions lazy unless `lazy=False` is passed ([#1244](https://github.com/holoviz/param/pull/1244))
 - Guard registered `rx` accessor names from reassignment and add a `memoize` opt-out ([#1194](https://github.com/holoviz/param/pull/1194))
+- Add `Comparator.register()` to add how two objects of a type are compared, ahead of the defaults ([#1252](https://github.com/holoviz/param/pull/1252))
 
 ### ⚡ Performance
 
@@ -62,6 +63,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, a
 ### 🔧 Compatibility
 
 - Drop support for Python 3.10 ([#1207](https://github.com/holoviz/param/pull/1207))
+- Compare `nan`, `NaT`, `timedelta`, `pd.Timedelta`, paths and UUIDs equal to an equal value, so setting a parameter to `nan` again, or to an equal path, no longer notifies `onlychanged` watchers ([#1252](https://github.com/holoviz/param/pull/1252))
 
 ### 📚 Documentation
 

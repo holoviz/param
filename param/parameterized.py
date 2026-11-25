@@ -117,6 +117,14 @@ def _dt_types():
         yield np.datetime64  # type: ignore[unresolved-attribute]
 
 @gen_types
+def _plain_value_types():
+    # Only reachable for objects whose module is already imported.
+    if pathlib := sys.modules.get("pathlib"):
+        yield pathlib.PurePath
+    if uuid := sys.modules.get("uuid"):
+        yield uuid.UUID
+
+@gen_types
 def _int_types():
     yield int
     if np := sys.modules.get("numpy"):
@@ -2731,6 +2739,11 @@ _BUILTIN_VALUE_TYPES = frozenset({
 })
 
 
+def _eq_or_both_missing(obj1, obj2) -> bool:
+    """Equal, or both missing values such as NaN or NaT, which never equal themselves."""
+    return bool(obj1 == obj2) or (obj1 != obj1 and obj2 != obj2)
+
+
 class Comparator:
     """
     Comparator defines methods for determining whether two objects
@@ -2746,35 +2759,75 @@ class Comparator:
     applies. This is useful for defining comparisons for objects
     without explicitly importing them.
 
-    To use the Comparator simply call the is_equal function.
+    To use the Comparator simply call the is_equal function, and register
+    a comparison for further types with :meth:`register`.
+
+    Missing values that never equal themselves, such as ``float('nan')``
+    and ``pd.NaT``, compare equal to each other.
     """
 
     equalities: dict[type | tuple[type, ...] | Callable[[t.Any], bool], Callable[[t.Any, t.Any], bool]] = {
-        numbers.Number: operator.eq,
+        numbers.Number: _eq_or_both_missing,
         str: operator.eq,
         bytes: operator.eq,
         type(None): operator.eq,
+        dt.timedelta: operator.eq,
         lambda o: hasattr(o, '_infinitely_iterable'): operator.eq,  # Time
     }
     gen_equalities = {
-        _dt_types: operator.eq
+        _dt_types: _eq_or_both_missing,
+        _plain_value_types: operator.eq,
     }
+
+    @classmethod
+    def register(cls, key, eq=operator.eq):
+        """
+        Register how to compare two objects matched by ``key``.
+
+        Parameters
+        ----------
+        key : type, tuple of types or callable
+            Both objects must be instances of the type(s), or the callable
+            must return True for each of them.
+        eq : callable, optional
+            Called with both objects and returns whether they are equal.
+            Defaults to ``operator.eq``.
+
+        Returns
+        -------
+        callable
+            The registered ``eq``.
+
+        Notes
+        -----
+        A registered comparison takes precedence over the defaults and
+        over earlier registrations, and registering the same ``key``
+        again replaces its comparison.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from param.parameterized import Comparator
+        >>> Comparator.register(np.ndarray, lambda a, b: np.array_equal(a, b, equal_nan=True))
+        """
+        cls.equalities = {key: eq, **{k: v for k, v in cls.equalities.items() if k != key}}
+        return eq
 
     @classmethod
     def is_equal(cls, obj1, obj2):
         gen_equalities = cls.gen_equalities
         if (
             type(obj1) in _BUILTIN_VALUE_TYPES and type(obj2) in _BUILTIN_VALUE_TYPES
-            and len(gen_equalities) == 1 and _dt_types in gen_equalities
+            and gen_equalities.keys() <= _DEFAULT_GEN_EQUALITIES
         ):
-            # The default generated equalities only cover date and time
-            # types, which can match neither object, so skip expanding them.
+            # The default generated equalities cover types that can match
+            # neither object, so skip expanding them.
             equals = cls.equalities
         else:
             equals = cls.equalities.copy()
             for gen, op in gen_equalities.items():
                 for v in gen():
-                    equals[v] = op
+                    equals.setdefault(v, op)
 
         for eq_type, eq in equals.items():
             if isinstance(eq_type, type) or (isinstance(eq_type, tuple) and all(isinstance(t, type) for t in eq_type)):
@@ -2812,6 +2865,9 @@ class Comparator:
             else:
                 return False
         return True
+
+
+_DEFAULT_GEN_EQUALITIES = frozenset(Comparator.gen_equalities)
 
 
 class _ParametersRestorer:

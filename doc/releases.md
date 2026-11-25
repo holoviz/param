@@ -2,11 +2,11 @@
 
 ## Version 2.5.0
 
-Date: 2026-11-XX
+Date: 2026-11-25
 
 Param 2.5.0 introduces `param.Model`, a `Parameterized` subclass that builds its parameters from plain type annotations, and a new `DataFrameLike` parameter that accepts pandas, Polars, PyArrow and any other dataframe supported by Narwhals. Reactive expressions (`rx`) get a large set of new capabilities for building and inspecting complex, asynchronous pipelines, including opt-in error propagation, input overrides, node-local metadata, graph traversal, explicit disposal and partial results across several async inputs, alongside many async bug fixes. `param.batch()` defers watcher notification across every object touched inside it. The release also speeds up the `Parameter` get/set hot paths, making `Number` reads about 2.4x faster and sets that trigger watchers about 2.2x faster. Python 3.10 is no longer supported.
 
-Many thanks to our new contributors @ghostiee-11, @binggao1230 and @syahra712, as well as to @Coderambling, @hoxbro and @philippjfr for their contributions to this release.
+Many thanks to our new contributors @ghostiee-11, @binggao1230, @syahra712 and @YashAnand69, as well as to @Coderambling, @hoxbro and @philippjfr for their contributions to this release.
 
 ### 🚀 Features
 

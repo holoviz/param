@@ -1791,3 +1791,95 @@ def test_changed_comparison_runs_once_per_event(count_changed, what):
     set_x([{'a': 1}] if what == 'value' else 3)
     assert len(count_changed) == 1
     assert acc.call_count() == 1
+
+
+class TestDeepChains:
+    # Dispatch recurses once per hop of a watch/ref chain; past half the
+    # recursion limit it falls back to batch()'s iterative drain (#1236).
+
+    class Node(param.Parameterized):
+        """A node whose value can be a reference to another node's value."""
+
+        value = param.Parameter(default=0, allow_refs=True)
+
+    def ref_chain(self, n):
+        src = prev = self.Node()
+        nodes = []
+        for _ in range(n):
+            prev = self.Node(value=prev.param.value)
+            nodes.append(prev)
+        return src, nodes
+
+    def test_deep_ref_chain(self):
+        src, nodes = self.ref_chain(2 * sys.getrecursionlimit())
+        src.value = 1
+        assert all(node.value == 1 for node in nodes)
+        src.value = 2
+        assert all(node.value == 2 for node in nodes)
+
+    def test_deep_watch_chain(self):
+        n = 2 * sys.getrecursionlimit()
+        nodes = [self.Node() for _ in range(n)]
+        calls = [0] * n
+
+        def link(i):
+            def forward(event):
+                calls[i] += 1
+                nodes[i + 1].value = event.new
+            return forward
+
+        for i in range(n - 1):
+            nodes[i].param.watch(link(i), 'value')
+        nodes[0].value = 1
+        assert all(node.value == 1 for node in nodes)
+        assert calls[:-1] == [1] * (n - 1)
+
+    def test_deep_depends_chain(self):
+        class Stage(param.Parameterized):
+            value = param.Parameter(default=0)
+            upstream = param.Parameter(default=None)
+
+            @param.depends('upstream.value', watch=True)
+            def _forward(self):
+                self.value = self.upstream.value
+
+        src = prev = Stage()
+        stages = []
+        for _ in range(2 * sys.getrecursionlimit()):
+            prev = Stage(upstream=prev)
+            stages.append(prev)
+        src.value = 1
+        assert all(stage.value == 1 for stage in stages)
+
+    def test_deep_chain_from_deep_stack(self):
+        src, nodes = self.ref_chain(100)
+
+        def recurse(depth):
+            if depth:
+                return recurse(depth - 1)
+            src.value = 1
+
+        recurse(sys.getrecursionlimit() * 3 // 4)
+        assert all(node.value == 1 for node in nodes)
+
+    def test_shallow_chain_dispatches_depth_first(self):
+        # Reading downstream right after a set must see it already updated.
+        src, nodes = self.ref_chain(10)
+        seen = []
+
+        def read_downstream(event):
+            nodes[0].value = event.new
+            seen.append(nodes[-1].value)
+
+        trigger = self.Node()
+        trigger.param.watch(read_downstream, 'value')
+        trigger.value = 1
+        assert seen == [1]
+
+    def test_depth_restored_after_watcher_error(self):
+        nodes = [self.Node() for _ in range(3)]
+        nodes[0].param.watch(lambda e: setattr(nodes[1], 'value', e.new), 'value')
+        nodes[1].param.watch(lambda e: 1 / 0, 'value')
+        with pytest.raises(ZeroDivisionError):
+            nodes[0].value = 1
+        assert param.parameterized._watcher_depth.depth == 0

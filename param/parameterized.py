@@ -20,6 +20,7 @@ import operator
 import os
 import re
 import sys
+import threading
 import types
 import typing as t
 import warnings
@@ -775,6 +776,39 @@ def batch() -> Generator[None, None, None]:
             # The propagating exception's traceback holds this frame;
             # drop the references to it (see _flush_batch).
             error = flush_error = None
+
+
+class _WatcherDepth(threading.local):
+    """Per-thread nesting depth of synchronous watcher calls."""
+
+    depth = 0
+
+
+_watcher_depth = _WatcherDepth()
+
+# Below this many nested watcher calls the stack is not probed at all, so
+# ordinary dispatch only pays for a counter.
+_DEEP_WATCHER_DEPTH = 4
+
+
+def _should_defer_nested_watchers() -> bool:
+    """
+    Whether a watcher about to run should queue its cascade into a
+    `batch()` instead of dispatching it inline, because the stack is past
+    half the recursion limit and dispatch recurses once per hop of a
+    watch/ref chain. Switching only this close to the limit keeps today's
+    depth-first ordering for every graph that does not already risk a
+    `RecursionError`; the remaining half is headroom for the drain and the
+    watcher's own work.
+    """
+    current = _param_batch.get()
+    if current is not None and not current.closed:
+        return False
+    try:
+        sys._getframe(sys.getrecursionlimit() // 2)
+    except ValueError:
+        return False
+    return True
 
 
 @contextmanager
@@ -3872,10 +3906,22 @@ class Parameters:
                                    watcher.fn)
             async_executor(partial(watcher.fn, *args, **kwargs))
         else:
+            state = _watcher_depth
+            depth = state.depth
+            state.depth = depth + 1
             try:
-                watcher.fn(*args, **kwargs)
+                if depth >= _DEEP_WATCHER_DEPTH and _should_defer_nested_watchers():
+                    # batch() drains cascades iteratively, so the stack stops
+                    # growing here instead of raising RecursionError midway
+                    # through the chain and leaving it half updated.
+                    with batch():
+                        watcher.fn(*args, **kwargs)
+                else:
+                    watcher.fn(*args, **kwargs)
             except Skip:
                 pass
+            finally:
+                state.depth = depth
 
     def _dispatch_event(self_, watchers: Iterable[Watcher], event: Event):
         """

@@ -1,9 +1,14 @@
 [
   {
-    "name": "2.4 (latest)",
-    "version": "2.4.1",
+    "name": "2.5 (latest)",
+    "version": "2.5.0",
     "url": "https://param.holoviz.org/en/docs/latest/",
     "preferred": true
+  },
+  {
+    "name": "2.4",
+    "version": "2.4.2",
+    "url": "https://param.holoviz.org/en/docs/2.4.2/"
   },
   {
     "name": "2.3",

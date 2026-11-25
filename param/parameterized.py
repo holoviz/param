@@ -717,6 +717,13 @@ def batch() -> Generator[None, None, None]:
     re-raised once the block has finished; if the block itself already
     raised, a later error while flushing is a warning instead.
 
+    Outside ``batch``, a watcher that sets another parameter notifies its
+    watchers inline, so every step of a chain of watchers or references
+    adds to the call stack and a chain of a few hundred objects raises
+    ``RecursionError``. While flushing, such sets are queued and drained
+    in a loop instead, so wrap the change at the root of a deep dataflow
+    graph in ``batch`` to update chains of any length.
+
     Examples
     --------
     >>> import param

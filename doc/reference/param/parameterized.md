@@ -112,6 +112,7 @@ of {py:class}`Parameterized` classes and instances.
 .. autosummary::
   :toctree: generated/
 
+  batch
   parameterized.batch_call_watchers
   parameterized.classlist
   concrete_descendents

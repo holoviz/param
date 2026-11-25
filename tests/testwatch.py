@@ -1706,6 +1706,29 @@ class TestBatch:
                     p.x = 2
                     raise ValueError('body boom')
 
+    @pytest.mark.parametrize('kind', ['ref', 'watch'])
+    def test_batch_propagates_through_chain_deeper_than_recursion_limit(self, kind):
+        # Documented workaround for chains that raise RecursionError
+        # without batch() (#1236): the flush must stay iterative.
+        class Node(param.Parameterized):
+            value = param.Parameter(default=0, allow_refs=True)
+
+        n = 2 * sys.getrecursionlimit()
+        if kind == 'ref':
+            nodes = [Node()]
+            for _ in range(n):
+                nodes.append(Node(value=nodes[-1].param.value))
+        else:
+            nodes = [Node() for _ in range(n)]
+            for upstream, downstream in zip(nodes, nodes[1:]):
+                upstream.param.watch(
+                    lambda e, downstream=downstream: setattr(downstream, 'value', e.new), 'value'
+                )
+
+        with batch():
+            nodes[0].value = 1
+        assert all(node.value == 1 for node in nodes)
+
     @pytest.mark.skipif(sys.implementation.name == 'pypy', reason='Relies on reference counting')
     @pytest.mark.parametrize('where', ['watcher', 'block', 'both'])
     def test_batch_error_freed_without_gc(self, where):

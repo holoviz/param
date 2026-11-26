@@ -2,6 +2,19 @@
 name = "param"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
+preview = ["pixi-build"]
+requires-pixi = ">=0.68.1"
+
+[package]
+name = "param"
+version = "2.9999.0" # below 3.0 for downstream pins, dynamic versioning: https://github.com/prefix-dev/pixi/issues/5360
+
+[package.build]
+backend = { name = "pixi-build-python", version = ">=0.4.4" }
+
+[package.host-dependencies]
+hatchling = "*"
+hatch-vcs = "*"
 
 [activation.env]
 PYTHONIOENCODING = "utf-8"
@@ -41,7 +54,7 @@ features = ["py314t", "required", "test-core", "test-314t"]
 no-default-feature = true
 
 [environments.test-315]
-features = ["py315", "required", "test-core", "test-315"]
+features = ["py315", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-core]
@@ -66,10 +79,7 @@ no-default-feature = true
 
 [feature.required.dependencies]
 nomkl = "*"
-pip = "*"
-
-[feature.required.tasks]
-install = 'python -m pip install --no-deps --disable-pip-version-check -e .'
+param = { path = "." }
 
 [feature.py311.dependencies]
 python = "3.11.*"
@@ -97,12 +107,8 @@ COVERAGE_CORE = "sysmon"
 [feature.py314t.dependencies]
 python-freethreading = "3.14.*"
 
-[feature.py315]
-channels = ["conda-forge/label/python_rc"]
-
 [feature.py315.dependencies]
 python = "3.15.*"
-_python_rc = "*"
 python-gil = "*"
 
 [feature.py315.activation.env]
@@ -117,12 +123,13 @@ panel = "*"
 
 [feature.dev.dependencies]
 jupyterlab = "*"
+pip = "*"
 setuptools_scm = ">=6"
 
 [feature.dev.tasks]
 lab = 'jupyter lab'
 sync-git-tags = 'python scripts/sync_git_tags.py param'
-setup-dev = { depends-on = ["install", "lint-install"] }
+setup-dev = { depends-on = ["lint-install"] }
 
 # =============================================
 # =================== TESTS ===================
@@ -166,21 +173,6 @@ odfpy = "*"
 # pytables = "*"
 xlrd = "*"
 # gmpy2 = "*"
-
-[feature.test-315.dependencies]
-cloudpickle = "*"
-ipython = "*"
-jsonschema = "*"
-nest-asyncio = "*"
-numpy = "*"
-odfpy = "*"
-# openpyxl = "*"
-# pandas = "*"
-# pyarrow = "*"
-pytables = "*"
-xlrd = "*"
-# ipykernel = "*"
-gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'
@@ -252,12 +244,9 @@ type-pyrefly = { cmd = 'pyrefly check --output-format min-text --count-errors=0 
     { arg = "file", default = "" },
 ] }
 type-pyright = { cmd = 'pyright {{ file }}', args = [{ arg = "file", default = "" }] }
-type-asserts-pyright = { depends-on = ["install"], cmd = 'pyright --project tests/pyrightconfig-bare.json tests/assert_types.py' }
-type-asserts-mypy = { depends-on = ["install"], cmd = 'mypy tests/assert_types.py' }
-type-asserts = { depends-on = [
-    { task = "type-asserts-mypy"},
-    { task = "type-asserts-pyright"},
-] }
+type-asserts-pyright = { cmd = 'pyright --project tests/pyrightconfig-bare.json tests/assert_types.py' }
+type-asserts-mypy = { cmd = 'mypy tests/assert_types.py' }
+type-asserts = { depends-on = ["type-asserts-mypy", "type-asserts-pyright"] }
 type-all = { depends-on = [
     { task = "type-ty", args = [ { file = "{{ file }}" } ] },
     { task = "type-mypy", args = [ { file = "{{ file }}" } ] },

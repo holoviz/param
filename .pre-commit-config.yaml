@@ -25,3 +25,11 @@ repos:
     rev: 7b04f660f4ee4f048d18fd341887cf28dfbedfe2  # frozen: v1.46.3
     hooks:
       - id: typos
+  - repo: local
+    hooks:
+      - id: pixi
+        name: check pixi
+        entry: pixi lock --check
+        language: system
+        files: ^pixi
+        pass_filenames: false

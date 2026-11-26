@@ -54,7 +54,7 @@ features = ["py314t", "required", "test-core", "test-314t"]
 no-default-feature = true
 
 [environments.test-315]
-features = ["py315", "required", "test-core", "test-315"]
+features = ["py315", "required", "test-core", "test", "example", "test-example"]
 no-default-feature = true
 
 [environments.test-core]
@@ -173,21 +173,6 @@ odfpy = "*"
 # pytables = "*"
 xlrd = "*"
 # gmpy2 = "*"
-
-[feature.test-315.dependencies]
-cloudpickle = "*"
-ipython = "*"
-jsonschema = "*"
-nest-asyncio = "*"
-numpy = "*"
-odfpy = "*"
-# openpyxl = "*"
-# pandas = "*"
-# pyarrow = "*"
-pytables = "*"
-xlrd = "*"
-# ipykernel = "*"
-gmpy2 = "*"
 
 [feature.test-example.tasks]
 test-example = 'pytest -n logical --dist loadscope --nbval-lax doc'

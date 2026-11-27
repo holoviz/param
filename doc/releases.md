@@ -55,6 +55,7 @@ Many thanks to our new contributors @ghostiee-11, @binggao1230, @syahra712 and @
 - Keep an async reference following its dependencies after one of its runs is superseded while still awaiting ([#1241](https://github.com/holoviz/param/pull/1241))
 - Skip an operation whose previous node, or a node it derives from, is still awaiting an async result instead of computing with the stale value ([#1243](https://github.com/holoviz/param/pull/1243), [#1247](https://github.com/holoviz/param/pull/1247))
 - Make lazy `rx` expressions call async and generator functions, answer `hasattr` and other attribute probes, and resolve inside callbacks ([#1245](https://github.com/holoviz/param/pull/1245))
+- Propagate through arbitrarily deep chains of references and watchers instead of raising `RecursionError` partway through, by switching to `param.batch()` ordering once the stack passes half the recursion limit ([#1253](https://github.com/holoviz/param/pull/1253))
 
 ### ⚠️ Deprecations
 

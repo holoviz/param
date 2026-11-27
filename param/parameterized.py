@@ -4357,16 +4357,31 @@ class Parameters:
         vals.sort(key=itemgetter(0))
         return dict(vals)
 
-    # Please update the docstring with better description and examples
-    # I've (MarcSkovMadsen) not been able to understand this. Its probably because I lack context.
-    # Its not mentioned in the documentation or pytests
     def force_new_dynamic_value(self_, name: str):
         """
-        Force a new value to be generated for the dynamic attribute
-        name, and return it.
+        Generate and return the next value of a dynamic parameter.
 
-        If name is not dynamic, its current value is returned
-        (i.e. equivalent to ``getattr(name)``).
+        Parameters
+        ----------
+        name : str
+            The name of the attribute to read. For a dynamic parameter backed
+            by a callable, force a fresh value even when its current value is
+            cached. For a constant value, return the value unchanged.
+
+        Examples
+        --------
+        >>> import param
+        >>> class Counter(param.Parameterized):
+        ...     tick = param.Dynamic()
+        ...     label = param.String(default="counter")
+        >>> ticks = iter([10, 20])
+        >>> counter = Counter(tick=lambda: next(ticks))
+        >>> counter.param.force_new_dynamic_value("tick")
+        10
+        >>> counter.param.force_new_dynamic_value("tick")
+        20
+        >>> counter.param.force_new_dynamic_value("label")
+        'counter'
         """
         param_obj = self_.objects('existing').get(name)  # type: ignore[union-attr, ty:unresolved-attribute]
         if not param_obj:
